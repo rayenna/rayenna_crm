@@ -26,13 +26,21 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div 
+      className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8"
+      style={{
+        backgroundImage: 'url(/background.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      <div className="max-w-md w-full space-y-8 bg-white/90 backdrop-blur-sm rounded-lg shadow-xl p-8">
         <div className="text-center">
           <img 
             src="/rayenna_logo.jpg" 
             alt="Rayenna Energy Logo" 
-            className="h-16 w-auto mx-auto mb-4"
+            className="h-32 w-auto mx-auto mb-4"
           />
           <h2 className="text-3xl font-extrabold text-primary-700">
             Rayenna CRM

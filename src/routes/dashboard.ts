@@ -82,6 +82,43 @@ router.get('/sales', authenticate, async (req: AuthRequest, res) => {
       }));
     }
 
+    // Calculate project value by type for pie chart
+    const projectValueByType = await prisma.project.groupBy({
+      by: ['type'],
+      where: { projectCost: { not: null }, ...where },
+      _sum: { projectCost: true },
+      _count: { id: true },
+    });
+
+    const valueByType = projectValueByType.map((item) => {
+      let label = '';
+      switch (item.type) {
+        case 'RESIDENTIAL_SUBSIDY':
+          label = 'Residential - Subsidy';
+          break;
+        case 'RESIDENTIAL_NON_SUBSIDY':
+          label = 'Residential - Non Subsidy';
+          break;
+        case 'COMMERCIAL_INDUSTRIAL':
+          label = 'Commercial Industrial';
+          break;
+        default:
+          label = item.type;
+      }
+      return {
+        type: item.type,
+        label,
+        value: item._sum.projectCost || 0,
+        count: item._count.id,
+      };
+    });
+
+    const totalValue = valueByType.reduce((sum, item) => sum + item.value, 0);
+    const valueByTypeWithPercentage = valueByType.map((item) => ({
+      ...item,
+      percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
+    }));
+
     res.json({
       totalLeads,
       confirmedProjects,
@@ -92,6 +129,7 @@ router.get('/sales', authenticate, async (req: AuthRequest, res) => {
         count: p._count.id,
       })),
       revenueBySalesperson: revenueBreakdown,
+      projectValueByType: valueByTypeWithPercentage,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -131,7 +169,11 @@ router.get('/operations', authenticate, async (req: AuthRequest, res) => {
         },
         select: {
           id: true,
-          customerName: true,
+          customer: {
+            select: {
+              customerName: true,
+            },
+          },
           subsidyRequestDate: true,
           projectStatus: true,
         },
@@ -146,7 +188,11 @@ router.get('/operations', authenticate, async (req: AuthRequest, res) => {
         },
         select: {
           id: true,
-          customerName: true,
+          customer: {
+            select: {
+              customerName: true,
+            },
+          },
           feasibilityDate: true,
           registrationDate: true,
           projectStatus: true,
@@ -162,7 +208,11 @@ router.get('/operations', authenticate, async (req: AuthRequest, res) => {
         },
         select: {
           id: true,
-          customerName: true,
+          customer: {
+            select: {
+              customerName: true,
+            },
+          },
           mnrePortalRegistrationDate: true,
           installationCompletionDate: true,
           projectStatus: true,
@@ -170,12 +220,50 @@ router.get('/operations', authenticate, async (req: AuthRequest, res) => {
       }),
     ]);
 
+    // Calculate project value by type for pie chart
+    const projectValueByType = await prisma.project.groupBy({
+      by: ['type'],
+      where: { projectCost: { not: null } },
+      _sum: { projectCost: true },
+      _count: { id: true },
+    });
+
+    const valueByType = projectValueByType.map((item) => {
+      let label = '';
+      switch (item.type) {
+        case 'RESIDENTIAL_SUBSIDY':
+          label = 'Residential - Subsidy';
+          break;
+        case 'RESIDENTIAL_NON_SUBSIDY':
+          label = 'Residential - Non Subsidy';
+          break;
+        case 'COMMERCIAL_INDUSTRIAL':
+          label = 'Commercial Industrial';
+          break;
+        default:
+          label = item.type;
+      }
+      return {
+        type: item.type,
+        label,
+        value: item._sum.projectCost || 0,
+        count: item._count.id,
+      };
+    });
+
+    const totalValue = valueByType.reduce((sum, item) => sum + item.value, 0);
+    const valueByTypeWithPercentage = valueByType.map((item) => ({
+      ...item,
+      percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
+    }));
+
     res.json({
       pendingInstallation,
       submittedForSubsidy,
       subsidyCredited,
       pendingSubsidy: pendingSubsidy.map((p) => ({
         ...p,
+        customerName: p.customer?.customerName || 'Unknown',
         daysPending: p.subsidyRequestDate
           ? Math.floor(
               (Date.now() - new Date(p.subsidyRequestDate).getTime()) / (1000 * 60 * 60 * 24)
@@ -184,6 +272,7 @@ router.get('/operations', authenticate, async (req: AuthRequest, res) => {
       })),
       ksebBottlenecks,
       mnreBottlenecks,
+      projectValueByType: valueByTypeWithPercentage,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -225,7 +314,11 @@ router.get('/finance', authenticate, async (req: AuthRequest, res) => {
         where: { finalProfit: { not: null } },
         select: {
           id: true,
-          customerName: true,
+          customer: {
+            select: {
+              customerName: true,
+            },
+          },
           projectCost: true,
           finalProfit: true,
           salesperson: {
@@ -267,6 +360,43 @@ router.get('/finance', authenticate, async (req: AuthRequest, res) => {
       }));
     }
 
+    // Calculate project value by type for pie chart
+    const projectValueByType = await prisma.project.groupBy({
+      by: ['type'],
+      where: { projectCost: { not: null } },
+      _sum: { projectCost: true },
+      _count: { id: true },
+    });
+
+    const valueByType = projectValueByType.map((item) => {
+      let label = '';
+      switch (item.type) {
+        case 'RESIDENTIAL_SUBSIDY':
+          label = 'Residential - Subsidy';
+          break;
+        case 'RESIDENTIAL_NON_SUBSIDY':
+          label = 'Residential - Non Subsidy';
+          break;
+        case 'COMMERCIAL_INDUSTRIAL':
+          label = 'Commercial Industrial';
+          break;
+        default:
+          label = item.type;
+      }
+      return {
+        type: item.type,
+        label,
+        value: item._sum.projectCost || 0,
+        count: item._count.id,
+      };
+    });
+
+    const totalValue = valueByType.reduce((sum, item) => sum + item.value, 0);
+    const valueByTypeWithPercentage = valueByType.map((item) => ({
+      ...item,
+      percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
+    }));
+
     res.json({
       totalProjectValue: totalProjectValue._sum.projectCost || 0,
       totalAmountReceived: totalAmountReceived._sum.totalAmountReceived || 0,
@@ -279,6 +409,7 @@ router.get('/finance', authenticate, async (req: AuthRequest, res) => {
       })),
       profitByProject,
       profitBySalesperson: profitBreakdown,
+      projectValueByType: valueByTypeWithPercentage,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -343,23 +474,65 @@ router.get('/management', authenticate, async (req: AuthRequest, res) => {
             _sum: { balanceAmount: true },
           }),
           prisma.project.aggregate({
-            _sum: { finalProfit: true },
-            where: { finalProfit: { not: null } },
+            _sum: { grossProfit: true },
+            where: { grossProfit: { not: null } },
           }),
         ]);
         return {
           totalValue: totalValue._sum.projectCost || 0,
           totalReceived: totalReceived._sum.totalAmountReceived || 0,
           totalOutstanding: totalOutstanding._sum.balanceAmount || 0,
-          totalProfit: totalProfit._sum.finalProfit || 0,
+          totalProfit: totalProfit._sum.grossProfit || 0,
         };
       })(),
     ]);
+
+    // Calculate project value by type
+    const projectValueByType = await prisma.project.groupBy({
+      by: ['type'],
+      where: { projectCost: { not: null } },
+      _sum: { projectCost: true },
+      _count: { id: true },
+    });
+
+    // Format the data for the chart
+    const valueByType = projectValueByType.map((item) => {
+      let label = '';
+      switch (item.type) {
+        case 'RESIDENTIAL_SUBSIDY':
+          label = 'Residential - Subsidy';
+          break;
+        case 'RESIDENTIAL_NON_SUBSIDY':
+          label = 'Residential - Non Subsidy';
+          break;
+        case 'COMMERCIAL_INDUSTRIAL':
+          label = 'Commercial Industrial';
+          break;
+        default:
+          label = item.type;
+      }
+      return {
+        type: item.type,
+        label,
+        value: item._sum.projectCost || 0,
+        count: item._count.id,
+      };
+    });
+
+    // Calculate total for percentage calculation
+    const totalValue = valueByType.reduce((sum, item) => sum + item.value, 0);
+
+    // Add percentage to each item
+    const valueByTypeWithPercentage = valueByType.map((item) => ({
+      ...item,
+      percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
+    }));
 
     res.json({
       sales,
       operations,
       finance,
+      projectValueByType: valueByTypeWithPercentage,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

@@ -42,6 +42,16 @@ enum PaymentStatus {
   FULLY_PAID
 }
 
+enum ProjectServiceType {
+  EPC_PROJECT
+  PANEL_CLEANING
+  MAINTENANCE
+  REPAIR
+  CONSULTING
+  RESALE
+  OTHER_SERVICES
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -59,18 +69,45 @@ model User {
   @@map("users")
 }
 
+model Customer {
+  id            String   @id @default(cuid())
+  customerId    String   @unique // 6-digit alphanumeric ID
+  customerName  String
+  addressLine1  String?
+  addressLine2  String?
+  city          String?
+  state         String?
+  country       String?
+  pinCode       String?
+  contactNumbers String? // JSON array of phone numbers
+  consumerNumber String?
+  email         String?
+  idProofNumber String?
+  idProofType   String?
+  companyName   String?
+  companyGst    String?
+  leadSource    String?
+  leadBroughtBy String?
+  
+  projects      Project[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("customers")
+}
+
 model Project {
   id        String   @id @default(cuid())
   slNo      Int      @unique @default(autoincrement())
   
-  // Customer Details
-  customerName      String
-  address           String?
-  contactNumbers    String? // JSON array of phone numbers
-  consumerNumber    String?
+  // Customer Reference
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  
+  // Project Details
   type              ProjectType
-  leadSource        String?
-  leadBroughtBy     String?
+  projectServiceType ProjectServiceType @default(EPC_PROJECT) // EPC Project, Panel Cleaning, Maintenance, etc.
   salespersonId     String?
   year              String // FY format: "2024-25"
   count             Int     @default(1)
@@ -82,6 +119,8 @@ model Project {
   loanDetails           String?  // JSON: { hasLoan: boolean, remarks: string }
   incentiveEligible     Boolean  @default(false)
   expectedProfit        Float?   // Auto-calculated
+  grossProfit           Float?   // Auto-calculated: Order Value - Total Project Cost
+  profitability        Float?   // Auto-calculated: (Gross Profit / Order Value) × 100
   finalProfit           Float?
 
   // Project Execution & Compliance
@@ -93,6 +132,7 @@ model Project {
   subsidyRequestDate            DateTime?
   subsidyCreditedDate           DateTime?
   projectStatus                 ProjectStatus @default(LEAD)
+  totalProjectCost              Float?   // Overall cost incurred in the project
 
   // Payment Tracking
   advanceReceived       Float?   @default(0)

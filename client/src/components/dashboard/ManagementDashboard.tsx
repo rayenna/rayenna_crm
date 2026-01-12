@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
+import ProjectValuePieChart from './ProjectValuePieChart'
 
 const ManagementDashboard = () => {
   const { data, isLoading } = useQuery({
@@ -80,6 +81,11 @@ const ManagementDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Project Value by Segment Pie Chart */}
+      {data?.projectValueByType && data.projectValueByType.length > 0 && (
+        <ProjectValuePieChart data={data.projectValueByType} />
+      )}
     </div>
   )
 }

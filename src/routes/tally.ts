@@ -25,6 +25,12 @@ router.get('/export/excel', authenticate, authorize(UserRole.ADMIN, UserRole.FIN
     const projects = await prisma.project.findMany({
       where,
       include: {
+        customer: {
+          select: {
+            customerName: true,
+            consumerNumber: true,
+          },
+        },
         salesperson: {
           select: { name: true },
         },
@@ -35,8 +41,8 @@ router.get('/export/excel', authenticate, authorize(UserRole.ADMIN, UserRole.FIN
     // Format data for Tally
     const tallyData = projects.map((project) => ({
       'SL No': project.slNo,
-      'Customer Name': project.customerName,
-      'Consumer Number': project.consumerNumber || '',
+      'Customer Name': project.customer?.customerName || '',
+      'Consumer Number': project.customer?.consumerNumber || '',
       'Invoice Amount': project.projectCost || 0,
       'Payment Received': project.totalAmountReceived || 0,
       'Outstanding Balance': project.balanceAmount || 0,
@@ -80,6 +86,12 @@ router.get('/export/json', authenticate, authorize(UserRole.ADMIN, UserRole.FINA
     const projects = await prisma.project.findMany({
       where,
       include: {
+        customer: {
+          select: {
+            customerName: true,
+            consumerNumber: true,
+          },
+        },
         salesperson: {
           select: { name: true },
         },
@@ -90,8 +102,8 @@ router.get('/export/json', authenticate, authorize(UserRole.ADMIN, UserRole.FINA
     // Format data for Tally
     const tallyData = projects.map((project) => ({
       slNo: project.slNo,
-      customerName: project.customerName,
-      consumerNumber: project.consumerNumber || '',
+      customerName: project.customer?.customerName || '',
+      consumerNumber: project.customer?.consumerNumber || '',
       invoiceAmount: project.projectCost || 0,
       paymentReceived: project.totalAmountReceived || 0,
       outstandingBalance: project.balanceAmount || 0,
@@ -127,6 +139,12 @@ router.get('/export/xml', authenticate, authorize(UserRole.ADMIN, UserRole.FINAN
     const projects = await prisma.project.findMany({
       where,
       include: {
+        customer: {
+          select: {
+            customerName: true,
+            consumerNumber: true,
+          },
+        },
         salesperson: {
           select: { name: true },
         },
@@ -140,8 +158,8 @@ router.get('/export/xml', authenticate, authorize(UserRole.ADMIN, UserRole.FINAN
       Projects: {
         Project: projects.map((project) => ({
           SLNo: project.slNo,
-          CustomerName: project.customerName,
-          ConsumerNumber: project.consumerNumber || '',
+          CustomerName: project.customer?.customerName || '',
+          ConsumerNumber: project.customer?.consumerNumber || '',
           InvoiceAmount: project.projectCost || 0,
           PaymentReceived: project.totalAmountReceived || 0,
           OutstandingBalance: project.balanceAmount || 0,

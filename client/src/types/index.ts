@@ -27,6 +27,16 @@ export enum PaymentStatus {
   FULLY_PAID = 'FULLY_PAID',
 }
 
+export enum ProjectServiceType {
+  EPC_PROJECT = 'EPC_PROJECT',
+  PANEL_CLEANING = 'PANEL_CLEANING',
+  MAINTENANCE = 'MAINTENANCE',
+  REPAIR = 'REPAIR',
+  CONSULTING = 'CONSULTING',
+  RESALE = 'RESALE',
+  OTHER_SERVICES = 'OTHER_SERVICES',
+}
+
 export interface User {
   id: string
   email: string
@@ -38,13 +48,10 @@ export interface User {
 export interface Project {
   id: string
   slNo: number
-  customerName: string
-  address?: string
-  contactNumbers?: string
-  consumerNumber?: string
+  customerId: string
+  customer?: Customer
   type: ProjectType
-  leadSource?: string
-  leadBroughtBy?: string
+  projectServiceType: ProjectServiceType
   salespersonId?: string
   year: string
   count: number
@@ -54,6 +61,8 @@ export interface Project {
   loanDetails?: string
   incentiveEligible: boolean
   expectedProfit?: number
+  grossProfit?: number
+  profitability?: number
   finalProfit?: number
   mnrePortalRegistrationDate?: string
   feasibilityDate?: string
@@ -63,6 +72,7 @@ export interface Project {
   subsidyRequestDate?: string
   subsidyCreditedDate?: string
   projectStatus: ProjectStatus
+  totalProjectCost?: number
   advanceReceived?: number
   advanceReceivedDate?: string
   payment1?: number
@@ -113,4 +123,28 @@ export interface AuditLog {
   newValue?: string
   remarks?: string
   createdAt: string
+}
+
+export interface Customer {
+  id: string
+  customerId: string // 6-digit alphanumeric ID
+  customerName: string
+  addressLine1?: string
+  addressLine2?: string
+  city?: string
+  state?: string
+  country?: string
+  pinCode?: string
+  contactNumbers?: string
+  consumerNumber?: string
+  email?: string
+  idProofNumber?: string
+  idProofType?: string
+  companyName?: string
+  companyGst?: string
+  leadSource?: string
+  leadBroughtBy?: string
+  projects?: Project[]
+  createdAt: string
+  updatedAt: string
 }

@@ -1,10 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Project, ProjectType, UserRole } from '../types'
+import { Project, ProjectType, ProjectServiceType, UserRole } from '../types'
 import toast from 'react-hot-toast'
 
 const ProjectForm = () => {
@@ -31,17 +31,142 @@ const ProjectForm = () => {
     },
   })
 
-  const { register, handleSubmit, setValue } = useForm()
+  const { data: customers, isLoading: customersLoading, error: customersError } = useQuery({
+    queryKey: ['customers', 'all'],
+    queryFn: async () => {
+      try {
+        const res = await axios.get('/api/customers?limit=10000') // Fetch all customers (up to 10000)
+        console.log('Customers loaded:', res.data?.customers?.length || 0, 'customers')
+        return res.data
+      } catch (error: any) {
+        console.error('Error fetching customers:', error)
+        throw error
+      }
+    },
+    enabled: true, // Always fetch customers
+    retry: 2, // Retry on failure
+  })
+
+  // Function to calculate Financial Year from a date
+  // FY runs from April 1 to March 31
+  // e.g., April 1, 2024 to March 31, 2025 = FY 2024-25
+  const calculateFY = (date: Date | string | null | undefined): string | null => {
+    if (!date) return null;
+    
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      if (isNaN(dateObj.getTime())) return null;
+      
+      const year = dateObj.getFullYear();
+      const month = dateObj.getMonth() + 1; // getMonth() returns 0-11
+      
+      // If month is April (4) or later, FY starts in current year
+      // If month is Jan-Mar (1-3), FY started in previous year
+      if (month >= 4) {
+        // April 2024 to March 2025 = FY 2024-25
+        return `${year}-${String(year + 1).slice(-2)}`;
+      } else {
+        // January 2025 to March 2025 = FY 2024-25 (started in 2024)
+        return `${year - 1}-${String(year).slice(-2)}`;
+      }
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const { register, handleSubmit, setValue, getValues, watch } = useForm()
+  const selectedCustomerId = watch('customerId')
+  const confirmationDate = watch('confirmationDate')
+  const [customerSearch, setCustomerSearch] = useState('')
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
+  const customerDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Auto-calculate FY when confirmationDate changes
+  useEffect(() => {
+    if (confirmationDate) {
+      const fy = calculateFY(confirmationDate);
+      if (fy) {
+        setValue('year', fy);
+      }
+    } else {
+      // Clear year if confirmationDate is cleared
+      setValue('year', '');
+    }
+  }, [confirmationDate, setValue])
+
+  // Filter customers based on search
+  const filteredCustomers = useMemo(() => {
+    if (!customers?.customers) return []
+    if (!customerSearch.trim()) return customers.customers
+    
+    const searchLower = customerSearch.toLowerCase()
+    return customers.customers.filter((customer: any) => 
+      customer.customerName.toLowerCase().includes(searchLower) ||
+      customer.customerId.toLowerCase().includes(searchLower) ||
+      (customer.consumerNumber && customer.consumerNumber.toLowerCase().includes(searchLower)) ||
+      (customer.address && customer.address.toLowerCase().includes(searchLower))
+    )
+  }, [customers?.customers, customerSearch])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target as Node)) {
+        setShowCustomerDropdown(false)
+      }
+    }
+
+    if (showCustomerDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showCustomerDropdown])
 
   useEffect(() => {
     if (project && isEdit) {
+      const immutableFields = ['id', 'slNo', 'count', 'createdById', 'createdAt', 'updatedAt', 'totalAmountReceived', 'balanceAmount', 'paymentStatus', 'expectedProfit', 'customer'];
       Object.keys(project).forEach((key) => {
-        if (key === 'contactNumbers' && project.contactNumbers) {
-          setValue(key, JSON.parse(project.contactNumbers))
+        // Skip immutable/system fields
+        if (immutableFields.includes(key)) {
+          return;
+        }
+        // Set customerId from project
+        if (key === 'customerId') {
+          setValue('customerId', project.customerId);
+          // Also set the search field if customer info is available
+          if (project.customer) {
+            setCustomerSearch(`${project.customer.customerId} - ${project.customer.customerName}`);
+          }
         } else if (key === 'loanDetails' && project.loanDetails) {
-          setValue(key, JSON.parse(project.loanDetails))
+          try {
+            setValue(key, JSON.parse(project.loanDetails));
+          } catch {
+            setValue(key, project.loanDetails);
+          }
         } else {
-          setValue(key as any, project[key as keyof Project])
+          // Handle date fields - convert ISO strings to YYYY-MM-DD for HTML date inputs
+          if (key.includes('Date') && project[key as keyof Project]) {
+            try {
+              const dateValue = project[key as keyof Project] as string;
+              if (dateValue) {
+                const date = new Date(dateValue);
+                if (!isNaN(date.getTime())) {
+                  // Format as YYYY-MM-DD for HTML date input
+                  const formatted = date.toISOString().split('T')[0];
+                  setValue(key as any, formatted);
+                } else {
+                  setValue(key as any, project[key as keyof Project]);
+                }
+              }
+            } catch {
+              setValue(key as any, project[key as keyof Project]);
+            }
+          } else {
+            setValue(key as any, project[key as keyof Project]);
+          }
         }
       })
     }
@@ -66,35 +191,156 @@ const ProjectForm = () => {
   })
 
   const onSubmit = (data: any) => {
-    // Format dates
+    // Get all form values including empty fields
+    const allValues = getValues();
+    
+    // Remove immutable/system fields that shouldn't be sent to backend
+    const immutableFields = ['id', 'slNo', 'count', 'createdById', 'createdAt', 'updatedAt', 'totalAmountReceived', 'balanceAmount', 'paymentStatus', 'expectedProfit', 'customer'];
+    immutableFields.forEach((field) => {
+      delete data[field];
+    });
+
+    // Ensure customerId is provided
+    if (!data.customerId) {
+      toast.error('Please select a customer');
+      return;
+    }
+
+    // Ensure projectServiceType has a default value if not provided
+    if (!data.projectServiceType) {
+      data.projectServiceType = ProjectServiceType.EPC_PROJECT;
+    }
+
+    // Date field names with user-friendly labels for validation
     const dateFields = [
-      'confirmationDate',
-      'advanceReceivedDate',
-      'payment1Date',
-      'payment2Date',
-      'payment3Date',
-      'lastPaymentDate',
-      'mnrePortalRegistrationDate',
-      'feasibilityDate',
-      'registrationDate',
-      'installationCompletionDate',
-      'subsidyRequestDate',
-      'subsidyCreditedDate',
-    ]
-    dateFields.forEach((field) => {
-      if (data[field]) {
-        data[field] = new Date(data[field]).toISOString()
+      { field: 'confirmationDate', label: 'Confirmation Date' },
+      { field: 'advanceReceivedDate', label: 'Advance Received Date' },
+      { field: 'payment1Date', label: 'Payment 1 Date' },
+      { field: 'payment2Date', label: 'Payment 2 Date' },
+      { field: 'payment3Date', label: 'Payment 3 Date' },
+      { field: 'lastPaymentDate', label: 'Last Payment Date' },
+      { field: 'mnrePortalRegistrationDate', label: 'MNRE Portal Registration Date' },
+      { field: 'feasibilityDate', label: 'Feasibility Date' },
+      { field: 'registrationDate', label: 'Registration Date' },
+      { field: 'installationCompletionDate', label: 'Installation Completion Date' },
+      { field: 'subsidyRequestDate', label: 'Subsidy Request Date' },
+      { field: 'subsidyCreditedDate', label: 'Subsidy Credited Date' },
+    ];
+    
+    // Validate all dates before proceeding
+    const dateErrors: string[] = [];
+    
+    dateFields.forEach(({ field, label }) => {
+      const value = allValues[field] || data[field];
+      
+      // Skip validation for empty/null dates (they're valid)
+      if (!value || value === '' || value === null) {
+        data[field] = null;
+        return;
       }
-    })
+      
+      try {
+        const date = new Date(value);
+        
+        // Check if date is valid
+        if (isNaN(date.getTime())) {
+          dateErrors.push(`${label} is not a valid date. Please enter a valid date.`);
+          return;
+        }
+        
+        // Check if date is within reasonable range (1900-2100)
+        const year = date.getFullYear();
+        if (year < 1900 || year > 2100) {
+          dateErrors.push(`${label} has an invalid year (${year}). Please enter a date between 1900 and 2100.`);
+          return;
+        }
+        
+        // Date is valid, format it
+        data[field] = date.toISOString();
+      } catch (error) {
+        dateErrors.push(`${label} is not a valid date format. Please enter a valid date (YYYY-MM-DD).`);
+      }
+    });
+    
+    // If there are date validation errors, show them and prevent submission
+    if (dateErrors.length > 0) {
+      const errorMessage = dateErrors.length === 1 
+        ? dateErrors[0]
+        : `Multiple invalid dates found:\n${dateErrors.map((e, i) => `${i + 1}. ${e}`).join('\n')}`;
+      
+      toast.error(errorMessage, { duration: 6000 });
+      return; // Prevent form submission
+    }
+    
+    // Payment field pairs - amount and date must both be provided or both be empty
+    const paymentFieldPairs = [
+      { amount: 'advanceReceived', date: 'advanceReceivedDate', label: 'Advance Received' },
+      { amount: 'payment1', date: 'payment1Date', label: 'Payment 1' },
+      { amount: 'payment2', date: 'payment2Date', label: 'Payment 2' },
+      { amount: 'payment3', date: 'payment3Date', label: 'Payment 3' },
+      { amount: 'lastPayment', date: 'lastPaymentDate', label: 'Last Payment' },
+    ];
+    
+    // Validate that amount and date are both provided or both empty
+    const paymentErrors: string[] = [];
+    
+    paymentFieldPairs.forEach(({ amount, date, label }) => {
+      const amountValue = allValues[amount] !== undefined ? allValues[amount] : data[amount];
+      const dateValue = allValues[date] !== undefined ? allValues[date] : data[date];
+      
+      // Check if amount is provided
+      const hasAmount = amountValue !== undefined && amountValue !== null && amountValue !== '' && parseFloat(String(amountValue)) > 0;
+      // Check if date is provided
+      const hasDate = dateValue !== undefined && dateValue !== null && dateValue !== '';
+      
+      // If amount is provided but date is not, or vice versa, show error
+      if (hasAmount && !hasDate) {
+        paymentErrors.push(`${label}: Amount is entered but date is missing. Please enter both amount and date.`);
+      } else if (hasDate && !hasAmount) {
+        paymentErrors.push(`${label}: Date is entered but amount is missing. Please enter both amount and date.`);
+      }
+      
+      // Process amount field
+      if (amountValue === undefined || amountValue === null || amountValue === '') {
+        data[amount] = 0; // Default to 0 if not provided
+      } else {
+        // Convert to number
+        const numValue = parseFloat(String(amountValue));
+        data[amount] = isNaN(numValue) ? 0 : numValue;
+      }
+    });
+    
+    // If there are payment validation errors, show them and prevent submission
+    if (paymentErrors.length > 0) {
+      const errorMessage = paymentErrors.length === 1 
+        ? paymentErrors[0]
+        : `Payment validation errors:\n${paymentErrors.map((e, i) => `${i + 1}. ${e}`).join('\n')}`;
+      
+      toast.error(errorMessage, { duration: 6000 });
+      return; // Prevent form submission
+    }
 
     // Format arrays/objects
-    if (data.contactNumbers && Array.isArray(data.contactNumbers)) {
-      data.contactNumbers = data.contactNumbers.filter((n: string) => n.trim())
-    }
     if (data.loanDetails && typeof data.loanDetails === 'object') {
       // Keep as object, will be stringified on backend
     }
 
+    console.log('Submitting data:', data); // Debug log
+    // Debug: Log full data object
+    console.log('Submitting data (full):', JSON.stringify(data, null, 2));
+    console.log('Payment fields:', {
+      advanceReceived: data.advanceReceived,
+      advanceReceivedDate: data.advanceReceivedDate,
+      payment1: data.payment1,
+      payment1Date: data.payment1Date,
+      payment2: data.payment2,
+      payment2Date: data.payment2Date,
+      payment3: data.payment3,
+      payment3Date: data.payment3Date,
+      lastPayment: data.lastPayment,
+      lastPaymentDate: data.lastPaymentDate,
+    });
+    
     mutation.mutate(data)
   }
 
@@ -109,22 +355,166 @@ const ProjectForm = () => {
       </h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Customer Details */}
+        {/* Customer Selection */}
         <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Customer Details</h2>
+          <h2 className="text-lg font-semibold mb-4">Customer & Project Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Customer Name *
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Customer *
               </label>
-              <input
-                type="text"
-                {...register('customerName', { required: true })}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-              />
+              {customersLoading ? (
+                <div className="mt-1 text-sm text-gray-500">Loading customers...</div>
+              ) : customersError ? (
+                <div className="mt-1 text-sm text-red-500">
+                  Error loading customers: {customersError?.message || 'Unknown error'}. Please try again or{' '}
+                  <Link to="/customers" className="text-primary-600 hover:text-primary-800 underline">
+                    create a new customer
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative" ref={customerDropdownRef}>
+                      <input
+                        type="text"
+                        placeholder="Search customer by name, ID, or consumer number..."
+                        value={customerSearch}
+                        onChange={(e) => {
+                          setCustomerSearch(e.target.value)
+                          setShowCustomerDropdown(true)
+                        }}
+                        onFocus={() => setShowCustomerDropdown(true)}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 pr-10"
+                      />
+                      {customerSearch && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomerSearch('')
+                            setShowCustomerDropdown(false)
+                            setValue('customerId', '')
+                          }}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          ✕
+                        </button>
+                      )}
+                      {showCustomerDropdown && filteredCustomers.length > 0 && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                          {filteredCustomers.map((customer: any) => (
+                            <div
+                              key={customer.id}
+                              onMouseDown={(e) => {
+                                e.preventDefault() // Prevent input blur
+                                setValue('customerId', customer.id)
+                                setCustomerSearch(`${customer.customerId} - ${customer.customerName}`)
+                                setShowCustomerDropdown(false)
+                              }}
+                              className="px-4 py-2 hover:bg-primary-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-medium text-sm text-gray-900">
+                                {customer.customerId} - {customer.customerName}
+                              </div>
+                              {customer.consumerNumber && (
+                                <div className="text-xs text-gray-500">Consumer: {customer.consumerNumber}</div>
+                              )}
+                              {customer.address && (
+                                <div className="text-xs text-gray-500 truncate">{customer.address}</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {showCustomerDropdown && customerSearch && filteredCustomers.length === 0 && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-4 text-sm text-gray-500">
+                          No customers found matching "{customerSearch}"
+                        </div>
+                      )}
+                    </div>
+                    <select
+                      {...register('customerId', { required: 'Please select a customer' })}
+                      onChange={(e) => {
+                        const selectedId = e.target.value
+                        if (selectedId) {
+                          const customer = customers?.customers?.find((c: any) => c.id === selectedId)
+                          if (customer) {
+                            setCustomerSearch(`${customer.customerId} - ${customer.customerName}`)
+                          }
+                        } else {
+                          setCustomerSearch('')
+                        }
+                      }}
+                      className="w-48 border border-gray-300 rounded-md px-3 py-2"
+                    >
+                      <option value="">Or select from list</option>
+                      {customers?.customers && customers.customers.length > 0 ? (
+                        customers.customers.map((customer: any) => (
+                          <option key={customer.id} value={customer.id}>
+                            {customer.customerId} - {customer.customerName}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="" disabled>No customers found</option>
+                      )}
+                    </select>
+                  </div>
+                  {customers?.customers && customers.customers.length === 0 && (
+                    <p className="mt-2 text-xs text-yellow-600">
+                      No customers found. Please{' '}
+                      <Link to="/customers" className="text-primary-600 hover:text-primary-800 underline">
+                        create a customer
+                      </Link>{' '}
+                      first.
+                    </p>
+                  )}
+                  <input
+                    type="hidden"
+                    {...register('customerId', { required: 'Please select a customer' })}
+                  />
+                </>
+              )}
+              {selectedCustomerId && customers?.customers && (
+                <div className="mt-2 p-3 bg-gray-50 rounded-md text-sm text-gray-600">
+                  {(() => {
+                    const customer = customers.customers.find((c: any) => c.id === selectedCustomerId);
+                    if (customer) {
+                      return (
+                        <div>
+                          <p className="font-medium text-gray-900 mb-2">Selected Customer Details:</p>
+                          <p><strong>Customer ID:</strong> {customer.customerId}</p>
+                          <p><strong>Name:</strong> {customer.customerName}</p>
+                          {customer.address && (
+                            <p><strong>Address:</strong> {customer.address}</p>
+                          )}
+                          {customer.contactNumbers && (
+                            <p><strong>Contact:</strong> {(() => {
+                              try {
+                                const contacts = JSON.parse(customer.contactNumbers);
+                                return Array.isArray(contacts) ? contacts.join(', ') : customer.contactNumbers;
+                              } catch {
+                                return customer.contactNumbers;
+                              }
+                            })()}</p>
+                          )}
+                          {customer.consumerNumber && (
+                            <p><strong>Consumer Number:</strong> {customer.consumerNumber}</p>
+                          )}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+              )}
+              {!isEdit && (
+                <p className="mt-2 text-xs text-gray-500">
+                  Don't see the customer? <Link to="/customers" className="text-primary-600 hover:text-primary-800">Create a new customer</Link>
+                </p>
+              )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Type *</label>
+              <label className="block text-sm font-medium text-gray-700">Segment *</label>
               <select
                 {...register('type', { required: true })}
                 className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
@@ -136,49 +526,21 @@ const ProjectForm = () => {
                 ))}
               </select>
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">Address</label>
-              <textarea
-                {...register('address')}
-                rows={2}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-              />
-            </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Contact Numbers (comma-separated)
-              </label>
-              <input
-                type="text"
-                {...register('contactNumbers')}
-                placeholder="1234567890, 9876543210"
+              <label className="block text-sm font-medium text-gray-700">Project Type *</label>
+              <select
+                {...register('projectServiceType', { required: true })}
                 className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Consumer Number</label>
-              <input
-                type="text"
-                {...register('consumerNumber')}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Lead Source</label>
-              <input
-                type="text"
-                {...register('leadSource')}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Year (FY) *</label>
-              <input
-                type="text"
-                {...register('year', { required: true })}
-                placeholder="2024-25"
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-              />
+                defaultValue={ProjectServiceType.EPC_PROJECT}
+              >
+                <option value={ProjectServiceType.EPC_PROJECT}>EPC Project</option>
+                <option value={ProjectServiceType.PANEL_CLEANING}>Panel Cleaning</option>
+                <option value={ProjectServiceType.MAINTENANCE}>Maintenance</option>
+                <option value={ProjectServiceType.REPAIR}>Repair</option>
+                <option value={ProjectServiceType.CONSULTING}>Consulting</option>
+                <option value={ProjectServiceType.RESALE}>Resale</option>
+                <option value={ProjectServiceType.OTHER_SERVICES}>Other Services</option>
+              </select>
             </div>
             {hasRole([UserRole.ADMIN]) && salespersons && (
               <div>
@@ -216,7 +578,7 @@ const ProjectForm = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Project Cost (₹)</label>
+                <label className="block text-sm font-medium text-gray-700">Order Value (₹)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -226,22 +588,23 @@ const ProjectForm = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Confirmation Date
+                  Confirmation Date *
                 </label>
                 <input
                   type="date"
-                  {...register('confirmationDate')}
+                  {...register('confirmationDate', { required: true })}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Incentive Eligible
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Year (FY) *</label>
                 <input
-                  type="checkbox"
-                  {...register('incentiveEligible')}
-                  className="mt-1"
+                  type="text"
+                  {...register('year', { required: true })}
+                  placeholder="2024-25"
+                  readOnly
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 cursor-not-allowed"
+                  title="Automatically calculated from Confirmation Date"
                 />
               </div>
             </div>
@@ -407,7 +770,7 @@ const ProjectForm = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Subsidy Request Date
+                  Net Meter Installation Date
                 </label>
                 <input
                   type="date"
@@ -423,6 +786,18 @@ const ProjectForm = () => {
                   type="date"
                   {...register('subsidyCreditedDate')}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Total Project Cost (₹)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  {...register('totalProjectCost')}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="Overall cost incurred in the project"
                 />
               </div>
             </div>

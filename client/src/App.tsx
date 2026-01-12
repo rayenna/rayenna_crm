@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import PrivateRoute from './components/PrivateRoute'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import CustomerMaster from './pages/CustomerMaster'
 import Projects from './pages/Projects'
 import ProjectDetail from './pages/ProjectDetail'
 import ProjectForm from './pages/ProjectForm'
@@ -27,6 +28,7 @@ function App() {
           >
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
+            <Route path="customers" element={<CustomerMaster />} />
             <Route path="projects" element={<Projects />} />
             <Route path="projects/new" element={<ProjectForm />} />
             <Route path="projects/:id" element={<ProjectDetail />} />

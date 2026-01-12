@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Project, ProjectStatus, ProjectType } from '../types'
+import { Project, ProjectStatus, ProjectType, ProjectServiceType } from '../types'
 import { format } from 'date-fns'
 
 const Projects = () => {
@@ -11,6 +11,7 @@ const Projects = () => {
   const [filters, setFilters] = useState({
     status: '',
     type: '',
+    projectServiceType: '',
     search: '',
   })
 
@@ -20,6 +21,7 @@ const Projects = () => {
       const params = new URLSearchParams()
       if (filters.status) params.append('status', filters.status)
       if (filters.type) params.append('type', filters.type)
+      if (filters.projectServiceType) params.append('projectServiceType', filters.projectServiceType)
       if (filters.search) params.append('search', filters.search)
       const res = await axios.get(`/api/projects?${params.toString()}`)
       return res.data
@@ -43,7 +45,7 @@ const Projects = () => {
       </div>
 
       <div className="bg-white shadow rounded-lg mb-4 p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <input
             type="text"
             placeholder="Search..."
@@ -68,10 +70,33 @@ const Projects = () => {
             value={filters.type}
             onChange={(e) => setFilters({ ...filters, type: e.target.value })}
           >
-            <option value="">All Types</option>
+            <option value="">All Segments</option>
             {Object.values(ProjectType).map((type) => (
               <option key={type} value={type}>
                 {type.replace(/_/g, ' ')}
+              </option>
+            ))}
+          </select>
+          <select
+            className="border border-gray-300 rounded-md px-3 py-2"
+            value={filters.projectServiceType}
+            onChange={(e) => setFilters({ ...filters, projectServiceType: e.target.value })}
+          >
+            <option value="">All Project Types</option>
+            {Object.values(ProjectServiceType).map((serviceType) => (
+              <option key={serviceType} value={serviceType}>
+                {(() => {
+                  const typeMap: Record<string, string> = {
+                    'EPC_PROJECT': 'EPC Project',
+                    'PANEL_CLEANING': 'Panel Cleaning',
+                    'MAINTENANCE': 'Maintenance',
+                    'REPAIR': 'Repair',
+                    'CONSULTING': 'Consulting',
+                    'RESALE': 'Resale',
+                    'OTHER_SERVICES': 'Other Services',
+                  };
+                  return typeMap[serviceType] || serviceType.replace(/_/g, ' ');
+                })()}
               </option>
             ))}
           </select>
@@ -90,7 +115,7 @@ const Projects = () => {
                   <div className="flex-1">
                     <div className="flex items-center">
                       <p className="text-sm font-medium text-primary-600">
-                        #{project.slNo} - {project.customerName}
+                        #{project.slNo} - {project.customer?.customerName || 'Unknown Customer'}
                       </p>
                       <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">
                         {project.type.replace(/_/g, ' ')}

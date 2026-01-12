@@ -50,3 +50,75 @@ export const calculateExpectedProfit = (
 
   return Math.round(expectedProfit * 100) / 100; // Round to 2 decimal places
 };
+
+/**
+ * Calculate Gross Profit
+ * Gross Profit = Order Value (projectCost) - Total Project Cost (totalProjectCost)
+ * If totalProjectCost is null/undefined, return null (cannot calculate without cost)
+ */
+export const calculateGrossProfit = (
+  projectCost: number | null | undefined,
+  totalProjectCost: number | null | undefined
+): number | null => {
+  // Order Value must be present and valid
+  if (projectCost === null || projectCost === undefined || isNaN(projectCost)) {
+    return null;
+  }
+  
+  // If Total Project Cost is not provided, cannot calculate gross profit
+  if (totalProjectCost === null || totalProjectCost === undefined || isNaN(totalProjectCost)) {
+    return null;
+  }
+
+  const grossProfit = projectCost - totalProjectCost;
+  return Math.round(grossProfit * 100) / 100; // Round to 2 decimal places
+};
+
+/**
+ * Calculate Profitability Percentage
+ * Profitability (%) = (Gross Profit / Order Value) × 100
+ */
+export const calculateProfitability = (
+  grossProfit: number | null | undefined,
+  projectCost: number | null | undefined
+): number | null => {
+  // Both values must be present and valid
+  if (grossProfit === null || grossProfit === undefined || isNaN(grossProfit)) {
+    return null;
+  }
+  if (projectCost === null || projectCost === undefined || isNaN(projectCost) || projectCost === 0) {
+    return null; // Cannot divide by zero
+  }
+
+  const profitability = (grossProfit / projectCost) * 100;
+  return Math.round(profitability * 100) / 100; // Round to 2 decimal places
+};
+
+/**
+ * Calculate Financial Year from a date
+ * FY runs from April 1 to March 31
+ * e.g., April 1, 2024 to March 31, 2025 = FY 2024-25
+ */
+export const calculateFY = (date: Date | string | null | undefined): string | null => {
+  if (!date) return null;
+  
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(dateObj.getTime())) return null;
+    
+    const year = dateObj.getFullYear();
+    const month = dateObj.getMonth() + 1; // getMonth() returns 0-11
+    
+    // If month is April (4) or later, FY starts in current year
+    // If month is Jan-Mar (1-3), FY started in previous year
+    if (month >= 4) {
+      // April 2024 to March 2025 = FY 2024-25
+      return `${year}-${String(year + 1).slice(-2)}`;
+    } else {
+      // January 2025 to March 2025 = FY 2024-25 (started in 2024)
+      return `${year - 1}-${String(year).slice(-2)}`;
+    }
+  } catch (error) {
+    return null;
+  }
+};
