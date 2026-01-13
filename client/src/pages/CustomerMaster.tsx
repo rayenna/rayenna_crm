@@ -136,6 +136,18 @@ const CustomerMaster = () => {
                           })()}
                         </span>
                       )}
+                      {customer.email && (
+                        <span className="ml-4">
+                          Email: {(() => {
+                            try {
+                              const emails = JSON.parse(customer.email)
+                              return Array.isArray(emails) ? emails.join(', ') : customer.email
+                            } catch {
+                              return customer.email
+                            }
+                          })()}
+                        </span>
+                      )}
                     </div>
                     {customer.leadSource && (
                       <div className="mt-1 text-xs text-gray-400">
@@ -206,7 +218,6 @@ const CustomerForm = ({
       country: customer?.country || '',
       pinCode: customer?.pinCode || '',
       consumerNumber: customer?.consumerNumber || '',
-      email: customer?.email || '',
       idProofNumber: customer?.idProofNumber || '',
       idProofType: customer?.idProofType || '',
       companyName: customer?.companyName || '',
@@ -221,6 +232,15 @@ const CustomerForm = ({
       return Array.isArray(parsed) ? parsed : [customer.contactNumbers]
     } catch {
       return [customer.contactNumbers]
+    }
+  })() : [''])
+
+  const [emails, setEmails] = useState<string[]>(customer?.email ? (() => {
+    try {
+      const parsed = JSON.parse(customer.email)
+      return Array.isArray(parsed) ? parsed : [customer.email]
+    } catch {
+      return [customer.email]
     }
   })() : [''])
   
@@ -278,6 +298,7 @@ const CustomerForm = ({
     const submitData = {
       ...data,
       contactNumbers: contactNumbers.filter(cn => cn.trim() !== ''),
+      email: emails.filter(e => e.trim() !== ''),
     }
     mutation.mutate(submitData)
   }
@@ -294,6 +315,20 @@ const CustomerForm = ({
     const updated = [...contactNumbers]
     updated[index] = value
     setContactNumbers(updated)
+  }
+
+  const addEmail = () => {
+    setEmails([...emails, ''])
+  }
+
+  const removeEmail = (index: number) => {
+    setEmails(emails.filter((_, i) => i !== index))
+  }
+
+  const updateEmail = (index: number, value: string) => {
+    const updated = [...emails]
+    updated[index] = value
+    setEmails(updated)
   }
 
   return (
@@ -482,15 +517,35 @@ const CustomerForm = ({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                E-mail ID
+                E-mail IDs
               </label>
-              <input
-                type="email"
-                {...register('email')}
-                defaultValue={customer?.email || ''}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                placeholder="example@email.com"
-              />
+              {emails.map((email, index) => (
+                <div key={index} className="flex items-center space-x-2 mb-2">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => updateEmail(index, e.target.value)}
+                    placeholder="example@email.com"
+                    className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+                  />
+                  {emails.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeEmail(index)}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addEmail}
+                className="text-primary-600 hover:text-primary-800 text-sm font-medium"
+              >
+                + Add E-mail ID
+              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

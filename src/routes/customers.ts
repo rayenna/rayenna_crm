@@ -192,6 +192,23 @@ router.post(
         }
       }
 
+      // Handle emails - ensure it's a JSON string (similar to contactNumbers)
+      let emailsStr: string | null = null;
+      if (email !== undefined && email !== null) {
+        if (Array.isArray(email)) {
+          emailsStr = JSON.stringify(email);
+        } else if (typeof email === 'string') {
+          try {
+            // Validate it's valid JSON
+            JSON.parse(email);
+            emailsStr = email;
+          } catch {
+            // If not valid JSON, wrap it as an array
+            emailsStr = JSON.stringify([email]);
+          }
+        }
+      }
+
       const customer = await prisma.customer.create({
         data: {
           customerId,
@@ -204,7 +221,7 @@ router.post(
           pinCode: pinCode || null,
           contactNumbers: contactNumbersStr,
           consumerNumber: consumerNumber || null,
-          email: email || null,
+          email: emailsStr,
           idProofNumber: idProofNumber || null,
           idProofType: idProofType || null,
           companyName: companyName || null,
@@ -317,6 +334,23 @@ router.put(
           }
         } else if (contactNumbers === null || contactNumbers === '') {
           updateData.contactNumbers = null;
+        }
+      }
+
+      // Handle emails (similar to contactNumbers)
+      if (email !== undefined) {
+        if (Array.isArray(email)) {
+          updateData.email = JSON.stringify(email);
+        } else if (typeof email === 'string') {
+          try {
+            JSON.parse(email);
+            updateData.email = email;
+          } catch {
+            // If not valid JSON, wrap it as an array
+            updateData.email = JSON.stringify([email]);
+          }
+        } else if (email === null || email === '') {
+          updateData.email = null;
         }
       }
 

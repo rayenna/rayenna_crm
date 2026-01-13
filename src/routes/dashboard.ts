@@ -528,11 +528,39 @@ router.get('/management', authenticate, async (req: AuthRequest, res) => {
       percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
     }));
 
+    // Calculate project value and profit by financial year
+    const projectValueByFY = await prisma.project.groupBy({
+      by: ['year'],
+      where: { projectCost: { not: null } },
+      _sum: { projectCost: true },
+    });
+
+    const profitByFY = await prisma.project.groupBy({
+      by: ['year'],
+      where: { grossProfit: { not: null } },
+      _sum: { grossProfit: true },
+    });
+
+    // Combine the data by financial year
+    const allFYs = new Set([
+      ...projectValueByFY.map((item) => item.year),
+      ...profitByFY.map((item) => item.year),
+    ]);
+
+    const projectValueProfitByFY = Array.from(allFYs)
+      .sort()
+      .map((fy) => ({
+        fy,
+        totalProjectValue: projectValueByFY.find((item) => item.year === fy)?._sum.projectCost || 0,
+        totalProfit: profitByFY.find((item) => item.year === fy)?._sum.grossProfit || 0,
+      }));
+
     res.json({
       sales,
       operations,
       finance,
       projectValueByType: valueByTypeWithPercentage,
+      projectValueProfitByFY,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
