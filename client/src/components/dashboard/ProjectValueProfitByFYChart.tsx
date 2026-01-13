@@ -14,15 +14,39 @@ interface ProjectValueProfitByFYChartProps {
 const ProjectValueProfitByFYChart = ({ data }: ProjectValueProfitByFYChartProps) => {
   const [selectedFY, setSelectedFY] = useState<string>('all')
 
-  if (!data || data.length === 0) return null
+  // Debug logging (can be removed in production)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('ProjectValueProfitByFYChart - Data received:', data)
+  }
+  
+  // Normalize data - ensure it's an array
+  const chartData = Array.isArray(data) ? data : []
+
+  // Show placeholder if no data
+  if (!chartData || chartData.length === 0) {
+    return (
+      <div className="bg-white shadow rounded-lg p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          Total Project Value and Total Profit by Financial Year
+        </h2>
+        <div className="flex items-center justify-center h-96 text-gray-500">
+          <div className="text-center">
+            <p className="mb-2">No data available.</p>
+            <p className="text-sm">Projects with financial year information will appear here.</p>
+            <p className="text-xs mt-2 text-gray-400">Data structure: {JSON.stringify(chartData)}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // Get unique financial years for the filter dropdown
-  const availableFYs = Array.from(new Set(data.map((item) => item.fy))).sort()
+  const availableFYs = Array.from(new Set(chartData.map((item) => item.fy))).filter(fy => fy).sort()
 
   // Filter data based on selected financial year
   const filteredData = selectedFY === 'all' 
-    ? data 
-    : data.filter((item) => item.fy === selectedFY)
+    ? chartData 
+    : chartData.filter((item) => item.fy === selectedFY)
 
   // Format currency for tooltip
   const formatCurrency = (value: number) => {
@@ -71,12 +95,12 @@ const ProjectValueProfitByFYChart = ({ data }: ProjectValueProfitByFYChartProps)
               label={{ value: selectedFY === 'all' ? 'Financial Year (FY)' : `Financial Year: ${selectedFY}`, position: 'insideBottom', offset: -5 }}
             />
             <YAxis 
-              label={{ value: 'Value (₹)', angle: -90, position: 'insideLeft' }}
+              label={{ value: 'Value in Indian Rupees (₹)', angle: -90, position: 'insideLeft' }}
               tickFormatter={(value) => {
                 if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`
                 if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`
                 if (value >= 1000) return `₹${(value / 1000).toFixed(1)}K`
-                return `₹${value}`
+                return `₹${value.toLocaleString('en-IN')}`
               }}
             />
             <Tooltip

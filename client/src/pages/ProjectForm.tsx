@@ -224,7 +224,6 @@ const ProjectForm = () => {
       { field: 'registrationDate', label: 'Registration Date' },
       { field: 'installationCompletionDate', label: 'Installation Completion Date' },
       { field: 'subsidyRequestDate', label: 'Subsidy Request Date' },
-      { field: 'subsidyCreditedDate', label: 'Subsidy Credited Date' },
     ];
     
     // Validate all dates before proceeding
@@ -607,6 +606,69 @@ const ProjectForm = () => {
                   title="Automatically calculated from Confirmation Date"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Project Stage</label>
+                <select
+                  {...register('projectStatus')}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                >
+                  <option value="LEAD">Lead</option>
+                  <option value="SITE_SURVEY">Site Survey</option>
+                  <option value="PROPOSAL">Proposal</option>
+                  <option value="CONFIRMED">Confirmed Order</option>
+                  <option value="UNDER_INSTALLATION">Installation</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="COMPLETED_SUBSIDY_CREDITED">Completed - Subsidy Credited</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Roof Type</label>
+                <select
+                  {...register('roofType')}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                >
+                  <option value="">Select Roof Type</option>
+                  <option value="Concrete-Flat">Concrete-Flat</option>
+                  <option value="Concrete-Sloped">Concrete-Sloped</option>
+                  <option value="Tile">Tile</option>
+                  <option value="Thatched">Thatched</option>
+                  <option value="Asbestos">Asbestos</option>
+                  <option value="Metal">Metal</option>
+                  <option value="Others">Others</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">System Type</label>
+                <div className="flex gap-4 mt-1">
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      {...register('systemType')}
+                      value="OFF_GRID"
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-700">Off-Grid</span>
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      {...register('systemType')}
+                      value="ON_GRID"
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-700">On-Grid</span>
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      {...register('systemType')}
+                      value="HYBRID"
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-700">Hybrid</span>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -709,25 +771,11 @@ const ProjectForm = () => {
           </div>
         )}
 
-        {/* Project Execution */}
+        {/* Project Lifecycle */}
         {canEditExecution && (
           <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-semibold mb-4">Project Execution</h2>
+            <h2 className="text-lg font-semibold mb-4">Project Lifecycle</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Project Status</label>
-                <select
-                  {...register('projectStatus')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                >
-                  <option value="LEAD">Lead</option>
-                  <option value="CONFIRMED">Confirmed</option>
-                  <option value="UNDER_INSTALLATION">Under Installation</option>
-                  <option value="SUBMITTED_FOR_SUBSIDY">Submitted for Subsidy</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="COMPLETED_SUBSIDY_CREDITED">Completed - Subsidy Credited</option>
-                </select>
-              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   MNRE Portal Registration Date
@@ -780,16 +828,6 @@ const ProjectForm = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Subsidy Credited Date
-                </label>
-                <input
-                  type="date"
-                  {...register('subsidyCreditedDate')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
                   Total Project Cost (₹)
                 </label>
                 <input
@@ -798,6 +836,24 @@ const ProjectForm = () => {
                   {...register('totalProjectCost')}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                   placeholder="Overall cost incurred in the project"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Panel Brand</label>
+                <input
+                  type="text"
+                  {...register('panelBrand')}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="Enter panel brand name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Inverter Brand</label>
+                <input
+                  type="text"
+                  {...register('inverterBrand')}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="Enter inverter brand name"
                 />
               </div>
             </div>

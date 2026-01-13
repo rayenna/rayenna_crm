@@ -226,15 +226,26 @@ const ProjectDetail = () => {
           </dl>
         </div>
 
-        {/* Project Execution */}
+        {/* Project Lifecycle */}
         <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Project Execution</h2>
+          <h2 className="text-lg font-semibold mb-4">Project Lifecycle</h2>
           <dl className="space-y-3">
             <div>
-              <dt className="text-sm text-gray-500">Status</dt>
+              <dt className="text-sm text-gray-500">Project Stage</dt>
               <dd className="text-sm font-medium">
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
-                  {project.projectStatus.replace(/_/g, ' ')}
+                  {(() => {
+                    const stageMap: Record<string, string> = {
+                      'LEAD': 'Lead',
+                      'SITE_SURVEY': 'Site Survey',
+                      'PROPOSAL': 'Proposal',
+                      'CONFIRMED': 'Confirmed Order',
+                      'UNDER_INSTALLATION': 'Installation',
+                      'COMPLETED': 'Completed',
+                      'COMPLETED_SUBSIDY_CREDITED': 'Completed - Subsidy Credited',
+                    };
+                    return stageMap[project.projectStatus] || project.projectStatus.replace(/_/g, ' ');
+                  })()}
                 </span>
               </dd>
             </div>

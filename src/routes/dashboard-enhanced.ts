@@ -515,12 +515,15 @@ router.get('/management', authenticate, async (req: AuthRequest, res) => {
       projectsByStage,
       // AI predictions
       atRiskProjects,
+      // Project value and profit by financial year
+      projectValueProfitByFY,
+      // Project value by type
+      projectValueByType,
     ] = await Promise.all([
       // Sales metrics
       (async () => {
-        const [totalLeads, convertedLeads, totalCapacity, totalRevenue] = await Promise.all([
-          prisma.lead.count(),
-          prisma.lead.count({ where: { status: 'CONVERTED' } }),
+        const [totalLeads, totalCapacity, totalRevenue] = await Promise.all([
+          prisma.project.count({ where: { projectStatus: ProjectStatus.LEAD } }),
           prisma.project.aggregate({
             _sum: { systemCapacity: true },
             where: { systemCapacity: { not: null } },
@@ -532,57 +535,54 @@ router.get('/management', authenticate, async (req: AuthRequest, res) => {
         ]);
         return {
           totalLeads,
-          convertedLeads,
-          conversionRate: totalLeads > 0 ? ((convertedLeads / totalLeads) * 100).toFixed(1) : '0',
           totalCapacity: totalCapacity._sum.systemCapacity || 0,
           totalRevenue: totalRevenue._sum.projectCost || 0,
         };
       })(),
       // Operations metrics
       (async () => {
-        const [pendingInstallation, completedInstallation, liveProjects, amcProjects] = await Promise.all([
-          prisma.installation.count({ where: { status: { in: ['PENDING', 'IN_PROGRESS'] } } }),
-          prisma.installation.count({ where: { status: 'COMPLETED' } }),
-          prisma.project.count({ where: { projectStage: 'LIVE' } }),
-          prisma.project.count({ where: { projectStage: 'AMC' } }),
+        const [pendingInstallation, subsidyCredited, pendingSubsidy] = await Promise.all([
+          prisma.project.count({
+            where: {
+              projectStatus: { in: [ProjectStatus.CONFIRMED, ProjectStatus.UNDER_INSTALLATION] },
+            },
+          }),
+          prisma.project.count({
+            where: { projectStatus: ProjectStatus.COMPLETED_SUBSIDY_CREDITED },
+          }),
+          prisma.project.count({
+            where: { projectStatus: ProjectStatus.SUBMITTED_FOR_SUBSIDY },
+          }),
         ]);
         return {
           pendingInstallation,
-          completedInstallation,
-          liveProjects,
-          amcProjects,
+          subsidyCredited,
+          pendingSubsidy,
         };
       })(),
       // Finance metrics
       (async () => {
-        const [totalValue, totalReceived, totalOutstanding, totalProfit, unpaidInvoices] = await Promise.all([
+        const [totalValue, totalReceived, totalOutstanding, totalProfit] = await Promise.all([
           prisma.project.aggregate({
             _sum: { projectCost: true },
             where: { projectCost: { not: null } },
           }),
-          prisma.payment.aggregate({
-            _sum: { amount: true },
+          prisma.project.aggregate({
+            _sum: { totalAmountReceived: true },
           }),
-          prisma.invoice.findMany({
-            include: { payments: true },
-          }).then((invoices) => {
-            return invoices.reduce((sum, inv) => {
-              const paid = inv.payments.reduce((pSum, p) => pSum + p.amount, 0);
-              return sum + (inv.total - paid);
-            }, 0);
+          prisma.project.aggregate({
+            _sum: { balanceAmount: true },
           }),
           prisma.project.aggregate({
             _sum: { grossProfit: true },
             where: { grossProfit: { not: null } },
           }),
-          prisma.invoice.count({ where: { status: { in: ['UNPAID', 'PART_PAID'] } } }),
         ]);
         return {
           totalValue: totalValue._sum.projectCost || 0,
-          totalReceived: totalReceived._sum.amount || 0,
-          totalOutstanding,
+          totalReceived: totalReceived._sum.totalAmountReceived || 0,
+          totalOutstanding: totalOutstanding._sum.balanceAmount || 0,
           totalProfit: totalProfit._sum.grossProfit || 0,
-          unpaidInvoices,
         };
       })(),
       // Service metrics
@@ -617,6 +617,87 @@ router.get('/management', authenticate, async (req: AuthRequest, res) => {
         },
         take: 10,
       }),
+      // Project value and profit by financial year
+      (async () => {
+        const [projectsByYear, profitByYear] = await Promise.all([
+          prisma.project.groupBy({
+            by: ['year'],
+            where: {
+              year: { not: null as any },
+              projectCost: { not: null },
+            },
+            _sum: {
+              projectCost: true,
+            },
+          }),
+          prisma.project.groupBy({
+            by: ['year'],
+            where: {
+              year: { not: null as any },
+              grossProfit: { not: null },
+            },
+            _sum: {
+              grossProfit: true,
+            },
+          }),
+        ]);
+        
+        // Get all unique financial years
+        const allFYs = new Set<string>();
+        projectsByYear.forEach((p: any) => p.year && allFYs.add(p.year));
+        profitByYear.forEach((p: any) => p.year && allFYs.add(p.year));
+        
+        // Combine data by financial year
+        return Array.from(allFYs)
+          .sort()
+          .map((fy) => ({
+            fy,
+            totalProjectValue: projectsByYear.find((p: any) => p.year === fy)?._sum?.projectCost || 0,
+            totalProfit: profitByYear.find((p: any) => p.year === fy)?._sum?.grossProfit || 0,
+          }));
+      })(),
+      // Project value by type (for pie chart)
+      (async () => {
+        const projectValueByType = await prisma.project.groupBy({
+          by: ['type'],
+          where: { projectCost: { not: null } },
+          _sum: { projectCost: true },
+          _count: { id: true },
+        });
+
+        // Format the data for the chart
+        const valueByType = projectValueByType.map((item) => {
+          let label = '';
+          switch (item.type) {
+            case 'RESIDENTIAL_SUBSIDY':
+              label = 'Residential - Subsidy';
+              break;
+            case 'RESIDENTIAL_NON_SUBSIDY':
+              label = 'Residential - Non Subsidy';
+              break;
+            case 'COMMERCIAL_INDUSTRIAL':
+              label = 'Commercial Industrial';
+              break;
+            default:
+              label = item.type;
+          }
+          return {
+            type: item.type,
+            label,
+            value: item._sum.projectCost || 0,
+            count: item._count.id,
+          };
+        });
+
+        // Calculate total for percentage calculation
+        const totalValue = valueByType.reduce((sum, item) => sum + item.value, 0);
+
+        // Add percentage to each item
+        return valueByType.map((item) => ({
+          ...item,
+          percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
+        }));
+      })(),
     ]);
 
     res.json({
@@ -639,7 +720,10 @@ router.get('/management', authenticate, async (req: AuthRequest, res) => {
         salesOwner: p.salesperson?.name || 'Unassigned',
         opsOwner: p.opsPerson?.name || 'Unassigned',
       })),
+      projectValueProfitByFY: projectValueProfitByFY || [],
+      projectValueByType: projectValueByType || [],
     });
+    
   } catch (error: any) {
     console.error('Error fetching management dashboard:', error);
     res.status(500).json({ error: error.message });

@@ -6,7 +6,7 @@ const OperationsDashboard = () => {
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard', 'operations'],
     queryFn: async () => {
-      const res = await axios.get('/api/dashboard-enhanced/operations')
+      const res = await axios.get('/api/dashboard/operations')
       return res.data
     },
   })

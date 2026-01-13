@@ -6,7 +6,7 @@ const SalesDashboard = () => {
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard', 'sales'],
     queryFn: async () => {
-      const res = await axios.get('/api/dashboard-enhanced/sales')
+      const res = await axios.get('/api/dashboard/sales')
       return res.data
     },
   })

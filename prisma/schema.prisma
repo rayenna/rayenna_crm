@@ -29,6 +29,8 @@ enum ProjectType {
 
 enum ProjectStatus {
   LEAD
+  SITE_SURVEY
+  PROPOSAL
   CONFIRMED
   UNDER_INSTALLATION
   SUBMITTED_FOR_SUBSIDY
@@ -210,6 +212,7 @@ model Project {
   systemType                SystemType? // On-grid, Off-grid, Hybrid
   panelBrand                String?
   inverterBrand             String?
+  roofType                  String? // Concrete-Flat, Concrete-Sloped, Tile, Thatched, Asbestos, Metal, Others
   projectStage              ProjectStage? // Survey, Proposal, Approved, Installation, Billing, Live, AMC
   stageEnteredAt            DateTime? // When current stage was entered (for SLA tracking)
   slaDays                   Int? // SLA days for current stage

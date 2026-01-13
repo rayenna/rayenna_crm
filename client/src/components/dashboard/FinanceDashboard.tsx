@@ -6,7 +6,7 @@ const FinanceDashboard = () => {
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard', 'finance'],
     queryFn: async () => {
-      const res = await axios.get('/api/dashboard-enhanced/finance')
+      const res = await axios.get('/api/dashboard/finance')
       return res.data
     },
   })

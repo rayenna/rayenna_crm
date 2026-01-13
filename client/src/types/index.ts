@@ -14,6 +14,8 @@ export enum ProjectType {
 
 export enum ProjectStatus {
   LEAD = 'LEAD',
+  SITE_SURVEY = 'SITE_SURVEY',
+  PROPOSAL = 'PROPOSAL',
   CONFIRMED = 'CONFIRMED',
   UNDER_INSTALLATION = 'UNDER_INSTALLATION',
   SUBMITTED_FOR_SUBSIDY = 'SUBMITTED_FOR_SUBSIDY',
@@ -96,6 +98,7 @@ export interface Project {
   systemType?: SystemType
   panelBrand?: string
   inverterBrand?: string
+  roofType?: string
   siteAddress?: string
   expectedCommissioningDate?: string
   marginEstimate?: number

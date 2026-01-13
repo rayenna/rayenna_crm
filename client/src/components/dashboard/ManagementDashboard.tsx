@@ -7,12 +7,18 @@ const ManagementDashboard = () => {
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard', 'management'],
     queryFn: async () => {
-      const res = await axios.get('/api/dashboard-enhanced/management')
+      const res = await axios.get('/api/dashboard/management')
       return res.data
     },
   })
 
   if (isLoading) return <div>Loading...</div>
+
+  // Debug: Log data to console (can be removed in production)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Management Dashboard Data:', data)
+    console.log('Project Value Profit By FY:', data?.projectValueProfitByFY)
+  }
 
   return (
     <div className="space-y-6">
@@ -83,19 +89,17 @@ const ManagementDashboard = () => {
         </div>
       </div>
 
+      {/* Project Value and Profit by Financial Year - Grouped Column Chart */}
+      <div className="w-full">
+        <ProjectValueProfitByFYChart data={data?.projectValueProfitByFY || []} />
+      </div>
+
       {/* Charts Section - Side by Side */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Project Value by Segment Pie Chart */}
         {data?.projectValueByType && data.projectValueByType.length > 0 && (
           <div className="lg:col-span-1">
             <ProjectValuePieChart data={data.projectValueByType} />
-          </div>
-        )}
-
-        {/* Project Value and Profit by Financial Year Chart */}
-        {data?.projectValueProfitByFY && data.projectValueProfitByFY.length > 0 && (
-          <div className="lg:col-span-1">
-            <ProjectValueProfitByFYChart data={data.projectValueProfitByFY} />
           </div>
         )}
       </div>

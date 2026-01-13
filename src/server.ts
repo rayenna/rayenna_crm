@@ -73,8 +73,25 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+// Handle port already in use error gracefully
+server.on('error', (err: any) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n❌ Port ${PORT} is already in use!\n`);
+    console.error('Please either:');
+    console.error(`  1. Kill the process using port ${PORT}:`);
+    console.error(`     netstat -ano | findstr :${PORT}`);
+    console.error(`     taskkill /PID <PID_NUMBER> /F`);
+    console.error(`  2. Or run: powershell -ExecutionPolicy Bypass -File kill-port-3000.ps1`);
+    console.error(`  3. Or set a different port: set PORT=3001 && npm run dev\n`);
+    process.exit(1);
+  } else {
+    console.error('Server error:', err);
+    process.exit(1);
+  }
 });
 
 // Graceful shutdown
