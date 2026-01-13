@@ -52,6 +52,67 @@ enum ProjectServiceType {
   OTHER_SERVICES
 }
 
+enum CustomerType {
+  RESIDENTIAL
+  APARTMENT
+  COMMERCIAL
+}
+
+enum LeadSource {
+  WEBSITE
+  REFERRAL
+  GOOGLE
+  CHANNEL_PARTNER
+}
+
+enum LeadStatus {
+  NEW
+  QUALIFIED
+  LOST
+  CONVERTED
+}
+
+enum SystemType {
+  ON_GRID
+  OFF_GRID
+  HYBRID
+}
+
+enum ProjectStage {
+  SURVEY
+  PROPOSAL
+  APPROVED
+  INSTALLATION
+  BILLING
+  LIVE
+  AMC
+}
+
+enum ProposalStatus {
+  DRAFT
+  SENT
+  APPROVED
+  REJECTED
+}
+
+enum InstallationStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PART_PAID
+  PAID
+}
+
+enum PaymentMode {
+  UPI
+  BANK
+  CHEQUE
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -61,106 +122,155 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  createdProjects  Project[]    @relation("CreatedBy")
-  salesProjects    Project[]    @relation("SalesPerson")
-  uploadedDocuments Document[]  @relation("UploadedBy")
-  auditLogs        AuditLog[]   @relation("AuditUser")
+  createdProjects   Project[]    @relation("CreatedBy")
+  salesProjects     Project[]    @relation("SalesPerson")
+  opsProjects       Project[]    @relation("OpsPerson")
+  assignedLeads     Lead[]       @relation("AssignedSales")
+  uploadedDocuments Document[]   @relation("UploadedBy")
+  auditLogs         AuditLog[]   @relation("AuditUser")
+  siteSurveys       SiteSurvey[] @relation("CompletedBy")
 
   @@map("users")
 }
 
+model Lead {
+  id              String     @id @default(cuid())
+  customerId      String
+  customer        Customer   @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  source          LeadSource // Website, Referral, Google, Channel Partner
+  systemSizeKw    Float? // System size in kW
+  roofType        String?
+  city            String?
+  assignedSalesId String?
+  assignedSales   User?      @relation("AssignedSales", fields: [assignedSalesId], references: [id], onDelete: SetNull)
+  status          LeadStatus @default(NEW) // New, Qualified, Lost, Converted
+  expectedValue   Float? // Expected project value
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  projects Project[] // Leads can convert to multiple projects
+
+  @@map("leads")
+}
+
 model Customer {
-  id            String   @id @default(cuid())
-  customerId    String   @unique // 6-digit alphanumeric ID
-  customerName  String
-  addressLine1  String?
-  addressLine2  String?
-  city          String?
-  state         String?
-  country       String?
-  pinCode       String?
-  contactNumbers String? // JSON array of phone numbers
+  id             String        @id @default(cuid())
+  customerId     String        @unique // 6-digit alphanumeric ID
+  customerName   String
+  customerType   CustomerType? // Residential, Apartment, Commercial
+  contactPerson  String? // Contact person name
+  phone          String? // Primary phone number
+  email          String?
+  address        String? // Full address (keeping for backward compatibility)
+  addressLine1   String? // Detailed address fields
+  addressLine2   String?
+  city           String?
+  state          String?
+  country        String?
+  pinCode        String? // pincode
+  gstNumber      String? // GST number
+  contactNumbers String? // JSON array of phone numbers (legacy)
   consumerNumber String?
-  email         String?
-  idProofNumber String?
-  idProofType   String?
-  companyName   String?
-  companyGst    String?
-  leadSource    String?
-  leadBroughtBy String?
-  
-  projects      Project[]
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  idProofNumber  String?
+  idProofType    String?
+  companyName    String?
+  companyGst     String? // Legacy field, use gstNumber
+  leadSource     String? // Legacy field
+  leadBroughtBy  String?
+
+  projects Project[]
+  leads    Lead[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("customers")
 }
 
 model Project {
-  id        String   @id @default(cuid())
-  slNo      Int      @unique @default(autoincrement())
-  
-  // Customer Reference
+  id   String @id @default(cuid())
+  slNo Int    @unique @default(autoincrement())
+
+  // Customer & Lead References
   customerId String
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  
+  leadId     String? // Reference to lead if converted from lead
+  lead       Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
   // Project Details
-  type              ProjectType
+  type               ProjectType
   projectServiceType ProjectServiceType @default(EPC_PROJECT) // EPC Project, Panel Cleaning, Maintenance, etc.
-  salespersonId     String?
-  year              String // FY format: "2024-25"
-  count             Int     @default(1)
+  salespersonId      String?
+  assignedOpsId      String? // Assigned operations person
+  year               String // FY format: "2024-25"
+  count              Int                @default(1)
+
+  // System Details (Professional Structure)
+  systemCapacity            Float? // kW
+  systemType                SystemType? // On-grid, Off-grid, Hybrid
+  panelBrand                String?
+  inverterBrand             String?
+  projectStage              ProjectStage? // Survey, Proposal, Approved, Installation, Billing, Live, AMC
+  siteAddress               String?       @db.Text // Site address for installation
+  expectedCommissioningDate DateTime? // Expected commissioning date
 
   // Sales & Commercial
-  systemCapacity        Float?   // kW
-  projectCost           Float?   // ₹
-  confirmationDate      DateTime?
-  loanDetails           String?  // JSON: { hasLoan: boolean, remarks: string }
-  incentiveEligible     Boolean  @default(false)
-  expectedProfit        Float?   // Auto-calculated
-  grossProfit           Float?   // Auto-calculated: Order Value - Total Project Cost
-  profitability        Float?   // Auto-calculated: (Gross Profit / Order Value) × 100
-  finalProfit           Float?
+  projectCost       Float? // ₹ (project_value)
+  projectValue      Float? // Alternative name for projectCost
+  marginEstimate    Float? // Margin estimate
+  confirmationDate  DateTime?
+  loanDetails       String? // JSON: { hasLoan: boolean, remarks: string }
+  incentiveEligible Boolean   @default(false)
+  expectedProfit    Float? // Auto-calculated
+  grossProfit       Float? // Auto-calculated: Order Value - Total Project Cost
+  profitability     Float? // Auto-calculated: (Gross Profit / Order Value) × 100
+  finalProfit       Float?
 
   // Project Execution & Compliance
-  mnrePortalRegistrationDate    DateTime?
-  feasibilityDate               DateTime? // KSEB
-  registrationDate              DateTime? // KSEB
-  installationCompletionDate    DateTime?
-  mnreInstallationDetails       String?  // JSON or text
-  subsidyRequestDate            DateTime?
-  subsidyCreditedDate           DateTime?
-  projectStatus                 ProjectStatus @default(LEAD)
-  totalProjectCost              Float?   // Overall cost incurred in the project
+  mnrePortalRegistrationDate DateTime?
+  feasibilityDate            DateTime? // KSEB
+  registrationDate           DateTime? // KSEB
+  installationCompletionDate DateTime?
+  mnreInstallationDetails    String? // JSON or text
+  subsidyRequestDate         DateTime?
+  subsidyCreditedDate        DateTime?
+  projectStatus              ProjectStatus @default(LEAD)
+  totalProjectCost           Float? // Overall cost incurred in the project
 
-  // Payment Tracking
-  advanceReceived       Float?   @default(0)
-  advanceReceivedDate   DateTime?
-  payment1              Float?   @default(0)
-  payment1Date          DateTime?
-  payment2              Float?   @default(0)
-  payment2Date          DateTime?
-  payment3              Float?   @default(0)
-  payment3Date          DateTime?
-  lastPayment           Float?   @default(0)
-  lastPaymentDate       DateTime?
-  totalAmountReceived   Float    @default(0) // Auto-calculated
-  balanceAmount         Float    @default(0) // Auto-calculated
-  paymentStatus         PaymentStatus @default(PENDING) // Auto-calculated
+  // Payment Tracking (Legacy - kept for backward compatibility)
+  advanceReceived     Float?        @default(0)
+  advanceReceivedDate DateTime?
+  payment1            Float?        @default(0)
+  payment1Date        DateTime?
+  payment2            Float?        @default(0)
+  payment2Date        DateTime?
+  payment3            Float?        @default(0)
+  payment3Date        DateTime?
+  lastPayment         Float?        @default(0)
+  lastPaymentDate     DateTime?
+  totalAmountReceived Float         @default(0) // Auto-calculated
+  balanceAmount       Float         @default(0) // Auto-calculated
+  paymentStatus       PaymentStatus @default(PENDING) // Auto-calculated
 
   // Remarks & Documentation
-  remarks       String?  @db.Text
+  remarks       String? @db.Text
   internalNotes String? @db.Text // Sales only
 
   // Relations
   createdById String
   createdBy   User   @relation("CreatedBy", fields: [createdById], references: [id])
-  
-  salesperson User?  @relation("SalesPerson", fields: [salespersonId], references: [id], onDelete: SetNull)
 
-  documents Document[]
-  auditLogs AuditLog[]
+  salesperson User? @relation("SalesPerson", fields: [salespersonId], references: [id], onDelete: SetNull)
+  opsPerson   User? @relation("OpsPerson", fields: [assignedOpsId], references: [id], onDelete: SetNull)
+
+  documents      Document[]
+  auditLogs      AuditLog[]
+  siteSurveys    SiteSurvey[]
+  proposals      Proposal[]
+  installations  Installation[]
+  invoices       Invoice[]
+  amcContracts   AMCContract[]
+  serviceTickets ServiceTicket[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -169,20 +279,20 @@ model Project {
 }
 
 model Document {
-  id          String   @id @default(cuid())
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   fileName    String
   filePath    String
-  fileType    String   // MIME type
-  fileSize    Int      // bytes
-  category    String   // proposal, agreement, kseb, mnre, invoice, payment_proof
+  fileType    String // MIME type
+  fileSize    Int // bytes
+  category    String // proposal, agreement, kseb, mnre, invoice, payment_proof
   description String?
-  
+
   uploadedById String
   uploadedBy   User   @relation("UploadedBy", fields: [uploadedById], references: [id])
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -190,21 +300,129 @@ model Document {
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  userId    String
-  user      User    @relation("AuditUser", fields: [userId], references: [id])
-  
-  action    String  // created, updated, deleted, status_changed, payment_updated, etc.
-  field     String? // which field was changed
-  oldValue  String? @db.Text
-  newValue  String? @db.Text
-  remarks   String? @db.Text
-  
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation("AuditUser", fields: [userId], references: [id])
+
+  action   String // created, updated, deleted, status_changed, payment_updated, etc.
+  field    String? // which field was changed
+  oldValue String? @db.Text
+  newValue String? @db.Text
+  remarks  String? @db.Text
+
   createdAt DateTime @default(now())
 
   @@map("audit_logs")
 }
 
+model SiteSurvey {
+  id             String    @id @default(cuid())
+  projectId      String
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  roofArea       Float? // Roof area in sq ft or sq m
+  shading        String? // Shading details
+  panelLayoutUrl String? // URL to panel layout document/image
+  discom         String? // Distribution company name
+  meterType      String? // Meter type
+  remarks        String?   @db.Text
+  completedById  String?
+  completedBy    User?     @relation("CompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("site_surveys")
+}
+
+model Proposal {
+  id              String         @id @default(cuid())
+  projectId       String
+  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  proposalPdfUrl  String? // URL to proposal PDF
+  energyOutputKwh Float? // Expected energy output in kWh
+  annualSavings   Float? // Annual savings estimate
+  paybackYears    Float? // Payback period in years
+  price           Float? // Proposal price
+  aiGenerated     Boolean        @default(false) // Whether AI generated
+  sentDate        DateTime?
+  status          ProposalStatus @default(DRAFT) // Draft, Sent, Approved, Rejected
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@map("proposals")
+}
+
+model Installation {
+  id             String             @id @default(cuid())
+  projectId      String
+  project        Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  installerName  String? // Installer/contractor name
+  startDate      DateTime?
+  completionDate DateTime?
+  status         InstallationStatus @default(PENDING) // Pending, In Progress, Completed
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@map("installations")
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  projectId     String
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  invoiceNumber String        @unique // Invoice number
+  amount        Float // Base amount
+  gst           Float?        @default(0) // GST amount
+  total         Float // Total amount (amount + gst)
+  dueDate       DateTime?
+  status        InvoiceStatus @default(UNPAID) // Unpaid, Part Paid, Paid
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  payments Payment[]
+
+  @@map("invoices")
+}
+
+model Payment {
+  id          String      @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount      Float // Payment amount
+  paymentDate DateTime    @default(now())
+  mode        PaymentMode // UPI, Bank, Cheque
+  referenceNo String? // Payment reference number
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("payments")
+}
+
+model AMCContract {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  startDate DateTime
+  endDate   DateTime
+  annualFee Float? // Annual maintenance fee
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("amc_contracts")
+}
+
+model ServiceTicket {
+  id         String    @id @default(cuid())
+  projectId  String
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issue      String    @db.Text // Issue description
+  status     String    @default("OPEN") // Open, In Progress, Resolved, Closed
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@map("service_tickets")
+}
