@@ -7,7 +7,7 @@ const ManagementDashboard = () => {
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard', 'management'],
     queryFn: async () => {
-      const res = await axios.get('/api/dashboard/management')
+      const res = await axios.get('/api/dashboard-enhanced/management')
       return res.data
     },
   })

@@ -37,6 +37,22 @@ export enum ProjectServiceType {
   OTHER_SERVICES = 'OTHER_SERVICES',
 }
 
+export enum ProjectStage {
+  SURVEY = 'SURVEY',
+  PROPOSAL = 'PROPOSAL',
+  APPROVED = 'APPROVED',
+  INSTALLATION = 'INSTALLATION',
+  BILLING = 'BILLING',
+  LIVE = 'LIVE',
+  AMC = 'AMC',
+}
+
+export enum SystemType {
+  ON_GRID = 'ON_GRID',
+  OFF_GRID = 'OFF_GRID',
+  HYBRID = 'HYBRID',
+}
+
 export interface User {
   id: string
   email: string
@@ -72,6 +88,20 @@ export interface Project {
   subsidyRequestDate?: string
   subsidyCreditedDate?: string
   projectStatus: ProjectStatus
+  // Lifecycle fields
+  projectStage?: ProjectStage
+  stageEnteredAt?: string
+  slaDays?: number
+  statusIndicator?: 'GREEN' | 'AMBER' | 'RED'
+  systemType?: SystemType
+  panelBrand?: string
+  inverterBrand?: string
+  siteAddress?: string
+  expectedCommissioningDate?: string
+  marginEstimate?: number
+  assignedOpsId?: string
+  opsPerson?: User
+  leadId?: string
   totalProjectCost?: number
   advanceReceived?: number
   advanceReceivedDate?: string

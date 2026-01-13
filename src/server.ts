@@ -10,9 +10,17 @@ import authRoutes from './routes/auth';
 import projectRoutes from './routes/projects';
 import documentRoutes from './routes/documents';
 import dashboardRoutes from './routes/dashboard';
+import dashboardEnhancedRoutes from './routes/dashboard-enhanced';
 import tallyRoutes from './routes/tally';
 import userRoutes from './routes/users';
 import customerRoutes from './routes/customers';
+import leadRoutes from './routes/leads';
+import siteSurveyRoutes from './routes/siteSurveys';
+import proposalRoutes from './routes/proposals';
+import installationRoutes from './routes/installations';
+import invoiceRoutes from './routes/invoices';
+import amcRoutes from './routes/amc';
+import serviceTicketRoutes from './routes/serviceTickets';
 
 dotenv.config();
 
@@ -37,9 +45,17 @@ app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/dashboard-enhanced', dashboardEnhancedRoutes);
 app.use('/api/tally', tallyRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/customers', customerRoutes);
+app.use('/api/leads', leadRoutes);
+app.use('/api/site-surveys', siteSurveyRoutes);
+app.use('/api/proposals', proposalRoutes);
+app.use('/api/installations', installationRoutes);
+app.use('/api/invoices', invoiceRoutes);
+app.use('/api/amc', amcRoutes);
+app.use('/api/service-tickets', serviceTicketRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

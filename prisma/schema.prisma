@@ -211,6 +211,9 @@ model Project {
   panelBrand                String?
   inverterBrand             String?
   projectStage              ProjectStage? // Survey, Proposal, Approved, Installation, Billing, Live, AMC
+  stageEnteredAt            DateTime? // When current stage was entered (for SLA tracking)
+  slaDays                   Int? // SLA days for current stage
+  statusIndicator           String? // GREEN, AMBER, RED (based on SLA)
   siteAddress               String?       @db.Text // Site address for installation
   expectedCommissioningDate DateTime? // Expected commissioning date
 

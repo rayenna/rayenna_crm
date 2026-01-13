@@ -4,6 +4,8 @@ import { PrismaClient, ProjectStatus, ProjectType, ProjectServiceType, UserRole 
 import { authenticate, authorize, AuthRequest } from '../middleware/auth';
 import { createAuditLog } from '../utils/audit';
 import { calculatePayments, calculateExpectedProfit, calculateGrossProfit, calculateProfitability, calculateFY } from '../utils/calculations';
+import { predictProjectDelay } from '../utils/ai';
+import { suggestOptimalPricing } from '../utils/ai';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -111,6 +113,9 @@ router.get('/:id', authenticate, async (req: AuthRequest, res) => {
           select: { id: true, name: true, email: true },
         },
         salesperson: {
+          select: { id: true, name: true, email: true },
+        },
+        opsPerson: {
           select: { id: true, name: true, email: true },
         },
         documents: {
@@ -986,6 +991,63 @@ router.delete(
       res.json({ message: 'Project deleted successfully' });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// AI: Get delay prediction for a project
+router.get(
+  '/:id/delay-prediction',
+  authenticate,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const project = await prisma.project.findUnique({
+        where: { id: req.params.id },
+      });
+
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+
+      const prediction = await predictProjectDelay(req.params.id);
+      res.json(prediction);
+    } catch (error: any) {
+      console.error('Error predicting delay:', error);
+      res.status(500).json({ error: error.message || 'Failed to predict delay' });
+    }
+  }
+);
+
+// AI: Suggest optimal pricing
+router.post(
+  '/suggest-pricing',
+  authenticate,
+  [
+    body('systemCapacity').isFloat({ min: 0 }),
+    body('systemType').optional().isString(),
+    body('city').optional().isString(),
+    body('customerType').optional().isString(),
+  ],
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const { systemCapacity, systemType, city, customerType } = req.body;
+
+      const suggestion = await suggestOptimalPricing(
+        systemCapacity,
+        systemType || 'ON_GRID',
+        city,
+        customerType
+      );
+
+      res.json(suggestion);
+    } catch (error: any) {
+      console.error('Error suggesting pricing:', error);
+      res.status(500).json({ error: error.message || 'Failed to suggest pricing' });
     }
   }
 );
