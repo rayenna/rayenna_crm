@@ -13,6 +13,8 @@ const Projects = () => {
     type: '',
     projectServiceType: '',
     search: '',
+    sortBy: '',
+    sortOrder: 'desc',
   })
 
   const { data, isLoading } = useQuery({
@@ -23,6 +25,10 @@ const Projects = () => {
       if (filters.type) params.append('type', filters.type)
       if (filters.projectServiceType) params.append('projectServiceType', filters.projectServiceType)
       if (filters.search) params.append('search', filters.search)
+      if (filters.sortBy) {
+        params.append('sortBy', filters.sortBy)
+        params.append('sortOrder', filters.sortOrder)
+      }
       const res = await axios.get(`/api/projects?${params.toString()}`)
       return res.data
     },
@@ -45,7 +51,7 @@ const Projects = () => {
       </div>
 
       <div className="bg-white shadow rounded-lg mb-4 p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
           <input
             type="text"
             placeholder="Search..."
@@ -100,6 +106,35 @@ const Projects = () => {
               </option>
             ))}
           </select>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+            <select
+              className="border border-gray-300 rounded-md px-3 py-2 w-full"
+              value={filters.sortBy}
+              onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
+            >
+              <option value="">Default (Confirmation Date)</option>
+              <option value="systemCapacity">System Capacity</option>
+              <option value="projectCost">Order Value</option>
+              <option value="confirmationDate">Date of Confirmation</option>
+              <option value="profitability">Profitability</option>
+              <option value="customerName">Customer Name</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
+            <select
+              className="border border-gray-300 rounded-md px-3 py-2 w-full"
+              value={filters.sortOrder}
+              onChange={(e) => setFilters({ ...filters, sortOrder: e.target.value })}
+              disabled={!filters.sortBy}
+            >
+              <option value="desc">Descending</option>
+              <option value="asc">Ascending</option>
+            </select>
+          </div>
         </div>
       </div>
 

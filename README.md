@@ -97,7 +97,10 @@ cd client; npm install; cd ..
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` and update `DATABASE_URL` with your PostgreSQL credentials.
+   Edit `.env` and update:
+   - `DATABASE_URL` with your PostgreSQL credentials
+   - `OPENAI_API_KEY` for AI proposal generation (optional, see `SETUP_OPENAI_API.md`)
+   - `JWT_SECRET` for authentication
 
 3. **Run Migrations**
    ```bash

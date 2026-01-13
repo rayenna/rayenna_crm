@@ -6,6 +6,8 @@ import { createAuditLog } from '../utils/audit';
 import { calculatePayments, calculateExpectedProfit, calculateGrossProfit, calculateProfitability, calculateFY } from '../utils/calculations';
 import { predictProjectDelay } from '../utils/ai';
 import { suggestOptimalPricing } from '../utils/ai';
+import { generateProposalContent, calculateFinancials } from '../utils/proposalGenerator';
+import { generateProposalPDF } from '../utils/pdfGenerator';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -23,6 +25,8 @@ router.get(
     query('search').optional().isString(),
     query('page').optional().isInt({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 100 }),
+    query('sortBy').optional().isIn(['systemCapacity', 'projectCost', 'confirmationDate', 'profitability', 'customerName']),
+    query('sortOrder').optional().isIn(['asc', 'desc']),
   ],
   async (req: AuthRequest, res: Response) => {
     try {
@@ -40,6 +44,8 @@ router.get(
         search,
         page = '1',
         limit = '50',
+        sortBy,
+        sortOrder = 'desc',
       } = req.query;
 
       const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
@@ -65,6 +71,37 @@ router.get(
         where.salespersonId = req.user.id;
       }
 
+      // Build orderBy based on sortBy parameter
+      let orderBy: any[] = [];
+      if (sortBy) {
+        const order = sortOrder === 'asc' ? 'asc' : 'desc';
+        switch (sortBy) {
+          case 'systemCapacity':
+            orderBy = [{ systemCapacity: order }, { createdAt: 'desc' }];
+            break;
+          case 'projectCost':
+            orderBy = [{ projectCost: order }, { createdAt: 'desc' }];
+            break;
+          case 'confirmationDate':
+            orderBy = [{ confirmationDate: order }, { createdAt: 'desc' }];
+            break;
+          case 'profitability':
+            orderBy = [{ profitability: order }, { createdAt: 'desc' }];
+            break;
+          case 'customerName':
+            orderBy = [{ customer: { customerName: order } }, { createdAt: 'desc' }];
+            break;
+          default:
+            orderBy = [{ confirmationDate: 'desc' }, { createdAt: 'desc' }];
+        }
+      } else {
+        // Default sorting
+        orderBy = [
+          { confirmationDate: 'desc' },
+          { createdAt: 'desc' }, // Fallback for projects without confirmation date
+        ];
+      }
+
       const [projects, total] = await Promise.all([
         prisma.project.findMany({
           where,
@@ -77,10 +114,7 @@ router.get(
               select: { id: true, name: true, email: true },
             },
           },
-          orderBy: [
-            { confirmationDate: 'desc' },
-            { createdAt: 'desc' }, // Fallback for projects without confirmation date
-          ],
+          orderBy,
           skip,
           take,
         }),
@@ -1051,5 +1085,372 @@ router.post(
     }
   }
 );
+
+// Generate AI Proposal
+router.post('/:id/generate-proposal', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const projectId = req.params.id;
+
+    // Get project with related data
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        customer: true,
+        salesperson: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Check access permissions
+    if (
+      req.user?.role !== UserRole.ADMIN &&
+      req.user?.role !== UserRole.MANAGEMENT &&
+      req.user?.role !== UserRole.SALES &&
+      project.salespersonId !== req.user?.id
+    ) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    if (!project.customer) {
+      return res.status(400).json({ error: 'Customer information not found' });
+    }
+
+    // Prepare proposal data
+    const proposalData = {
+      customer: {
+        name: project.customer.customerName,
+        address: project.customer.address || undefined,
+        addressLine1: project.customer.addressLine1 || undefined,
+        addressLine2: project.customer.addressLine2 || undefined,
+        city: project.customer.city || undefined,
+        state: project.customer.state || undefined,
+        pinCode: project.customer.pinCode || undefined,
+        phone: project.customer.phone || undefined,
+        email: project.customer.email || undefined,
+        customerType: project.customer.customerType || undefined,
+      },
+      project: {
+        systemCapacity: project.systemCapacity || undefined,
+        projectCost: project.projectCost || undefined,
+        systemType: project.systemType || undefined,
+        roofType: project.roofType || undefined,
+        panelBrand: project.panelBrand || undefined,
+        inverterBrand: project.inverterBrand || undefined,
+        incentiveEligible: project.incentiveEligible,
+        loanDetails: project.loanDetails || undefined,
+      },
+      salesperson: {
+        name: project.salesperson?.name || 'Rayenna Energy Team',
+      },
+    };
+
+    // Calculate financials
+    const financials = calculateFinancials(proposalData);
+
+    // Generate AI content
+    const content = await generateProposalContent(proposalData, financials);
+
+    // Return HTML preview (for now, PDF generation on demand)
+    const htmlPreview = generateHTMLPreview(proposalData, financials, content);
+
+    res.json({
+      success: true,
+      content,
+      financials,
+      htmlPreview,
+      proposalData,
+    });
+  } catch (error: any) {
+    console.error('Error generating proposal:', error);
+    res.status(500).json({ error: error.message || 'Failed to generate proposal' });
+  }
+});
+
+// Download proposal as PDF
+router.get('/:id/proposal-pdf', authenticate, async (req: AuthRequest, res) => {
+  try {
+    const projectId = req.params.id;
+
+    // Get project with related data
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        customer: true,
+        salesperson: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    if (!project || !project.customer) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Check access permissions
+    if (
+      req.user?.role !== UserRole.ADMIN &&
+      req.user?.role !== UserRole.MANAGEMENT &&
+      req.user?.role !== UserRole.SALES &&
+      project.salespersonId !== req.user?.id
+    ) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Prepare proposal data
+    const proposalData = {
+      customer: {
+        name: project.customer.customerName,
+        address: project.customer.address || undefined,
+        addressLine1: project.customer.addressLine1 || undefined,
+        addressLine2: project.customer.addressLine2 || undefined,
+        city: project.customer.city || undefined,
+        state: project.customer.state || undefined,
+        pinCode: project.customer.pinCode || undefined,
+        phone: project.customer.phone || undefined,
+        email: project.customer.email || undefined,
+        customerType: project.customer.customerType || undefined,
+      },
+      project: {
+        systemCapacity: project.systemCapacity || undefined,
+        projectCost: project.projectCost || undefined,
+        systemType: project.systemType || undefined,
+        roofType: project.roofType || undefined,
+        panelBrand: project.panelBrand || undefined,
+        inverterBrand: project.inverterBrand || undefined,
+        incentiveEligible: project.incentiveEligible,
+        loanDetails: project.loanDetails || undefined,
+      },
+      salesperson: {
+        name: project.salesperson?.name || 'Rayenna Energy Team',
+      },
+    };
+
+    // Calculate financials
+    const financials = calculateFinancials(proposalData);
+
+    // Generate AI content
+    const content = await generateProposalContent(proposalData, financials);
+
+    // Generate PDF
+    const pdfBuffer = await generateProposalPDF(proposalData, financials, content);
+
+    // Set response headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="Proposal_${project.customer.customerName}_${project.slNo}.pdf"`
+    );
+
+    res.send(pdfBuffer);
+  } catch (error: any) {
+    console.error('Error generating PDF:', error);
+    res.status(500).json({ error: error.message || 'Failed to generate PDF' });
+  }
+});
+
+// Helper function to generate HTML preview
+function generateHTMLPreview(
+  data: any,
+  financials: any,
+  content: any
+): string {
+  const addressParts = [
+    data.customer.addressLine1,
+    data.customer.addressLine2,
+    data.customer.city,
+    data.customer.state,
+    data.customer.pinCode,
+  ].filter(Boolean);
+  const fullAddress = addressParts.length > 0
+    ? addressParts.join(', ')
+    : (data.customer.address || 'N/A');
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Solar Proposal - ${data.customer.name}</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #374151;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      background: #f9fafb;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding: 30px;
+      background: linear-gradient(135deg, #1e40af 0%, #059669 100%);
+      color: white;
+      border-radius: 8px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 32px;
+      font-weight: bold;
+    }
+    .header p {
+      margin: 10px 0 0 0;
+      opacity: 0.9;
+    }
+    .section {
+      background: white;
+      padding: 30px;
+      margin-bottom: 30px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .section h2 {
+      color: #1e40af;
+      font-size: 20px;
+      margin-top: 0;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #1e40af;
+      padding-bottom: 10px;
+    }
+    .financial-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    .financial-table td {
+      padding: 12px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .financial-table td:first-child {
+      font-weight: 600;
+      color: #374151;
+    }
+    .financial-table tr.highlight td {
+      background: #f3f4f6;
+      font-weight: 600;
+      color: #059669;
+    }
+    .bullets {
+      list-style: none;
+      padding: 0;
+    }
+    .bullets li {
+      padding: 8px 0;
+      padding-left: 25px;
+      position: relative;
+    }
+    .bullets li:before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #1e40af;
+      font-weight: bold;
+      font-size: 20px;
+    }
+    .steps {
+      list-style: none;
+      padding: 0;
+      counter-reset: step-counter;
+    }
+    .steps li {
+      padding: 12px 0;
+      padding-left: 40px;
+      position: relative;
+      counter-increment: step-counter;
+    }
+    .steps li:before {
+      content: counter(step-counter);
+      position: absolute;
+      left: 0;
+      background: #1e40af;
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>RAYENNA ENERGY</h1>
+    <p>Renewable Energy Solutions</p>
+    <h2 style="margin-top: 30px; font-size: 24px;">Solar Power System Proposal</h2>
+    <p style="margin-top: 20px; font-size: 18px;">For: ${data.customer.name}</p>
+    <p>System Capacity: ${data.project.systemCapacity || 'N/A'} kW</p>
+    <p>Date: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+  </div>
+
+  <div class="section">
+    <h2>Executive Summary</h2>
+    <p>${content.executiveSummary}</p>
+  </div>
+
+  <div class="section">
+    <h2>About Rayenna Energy</h2>
+    <p>${content.aboutRayenna}</p>
+  </div>
+
+  <div class="section">
+    <h2>Proposed Solar System</h2>
+    <p>${content.systemDescription}</p>
+    <table class="financial-table">
+      <tr><td>System Capacity</td><td>${data.project.systemCapacity || 'N/A'} kW</td></tr>
+      <tr><td>System Type</td><td>${(data.project.systemType || 'On-Grid').replace('_', '-')}</td></tr>
+      <tr><td>Installation Type</td><td>${data.project.roofType ? data.project.roofType + ' Roof' : 'Roof-mounted'}</td></tr>
+      <tr><td>Panel Brand</td><td>${data.project.panelBrand || 'Premium Quality'}</td></tr>
+      <tr><td>Inverter Brand</td><td>${data.project.inverterBrand || 'Premium Quality'}</td></tr>
+      <tr><td>Estimated Annual Generation</td><td>${financials.estimatedAnnualGeneration.toFixed(0)} kWh</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Financial Summary</h2>
+    <table class="financial-table">
+      <tr><td>Gross Project Cost</td><td>₹${financials.grossProjectCost.toLocaleString('en-IN')}</td></tr>
+      <tr><td>Subsidy Amount</td><td>₹${financials.subsidyAmount.toLocaleString('en-IN')}</td></tr>
+      <tr class="highlight"><td>Net Customer Investment</td><td>₹${financials.netCustomerInvestment.toLocaleString('en-IN')}</td></tr>
+      <tr><td>Estimated Annual Generation</td><td>${financials.estimatedAnnualGeneration.toFixed(0)} kWh</td></tr>
+      <tr class="highlight"><td>Estimated Yearly Savings</td><td>₹${financials.estimatedYearlySavings.toLocaleString('en-IN')}</td></tr>
+      <tr><td>Estimated Payback Period</td><td>${financials.estimatedPaybackPeriod.toFixed(1)} years</td></tr>
+      <tr class="highlight"><td>25-Year Lifetime Savings</td><td>₹${financials.lifetimeSavings.toLocaleString('en-IN')}</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Why Rayenna Energy</h2>
+    <ul class="bullets">
+      ${content.whyRayenna.split('\n').filter((line: string) => line.trim()).map((point: string) => 
+        `<li>${point.replace(/^[•\-\d.]+\s*/, '').trim()}</li>`
+      ).join('')}
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Next Steps</h2>
+    <ol class="steps">
+      ${content.nextSteps.split('\n').filter((line: string) => line.trim()).map((step: string) => 
+        `<li>${step.replace(/^[•\-\d.]+\s*/, '').trim()}</li>`
+      ).join('')}
+    </ol>
+  </div>
+
+  <div style="text-align: center; margin-top: 40px; color: #6b7280; font-size: 12px;">
+    <p>For queries, contact: sales@rayenna.energy | www.rayenna.energy</p>
+  </div>
+</body>
+</html>
+  `;
+}
 
 export default router;

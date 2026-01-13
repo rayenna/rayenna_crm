@@ -29,13 +29,12 @@ const ProjectValueProfitByFYChart = ({ data }: ProjectValueProfitByFYChartProps)
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
           Total Project Value and Total Profit by Financial Year
         </h2>
-        <div className="flex items-center justify-center h-96 text-gray-500">
-          <div className="text-center">
-            <p className="mb-2">No data available.</p>
-            <p className="text-sm">Projects with financial year information will appear here.</p>
-            <p className="text-xs mt-2 text-gray-400">Data structure: {JSON.stringify(chartData)}</p>
-          </div>
+      <div className="flex items-center justify-center h-64 sm:h-96 text-gray-500">
+        <div className="text-center px-4">
+          <p className="mb-2 text-sm sm:text-base">No data available.</p>
+          <p className="text-xs sm:text-sm text-gray-600">Projects with financial year information will appear here.</p>
         </div>
+      </div>
       </div>
     )
   }
@@ -54,18 +53,18 @@ const ProjectValueProfitByFYChart = ({ data }: ProjectValueProfitByFYChartProps)
   }
 
   return (
-    <div className="bg-white shadow rounded-lg p-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Total Project Value and Total Profit by Financial Year
+    <div className="bg-white shadow-sm rounded-lg border border-gray-100 p-4 sm:p-6">
+      <div className="flex flex-col gap-3 mb-4">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+          Project Value & Profit by Financial Year
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <label htmlFor="fy-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">
             Filter by FY:
           </label>
           <select
             id="fy-filter"
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 min-w-[150px]"
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 w-full sm:w-auto sm:min-w-[150px]"
             value={selectedFY}
             onChange={(e) => setSelectedFY(e.target.value)}
           >
@@ -78,7 +77,8 @@ const ProjectValueProfitByFYChart = ({ data }: ProjectValueProfitByFYChartProps)
           </select>
         </div>
       </div>
-      <div className="w-full" style={{ height: '400px' }}>
+      <div className="w-full overflow-x-auto">
+        <div className="min-w-[300px]" style={{ height: '300px' }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={filteredData}
@@ -92,10 +92,12 @@ const ProjectValueProfitByFYChart = ({ data }: ProjectValueProfitByFYChartProps)
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis 
               dataKey="fy" 
-              label={{ value: selectedFY === 'all' ? 'Financial Year (FY)' : `Financial Year: ${selectedFY}`, position: 'insideBottom', offset: -5 }}
+              tick={{ fontSize: 12 }}
+              label={{ value: selectedFY === 'all' ? 'Financial Year (FY)' : `FY: ${selectedFY}`, position: 'insideBottom', offset: -5, style: { fontSize: '12px' } }}
             />
             <YAxis 
-              label={{ value: 'Value in Indian Rupees (₹)', angle: -90, position: 'insideLeft' }}
+              tick={{ fontSize: 12 }}
+              label={{ value: 'Value (₹)', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }}
               tickFormatter={(value) => {
                 if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`
                 if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`
@@ -137,6 +139,7 @@ const ProjectValueProfitByFYChart = ({ data }: ProjectValueProfitByFYChartProps)
             />
           </BarChart>
         </ResponsiveContainer>
+        </div>
       </div>
     </div>
   )

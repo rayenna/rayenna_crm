@@ -1,5 +1,5 @@
 import express from 'express';
-import { PrismaClient, UserRole, ProjectStatus } from '@prisma/client';
+import { PrismaClient, UserRole, ProjectStatus, LeadStatus, ProjectStage } from '@prisma/client';
 import { authenticate, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
@@ -119,17 +119,106 @@ router.get('/sales', authenticate, async (req: AuthRequest, res) => {
       percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
     }));
 
+    // Calculate project value and profit by financial year (filtered by salesperson if applicable)
+    const projectValueByFY = await prisma.project.groupBy({
+      by: ['year'],
+      where: { projectCost: { not: null }, ...where },
+      _sum: { projectCost: true },
+    });
+
+    const profitByFY = await prisma.project.groupBy({
+      by: ['year'],
+      where: { grossProfit: { not: null }, ...where },
+      _sum: { grossProfit: true },
+    });
+
+    // Combine the data by financial year
+    const allFYs = new Set([
+      ...projectValueByFY.map((item) => item.year),
+      ...profitByFY.map((item) => item.year),
+    ]);
+
+    const projectValueProfitByFY = Array.from(allFYs)
+      .sort()
+      .map((fy) => ({
+        fy,
+        totalProjectValue: projectValueByFY.find((item) => item.year === fy)?._sum.projectCost || 0,
+        totalProfit: profitByFY.find((item) => item.year === fy)?._sum.grossProfit || 0,
+      }));
+
+    // Get leads data
+    const leadsData = await prisma.lead.findMany({
+      where: role === UserRole.SALES ? { assignedSalesId: userId } : {},
+      select: {
+        status: true,
+        source: true,
+        expectedValue: true,
+      },
+    });
+
+    const totalLeadsCount = leadsData.length;
+    const newLeads = leadsData.filter((l) => l.status === LeadStatus.NEW).length;
+    const qualifiedLeads = leadsData.filter((l) => l.status === LeadStatus.QUALIFIED).length;
+    const convertedLeads = leadsData.filter((l) => l.status === LeadStatus.CONVERTED).length;
+    const conversionRate = totalLeadsCount > 0 ? ((convertedLeads / totalLeadsCount) * 100).toFixed(1) : '0';
+
+    // Leads by source
+    const leadsBySource = leadsData.reduce((acc: any, lead) => {
+      const source = lead.source || 'UNKNOWN';
+      if (!acc[source]) {
+        acc[source] = { count: 0, expectedValue: 0 };
+      }
+      acc[source].count++;
+      acc[source].expectedValue += lead.expectedValue || 0;
+      return acc;
+    }, {});
+
+    const leadsBySourceArray = Object.entries(leadsBySource).map(([source, data]: [string, any]) => ({
+      source,
+      count: data.count,
+      expectedValue: data.expectedValue,
+    }));
+
+    // Pipeline by stage
+    const pipelineSurvey = await prisma.project.count({
+      where: { ...where, projectStage: ProjectStage.SURVEY },
+    });
+    const pipelineProposal = await prisma.project.count({
+      where: { ...where, projectStage: ProjectStage.PROPOSAL },
+    });
+    const pipelineApproved = await prisma.project.count({
+      where: { ...where, projectStage: ProjectStage.APPROVED },
+    });
+    const pipelineAtRisk = await prisma.project.count({
+      where: {
+        ...where,
+        statusIndicator: 'RED',
+      },
+    });
+
     res.json({
-      totalLeads,
-      confirmedProjects,
-      totalCapacity: totalCapacity._sum.systemCapacity || 0,
-      totalRevenue: totalRevenue._sum.projectCost || 0,
-      projectsByStatus: projectsByStatus.map((p) => ({
-        status: p.projectStatus,
-        count: p._count.id,
-      })),
+      leads: {
+        total: totalLeadsCount,
+        new: newLeads,
+        qualified: qualifiedLeads,
+        converted: convertedLeads,
+        conversionRate,
+        bySource: leadsBySourceArray,
+      },
+      revenue: {
+        totalCapacity: totalCapacity._sum.systemCapacity || 0,
+        totalRevenue: totalRevenue._sum.projectCost || 0,
+        expectedRevenue: totalRevenue._sum.projectCost || 0, // Using same for now
+      },
+      pipeline: {
+        survey: pipelineSurvey,
+        proposal: pipelineProposal,
+        approved: pipelineApproved,
+        atRisk: pipelineAtRisk,
+      },
       revenueBySalesperson: revenueBreakdown,
       projectValueByType: valueByTypeWithPercentage,
+      projectValueProfitByFY,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

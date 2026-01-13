@@ -6,10 +6,310 @@ import { useAuth } from '../contexts/AuthContext'
 import { Project, UserRole, ProjectStage } from '../types'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
+import ProposalPreview from '../components/proposal/ProposalPreview'
+
+// File Upload Component
+const FileUploadSection = ({ projectId }: { projectId: string }) => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [category, setCategory] = useState<string>('')
+  const [description, setDescription] = useState<string>('')
+  const [uploading, setUploading] = useState(false)
+  const queryClient = useQueryClient()
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Validate file type
+      const validTypes = [
+        'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
+        'application/pdf',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ]
+      if (!validTypes.includes(file.type)) {
+        toast.error('Invalid file type. Please upload images, PDFs, or Office documents.')
+        return
+      }
+      // Validate file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('File size exceeds 10MB limit.')
+        return
+      }
+      setSelectedFile(file)
+    }
+  }
+
+  const uploadMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const res = await axios.post(`/api/documents/${projectId}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      return res.data
+    },
+    onSuccess: () => {
+      toast.success('File uploaded successfully!')
+      setSelectedFile(null)
+      setCategory('')
+      setDescription('')
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to upload file')
+    },
+  })
+
+  const handleUpload = () => {
+    if (!selectedFile || !category) {
+      toast.error('Please select a file and category')
+      return
+    }
+    setUploading(true)
+    const formData = new FormData()
+    formData.append('file', selectedFile)
+    formData.append('category', category)
+    if (description) {
+      formData.append('description', description)
+    }
+    uploadMutation.mutate(formData)
+    setUploading(false)
+  }
+
+  return (
+    <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+      <h3 className="text-md font-semibold mb-4">Upload File</h3>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            File
+          </label>
+          <input
+            type="file"
+            onChange={handleFileChange}
+            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Category
+          </label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+          >
+            <option value="">Select category</option>
+            <option value="photos_videos">Photos / Videos</option>
+            <option value="documents">Documents</option>
+            <option value="sheets">Sheets</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Description (Optional)
+          </label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+            className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            placeholder="Add a brief description..."
+          />
+        </div>
+        <button
+          onClick={handleUpload}
+          disabled={!selectedFile || !category || uploading}
+          className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+        >
+          {uploading ? 'Uploading...' : 'Upload File'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Project Lifecycle Card Component
+const ProjectLifecycleCard = ({ project }: { project: Project }) => {
+  const [showDelayPrediction, setShowDelayPrediction] = useState(false)
+  const [delayPrediction, setDelayPrediction] = useState<any>(null)
+  const [loadingPrediction, setLoadingPrediction] = useState(false)
+
+  // Calculate days in stage
+  const daysInStage = project.stageEnteredAt
+    ? Math.floor((Date.now() - new Date(project.stageEnteredAt).getTime()) / (1000 * 60 * 60 * 24))
+    : 0
+
+  const slaDays = project.slaDays || 0
+  const daysRemaining = Math.max(0, slaDays - daysInStage)
+  const slaPercentage = slaDays > 0 ? (daysInStage / slaDays) * 100 : 0
+
+  // Determine owner based on stage
+  const getOwner = (stage: ProjectStage | undefined): 'SALES' | 'OPS' => {
+    if (!stage) return 'SALES'
+    const salesStages: ProjectStage[] = [ProjectStage.SURVEY, ProjectStage.PROPOSAL, ProjectStage.APPROVED]
+    return salesStages.includes(stage) ? 'SALES' : 'OPS'
+  }
+
+  const owner = getOwner(project.projectStage)
+  const ownerName = owner === 'SALES' 
+    ? (project.salesperson?.name || 'Unassigned')
+    : (project.opsPerson?.name || 'Unassigned')
+
+  // Get status indicator color
+  const getStatusColor = (status?: string) => {
+    switch (status) {
+      case 'GREEN':
+        return 'bg-green-100 text-green-800 border-green-300'
+      case 'AMBER':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-300'
+      case 'RED':
+        return 'bg-red-100 text-red-800 border-red-300'
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-300'
+    }
+  }
+
+  // Get stage display name
+  const getStageDisplayName = (stage: ProjectStage) => {
+    const stageNames: Record<ProjectStage, string> = {
+      [ProjectStage.SURVEY]: 'Survey',
+      [ProjectStage.PROPOSAL]: 'Proposal',
+      [ProjectStage.APPROVED]: 'Approved',
+      [ProjectStage.INSTALLATION]: 'Installation',
+      [ProjectStage.BILLING]: 'Billing',
+      [ProjectStage.LIVE]: 'Live',
+      [ProjectStage.AMC]: 'AMC',
+    }
+    return stageNames[stage] || stage
+  }
+
+  const handlePredictDelay = async () => {
+    if (showDelayPrediction && delayPrediction) {
+      setShowDelayPrediction(false)
+      return
+    }
+
+    setLoadingPrediction(true)
+    try {
+      const res = await axios.get(`/api/projects/${project.id}/delay-prediction`)
+      setDelayPrediction(res.data)
+      setShowDelayPrediction(true)
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to predict delay')
+    } finally {
+      setLoadingPrediction(false)
+    }
+  }
+
+  return (
+    <div className="mb-6 bg-white shadow rounded-lg p-6 border-l-4 border-primary-500">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Project Lifecycle</h2>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div>
+              <span className="text-sm text-gray-500">Stage:</span>
+              <span className="ml-2 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary-100 text-primary-800">
+                {project.projectStage ? getStageDisplayName(project.projectStage) : 'N/A'}
+              </span>
+            </div>
+            <div>
+              <span className="text-sm text-gray-500">Owner:</span>
+              <span className={`ml-2 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                owner === 'SALES' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+              }`}>
+                {owner} - {ownerName}
+              </span>
+            </div>
+            <div>
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border-2 ${getStatusColor(project.statusIndicator)}`}>
+                {project.statusIndicator || 'UNKNOWN'}
+              </span>
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={handlePredictDelay}
+          disabled={loadingPrediction}
+          className="text-sm bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+        >
+          {loadingPrediction ? 'Analyzing...' : showDelayPrediction ? 'Hide Prediction' : 'AI: Predict Delay'}
+        </button>
+      </div>
+
+      {/* SLA Progress */}
+      <div className="mb-4">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm font-medium text-gray-700">SLA Progress</span>
+          <span className="text-sm text-gray-500">
+            {daysInStage} / {slaDays} days ({slaPercentage.toFixed(1)}%)
+          </span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2.5">
+          <div
+            className={`h-2.5 rounded-full transition-all ${
+              project.statusIndicator === 'RED'
+                ? 'bg-red-500'
+                : project.statusIndicator === 'AMBER'
+                ? 'bg-yellow-500'
+                : 'bg-green-500'
+            }`}
+            style={{ width: `${Math.min(100, slaPercentage)}%` }}
+          />
+        </div>
+        <div className="flex justify-between mt-1 text-xs text-gray-500">
+          <span>{daysRemaining > 0 ? `${daysRemaining} days remaining` : `${Math.abs(daysRemaining)} days overdue`}</span>
+          {project.stageEnteredAt && (
+            <span>Entered: {format(new Date(project.stageEnteredAt), 'MMM dd, yyyy')}</span>
+          )}
+        </div>
+      </div>
+
+      {/* AI Delay Prediction */}
+      {showDelayPrediction && delayPrediction && (
+        <div className={`mt-4 p-4 rounded-lg border-2 ${
+          delayPrediction.riskLevel === 'HIGH'
+            ? 'bg-red-50 border-red-200'
+            : delayPrediction.riskLevel === 'MEDIUM'
+            ? 'bg-yellow-50 border-yellow-200'
+            : 'bg-green-50 border-green-200'
+        }`}>
+          <div className="flex items-start justify-between mb-2">
+            <h3 className="text-sm font-semibold text-gray-900">AI Delay Prediction</h3>
+            <span className={`text-xs font-medium px-2 py-1 rounded ${
+              delayPrediction.riskLevel === 'HIGH'
+                ? 'bg-red-100 text-red-800'
+                : delayPrediction.riskLevel === 'MEDIUM'
+                ? 'bg-yellow-100 text-yellow-800'
+                : 'bg-green-100 text-green-800'
+            }`}>
+              {delayPrediction.riskLevel} RISK
+            </span>
+          </div>
+          <p className="text-sm text-gray-700 mb-2">
+            <strong>Predicted Delay:</strong> {delayPrediction.predictedDelay} days
+          </p>
+          {delayPrediction.reasons && delayPrediction.reasons.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-gray-600 mb-1">Key Reasons:</p>
+              <ul className="text-xs text-gray-600 list-disc list-inside space-y-1">
+                {delayPrediction.reasons.map((reason: string, idx: number) => (
+                  <li key={idx}>{reason}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 const ProjectDetail = () => {
   const { id } = useParams()
   const { user, hasRole } = useAuth()
+  const [showProposal, setShowProposal] = useState(false)
 
   const { data: project, isLoading, error } = useQuery({
     queryKey: ['project', id],
@@ -29,6 +329,10 @@ const ProjectDetail = () => {
   if (!project) return <div className="p-6 text-center">Project not found</div>
 
   return (
+    <>
+      {showProposal && id && (
+        <ProposalPreview projectId={id} onClose={() => setShowProposal(false)} />
+      )}
     <div className="px-4 py-6 sm:px-0">
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -40,6 +344,18 @@ const ProjectDetail = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          {(hasRole([UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES]) || 
+            (hasRole([UserRole.SALES]) && project?.salespersonId === user?.id)) && (
+            <button
+              onClick={() => setShowProposal(true)}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Generate AI Proposal
+            </button>
+          )}
           {canEdit && (
             <Link
               to={`/projects/${id}/edit`}
@@ -76,10 +392,18 @@ const ProjectDetail = () => {
                 <dt className="text-sm text-gray-500">Customer Name</dt>
                 <dd className="text-sm font-medium">{project.customer.customerName}</dd>
               </div>
-              {project.customer.address && (
+              {(project.customer.addressLine1 || project.customer.city) && (
                 <div>
                   <dt className="text-sm text-gray-500">Address</dt>
-                  <dd className="text-sm font-medium">{project.customer.address}</dd>
+                  <dd className="text-sm font-medium">
+                    {[
+                      project.customer.addressLine1,
+                      project.customer.addressLine2,
+                      project.customer.city,
+                      project.customer.state,
+                      project.customer.pinCode
+                    ].filter(Boolean).join(', ')}
+                  </dd>
                 </div>
               )}
               {project.customer.contactNumbers && (
@@ -146,12 +470,6 @@ const ProjectDetail = () => {
                 })()}
               </dd>
             </div>
-            {project.leadSource && (
-              <div>
-                <dt className="text-sm text-gray-500">Lead Source</dt>
-                <dd className="text-sm font-medium">{project.leadSource}</dd>
-              </div>
-            )}
             {project.salesperson && (
               <div>
                 <dt className="text-sm text-gray-500">Salesperson</dt>
@@ -425,146 +743,7 @@ const ProjectDetail = () => {
         )}
       </div>
     </div>
-  )
-}
-
-// File Upload Component
-const FileUploadSection = ({ projectId }: { projectId: string }) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [category, setCategory] = useState<string>('')
-  const [description, setDescription] = useState<string>('')
-  const [uploading, setUploading] = useState(false)
-  const queryClient = useQueryClient()
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      // Validate file type
-      const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
-      const blockedExtensions = [
-        '.exe', '.bat', '.cmd', '.com', '.pif', '.scr', '.vbs', '.js', '.jar',
-        '.msi', '.dll', '.app', '.deb', '.rpm', '.dmg', '.pkg',
-        '.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.xz', '.iso',
-        '.docm', '.xlsm', '.pptm',
-      ]
-      
-      if (blockedExtensions.includes(ext)) {
-        toast.error(`File type not allowed: ${ext}. Executables, macros, and archive files are not permitted.`)
-        e.target.value = ''
-        return
-      }
-
-      // Check file size (25MB)
-      if (file.size > 25 * 1024 * 1024) {
-        toast.error('File size exceeds 25MB limit')
-        e.target.value = ''
-        return
-      }
-
-      setSelectedFile(file)
-    }
-  }
-
-  const handleUpload = async () => {
-    if (!selectedFile) {
-      toast.error('Please select a file')
-      return
-    }
-
-    if (!category) {
-      toast.error('Please select a category')
-      return
-    }
-
-    setUploading(true)
-    const formData = new FormData()
-    formData.append('file', selectedFile)
-    formData.append('category', category)
-    if (description) {
-      formData.append('description', description)
-    }
-
-    try {
-      await axios.post(`/api/documents/project/${projectId}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      })
-      
-      toast.success('File uploaded successfully')
-      setSelectedFile(null)
-      setCategory('')
-      setDescription('')
-      // Reset file input
-      const fileInput = document.getElementById('file-input') as HTMLInputElement
-      if (fileInput) fileInput.value = ''
-      
-      // Refresh project data
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] })
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to upload file')
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  return (
-    <div>
-      <h3 className="text-md font-semibold mb-4">Upload File</h3>
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            File
-          </label>
-          <input
-            id="file-input"
-            type="file"
-            onChange={handleFileChange}
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            Allowed: Documents, Images, Videos, Spreadsheets. Max size: 25MB. Not allowed: Executables, Macros, Archives
-          </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Category *
-          </label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-          >
-            <option value="">Select category</option>
-            <option value="photos_videos">Photos / Videos</option>
-            <option value="documents">Documents</option>
-            <option value="sheets">Sheets</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Description (Optional)
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={2}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-            placeholder="Add a description for this file..."
-          />
-        </div>
-
-        <button
-          onClick={handleUpload}
-          disabled={!selectedFile || !category || uploading}
-          className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
-        >
-          {uploading ? 'Uploading...' : 'Upload File'}
-        </button>
-      </div>
-    </div>
+    </>
   )
 }
 
@@ -843,183 +1022,6 @@ const DocumentDeleteButton = ({ documentId, projectId }: { documentId: string; p
         />
       </svg>
     </button>
-  )
-}
-
-// Project Lifecycle Card Component
-const ProjectLifecycleCard = ({ project }: { project: Project }) => {
-  const [showDelayPrediction, setShowDelayPrediction] = useState(false)
-  const [delayPrediction, setDelayPrediction] = useState<any>(null)
-  const [loadingPrediction, setLoadingPrediction] = useState(false)
-
-  // Calculate days in stage
-  const daysInStage = project.stageEnteredAt
-    ? Math.floor((Date.now() - new Date(project.stageEnteredAt).getTime()) / (1000 * 60 * 60 * 24))
-    : 0
-
-  const slaDays = project.slaDays || 0
-  const daysRemaining = Math.max(0, slaDays - daysInStage)
-  const slaPercentage = slaDays > 0 ? (daysInStage / slaDays) * 100 : 0
-
-  // Determine owner based on stage
-  const getOwner = (stage: ProjectStage | undefined): 'SALES' | 'OPS' => {
-    if (!stage) return 'SALES'
-    const salesStages: ProjectStage[] = [ProjectStage.SURVEY, ProjectStage.PROPOSAL, ProjectStage.APPROVED]
-    return salesStages.includes(stage) ? 'SALES' : 'OPS'
-  }
-
-  const owner = getOwner(project.projectStage)
-  const ownerName = owner === 'SALES' 
-    ? (project.salesperson?.name || 'Unassigned')
-    : (project.opsPerson?.name || 'Unassigned')
-
-  // Get status indicator color
-  const getStatusColor = (status?: string) => {
-    switch (status) {
-      case 'GREEN':
-        return 'bg-green-100 text-green-800 border-green-300'
-      case 'AMBER':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300'
-      case 'RED':
-        return 'bg-red-100 text-red-800 border-red-300'
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-300'
-    }
-  }
-
-  // Get stage display name
-  const getStageDisplayName = (stage: ProjectStage) => {
-    const stageNames: Record<ProjectStage, string> = {
-      [ProjectStage.SURVEY]: 'Survey',
-      [ProjectStage.PROPOSAL]: 'Proposal',
-      [ProjectStage.APPROVED]: 'Approved',
-      [ProjectStage.INSTALLATION]: 'Installation',
-      [ProjectStage.BILLING]: 'Billing',
-      [ProjectStage.LIVE]: 'Live',
-      [ProjectStage.AMC]: 'AMC',
-    }
-    return stageNames[stage] || stage
-  }
-
-  const handlePredictDelay = async () => {
-    if (showDelayPrediction && delayPrediction) {
-      setShowDelayPrediction(false)
-      return
-    }
-
-    setLoadingPrediction(true)
-    try {
-      const res = await axios.get(`/api/projects/${project.id}/delay-prediction`)
-      setDelayPrediction(res.data)
-      setShowDelayPrediction(true)
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to predict delay')
-    } finally {
-      setLoadingPrediction(false)
-    }
-  }
-
-  return (
-    <div className="mb-6 bg-white shadow rounded-lg p-6 border-l-4 border-primary-500">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Project Lifecycle</h2>
-          <div className="flex items-center gap-3 flex-wrap">
-            <div>
-              <span className="text-sm text-gray-500">Stage:</span>
-              <span className="ml-2 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary-100 text-primary-800">
-                {getStageDisplayName(project.projectStage)}
-              </span>
-            </div>
-            <div>
-              <span className="text-sm text-gray-500">Owner:</span>
-              <span className={`ml-2 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                owner === 'SALES' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-              }`}>
-                {owner} - {ownerName}
-              </span>
-            </div>
-            <div>
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border-2 ${getStatusColor(project.statusIndicator)}`}>
-                {project.statusIndicator || 'UNKNOWN'}
-              </span>
-            </div>
-          </div>
-        </div>
-        <button
-          onClick={handlePredictDelay}
-          disabled={loadingPrediction}
-          className="text-sm bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-        >
-          {loadingPrediction ? 'Analyzing...' : showDelayPrediction ? 'Hide Prediction' : 'AI: Predict Delay'}
-        </button>
-      </div>
-
-      {/* SLA Progress */}
-      <div className="mb-4">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium text-gray-700">SLA Progress</span>
-          <span className="text-sm text-gray-500">
-            {daysInStage} / {slaDays} days ({slaPercentage.toFixed(1)}%)
-          </span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-2.5">
-          <div
-            className={`h-2.5 rounded-full transition-all ${
-              project.statusIndicator === 'RED'
-                ? 'bg-red-500'
-                : project.statusIndicator === 'AMBER'
-                ? 'bg-yellow-500'
-                : 'bg-green-500'
-            }`}
-            style={{ width: `${Math.min(100, slaPercentage)}%` }}
-          />
-        </div>
-        <div className="flex justify-between mt-1 text-xs text-gray-500">
-          <span>{daysRemaining > 0 ? `${daysRemaining} days remaining` : `${Math.abs(daysRemaining)} days overdue`}</span>
-          {project.stageEnteredAt && (
-            <span>Entered: {format(new Date(project.stageEnteredAt), 'MMM dd, yyyy')}</span>
-          )}
-        </div>
-      </div>
-
-      {/* AI Delay Prediction */}
-      {showDelayPrediction && delayPrediction && (
-        <div className={`mt-4 p-4 rounded-lg border-2 ${
-          delayPrediction.riskLevel === 'HIGH'
-            ? 'bg-red-50 border-red-200'
-            : delayPrediction.riskLevel === 'MEDIUM'
-            ? 'bg-yellow-50 border-yellow-200'
-            : 'bg-green-50 border-green-200'
-        }`}>
-          <div className="flex items-start justify-between mb-2">
-            <h3 className="text-sm font-semibold text-gray-900">AI Delay Prediction</h3>
-            <span className={`text-xs font-medium px-2 py-1 rounded ${
-              delayPrediction.riskLevel === 'HIGH'
-                ? 'bg-red-100 text-red-800'
-                : delayPrediction.riskLevel === 'MEDIUM'
-                ? 'bg-yellow-100 text-yellow-800'
-                : 'bg-green-100 text-green-800'
-            }`}>
-              {delayPrediction.riskLevel} RISK
-            </span>
-          </div>
-          <p className="text-sm text-gray-700 mb-2">
-            <strong>Predicted Delay:</strong> {delayPrediction.predictedDelay} days
-          </p>
-          {delayPrediction.reasons && delayPrediction.reasons.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-gray-600 mb-1">Key Reasons:</p>
-              <ul className="text-xs text-gray-600 list-disc list-inside space-y-1">
-                {delayPrediction.reasons.map((reason: string, idx: number) => (
-                  <li key={idx}>{reason}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
   )
 }
 
