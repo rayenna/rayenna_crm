@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import ProjectValuePieChart from './ProjectValuePieChart'
 import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
+import ProfitabilityWordCloud from './ProfitabilityWordCloud'
 
 const ManagementDashboard = () => {
   const { data, isLoading } = useQuery({
@@ -95,13 +96,19 @@ const ManagementDashboard = () => {
       </div>
 
       {/* Charts Section - Side by Side */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 lg:items-stretch">
         {/* Project Value by Segment Pie Chart */}
         {data?.projectValueByType && data.projectValueByType.length > 0 && (
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 flex">
             <ProjectValuePieChart data={data.projectValueByType} />
           </div>
         )}
+        {/* Customer Profitability Word Cloud */}
+        <div className="lg:col-span-1 flex">
+          <ProfitabilityWordCloud 
+            availableFYs={data?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []} 
+          />
+        </div>
       </div>
     </div>
   )

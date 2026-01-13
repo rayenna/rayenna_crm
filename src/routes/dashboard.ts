@@ -196,6 +196,30 @@ router.get('/sales', authenticate, async (req: AuthRequest, res) => {
       },
     });
 
+    // Get customer/project profitability data for word cloud
+    const profitabilityData = await prisma.project.findMany({
+      where: {
+        ...where,
+        profitability: { not: null },
+      },
+      include: {
+        customer: {
+          select: {
+            customerName: true,
+          },
+        },
+      },
+      orderBy: {
+        profitability: 'desc',
+      },
+      take: 50, // Limit to top 50 for word cloud
+    });
+
+    const wordCloudData = profitabilityData.map((p) => ({
+      text: p.customer?.customerName || 'Unknown',
+      value: p.profitability || 0,
+    }));
+
     res.json({
       leads: {
         total: totalLeadsCount,
@@ -219,6 +243,7 @@ router.get('/sales', authenticate, async (req: AuthRequest, res) => {
       revenueBySalesperson: revenueBreakdown,
       projectValueByType: valueByTypeWithPercentage,
       projectValueProfitByFY,
+      wordCloudData,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -644,12 +669,36 @@ router.get('/management', authenticate, async (req: AuthRequest, res) => {
         totalProfit: profitByFY.find((item) => item.year === fy)?._sum.grossProfit || 0,
       }));
 
+    // Get customer/project profitability data for word cloud
+    const profitabilityData = await prisma.project.findMany({
+      where: {
+        profitability: { not: null },
+      },
+      include: {
+        customer: {
+          select: {
+            customerName: true,
+          },
+        },
+      },
+      orderBy: {
+        profitability: 'desc',
+      },
+      take: 50, // Limit to top 50 for word cloud
+    });
+
+    const wordCloudData = profitabilityData.map((p) => ({
+      text: p.customer?.customerName || 'Unknown',
+      value: p.profitability || 0,
+    }));
+
     res.json({
       sales,
       operations,
       finance,
       projectValueByType: valueByTypeWithPercentage,
       projectValueProfitByFY,
+      wordCloudData,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

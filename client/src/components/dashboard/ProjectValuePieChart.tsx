@@ -36,12 +36,12 @@ const ProjectValuePieChart = ({ data }: ProjectValuePieChartProps) => {
   if (!data || data.length === 0) return null
 
   return (
-    <div className="bg-white shadow-sm rounded-lg border border-gray-100 p-4 sm:p-6">
+    <div className="bg-white shadow-sm rounded-lg border border-gray-100 p-4 sm:p-6 h-full flex flex-col">
       <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
         Project Value by Customer Segment
       </h2>
-      <div className="w-full overflow-x-auto">
-        <div className="min-w-[280px]" style={{ height: '300px' }}>
+      <div className="w-full overflow-x-auto flex-1 flex flex-col" style={{ minHeight: '350px' }}>
+        <div className="min-w-[280px] flex-1" style={{ minHeight: '300px' }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
