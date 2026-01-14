@@ -43,7 +43,7 @@ const FileUploadSection = ({ projectId }: { projectId: string }) => {
 
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const res = await axios.post(`/api/documents/${projectId}`, formData, {
+      const res = await axios.post(`/api/documents/project/${projectId}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
       return res.data
@@ -577,7 +577,7 @@ const ProjectDetail = () => {
             )}
             {project.feasibilityDate && (
               <div>
-                <dt className="text-sm text-gray-500">Feasibility Date (KSEB)</dt>
+                <dt className="text-sm text-gray-500">Feasibility Date (DISCOM)</dt>
                 <dd className="text-sm font-medium">
                   {format(new Date(project.feasibilityDate), 'MMM dd, yyyy')}
                 </dd>
@@ -585,7 +585,7 @@ const ProjectDetail = () => {
             )}
             {project.registrationDate && (
               <div>
-                <dt className="text-sm text-gray-500">Registration Date (KSEB)</dt>
+                <dt className="text-sm text-gray-500">Registration Date (DISCOM)</dt>
                 <dd className="text-sm font-medium">
                   {format(new Date(project.registrationDate), 'MMM dd, yyyy')}
                 </dd>

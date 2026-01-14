@@ -25,10 +25,17 @@ const ProjectValueProfitByFYChart = ({ data }: ProjectValueProfitByFYChartProps)
   // Show placeholder if no data
   if (!chartData || chartData.length === 0) {
     return (
-      <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Total Project Value and Total Profit by Financial Year
-        </h2>
+      <div className="bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-6 backdrop-blur-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+            Total Project Value and Total Profit by Financial Year
+          </h2>
+        </div>
       <div className="flex items-center justify-center h-64 sm:h-96 text-gray-500">
         <div className="text-center px-4">
           <p className="mb-2 text-sm sm:text-base">No data available.</p>
@@ -53,18 +60,25 @@ const ProjectValueProfitByFYChart = ({ data }: ProjectValueProfitByFYChartProps)
   }
 
   return (
-    <div className="bg-white shadow-sm rounded-lg border border-gray-100 p-4 sm:p-6">
+    <div className="bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-6 backdrop-blur-sm">
       <div className="flex flex-col gap-3 mb-4">
-        <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-          Project Value & Profit by Financial Year
-        </h2>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+            Project Value & Profit by Financial Year
+          </h2>
+        </div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <label htmlFor="fy-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">
             Filter by FY:
           </label>
           <select
             id="fy-filter"
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 w-full sm:w-auto sm:min-w-[150px]"
+            className="border-2 border-primary-300 rounded-xl px-4 py-2.5 text-sm font-medium bg-gradient-to-r from-white to-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 w-full sm:w-auto sm:min-w-[150px] shadow-md hover:shadow-lg transition-all duration-200"
             value={selectedFY}
             onChange={(e) => setSelectedFY(e.target.value)}
           >
@@ -109,7 +123,7 @@ const ProjectValueProfitByFYChart = ({ data }: ProjectValueProfitByFYChartProps)
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
                   return (
-                    <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                    <div className="bg-gradient-to-br from-white to-primary-50 p-4 border-2 border-primary-200 rounded-xl shadow-2xl backdrop-blur-sm">
                       <p className="font-semibold text-gray-900 mb-2">
                         FY: {payload[0].payload.fy}
                       </p>

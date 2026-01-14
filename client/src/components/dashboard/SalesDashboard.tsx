@@ -1,165 +1,116 @@
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
+import { FaUsers, FaBolt, FaRupeeSign, FaCheckCircle, FaClipboardList, FaExclamationTriangle } from 'react-icons/fa'
 import ProjectValuePieChart from './ProjectValuePieChart'
 import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
 import ProfitabilityWordCloud from './ProfitabilityWordCloud'
+import MetricCard from './MetricCard'
 
-const SalesDashboard = () => {
+interface SalesDashboardProps {
+  selectedFYs: string[]
+  selectedMonths: string[]
+}
+
+const SalesDashboard = ({ selectedFYs, selectedMonths }: SalesDashboardProps) => {
   const { data, isLoading } = useQuery({
-    queryKey: ['dashboard', 'sales'],
+    queryKey: ['dashboard', 'sales', selectedFYs, selectedMonths],
     queryFn: async () => {
-      const res = await axios.get('/api/dashboard/sales')
+      const params = new URLSearchParams()
+      selectedFYs.forEach((fy) => params.append('fy', fy))
+      selectedMonths.forEach((month) => params.append('month', month))
+      const res = await axios.get(`/api/dashboard/sales?${params.toString()}`)
       return res.data
     },
   })
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    )
+  if (isLoading) return <div>Loading...</div>
+
+  // Debug: Log data to console (can be removed in production)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Sales Dashboard Data:', data)
+    console.log('Project Value Profit By FY:', data?.projectValueProfitByFY)
+    console.log('Project Value By Type:', data?.projectValueByType)
+    console.log('Word Cloud Data:', data?.wordCloudData)
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
-      {/* Lead Metrics */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <div className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="p-4 sm:p-5">
-            <div className="text-xl sm:text-2xl font-bold text-gray-900">{data?.leads?.total || 0}</div>
-            <div className="text-xs sm:text-sm text-gray-500 mt-1">Total Leads</div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="p-4 sm:p-5">
-            <div className="text-xl sm:text-2xl font-bold text-gray-900">
-              {data?.leads?.new || 0}
-            </div>
-            <div className="text-xs sm:text-sm text-gray-500 mt-1">New Leads</div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="p-4 sm:p-5">
-            <div className="text-xl sm:text-2xl font-bold text-gray-900">
-              {data?.leads?.qualified || 0}
-            </div>
-            <div className="text-xs sm:text-sm text-gray-500 mt-1">Qualified</div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow-sm rounded-lg border-l-4 border-green-500 hover:shadow-md transition-shadow">
-          <div className="p-4 sm:p-5">
-            <div className="text-xl sm:text-2xl font-bold text-green-600">
-              {data?.leads?.converted || 0}
-            </div>
-            <div className="text-xs sm:text-sm text-gray-600 mt-1">Converted</div>
-            <div className="text-xs text-gray-500 mt-1">
-              {data?.leads?.conversionRate || '0'}% rate
-            </div>
-          </div>
-        </div>
+    <div className="space-y-6 animate-fade-in">
+      {/* Top Metrics Row - 4 columns */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard
+          title="Total Leads"
+          value={data?.leads?.total || 0}
+          icon={<FaUsers />}
+          gradient="from-blue-500 to-cyan-500"
+        />
+        <MetricCard
+          title="Total Capacity"
+          value={`${(data?.revenue?.totalCapacity || 0).toFixed(2)} kW`}
+          icon={<FaBolt />}
+          gradient="from-yellow-500 to-orange-500"
+        />
+        <MetricCard
+          title="Total Revenue"
+          value={`₹${(data?.revenue?.totalRevenue || 0).toLocaleString('en-IN')}`}
+          icon={<FaRupeeSign />}
+          gradient="from-green-500 to-emerald-500"
+        />
+        <MetricCard
+          title="Approved Projects"
+          value={data?.pipeline?.approved || 0}
+          icon={<FaCheckCircle />}
+          gradient="from-purple-500 to-pink-500"
+        />
       </div>
 
-      {/* Revenue Metrics */}
-      <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-3">
-        <div className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="p-4 sm:p-5">
-            <div className="text-xl sm:text-2xl font-bold text-gray-900">
-              {(data?.revenue?.totalCapacity || 0).toFixed(2)} <span className="text-base sm:text-lg font-normal text-gray-600">kW</span>
-            </div>
-            <div className="text-xs sm:text-sm text-gray-500 mt-1">Total Capacity</div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow-sm rounded-lg border-l-4 border-primary-500 hover:shadow-md transition-shadow">
-          <div className="p-4 sm:p-5">
-            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-primary-600 break-words">
-              ₹{(data?.revenue?.totalRevenue || 0).toLocaleString('en-IN')}
-            </div>
-            <div className="text-xs sm:text-sm text-gray-600 mt-1">Total Revenue</div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="p-4 sm:p-5">
-            <div className="text-lg sm:text-xl lg:text-2xl font-bold text-blue-600 break-words">
-              ₹{(data?.revenue?.expectedRevenue || 0).toLocaleString('en-IN')}
-            </div>
-            <div className="text-xs sm:text-sm text-gray-500 mt-1">Expected Revenue</div>
-          </div>
-        </div>
+      {/* Second Metrics Row - 3 columns */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <MetricCard
+          title="Survey Stage"
+          value={data?.pipeline?.survey || 0}
+          icon={<FaClipboardList />}
+          gradient="from-indigo-500 to-blue-500"
+        />
+        <MetricCard
+          title="Proposal Stage"
+          value={data?.pipeline?.proposal || 0}
+          icon={<FaClipboardList />}
+          gradient="from-yellow-500 to-amber-500"
+        />
+        <MetricCard
+          title="At Risk"
+          value={data?.pipeline?.atRisk || 0}
+          icon={<FaExclamationTriangle />}
+          gradient="from-red-500 to-rose-500"
+        />
       </div>
-
-      {/* Pipeline Metrics */}
-      <div className="bg-white shadow-sm rounded-lg border border-gray-100">
-        <div className="px-4 py-4 sm:px-6 sm:py-5">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
-            Pipeline by Stage
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            <div className="text-center p-3 sm:p-4 bg-blue-50 rounded-lg border border-blue-100">
-              <div className="text-xl sm:text-2xl font-bold text-blue-600">{data?.pipeline?.survey || 0}</div>
-              <div className="text-xs sm:text-sm text-gray-700 mt-1 font-medium">Survey</div>
-            </div>
-            <div className="text-center p-3 sm:p-4 bg-yellow-50 rounded-lg border border-yellow-100">
-              <div className="text-xl sm:text-2xl font-bold text-yellow-600">{data?.pipeline?.proposal || 0}</div>
-              <div className="text-xs sm:text-sm text-gray-700 mt-1 font-medium">Proposal</div>
-            </div>
-            <div className="text-center p-3 sm:p-4 bg-green-50 rounded-lg border border-green-100">
-              <div className="text-xl sm:text-2xl font-bold text-green-600">{data?.pipeline?.approved || 0}</div>
-              <div className="text-xs sm:text-sm text-gray-700 mt-1 font-medium">Approved</div>
-            </div>
-            <div className="text-center p-3 sm:p-4 bg-red-50 rounded-lg border border-red-100">
-              <div className="text-xl sm:text-2xl font-bold text-red-600">{data?.pipeline?.atRisk || 0}</div>
-              <div className="text-xs sm:text-sm text-gray-700 mt-1 font-medium">At Risk</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Lead Source Breakdown */}
-      {data?.leads?.bySource && data.leads.bySource.length > 0 && (
-        <div className="bg-white shadow-sm rounded-lg border border-gray-100">
-          <div className="px-4 py-4 sm:px-6 sm:py-5">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
-              Leads by Source
-            </h3>
-            <div className="space-y-2 sm:space-y-3">
-              {data.leads.bySource.map((item: any) => (
-                <div key={item.source} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                  <span className="text-sm font-medium text-gray-700 capitalize">{item.source.replace(/_/g, ' ')}</span>
-                  <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
-                    <span className="text-sm font-semibold text-gray-900">{item.count} <span className="font-normal text-gray-600">leads</span></span>
-                    <span className="text-sm font-semibold text-blue-600">₹{(item.expectedValue || 0).toLocaleString('en-IN')}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Project Value and Profit by Financial Year - Grouped Column Chart */}
-      <div className="w-full overflow-hidden">
+      <div className="w-full bg-white rounded-xl shadow-lg p-6 border border-gray-100">
         <ProjectValueProfitByFYChart data={data?.projectValueProfitByFY || []} />
       </div>
 
       {/* Charts Section - Side by Side */}
-      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 lg:items-stretch">
+      <div className="grid grid-cols-1 gap-6 sm:gap-6 lg:grid-cols-2 lg:items-stretch">
         {/* Project Value by Segment Pie Chart */}
-        {data?.projectValueByType && data.projectValueByType.length > 0 && (
-          <div className="w-full flex">
-            <ProjectValuePieChart data={data.projectValueByType} />
-          </div>
-        )}
+        <div className="lg:col-span-1 flex">
+          {data?.projectValueByType && data.projectValueByType.length > 0 ? (
+            <ProjectValuePieChart 
+              data={data.projectValueByType} 
+              availableFYs={data?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []}
+              dashboardType="sales"
+            />
+          ) : (
+            <div className="w-full bg-white shadow rounded-lg p-6 flex items-center justify-center min-h-[400px]">
+              <div className="text-center text-gray-500">
+                <p>No project data available</p>
+                <p className="text-sm mt-2">Project Value by Customer Segment chart will appear here when data is available.</p>
+              </div>
+            </div>
+          )}
+        </div>
         {/* Customer Profitability Word Cloud */}
-        <div className="w-full flex">
+        <div className="lg:col-span-1 flex">
           <ProfitabilityWordCloud 
             availableFYs={data?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []} 
           />

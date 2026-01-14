@@ -158,7 +158,11 @@ model Lead {
 model Customer {
   id             String        @id @default(cuid())
   customerId     String        @unique // 6-digit alphanumeric ID
-  customerName   String
+  customerName   String        // Legacy field, kept for backward compatibility
+  prefix         String?       // Mr., Ms., Mrs., Mx., Dr., etc.
+  firstName      String?       // Will be required after migration
+  middleName     String?
+  lastName       String?
   customerType   CustomerType? // Residential, Apartment, Commercial
   contactPerson  String? // Contact person name
   phone          String? // Primary phone number

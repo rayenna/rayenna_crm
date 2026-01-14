@@ -1,25 +1,44 @@
+import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import SalesDashboard from '../components/dashboard/SalesDashboard'
 import OperationsDashboard from '../components/dashboard/OperationsDashboard'
 import FinanceDashboard from '../components/dashboard/FinanceDashboard'
 import ManagementDashboard from '../components/dashboard/ManagementDashboard'
+import DashboardFilters from '../components/dashboard/DashboardFilters'
+import { useQuery } from '@tanstack/react-query'
+import axios from 'axios'
 
 const Dashboard = () => {
   const { user } = useAuth()
+  const [selectedFYs, setSelectedFYs] = useState<string[]>([])
+  const [selectedMonths, setSelectedMonths] = useState<string[]>([])
+
+  // Fetch available FYs from dashboard data (use management endpoint to get all FYs)
+  const { data: dashboardData } = useQuery({
+    queryKey: ['dashboard', 'management', 'fys'],
+    queryFn: async () => {
+      const res = await axios.get('/api/dashboard/management')
+      return res.data
+    },
+    enabled: true, // Fetch to get available FYs
+  })
+
+  const availableFYs =
+    dashboardData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []
 
   const getDashboardComponent = () => {
     switch (user?.role) {
       case UserRole.SALES:
-        return <SalesDashboard />
+        return <SalesDashboard selectedFYs={selectedFYs} selectedMonths={selectedMonths} />
       case UserRole.OPERATIONS:
-        return <OperationsDashboard />
+        return <OperationsDashboard selectedFYs={selectedFYs} selectedMonths={selectedMonths} />
       case UserRole.FINANCE:
-        return <FinanceDashboard />
+        return <FinanceDashboard selectedFYs={selectedFYs} selectedMonths={selectedMonths} />
       case UserRole.MANAGEMENT:
-        return <ManagementDashboard />
+        return <ManagementDashboard selectedFYs={selectedFYs} selectedMonths={selectedMonths} />
       case UserRole.ADMIN:
-        return <ManagementDashboard />
+        return <ManagementDashboard selectedFYs={selectedFYs} selectedMonths={selectedMonths} />
       default:
         return <div>No dashboard available</div>
     }
@@ -27,7 +46,19 @@ const Dashboard = () => {
 
   return (
     <div className="px-4 py-6 sm:px-0">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
+      <div className="mb-6 animate-slide-up">
+        <h1 className="text-5xl font-extrabold bg-gradient-to-r from-primary-600 via-primary-500 via-green-500 to-primary-600 bg-clip-text text-transparent mb-3 drop-shadow-lg">
+          Dashboard
+        </h1>
+        <p className="text-gray-600 font-medium text-lg">Monitor your business performance at a glance</p>
+      </div>
+      <DashboardFilters
+        availableFYs={availableFYs}
+        selectedFYs={selectedFYs}
+        selectedMonths={selectedMonths}
+        onFYChange={setSelectedFYs}
+        onMonthChange={setSelectedMonths}
+      />
       {getDashboardComponent()}
     </div>
   )

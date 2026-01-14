@@ -42,7 +42,10 @@ router.get(
 
       if (search) {
         where.OR = [
-          { customerName: { contains: search as string, mode: 'insensitive' } },
+          { firstName: { contains: search as string, mode: 'insensitive' } },
+          { middleName: { contains: search as string, mode: 'insensitive' } },
+          { lastName: { contains: search as string, mode: 'insensitive' } },
+          { customerName: { contains: search as string, mode: 'insensitive' } }, // Legacy search
           { customerId: { contains: search as string, mode: 'insensitive' } },
           { consumerNumber: { contains: search as string, mode: 'insensitive' } },
           { addressLine1: { contains: search as string, mode: 'insensitive' } },
@@ -121,7 +124,10 @@ router.post(
   '/',
   authenticate,
   [
-    body('customerName').notEmpty().trim(),
+    body('firstName').notEmpty().trim(),
+    body('prefix').optional().trim(),
+    body('middleName').optional().trim(),
+    body('lastName').optional().trim(),
     body('addressLine1').optional().trim(),
     body('addressLine2').optional().trim(),
     body('city').optional().trim(),
@@ -149,7 +155,10 @@ router.post(
       }
 
       const { 
-        customerName, 
+        prefix,
+        firstName,
+        middleName,
+        lastName,
         addressLine1, 
         addressLine2, 
         city, 
@@ -174,6 +183,10 @@ router.post(
 
       // Generate unique customer ID
       const customerId = await generateCustomerId();
+
+      // Construct customerName from name parts for backward compatibility
+      const nameParts = [firstName, middleName, lastName].filter(Boolean).join(' ')
+      const customerName = nameParts || firstName // Fallback to firstName if all empty
 
       // Handle contactNumbers - ensure it's a JSON string
       let contactNumbersStr: string | null = null;
@@ -212,7 +225,11 @@ router.post(
       const customer = await prisma.customer.create({
         data: {
           customerId,
-          customerName,
+          customerName, // Legacy field
+          prefix: prefix || null,
+          firstName,
+          middleName: middleName || null,
+          lastName: lastName || null,
           addressLine1: addressLine1 || null,
           addressLine2: addressLine2 || null,
           city: city || null,
@@ -280,7 +297,10 @@ router.put(
       }
 
       const { 
-        customerName, 
+        prefix,
+        firstName,
+        middleName,
+        lastName,
         addressLine1, 
         addressLine2, 
         city, 
@@ -305,7 +325,36 @@ router.put(
 
       const updateData: any = {};
 
-      if (customerName !== undefined) updateData.customerName = customerName;
+      // Update name fields
+      if (firstName !== undefined) {
+        updateData.firstName = firstName
+        // Reconstruct customerName for backward compatibility
+        const currentMiddleName = middleName !== undefined ? middleName : customer.middleName
+        const currentLastName = lastName !== undefined ? lastName : customer.lastName
+        const nameParts = [firstName, currentMiddleName, currentLastName].filter(Boolean).join(' ')
+        updateData.customerName = nameParts || firstName
+      }
+      if (prefix !== undefined) updateData.prefix = prefix || null
+      if (middleName !== undefined) {
+        updateData.middleName = middleName || null
+        // Reconstruct customerName if firstName exists
+        const currentFirstName = firstName !== undefined ? firstName : customer.firstName
+        const currentLastName = lastName !== undefined ? lastName : customer.lastName
+        if (currentFirstName) {
+          const nameParts = [currentFirstName, middleName || null, currentLastName].filter(Boolean).join(' ')
+          updateData.customerName = nameParts || currentFirstName
+        }
+      }
+      if (lastName !== undefined) {
+        updateData.lastName = lastName || null
+        // Reconstruct customerName if firstName exists
+        const currentFirstName = firstName !== undefined ? firstName : customer.firstName
+        const currentMiddleName = middleName !== undefined ? middleName : customer.middleName
+        if (currentFirstName) {
+          const nameParts = [currentFirstName, currentMiddleName || null, lastName || null].filter(Boolean).join(' ')
+          updateData.customerName = nameParts || currentFirstName
+        }
+      }
       if (addressLine1 !== undefined) updateData.addressLine1 = addressLine1 || null;
       if (addressLine2 !== undefined) updateData.addressLine2 = addressLine2 || null;
       if (city !== undefined) updateData.city = city || null;

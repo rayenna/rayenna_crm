@@ -5,16 +5,81 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 const router = express.Router();
 const prisma = new PrismaClient();
 
+// Helper function to apply FY and Month filters to project queries
+function applyDateFilters(
+  baseWhere: any,
+  fyFilters: string[],
+  monthFilters: string[]
+): any {
+  let where = { ...baseWhere };
+
+  // Apply FY filter
+  if (fyFilters.length > 0) {
+    where.year = { in: fyFilters };
+  }
+
+  // Apply month filter using date range filtering
+  // Month filter only applies if exactly one FY is selected
+  if (monthFilters.length > 0 && fyFilters.length === 1) {
+    const fy = fyFilters[0];
+    // Extract year from FY (e.g., "2024-25" -> 2024 or 2025)
+    const yearMatch = fy.match(/(\d{4})/);
+    if (yearMatch) {
+      const startYear = parseInt(yearMatch[1]);
+      
+      // Build date filters for each selected month
+      const dateFilters: any[] = [];
+      
+      monthFilters.forEach((month) => {
+        const monthNum = parseInt(month);
+        let year = startYear;
+        
+        // Months 1-3 (Jan-Mar) belong to the second year of the FY
+        // Months 4-12 (Apr-Dec) belong to the first year of the FY
+        if (monthNum >= 1 && monthNum <= 3) {
+          year = startYear + 1;
+        }
+        
+        const startDate = new Date(year, monthNum - 1, 1);
+        const endDate = new Date(year, monthNum, 0, 23, 59, 59, 999);
+        
+        dateFilters.push({
+          OR: [
+            { confirmationDate: { gte: startDate, lte: endDate } },
+            { createdAt: { gte: startDate, lte: endDate } },
+          ],
+        });
+      });
+      
+      if (dateFilters.length > 0) {
+        where.AND = [
+          ...(where.AND || []),
+          {
+            OR: dateFilters,
+          },
+        ];
+      }
+    }
+  }
+
+  return where;
+}
+
 // Sales Dashboard
 router.get('/sales', authenticate, async (req: AuthRequest, res) => {
   try {
     const userId = req.user?.id;
     const role = req.user?.role;
+    const fyFilters = req.query.fy ? (Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[] : [];
+    const monthFilters = req.query.month ? (Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[] : [];
 
-    const where: any = {};
+    const baseWhere: any = {};
     if (role === UserRole.SALES) {
-      where.salespersonId = userId;
+      baseWhere.salespersonId = userId;
     }
+    
+    // Apply FY filter
+    const { where, monthFilters: monthFiltersApplied } = await applyDateFilters(baseWhere, fyFilters, monthFilters);
 
     const [
       totalLeads,
@@ -201,11 +266,15 @@ router.get('/sales', authenticate, async (req: AuthRequest, res) => {
       where: {
         ...where,
         profitability: { not: null },
+        // customerId is a required field, so it can never be null - no need to filter
       },
-      include: {
+      select: {
+        id: true,
+        profitability: true,
         customer: {
           select: {
-            customerName: true,
+            firstName: true, // Primary - used for word cloud
+            customerName: true, // Fallback only if firstName is null/empty
           },
         },
       },
@@ -215,10 +284,20 @@ router.get('/sales', authenticate, async (req: AuthRequest, res) => {
       take: 50, // Limit to top 50 for word cloud
     });
 
-    const wordCloudData = profitabilityData.map((p) => ({
-      text: p.customer?.customerName || 'Unknown',
-      value: p.profitability || 0,
-    }));
+    // Map to word cloud data - use firstName (required), profitability from Sales & Commercial section
+    const wordCloudData = profitabilityData.map((p) => {
+      // Use firstName - only fallback to customerName if firstName is truly empty/null
+      const firstName = p.customer?.firstName?.trim();
+      const text = firstName || p.customer?.customerName?.trim() || 'Unknown';
+      
+      // Profitability from Sales & Commercial section
+      const profitability = p.profitability || 0;
+      
+      return {
+        text: text || 'Unknown',
+        value: profitability,
+      };
+    });
 
     res.json({
       leads: {
@@ -253,6 +332,12 @@ router.get('/sales', authenticate, async (req: AuthRequest, res) => {
 // Operations Dashboard
 router.get('/operations', authenticate, async (req: AuthRequest, res) => {
   try {
+    const fyFilters = req.query.fy ? (Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[] : [];
+    const monthFilters = req.query.month ? (Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[] : [];
+    
+    const baseWhere: any = {};
+    const where = applyDateFilters(baseWhere, fyFilters, monthFilters);
+    
     const [
       pendingInstallation,
       submittedForSubsidy,
@@ -264,20 +349,22 @@ router.get('/operations', authenticate, async (req: AuthRequest, res) => {
       // Projects pending installation
       prisma.project.count({
         where: {
+          ...where,
           projectStatus: { in: [ProjectStatus.CONFIRMED, ProjectStatus.UNDER_INSTALLATION] },
         },
       }),
       // Submitted for subsidy
       prisma.project.count({
-        where: { projectStatus: ProjectStatus.SUBMITTED_FOR_SUBSIDY },
+        where: { ...where, projectStatus: ProjectStatus.SUBMITTED_FOR_SUBSIDY },
       }),
       // Subsidy credited
       prisma.project.count({
-        where: { projectStatus: ProjectStatus.COMPLETED_SUBSIDY_CREDITED },
+        where: { ...where, projectStatus: ProjectStatus.COMPLETED_SUBSIDY_CREDITED },
       }),
       // Pending subsidy (submitted but not credited)
       prisma.project.findMany({
         where: {
+          ...where,
           projectStatus: ProjectStatus.SUBMITTED_FOR_SUBSIDY,
           subsidyRequestDate: { not: null },
         },
@@ -295,6 +382,7 @@ router.get('/operations', authenticate, async (req: AuthRequest, res) => {
       // KSEB bottlenecks (feasibility or registration pending)
       prisma.project.findMany({
         where: {
+          ...where,
           OR: [
             { feasibilityDate: null, projectStatus: { not: ProjectStatus.LEAD } },
             { registrationDate: null, projectStatus: { not: ProjectStatus.LEAD } },
@@ -315,6 +403,7 @@ router.get('/operations', authenticate, async (req: AuthRequest, res) => {
       // MNRE bottlenecks
       prisma.project.findMany({
         where: {
+          ...where,
           OR: [
             { mnrePortalRegistrationDate: null, projectStatus: { not: ProjectStatus.LEAD } },
             { installationCompletionDate: null, projectStatus: { not: ProjectStatus.LEAD } },
@@ -334,10 +423,10 @@ router.get('/operations', authenticate, async (req: AuthRequest, res) => {
       }),
     ]);
 
-    // Calculate project value by type for pie chart
+    // Calculate project value by type for pie chart (with optional FY filter)
     const projectValueByType = await prisma.project.groupBy({
       by: ['type'],
-      where: { projectCost: { not: null } },
+      where: { projectCost: { not: null }, ...where },
       _sum: { projectCost: true },
       _count: { id: true },
     });
@@ -371,6 +460,33 @@ router.get('/operations', authenticate, async (req: AuthRequest, res) => {
       percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
     }));
 
+    // Calculate project value and profit by financial year
+    const projectValueByFY = await prisma.project.groupBy({
+      by: ['year'],
+      where: { projectCost: { not: null } },
+      _sum: { projectCost: true },
+    });
+
+    const profitByFY = await prisma.project.groupBy({
+      by: ['year'],
+      where: { grossProfit: { not: null } },
+      _sum: { grossProfit: true },
+    });
+
+    // Combine the data by financial year
+    const allFYs = new Set([
+      ...projectValueByFY.map((item) => item.year),
+      ...profitByFY.map((item) => item.year),
+    ]);
+
+    const projectValueProfitByFY = Array.from(allFYs)
+      .sort()
+      .map((fy) => ({
+        fy,
+        totalProjectValue: projectValueByFY.find((item) => item.year === fy)?._sum.projectCost || 0,
+        totalProfit: profitByFY.find((item) => item.year === fy)?._sum.grossProfit || 0,
+      }));
+
     res.json({
       pendingInstallation,
       submittedForSubsidy,
@@ -387,6 +503,7 @@ router.get('/operations', authenticate, async (req: AuthRequest, res) => {
       ksebBottlenecks,
       mnreBottlenecks,
       projectValueByType: valueByTypeWithPercentage,
+      projectValueProfitByFY,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -396,6 +513,12 @@ router.get('/operations', authenticate, async (req: AuthRequest, res) => {
 // Finance Dashboard
 router.get('/finance', authenticate, async (req: AuthRequest, res) => {
   try {
+    const fyFilters = req.query.fy ? (Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[] : [];
+    const monthFilters = req.query.month ? (Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[] : [];
+    
+    const baseWhere: any = {};
+    const where = applyDateFilters(baseWhere, fyFilters, monthFilters);
+    
     const [
       totalProjectValue,
       totalAmountReceived,
@@ -407,25 +530,28 @@ router.get('/finance', authenticate, async (req: AuthRequest, res) => {
       // Total project value
       prisma.project.aggregate({
         _sum: { projectCost: true },
-        where: { projectCost: { not: null } },
+        where: { ...where, projectCost: { not: null } },
       }),
       // Total amount received
       prisma.project.aggregate({
         _sum: { totalAmountReceived: true },
+        where,
       }),
       // Total outstanding
       prisma.project.aggregate({
         _sum: { balanceAmount: true },
+        where,
       }),
       // Projects by payment status
       prisma.project.groupBy({
         by: ['paymentStatus'],
+        where: { ...where },
         _count: { id: true },
         _sum: { projectCost: true, balanceAmount: true },
       }),
       // Profit by project
       prisma.project.findMany({
-        where: { finalProfit: { not: null } },
+        where: { ...where, finalProfit: { not: null } },
         select: {
           id: true,
           customer: {
@@ -445,7 +571,7 @@ router.get('/finance', authenticate, async (req: AuthRequest, res) => {
       // Profit by salesperson
       prisma.project.groupBy({
         by: ['salespersonId'],
-        where: { salespersonId: { not: null }, finalProfit: { not: null } },
+        where: { ...where, salespersonId: { not: null }, finalProfit: { not: null } },
         _sum: { finalProfit: true },
         _count: { id: true },
       }),
@@ -511,6 +637,33 @@ router.get('/finance', authenticate, async (req: AuthRequest, res) => {
       percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
     }));
 
+    // Calculate project value and profit by financial year
+    const projectValueByFY = await prisma.project.groupBy({
+      by: ['year'],
+      where: { projectCost: { not: null } },
+      _sum: { projectCost: true },
+    });
+
+    const profitByFY = await prisma.project.groupBy({
+      by: ['year'],
+      where: { grossProfit: { not: null } },
+      _sum: { grossProfit: true },
+    });
+
+    // Combine the data by financial year
+    const allFYs = new Set([
+      ...projectValueByFY.map((item) => item.year),
+      ...profitByFY.map((item) => item.year),
+    ]);
+
+    const projectValueProfitByFY = Array.from(allFYs)
+      .sort()
+      .map((fy) => ({
+        fy,
+        totalProjectValue: projectValueByFY.find((item) => item.year === fy)?._sum.projectCost || 0,
+        totalProfit: profitByFY.find((item) => item.year === fy)?._sum.grossProfit || 0,
+      }));
+
     res.json({
       totalProjectValue: totalProjectValue._sum.projectCost || 0,
       totalAmountReceived: totalAmountReceived._sum.totalAmountReceived || 0,
@@ -524,6 +677,7 @@ router.get('/finance', authenticate, async (req: AuthRequest, res) => {
       profitByProject,
       profitBySalesperson: profitBreakdown,
       projectValueByType: valueByTypeWithPercentage,
+      projectValueProfitByFY,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -533,18 +687,24 @@ router.get('/finance', authenticate, async (req: AuthRequest, res) => {
 // Management Dashboard (aggregated view)
 router.get('/management', authenticate, async (req: AuthRequest, res) => {
   try {
+    const fyFilters = req.query.fy ? (Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[] : [];
+    const monthFilters = req.query.month ? (Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[] : [];
+    
+    const baseWhere: any = {};
+    const where = applyDateFilters(baseWhere, fyFilters, monthFilters);
+
     const [sales, operations, finance] = await Promise.all([
       // Sales metrics
       (async () => {
         const [totalLeads, totalCapacity, totalRevenue] = await Promise.all([
-          prisma.project.count({ where: { projectStatus: ProjectStatus.LEAD } }),
+          prisma.project.count({ where: { ...where, projectStatus: ProjectStatus.LEAD } }),
           prisma.project.aggregate({
             _sum: { systemCapacity: true },
-            where: { systemCapacity: { not: null } },
+            where: { ...where, systemCapacity: { not: null } },
           }),
           prisma.project.aggregate({
             _sum: { projectCost: true },
-            where: { projectCost: { not: null } },
+            where: { ...where, projectCost: { not: null } },
           }),
         ]);
         return {
@@ -558,14 +718,15 @@ router.get('/management', authenticate, async (req: AuthRequest, res) => {
         const [pendingInstallation, subsidyCredited, pendingSubsidy] = await Promise.all([
           prisma.project.count({
             where: {
+              ...where,
               projectStatus: { in: [ProjectStatus.CONFIRMED, ProjectStatus.UNDER_INSTALLATION] },
             },
           }),
           prisma.project.count({
-            where: { projectStatus: ProjectStatus.COMPLETED_SUBSIDY_CREDITED },
+            where: { ...where, projectStatus: ProjectStatus.COMPLETED_SUBSIDY_CREDITED },
           }),
           prisma.project.count({
-            where: { projectStatus: ProjectStatus.SUBMITTED_FOR_SUBSIDY },
+            where: { ...where, projectStatus: ProjectStatus.SUBMITTED_FOR_SUBSIDY },
           }),
         ]);
         return {
@@ -579,17 +740,19 @@ router.get('/management', authenticate, async (req: AuthRequest, res) => {
         const [totalValue, totalReceived, totalOutstanding, totalProfit] = await Promise.all([
           prisma.project.aggregate({
             _sum: { projectCost: true },
-            where: { projectCost: { not: null } },
+            where: { ...where, projectCost: { not: null } },
           }),
           prisma.project.aggregate({
             _sum: { totalAmountReceived: true },
+            where,
           }),
           prisma.project.aggregate({
             _sum: { balanceAmount: true },
+            where,
           }),
           prisma.project.aggregate({
             _sum: { grossProfit: true },
-            where: { grossProfit: { not: null } },
+            where: { ...where, grossProfit: { not: null } },
           }),
         ]);
         return {
@@ -601,10 +764,10 @@ router.get('/management', authenticate, async (req: AuthRequest, res) => {
       })(),
     ]);
 
-    // Calculate project value by type
+    // Calculate project value by type (with optional FY filter)
     const projectValueByType = await prisma.project.groupBy({
       by: ['type'],
-      where: { projectCost: { not: null } },
+      where: { projectCost: { not: null }, ...where },
       _sum: { projectCost: true },
       _count: { id: true },
     });
@@ -672,12 +835,14 @@ router.get('/management', authenticate, async (req: AuthRequest, res) => {
     // Get customer/project profitability data for word cloud
     const profitabilityData = await prisma.project.findMany({
       where: {
+        ...where,
         profitability: { not: null },
       },
       include: {
         customer: {
           select: {
-            customerName: true,
+            firstName: true, // Primary - used for word cloud
+            customerName: true, // Fallback only if firstName is null/empty
           },
         },
       },
@@ -687,10 +852,20 @@ router.get('/management', authenticate, async (req: AuthRequest, res) => {
       take: 50, // Limit to top 50 for word cloud
     });
 
-    const wordCloudData = profitabilityData.map((p) => ({
-      text: p.customer?.customerName || 'Unknown',
-      value: p.profitability || 0,
-    }));
+    // Map to word cloud data - use firstName (required), profitability from Sales & Commercial section
+    const wordCloudData = profitabilityData.map((p) => {
+      // First Name from Customer (fallback to customerName if firstName is empty)
+      const firstName = p.customer?.firstName?.trim();
+      const text = firstName || p.customer?.customerName?.trim() || 'Unknown';
+      
+      // Profitability from Sales & Commercial section
+      const profitability = p.profitability || 0;
+      
+      return {
+        text: text || 'Unknown',
+        value: profitability,
+      };
+    });
 
     res.json({
       sales,

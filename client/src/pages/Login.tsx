@@ -35,17 +35,19 @@ const Login = () => {
         backgroundRepeat: 'no-repeat',
       }}
     >
-      <div className="max-w-md w-full space-y-8 bg-white/90 backdrop-blur-sm rounded-lg shadow-xl p-8">
+      <div className="max-w-md w-full space-y-8 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 border-2 border-white/20">
         <div className="text-center">
-          <img 
-            src="/rayenna_logo.jpg" 
-            alt="Rayenna Energy Logo" 
-            className="h-32 w-auto mx-auto mb-4"
-          />
-          <h2 className="text-3xl font-extrabold text-primary-700">
+          <div className="mb-6">
+            <img 
+              src="/rayenna_logo.jpg" 
+              alt="Rayenna Energy Logo" 
+              className="h-32 w-auto mx-auto mb-4 drop-shadow-lg"
+            />
+          </div>
+          <h2 className="text-4xl font-extrabold bg-gradient-to-r from-primary-600 via-primary-500 to-green-600 bg-clip-text text-transparent mb-2">
             Rayenna CRM
           </h2>
-          <p className="mt-2 text-sm text-secondary-600">
+          <p className="mt-2 text-sm font-medium text-gray-600">
             Sign in to your account
           </p>
         </div>
@@ -89,12 +91,18 @@ const Login = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 transition-colors shadow-md hover:shadow-lg"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
         </form>
+        
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <p className="text-xs text-gray-500 text-center leading-relaxed">
+            By signing in, you acknowledge and agree to the Credits, Copyright, intellectual property and Terms of Usage of this product. Refer the About section to know more
+          </p>
+        </div>
       </div>
     </div>
   )

@@ -43,8 +43,13 @@ const CustomerMaster = () => {
     },
   })
 
+  const getCustomerDisplayName = (customer: Customer) => {
+    const parts = [customer.prefix, customer.firstName, customer.middleName, customer.lastName].filter(Boolean)
+    return parts.length > 0 ? parts.join(' ') : customer.customerName || 'Unknown'
+  }
+
   const handleDelete = (customer: Customer) => {
-    if (window.confirm(`Are you sure you want to delete customer ${customer.customerName}?`)) {
+    if (window.confirm(`Are you sure you want to delete customer ${getCustomerDisplayName(customer)}?`)) {
       deleteMutation.mutate(customer.id)
     }
   }
@@ -54,7 +59,9 @@ const CustomerMaster = () => {
   return (
     <div className="px-4 py-6 sm:px-0">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Customer Master</h1>
+        <h1 className="text-5xl font-extrabold bg-gradient-to-r from-primary-600 via-primary-500 via-green-500 to-primary-600 bg-clip-text text-transparent mb-3 drop-shadow-lg">
+          Customer Master
+        </h1>
         {canCreate && (
           <button
             onClick={() => {
@@ -102,7 +109,7 @@ const CustomerMaster = () => {
                   <div className="flex-1">
                     <div className="flex items-center">
                       <p className="text-sm font-medium text-primary-600">
-                        {customer.customerName}
+                        {getCustomerDisplayName(customer)}
                       </p>
                       <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
                         ID: {customer.customerId}
@@ -210,7 +217,10 @@ const CustomerForm = ({
 }) => {
   const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm({
     defaultValues: {
-      customerName: customer?.customerName || '',
+      prefix: customer?.prefix || '',
+      firstName: customer?.firstName || '',
+      middleName: customer?.middleName || '',
+      lastName: customer?.lastName || '',
       addressLine1: customer?.addressLine1 || '',
       addressLine2: customer?.addressLine2 || '',
       city: customer?.city || '',
@@ -348,18 +358,63 @@ const CustomerForm = ({
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Customer Name *
-              </label>
-              <input
-                {...register('customerName', { required: 'Customer name is required' })}
-                defaultValue={customer?.customerName}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-              />
-              {errors.customerName && (
-                <p className="text-red-500 text-xs mt-1">{errors.customerName.message as string}</p>
-              )}
+            {/* Name Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Prefix
+                </label>
+                <select
+                  {...register('prefix')}
+                  defaultValue={customer?.prefix || ''}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                >
+                  <option value="">None</option>
+                  <option value="Mr.">Mr.</option>
+                  <option value="Ms.">Ms.</option>
+                  <option value="Mrs.">Mrs.</option>
+                  <option value="Miss">Miss</option>
+                  <option value="Mx.">Mx.</option>
+                  <option value="Dr.">Dr.</option>
+                  <option value="Prof.">Prof.</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  First Name *
+                </label>
+                <input
+                  {...register('firstName', { required: 'First name is required' })}
+                  defaultValue={customer?.firstName || ''}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="First Name"
+                />
+                {errors.firstName && (
+                  <p className="text-red-500 text-xs mt-1">{errors.firstName.message as string}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Middle Name
+                </label>
+                <input
+                  {...register('middleName')}
+                  defaultValue={customer?.middleName || ''}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="Middle Name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Last Name
+                </label>
+                <input
+                  {...register('lastName')}
+                  defaultValue={customer?.lastName || ''}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="Last Name"
+                />
+              </div>
             </div>
 
             <div>

@@ -161,7 +161,11 @@ export interface AuditLog {
 export interface Customer {
   id: string
   customerId: string // 6-digit alphanumeric ID
-  customerName: string
+  customerName?: string // Legacy field, kept for backward compatibility
+  prefix?: string // Mr., Ms., Mrs., Mx., Dr., etc.
+  firstName?: string
+  middleName?: string
+  lastName?: string
   addressLine1?: string
   addressLine2?: string
   city?: string

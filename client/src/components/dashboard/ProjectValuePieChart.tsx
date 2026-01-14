@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
+import { useQuery } from '@tanstack/react-query'
+import axios from 'axios'
 
 interface ProjectValueByType {
   type: string
@@ -11,12 +13,33 @@ interface ProjectValueByType {
 
 interface ProjectValuePieChartProps {
   data: ProjectValueByType[]
+  availableFYs?: string[] // Available financial years from dashboard
+  dashboardType?: 'management' | 'sales' | 'operations' | 'finance' // Dashboard type to determine API endpoint
 }
 
 const CHART_COLORS = ['#ef4444', '#3b82f6', '#10b981'] // Red, Blue, Green
 
-const ProjectValuePieChart = ({ data }: ProjectValuePieChartProps) => {
+const ProjectValuePieChart = ({ data, availableFYs = [], dashboardType = 'management' }: ProjectValuePieChartProps) => {
   const [outerRadius, setOuterRadius] = useState(120)
+  const [selectedFY, setSelectedFY] = useState<string>('all')
+  
+  // Fetch filtered data when FY is selected
+  const { data: filteredData, isLoading: isLoadingFiltered } = useQuery({
+    queryKey: ['projectValueByType', dashboardType, selectedFY],
+    queryFn: async () => {
+      if (selectedFY === 'all') {
+        return data // Use original data if 'all' is selected
+      }
+      const endpoint = `/api/dashboard/${dashboardType}?fy=${selectedFY}`
+      const res = await axios.get(endpoint)
+      return res.data.projectValueByType || []
+    },
+    enabled: selectedFY !== 'all', // Only fetch if a specific FY is selected
+    staleTime: 30000, // Cache for 30 seconds
+  })
+  
+  // Use filtered data if available, otherwise use original data
+  const chartData = selectedFY !== 'all' && filteredData ? filteredData : data
 
   useEffect(() => {
     const updateRadius = () => {
@@ -33,25 +56,86 @@ const ProjectValuePieChart = ({ data }: ProjectValuePieChartProps) => {
     return () => window.removeEventListener('resize', updateRadius)
   }, [])
 
-  if (!data || data.length === 0) return null
+  if (!data || data.length === 0) {
+    return (
+      <div className="bg-gradient-to-br from-white via-primary-50/30 to-white shadow-xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-6 h-full flex flex-col backdrop-blur-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+            </svg>
+          </div>
+          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+            Project Value by Customer Segment
+          </h2>
+        </div>
+        <div className="flex items-center justify-center h-64 text-gray-500">
+          <p>No project data available</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('ProjectValuePieChart - Data received:', data)
+    console.log('ProjectValuePieChart - Chart data (filtered):', chartData)
+  }
+
+  // Ensure we have data to display
+  const displayData = (chartData && chartData.length > 0) ? chartData : data
 
   return (
-    <div className="bg-white shadow-sm rounded-lg border border-gray-100 p-4 sm:p-6 h-full flex flex-col">
-      <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
-        Project Value by Customer Segment
-      </h2>
-      <div className="w-full overflow-x-auto flex-1 flex flex-col" style={{ minHeight: '350px' }}>
-        <div className="min-w-[280px] flex-1" style={{ minHeight: '300px' }}>
+    <div className="bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-6 h-full flex flex-col backdrop-blur-sm">
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+            </svg>
+          </div>
+          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+            Project Value by Customer Segment
+          </h2>
+        </div>
+        {availableFYs && availableFYs.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <label htmlFor="pie-fy-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+              Filter by FY:
+            </label>
+            <select
+              id="pie-fy-filter"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 w-full sm:w-auto sm:min-w-[150px]"
+              value={selectedFY}
+              onChange={(e) => setSelectedFY(e.target.value)}
+              disabled={isLoadingFiltered}
+            >
+              <option value="all">All Financial Years</option>
+              {availableFYs.map((fy) => (
+                <option key={fy} value={fy}>
+                  {fy}
+                </option>
+              ))}
+            </select>
+            {isLoadingFiltered && (
+              <span className="text-xs text-gray-500">Loading...</span>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="w-full overflow-x-auto flex-1 flex flex-col">
+        <div className="min-w-[280px]" style={{ height: 320 }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={data}
+              data={displayData}
               cx="50%"
               cy="50%"
               labelLine={false}
               label={(entry: any) => {
-                const total = data.reduce((sum: number, item: any) => sum + item.value, 0)
-                const percentage = (entry.value / total) * 100
+                const total = displayData.reduce((sum: number, item: any) => sum + item.value, 0)
+                const percentage = total > 0 ? (entry.value / total) * 100 : 0
                 if (percentage > 10) {
                   return `${entry.percentage}%`
                 }
@@ -61,7 +145,7 @@ const ProjectValuePieChart = ({ data }: ProjectValuePieChartProps) => {
               fill="#8884d8"
               dataKey="value"
             >
-              {data.map((entry: any, index: number) => (
+              {displayData.map((entry: any, index: number) => (
                 <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
               ))}
             </Pie>
@@ -89,7 +173,7 @@ const ProjectValuePieChart = ({ data }: ProjectValuePieChartProps) => {
               verticalAlign="bottom"
               height={36}
               wrapperStyle={{ fontSize: '12px' }}
-              formatter={(value, entry: any) => (
+              formatter={(_value, entry: any) => (
                 <span className="text-xs sm:text-sm">
                   {entry.payload.label}: ₹{entry.payload.value.toLocaleString('en-IN')} ({entry.payload.percentage}%)
                 </span>
@@ -122,7 +206,7 @@ const ProjectValuePieChart = ({ data }: ProjectValuePieChartProps) => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {data.map((item: any, index: number) => (
+                {displayData.map((item: any, index: number) => (
                   <tr key={item.type} className="hover:bg-gray-50">
                     <td className="px-3 sm:px-4 py-2 sm:py-3">
                       <div className="flex items-center">

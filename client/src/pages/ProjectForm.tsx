@@ -7,6 +7,127 @@ import { useAuth } from '../contexts/AuthContext'
 import { Project, ProjectType, ProjectServiceType, UserRole } from '../types'
 import toast from 'react-hot-toast'
 
+// File Upload Component
+const FileUploadSection = ({ projectId }: { projectId: string }) => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [category, setCategory] = useState<string>('')
+  const [description, setDescription] = useState<string>('')
+  const [uploading, setUploading] = useState(false)
+  const queryClient = useQueryClient()
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Validate file type
+      const validTypes = [
+        'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
+        'application/pdf',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ]
+      if (!validTypes.includes(file.type)) {
+        toast.error('Invalid file type. Please upload images, PDFs, or Office documents.')
+        return
+      }
+      // Validate file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('File size exceeds 10MB limit.')
+        return
+      }
+      setSelectedFile(file)
+    }
+  }
+
+  const uploadMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const res = await axios.post(`/api/documents/project/${projectId}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      return res.data
+    },
+    onSuccess: () => {
+      toast.success('File uploaded successfully!')
+      setSelectedFile(null)
+      setCategory('')
+      setDescription('')
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to upload file')
+      setUploading(false)
+    },
+  })
+
+  const handleUpload = () => {
+    if (!selectedFile || !category) {
+      toast.error('Please select a file and category')
+      return
+    }
+    setUploading(true)
+    const formData = new FormData()
+    formData.append('file', selectedFile)
+    formData.append('category', category)
+    if (description) {
+      formData.append('description', description)
+    }
+    uploadMutation.mutate(formData)
+  }
+
+  return (
+    <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+      <h3 className="text-md font-semibold mb-4">Upload File</h3>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            File
+          </label>
+          <input
+            type="file"
+            onChange={handleFileChange}
+            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Category *
+          </label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+          >
+            <option value="">Select category</option>
+            <option value="photos_videos">Photos / Videos</option>
+            <option value="documents">Documents</option>
+            <option value="sheets">Sheets</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Description (Optional)
+          </label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+            className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            placeholder="Add a brief description..."
+          />
+        </div>
+        <button
+          onClick={handleUpload}
+          disabled={!selectedFile || !category || uploading}
+          className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+        >
+          {uploading ? 'Uploading...' : 'Upload File'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 const ProjectForm = () => {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -788,7 +909,7 @@ const ProjectForm = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Feasibility Date (KSEB)
+                  Feasibility Date (DISCOM)
                 </label>
                 <input
                   type="date"
@@ -798,7 +919,7 @@ const ProjectForm = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Registration Date (KSEB)
+                  Registration Date (DISCOM)
                 </label>
                 <input
                   type="date"
@@ -869,6 +990,14 @@ const ProjectForm = () => {
             className="block w-full border border-gray-300 rounded-md px-3 py-2"
           />
         </div>
+
+        {/* File Upload Section - Only for Sales and Operations in Edit mode */}
+        {isEdit && id && hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS]) && (
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-semibold mb-4">File Uploads</h2>
+            <FileUploadSection projectId={id} />
+          </div>
+        )}
 
         <div className="flex justify-end gap-4">
           <button

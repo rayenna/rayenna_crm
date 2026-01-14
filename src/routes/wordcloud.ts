@@ -1,7 +1,6 @@
 import express from 'express';
 import { PrismaClient, UserRole } from '@prisma/client';
 import { authenticate, AuthRequest } from '../middleware/auth';
-import { calculateFY } from '../utils/calculations';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -18,6 +17,8 @@ router.get('/wordcloud', authenticate, async (req: AuthRequest, res) => {
 
     const where: any = {
       profitability: { not: null },
+      // customerId is a required field (String, not String?), so it can never be null
+      // We don't need to filter for it - all projects have a customerId
     };
 
     // Role-based filtering
@@ -33,10 +34,16 @@ router.get('/wordcloud', authenticate, async (req: AuthRequest, res) => {
     // Get all projects matching FY filter
     const allProjects = await prisma.project.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        profitability: true, // Profitability from Sales & Commercial section
+        year: true,
+        confirmationDate: true,
+        createdAt: true,
         customer: {
           select: {
-            customerName: true,
+            firstName: true, // First Name from Customer
+            customerName: true, // Fallback
           },
         },
       },
@@ -56,19 +63,49 @@ router.get('/wordcloud', authenticate, async (req: AuthRequest, res) => {
 
     // Sort by profitability and take top 50
     const profitabilityData = filteredProjects
+      .filter((p) => p.profitability !== null && p.profitability !== undefined)
       .sort((a, b) => (b.profitability || 0) - (a.profitability || 0))
       .slice(0, 50);
 
-    const wordCloudData = profitabilityData.map((p) => ({
-      text: p.customer?.customerName || 'Unknown',
-      value: p.profitability || 0,
-    }));
+    // Map to word cloud data: First Name from Customer, Profitability from Sales & Commercial section
+    const wordCloudData = profitabilityData
+      .map((p) => {
+        // First Name from Customer (fallback to customerName if firstName is empty)
+        const firstName = p.customer?.firstName ? String(p.customer.firstName).trim() : null;
+        const customerName = p.customer?.customerName ? String(p.customer.customerName).trim() : null;
+        const text = (firstName && firstName.length > 0) || (customerName && customerName.length > 0)
+          ? (firstName || customerName || 'Unknown')
+          : 'Unknown';
+        
+        // Profitability from Sales & Commercial section
+        const profitability = p.profitability || 0;
+        
+        return {
+          text: text,
+          value: profitability,
+        };
+      })
+      .filter((item) => item.text && item.text !== 'Unknown' && item.value > 0);
+
+    // Debug logging (can be removed in production)
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[WordCloud API] Returning ${wordCloudData.length} items`);
+      if (wordCloudData.length > 0) {
+        console.log(`[WordCloud API] Sample data:`, wordCloudData.slice(0, 3));
+      }
+    }
 
     res.json({
       wordCloudData,
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('[WordCloud API] Error:', error);
+    console.error('[WordCloud API] Error stack:', error?.stack);
+    console.error('[WordCloud API] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    res.status(500).json({ 
+      error: error?.message || 'Internal server error',
+      ...(process.env.NODE_ENV === 'development' && { stack: error?.stack })
+    });
   }
 });
 

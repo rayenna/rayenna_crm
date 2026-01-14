@@ -1,0 +1,55 @@
+Rayenna Energy CRM - Customer Relationship Management Platform
+
+Title Credits
+
+Product Name: Rayenna Energy CRM
+Product Category: Custom Enterprise CRM Platform
+
+Concept, Architecture, Design & Development:
+SHABEER MOHAMED KOZHAKKANIYIL
+Director, Rayenna Energy Private Limited
+
+Role:
+# Sole Architect & Developer
+# Technology Stack Selection
+# Database & Data Model Design
+# Workflow & Business Logic Design
+# Feature & Functionality Definition
+# User Interface & User Experience Design
+# System Integration & Customization
+
+Development Background
+
+This CRM platform was custom-designed and developed specifically for the operational needs of Rayenna Energy Private Limited.
+Initial workflows and data structures were informed by the Company’s internal cadence, lead capture formats, and project tracking processes. The software implementation, system architecture, logic, design patterns, and user experience represent original work independently conceived and executed by the developer.
+
+Intellectual Property & Copyright Notice
+
+©2026 – Present
+
+This software, including but not limited to:
+# Source code and object code
+# Database schemas and structures
+# Application workflows and logic
+# User interface designs and layouts
+# Documentation, configurations, and system behavior
+
+is protected under applicable copyright, intellectual property, and software protection laws.
+
+All rights reserved.
+
+Authorship & Inventorship Declaration
+
+The CRM platform is an original work of authorship created by SHABEER MOHAMED KOZHAKKANIYIL. Any novel methods, processes, workflows, or system designs embodied in this software may constitute proprietary inventions and are subject to protection under applicable intellectual property laws, including but not limited to patent laws, where applicable.
+
+Ownership & Assignment Clarification
+
+Unless otherwise expressly assigned in writing: The authorship and inventorship of this software and its underlying systems remain attributable to SHABEER MOHAMED KOZHAKKANIYIL. Any usage, deployment, or operational use of this software by Rayenna Energy Private Limited does not, by itself, constitute a waiver or automatic transfer of inventorship rights. Ownership, licensing, or assignment of intellectual property rights—whether to the Company or jointly—shall be governed exclusively by separate written agreements, board resolutions, or statutory filings, as applicable.
+
+Restrictions
+
+No part of this software may be Reproduced, Modified, Reverse engineered, Distributed, Licensed, Transferred in whole or in part, without explicit written authorization from the rightful intellectual property owner(s).
+
+Confidentiality Notice
+
+This software contains proprietary and confidential information intended solely for authorized internal use by Rayenna Energy Private Limited. Unauthorized access, disclosure, or use is strictly prohibited.
