@@ -141,9 +141,9 @@ const AboutSection = () => {
           </p>
         </div>
 
-        <div className="px-6 py-6 sm:px-8 sm:py-8">
+        <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-5">
+            <div className="space-y-5 min-w-0 max-w-full overflow-hidden">
               {blocks.map((b, idx) => {
                 if (b.type === 'title') {
                   return (
@@ -170,7 +170,10 @@ const AboutSection = () => {
                           <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-primary-600 to-green-600 text-white text-xs shadow">
                             ✓
                           </span>
-                          <span className="text-sm sm:text-base text-gray-700 leading-relaxed">
+                          <span 
+                            className="text-sm sm:text-base text-gray-700 leading-relaxed break-words whitespace-normal max-w-full"
+                            style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                          >
                             {it}
                           </span>
                         </li>
@@ -179,7 +182,11 @@ const AboutSection = () => {
                   )
                 }
                 return (
-                  <p key={idx} className="text-sm sm:text-base text-gray-700 leading-relaxed">
+                  <p 
+                    key={idx} 
+                    className="text-sm sm:text-base text-gray-700 leading-relaxed break-words whitespace-normal max-w-full"
+                    style={{ wordBreak: 'break-word', overflowWrap: 'break-word', hyphens: 'auto' }}
+                  >
                     {b.text}
                   </p>
                 )
@@ -223,7 +230,8 @@ const AboutSection = () => {
                 className="w-full max-w-[224px] sm:max-w-[288px] h-auto drop-shadow-2xl"
               />
               <p className="mt-3 text-xs sm:text-sm text-gray-500 text-center">
-                Rayenna Energy Private Limited
+                ©2026 – Present. Rayenna Energy Private Limited<br />
+                www.rayenna.energy | sales@rayenna.energy
               </p>
             </div>
           </div>

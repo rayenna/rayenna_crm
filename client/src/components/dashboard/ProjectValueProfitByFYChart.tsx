@@ -33,7 +33,7 @@ const ProjectValueProfitByFYChart = ({ data }: ProjectValueProfitByFYChartProps)
             </svg>
           </div>
           <h2 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-            Total Project Value and Total Profit by Financial Year
+            Total Revenue and Total Profit by Financial Year
           </h2>
         </div>
       <div className="flex items-center justify-center h-64 sm:h-96 text-gray-500">
@@ -141,7 +141,7 @@ const ProjectValueProfitByFYChart = ({ data }: ProjectValueProfitByFYChartProps)
             <Legend />
             <Bar 
               dataKey="totalProjectValue" 
-              name="Total Project Value" 
+              name="Total Revenue" 
               fill="#3b82f6" 
               radius={[4, 4, 0, 0]}
             />

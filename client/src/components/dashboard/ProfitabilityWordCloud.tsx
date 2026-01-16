@@ -70,15 +70,38 @@ const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudPro
     const updateDimensions = () => {
       const container = canvasRef.current?.parentElement
       if (container) {
-        const width = Math.min(container.clientWidth - 32, 600) // Account for padding
-        const height = Math.min(window.innerWidth < 640 ? 300 : window.innerWidth < 1024 ? 350 : 400, width * 0.67)
+        // Calculate width: account for padding (p-4 = 16px each side = 32px total, p-6 on larger = 48px)
+        const padding = window.innerWidth < 640 ? 32 : 48
+        const maxWidth = container.clientWidth - padding
+        const width = Math.min(maxWidth, 600)
+        // Calculate height: responsive based on screen size, maintain aspect ratio
+        const height = window.innerWidth < 640 
+          ? Math.min(300, width * 0.75) 
+          : window.innerWidth < 1024 
+          ? Math.min(350, width * 0.7) 
+          : Math.min(400, width * 0.67)
         setDimensions({ width, height })
+      } else {
+        // Fallback if container not found yet
+        const fallbackWidth = window.innerWidth < 640 ? 280 : window.innerWidth < 1024 ? 400 : 500
+        const fallbackHeight = window.innerWidth < 640 ? 300 : window.innerWidth < 1024 ? 350 : 400
+        setDimensions({ width: fallbackWidth, height: fallbackHeight })
       }
     }
 
+    // Initial update
     updateDimensions()
-    window.addEventListener('resize', updateDimensions)
-    return () => window.removeEventListener('resize', updateDimensions)
+    // Update on resize with debounce
+    let resizeTimeout: NodeJS.Timeout
+    const handleResize = () => {
+      clearTimeout(resizeTimeout)
+      resizeTimeout = setTimeout(updateDimensions, 100)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      clearTimeout(resizeTimeout)
+    }
   }, [])
 
   useEffect(() => {
@@ -186,7 +209,7 @@ const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudPro
   }
 
   return (
-    <div className="bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-6 h-full flex flex-col backdrop-blur-sm">
+    <div className="w-full bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-6 flex flex-col backdrop-blur-sm min-h-[600px] lg:min-h-[650px]">
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -334,21 +357,21 @@ const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudPro
       </div>
 
       {/* Word Cloud Canvas or Loading/No Data */}
-      <div className="flex-1 flex flex-col" style={{ minHeight: '350px' }}>
+      <div className="flex-1 flex flex-col min-h-[300px] sm:min-h-[350px] lg:min-h-[400px]">
         {isLoading ? (
-          <div className="flex items-center justify-center flex-1" style={{ minHeight: '300px' }}>
+          <div className="flex items-center justify-center flex-1 min-h-[300px]">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
               <p className="mt-4 text-sm text-gray-500">Loading...</p>
             </div>
           </div>
         ) : !data?.wordCloudData || data.wordCloudData.length === 0 ? (
-          <div className="flex items-center justify-center flex-1" style={{ minHeight: '300px' }}>
+          <div className="flex items-center justify-center flex-1 min-h-[300px]">
             <p className="text-sm text-gray-500">No profitability data available for selected filters.</p>
           </div>
         ) : (
           <>
-            <div className="w-full flex justify-center overflow-hidden flex-1" style={{ minHeight: '300px' }}>
+            <div className="w-full flex justify-center overflow-hidden flex-1 min-h-[300px] sm:min-h-[350px] lg:min-h-[400px]">
               <canvas
                 ref={canvasRef}
                 className="max-w-full h-auto"

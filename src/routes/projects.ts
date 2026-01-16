@@ -1,6 +1,6 @@
 import express, { Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
-import { PrismaClient, ProjectStatus, ProjectType, ProjectServiceType, UserRole } from '@prisma/client';
+import { PrismaClient, ProjectStatus, ProjectType, ProjectServiceType, ProjectStage, UserRole, LeadSource } from '@prisma/client';
 import { authenticate, authorize, AuthRequest } from '../middleware/auth';
 import { createAuditLog } from '../utils/audit';
 import { calculatePayments, calculateExpectedProfit, calculateGrossProfit, calculateProfitability, calculateFY } from '../utils/calculations';
@@ -8,6 +8,8 @@ import { predictProjectDelay } from '../utils/ai';
 import { suggestOptimalPricing } from '../utils/ai';
 import { generateProposalContent, calculateFinancials } from '../utils/proposalGenerator';
 import { generateProposalPDF } from '../utils/pdfGenerator';
+import path from 'path';
+import fs from 'fs';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -17,10 +19,30 @@ router.get(
   '/',
   authenticate,
   [
-    query('status').optional().isIn(Object.values(ProjectStatus)),
-    query('type').optional().isIn(Object.values(ProjectType)),
-    query('projectServiceType').optional().isIn(Object.values(ProjectServiceType)),
-    query('salespersonId').optional().isString(),
+    // Allow multiple status values (array) - express automatically parses multiple params with same name into array
+    query('status').optional().custom((value) => {
+      if (!value) return true;
+      const values = Array.isArray(value) ? value : [value];
+      return values.every(v => Object.values(ProjectStatus).includes(v as ProjectStatus));
+    }).withMessage('Invalid status value'),
+    // Allow multiple type values (array)
+    query('type').optional().custom((value) => {
+      if (!value) return true;
+      const values = Array.isArray(value) ? value : [value];
+      return values.every(v => Object.values(ProjectType).includes(v as ProjectType));
+    }).withMessage('Invalid type value'),
+    // Allow multiple projectServiceType values (array)
+    query('projectServiceType').optional().custom((value) => {
+      if (!value) return true;
+      const values = Array.isArray(value) ? value : [value];
+      return values.every(v => Object.values(ProjectServiceType).includes(v as ProjectServiceType));
+    }).withMessage('Invalid projectServiceType value'),
+    // Allow multiple salespersonId values (array)
+    query('salespersonId').optional().custom((value) => {
+      if (!value) return true;
+      const values = Array.isArray(value) ? value : [value];
+      return values.every(v => typeof v === 'string');
+    }).withMessage('Invalid salespersonId value'),
     query('year').optional().isString(),
     query('search').optional().isString(),
     query('page').optional().isInt({ min: 1 }),
@@ -29,6 +51,7 @@ router.get(
     query('sortOrder').optional().isIn(['asc', 'desc']),
   ],
   async (req: AuthRequest, res: Response) => {
+    let where: any = {};
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -43,7 +66,7 @@ router.get(
         year,
         search,
         page = '1',
-        limit = '50',
+        limit = '25',
         sortBy,
         sortOrder = 'desc',
       } = req.query;
@@ -51,24 +74,58 @@ router.get(
       const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
       const take = parseInt(limit as string);
 
-      const where: any = {};
+      where = {};
 
-      if (status) where.projectStatus = status;
-      if (type) where.type = type;
-      if (projectServiceType) where.projectServiceType = projectServiceType;
-      if (salespersonId) where.salespersonId = salespersonId;
-      if (year) where.year = year;
-      if (search) {
-        where.OR = [
-          { customer: { customerName: { contains: search as string, mode: 'insensitive' } } },
-          { customer: { customerId: { contains: search as string, mode: 'insensitive' } } },
-          { customer: { consumerNumber: { contains: search as string, mode: 'insensitive' } } },
-        ];
-      }
+      // Handle array filters (multi-select) - express sends arrays when multiple values have same param name
+      const statusArray = Array.isArray(status) ? status : status ? [status] : [];
+      const typeArray = Array.isArray(type) ? type : type ? [type] : [];
+      const projectServiceTypeArray = Array.isArray(projectServiceType) ? projectServiceType : projectServiceType ? [projectServiceType] : [];
+      const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : salespersonId ? [salespersonId] : [];
 
-      // Role-based filtering
+      // Role-based filtering - Sales users only see their own projects
+      // This should be applied before other filters
       if (req.user?.role === UserRole.SALES) {
         where.salespersonId = req.user.id;
+      }
+
+      // Handle array filters (multi-select) - express sends arrays when multiple values have same param name
+      // Note: Sales users don't see the salespersonId filter, so salespersonIdArray will be empty for them
+      if (statusArray.length > 0) where.projectStatus = { in: statusArray as string[] };
+      if (typeArray.length > 0) where.type = { in: typeArray as string[] };
+      if (projectServiceTypeArray.length > 0) where.projectServiceType = { in: projectServiceTypeArray as string[] };
+      // Only apply salespersonId filter for non-Sales users (Sales users already filtered above)
+      if (salespersonIdArray.length > 0 && req.user?.role !== UserRole.SALES) {
+        where.salespersonId = { in: salespersonIdArray as string[] };
+      }
+      if (year) where.year = year;
+      
+      // Handle search - combine with existing conditions using AND
+      if (search) {
+        const searchConditions = {
+          OR: [
+            { customer: { customerName: { contains: search as string, mode: 'insensitive' } } },
+            { customer: { customerId: { contains: search as string, mode: 'insensitive' } } },
+            { customer: { consumerNumber: { contains: search as string, mode: 'insensitive' } } },
+          ],
+        };
+        
+        // If we already have top-level conditions (like salespersonId), we need to wrap in AND
+        const topLevelKeys = Object.keys(where).filter(key => key !== 'AND' && key !== 'OR');
+        if (topLevelKeys.length > 0) {
+          // Move all existing top-level conditions into AND array
+          const existingConditions: any[] = [];
+          topLevelKeys.forEach(key => {
+            existingConditions.push({ [key]: where[key] });
+          });
+          where.AND = [...existingConditions, searchConditions];
+          // Remove moved conditions from top level
+          topLevelKeys.forEach(key => {
+            delete where[key];
+          });
+        } else {
+          // No top-level conditions, can add OR directly
+          where.OR = searchConditions.OR;
+        }
       }
 
       // Build orderBy based on sortBy parameter
@@ -105,8 +162,30 @@ router.get(
       const [projects, total] = await Promise.all([
         prisma.project.findMany({
           where,
-          include: {
-            customer: true,
+          select: {
+            id: true,
+            slNo: true,
+            customerId: true,
+            type: true,
+            projectServiceType: true,
+            salespersonId: true,
+            year: true,
+            systemCapacity: true,
+            projectCost: true,
+            projectStatus: true,
+            confirmationDate: true,
+            createdAt: true,
+            paymentStatus: true,
+            customer: {
+              select: {
+                id: true,
+                customerId: true,
+                customerName: true,
+                firstName: true,
+                middleName: true,
+                lastName: true,
+              },
+            },
             createdBy: {
               select: { id: true, name: true, email: true },
             },
@@ -131,7 +210,15 @@ router.get(
         },
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error('Error fetching projects:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        meta: error.meta,
+      });
+      console.error('User role:', req.user?.role);
+      console.error('Where clause:', JSON.stringify(where, null, 2));
+      res.status(500).json({ error: error.message || 'Internal server error' });
     }
   }
 );
@@ -279,15 +366,32 @@ router.post(
         confirmationDate,
         loanDetails,
         incentiveEligible,
+        leadSource,
+        leadSourceDetails,
       } = req.body;
 
-      // Verify customer exists
+      // Verify customer exists and get salespersonId
       const customer = await prisma.customer.findUnique({
         where: { id: customerId },
+        select: {
+          id: true,
+          salespersonId: true,
+          createdById: true,
+        },
       });
 
       if (!customer) {
         return res.status(404).json({ error: 'Customer not found' });
+      }
+
+      // For Sales users: Only allow creating projects for customers they created or are tagged to
+      if (req.user?.role === UserRole.SALES) {
+        const isCustomerCreator = customer.createdById === req.user.id;
+        const isTaggedSalesperson = customer.salespersonId === req.user.id;
+        
+        if (!isCustomerCreator && !isTaggedSalesperson) {
+          return res.status(403).json({ error: 'You can only create projects for customers you created or are tagged to' });
+        }
       }
 
       // Convert confirmationDate to Date object
@@ -332,13 +436,17 @@ router.post(
           customerId,
           type,
           projectServiceType: projectServiceType || ProjectServiceType.EPC_PROJECT,
-          salespersonId: salespersonId || (req.user?.role === UserRole.SALES ? req.user.id : null),
+          // Use customer's salespersonId (salespersonId from customer, not from request)
+          // Only Admin can override this when creating projects
+          salespersonId: req.user?.role === UserRole.ADMIN && salespersonId ? salespersonId : (customer.salespersonId || (req.user?.role === UserRole.SALES ? req.user.id : null)),
           year: calculatedYear, // Use auto-calculated year
           systemCapacity: systemCapacityNum,
           projectCost: projectCostNum,
           confirmationDate: confirmationDate ? new Date(confirmationDate) : null,
           loanDetails: loanDetails ? (typeof loanDetails === 'object' ? JSON.stringify(loanDetails) : loanDetails) : null,
           incentiveEligible: incentiveEligible || false,
+          leadSource: leadSource || null,
+          leadSourceDetails: leadSourceDetails || null,
           expectedProfit,
           grossProfit,
           profitability,
@@ -393,6 +501,11 @@ router.put(
 
       if (!project) {
         return res.status(404).json({ error: 'Project not found' });
+      }
+
+      // Prevent editing projects in Lost status (only Admin can delete)
+      if (project.projectStatus === ProjectStatus.LOST && req.user?.role !== UserRole.ADMIN) {
+        return res.status(403).json({ error: 'Projects in Lost status cannot be edited. Only Admin can delete them.' });
       }
 
       // Role-based access control
@@ -762,6 +875,7 @@ router.put(
         delete updateData.customer; // Remove relation objects
         delete updateData.createdBy; // Remove relation objects
         delete updateData.salesperson; // Remove relation objects
+        delete updateData.opsPerson; // Remove relation objects
         delete updateData.documents; // Remove relation objects
         delete updateData.auditLogs; // Remove relation objects
         
@@ -863,15 +977,78 @@ router.put(
         if (updateData.projectStatus !== undefined && !Object.values(ProjectStatus).includes(updateData.projectStatus as ProjectStatus)) {
           delete updateData.projectStatus;
         }
+        if (updateData.leadSource !== undefined && !Object.values(LeadSource).includes(updateData.leadSource as LeadSource)) {
+          delete updateData.leadSource;
+        }
         
         // Handle string fields - ensure they're strings or null
-        const stringFields = ['year', 'mnreInstallationDetails', 'remarks', 'internalNotes'];
+        const stringFields = ['year', 'mnreInstallationDetails', 'remarks', 'internalNotes', 'leadSourceDetails'];
         for (const field of stringFields) {
           if (updateData[field] !== undefined) {
             if (updateData[field] === null || updateData[field] === '' || updateData[field] === 'null') {
               updateData[field] = null;
             } else {
               updateData[field] = String(updateData[field]);
+            }
+          }
+        }
+        
+        // Handle salespersonId - Admin can update it
+        if (updateData.salespersonId !== undefined) {
+          if (updateData.salespersonId === null || updateData.salespersonId === '' || updateData.salespersonId === 'null') {
+            updateData.salespersonId = null;
+          } else {
+            // Convert to string to ensure proper format
+            const salespersonIdStr = String(updateData.salespersonId).trim();
+            if (!salespersonIdStr) {
+              updateData.salespersonId = null;
+            } else {
+              try {
+                // Validate that the salesperson exists (if provided)
+                const salesperson = await prisma.user.findUnique({
+                  where: { id: salespersonIdStr },
+                  select: { id: true, role: true },
+                });
+                if (!salesperson) {
+                  return res.status(400).json({ error: 'Invalid salesperson ID: User not found' });
+                }
+                // Set the validated ID
+                updateData.salespersonId = salespersonIdStr;
+              } catch (error: any) {
+                // If Prisma query fails (e.g., invalid ID format), return error
+                console.error('Error validating salespersonId:', error);
+                return res.status(400).json({ error: `Invalid salesperson ID format: ${error.message}` });
+              }
+            }
+          }
+        }
+        
+        // Handle assignedOpsId - Admin can update it
+        if (updateData.assignedOpsId !== undefined) {
+          if (updateData.assignedOpsId === null || updateData.assignedOpsId === '' || updateData.assignedOpsId === 'null') {
+            updateData.assignedOpsId = null;
+          } else {
+            // Convert to string to ensure proper format
+            const opsIdStr = String(updateData.assignedOpsId).trim();
+            if (!opsIdStr) {
+              updateData.assignedOpsId = null;
+            } else {
+              try {
+                // Validate that the ops user exists (if provided)
+                const opsUser = await prisma.user.findUnique({
+                  where: { id: opsIdStr },
+                  select: { id: true, role: true },
+                });
+                if (!opsUser) {
+                  return res.status(400).json({ error: 'Invalid assigned operations ID: User not found' });
+                }
+                // Set the validated ID
+                updateData.assignedOpsId = opsIdStr;
+              } catch (error: any) {
+                // If Prisma query fails (e.g., invalid ID format), return error
+                console.error('Error validating assignedOpsId:', error);
+                return res.status(400).json({ error: `Invalid assigned operations ID format: ${error.message}` });
+              }
             }
           }
         }
@@ -967,6 +1144,14 @@ router.put(
         return res.status(400).json({ error: 'No valid fields to update' });
       }
 
+      // Final cleanup: Remove any remaining relation objects that might have been missed
+      const relationFields = ['customer', 'createdBy', 'salesperson', 'opsPerson', 'documents', 'auditLogs'];
+      relationFields.forEach(field => {
+        if (updateData[field] !== undefined) {
+          delete updateData[field];
+        }
+      });
+
       const updatedProject = await prisma.project.update({
         where: { id: req.params.id },
         data: updateData,
@@ -998,7 +1183,18 @@ router.put(
 
       res.json(updatedProject);
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error('Project update error:', error);
+      // Provide more detailed error information
+      if (error.code === 'P2002') {
+        return res.status(400).json({ error: 'Unique constraint violation. A project with this information already exists.' });
+      }
+      if (error.code === 'P2025') {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      if (error.code === 'P2003') {
+        return res.status(400).json({ error: 'Invalid foreign key reference. One of the referenced records does not exist.' });
+      }
+      res.status(500).json({ error: error.message || 'Internal server error' });
     }
   }
 );
@@ -1238,6 +1434,43 @@ router.get('/:id/proposal-pdf', authenticate, async (req: AuthRequest, res) => {
 
     // Generate PDF
     const pdfBuffer = await generateProposalPDF(proposalData, financials, content);
+
+    // Save PDF to file system and create document record
+    const uploadsDir = path.join(__dirname, '../../uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const fileName = `proposal-${projectId}-${Date.now()}.pdf`;
+    const filePath = path.join(uploadsDir, fileName);
+    fs.writeFileSync(filePath, pdfBuffer);
+
+    // Store relative path from uploads directory
+    const relativePath = path.relative(uploadsDir, filePath).replace(/\\/g, '/');
+
+    // Create document record - AI Generated Proposal PDFs are stored with special description
+    const document = await prisma.document.create({
+      data: {
+        projectId,
+        fileName: `Proposal_${project.customer.customerName}_${project.slNo}.pdf`,
+        filePath: relativePath,
+        fileType: 'application/pdf',
+        fileSize: pdfBuffer.length,
+        category: 'documents',
+        description: 'AI Generated Proposal PDF', // Special marker to identify proposal PDFs
+        uploadedById: req.user!.id,
+      },
+    });
+
+    // Create audit log
+    await createAuditLog({
+      projectId,
+      userId: req.user!.id,
+      action: 'proposal_pdf_generated',
+      field: 'documents',
+      newValue: document.fileName,
+      remarks: 'AI Generated Proposal PDF saved to Key Artifacts',
+    });
 
     // Set response headers
     res.setHeader('Content-Type', 'application/pdf');

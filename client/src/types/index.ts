@@ -21,6 +21,7 @@ export enum ProjectStatus {
   SUBMITTED_FOR_SUBSIDY = 'SUBMITTED_FOR_SUBSIDY',
   COMPLETED = 'COMPLETED',
   COMPLETED_SUBSIDY_CREDITED = 'COMPLETED_SUBSIDY_CREDITED',
+  LOST = 'LOST',
 }
 
 export enum PaymentStatus {
@@ -47,6 +48,23 @@ export enum ProjectStage {
   BILLING = 'BILLING',
   LIVE = 'LIVE',
   AMC = 'AMC',
+  LOST = 'LOST',
+}
+
+export enum LostReason {
+  LOST_TO_COMPETITION = 'LOST_TO_COMPETITION',
+  NO_BUDGET = 'NO_BUDGET',
+  INDEFINITELY_DELAYED = 'INDEFINITELY_DELAYED',
+  OTHER = 'OTHER',
+}
+
+export enum LeadSource {
+  WEBSITE = 'WEBSITE',
+  REFERRAL = 'REFERRAL',
+  GOOGLE = 'GOOGLE',
+  CHANNEL_PARTNER = 'CHANNEL_PARTNER',
+  DIGITAL_MARKETING = 'DIGITAL_MARKETING',
+  OTHER = 'OTHER',
 }
 
 export enum SystemType {
@@ -94,6 +112,10 @@ export interface Project {
   projectStage?: ProjectStage
   stageEnteredAt?: string
   slaDays?: number
+  // Lost stage fields
+  lostDate?: string
+  lostReason?: LostReason
+  lostOtherReason?: string
   statusIndicator?: 'GREEN' | 'AMBER' | 'RED'
   systemType?: SystemType
   panelBrand?: string
@@ -105,6 +127,8 @@ export interface Project {
   assignedOpsId?: string
   opsPerson?: User
   leadId?: string
+  leadSource?: LeadSource
+  leadSourceDetails?: string
   totalProjectCost?: number
   advanceReceived?: number
   advanceReceivedDate?: string
@@ -179,9 +203,20 @@ export interface Customer {
   idProofType?: string
   companyName?: string
   companyGst?: string
-  leadSource?: string
-  leadBroughtBy?: string
+  createdById?: string
+  salespersonId?: string
+  salesperson?: User
   projects?: Project[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ProjectRemark {
+  id: string
+  projectId: string
+  userId: string
+  user?: User
+  remark: string
   createdAt: string
   updatedAt: string
 }

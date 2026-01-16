@@ -11,6 +11,7 @@ const STAGE_SLA: Record<ProjectStage, number> = {
   BILLING: 7, // 7 days for billing
   LIVE: 3, // 3 days to go live
   AMC: 365, // 365 days for AMC (ongoing)
+  LOST: 0, // Lost projects don't have SLA
 };
 
 /**

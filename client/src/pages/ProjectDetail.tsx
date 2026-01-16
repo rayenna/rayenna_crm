@@ -3,134 +3,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { useParams, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Project, UserRole, ProjectStage } from '../types'
+import { Project, UserRole, ProjectStatus, LostReason } from '../types'
+import RemarksSection from '../components/remarks/RemarksSection'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import ProposalPreview from '../components/proposal/ProposalPreview'
 
-// File Upload Component
-const FileUploadSection = ({ projectId }: { projectId: string }) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [category, setCategory] = useState<string>('')
-  const [description, setDescription] = useState<string>('')
-  const [uploading, setUploading] = useState(false)
-  const queryClient = useQueryClient()
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      // Validate file type
-      const validTypes = [
-        'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
-        'application/pdf',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-      ]
-      if (!validTypes.includes(file.type)) {
-        toast.error('Invalid file type. Please upload images, PDFs, or Office documents.')
-        return
-      }
-      // Validate file size (10MB limit)
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error('File size exceeds 10MB limit.')
-        return
-      }
-      setSelectedFile(file)
-    }
-  }
-
-  const uploadMutation = useMutation({
-    mutationFn: async (formData: FormData) => {
-      const res = await axios.post(`/api/documents/project/${projectId}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      return res.data
-    },
-    onSuccess: () => {
-      toast.success('File uploaded successfully!')
-      setSelectedFile(null)
-      setCategory('')
-      setDescription('')
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] })
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to upload file')
-    },
-  })
-
-  const handleUpload = () => {
-    if (!selectedFile || !category) {
-      toast.error('Please select a file and category')
-      return
-    }
-    setUploading(true)
-    const formData = new FormData()
-    formData.append('file', selectedFile)
-    formData.append('category', category)
-    if (description) {
-      formData.append('description', description)
-    }
-    uploadMutation.mutate(formData)
-    setUploading(false)
-  }
-
-  return (
-    <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-      <h3 className="text-md font-semibold mb-4">Upload File</h3>
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            File
-          </label>
-          <input
-            type="file"
-            onChange={handleFileChange}
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Category
-          </label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-          >
-            <option value="">Select category</option>
-            <option value="photos_videos">Photos / Videos</option>
-            <option value="documents">Documents</option>
-            <option value="sheets">Sheets</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Description (Optional)
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={2}
-            className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            placeholder="Add a brief description..."
-          />
-        </div>
-        <button
-          onClick={handleUpload}
-          disabled={!selectedFile || !category || uploading}
-          className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
-        >
-          {uploading ? 'Uploading...' : 'Upload File'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// Project Lifecycle Card Component
-const ProjectLifecycleCard = ({ project }: { project: Project }) => {
+// Project Lifecycle Card Component - DEPRECATED: Project Stage removed, keeping for backward compatibility but not used
+const ProjectLifecycleCard_DEPRECATED = ({ project }: { project: Project }) => {
   const [showDelayPrediction, setShowDelayPrediction] = useState(false)
   const [delayPrediction, setDelayPrediction] = useState<any>(null)
   const [loadingPrediction, setLoadingPrediction] = useState(false)
@@ -180,6 +60,7 @@ const ProjectLifecycleCard = ({ project }: { project: Project }) => {
       [ProjectStage.BILLING]: 'Billing',
       [ProjectStage.LIVE]: 'Live',
       [ProjectStage.AMC]: 'AMC',
+      [ProjectStage.LOST]: 'Lost',
     }
     return stageNames[stage] || stage
   }
@@ -320,9 +201,11 @@ const ProjectDetail = () => {
     retry: 1,
   })
 
-  const canEdit = hasRole([UserRole.ADMIN]) || 
+  // Projects in Lost status cannot be edited (only Admin can delete)
+  const isLost = project?.projectStatus === ProjectStatus.LOST
+  const canEdit = !isLost && (hasRole([UserRole.ADMIN]) || 
     (hasRole([UserRole.SALES]) && project?.salespersonId === user?.id) ||
-    hasRole([UserRole.OPERATIONS, UserRole.FINANCE])
+    hasRole([UserRole.OPERATIONS, UserRole.FINANCE]))
 
   if (isLoading) return <div className="p-6 text-center">Loading project details...</div>
   if (error) return <div className="p-6 text-center text-red-600">Error loading project: {(error as any).response?.data?.error || (error as any).message}</div>
@@ -344,8 +227,12 @@ const ProjectDetail = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          {(hasRole([UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES]) || 
-            (hasRole([UserRole.SALES]) && project?.salespersonId === user?.id)) && (
+          {/* Generate AI Proposal button - Only for SALES and OPERATIONS users, for projects in Lead, Site Survey, or Proposal stages */}
+          {(hasRole([UserRole.SALES]) || 
+            hasRole([UserRole.OPERATIONS])) && 
+            (project.projectStatus === ProjectStatus.LEAD ||
+             project.projectStatus === ProjectStatus.SITE_SURVEY || 
+             project.projectStatus === ProjectStatus.PROPOSAL) && (
             <button
               onClick={() => setShowProposal(true)}
               className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-2"
@@ -373,10 +260,7 @@ const ProjectDetail = () => {
         </div>
       </div>
 
-      {/* Project Lifecycle Card */}
-      {project.projectStage && (
-        <ProjectLifecycleCard project={project} />
-      )}
+      {/* Project Lifecycle Card - Removed: Project Stage field is no longer used */}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Customer Details */}
@@ -427,16 +311,24 @@ const ProjectDetail = () => {
                   <dd className="text-sm font-medium">{project.customer.consumerNumber}</dd>
                 </div>
               )}
-              {project.customer.leadSource && (
+              {project.leadSource && (
                 <div>
                   <dt className="text-sm text-gray-500">Lead Source</dt>
-                  <dd className="text-sm font-medium">{project.customer.leadSource}</dd>
-                </div>
-              )}
-              {project.customer.leadBroughtBy && (
-                <div>
-                  <dt className="text-sm text-gray-500">Lead Brought By</dt>
-                  <dd className="text-sm font-medium">{project.customer.leadBroughtBy}</dd>
+                  <dd className="text-sm font-medium">
+                    {project.leadSource === 'WEBSITE' && 'Website'}
+                    {project.leadSource === 'REFERRAL' && 'Referral'}
+                    {project.leadSource === 'GOOGLE' && 'Google'}
+                    {project.leadSource === 'CHANNEL_PARTNER' && 'Channel Partner'}
+                    {project.leadSource === 'DIGITAL_MARKETING' && 'Digital Marketing'}
+                    {project.leadSource === 'OTHER' && 'Other'}
+                    {project.leadSourceDetails && (
+                      <span className="ml-2 text-gray-600">
+                        ({project.leadSource === 'CHANNEL_PARTNER' && project.leadSourceDetails}
+                        {project.leadSource === 'REFERRAL' && project.leadSourceDetails}
+                        {project.leadSource === 'OTHER' && project.leadSourceDetails})
+                      </span>
+                    )}
+                  </dd>
                 </div>
               )}
             </dl>
@@ -623,6 +515,48 @@ const ProjectDetail = () => {
                 </dd>
               </div>
             )}
+            {/* Lost Stage Information */}
+            {project.projectStatus === ProjectStatus.LOST && (
+              <>
+                {project.lostDate && (
+                  <div>
+                    <dt className="text-sm text-gray-500">Lost Date</dt>
+                    <dd className="text-sm font-medium text-red-600">
+                      {format(new Date(project.lostDate), 'MMM dd, yyyy')}
+                    </dd>
+                  </div>
+                )}
+                {project.lostReason && (
+                  <div>
+                    <dt className="text-sm text-gray-500">Reason for Loss</dt>
+                    <dd className="text-sm font-medium">
+                      {(() => {
+                        const reasonMap: Record<string, string> = {
+                          'LOST_TO_COMPETITION': 'Lost to Competition',
+                          'NO_BUDGET': 'No Budget',
+                          'INDEFINITELY_DELAYED': 'Indefinitely Delayed',
+                          'OTHER': 'Other',
+                        };
+                        return reasonMap[project.lostReason!] || project.lostReason;
+                      })()}
+                    </dd>
+                  </div>
+                )}
+                {project.lostOtherReason && (
+                  <div>
+                    <dt className="text-sm text-gray-500">Other Reason Details</dt>
+                    <dd className="text-sm font-medium">{project.lostOtherReason}</dd>
+                  </div>
+                )}
+                {isLost && (
+                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                    <p className="text-sm text-red-700">
+                      <strong>Note:</strong> This project is in Lost stage and cannot be edited. Only Admin can delete it.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
           </dl>
         </div>
 
@@ -676,31 +610,27 @@ const ProjectDetail = () => {
         </div>
       </div>
 
-      {/* Remarks */}
-      {project.remarks && (
-        <div className="mt-6 bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Remarks</h2>
-          <p className="text-sm text-gray-700 whitespace-pre-wrap">{project.remarks}</p>
-        </div>
-      )}
+      {/* Remarks - View Only */}
+      <RemarksSection projectId={project.id} isEditMode={false} />
 
-      {/* Key Artifacts */}
+      {/* Key Artifacts - View Only */}
       <div className="mt-6 bg-white shadow rounded-lg p-6">
         <h2 className="text-lg font-semibold mb-4">Key Artifacts</h2>
-        
-        {/* File Upload Section - Only for Sales and Operations */}
-        {(hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS])) && (
-          <FileUploadSection projectId={project.id} />
-        )}
+        <p className="text-sm text-gray-500 mb-4">
+          To upload new artifacts, please click the <strong>Edit</strong> button above.
+        </p>
 
-        {/* Documents List */}
+        {/* Documents List - View Only */}
         {project.documents && project.documents.length > 0 && (
-          <div className={hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS]) ? "mt-6" : ""}>
+          <div>
             <h3 className="text-md font-semibold mb-4">Uploaded Documents</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {project.documents.map((doc) => {
-                const canDelete = hasRole([UserRole.ADMIN]) || doc.uploadedById === user?.id
-                const canView = hasRole([UserRole.ADMIN, UserRole.MANAGEMENT]) || doc.uploadedById === user?.id
+                // For AI Generated Proposal PDFs, only admin can delete even in view mode
+                // For other documents, delete is disabled in view mode
+                const isProposalPDF = doc.description === 'AI Generated Proposal PDF'
+                const canDelete = isProposalPDF && hasRole([UserRole.ADMIN])
+                const canView = hasRole([UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE]) || doc.uploadedById === user?.id
                 
                 return (
                   <div
@@ -736,10 +666,9 @@ const ProjectDetail = () => {
           </div>
         )}
         
-        {/* Show message if no documents and user can't upload */}
-        {(!project.documents || project.documents.length === 0) && 
-         !hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS]) && (
-          <p className="text-sm text-gray-500">No artifacts uploaded yet.</p>
+        {/* Show message if no documents */}
+        {(!project.documents || project.documents.length === 0) && (
+          <p className="text-sm text-gray-500">No artifacts uploaded yet. Click <strong>Edit</strong> to upload documents.</p>
         )}
       </div>
     </div>

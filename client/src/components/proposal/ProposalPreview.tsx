@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface ProposalPreviewProps {
   projectId: string
@@ -44,6 +45,7 @@ interface ProposalData {
 }
 
 const ProposalPreview = ({ projectId, onClose }: ProposalPreviewProps) => {
+  const queryClient = useQueryClient()
   const [loading, setLoading] = useState(false)
   const [proposal, setProposal] = useState<ProposalData | null>(null)
   const [pdfLoading, setPdfLoading] = useState(false)
@@ -80,7 +82,10 @@ const ProposalPreview = ({ projectId, onClose }: ProposalPreviewProps) => {
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
       
-      toast.success('PDF downloaded successfully!')
+      // Invalidate project query to refresh documents list (PDF is saved automatically)
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] })
+      
+      toast.success('PDF downloaded and saved to Key Artifacts!')
     } catch (error: any) {
       console.error('Error downloading PDF:', error)
       toast.error(error.response?.data?.error || 'Failed to download PDF')

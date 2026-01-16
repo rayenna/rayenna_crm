@@ -204,11 +204,20 @@ router.delete(
         return res.status(404).json({ error: 'Document not found' });
       }
 
-      // Check if user is admin or the uploader
+      // Check if this is an AI Generated Proposal PDF (only admin can delete)
+      const isProposalPDF = document.description === 'AI Generated Proposal PDF';
       const isAdmin = req.user?.role === UserRole.ADMIN;
       const isUploader = document.uploadedById === req.user?.id;
 
-      if (!isAdmin && !isUploader) {
+      // For AI Generated Proposal PDFs, only admin can delete
+      if (isProposalPDF && !isAdmin) {
+        return res.status(403).json({ 
+          error: 'You do not have permission to delete this document. Only admin can delete AI Generated Proposal PDFs.' 
+        });
+      }
+
+      // For other documents, admin or uploader can delete
+      if (!isProposalPDF && !isAdmin && !isUploader) {
         return res.status(403).json({ 
           error: 'You do not have permission to delete this document. Only the uploader or admin can delete it.' 
         });

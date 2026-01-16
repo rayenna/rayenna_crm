@@ -3,11 +3,17 @@ import { body, query, validationResult } from 'express-validator';
 import { PrismaClient, UserRole } from '@prisma/client';
 import { authenticate, authorize, AuthRequest } from '../middleware/auth';
 import { generateCustomerId } from '../utils/customerId';
+import * as XLSX from 'xlsx';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Helper function to check if user can create/update customers
+// Helper function to check if user can create customers (only Sales and Admin)
+const canCreateCustomer = (role: UserRole): boolean => {
+  return role === UserRole.SALES || role === UserRole.ADMIN;
+};
+
+// Helper function to check if user can modify customers
 const canModifyCustomer = (role: UserRole): boolean => {
   const allowedRoles: UserRole[] = [UserRole.SALES, UserRole.OPERATIONS, UserRole.MANAGEMENT, UserRole.ADMIN];
   return allowedRoles.includes(role);
@@ -32,7 +38,9 @@ router.get(
       const {
         search,
         page = '1',
-        limit = '50',
+        limit = '25',
+        salespersonId,
+        myCustomers, // For Sales users: 'true' to show only their customers
       } = req.query;
 
       const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
@@ -40,20 +48,117 @@ router.get(
 
       const where: any = {};
 
-      if (search) {
-        where.OR = [
-          { firstName: { contains: search as string, mode: 'insensitive' } },
-          { middleName: { contains: search as string, mode: 'insensitive' } },
-          { lastName: { contains: search as string, mode: 'insensitive' } },
-          { customerName: { contains: search as string, mode: 'insensitive' } }, // Legacy search
-          { customerId: { contains: search as string, mode: 'insensitive' } },
-          { consumerNumber: { contains: search as string, mode: 'insensitive' } },
-          { addressLine1: { contains: search as string, mode: 'insensitive' } },
-          { city: { contains: search as string, mode: 'insensitive' } },
-          { state: { contains: search as string, mode: 'insensitive' } },
-          { pinCode: { contains: search as string, mode: 'insensitive' } },
+      // For Sales users: if myCustomers is 'true', filter to their customers
+      if (req.user?.role === UserRole.SALES && myCustomers === 'true') {
+        // Get customer IDs where this Sales user has created projects (backward compatibility)
+        const userProjects = await prisma.project.findMany({
+          where: {
+            createdById: req.user.id,
+          },
+          select: {
+            customerId: true,
+          },
+          distinct: ['customerId'],
+        });
+        const customerIdsFromProjects = userProjects.map(p => p.customerId);
+        
+        // Build OR condition: created by user, tagged to user, OR has projects created by user
+        const orConditions: any[] = [
+          { createdById: req.user.id },
+          { salespersonId: req.user.id },
         ];
+        
+        // Add customer IDs from projects if any exist
+        if (customerIdsFromProjects.length > 0) {
+          orConditions.push({ id: { in: customerIdsFromProjects } });
+        }
+        
+        where.OR = orConditions;
+      } else if (req.user?.role !== UserRole.SALES) {
+        // For non-Sales users: filter by salespersonId if provided
+        if (salespersonId) {
+          const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : [salespersonId];
+          // Filter out empty strings and null values, and ensure they're strings
+          const validSalespersonIds = salespersonIdArray
+            .filter((id): id is string => typeof id === 'string' && id.trim() !== '');
+          
+          if (validSalespersonIds.length > 0) {
+            // Get customer IDs where this salesperson has created projects (backward compatibility)
+            const userProjects = await prisma.project.findMany({
+              where: {
+                createdById: { in: validSalespersonIds },
+              },
+              select: {
+                customerId: true,
+              },
+              distinct: ['customerId'],
+            });
+            const customerIdsFromProjects = userProjects.map(p => p.customerId);
+            
+            // Build OR condition: salespersonId matches OR customer has projects created by salesperson
+            const orConditions: any[] = [
+              { salespersonId: { in: validSalespersonIds } },
+            ];
+            
+            // Add customer IDs from projects if any exist
+            if (customerIdsFromProjects.length > 0) {
+              orConditions.push({ id: { in: customerIdsFromProjects } });
+            }
+            
+            where.OR = orConditions;
+          }
+        }
+        // If no salespersonId is provided, show all customers (no filter applied)
       }
+
+      if (search) {
+        const searchConditions = {
+          OR: [
+            { firstName: { contains: search as string, mode: 'insensitive' } },
+            { middleName: { contains: search as string, mode: 'insensitive' } },
+            { lastName: { contains: search as string, mode: 'insensitive' } },
+            { customerName: { contains: search as string, mode: 'insensitive' } }, // Legacy search
+            { customerId: { contains: search as string, mode: 'insensitive' } },
+            { consumerNumber: { contains: search as string, mode: 'insensitive' } },
+            { addressLine1: { contains: search as string, mode: 'insensitive' } },
+            { city: { contains: search as string, mode: 'insensitive' } },
+            { state: { contains: search as string, mode: 'insensitive' } },
+            { pinCode: { contains: search as string, mode: 'insensitive' } },
+          ],
+        };
+        
+        // If we already have OR conditions (from myCustomers or salespersonId filter), combine them with AND
+        if (where.OR) {
+          const existingOR = where.OR;
+          where.AND = [
+            { OR: existingOR },
+            searchConditions,
+          ];
+          delete where.OR;
+        } else {
+          // If we have other conditions (like salespersonId as direct filter), combine with AND
+          const existingConditions: any = {};
+          Object.keys(where).forEach(key => {
+            if (key !== 'AND' && key !== 'OR') {
+              existingConditions[key] = where[key];
+              delete where[key];
+            }
+          });
+          
+          if (Object.keys(existingConditions).length > 0) {
+            where.AND = [
+              existingConditions,
+              searchConditions,
+            ];
+          } else {
+            where.OR = searchConditions.OR;
+          }
+        }
+      }
+
+      // Debug logging
+      console.log('[CUSTOMERS API] Query params:', { search, page, limit, salespersonId, myCustomers, userRole: req.user?.role, userId: req.user?.id });
+      console.log('[CUSTOMERS API] Where clause:', JSON.stringify(where, null, 2));
 
       const [customers, total] = await Promise.all([
         prisma.customer.findMany({
@@ -61,14 +166,41 @@ router.get(
           skip,
           take,
           orderBy: { createdAt: 'desc' },
-          include: {
+          select: {
+            id: true,
+            customerId: true,
+            customerName: true,
+            prefix: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            addressLine1: true,
+            addressLine2: true,
+            city: true,
+            state: true,
+            country: true,
+            pinCode: true,
+            consumerNumber: true,
+            contactNumbers: true,
+            email: true,
+            createdAt: true,
+            createdById: true,
+            salespersonId: true,
             _count: {
               select: { projects: true },
+            },
+            projects: {
+              select: {
+                createdById: true,
+              },
+              take: 1,
             },
           },
         }),
         prisma.customer.count({ where }),
       ]);
+
+      console.log('[CUSTOMERS API] Found customers:', customers.length, 'Total:', total);
 
       res.json({
         customers,
@@ -78,8 +210,14 @@ router.get(
         totalPages: Math.ceil(total / take),
       });
     } catch (error: any) {
-      console.error('Error fetching customers:', error);
-      res.status(500).json({ error: error.message });
+      console.error('[CUSTOMERS API] Error fetching customers:', error);
+      console.error('[CUSTOMERS API] Error stack:', error.stack);
+      console.error('[CUSTOMERS API] Error details:', {
+        message: error.message,
+        code: error.code,
+        meta: error.meta,
+      });
+      res.status(500).json({ error: error.message || 'Internal server error' });
     }
   }
 );
@@ -89,7 +227,36 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const customer = await prisma.customer.findUnique({
       where: { id: req.params.id },
-      include: {
+      select: {
+        id: true,
+        customerId: true,
+        customerName: true,
+        prefix: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        customerType: true,
+        contactPerson: true,
+        phone: true,
+        email: true,
+        address: true,
+        addressLine1: true,
+        addressLine2: true,
+        city: true,
+        state: true,
+        country: true,
+        pinCode: true,
+        gstNumber: true,
+        contactNumbers: true,
+        consumerNumber: true,
+        idProofNumber: true,
+        idProofType: true,
+        companyName: true,
+        companyGst: true,
+        createdById: true,
+        salespersonId: true,
+        createdAt: true,
+        updatedAt: true,
         projects: {
           select: {
             id: true,
@@ -136,8 +303,6 @@ router.post(
     body('pinCode').optional().trim(),
     body('contactNumbers').optional(),
     body('consumerNumber').optional().trim(),
-    body('leadSource').optional().trim(),
-    body('leadBroughtBy').optional().trim(),
   ],
   async (req: AuthRequest, res: Response) => {
     try {
@@ -145,8 +310,8 @@ router.post(
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      if (!canModifyCustomer(req.user.role)) {
-        return res.status(403).json({ error: 'Insufficient permissions to create customers' });
+      if (!canCreateCustomer(req.user.role)) {
+        return res.status(403).json({ error: 'Only Sales and Admin users can create customers' });
       }
 
       const errors = validationResult(req);
@@ -171,9 +336,7 @@ router.post(
         idProofNumber,
         idProofType,
         companyName,
-        companyGst,
-        leadSource, 
-        leadBroughtBy 
+        companyGst
       } = req.body;
       
       // Validate: If Id Proof# is provided, Type of Id Proof is mandatory
@@ -243,8 +406,9 @@ router.post(
           idProofType: idProofType || null,
           companyName: companyName || null,
           companyGst: companyGst || null,
-          leadSource: leadSource || null,
-          leadBroughtBy: leadBroughtBy || null,
+          createdById: req.user.id, // Track who created the customer
+          // Auto-tag the creating Sales person as the salesperson for this customer
+          salespersonId: req.user.role === UserRole.SALES ? req.user.id : null,
         },
       });
 
@@ -270,8 +434,6 @@ router.put(
     body('pinCode').optional().trim(),
     body('contactNumbers').optional(),
     body('consumerNumber').optional().trim(),
-    body('leadSource').optional().trim(),
-    body('leadBroughtBy').optional().trim(),
   ],
   async (req: AuthRequest, res: Response) => {
     try {
@@ -279,21 +441,73 @@ router.put(
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      if (!canModifyCustomer(req.user.role)) {
-        return res.status(403).json({ error: 'Insufficient permissions to update customers' });
-      }
-
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
+        console.log('[CUSTOMER UPDATE] Validation errors:', errors.array());
         return res.status(400).json({ errors: errors.array() });
       }
 
+      console.log('[CUSTOMER UPDATE] Starting update for customer:', req.params.id, 'by user:', req.user?.id);
+
       const customer = await prisma.customer.findUnique({
         where: { id: req.params.id },
+        select: {
+          id: true,
+          createdById: true,
+          salespersonId: true,
+          firstName: true,
+          middleName: true,
+          lastName: true,
+        },
       });
 
       if (!customer) {
         return res.status(404).json({ error: 'Customer not found' });
+      }
+
+      // Check permissions for editing
+      const isAdmin = req.user.role === UserRole.ADMIN;
+      const isManagement = req.user.role === UserRole.MANAGEMENT;
+      
+      if (isAdmin || isManagement) {
+        // Admin and Management can always edit (Management needs this to change salesperson)
+      } else if (req.user.role === UserRole.SALES) {
+        // For Sales users, ONLY allow if they created the customer OR are tagged as salesperson
+        // OR if they have created projects for this customer (backward compatibility)
+        // This logic MUST match the GET endpoint filter logic exactly
+        const isCreator = customer.createdById != null && customer.createdById === req.user.id;
+        const isTaggedSalesperson = customer.salespersonId != null && customer.salespersonId === req.user.id;
+        
+        // Always check for projects (backward compatibility) - matches GET endpoint logic
+        const userProjectCount = await prisma.project.count({
+          where: {
+            customerId: customer.id,
+            createdById: req.user.id,
+          },
+        });
+        const hasUserProjects = userProjectCount > 0;
+        
+        console.log('[CUSTOMER UPDATE] Permission check:', {
+          userId: req.user.id,
+          customerId: customer.id,
+          createdById: customer.createdById,
+          salespersonId: customer.salespersonId,
+          isCreator,
+          isTaggedSalesperson,
+          userProjectCount,
+          hasUserProjects,
+          permissionGranted: isCreator || isTaggedSalesperson || hasUserProjects,
+        });
+        
+        if (!isCreator && !isTaggedSalesperson && !hasUserProjects) {
+          console.log('[CUSTOMER UPDATE] Permission denied - user does not have access');
+          return res.status(403).json({ error: 'Only the Sales person who created or is tagged to this customer, or Admin/Management can edit it' });
+        }
+        
+        console.log('[CUSTOMER UPDATE] Permission granted');
+      } else {
+        // Other roles cannot edit
+        return res.status(403).json({ error: 'Only Sales users (who created or are tagged to the customer), Admin, or Management can edit customers' });
       }
 
       const { 
@@ -313,9 +527,7 @@ router.put(
         idProofNumber,
         idProofType,
         companyName,
-        companyGst,
-        leadSource, 
-        leadBroughtBy 
+        companyGst
       } = req.body;
       
       // Validate: If Id Proof# is provided, Type of Id Proof is mandatory
@@ -367,8 +579,6 @@ router.put(
       if (idProofType !== undefined) updateData.idProofType = idProofType || null;
       if (companyName !== undefined) updateData.companyName = companyName || null;
       if (companyGst !== undefined) updateData.companyGst = companyGst || null;
-      if (leadSource !== undefined) updateData.leadSource = leadSource || null;
-      if (leadBroughtBy !== undefined) updateData.leadBroughtBy = leadBroughtBy || null;
 
       // Handle contactNumbers
       if (contactNumbers !== undefined) {
@@ -403,14 +613,67 @@ router.put(
         }
       }
 
+      // Handle salespersonId - Only Management and Admin can change it
+      if (req.body.salespersonId !== undefined) {
+        const canChangeSalesperson = req.user.role === UserRole.ADMIN || req.user.role === UserRole.MANAGEMENT;
+        
+        if (!canChangeSalesperson) {
+          return res.status(403).json({ error: 'Only Management and Admin users can change the salesperson for a customer' });
+        }
+
+        if (req.body.salespersonId === null || req.body.salespersonId === '' || req.body.salespersonId === 'null') {
+          updateData.salespersonId = null;
+        } else {
+          const salespersonIdStr = String(req.body.salespersonId).trim();
+          if (!salespersonIdStr) {
+            updateData.salespersonId = null;
+          } else {
+            try {
+              const salesperson = await prisma.user.findUnique({
+                where: { id: salespersonIdStr },
+                select: { id: true, role: true },
+              });
+              if (!salesperson) {
+                return res.status(400).json({ error: 'Invalid salesperson ID: User not found' });
+              }
+              updateData.salespersonId = salespersonIdStr;
+            } catch (error: any) {
+              console.error('Error validating salespersonId:', error);
+              return res.status(400).json({ error: `Invalid salesperson ID format: ${error.message}` });
+            }
+          }
+        }
+      }
+
+      // Remove relation objects before update (if any were accidentally included)
+      const relationFields = ['customer', 'createdBy', 'salesperson'];
+      relationFields.forEach(field => {
+        if (updateData[field] !== undefined) {
+          delete updateData[field];
+        }
+      });
+
+      console.log('[CUSTOMER UPDATE] About to update customer:', {
+        customerId: req.params.id,
+        updateDataKeys: Object.keys(updateData),
+        updateDataSize: JSON.stringify(updateData).length,
+      });
+
       const updatedCustomer = await prisma.customer.update({
         where: { id: req.params.id },
         data: updateData,
       });
 
+      console.log('[CUSTOMER UPDATE] Customer updated successfully:', updatedCustomer.id);
       res.json(updatedCustomer);
     } catch (error: any) {
-      console.error('Error updating customer:', error);
+      console.error('[CUSTOMER UPDATE] Error updating customer:', error);
+      console.error('[CUSTOMER UPDATE] Error details:', {
+        message: error.message,
+        code: error.code,
+        meta: error.meta,
+        stack: error.stack?.split('\n').slice(0, 5).join('\n'),
+      });
       res.status(500).json({ error: error.message });
     }
   }
@@ -445,6 +708,294 @@ router.delete('/:id', authenticate, authorize(UserRole.ADMIN), async (req: AuthR
     res.json({ message: 'Customer deleted successfully' });
   } catch (error: any) {
     console.error('Error deleting customer:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Helper function to get customer display name
+const getCustomerDisplayNameForExport = (customer: any): string => {
+  const parts = [customer.prefix, customer.firstName, customer.middleName, customer.lastName].filter(Boolean);
+  return parts.length > 0 ? parts.join(' ') : customer.customerName || '';
+};
+
+// Export customers to Excel (Admin only)
+router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest, res: Response) => {
+  try {
+    const { search, salespersonId, myCustomers } = req.query;
+
+    const where: any = {};
+
+    // Apply filters similar to GET /api/customers
+    if (req.user?.role === UserRole.SALES && myCustomers === 'true') {
+      const userProjects = await prisma.project.findMany({
+        where: { createdById: req.user.id },
+        select: { customerId: true },
+        distinct: ['customerId'],
+      });
+      const customerIdsFromProjects = userProjects.map(p => p.customerId);
+      const orConditions: any[] = [
+        { createdById: req.user.id },
+        { salespersonId: req.user.id },
+      ];
+      if (customerIdsFromProjects.length > 0) {
+        orConditions.push({ id: { in: customerIdsFromProjects } });
+      }
+      where.OR = orConditions;
+    } else if (req.user?.role !== UserRole.SALES && salespersonId) {
+      const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : [salespersonId];
+      const validSalespersonIds = salespersonIdArray
+        .filter((id): id is string => typeof id === 'string' && id.trim() !== '');
+      if (validSalespersonIds.length > 0) {
+        const userProjects = await prisma.project.findMany({
+          where: { createdById: { in: validSalespersonIds } },
+          select: { customerId: true },
+          distinct: ['customerId'],
+        });
+        const customerIdsFromProjects = userProjects.map(p => p.customerId);
+        const orConditions: any[] = [
+          { salespersonId: { in: validSalespersonIds } },
+        ];
+        if (customerIdsFromProjects.length > 0) {
+          orConditions.push({ id: { in: customerIdsFromProjects } });
+        }
+        where.OR = orConditions;
+      }
+    }
+
+    if (search) {
+      const searchConditions = {
+        OR: [
+          { firstName: { contains: search as string, mode: 'insensitive' } },
+          { middleName: { contains: search as string, mode: 'insensitive' } },
+          { lastName: { contains: search as string, mode: 'insensitive' } },
+          { customerName: { contains: search as string, mode: 'insensitive' } },
+          { customerId: { contains: search as string, mode: 'insensitive' } },
+          { consumerNumber: { contains: search as string, mode: 'insensitive' } },
+          { addressLine1: { contains: search as string, mode: 'insensitive' } },
+          { city: { contains: search as string, mode: 'insensitive' } },
+          { state: { contains: search as string, mode: 'insensitive' } },
+          { pinCode: { contains: search as string, mode: 'insensitive' } },
+        ],
+      };
+      if (where.OR) {
+        const existingOR = where.OR;
+        where.AND = [{ OR: existingOR }, searchConditions];
+        delete where.OR;
+      } else {
+        const existingConditions: any = {};
+        Object.keys(where).forEach(key => {
+          if (key !== 'AND' && key !== 'OR') {
+            existingConditions[key] = where[key];
+            delete where[key];
+          }
+        });
+        if (Object.keys(existingConditions).length > 0) {
+          where.AND = [existingConditions, searchConditions];
+        } else {
+          where.OR = searchConditions.OR;
+        }
+      }
+    }
+
+    const customers = await prisma.customer.findMany({
+      where,
+      include: {
+        salesperson: {
+          select: { name: true, email: true },
+        },
+        _count: {
+          select: { projects: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Format data for Excel
+    const exportData = customers.map((customer) => {
+      const contactNumbers = customer.contactNumbers ? 
+        (typeof customer.contactNumbers === 'string' ? JSON.parse(customer.contactNumbers) : customer.contactNumbers) : [];
+      const emails = customer.email ? 
+        (typeof customer.email === 'string' ? JSON.parse(customer.email) : customer.email) : [];
+
+      return {
+        'Customer ID': customer.customerId || '',
+        'Name': getCustomerDisplayNameForExport(customer),
+        'Prefix': customer.prefix || '',
+        'First Name': customer.firstName || '',
+        'Middle Name': customer.middleName || '',
+        'Last Name': customer.lastName || '',
+        'Address Line 1': customer.addressLine1 || '',
+        'Address Line 2': customer.addressLine2 || '',
+        'City': customer.city || '',
+        'State': customer.state || '',
+        'Country': customer.country || '',
+        'PIN Code': customer.pinCode || '',
+        'Consumer Number': customer.consumerNumber || '',
+        'Contact Numbers': Array.isArray(contactNumbers) ? contactNumbers.join(', ') : contactNumbers || '',
+        'Email': Array.isArray(emails) ? emails.join(', ') : emails || '',
+        'ID Proof Type': customer.idProofType || '',
+        'ID Proof Number': customer.idProofNumber || '',
+        'Company Name': customer.companyName || '',
+        'Company GST': customer.companyGst || '',
+        'Salesperson': customer.salesperson?.name || '',
+        'Salesperson Email': customer.salesperson?.email || '',
+        'Total Projects': customer._count.projects || 0,
+        'Created At': customer.createdAt ? new Date(customer.createdAt).toLocaleDateString('en-IN') : '',
+      };
+    });
+
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
+
+    // Generate buffer
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=customers-export-${Date.now()}.xlsx`);
+    res.send(buffer);
+  } catch (error: any) {
+    console.error('Error exporting customers to Excel:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Export customers to CSV (Admin only)
+router.get('/export/csv', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest, res: Response) => {
+  try {
+    const { search, salespersonId, myCustomers } = req.query;
+
+    const where: any = {};
+
+    // Apply filters similar to GET /api/customers
+    if (req.user?.role === UserRole.SALES && myCustomers === 'true') {
+      const userProjects = await prisma.project.findMany({
+        where: { createdById: req.user.id },
+        select: { customerId: true },
+        distinct: ['customerId'],
+      });
+      const customerIdsFromProjects = userProjects.map(p => p.customerId);
+      const orConditions: any[] = [
+        { createdById: req.user.id },
+        { salespersonId: req.user.id },
+      ];
+      if (customerIdsFromProjects.length > 0) {
+        orConditions.push({ id: { in: customerIdsFromProjects } });
+      }
+      where.OR = orConditions;
+    } else if (req.user?.role !== UserRole.SALES && salespersonId) {
+      const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : [salespersonId];
+      const validSalespersonIds = salespersonIdArray
+        .filter((id): id is string => typeof id === 'string' && id.trim() !== '');
+      if (validSalespersonIds.length > 0) {
+        const userProjects = await prisma.project.findMany({
+          where: { createdById: { in: validSalespersonIds } },
+          select: { customerId: true },
+          distinct: ['customerId'],
+        });
+        const customerIdsFromProjects = userProjects.map(p => p.customerId);
+        const orConditions: any[] = [
+          { salespersonId: { in: validSalespersonIds } },
+        ];
+        if (customerIdsFromProjects.length > 0) {
+          orConditions.push({ id: { in: customerIdsFromProjects } });
+        }
+        where.OR = orConditions;
+      }
+    }
+
+    if (search) {
+      const searchConditions = {
+        OR: [
+          { firstName: { contains: search as string, mode: 'insensitive' } },
+          { middleName: { contains: search as string, mode: 'insensitive' } },
+          { lastName: { contains: search as string, mode: 'insensitive' } },
+          { customerName: { contains: search as string, mode: 'insensitive' } },
+          { customerId: { contains: search as string, mode: 'insensitive' } },
+          { consumerNumber: { contains: search as string, mode: 'insensitive' } },
+          { addressLine1: { contains: search as string, mode: 'insensitive' } },
+          { city: { contains: search as string, mode: 'insensitive' } },
+          { state: { contains: search as string, mode: 'insensitive' } },
+          { pinCode: { contains: search as string, mode: 'insensitive' } },
+        ],
+      };
+      if (where.OR) {
+        const existingOR = where.OR;
+        where.AND = [{ OR: existingOR }, searchConditions];
+        delete where.OR;
+      } else {
+        const existingConditions: any = {};
+        Object.keys(where).forEach(key => {
+          if (key !== 'AND' && key !== 'OR') {
+            existingConditions[key] = where[key];
+            delete where[key];
+          }
+        });
+        if (Object.keys(existingConditions).length > 0) {
+          where.AND = [existingConditions, searchConditions];
+        } else {
+          where.OR = searchConditions.OR;
+        }
+      }
+    }
+
+    const customers = await prisma.customer.findMany({
+      where,
+      include: {
+        salesperson: {
+          select: { name: true, email: true },
+        },
+        _count: {
+          select: { projects: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Format data for CSV
+    const exportData = customers.map((customer) => {
+      const contactNumbers = customer.contactNumbers ? 
+        (typeof customer.contactNumbers === 'string' ? JSON.parse(customer.contactNumbers) : customer.contactNumbers) : [];
+      const emails = customer.email ? 
+        (typeof customer.email === 'string' ? JSON.parse(customer.email) : customer.email) : [];
+
+      return {
+        'Customer ID': customer.customerId || '',
+        'Name': getCustomerDisplayNameForExport(customer),
+        'Prefix': customer.prefix || '',
+        'First Name': customer.firstName || '',
+        'Middle Name': customer.middleName || '',
+        'Last Name': customer.lastName || '',
+        'Address Line 1': customer.addressLine1 || '',
+        'Address Line 2': customer.addressLine2 || '',
+        'City': customer.city || '',
+        'State': customer.state || '',
+        'Country': customer.country || '',
+        'PIN Code': customer.pinCode || '',
+        'Consumer Number': customer.consumerNumber || '',
+        'Contact Numbers': Array.isArray(contactNumbers) ? contactNumbers.join(', ') : contactNumbers || '',
+        'Email': Array.isArray(emails) ? emails.join(', ') : emails || '',
+        'ID Proof Type': customer.idProofType || '',
+        'ID Proof Number': customer.idProofNumber || '',
+        'Company Name': customer.companyName || '',
+        'Company GST': customer.companyGst || '',
+        'Salesperson': customer.salesperson?.name || '',
+        'Salesperson Email': customer.salesperson?.email || '',
+        'Total Projects': customer._count.projects || 0,
+        'Created At': customer.createdAt ? new Date(customer.createdAt).toLocaleDateString('en-IN') : '',
+      };
+    });
+
+    // Convert to CSV
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const csv = XLSX.utils.sheet_to_csv(worksheet);
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=customers-export-${Date.now()}.csv`);
+    res.send(csv);
+  } catch (error: any) {
+    console.error('Error exporting customers to CSV:', error);
     res.status(500).json({ error: error.message });
   }
 });

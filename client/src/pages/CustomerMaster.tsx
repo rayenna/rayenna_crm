@@ -8,23 +8,67 @@ import { Customer, UserRole } from '../types'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import { countries, getStatesByCountry, getCitiesByState, State, City } from '../utils/locationData'
+import { useDebounce } from '../hooks/useDebounce'
+import MultiSelect from '../components/MultiSelect'
 
 const CustomerMaster = () => {
   const { user, hasRole } = useAuth()
   const queryClient = useQueryClient()
-  const [filters, setFilters] = useState({
-    search: '',
-  })
+  const [page, setPage] = useState(1)
+  const [searchInput, setSearchInput] = useState('')
+  const debouncedSearch = useDebounce(searchInput, 500) // 500ms debounce
   const [showForm, setShowForm] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
+  
+  // Filter state: For Sales users - 'all' or 'my', For others - salespersonId array
+  const [customerFilter, setCustomerFilter] = useState<'all' | 'my'>('my') // Default to 'my' for Sales users
+  const [selectedSalespersonIds, setSelectedSalespersonIds] = useState<string[]>([])
 
-  const canCreate = hasRole([UserRole.SALES, UserRole.OPERATIONS, UserRole.MANAGEMENT, UserRole.ADMIN])
+  const canCreate = hasRole([UserRole.SALES, UserRole.ADMIN])
+  const isSalesUser = user?.role === UserRole.SALES
+
+  // Fetch sales users for the filter dropdown (only for non-SALES users)
+  const { data: salesUsers } = useQuery({
+    queryKey: ['salesUsers'],
+    queryFn: async () => {
+      const res = await axios.get('/api/users/role/sales')
+      return res.data
+    },
+    enabled: !isSalesUser, // Only fetch if user is not SALES
+  })
+
+  // Reset page when search or filters change
+  useEffect(() => {
+    setPage(1)
+  }, [debouncedSearch, customerFilter, selectedSalespersonIds])
 
   const { data, isLoading } = useQuery({
-    queryKey: ['customers', filters],
+    queryKey: ['customers', debouncedSearch, page, customerFilter, selectedSalespersonIds],
     queryFn: async () => {
       const params = new URLSearchParams()
-      if (filters.search) params.append('search', filters.search)
+      if (debouncedSearch) params.append('search', debouncedSearch)
+      params.append('page', page.toString())
+      params.append('limit', '25')
+      
+      // For Sales users: add myCustomers filter
+      if (isSalesUser) {
+        if (customerFilter === 'my') {
+          params.append('myCustomers', 'true')
+        }
+      } else {
+        // For other users: add salespersonId filter only if salespersons are selected
+        if (selectedSalespersonIds.length > 0) {
+          selectedSalespersonIds.forEach((id) => {
+            if (id && id.trim() !== '') {
+              params.append('salespersonId', id)
+            }
+          })
+        }
+        // If no salesperson is selected, don't send salespersonId parameter (shows all customers)
+      }
+      
       const res = await axios.get(`/api/customers?${params.toString()}`)
       return res.data
     },
@@ -49,9 +93,21 @@ const CustomerMaster = () => {
   }
 
   const handleDelete = (customer: Customer) => {
-    if (window.confirm(`Are you sure you want to delete customer ${getCustomerDisplayName(customer)}?`)) {
-      deleteMutation.mutate(customer.id)
+    setCustomerToDelete(customer)
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDelete = () => {
+    if (customerToDelete) {
+      deleteMutation.mutate(customerToDelete.id)
+      setShowDeleteConfirm(false)
+      setCustomerToDelete(null)
     }
+  }
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false)
+    setCustomerToDelete(null)
   }
 
   if (isLoading) return <div className="px-4 py-6">Loading...</div>
@@ -76,13 +132,143 @@ const CustomerMaster = () => {
       </div>
 
       <div className="bg-white shadow rounded-lg mb-4 p-4">
-        <input
-          type="text"
-          placeholder="Search by name, ID, or consumer number..."
-          className="border border-gray-300 rounded-md px-3 py-2 w-full"
-          value={filters.search}
-          onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-        />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <input
+            type="text"
+            placeholder="Search by name, ID, or consumer number..."
+            className="border border-gray-300 rounded-md px-3 py-2 w-full"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+          
+          {/* Filter for Sales users: All Customers / My Customers */}
+          {isSalesUser ? (
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Filter:</label>
+              <div className="flex gap-4">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    name="customerFilter"
+                    value="all"
+                    checked={customerFilter === 'all'}
+                    onChange={(e) => setCustomerFilter(e.target.value as 'all' | 'my')}
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-gray-700">All Customers</span>
+                </label>
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    name="customerFilter"
+                    value="my"
+                    checked={customerFilter === 'my'}
+                    onChange={(e) => setCustomerFilter(e.target.value as 'all' | 'my')}
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-gray-700">My Customers</span>
+                </label>
+              </div>
+            </div>
+          ) : (
+            /* Filter for other users: Sales Person dropdown */
+            <div>
+              <MultiSelect
+                options={salesUsers?.map((salesUser: any) => ({
+                  value: salesUser.id,
+                  label: `${salesUser.name} (${salesUser.email})`,
+                })) || []}
+                selectedValues={selectedSalespersonIds}
+                onChange={(values) => setSelectedSalespersonIds(values)}
+                placeholder="All Sales Persons"
+              />
+            </div>
+          )}
+        </div>
+        
+        {/* Export buttons - Only visible to Admin users */}
+        {hasRole([UserRole.ADMIN]) && (
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={async () => {
+                try {
+                  const params = new URLSearchParams()
+                  if (debouncedSearch) params.append('search', debouncedSearch)
+                  if (selectedSalespersonIds.length > 0) {
+                    selectedSalespersonIds.forEach((id) => {
+                      if (id && id.trim() !== '') {
+                        params.append('salespersonId', id)
+                      }
+                    })
+                  }
+                  
+                  const response = await axios.get(`/api/customers/export/excel?${params.toString()}`, {
+                    responseType: 'blob',
+                  })
+                  
+                  const url = window.URL.createObjectURL(new Blob([response.data]))
+                  const link = document.createElement('a')
+                  link.href = url
+                  link.setAttribute('download', `customers-export-${Date.now()}.xlsx`)
+                  document.body.appendChild(link)
+                  link.click()
+                  link.remove()
+                  window.URL.revokeObjectURL(url)
+                  
+                  toast.success('Customers exported to Excel successfully')
+                } catch (error: any) {
+                  console.error('Export error:', error)
+                  toast.error(error.response?.data?.error || 'Failed to export customers to Excel')
+                }
+              }}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Export to Excel
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  const params = new URLSearchParams()
+                  if (debouncedSearch) params.append('search', debouncedSearch)
+                  if (selectedSalespersonIds.length > 0) {
+                    selectedSalespersonIds.forEach((id) => {
+                      if (id && id.trim() !== '') {
+                        params.append('salespersonId', id)
+                      }
+                    })
+                  }
+                  
+                  const response = await axios.get(`/api/customers/export/csv?${params.toString()}`, {
+                    responseType: 'blob',
+                  })
+                  
+                  const url = window.URL.createObjectURL(new Blob([response.data]))
+                  const link = document.createElement('a')
+                  link.href = url
+                  link.setAttribute('download', `customers-export-${Date.now()}.csv`)
+                  document.body.appendChild(link)
+                  link.click()
+                  link.remove()
+                  window.URL.revokeObjectURL(url)
+                  
+                  toast.success('Customers exported to CSV successfully')
+                } catch (error: any) {
+                  console.error('Export error:', error)
+                  toast.error(error.response?.data?.error || 'Failed to export customers to CSV')
+                }
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Export to CSV
+            </button>
+          </div>
+        )}
       </div>
 
       {showForm && (
@@ -98,6 +284,37 @@ const CustomerMaster = () => {
             queryClient.invalidateQueries({ queryKey: ['customers'] })
           }}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && customerToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-red-600 mb-4">WARNING</h3>
+              <p className="text-gray-700 mb-6">
+                CUSTOMER Details once deleted cannot be recovered
+              </p>
+              <p className="text-gray-600 mb-6 font-medium">
+                Are you sure to Proceed?
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={cancelDelete}
+                  className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium"
+                >
+                  YES
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
@@ -156,12 +373,6 @@ const CustomerMaster = () => {
                         </span>
                       )}
                     </div>
-                    {customer.leadSource && (
-                      <div className="mt-1 text-xs text-gray-400">
-                        Lead Source: {customer.leadSource}
-                        {customer.leadBroughtBy && ` • Brought by: ${customer.leadBroughtBy}`}
-                      </div>
-                    )}
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className="text-right">
@@ -169,17 +380,48 @@ const CustomerMaster = () => {
                         Created: {format(new Date(customer.createdAt), 'MMM dd, yyyy')}
                       </p>
                     </div>
-                    {canCreate && (
-                      <button
-                        onClick={() => {
-                          setEditingCustomer(customer)
-                          setShowForm(true)
-                        }}
-                        className="text-primary-600 hover:text-primary-800 text-sm font-medium"
-                      >
-                        Edit
-                      </button>
-                    )}
+                    {(() => {
+                      // Admin and Management can always edit
+                      if (hasRole([UserRole.ADMIN, UserRole.MANAGEMENT])) {
+                        return (
+                          <button
+                            onClick={() => {
+                              setEditingCustomer(customer)
+                              setShowForm(true)
+                            }}
+                            className="text-primary-600 hover:text-primary-800 text-sm font-medium"
+                          >
+                            Edit
+                          </button>
+                        )
+                      }
+                      
+                      // Sales can edit ONLY when viewing "My Customers" (not "All Customers")
+                      if (hasRole([UserRole.SALES])) {
+                        // Hide edit button when viewing "All Customers"
+                        if (customerFilter === 'all') {
+                          return null
+                        }
+                        
+                        // In "My Customers" view, backend already filters to show only customers
+                        // where user created the customer, is tagged as salesperson, OR created projects for them
+                        // So we show Edit button for ALL customers in this view
+                        // (Backend will still verify permissions on edit)
+                        return (
+                          <button
+                            onClick={() => {
+                              setEditingCustomer(customer)
+                              setShowForm(true)
+                            }}
+                            className="text-primary-600 hover:text-primary-800 text-sm font-medium"
+                          >
+                            Edit
+                          </button>
+                        )
+                      }
+                      
+                      return null
+                    })()}
                     {hasRole([UserRole.ADMIN]) && (
                       <button
                         onClick={() => handleDelete(customer)}
@@ -196,9 +438,27 @@ const CustomerMaster = () => {
         </ul>
       </div>
 
-      {data?.totalPages > 1 && (
-        <div className="mt-4 text-sm text-gray-500">
-          Showing page {data.page} of {data.totalPages} ({data.total} total)
+      {data?.totalPages && data.totalPages > 1 && (
+        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-sm text-gray-500">
+            Showing page {data.page} of {data.totalPages} ({data.total} total)
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage(p => Math.min(data.totalPages, p + 1))}
+              disabled={page >= data.totalPages}
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -215,6 +475,15 @@ const CustomerForm = ({
   onClose: () => void
   onSuccess: () => void
 }) => {
+  const { hasRole } = useAuth()
+  const { data: salespersons } = useQuery({
+    queryKey: ['salespersons'],
+    queryFn: async () => {
+      const res = await axios.get('/api/users/role/sales')
+      return res.data
+    },
+  })
+
   const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm({
     defaultValues: {
       prefix: customer?.prefix || '',
@@ -232,8 +501,7 @@ const CustomerForm = ({
       idProofType: customer?.idProofType || '',
       companyName: customer?.companyName || '',
       companyGst: customer?.companyGst || '',
-      leadSource: customer?.leadSource || '',
-      leadBroughtBy: customer?.leadBroughtBy || '',
+      salespersonId: customer?.salespersonId || '',
     }
   })
   const [contactNumbers, setContactNumbers] = useState<string[]>(customer?.contactNumbers ? (() => {
@@ -305,11 +573,18 @@ const CustomerForm = ({
       return
     }
     
-    const submitData = {
+    const submitData: any = {
       ...data,
       contactNumbers: contactNumbers.filter(cn => cn.trim() !== ''),
       email: emails.filter(e => e.trim() !== ''),
     }
+    
+    // Remove salespersonId if user doesn't have permission to change it (Sales users)
+    // Only Management and Admin can change salespersonId
+    if (!hasRole([UserRole.MANAGEMENT, UserRole.ADMIN])) {
+      delete submitData.salespersonId
+    }
+    
     mutation.mutate(submitData)
   }
 
@@ -671,27 +946,28 @@ const CustomerForm = ({
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Lead Source
-              </label>
-              <input
-                {...register('leadSource')}
-                defaultValue={customer?.leadSource || ''}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Lead Brought By
-              </label>
-              <input
-                {...register('leadBroughtBy')}
-                defaultValue={customer?.leadBroughtBy || ''}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-              />
-            </div>
+            {/* Salesperson field - Only visible to Management and Admin */}
+            {(hasRole([UserRole.MANAGEMENT]) || hasRole([UserRole.ADMIN])) && customer && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Salesperson
+                </label>
+                <select
+                  {...register('salespersonId')}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                >
+                  <option value="">No Salesperson Assigned</option>
+                  {salespersons?.map((salesperson: any) => (
+                    <option key={salesperson.id} value={salesperson.id}>
+                      {salesperson.name} ({salesperson.email})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Only Management and Admin can change the salesperson for a customer
+                </p>
+              </div>
+            )}
 
             <div className="flex justify-end space-x-3 pt-4">
               <button

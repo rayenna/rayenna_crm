@@ -1,38 +1,135 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Project, ProjectStatus, ProjectType, ProjectServiceType } from '../types'
+import { Project, ProjectStatus, ProjectType, ProjectServiceType, UserRole } from '../types'
 import { format } from 'date-fns'
+import MultiSelect from '../components/MultiSelect'
+import { useDebounce } from '../hooks/useDebounce'
+
+// Helper function to get status badge color classes
+const getStatusColorClasses = (status: ProjectStatus): string => {
+  switch (status) {
+    case ProjectStatus.LEAD:
+    case ProjectStatus.SITE_SURVEY:
+    case ProjectStatus.PROPOSAL:
+      // Orange
+      return 'bg-orange-100 text-orange-800 border-orange-300'
+    case ProjectStatus.CONFIRMED:
+    case ProjectStatus.UNDER_INSTALLATION:
+      // Blue
+      return 'bg-blue-100 text-blue-800 border-blue-300'
+    case ProjectStatus.SUBMITTED_FOR_SUBSIDY:
+      // Dark Purple
+      return 'bg-purple-100 text-purple-800 border-purple-300'
+    case ProjectStatus.COMPLETED:
+    case ProjectStatus.COMPLETED_SUBSIDY_CREDITED:
+      // Green
+      return 'bg-green-100 text-green-800 border-green-300'
+    case ProjectStatus.LOST:
+      // Red
+      return 'bg-red-100 text-red-800 border-red-300'
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-300'
+  }
+}
 
 const Projects = () => {
   const { user } = useAuth()
+  const [page, setPage] = useState(1)
+  const [searchInput, setSearchInput] = useState('')
+  const debouncedSearch = useDebounce(searchInput, 500) // 500ms debounce
+  
   const [filters, setFilters] = useState({
-    status: '',
-    type: '',
-    projectServiceType: '',
+    status: [] as string[],
+    type: [] as string[],
+    projectServiceType: [] as string[],
+    salespersonId: [] as string[],
     search: '',
     sortBy: '',
     sortOrder: 'desc',
   })
 
+  // Update filters when debounced search changes
+  useEffect(() => {
+    setFilters(prev => ({ ...prev, search: debouncedSearch }))
+    setPage(1) // Reset to first page when search changes
+  }, [debouncedSearch])
+
+  // Reset page when other filters change
+  useEffect(() => {
+    setPage(1)
+  }, [filters.status, filters.type, filters.projectServiceType, filters.salespersonId, filters.sortBy])
+
+  // Fetch sales users for the filter dropdown (only for non-SALES users)
+  const { data: salesUsers } = useQuery({
+    queryKey: ['salesUsers'],
+    queryFn: async () => {
+      const res = await axios.get('/api/users/role/sales')
+      return res.data
+    },
+    enabled: user?.role !== UserRole.SALES, // Only fetch if user is not SALES
+  })
+
   const { data, isLoading } = useQuery({
-    queryKey: ['projects', filters],
+    queryKey: ['projects', filters, page],
     queryFn: async () => {
       const params = new URLSearchParams()
-      if (filters.status) params.append('status', filters.status)
-      if (filters.type) params.append('type', filters.type)
-      if (filters.projectServiceType) params.append('projectServiceType', filters.projectServiceType)
+      // Append array values - each value gets its own parameter (status[]=value1&status[]=value2)
+      filters.status.forEach((value) => params.append('status', value))
+      filters.type.forEach((value) => params.append('type', value))
+      filters.projectServiceType.forEach((value) => params.append('projectServiceType', value))
+      filters.salespersonId.forEach((value) => params.append('salespersonId', value))
       if (filters.search) params.append('search', filters.search)
       if (filters.sortBy) {
         params.append('sortBy', filters.sortBy)
         params.append('sortOrder', filters.sortOrder)
       }
+      params.append('page', page.toString())
+      params.append('limit', '25')
       const res = await axios.get(`/api/projects?${params.toString()}`)
       return res.data
     },
   })
+
+  // Prepare options for multi-selects - matching exactly the Project Status dropdown in Sales & Commercial section
+  const statusOptions = [
+    { value: ProjectStatus.LEAD, label: 'Lead' },
+    { value: ProjectStatus.SITE_SURVEY, label: 'Site Survey' },
+    { value: ProjectStatus.PROPOSAL, label: 'Proposal' },
+    { value: ProjectStatus.CONFIRMED, label: 'Confirmed Order' },
+    { value: ProjectStatus.UNDER_INSTALLATION, label: 'Installation' },
+    { value: ProjectStatus.COMPLETED, label: 'Completed' },
+    { value: ProjectStatus.COMPLETED_SUBSIDY_CREDITED, label: 'Completed - Subsidy Credited' },
+    { value: ProjectStatus.LOST, label: 'Lost' },
+  ]
+
+  const typeOptions = Object.values(ProjectType).map(type => ({
+    value: type,
+    label: type.replace(/_/g, ' '),
+  }))
+
+  const projectServiceTypeOptions = Object.values(ProjectServiceType).map(serviceType => ({
+    value: serviceType,
+    label: (() => {
+      const typeMap: Record<string, string> = {
+        'EPC_PROJECT': 'EPC Project',
+        'PANEL_CLEANING': 'Panel Cleaning',
+        'MAINTENANCE': 'Maintenance',
+        'REPAIR': 'Repair',
+        'CONSULTING': 'Consulting',
+        'RESALE': 'Resale',
+        'OTHER_SERVICES': 'Other Services',
+      }
+      return typeMap[serviceType] || serviceType.replace(/_/g, ' ')
+    })(),
+  }))
+
+  const salesUserOptions = salesUsers?.map((salesUser: { id: string; name: string; email: string }) => ({
+    value: salesUser.id,
+    label: salesUser.name,
+  })) || []
 
   if (isLoading) return <div>Loading...</div>
 
@@ -56,61 +153,41 @@ const Projects = () => {
       </div>
 
       <div className="bg-white shadow rounded-lg mb-4 p-4">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+        <div className={`grid grid-cols-1 gap-4 mb-4 ${user?.role === UserRole.SALES ? 'md:grid-cols-4' : 'md:grid-cols-5'}`}>
           <input
             type="text"
             placeholder="Search..."
             className="border border-gray-300 rounded-md px-3 py-2"
-            value={filters.search}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search across all projects..."
           />
-          <select
-            className="border border-gray-300 rounded-md px-3 py-2"
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          >
-            <option value="">All Statuses</option>
-            {Object.values(ProjectStatus).map((status) => (
-              <option key={status} value={status}>
-                {status.replace(/_/g, ' ')}
-              </option>
-            ))}
-          </select>
-          <select
-            className="border border-gray-300 rounded-md px-3 py-2"
-            value={filters.type}
-            onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          >
-            <option value="">All Segments</option>
-            {Object.values(ProjectType).map((type) => (
-              <option key={type} value={type}>
-                {type.replace(/_/g, ' ')}
-              </option>
-            ))}
-          </select>
-          <select
-            className="border border-gray-300 rounded-md px-3 py-2"
-            value={filters.projectServiceType}
-            onChange={(e) => setFilters({ ...filters, projectServiceType: e.target.value })}
-          >
-            <option value="">All Project Types</option>
-            {Object.values(ProjectServiceType).map((serviceType) => (
-              <option key={serviceType} value={serviceType}>
-                {(() => {
-                  const typeMap: Record<string, string> = {
-                    'EPC_PROJECT': 'EPC Project',
-                    'PANEL_CLEANING': 'Panel Cleaning',
-                    'MAINTENANCE': 'Maintenance',
-                    'REPAIR': 'Repair',
-                    'CONSULTING': 'Consulting',
-                    'RESALE': 'Resale',
-                    'OTHER_SERVICES': 'Other Services',
-                  };
-                  return typeMap[serviceType] || serviceType.replace(/_/g, ' ');
-                })()}
-              </option>
-            ))}
-          </select>
+          <MultiSelect
+            options={statusOptions}
+            selectedValues={filters.status}
+            onChange={(values) => setFilters({ ...filters, status: values })}
+            placeholder="All Statuses"
+          />
+          <MultiSelect
+            options={typeOptions}
+            selectedValues={filters.type}
+            onChange={(values) => setFilters({ ...filters, type: values })}
+            placeholder="All Segments"
+          />
+          <MultiSelect
+            options={projectServiceTypeOptions}
+            selectedValues={filters.projectServiceType}
+            onChange={(values) => setFilters({ ...filters, projectServiceType: values })}
+            placeholder="All Project Types"
+          />
+          {user?.role !== UserRole.SALES && (
+            <MultiSelect
+              options={salesUserOptions}
+              selectedValues={filters.salespersonId}
+              onChange={(values) => setFilters({ ...filters, salespersonId: values })}
+              placeholder="All Sales Users"
+            />
+          )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -160,7 +237,7 @@ const Projects = () => {
                       <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">
                         {project.type.replace(/_/g, ' ')}
                       </span>
-                      <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
+                      <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColorClasses(project.projectStatus)}`}>
                         {project.projectStatus.replace(/_/g, ' ')}
                       </span>
                     </div>
@@ -192,9 +269,28 @@ const Projects = () => {
       </div>
 
       {data?.pagination && (
-        <div className="mt-4 text-sm text-gray-500">
-          Showing {data.pagination.page} of {data.pagination.pages} pages ({data.pagination.total}{' '}
-          total)
+        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-sm text-gray-500">
+            Showing page {data.pagination.page} of {data.pagination.pages} ({data.pagination.total} total)
+          </div>
+          {data.pagination.pages > 1 && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setPage(p => Math.min(data.pagination.pages, p + 1))}
+                disabled={page >= data.pagination.pages}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

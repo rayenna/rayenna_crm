@@ -23,6 +23,7 @@ import invoiceRoutes from './routes/invoices';
 import amcRoutes from './routes/amc';
 import serviceTicketRoutes from './routes/serviceTickets';
 import salesTeamPerformanceRoutes from './routes/salesTeamPerformance';
+import remarksRoutes from './routes/remarks';
 
 dotenv.config();
 
@@ -60,6 +61,7 @@ app.use('/api/invoices', invoiceRoutes);
 app.use('/api/amc', amcRoutes);
 app.use('/api/service-tickets', serviceTicketRoutes);
 app.use('/api/sales-team-performance', salesTeamPerformanceRoutes);
+app.use('/api/remarks', remarksRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

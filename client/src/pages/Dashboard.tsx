@@ -14,14 +14,20 @@ const Dashboard = () => {
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [selectedMonths, setSelectedMonths] = useState<string[]>([])
 
-  // Fetch available FYs from dashboard data (use management endpoint to get all FYs)
+  // Fetch available FYs from dashboard data based on user role
   const { data: dashboardData } = useQuery({
-    queryKey: ['dashboard', 'management', 'fys'],
+    queryKey: ['dashboard', 'fys', user?.role],
     queryFn: async () => {
+      // For sales users, fetch from sales endpoint to get only their FYs
+      if (user?.role === UserRole.SALES) {
+        const res = await axios.get('/api/dashboard/sales')
+        return res.data
+      }
+      // For other roles, use management endpoint to get all FYs
       const res = await axios.get('/api/dashboard/management')
       return res.data
     },
-    enabled: true, // Fetch to get available FYs
+    enabled: !!user, // Fetch to get available FYs
   })
 
   const availableFYs =

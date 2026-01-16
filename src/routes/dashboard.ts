@@ -65,6 +65,53 @@ function applyDateFilters(
   return where;
 }
 
+// Helper function to create revenue filter (excludes Leads, Site Survey, and Proposal stages)
+function getRevenueWhere(baseWhere: any): any {
+  // Extract AND conditions from baseWhere if they exist
+  const baseAndConditions = baseWhere.AND || [];
+  // Remove AND from baseWhere to avoid duplication
+  const { AND, ...baseWhereWithoutAnd } = baseWhere;
+  
+  // Build revenue filter: Only include confirmed/completed projects
+  // Exclude LEAD status (already excluded by projectStatus filter)
+  // Exclude SURVEY and PROPOSAL stages
+  // Note: We exclude null projectStage only for Lead status projects, but since we're already
+  // filtering by status CONFIRMED/COMPLETED, null projectStage is allowed (confirmed orders may not have stage set)
+  const revenueFilter: any = {
+    ...baseWhereWithoutAnd,
+    projectCost: { not: null },
+    projectStatus: {
+      in: [
+        ProjectStatus.CONFIRMED,
+        ProjectStatus.UNDER_INSTALLATION,
+        ProjectStatus.COMPLETED,
+        ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
+      ],
+    },
+  };
+
+  // Exclude SURVEY and PROPOSAL stages
+  // Allow null projectStage (confirmed orders may not have stage set)
+  // Prisma notIn doesn't handle null well, so we use OR to explicitly include null
+  const stageCondition = {
+    OR: [
+      { projectStage: null }, // Include null stages
+      { projectStage: { notIn: [ProjectStage.SURVEY, ProjectStage.PROPOSAL] } }, // Exclude Survey and Proposal
+    ],
+  };
+
+  // Combine all conditions
+  if (baseAndConditions.length > 0) {
+    revenueFilter.AND = [...baseAndConditions, stageCondition];
+  } else {
+    revenueFilter.AND = [stageCondition];
+  }
+  
+  console.log('[REVENUE FILTER] Final filter:', JSON.stringify(revenueFilter, null, 2));
+
+  return revenueFilter;
+}
+
 // Sales Dashboard
 router.get('/sales', authenticate, async (req: AuthRequest, res) => {
   try {
@@ -78,8 +125,24 @@ router.get('/sales', authenticate, async (req: AuthRequest, res) => {
       baseWhere.salespersonId = userId;
     }
     
-    // Apply FY filter
-    const { where, monthFilters: monthFiltersApplied } = await applyDateFilters(baseWhere, fyFilters, monthFilters);
+    // Apply FY and month filters
+    const where = applyDateFilters(baseWhere, fyFilters, monthFilters);
+
+    // Debug: Check revenue filter
+    const revenueWhere = getRevenueWhere(where);
+    console.log('[SALES DASHBOARD] Revenue filter:', JSON.stringify(revenueWhere, null, 2));
+    
+    // Debug: Count projects matching revenue filter
+    const revenueCount = await prisma.project.count({ where: revenueWhere });
+    console.log('[SALES DASHBOARD] Projects matching revenue filter:', revenueCount);
+    
+    // Debug: Sample projects
+    const sampleProjects = await prisma.project.findMany({
+      where: revenueWhere,
+      take: 3,
+      select: { id: true, projectStatus: true, projectStage: true, projectCost: true },
+    });
+    console.log('[SALES DASHBOARD] Sample projects:', sampleProjects);
 
     const [
       totalLeads,
@@ -102,22 +165,28 @@ router.get('/sales', authenticate, async (req: AuthRequest, res) => {
         where: { ...where, systemCapacity: { not: null } },
         _sum: { systemCapacity: true },
       }),
-      // Total revenue
-      prisma.project.aggregate({
-        where: { ...where, projectCost: { not: null } },
-        _sum: { projectCost: true },
-      }),
+      // Total revenue (only confirmed/completed projects, excluding leads/survey/proposal)
+      (async () => {
+        const revenueWhere = getRevenueWhere(where);
+        console.log('[SALES DASHBOARD] Revenue filter:', JSON.stringify(revenueWhere, null, 2));
+        const result = await prisma.project.aggregate({
+          where: revenueWhere,
+          _sum: { projectCost: true },
+        });
+        console.log('[SALES DASHBOARD] Revenue result:', result);
+        return result;
+      })(),
       // Projects by status
       prisma.project.groupBy({
         by: ['projectStatus'],
         where,
         _count: { id: true },
       }),
-      // Revenue by salesperson
+      // Revenue by salesperson (only confirmed/completed projects, excluding leads/survey/proposal)
       role === UserRole.ADMIN || role === UserRole.MANAGEMENT
         ? prisma.project.groupBy({
             by: ['salespersonId'],
-            where: { salespersonId: { not: null } },
+            where: getRevenueWhere({ ...where, salespersonId: { not: null } }),
             _sum: { projectCost: true },
             _count: { id: true },
           })
@@ -147,10 +216,10 @@ router.get('/sales', authenticate, async (req: AuthRequest, res) => {
       }));
     }
 
-    // Calculate project value by type for pie chart
+    // Calculate project value by type for pie chart (only confirmed/completed projects)
     const projectValueByType = await prisma.project.groupBy({
       by: ['type'],
-      where: { projectCost: { not: null }, ...where },
+      where: getRevenueWhere(where),
       _sum: { projectCost: true },
       _count: { id: true },
     });
@@ -184,10 +253,10 @@ router.get('/sales', authenticate, async (req: AuthRequest, res) => {
       percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
     }));
 
-    // Calculate project value and profit by financial year (filtered by salesperson if applicable)
+    // Calculate project value and profit by financial year (only confirmed/completed projects)
     const projectValueByFY = await prisma.project.groupBy({
       by: ['year'],
-      where: { projectCost: { not: null }, ...where },
+      where: getRevenueWhere(where),
       _sum: { projectCost: true },
     });
 
@@ -211,9 +280,69 @@ router.get('/sales', authenticate, async (req: AuthRequest, res) => {
         totalProfit: profitByFY.find((item) => item.year === fy)?._sum.grossProfit || 0,
       }));
 
+    // Build leads where clause with salesperson and date filters
+    const leadsWhere: any = {};
+    if (role === UserRole.SALES) {
+      leadsWhere.assignedSalesId = userId;
+    }
+    
+    // Apply date filters to leads based on createdAt
+    if (fyFilters.length > 0) {
+      // Build date filters for leads (filter by createdAt)
+      if (monthFilters.length > 0 && fyFilters.length === 1) {
+        // Month filter only applies if exactly one FY is selected
+        const fy = fyFilters[0];
+        const yearMatch = fy.match(/(\d{4})/);
+        if (yearMatch) {
+          const startYear = parseInt(yearMatch[1]);
+          const dateFilters: any[] = [];
+          
+          monthFilters.forEach((month) => {
+            const monthNum = parseInt(month);
+            let year = startYear;
+            
+            // Months 1-3 (Jan-Mar) belong to the second year of the FY
+            // Months 4-12 (Apr-Dec) belong to the first year of the FY
+            if (monthNum >= 1 && monthNum <= 3) {
+              year = startYear + 1;
+            }
+            
+            const startDate = new Date(year, monthNum - 1, 1);
+            const endDate = new Date(year, monthNum, 0, 23, 59, 59, 999);
+            
+            dateFilters.push({
+              createdAt: { gte: startDate, lte: endDate },
+            });
+          });
+          
+          if (dateFilters.length > 0) {
+            leadsWhere.OR = dateFilters;
+          }
+        }
+      } else {
+        // Only FY filter (no month) - filter by FY date range
+        const fyDateRanges: any[] = [];
+        fyFilters.forEach((fy) => {
+          const yearMatch = fy.match(/(\d{4})/);
+          if (yearMatch) {
+            const startYear = parseInt(yearMatch[1]);
+            const startDate = new Date(startYear, 3, 1); // April 1
+            const endDate = new Date(startYear + 1, 2, 31, 23, 59, 59, 999); // March 31
+            fyDateRanges.push({
+              createdAt: { gte: startDate, lte: endDate },
+            });
+          }
+        });
+        
+        if (fyDateRanges.length > 0) {
+          leadsWhere.OR = fyDateRanges;
+        }
+      }
+    }
+    
     // Get leads data
     const leadsData = await prisma.lead.findMany({
-      where: role === UserRole.SALES ? { assignedSalesId: userId } : {},
+      where: leadsWhere,
       select: {
         status: true,
         source: true,
@@ -259,6 +388,20 @@ router.get('/sales', authenticate, async (req: AuthRequest, res) => {
         ...where,
         statusIndicator: 'RED',
       },
+    });
+
+    // Total Pipeline - Sum of projectCost for projects in Lead (null), Site Survey, or Proposal stages
+    const totalPipeline = await prisma.project.aggregate({
+      where: {
+        ...where,
+        projectCost: { not: null },
+        OR: [
+          { projectStage: null }, // Lead stage
+          { projectStage: ProjectStage.SURVEY }, // Site Survey
+          { projectStage: ProjectStage.PROPOSAL }, // Proposal
+        ],
+      },
+      _sum: { projectCost: true },
     });
 
     // Get customer/project profitability data for word cloud
@@ -319,6 +462,7 @@ router.get('/sales', authenticate, async (req: AuthRequest, res) => {
         approved: pipelineApproved,
         atRisk: pipelineAtRisk,
       },
+      totalPipeline: totalPipeline._sum.projectCost || 0,
       revenueBySalesperson: revenueBreakdown,
       projectValueByType: valueByTypeWithPercentage,
       projectValueProfitByFY,
@@ -423,10 +567,10 @@ router.get('/operations', authenticate, async (req: AuthRequest, res) => {
       }),
     ]);
 
-    // Calculate project value by type for pie chart (with optional FY filter)
+    // Calculate project value by type for pie chart (with optional FY filter) - only confirmed/completed projects
     const projectValueByType = await prisma.project.groupBy({
       by: ['type'],
-      where: { projectCost: { not: null }, ...where },
+      where: getRevenueWhere(where),
       _sum: { projectCost: true },
       _count: { id: true },
     });
@@ -460,10 +604,10 @@ router.get('/operations', authenticate, async (req: AuthRequest, res) => {
       percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
     }));
 
-    // Calculate project value and profit by financial year
+    // Calculate project value and profit by financial year (only confirmed/completed projects)
     const projectValueByFY = await prisma.project.groupBy({
       by: ['year'],
-      where: { projectCost: { not: null } },
+      where: getRevenueWhere(where),
       _sum: { projectCost: true },
     });
 
@@ -527,10 +671,10 @@ router.get('/finance', authenticate, async (req: AuthRequest, res) => {
       profitByProject,
       profitBySalesperson,
     ] = await Promise.all([
-      // Total project value
+      // Total project value (only confirmed/completed projects)
       prisma.project.aggregate({
         _sum: { projectCost: true },
-        where: { ...where, projectCost: { not: null } },
+        where: getRevenueWhere(where),
       }),
       // Total amount received
       prisma.project.aggregate({
@@ -600,10 +744,10 @@ router.get('/finance', authenticate, async (req: AuthRequest, res) => {
       }));
     }
 
-    // Calculate project value by type for pie chart
+    // Calculate project value by type for pie chart (only confirmed/completed projects)
     const projectValueByType = await prisma.project.groupBy({
       by: ['type'],
-      where: { projectCost: { not: null } },
+      where: getRevenueWhere(where),
       _sum: { projectCost: true },
       _count: { id: true },
     });
@@ -640,7 +784,7 @@ router.get('/finance', authenticate, async (req: AuthRequest, res) => {
     // Calculate project value and profit by financial year
     const projectValueByFY = await prisma.project.groupBy({
       by: ['year'],
-      where: { projectCost: { not: null } },
+      where: getRevenueWhere(where),
       _sum: { projectCost: true },
     });
 
@@ -740,7 +884,7 @@ router.get('/management', authenticate, async (req: AuthRequest, res) => {
         const [totalValue, totalReceived, totalOutstanding, totalProfit] = await Promise.all([
           prisma.project.aggregate({
             _sum: { projectCost: true },
-            where: { ...where, projectCost: { not: null } },
+            where: getRevenueWhere(where),
           }),
           prisma.project.aggregate({
             _sum: { totalAmountReceived: true },
@@ -764,10 +908,10 @@ router.get('/management', authenticate, async (req: AuthRequest, res) => {
       })(),
     ]);
 
-    // Calculate project value by type (with optional FY filter)
+    // Calculate project value by type (with optional FY filter) - only confirmed/completed projects
     const projectValueByType = await prisma.project.groupBy({
       by: ['type'],
-      where: { projectCost: { not: null }, ...where },
+      where: getRevenueWhere(where),
       _sum: { projectCost: true },
       _count: { id: true },
     });
@@ -808,7 +952,7 @@ router.get('/management', authenticate, async (req: AuthRequest, res) => {
     // Calculate project value and profit by financial year
     const projectValueByFY = await prisma.project.groupBy({
       by: ['year'],
-      where: { projectCost: { not: null } },
+      where: getRevenueWhere(where),
       _sum: { projectCost: true },
     });
 
@@ -831,6 +975,20 @@ router.get('/management', authenticate, async (req: AuthRequest, res) => {
         totalProjectValue: projectValueByFY.find((item) => item.year === fy)?._sum.projectCost || 0,
         totalProfit: profitByFY.find((item) => item.year === fy)?._sum.grossProfit || 0,
       }));
+
+    // Total Pipeline - Sum of projectCost for projects in Lead (null), Site Survey, or Proposal stages
+    const totalPipeline = await prisma.project.aggregate({
+      where: {
+        ...where,
+        projectCost: { not: null },
+        OR: [
+          { projectStage: null }, // Lead stage
+          { projectStage: ProjectStage.SURVEY }, // Site Survey
+          { projectStage: ProjectStage.PROPOSAL }, // Proposal
+        ],
+      },
+      _sum: { projectCost: true },
+    });
 
     // Get customer/project profitability data for word cloud
     const profitabilityData = await prisma.project.findMany({
@@ -871,6 +1029,7 @@ router.get('/management', authenticate, async (req: AuthRequest, res) => {
       sales,
       operations,
       finance,
+      totalPipeline: totalPipeline._sum.projectCost || 0,
       projectValueByType: valueByTypeWithPercentage,
       projectValueProfitByFY,
       wordCloudData,

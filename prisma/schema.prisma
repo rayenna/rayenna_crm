@@ -36,6 +36,7 @@ enum ProjectStatus {
   SUBMITTED_FOR_SUBSIDY
   COMPLETED
   COMPLETED_SUBSIDY_CREDITED
+  LOST
 }
 
 enum PaymentStatus {
@@ -65,6 +66,8 @@ enum LeadSource {
   REFERRAL
   GOOGLE
   CHANNEL_PARTNER
+  DIGITAL_MARKETING
+  OTHER
 }
 
 enum LeadStatus {
@@ -88,6 +91,14 @@ enum ProjectStage {
   BILLING
   LIVE
   AMC
+  LOST
+}
+
+enum LostReason {
+  LOST_TO_COMPETITION
+  NO_BUDGET
+  INDEFINITELY_DELAYED
+  OTHER
 }
 
 enum ProposalStatus {
@@ -124,13 +135,16 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  createdProjects   Project[]    @relation("CreatedBy")
-  salesProjects     Project[]    @relation("SalesPerson")
-  opsProjects       Project[]    @relation("OpsPerson")
-  assignedLeads     Lead[]       @relation("AssignedSales")
-  uploadedDocuments Document[]   @relation("UploadedBy")
-  auditLogs         AuditLog[]   @relation("AuditUser")
-  siteSurveys       SiteSurvey[] @relation("CompletedBy")
+  createdProjects   Project[]       @relation("CreatedBy")
+  salesProjects     Project[]       @relation("SalesPerson")
+  opsProjects       Project[]       @relation("OpsPerson")
+  assignedLeads     Lead[]          @relation("AssignedSales")
+  uploadedDocuments Document[]      @relation("UploadedBy")
+  auditLogs         AuditLog[]      @relation("AuditUser")
+  siteSurveys       SiteSurvey[]    @relation("CompletedBy")
+  projectRemarks    ProjectRemark[] @relation("RemarkAuthor")
+  createdCustomers  Customer[]      @relation("CustomerCreatedBy")
+  salesCustomers    Customer[]      @relation("CustomerSalesPerson")
 
   @@map("users")
 }
@@ -181,8 +195,12 @@ model Customer {
   idProofType    String?
   companyName    String?
   companyGst     String? // Legacy field, use gstNumber
-  leadSource     String? // Legacy field
-  leadBroughtBy  String?
+
+  createdById String?
+  createdBy   User?   @relation("CustomerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  salespersonId String?
+  salesperson   User?  @relation("CustomerSalesPerson", fields: [salespersonId], references: [id], onDelete: SetNull)
 
   projects Project[]
   leads    Lead[]
@@ -217,14 +235,20 @@ model Project {
   panelBrand                String?
   inverterBrand             String?
   roofType                  String? // Concrete-Flat, Concrete-Sloped, Tile, Thatched, Asbestos, Metal, Others
-  projectStage              ProjectStage? // Survey, Proposal, Approved, Installation, Billing, Live, AMC
+  projectStage              ProjectStage? // Survey, Proposal, Approved, Installation, Billing, Live, AMC, Lost
   stageEnteredAt            DateTime? // When current stage was entered (for SLA tracking)
+  // Lost stage fields
+  lostDate                  DateTime? // Date when project was marked as Lost (must be current or past date)
+  lostReason                LostReason? // Reason for losing the project
+  lostOtherReason           String? // Free text if lostReason is OTHER
   slaDays                   Int? // SLA days for current stage
   statusIndicator           String? // GREEN, AMBER, RED (based on SLA)
   siteAddress               String?       @db.Text // Site address for installation
   expectedCommissioningDate DateTime? // Expected commissioning date
 
   // Sales & Commercial
+  leadSource        LeadSource? // Website, Referral, Google, Channel Partner, Digital Marketing, Other
+  leadSourceDetails String? // Additional details for Channel Partner (name), Referral (name), or Other (value)
   projectCost       Float? // ₹ (project_value)
   projectValue      Float? // Alternative name for projectCost
   marginEstimate    Float? // Margin estimate
@@ -281,6 +305,7 @@ model Project {
   invoices       Invoice[]
   amcContracts   AMCContract[]
   serviceTickets ServiceTicket[]
+  projectRemarks ProjectRemark[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -435,4 +460,19 @@ model ServiceTicket {
   updatedAt  DateTime  @updatedAt
 
   @@map("service_tickets")
+}
+
+model ProjectRemark {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("RemarkAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  remark    String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("project_remarks")
+  @@index([projectId])
+  @@index([userId])
 }

@@ -4,8 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Project, ProjectType, ProjectServiceType, UserRole } from '../types'
+import { Project, ProjectType, ProjectServiceType, UserRole, ProjectStatus, LostReason, LeadSource } from '../types'
 import toast from 'react-hot-toast'
+import RemarksSection from '../components/remarks/RemarksSection'
 
 // File Upload Component
 const FileUploadSection = ({ projectId }: { projectId: string }) => {
@@ -131,9 +132,10 @@ const FileUploadSection = ({ projectId }: { projectId: string }) => {
 const ProjectForm = () => {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { hasRole } = useAuth()
+  const { hasRole, user } = useAuth()
   const queryClient = useQueryClient()
   const isEdit = !!id
+  const isFinanceOnly = user?.role === UserRole.FINANCE && isEdit
 
   const { data: project } = useQuery({
     queryKey: ['project', id],
@@ -198,9 +200,15 @@ const ProjectForm = () => {
   const { register, handleSubmit, setValue, getValues, watch } = useForm()
   const selectedCustomerId = watch('customerId')
   const confirmationDate = watch('confirmationDate')
+  const projectStatus = watch('projectStatus')
   const [customerSearch, setCustomerSearch] = useState('')
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
   const customerDropdownRef = useRef<HTMLDivElement>(null)
+  
+  // Check if project is already in Lost status (prevents editing)
+  // For new projects, project will be undefined, so isLost will be false
+  const isLost = isEdit && project?.projectStatus === ProjectStatus.LOST
+  const isProjectLost = isLost || projectStatus === ProjectStatus.LOST
 
   // Auto-calculate FY when confirmationDate changes
   useEffect(() => {
@@ -215,19 +223,82 @@ const ProjectForm = () => {
     }
   }, [confirmationDate, setValue])
 
-  // Filter customers based on search
+  // Auto-set costs to 0 when Lost is selected
+  useEffect(() => {
+    if (projectStatus === ProjectStatus.LOST) {
+      setValue('projectCost', 0);
+      setValue('totalProjectCost', 0);
+      // Set lostDate to today if not set
+      if (!watch('lostDate')) {
+        const today = new Date().toISOString().split('T')[0];
+        setValue('lostDate', today);
+      }
+    }
+  }, [projectStatus, setValue, watch])
+
+  // Clear leadSourceDetails when leadSource changes to a value that doesn't need details
+  const leadSource = watch('leadSource')
+  useEffect(() => {
+    if (leadSource && 
+        leadSource !== LeadSource.CHANNEL_PARTNER && 
+        leadSource !== LeadSource.REFERRAL && 
+        leadSource !== LeadSource.OTHER) {
+      setValue('leadSourceDetails', '');
+    }
+  }, [leadSource, setValue])
+
+  // Filter customers based on search and user permissions
   const filteredCustomers = useMemo(() => {
     if (!customers?.customers) return []
-    if (!customerSearch.trim()) return customers.customers
+    
+    // For Sales users, only show customers they created or are tagged to
+    let availableCustomers = customers.customers
+    if (user?.role === UserRole.SALES && user?.id) {
+      availableCustomers = customers.customers.filter((customer: any) => {
+        const isCreator = customer.createdById === user.id
+        const isTagged = customer.salespersonId === user.id
+        // Backward compatibility: if customer has projects, check if any were created by this user
+        const hasUserProjects = customer.projects && customer.projects.length > 0 && 
+          customer.projects.some((project: any) => project.createdById === user.id)
+        const matches = isCreator || isTagged || hasUserProjects
+        return matches
+      })
+      console.log('Sales user filtering customers:', {
+        userRole: user.role,
+        userId: user.id,
+        totalCustomers: customers.customers.length,
+        filteredCustomers: availableCustomers.length,
+        sampleCustomers: customers.customers.slice(0, 5).map((c: any) => ({
+          id: c.id,
+          name: c.customerName,
+          createdById: c.createdById,
+          salespersonId: c.salespersonId,
+          hasProjects: c.projects?.length > 0,
+          projectCreatedBy: c.projects?.[0]?.createdById,
+          matches: c.createdById === user.id || c.salespersonId === user.id || (c.projects?.[0]?.createdById === user.id)
+        })),
+        filteredSample: availableCustomers.slice(0, 3).map((c: any) => ({
+          id: c.id,
+          name: c.customerName,
+          createdById: c.createdById,
+          salespersonId: c.salespersonId
+        }))
+      })
+    } else {
+      console.log('Not filtering - user role:', user?.role, 'userId:', user?.id)
+    }
+    
+    // Apply search filter
+    if (!customerSearch.trim()) return availableCustomers
     
     const searchLower = customerSearch.toLowerCase()
-    return customers.customers.filter((customer: any) => 
-      customer.customerName.toLowerCase().includes(searchLower) ||
-      customer.customerId.toLowerCase().includes(searchLower) ||
+    return availableCustomers.filter((customer: any) => 
+      customer.customerName?.toLowerCase().includes(searchLower) ||
+      customer.customerId?.toLowerCase().includes(searchLower) ||
       (customer.consumerNumber && customer.consumerNumber.toLowerCase().includes(searchLower)) ||
       (customer.address && customer.address.toLowerCase().includes(searchLower))
     )
-  }, [customers?.customers, customerSearch])
+  }, [customers?.customers, customerSearch, user?.role, user?.id])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -316,15 +387,20 @@ const ProjectForm = () => {
     const allValues = getValues();
     
     // Remove immutable/system fields that shouldn't be sent to backend
-    const immutableFields = ['id', 'slNo', 'count', 'createdById', 'createdAt', 'updatedAt', 'totalAmountReceived', 'balanceAmount', 'paymentStatus', 'expectedProfit', 'customer'];
+    const immutableFields = ['id', 'slNo', 'count', 'createdById', 'createdAt', 'updatedAt', 'totalAmountReceived', 'balanceAmount', 'paymentStatus', 'expectedProfit', 'customer', 'remarks'];
     immutableFields.forEach((field) => {
       delete data[field];
     });
-
-    // Ensure customerId is provided
-    if (!data.customerId) {
-      toast.error('Please select a customer');
-      return;
+    
+    // Remove customerId from update requests (customer cannot be changed after project creation)
+    if (isEdit) {
+      delete data.customerId;
+    } else {
+      // Ensure customerId is provided only when creating a new project
+      if (!data.customerId) {
+        toast.error('Please select a customer');
+        return;
+      }
     }
 
     // Ensure projectServiceType has a default value if not provided
@@ -345,7 +421,34 @@ const ProjectForm = () => {
       { field: 'registrationDate', label: 'Registration Date' },
       { field: 'installationCompletionDate', label: 'Installation Completion Date' },
       { field: 'subsidyRequestDate', label: 'Subsidy Request Date' },
+      { field: 'lostDate', label: 'Lost Date' },
     ];
+    
+    // Special validation for Lost status
+    if (data.projectStatus === ProjectStatus.LOST) {
+      if (!data.lostDate) {
+        toast.error('Lost date is required when project stage is Lost');
+        return;
+      }
+      const lostDate = new Date(data.lostDate);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      if (lostDate > today) {
+        toast.error('Lost date cannot be a future date');
+        return;
+      }
+      if (!data.lostReason) {
+        toast.error('Please select a reason for loss');
+        return;
+      }
+      if (data.lostReason === LostReason.OTHER && !data.lostOtherReason) {
+        toast.error('Please enter the reason for loss');
+        return;
+      }
+      // Auto-set costs to 0
+      data.projectCost = 0;
+      data.totalProjectCost = 0;
+    }
     
     // Validate all dates before proceeding
     const dateErrors: string[] = [];
@@ -467,6 +570,15 @@ const ProjectForm = () => {
   const canEditPayments = hasRole([UserRole.ADMIN, UserRole.FINANCE])
   const canEditExecution = hasRole([UserRole.ADMIN, UserRole.OPERATIONS])
   const canEditSales = hasRole([UserRole.ADMIN, UserRole.SALES])
+  
+  // Finance users can only edit payment tracking section
+  // Projects in Lost status cannot be edited (except Admin can delete)
+  // However, Sales (for their projects) and Operations can edit Lost status fields
+  const canEditOtherSections = !isFinanceOnly && !isLost
+  const canEditLostFields = isEdit && projectStatus === ProjectStatus.LOST && !isLost && 
+    (hasRole([UserRole.ADMIN]) || 
+     (hasRole([UserRole.SALES]) && project?.salespersonId === user?.id) ||
+     hasRole([UserRole.OPERATIONS]))
 
   return (
     <div className="px-4 py-6 sm:px-0">
@@ -475,13 +587,14 @@ const ProjectForm = () => {
       </h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Customer Selection */}
+        {/* Customer Selection - Hidden for Finance users in edit mode */}
+        {canEditOtherSections && (
         <div className="bg-white shadow rounded-lg p-6">
           <h2 className="text-lg font-semibold mb-4">Customer & Project Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Customer *
+                Customer * {isEdit && <span className="text-xs text-gray-500 font-normal">(Cannot be changed - create a new project to change customer)</span>}
               </label>
               {customersLoading ? (
                 <div className="mt-1 text-sm text-gray-500">Loading customers...</div>
@@ -501,13 +614,23 @@ const ProjectForm = () => {
                         placeholder="Search customer by name, ID, or consumer number..."
                         value={customerSearch}
                         onChange={(e) => {
-                          setCustomerSearch(e.target.value)
-                          setShowCustomerDropdown(true)
+                          if (!isEdit) {
+                            setCustomerSearch(e.target.value)
+                            setShowCustomerDropdown(true)
+                          }
                         }}
-                        onFocus={() => setShowCustomerDropdown(true)}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 pr-10"
+                        onFocus={() => {
+                          if (!isEdit) {
+                            setShowCustomerDropdown(true)
+                          }
+                        }}
+                        disabled={isEdit}
+                        readOnly={isEdit}
+                        className={`w-full border border-gray-300 rounded-md px-3 py-2 pr-10 ${
+                          isEdit ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''
+                        }`}
                       />
-                      {customerSearch && (
+                      {customerSearch && !isEdit && (
                         <button
                           type="button"
                           onClick={() => {
@@ -520,7 +643,7 @@ const ProjectForm = () => {
                           ✕
                         </button>
                       )}
-                      {showCustomerDropdown && filteredCustomers.length > 0 && (
+                      {!isEdit && showCustomerDropdown && filteredCustomers.length > 0 && (
                         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
                           {filteredCustomers.map((customer: any) => (
                             <div
@@ -546,30 +669,35 @@ const ProjectForm = () => {
                           ))}
                         </div>
                       )}
-                      {showCustomerDropdown && customerSearch && filteredCustomers.length === 0 && (
+                      {!isEdit && showCustomerDropdown && customerSearch && filteredCustomers.length === 0 && (
                         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-4 text-sm text-gray-500">
                           No customers found matching "{customerSearch}"
                         </div>
                       )}
                     </div>
                     <select
-                      {...register('customerId', { required: 'Please select a customer' })}
+                      {...register('customerId', { required: !isEdit ? 'Please select a customer' : false })}
                       onChange={(e) => {
-                        const selectedId = e.target.value
-                        if (selectedId) {
-                          const customer = customers?.customers?.find((c: any) => c.id === selectedId)
-                          if (customer) {
-                            setCustomerSearch(`${customer.customerId} - ${customer.customerName}`)
+                        if (!isEdit) {
+                          const selectedId = e.target.value
+                          if (selectedId) {
+                            const customer = customers?.customers?.find((c: any) => c.id === selectedId)
+                            if (customer) {
+                              setCustomerSearch(`${customer.customerId} - ${customer.customerName}`)
+                            }
+                          } else {
+                            setCustomerSearch('')
                           }
-                        } else {
-                          setCustomerSearch('')
                         }
                       }}
-                      className="w-48 border border-gray-300 rounded-md px-3 py-2"
+                      disabled={isEdit}
+                      className={`w-48 border border-gray-300 rounded-md px-3 py-2 ${
+                        isEdit ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''
+                      }`}
                     >
                       <option value="">Or select from list</option>
-                      {customers?.customers && customers.customers.length > 0 ? (
-                        customers.customers.map((customer: any) => (
+                      {filteredCustomers && filteredCustomers.length > 0 ? (
+                        filteredCustomers.map((customer: any) => (
                           <option key={customer.id} value={customer.id}>
                             {customer.customerId} - {customer.customerName}
                           </option>
@@ -590,14 +718,14 @@ const ProjectForm = () => {
                   )}
                   <input
                     type="hidden"
-                    {...register('customerId', { required: 'Please select a customer' })}
+                    {...register('customerId', { required: !isEdit ? 'Please select a customer' : false })}
                   />
                 </>
               )}
-              {selectedCustomerId && customers?.customers && (
+              {selectedCustomerId && filteredCustomers && (
                 <div className="mt-2 p-3 bg-gray-50 rounded-md text-sm text-gray-600">
                   {(() => {
-                    const customer = customers.customers.find((c: any) => c.id === selectedCustomerId);
+                    const customer = filteredCustomers.find((c: any) => c.id === selectedCustomerId);
                     if (customer) {
                       return (
                         <div>
@@ -632,6 +760,11 @@ const ProjectForm = () => {
                   Don't see the customer? <Link to="/customers" className="text-primary-600 hover:text-primary-800">Create a new customer</Link>
                 </p>
               )}
+              {isEdit && (
+                <p className="mt-2 text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                  <strong>Note:</strong> Customer cannot be changed for existing projects. To assign a different customer, please create a new project.
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Segment *</label>
@@ -662,30 +795,56 @@ const ProjectForm = () => {
                 <option value={ProjectServiceType.OTHER_SERVICES}>Other Services</option>
               </select>
             </div>
-            {hasRole([UserRole.ADMIN]) && salespersons && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Salesperson</label>
-                <select
-                  {...register('salespersonId')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                >
-                  <option value="">Select salesperson</option>
-                  {salespersons.map((sp: any) => (
-                    <option key={sp.id} value={sp.id}>
-                      {sp.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {/* Sales Person is now managed at Customer level, not Project level */}
           </div>
         </div>
+        )}
 
-        {/* Sales & Commercial */}
-        {(canEditSales || isEdit) && (
+        {/* Sales & Commercial - Visible for Sales/Admin users or when editing (except Lost projects and Finance-only mode)
+            Also allows Operations and Sales (for their projects) to edit Lost stage fields */}
+        {((canEditSales || isEdit || canEditLostFields) && (canEditOtherSections || canEditLostFields)) && (
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-lg font-semibold mb-4">Sales & Commercial</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Lead Source
+                </label>
+                <select
+                  {...register('leadSource')}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                >
+                  <option value="">Select Lead Source</option>
+                  <option value={LeadSource.WEBSITE}>Website</option>
+                  <option value={LeadSource.REFERRAL}>Referral</option>
+                  <option value={LeadSource.GOOGLE}>Google</option>
+                  <option value={LeadSource.CHANNEL_PARTNER}>Channel Partner</option>
+                  <option value={LeadSource.DIGITAL_MARKETING}>Digital Marketing</option>
+                  <option value={LeadSource.OTHER}>Other</option>
+                </select>
+              </div>
+              {/* Conditional text input for Channel Partner, Referral, or Other */}
+              {(watch('leadSource') === LeadSource.CHANNEL_PARTNER || 
+                watch('leadSource') === LeadSource.REFERRAL || 
+                watch('leadSource') === LeadSource.OTHER) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    {watch('leadSource') === LeadSource.CHANNEL_PARTNER && 'Channel Partner Name'}
+                    {watch('leadSource') === LeadSource.REFERRAL && 'Referral Name'}
+                    {watch('leadSource') === LeadSource.OTHER && 'Other Details'}
+                  </label>
+                  <input
+                    type="text"
+                    {...register('leadSourceDetails')}
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                    placeholder={
+                      watch('leadSource') === LeadSource.CHANNEL_PARTNER ? 'Enter channel partner name' :
+                      watch('leadSource') === LeadSource.REFERRAL ? 'Enter referral name' :
+                      'Enter details'
+                    }
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   System Capacity (kW)
@@ -708,13 +867,18 @@ const ProjectForm = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Confirmation Date *
+                  Confirmation Date {projectStatus !== ProjectStatus.LOST && '*'}
                 </label>
                 <input
                   type="date"
-                  {...register('confirmationDate', { required: true })}
+                  {...register('confirmationDate', { required: projectStatus !== ProjectStatus.LOST })}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  disabled={projectStatus === ProjectStatus.LOST}
+                  style={projectStatus === ProjectStatus.LOST ? { backgroundColor: '#f3f4f6', cursor: 'not-allowed' } : {}}
                 />
+                {projectStatus === ProjectStatus.LOST && (
+                  <p className="mt-1 text-xs text-gray-500">Confirmation Date is not required for Lost projects</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Year (FY) *</label>
@@ -728,10 +892,11 @@ const ProjectForm = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Project Stage</label>
+                <label className="block text-sm font-medium text-gray-700">Project Status</label>
                 <select
                   {...register('projectStatus')}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  disabled={isProjectLost}
                 >
                   <option value="LEAD">Lead</option>
                   <option value="SITE_SURVEY">Site Survey</option>
@@ -740,8 +905,73 @@ const ProjectForm = () => {
                   <option value="UNDER_INSTALLATION">Installation</option>
                   <option value="COMPLETED">Completed</option>
                   <option value="COMPLETED_SUBSIDY_CREDITED">Completed - Subsidy Credited</option>
+                  <option value={ProjectStatus.LOST}>Lost</option>
                 </select>
+                {isLost && (
+                  <p className="mt-1 text-sm text-red-600">This project is in Lost status and cannot be edited. Only Admin can delete it.</p>
+                )}
               </div>
+              {/* Lost Status Fields - Show when Lost is selected */}
+              {projectStatus === ProjectStatus.LOST && (canEditLostFields || canEditSales || hasRole([UserRole.OPERATIONS])) && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Lost Date *
+                    </label>
+                    <input
+                      type="date"
+                      {...register('lostDate', { 
+                        required: projectStatus === ProjectStatus.LOST ? 'Lost date is required' : false,
+                        validate: (value) => {
+                          if (projectStatus === ProjectStatus.LOST && value) {
+                            const lostDate = new Date(value);
+                            const today = new Date();
+                            today.setHours(23, 59, 59, 999); // Set to end of today
+                            if (lostDate > today) {
+                              return 'Lost date cannot be a future date';
+                            }
+                          }
+                          return true;
+                        }
+                      })}
+                      max={new Date().toISOString().split('T')[0]} // Max date is today
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Reason for Loss *
+                    </label>
+                    <select
+                      {...register('lostReason', { 
+                        required: projectStatus === ProjectStatus.LOST ? 'Please select a reason' : false 
+                      })}
+                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                    >
+                      <option value="">Select reason</option>
+                      <option value={LostReason.LOST_TO_COMPETITION}>Lost to Competition</option>
+                      <option value={LostReason.NO_BUDGET}>No Budget</option>
+                      <option value={LostReason.INDEFINITELY_DELAYED}>Indefinitely Delayed</option>
+                      <option value={LostReason.OTHER}>Other</option>
+                    </select>
+                  </div>
+                  {watch('lostReason') === LostReason.OTHER && (
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Other Reason *
+                      </label>
+                      <textarea
+                        {...register('lostOtherReason', { 
+                          required: watch('lostReason') === LostReason.OTHER ? 'Please enter the reason' : false 
+                        })}
+                        rows={3}
+                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                        placeholder="Please specify the reason for loss..."
+                      />
+                    </div>
+                  )}
+                </>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700">Roof Type</label>
                 <select
@@ -892,8 +1122,8 @@ const ProjectForm = () => {
           </div>
         )}
 
-        {/* Project Lifecycle */}
-        {canEditExecution && (
+        {/* Project Lifecycle - Hidden for Finance users in edit mode */}
+        {canEditExecution && canEditOtherSections && (
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-lg font-semibold mb-4">Project Lifecycle</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -957,7 +1187,12 @@ const ProjectForm = () => {
                   {...register('totalProjectCost')}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                   placeholder="Overall cost incurred in the project"
+                  disabled={projectStatus === ProjectStatus.LOST}
+                  readOnly={projectStatus === ProjectStatus.LOST}
                 />
+                {projectStatus === ProjectStatus.LOST && (
+                  <p className="mt-1 text-xs text-gray-500">Total Project Cost is set to 0 for Lost projects</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Panel Brand</label>
@@ -981,18 +1216,13 @@ const ProjectForm = () => {
           </div>
         )}
 
-        {/* Remarks */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Remarks</h2>
-          <textarea
-            {...register('remarks')}
-            rows={4}
-            className="block w-full border border-gray-300 rounded-md px-3 py-2"
-          />
-        </div>
+        {/* Remarks Section - Versioned remarks for all users */}
+        {isEdit && id && (
+          <RemarksSection projectId={id} isEditMode={true} />
+        )}
 
-        {/* File Upload Section - Only for Sales and Operations in Edit mode */}
-        {isEdit && id && hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS]) && (
+        {/* File Upload Section - Hidden for Finance users */}
+        {isEdit && id && hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS]) && canEditOtherSections && (
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-lg font-semibold mb-4">File Uploads</h2>
             <FileUploadSection projectId={id} />
@@ -1009,10 +1239,10 @@ const ProjectForm = () => {
           </button>
           <button
             type="submit"
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || isLost}
             className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 font-medium shadow-md hover:shadow-lg transition-all"
           >
-            {mutation.isPending ? 'Saving...' : isEdit ? 'Update' : 'Create'}
+            {mutation.isPending ? 'Saving...' : isEdit ? (isLost ? 'Cannot Edit Lost Project' : 'Update') : 'Create'}
           </button>
         </div>
       </form>

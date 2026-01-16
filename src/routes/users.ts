@@ -185,7 +185,7 @@ router.get('/role/sales', authenticate, async (req: AuthRequest, res: Response) 
   try {
     const salespersons = await prisma.user.findMany({
       where: {
-        role: { in: [UserRole.SALES, UserRole.ADMIN] },
+        role: UserRole.SALES,
       },
       select: {
         id: true,

@@ -27,8 +27,8 @@ const FinanceDashboard = ({ selectedFYs, selectedMonths }: FinanceDashboardProps
     <div className="space-y-6 animate-fade-in">
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
         <MetricCard
-          title="Total Project Value"
-          value={`₹${(data?.totalProjectValue || 0).toLocaleString('en-IN')}`}
+          title="Total Revenue"
+          value={`₹${Math.round(data?.totalProjectValue || 0).toLocaleString('en-IN')}`}
           icon={<FaRupeeSign />}
           gradient="from-green-500 to-emerald-500"
         />

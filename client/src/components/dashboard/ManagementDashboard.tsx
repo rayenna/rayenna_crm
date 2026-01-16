@@ -34,7 +34,7 @@ const ManagementDashboard = ({ selectedFYs, selectedMonths }: ManagementDashboar
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
         <MetricCard
           title="Total Leads"
           value={data?.sales?.totalLeads || 0}
@@ -43,20 +43,26 @@ const ManagementDashboard = ({ selectedFYs, selectedMonths }: ManagementDashboar
         />
         <MetricCard
           title="Total Capacity"
-          value={`${(data?.sales?.totalCapacity || 0).toFixed(2)} kW`}
+          value={`${Math.round(data?.sales?.totalCapacity || 0)} kW`}
           icon={<FaBolt />}
           gradient="from-yellow-500 to-orange-500"
         />
         <MetricCard
-          title="Total Project Value"
-          value={`₹${(data?.finance?.totalValue || 0).toLocaleString('en-IN')}`}
+          title="Total Revenue"
+          value={`₹${Math.round(data?.finance?.totalValue || 0).toLocaleString('en-IN')}`}
           icon={<FaRupeeSign />}
           gradient="from-green-500 to-emerald-500"
         />
         <MetricCard
-          title="Total Profit"
-          value={`₹${(data?.finance?.totalProfit || 0).toLocaleString('en-IN')}`}
+          title="Total Pipeline"
+          value={`₹${Math.round(data?.totalPipeline || 0).toLocaleString('en-IN')}`}
           icon={<FaChartLine />}
+          gradient="from-indigo-500 to-purple-500"
+        />
+        <MetricCard
+          title="Total Profit"
+          value={`₹${Math.round(data?.finance?.totalProfit || 0).toLocaleString('en-IN')}`}
+          icon={<FaRupeeSign />}
           gradient="from-purple-500 to-pink-500"
         />
       </div>
@@ -88,10 +94,10 @@ const ManagementDashboard = ({ selectedFYs, selectedMonths }: ManagementDashboar
       </div>
 
       {/* Charts Section - Side by Side */}
-      <div className="grid grid-cols-1 gap-6 sm:gap-6 lg:grid-cols-2 lg:items-stretch">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Project Value by Segment Pie Chart */}
         {data?.projectValueByType && data.projectValueByType.length > 0 && (
-          <div className="lg:col-span-1 flex">
+          <div className="w-full">
             <ProjectValuePieChart 
               data={data.projectValueByType} 
               availableFYs={data?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []}
@@ -100,7 +106,7 @@ const ManagementDashboard = ({ selectedFYs, selectedMonths }: ManagementDashboar
           </div>
         )}
         {/* Customer Profitability Word Cloud */}
-        <div className="lg:col-span-1 flex">
+        <div className="w-full">
           <ProfitabilityWordCloud 
             availableFYs={data?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []} 
           />
