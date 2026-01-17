@@ -1,13 +1,13 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { PrismaClient, InstallationStatus } from '@prisma/client';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // Get installations for a project
-router.get('/project/:projectId', authenticate, async (req: AuthRequest, res: express.Response) => {
+router.get('/project/:projectId', authenticate, async (req: Request, res: express.Response) => {
   try {
     const installations = await prisma.installation.findMany({
       where: { projectId: req.params.projectId },
@@ -29,7 +29,7 @@ router.get('/project/:projectId', authenticate, async (req: AuthRequest, res: ex
 });
 
 // Get single installation
-router.get('/:id', authenticate, async (req: AuthRequest, res: express.Response) => {
+router.get('/:id', authenticate, async (req: Request, res: express.Response) => {
   try {
     const installation = await prisma.installation.findUnique({
       where: { id: req.params.id },
@@ -62,7 +62,7 @@ router.post(
     body('installerName').optional().isString(),
     body('startDate').optional().isISO8601(),
   ],
-  async (req: AuthRequest, res: express.Response) => {
+  async (req: Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -114,7 +114,7 @@ router.put(
     body('startDate').optional().isISO8601(),
     body('completionDate').optional().isISO8601(),
   ],
-  async (req: AuthRequest, res: express.Response) => {
+  async (req: Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -156,7 +156,7 @@ router.put(
 );
 
 // Delete installation
-router.delete('/:id', authenticate, async (req: AuthRequest, res: express.Response) => {
+router.delete('/:id', authenticate, async (req: Request, res: express.Response) => {
   try {
     await prisma.installation.delete({
       where: { id: req.params.id },

@@ -1,13 +1,13 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // Get AMC contracts for a project
-router.get('/project/:projectId', authenticate, async (req: AuthRequest, res: express.Response) => {
+router.get('/project/:projectId', authenticate, async (req: Request, res: express.Response) => {
   try {
     const contracts = await prisma.aMCContract.findMany({
       where: { projectId: req.params.projectId },
@@ -29,7 +29,7 @@ router.get('/project/:projectId', authenticate, async (req: AuthRequest, res: ex
 });
 
 // Get all AMC contracts
-router.get('/', authenticate, async (req: AuthRequest, res: express.Response) => {
+router.get('/', authenticate, async (req: Request, res: express.Response) => {
   try {
     const { projectId, active } = req.query;
 
@@ -59,7 +59,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: express.Response) =>
 });
 
 // Get single AMC contract
-router.get('/:id', authenticate, async (req: AuthRequest, res: express.Response) => {
+router.get('/:id', authenticate, async (req: Request, res: express.Response) => {
   try {
     const contract = await prisma.aMCContract.findUnique({
       where: { id: req.params.id },
@@ -94,7 +94,7 @@ router.post(
     body('endDate').isISO8601(),
     body('annualFee').optional().isFloat({ min: 0 }),
   ],
-  async (req: AuthRequest, res: express.Response) => {
+  async (req: Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -144,7 +144,7 @@ router.put(
     body('endDate').optional().isISO8601(),
     body('annualFee').optional().isFloat({ min: 0 }),
   ],
-  async (req: AuthRequest, res: express.Response) => {
+  async (req: Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -176,7 +176,7 @@ router.put(
 );
 
 // Delete AMC contract
-router.delete('/:id', authenticate, async (req: AuthRequest, res: express.Response) => {
+router.delete('/:id', authenticate, async (req: Request, res: express.Response) => {
   try {
     await prisma.aMCContract.delete({
       where: { id: req.params.id },

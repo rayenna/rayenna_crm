@@ -1,6 +1,6 @@
-import express, { Response } from 'express';
+import express, { Request, Response } from 'express';
 import { PrismaClient, UserRole } from '@prisma/client';
-import { authenticate, authorize, AuthRequest } from '../middleware/auth';
+import { authenticate, authorize } from '../middleware/auth';
 import * as XLSX from 'xlsx';
 import { Builder } from 'xml2js';
 
@@ -20,7 +20,7 @@ const getCustomerDisplayName = (customer: any): string => {
 };
 
 // Export Projects to Excel (Tally-friendly format)
-router.get('/export/projects/excel', authenticate, authorize(UserRole.ADMIN, UserRole.FINANCE), async (req: AuthRequest, res: Response) => {
+router.get('/export/projects/excel', authenticate, authorize(UserRole.ADMIN, UserRole.FINANCE), async (req: Request, res: Response) => {
   try {
     const { startDate, endDate, projectStatus, customerId } = req.query;
 
@@ -105,7 +105,7 @@ router.get('/export/projects/excel', authenticate, authorize(UserRole.ADMIN, Use
 });
 
 // Export Invoices to Excel (Tally-friendly format)
-router.get('/export/invoices/excel', authenticate, authorize(UserRole.ADMIN, UserRole.FINANCE), async (req: AuthRequest, res: Response) => {
+router.get('/export/invoices/excel', authenticate, authorize(UserRole.ADMIN, UserRole.FINANCE), async (req: Request, res: Response) => {
   try {
     const { startDate, endDate, status, projectId } = req.query;
 
@@ -184,7 +184,7 @@ router.get('/export/invoices/excel', authenticate, authorize(UserRole.ADMIN, Use
 });
 
 // Export Payments to Excel (Tally-friendly format)
-router.get('/export/payments/excel', authenticate, authorize(UserRole.ADMIN, UserRole.FINANCE), async (req: AuthRequest, res: Response) => {
+router.get('/export/payments/excel', authenticate, authorize(UserRole.ADMIN, UserRole.FINANCE), async (req: Request, res: Response) => {
   try {
     const { startDate, endDate, mode, invoiceId } = req.query;
 
@@ -257,7 +257,7 @@ router.get('/export/payments/excel', authenticate, authorize(UserRole.ADMIN, Use
 });
 
 // Export to CSV (Tally-friendly format)
-router.get('/export/csv', authenticate, authorize(UserRole.ADMIN, UserRole.FINANCE), async (req: AuthRequest, res: Response) => {
+router.get('/export/csv', authenticate, authorize(UserRole.ADMIN, UserRole.FINANCE), async (req: Request, res: Response) => {
   try {
     const { type = 'projects', startDate, endDate } = req.query;
 
@@ -351,7 +351,7 @@ router.get('/export/csv', authenticate, authorize(UserRole.ADMIN, UserRole.FINAN
 });
 
 // Export to JSON (Tally-friendly format) - Legacy endpoint, kept for backward compatibility
-router.get('/export/json', authenticate, authorize(UserRole.ADMIN, UserRole.FINANCE), async (req: AuthRequest, res: Response) => {
+router.get('/export/json', authenticate, authorize(UserRole.ADMIN, UserRole.FINANCE), async (req: Request, res: Response) => {
   try {
     const { startDate, endDate, projectStatus } = req.query;
 
@@ -404,7 +404,7 @@ router.get('/export/json', authenticate, authorize(UserRole.ADMIN, UserRole.FINA
 });
 
 // Export to Tally XML (Native Tally format for ledger/voucher import)
-router.get('/export/tally-xml', authenticate, authorize(UserRole.ADMIN, UserRole.FINANCE), async (req: AuthRequest, res: Response) => {
+router.get('/export/tally-xml', authenticate, authorize(UserRole.ADMIN, UserRole.FINANCE), async (req: Request, res: Response) => {
   try {
     const { startDate, endDate, type = 'vouchers' } = req.query;
 
@@ -564,7 +564,7 @@ router.get('/export/tally-xml', authenticate, authorize(UserRole.ADMIN, UserRole
 });
 
 // Export to XML (Generic XML format) - Legacy endpoint, kept for backward compatibility
-router.get('/export/xml', authenticate, authorize(UserRole.ADMIN, UserRole.FINANCE), async (req: AuthRequest, res: Response) => {
+router.get('/export/xml', authenticate, authorize(UserRole.ADMIN, UserRole.FINANCE), async (req: Request, res: Response) => {
   try {
     const { startDate, endDate, projectStatus } = req.query;
 

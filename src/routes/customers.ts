@@ -1,7 +1,7 @@
-import express, { Response } from 'express';
+import express, { Request, Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
 import { PrismaClient, UserRole } from '@prisma/client';
-import { authenticate, authorize, AuthRequest } from '../middleware/auth';
+import { authenticate, authorize } from '../middleware/auth';
 import { generateCustomerId } from '../utils/customerId';
 import * as XLSX from 'xlsx';
 
@@ -28,7 +28,7 @@ router.get(
     query('page').optional().isInt({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 10000 }),
   ],
-  async (req: AuthRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -223,7 +223,7 @@ router.get(
 );
 
 // Get single customer (all authenticated users can view)
-router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
+router.get('/:id', authenticate, async (req: Request, res: Response) => {
   try {
     const customer = await prisma.customer.findUnique({
       where: { id: req.params.id },
@@ -304,7 +304,7 @@ router.post(
     body('contactNumbers').optional(),
     body('consumerNumber').optional().trim(),
   ],
-  async (req: AuthRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
       if (!req.user) {
         return res.status(401).json({ error: 'Unauthorized' });
@@ -435,7 +435,7 @@ router.put(
     body('contactNumbers').optional(),
     body('consumerNumber').optional().trim(),
   ],
-  async (req: AuthRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
       if (!req.user) {
         return res.status(401).json({ error: 'Unauthorized' });
@@ -680,7 +680,7 @@ router.put(
 );
 
 // Delete customer (Admin only, and only if no projects exist)
-router.delete('/:id', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest, res: Response) => {
+router.delete('/:id', authenticate, authorize(UserRole.ADMIN), async (req: Request, res: Response) => {
   try {
     const customer = await prisma.customer.findUnique({
       where: { id: req.params.id },
@@ -719,7 +719,7 @@ const getCustomerDisplayNameForExport = (customer: any): string => {
 };
 
 // Export customers to Excel (Admin only)
-router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest, res: Response) => {
+router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req: Request, res: Response) => {
   try {
     const { search, salespersonId, myCustomers } = req.query;
 
@@ -862,7 +862,7 @@ router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req:
 });
 
 // Export customers to CSV (Admin only)
-router.get('/export/csv', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest, res: Response) => {
+router.get('/export/csv', authenticate, authorize(UserRole.ADMIN), async (req: Request, res: Response) => {
   try {
     const { search, salespersonId, myCustomers } = req.query;
 

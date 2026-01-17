@@ -1,14 +1,14 @@
-import express, { Response } from 'express';
+import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { body, validationResult } from 'express-validator';
 import { PrismaClient, UserRole } from '@prisma/client';
-import { authenticate, authorize, AuthRequest } from '../middleware/auth';
+import { authenticate, authorize } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // Get all users (Admin only)
-router.get('/', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest, res: Response) => {
+router.get('/', authenticate, authorize(UserRole.ADMIN), async (req: Request, res: Response) => {
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -29,7 +29,7 @@ router.get('/', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest
 });
 
 // Get single user
-router.get('/:id', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest, res: Response) => {
+router.get('/:id', authenticate, authorize(UserRole.ADMIN), async (req: Request, res: Response) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.params.id },
@@ -64,7 +64,7 @@ router.post(
     body('password').isLength({ min: 6 }),
     body('role').isIn(Object.values(UserRole)),
   ],
-  async (req: AuthRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -119,7 +119,7 @@ router.put(
     body('password').optional().isLength({ min: 6 }),
     body('role').optional().isIn(Object.values(UserRole)),
   ],
-  async (req: AuthRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -160,7 +160,7 @@ router.put(
 );
 
 // Delete user (Admin only)
-router.delete('/:id', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest, res: Response) => {
+router.delete('/:id', authenticate, authorize(UserRole.ADMIN), async (req: Request, res: Response) => {
   try {
     // Prevent deleting yourself
     if (req.params.id === req.user?.id) {
@@ -181,7 +181,7 @@ router.delete('/:id', authenticate, authorize(UserRole.ADMIN), async (req: AuthR
 });
 
 // Get salespersons (for dropdowns)
-router.get('/role/sales', authenticate, async (req: AuthRequest, res: Response) => {
+router.get('/role/sales', authenticate, async (req: Request, res: Response) => {
   try {
     const salespersons = await prisma.user.findMany({
       where: {

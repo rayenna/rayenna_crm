@@ -1,14 +1,14 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { PrismaClient, ProposalStatus } from '@prisma/client';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 import { generateProposalContent } from '../utils/ai';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // Get proposals for a project
-router.get('/project/:projectId', authenticate, async (req: AuthRequest, res: express.Response) => {
+router.get('/project/:projectId', authenticate, async (req: Request, res: express.Response) => {
   try {
     const proposals = await prisma.proposal.findMany({
       where: { projectId: req.params.projectId },
@@ -31,7 +31,7 @@ router.get('/project/:projectId', authenticate, async (req: AuthRequest, res: ex
 });
 
 // Get single proposal
-router.get('/:id', authenticate, async (req: AuthRequest, res: express.Response) => {
+router.get('/:id', authenticate, async (req: Request, res: express.Response) => {
   try {
     const proposal = await prisma.proposal.findUnique({
       where: { id: req.params.id },
@@ -68,7 +68,7 @@ router.post(
     body('paybackYears').optional().isFloat({ min: 0 }),
     body('aiGenerated').optional().isBoolean(),
   ],
-  async (req: AuthRequest, res: express.Response) => {
+  async (req: Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -161,7 +161,7 @@ router.put(
     body('price').optional().isFloat({ min: 0 }),
     body('energyOutputKwh').optional().isFloat({ min: 0 }),
   ],
-  async (req: AuthRequest, res: express.Response) => {
+  async (req: Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -207,7 +207,7 @@ router.put(
 );
 
 // Delete proposal
-router.delete('/:id', authenticate, async (req: AuthRequest, res: express.Response) => {
+router.delete('/:id', authenticate, async (req: Request, res: express.Response) => {
   try {
     await prisma.proposal.delete({
       where: { id: req.params.id },

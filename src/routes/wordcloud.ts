@@ -1,12 +1,12 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { PrismaClient, UserRole } from '@prisma/client';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // Get word cloud data with filters
-router.get('/wordcloud', authenticate, async (req: AuthRequest, res) => {
+router.get('/wordcloud', authenticate, async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     const role = req.user?.role;

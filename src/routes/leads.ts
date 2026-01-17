@@ -1,7 +1,7 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
 import { PrismaClient, LeadSource, LeadStatus, UserRole } from '@prisma/client';
-import { authenticate, authorize, AuthRequest } from '../middleware/auth';
+import { authenticate, authorize } from '../middleware/auth';
 import { calculateFY } from '../utils/calculations';
 
 const router = express.Router();
@@ -19,7 +19,7 @@ router.get(
     query('page').optional().isInt({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 100 }),
   ],
-  async (req: AuthRequest, res: express.Response) => {
+  async (req: Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -80,7 +80,7 @@ router.get(
 );
 
 // Get single lead
-router.get('/:id', authenticate, async (req: AuthRequest, res: express.Response) => {
+router.get('/:id', authenticate, async (req: Request, res: express.Response) => {
   try {
     const lead = await prisma.lead.findUnique({
       where: { id: req.params.id },
@@ -115,7 +115,7 @@ router.post(
     body('assignedSalesId').optional().isString(),
     body('expectedValue').optional().isFloat({ min: 0 }),
   ],
-  async (req: AuthRequest, res: express.Response) => {
+  async (req: Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -151,7 +151,7 @@ router.put(
     body('systemSizeKw').optional().isFloat({ min: 0 }),
     body('expectedValue').optional().isFloat({ min: 0 }),
   ],
-  async (req: AuthRequest, res: express.Response) => {
+  async (req: Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -179,7 +179,7 @@ router.put(
 router.post(
   '/:id/convert',
   authenticate,
-  async (req: AuthRequest, res: express.Response) => {
+  async (req: Request, res: express.Response) => {
     try {
       const lead = await prisma.lead.findUnique({
         where: { id: req.params.id },
@@ -233,7 +233,7 @@ router.post(
 );
 
 // Delete lead
-router.delete('/:id', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest, res: express.Response) => {
+router.delete('/:id', authenticate, authorize(UserRole.ADMIN), async (req: Request, res: express.Response) => {
   try {
     await prisma.lead.delete({
       where: { id: req.params.id },

@@ -1,13 +1,13 @@
-import express, { Response } from 'express';
+import express, { Request, Response } from 'express';
 import { body, param, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // Debug: Test endpoint to verify route is accessible
-router.get('/test', authenticate, (req: AuthRequest, res: Response) => {
+router.get('/test', authenticate, (req: Request, res: Response) => {
   res.json({ message: 'Remarks API is working', userId: req.user?.id });
 });
 
@@ -16,7 +16,7 @@ router.get(
   '/project/:projectId',
   authenticate,
   [param('projectId').notEmpty().trim()],
-  async (req: AuthRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -71,7 +71,7 @@ router.post(
     param('projectId').notEmpty().trim(),
     body('remark').notEmpty().trim().isLength({ min: 1, max: 10000 }),
   ],
-  async (req: AuthRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
       console.log('[REMARKS API] POST request received:', {
         projectId: req.params.projectId,
@@ -163,7 +163,7 @@ router.put(
     param('id').notEmpty().trim(),
     body('remark').notEmpty().trim().isLength({ min: 1, max: 10000 }),
   ],
-  async (req: AuthRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -221,7 +221,7 @@ router.delete(
   '/:id',
   authenticate,
   [param('id').notEmpty().trim()],
-  async (req: AuthRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {

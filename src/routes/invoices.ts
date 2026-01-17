@@ -1,13 +1,13 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { PrismaClient, InvoiceStatus, PaymentMode } from '@prisma/client';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // Get invoices for a project
-router.get('/project/:projectId', authenticate, async (req: AuthRequest, res: express.Response) => {
+router.get('/project/:projectId', authenticate, async (req: Request, res: express.Response) => {
   try {
     const invoices = await prisma.invoice.findMany({
       where: { projectId: req.params.projectId },
@@ -33,7 +33,7 @@ router.get('/project/:projectId', authenticate, async (req: AuthRequest, res: ex
 router.get(
   '/',
   authenticate,
-  async (req: AuthRequest, res: express.Response) => {
+  async (req: Request, res: express.Response) => {
     try {
       const { status, projectId, page = 1, limit = 20 } = req.query;
 
@@ -78,7 +78,7 @@ router.get(
 );
 
 // Get single invoice
-router.get('/:id', authenticate, async (req: AuthRequest, res: express.Response) => {
+router.get('/:id', authenticate, async (req: Request, res: express.Response) => {
   try {
     const invoice = await prisma.invoice.findUnique({
       where: { id: req.params.id },
@@ -114,7 +114,7 @@ router.post(
     body('gst').optional().isFloat({ min: 0 }),
     body('dueDate').optional().isISO8601(),
   ],
-  async (req: AuthRequest, res: express.Response) => {
+  async (req: Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -156,7 +156,7 @@ router.put(
     body('amount').optional().isFloat({ min: 0 }),
     body('gst').optional().isFloat({ min: 0 }),
   ],
-  async (req: AuthRequest, res: express.Response) => {
+  async (req: Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -222,7 +222,7 @@ router.post(
     body('mode').isIn(Object.values(PaymentMode)),
     body('referenceNo').optional().isString(),
   ],
-  async (req: AuthRequest, res: express.Response) => {
+  async (req: Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -294,7 +294,7 @@ router.post(
 );
 
 // Delete invoice
-router.delete('/:id', authenticate, async (req: AuthRequest, res: express.Response) => {
+router.delete('/:id', authenticate, async (req: Request, res: express.Response) => {
   try {
     await prisma.invoice.delete({
       where: { id: req.params.id },

@@ -1,13 +1,13 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // Get service tickets for a project
-router.get('/project/:projectId', authenticate, async (req: AuthRequest, res: express.Response) => {
+router.get('/project/:projectId', authenticate, async (req: Request, res: express.Response) => {
   try {
     const tickets = await prisma.serviceTicket.findMany({
       where: { projectId: req.params.projectId },
@@ -32,7 +32,7 @@ router.get('/project/:projectId', authenticate, async (req: AuthRequest, res: ex
 router.get(
   '/',
   authenticate,
-  async (req: AuthRequest, res: express.Response) => {
+  async (req: Request, res: express.Response) => {
     try {
       const { projectId, status, page = 1, limit = 20 } = req.query;
 
@@ -76,7 +76,7 @@ router.get(
 );
 
 // Get single service ticket
-router.get('/:id', authenticate, async (req: AuthRequest, res: express.Response) => {
+router.get('/:id', authenticate, async (req: Request, res: express.Response) => {
   try {
     const ticket = await prisma.serviceTicket.findUnique({
       where: { id: req.params.id },
@@ -108,7 +108,7 @@ router.post(
     body('projectId').isString().notEmpty(),
     body('issue').isString().notEmpty(),
   ],
-  async (req: AuthRequest, res: express.Response) => {
+  async (req: Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -145,7 +145,7 @@ router.put(
     body('issue').optional().isString(),
     body('status').optional().isString(),
   ],
-  async (req: AuthRequest, res: express.Response) => {
+  async (req: Request, res: express.Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -180,7 +180,7 @@ router.put(
 );
 
 // Delete service ticket
-router.delete('/:id', authenticate, async (req: AuthRequest, res: express.Response) => {
+router.delete('/:id', authenticate, async (req: Request, res: express.Response) => {
   try {
     await prisma.serviceTicket.delete({
       where: { id: req.params.id },

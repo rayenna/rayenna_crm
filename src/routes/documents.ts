@@ -1,9 +1,9 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { PrismaClient, UserRole } from '@prisma/client';
-import { authenticate, authorize, AuthRequest } from '../middleware/auth';
+import { authenticate, authorize } from '../middleware/auth';
 import { createAuditLog } from '../utils/audit';
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
@@ -113,7 +113,7 @@ const upload = multer({
 });
 
 // Get documents for a project
-router.get('/project/:projectId', authenticate, async (req: AuthRequest, res) => {
+router.get('/project/:projectId', authenticate, async (req: Request, res) => {
   try {
     const { projectId } = req.params;
 
@@ -148,7 +148,7 @@ router.post(
   authenticate,
   authorize(UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS),
   upload.single('file'),
-  async (req: AuthRequest, res) => {
+  async (req: Request, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
@@ -287,7 +287,7 @@ router.post(
 router.delete(
   '/:id',
   authenticate,
-  async (req: AuthRequest, res) => {
+  async (req: Request, res) => {
     try {
       const document = await prisma.document.findUnique({
         where: { id: req.params.id },
@@ -370,7 +370,7 @@ router.delete(
 router.get(
   '/:id/download',
   authenticate,
-  async (req: AuthRequest, res) => {
+  async (req: Request, res) => {
     try {
       const document = await prisma.document.findUnique({
         where: { id: req.params.id },

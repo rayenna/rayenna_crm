@@ -1,6 +1,6 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { PrismaClient, UserRole, ProjectStatus, LeadStatus, ProjectStage } from '@prisma/client';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -113,7 +113,7 @@ function getRevenueWhere(baseWhere: any): any {
 }
 
 // Sales Dashboard
-router.get('/sales', authenticate, async (req: AuthRequest, res) => {
+router.get('/sales', authenticate, async (req: Request, res) => {
   try {
     const userId = req.user?.id;
     const role = req.user?.role;
@@ -474,7 +474,7 @@ router.get('/sales', authenticate, async (req: AuthRequest, res) => {
 });
 
 // Operations Dashboard
-router.get('/operations', authenticate, async (req: AuthRequest, res) => {
+router.get('/operations', authenticate, async (req: Request, res) => {
   try {
     const fyFilters = req.query.fy ? (Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[] : [];
     const monthFilters = req.query.month ? (Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[] : [];
@@ -655,7 +655,7 @@ router.get('/operations', authenticate, async (req: AuthRequest, res) => {
 });
 
 // Finance Dashboard
-router.get('/finance', authenticate, async (req: AuthRequest, res) => {
+router.get('/finance', authenticate, async (req: Request, res) => {
   try {
     const fyFilters = req.query.fy ? (Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[] : [];
     const monthFilters = req.query.month ? (Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[] : [];
@@ -829,7 +829,7 @@ router.get('/finance', authenticate, async (req: AuthRequest, res) => {
 });
 
 // Management Dashboard (aggregated view)
-router.get('/management', authenticate, async (req: AuthRequest, res) => {
+router.get('/management', authenticate, async (req: Request, res) => {
   try {
     const fyFilters = req.query.fy ? (Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[] : [];
     const monthFilters = req.query.month ? (Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[] : [];

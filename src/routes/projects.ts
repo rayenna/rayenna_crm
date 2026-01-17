@@ -1,7 +1,7 @@
-import express, { Response } from 'express';
+import express, { Request, Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
 import { PrismaClient, ProjectStatus, ProjectType, ProjectServiceType, ProjectStage, UserRole, LeadSource } from '@prisma/client';
-import { authenticate, authorize, AuthRequest } from '../middleware/auth';
+import { authenticate, authorize } from '../middleware/auth';
 import { createAuditLog } from '../utils/audit';
 import { calculatePayments, calculateExpectedProfit, calculateGrossProfit, calculateProfitability, calculateFY } from '../utils/calculations';
 import { predictProjectDelay } from '../utils/ai';
@@ -51,7 +51,7 @@ router.get(
     query('sortBy').optional().isIn(['systemCapacity', 'projectCost', 'confirmationDate', 'profitability', 'customerName']),
     query('sortOrder').optional().isIn(['asc', 'desc']),
   ],
-  async (req: AuthRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     let where: any = {};
     try {
       const errors = validationResult(req);
@@ -225,7 +225,7 @@ router.get(
 );
 
 // Get single project
-router.get('/:id', authenticate, async (req: AuthRequest, res) => {
+router.get('/:id', authenticate, async (req: Request, res) => {
   try {
     const project = await prisma.project.findUnique({
       where: { id: req.params.id },
@@ -349,7 +349,7 @@ router.post(
     body('projectServiceType').isIn(Object.values(ProjectServiceType)),
     body('confirmationDate').notEmpty().isISO8601().toDate(),
   ],
-  async (req: AuthRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -489,7 +489,7 @@ router.put(
     body('projectServiceType').optional().isIn(Object.values(ProjectServiceType)),
     body('projectStatus').optional().isIn(Object.values(ProjectStatus)),
   ],
-  async (req: AuthRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -1205,7 +1205,7 @@ router.delete(
   '/:id',
   authenticate,
   authorize(UserRole.ADMIN),
-  async (req: AuthRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
       const project = await prisma.project.findUnique({
         where: { id: req.params.id },
@@ -1230,7 +1230,7 @@ router.delete(
 router.get(
   '/:id/delay-prediction',
   authenticate,
-  async (req: AuthRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
       const project = await prisma.project.findUnique({
         where: { id: req.params.id },
@@ -1259,7 +1259,7 @@ router.post(
     body('city').optional().isString(),
     body('customerType').optional().isString(),
   ],
-  async (req: AuthRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -1284,7 +1284,7 @@ router.post(
 );
 
 // Generate AI Proposal
-router.post('/:id/generate-proposal', authenticate, async (req: AuthRequest, res) => {
+router.post('/:id/generate-proposal', authenticate, async (req: Request, res) => {
   try {
     const projectId = req.params.id;
 
@@ -1369,7 +1369,7 @@ router.post('/:id/generate-proposal', authenticate, async (req: AuthRequest, res
 });
 
 // Download proposal as PDF
-router.get('/:id/proposal-pdf', authenticate, async (req: AuthRequest, res) => {
+router.get('/:id/proposal-pdf', authenticate, async (req: Request, res) => {
   try {
     const projectId = req.params.id;
 
@@ -1695,7 +1695,7 @@ const getCustomerDisplayNameForExport = (customer: any): string => {
 };
 
 // Export projects to Excel (Admin only)
-router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest, res: Response) => {
+router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req: Request, res: Response) => {
   try {
     const {
       status,
@@ -1845,7 +1845,7 @@ router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req:
 });
 
 // Export projects to CSV (Admin only)
-router.get('/export/csv', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest, res: Response) => {
+router.get('/export/csv', authenticate, authorize(UserRole.ADMIN), async (req: Request, res: Response) => {
   try {
     const {
       status,

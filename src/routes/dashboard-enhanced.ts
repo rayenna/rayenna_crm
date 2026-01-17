@@ -1,6 +1,6 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { PrismaClient, UserRole, ProjectStatus, ProjectStage } from '@prisma/client';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 import { getProjectsByStageWithSLA, calculateStatusIndicator } from '../utils/projectLifecycle';
 import { predictProjectDelay } from '../utils/ai';
 
@@ -8,7 +8,7 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // Sales Dashboard - Enhanced with Leads and Pipeline
-router.get('/sales', authenticate, async (req: AuthRequest, res) => {
+router.get('/sales', authenticate, async (req: Request, res) => {
   try {
     const userId = req.user?.id;
     const role = req.user?.role;
@@ -138,7 +138,7 @@ router.get('/sales', authenticate, async (req: AuthRequest, res) => {
 });
 
 // Operations Dashboard - Enhanced with Installations and SLA tracking
-router.get('/operations', authenticate, async (req: AuthRequest, res) => {
+router.get('/operations', authenticate, async (req: Request, res) => {
   try {
     const userId = req.user?.id;
     const role = req.user?.role;
@@ -314,7 +314,7 @@ router.get('/operations', authenticate, async (req: AuthRequest, res) => {
 });
 
 // Finance Dashboard - Enhanced with Invoices and Payments
-router.get('/finance', authenticate, async (req: AuthRequest, res) => {
+router.get('/finance', authenticate, async (req: Request, res) => {
   try {
     const [
       // Invoice metrics
@@ -500,7 +500,7 @@ router.get('/finance', authenticate, async (req: AuthRequest, res) => {
 });
 
 // Management Dashboard - Comprehensive overview
-router.get('/management', authenticate, async (req: AuthRequest, res) => {
+router.get('/management', authenticate, async (req: Request, res) => {
   try {
     const [
       // Sales metrics

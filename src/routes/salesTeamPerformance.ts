@@ -1,6 +1,6 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { PrismaClient, UserRole } from '@prisma/client';
-import { authenticate, authorize, AuthRequest } from '../middleware/auth';
+import { authenticate, authorize } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -10,7 +10,7 @@ router.get(
   '/',
   authenticate,
   authorize(UserRole.ADMIN, UserRole.MANAGEMENT),
-  async (req: AuthRequest, res) => {
+  async (req: Request, res) => {
     try {
       const fyFilters = req.query.fy ? (Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[] : [];
       const monthFilters = req.query.month ? (Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[] : [];
