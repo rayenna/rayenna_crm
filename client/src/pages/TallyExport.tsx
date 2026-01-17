@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import axios from 'axios'
+import axiosInstance from '../utils/axios'
 import { UserRole } from '../types'
 
 const TallyExport = () => {
@@ -56,7 +56,7 @@ const TallyExport = () => {
         }
       }
 
-      const response = await axios.get(url, {
+      const response = await axiosInstance.get(url, {
         responseType: 'blob',
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import axios from 'axios'
+import axiosInstance from '../utils/axios'
 import { useParams, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Project, UserRole, ProjectStatus, LostReason } from '../types'
@@ -73,7 +73,7 @@ const ProjectLifecycleCard_DEPRECATED = ({ project }: { project: Project }) => {
 
     setLoadingPrediction(true)
     try {
-      const res = await axios.get(`/api/projects/${project.id}/delay-prediction`)
+      const res = await axiosInstance.get(`/api/projects/${project.id}/delay-prediction`)
       setDelayPrediction(res.data)
       setShowDelayPrediction(true)
     } catch (error: any) {
@@ -195,7 +195,7 @@ const ProjectDetail = () => {
   const { data: project, isLoading, error } = useQuery({
     queryKey: ['project', id],
     queryFn: async () => {
-      const res = await axios.get(`/api/projects/${id}`)
+      const res = await axiosInstance.get(`/api/projects/${id}`)
       return res.data as Project
     },
     retry: 1,
@@ -689,7 +689,7 @@ const DocumentViewButton = ({ documentId, fileName }: { documentId: string; file
 
     setViewing(true)
     try {
-      const response = await axios.get(`/api/documents/${documentId}/download`, {
+      const response = await axiosInstance.get(`/api/documents/${documentId}/download`, {
         responseType: 'blob',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -831,7 +831,7 @@ const DocumentDownloadButton = ({ documentId, fileName }: { documentId: string; 
 
     setDownloading(true)
     try {
-      const response = await axios.get(`/api/documents/${documentId}/download?download=true`, {
+      const response = await axiosInstance.get(`/api/documents/${documentId}/download?download=true`, {
         responseType: 'blob',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -896,7 +896,7 @@ const DocumentDeleteButton = ({ documentId, projectId }: { documentId: string; p
 
     setIsDeleting(true)
     try {
-      await axios.delete(`/api/documents/${documentId}`)
+      await axiosInstance.delete(`/api/documents/${documentId}`)
       toast.success('Document deleted successfully')
       setShowConfirm(false)
       // Refresh project data

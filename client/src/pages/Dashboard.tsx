@@ -7,7 +7,7 @@ import FinanceDashboard from '../components/dashboard/FinanceDashboard'
 import ManagementDashboard from '../components/dashboard/ManagementDashboard'
 import DashboardFilters from '../components/dashboard/DashboardFilters'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
+import axiosInstance from '../utils/axios'
 
 const Dashboard = () => {
   const { user } = useAuth()
@@ -20,11 +20,11 @@ const Dashboard = () => {
     queryFn: async () => {
       // For sales users, fetch from sales endpoint to get only their FYs
       if (user?.role === UserRole.SALES) {
-        const res = await axios.get('/api/dashboard/sales')
+        const res = await axiosInstance.get('/api/dashboard/sales')
         return res.data
       }
       // For other roles, use management endpoint to get all FYs
-      const res = await axios.get('/api/dashboard/management')
+      const res = await axiosInstance.get('/api/dashboard/management')
       return res.data
     },
     enabled: !!user, // Fetch to get available FYs

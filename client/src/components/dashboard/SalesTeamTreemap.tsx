@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
+import axiosInstance from '../../utils/axios'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
 
 interface SalesTeamData {
@@ -91,7 +91,7 @@ const SalesTeamTreemap = ({ availableFYs = [] }: SalesTeamTreemapProps) => {
       const params = new URLSearchParams()
       selectedFYs.forEach((fy) => params.append('fy', fy))
       selectedMonths.forEach((month) => params.append('month', month))
-      const res = await axios.get(`/api/sales-team-performance?${params.toString()}`)
+      const res = await axiosInstance.get(`/api/sales-team-performance?${params.toString()}`)
       return res.data
     },
     enabled: true, // Always fetch, even with no filters (shows all data)

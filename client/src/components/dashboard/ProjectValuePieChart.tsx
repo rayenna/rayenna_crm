@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
+import axiosInstance from '../../utils/axios'
 
 interface ProjectValueByType {
   type: string
@@ -32,7 +32,7 @@ const ProjectValuePieChart = ({ data, availableFYs = [], dashboardType = 'manage
         return data // Use original data if 'all' is selected
       }
       const endpoint = `/api/dashboard/${dashboardType}?fy=${selectedFY}`
-      const res = await axios.get(endpoint)
+      const res = await axiosInstance.get(endpoint)
       return res.data.projectValueByType || []
     },
     enabled: selectedFY !== 'all', // Only fetch if a specific FY is selected

@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import axios from 'axios'
+import axiosInstance from '../utils/axios'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Project, ProjectType, ProjectServiceType, UserRole, ProjectStatus, LostReason, LeadSource } from '../types'
@@ -43,7 +43,7 @@ const FileUploadSection = ({ projectId }: { projectId: string }) => {
 
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const res = await axios.post(`/api/documents/project/${projectId}`, formData, {
+      const res = await axiosInstance.post(`/api/documents/project/${projectId}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
       return res.data
@@ -140,7 +140,7 @@ const ProjectForm = () => {
   const { data: project } = useQuery({
     queryKey: ['project', id],
     queryFn: async () => {
-      const res = await axios.get(`/api/projects/${id}`)
+      const res = await axiosInstance.get(`/api/projects/${id}`)
       return res.data as Project
     },
     enabled: isEdit,
@@ -149,7 +149,7 @@ const ProjectForm = () => {
   const { data: salespersons } = useQuery({
     queryKey: ['salespersons'],
     queryFn: async () => {
-      const res = await axios.get('/api/users/role/sales')
+      const res = await axiosInstance.get('/api/users/role/sales')
       return res.data
     },
   })
@@ -158,7 +158,7 @@ const ProjectForm = () => {
     queryKey: ['customers', 'all'],
     queryFn: async () => {
       try {
-        const res = await axios.get('/api/customers?limit=10000') // Fetch all customers (up to 10000)
+        const res = await axiosInstance.get('/api/customers?limit=10000') // Fetch all customers (up to 10000)
         console.log('Customers loaded:', res.data?.customers?.length || 0, 'customers')
         return res.data
       } catch (error: any) {
@@ -367,9 +367,9 @@ const ProjectForm = () => {
   const mutation = useMutation({
     mutationFn: async (data: any) => {
       if (isEdit) {
-        return axios.put(`/api/projects/${id}`, data)
+        return axiosInstance.put(`/api/projects/${id}`, data)
       } else {
-        return axios.post('/api/projects', data)
+        return axiosInstance.post('/api/projects', data)
       }
     },
     onSuccess: () => {

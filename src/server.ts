@@ -31,7 +31,30 @@ const app = express();
 const prisma = new PrismaClient();
 
 // Middleware
-app.use(cors());
+// CORS configuration - allow local development and production frontend
+const allowedOrigins = [
+  'http://localhost:5173', // Local Vite dev server
+  'http://localhost:3000', // Local backend (if needed)
+  process.env.FRONTEND_URL, // Production frontend from env
+].filter(Boolean) as string[];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      // In development, allow all origins for easier testing
+      if (process.env.NODE_ENV === 'development') {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    }
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -63,7 +86,11 @@ app.use('/api/service-tickets', serviceTicketRoutes);
 app.use('/api/sales-team-performance', salesTeamPerformanceRoutes);
 app.use('/api/remarks', remarksRoutes);
 
-// Health check
+// Health check (for Render and monitoring)
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });

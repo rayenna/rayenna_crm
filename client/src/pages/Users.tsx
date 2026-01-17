@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import axios from 'axios'
+import axiosInstance from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
 import { User, UserRole } from '../types'
 import toast from 'react-hot-toast'
@@ -21,14 +21,14 @@ const Users = () => {
   const { data: users, isLoading } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
-      const res = await axios.get('/api/users')
+      const res = await axiosInstance.get('/api/users')
       return res.data as User[]
     },
   })
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      return axios.post('/api/users', data)
+      return axiosInstance.post('/api/users', data)
     },
     onSuccess: () => {
       toast.success('User created successfully')
@@ -43,7 +43,7 @@ const Users = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return axios.delete(`/api/users/${id}`)
+      return axiosInstance.delete(`/api/users/${id}`)
     },
     onSuccess: () => {
       toast.success('User deleted successfully')

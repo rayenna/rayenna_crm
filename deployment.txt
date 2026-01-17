@@ -1,0 +1,241 @@
+You are a senior Full-Stack + DevOps engineer.
+
+I have a WORKING CRM application developed locally using Cursor.
+Local deployment MUST remain functional for future enhancements.
+
+====================================================
+CURRENT STATE (DO NOT BREAK)
+====================================================
+
+- Repository: https://github.com/rayenna/rayenna_crm
+- GitHub user: rayennasolar@gmail.com
+- Monorepo structure (frontend + backend)
+- Local frontend runs on: http://localhost:5173
+- Local backend runs separately (Node + Express)
+- Local PostgreSQL may exist for development
+- Prisma is already configured
+- All features currently work locally
+
+LOCAL DEVELOPMENT MUST CONTINUE TO WORK AFTER ALL CHANGES.
+
+====================================================
+TARGET CLOUD DEPLOYMENT (FREE TIERS ONLY)
+====================================================
+
+Frontend:
+- React + Vite → Vercel (FREE)
+
+Backend:
+- Node.js + Express + Prisma → Render (FREE Web Service)
+
+Database:
+- PostgreSQL → Neon (FREE)
+
+File Storage:
+- Cloudinary (FREE)
+
+Accounts are already created on ALL platforms using:
+rayennasolar@gmail.com
+
+====================================================
+CORE REQUIREMENT (VERY IMPORTANT)
+====================================================
+
+- Maintain full LOCALHOST deployment for development
+- Use ENVIRONMENT VARIABLES to switch between:
+  - Local development
+  - Cloud production
+- Do NOT hardcode cloud URLs
+- Do NOT remove or break local configs
+- GitHub remains the main repo
+- Cloud platforms auto-deploy from GitHub
+
+====================================================
+TASKS
+====================================================
+
+1️⃣ PROJECT STRUCTURE VALIDATION
+Confirm and preserve monorepo structure similar to:
+
+/frontend
+  ├── src
+  ├── vite.config.ts
+  ├── package.json
+/backend
+  ├── src
+  ├── prisma/schema.prisma
+  ├── package.json
+  ├── tsconfig.json
+
+Do NOT flatten the repo.
+
+----------------------------------------------------
+
+2️⃣ FRONTEND (VERCEL-READY, LOCAL-SAFE)
+
+- Ensure frontend uses API base URL via:
+  import.meta.env.VITE_API_BASE_URL
+
+- Local `.env` example:
+  VITE_API_BASE_URL=http://localhost:3000
+
+- Production `.env.production` example:
+  VITE_API_BASE_URL=https://<render-backend-url>
+
+- Ensure:
+  npm run dev → still works locally
+  npm run build → works for Vercel
+
+- Add vercel.json ONLY if required for React Router:
+  (rewrite all routes to index.html)
+
+----------------------------------------------------
+
+3️⃣ BACKEND (RENDER-READY, LOCAL-SAFE)
+
+- Ensure Express listens on:
+  process.env.PORT || 3000
+
+- Preserve local dev startup (nodemon or ts-node)
+- Add production build flow:
+
+package.json:
+  "build": "tsc"
+  "start": "node dist/index.js"
+
+- Prisma must:
+  - Use DATABASE_URL from env
+  - Work with both local and Neon DB
+
+- Add health check endpoint:
+  GET /health → return 200 OK
+
+----------------------------------------------------
+
+4️⃣ DATABASE (NEON + LOCAL SUPPORT)
+
+- Prisma schema must remain PostgreSQL
+- Use ENV switching:
+  - Local DATABASE_URL → local postgres
+  - Production DATABASE_URL → Neon
+
+- Do NOT delete local migration or seed logic
+- Ensure prisma generate works in CI/build
+
+----------------------------------------------------
+
+5️⃣ FILE UPLOADS (CLOUDINARY, NO LOCAL BREAKAGE)
+
+- Keep Multer for request handling
+- Replace disk storage with Cloudinary storage
+- Local uploads may still work if configured
+- Save ONLY Cloudinary URLs in DB
+- Use env vars:
+  CLOUDINARY_CLOUD_NAME
+  CLOUDINARY_API_KEY
+  CLOUDINARY_API_SECRET
+
+----------------------------------------------------
+
+6️⃣ ENVIRONMENT FILES (CRITICAL)
+
+Create SAFE examples:
+
+Frontend:
+  .env.example
+  .env.local
+
+Backend:
+  .env.example
+  .env.local
+
+Never commit real secrets.
+
+----------------------------------------------------
+
+7️⃣ RENDER DEPLOYMENT PREP
+
+Ensure backend supports:
+
+Build Command:
+  npm install && npx prisma generate && npm run build
+
+Start Command:
+  npm run start
+
+Backend must NOT crash if env vars are missing locally.
+
+----------------------------------------------------
+
+8️⃣ FINAL VERIFICATION CHECKLIST
+
+- Local frontend still runs on localhost:5173
+- Local backend still runs successfully
+- Local DB still works
+- Production frontend builds for Vercel
+- Production backend builds for Render
+- Prisma connects to Neon in production
+- Cloudinary uploads work
+- CORS allows Vercel frontend
+
+====================================================
+RULES
+====================================================
+
+- DO NOT remove local functionality
+- DO NOT add paid services
+- DO NOT change tech stack
+- Prefer minimal and reversible changes
+- Explain any change that impacts local dev
+- Commit changes cleanly to GitHub
+
+====================================================
+
+DELIVERABLES
+====================================================
+
+After completing:
+1. Summarize all changes made
+2. List exact deployment steps on:
+   - Vercel
+   - Render
+   - Neon
+   - Cloudinary
+3. Confirm local + cloud coexistence is intact
+
+
+
+
+Connection String - Neon
+
+psql 'postgresql://neondb_owner:npg_YBTlVfenu2k7@ep-twilight-water-a1ahtaf4-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+
+
+psql -h pg.neon.tech
+
+
+Cloudinary Details
+
+Cloud Name - dwmwc2nzf
+API Key - 998311513464496
+API Secret - efzCoLtJzYcRJJWlEJq36zOsUb4
+
+
+
+CLOUDINARY_URL=cloudinary://<your_api_key>:<your_api_secret>@dwmwc2nzf
+
+DATABASE_URL=psql 'postgresql://neondb_owner:npg_YBTlVfenu2k7@ep-twilight-water-a1ahtaf4-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+   JWT_SECRET=<Generate a secure random string>
+   NODE_ENV=production
+   PORT=10000
+   MAX_FILE_SIZE=26214400
+   CLOUDINARY_CLOUD_NAME=dwmwc2nzf
+   CLOUDINARY_API_KEY=<Your Cloudinary API Key>
+   CLOUDINARY_API_SECRET=998311513464496
+   OPENAI_API_KEY=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
+   FRONTEND_URL=<Your Vercel frontend URL - set after Vercel deployment>
+
+
+
+
+

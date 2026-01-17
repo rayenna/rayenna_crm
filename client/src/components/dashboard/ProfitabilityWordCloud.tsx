@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
+import axiosInstance from '../../utils/axios'
 import WordCloud from 'wordcloud'
 
 interface WordCloudData {
@@ -60,7 +60,7 @@ const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudPro
       const params = new URLSearchParams()
       selectedFYs.forEach((fy) => params.append('fy', fy))
       selectedMonths.forEach((month) => params.append('month', month))
-      const res = await axios.get(`/api/dashboard/wordcloud?${params.toString()}`)
+      const res = await axiosInstance.get(`/api/dashboard/wordcloud?${params.toString()}`)
       return res.data
     },
     enabled: true, // Always fetch, even with no filters (shows all data)

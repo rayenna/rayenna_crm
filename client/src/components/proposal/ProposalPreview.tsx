@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import axios from 'axios'
+import axiosInstance from '../../utils/axios'
 import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -53,7 +53,7 @@ const ProposalPreview = ({ projectId, onClose }: ProposalPreviewProps) => {
   const generateProposal = async () => {
     setLoading(true)
     try {
-      const res = await axios.post(`/api/projects/${projectId}/generate-proposal`)
+      const res = await axiosInstance.post(`/api/projects/${projectId}/generate-proposal`)
       setProposal(res.data)
       toast.success('Proposal generated successfully!')
     } catch (error: any) {
@@ -67,7 +67,7 @@ const ProposalPreview = ({ projectId, onClose }: ProposalPreviewProps) => {
   const downloadPDF = async () => {
     setPdfLoading(true)
     try {
-      const res = await axios.get(`/api/projects/${projectId}/proposal-pdf`, {
+      const res = await axiosInstance.get(`/api/projects/${projectId}/proposal-pdf`, {
         responseType: 'blob',
       })
       

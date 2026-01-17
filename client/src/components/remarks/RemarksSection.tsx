@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import axios from 'axios'
+import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
 import { ProjectRemark } from '../../types'
 import { format } from 'date-fns'
@@ -22,7 +22,7 @@ const RemarksSection = ({ projectId, isEditMode = false }: RemarksSectionProps) 
   const { data: remarks, isLoading } = useQuery({
     queryKey: ['remarks', projectId],
     queryFn: async () => {
-      const res = await axios.get(`/api/remarks/project/${projectId}`)
+      const res = await axiosInstance.get(`/api/remarks/project/${projectId}`)
       return res.data as ProjectRemark[]
     },
   })
@@ -30,7 +30,7 @@ const RemarksSection = ({ projectId, isEditMode = false }: RemarksSectionProps) 
   // Create remark mutation
   const createMutation = useMutation({
     mutationFn: async (remark: string) => {
-      const res = await axios.post(`/api/remarks/project/${projectId}`, { remark })
+      const res = await axiosInstance.post(`/api/remarks/project/${projectId}`, { remark })
       return res.data
     },
     onSuccess: () => {
@@ -53,7 +53,7 @@ const RemarksSection = ({ projectId, isEditMode = false }: RemarksSectionProps) 
   // Update remark mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, remark }: { id: string; remark: string }) => {
-      const res = await axios.put(`/api/remarks/${id}`, { remark })
+      const res = await axiosInstance.put(`/api/remarks/${id}`, { remark })
       return res.data
     },
     onSuccess: () => {
@@ -70,7 +70,7 @@ const RemarksSection = ({ projectId, isEditMode = false }: RemarksSectionProps) 
   // Delete remark mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await axios.delete(`/api/remarks/${id}`)
+      await axiosInstance.delete(`/api/remarks/${id}`)
     },
     onSuccess: () => {
       toast.success('Remark deleted successfully')

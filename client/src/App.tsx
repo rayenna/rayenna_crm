@@ -11,6 +11,7 @@ import ProjectForm from './pages/ProjectForm'
 import Users from './pages/Users'
 import TallyExport from './pages/TallyExport'
 import About from './pages/About'
+import ChangePassword from './pages/ChangePassword'
 import Layout from './components/Layout'
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
             <Route path="projects/:id/edit" element={<ProjectForm />} />
             <Route path="users" element={<Users />} />
             <Route path="tally-export" element={<TallyExport />} />
+            <Route path="change-password" element={<ChangePassword />} />
             <Route path="about" element={<About />} />
           </Route>
         </Routes>

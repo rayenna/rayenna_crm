@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
+import axiosInstance from '../utils/axios'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Project, ProjectStatus, ProjectType, ProjectServiceType, UserRole } from '../types'
@@ -69,7 +69,7 @@ const Projects = () => {
   const { data: salesUsers } = useQuery({
     queryKey: ['salesUsers'],
     queryFn: async () => {
-      const res = await axios.get('/api/users/role/sales')
+      const res = await axiosInstance.get('/api/users/role/sales')
       return res.data
     },
     enabled: user?.role !== UserRole.SALES, // Only fetch if user is not SALES
@@ -91,7 +91,7 @@ const Projects = () => {
       }
       params.append('page', page.toString())
       params.append('limit', '25')
-      const res = await axios.get(`/api/projects?${params.toString()}`)
+      const res = await axiosInstance.get(`/api/projects?${params.toString()}`)
       return res.data
     },
   })
@@ -161,7 +161,7 @@ const Projects = () => {
         : `/api/projects/export/csv`
       const fileExtension = pendingExportType === 'excel' ? 'xlsx' : 'csv'
       
-      const response = await axios.get(`${endpoint}?${params.toString()}`, {
+      const response = await axiosInstance.get(`${endpoint}?${params.toString()}`, {
         responseType: 'blob',
       })
       

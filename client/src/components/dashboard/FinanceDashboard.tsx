@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
+import axiosInstance from '../../utils/axios'
 import { FaRupeeSign, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa'
 import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
 import MetricCard from './MetricCard'
@@ -16,7 +16,7 @@ const FinanceDashboard = ({ selectedFYs, selectedMonths }: FinanceDashboardProps
       const params = new URLSearchParams()
       selectedFYs.forEach((fy) => params.append('fy', fy))
       selectedMonths.forEach((month) => params.append('month', month))
-      const res = await axios.get(`/api/dashboard/finance?${params.toString()}`)
+      const res = await axiosInstance.get(`/api/dashboard/finance?${params.toString()}`)
       return res.data
     },
   })

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import axios from 'axios'
+import axiosInstance from '../utils/axios'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Customer, UserRole } from '../types'
@@ -35,7 +35,7 @@ const CustomerMaster = () => {
   const { data: salesUsers } = useQuery({
     queryKey: ['salesUsers'],
     queryFn: async () => {
-      const res = await axios.get('/api/users/role/sales')
+      const res = await axiosInstance.get('/api/users/role/sales')
       return res.data
     },
     enabled: !isSalesUser, // Only fetch if user is not SALES
@@ -71,14 +71,14 @@ const CustomerMaster = () => {
         // If no salesperson is selected, don't send salespersonId parameter (shows all customers)
       }
       
-      const res = await axios.get(`/api/customers?${params.toString()}`)
+      const res = await axiosInstance.get(`/api/customers?${params.toString()}`)
       return res.data
     },
   })
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return axios.delete(`/api/customers/${id}`)
+      return axiosInstance.delete(`/api/customers/${id}`)
     },
     onSuccess: () => {
       toast.success('Customer deleted successfully')
@@ -136,7 +136,7 @@ const CustomerMaster = () => {
         : `/api/customers/export/csv`
       const fileExtension = pendingExportType === 'excel' ? 'xlsx' : 'csv'
       
-      const response = await axios.get(`${endpoint}?${params.toString()}`, {
+      const response = await axiosInstance.get(`${endpoint}?${params.toString()}`, {
         responseType: 'blob',
       })
       
@@ -509,7 +509,7 @@ const CustomerForm = ({
   const { data: salespersons } = useQuery({
     queryKey: ['salespersons'],
     queryFn: async () => {
-      const res = await axios.get('/api/users/role/sales')
+      const res = await axiosInstance.get('/api/users/role/sales')
       return res.data
     },
   })
@@ -582,9 +582,9 @@ const CustomerForm = ({
   const mutation = useMutation({
     mutationFn: async (data: any) => {
       if (customer) {
-        return axios.put(`/api/customers/${customer.id}`, data)
+        return axiosInstance.put(`/api/customers/${customer.id}`, data)
       } else {
-        return axios.post('/api/customers', data)
+        return axiosInstance.post('/api/customers', data)
       }
     },
     onSuccess: () => {

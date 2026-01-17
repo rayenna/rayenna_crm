@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import axios from 'axios'
+import axiosInstance from '../utils/axios'
 import { User, UserRole } from '../types'
 
 interface AuthContextType {
@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const storedToken = localStorage.getItem('token')
     if (storedToken) {
       setToken(storedToken)
-      axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`
+      axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`
       fetchUser()
     } else {
       setIsLoading(false)
@@ -39,31 +39,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUser = async () => {
     try {
-      const response = await axios.get('/api/auth/me')
+      const response = await axiosInstance.get('/api/auth/me')
       setUser(response.data)
     } catch (error) {
       localStorage.removeItem('token')
       setToken(null)
-      delete axios.defaults.headers.common['Authorization']
+      delete axiosInstance.defaults.headers.common['Authorization']
     } finally {
       setIsLoading(false)
     }
   }
 
   const login = async (email: string, password: string) => {
-    const response = await axios.post('/api/auth/login', { email, password })
+    const response = await axiosInstance.post('/api/auth/login', { email, password })
     const { token: newToken, user: newUser } = response.data
     setToken(newToken)
     setUser(newUser)
     localStorage.setItem('token', newToken)
-    axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
+    axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
   }
 
   const logout = () => {
     setToken(null)
     setUser(null)
     localStorage.removeItem('token')
-    delete axios.defaults.headers.common['Authorization']
+    delete axiosInstance.defaults.headers.common['Authorization']
   }
 
   const hasRole = (roles: UserRole[]): boolean => {
