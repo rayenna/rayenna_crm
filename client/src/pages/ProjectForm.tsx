@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axiosInstance from '../utils/axios'
 import { useParams, useNavigate, Link } from 'react-router-dom'
@@ -197,7 +197,7 @@ const ProjectForm = () => {
     }
   };
 
-  const { register, handleSubmit, setValue, getValues, watch } = useForm()
+  const { register, handleSubmit, setValue, getValues, watch, control, formState: { errors } } = useForm()
   const selectedCustomerId = watch('customerId')
   const confirmationDate = watch('confirmationDate')
   const projectStatus = watch('projectStatus')
@@ -378,11 +378,25 @@ const ProjectForm = () => {
       navigate('/projects')
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Operation failed')
+      console.error('Project mutation error:', error);
+      console.error('Error response:', error.response?.data);
+      
+      // Handle validation errors (express-validator returns errors array)
+      if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+        const errorMessages = error.response.data.errors.map((err: any) => 
+          `${err.param || 'Field'}: ${err.msg || err.message || 'Invalid value'}`
+        ).join('\n');
+        toast.error(errorMessages, { duration: 6000 });
+      } else {
+        // Handle single error message
+        const errorMessage = error.response?.data?.error || error.message || 'Operation failed';
+        toast.error(errorMessage, { duration: 5000 });
+      }
     },
   })
 
   const onSubmit = (data: any) => {
+    console.log('[PROJECT FORM] onSubmit called with data:', data);
     // Get all form values including empty fields
     const allValues = getValues();
     
@@ -399,6 +413,17 @@ const ProjectForm = () => {
       // Ensure customerId is provided only when creating a new project
       if (!data.customerId) {
         toast.error('Please select a customer');
+        return;
+      }
+      
+      // Ensure required fields are present for new projects
+      if (!data.confirmationDate) {
+        toast.error('Confirmation Date is required for new projects');
+        return;
+      }
+      
+      if (!data.type) {
+        toast.error('Segment (Project Type) is required');
         return;
       }
     }
@@ -586,7 +611,19 @@ const ProjectForm = () => {
         {isEdit ? 'Edit Project' : 'New Project'}
       </h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit, (errors) => {
+        console.error('[PROJECT FORM] Form validation errors:', errors);
+        console.error('[PROJECT FORM] Current form values:', getValues());
+        console.error('[PROJECT FORM] customerId value:', getValues('customerId'));
+        const errorMessages = Object.entries(errors).map(([field, error]: [string, any]) => {
+          const message = error?.message || error?.type || 'Invalid value';
+          console.error(`[PROJECT FORM] Error for ${field}:`, message, error);
+          return `${field}: ${message}`;
+        });
+        if (errorMessages.length > 0) {
+          toast.error(`Please fix the following errors:\n${errorMessages.join('\n')}`, { duration: 6000 });
+        }
+      })} className="space-y-6">
         {/* Customer Selection - Hidden for Finance users in edit mode */}
         {canEditOtherSections && (
         <div className="bg-white shadow rounded-lg p-6">
@@ -650,7 +687,7 @@ const ProjectForm = () => {
                               key={customer.id}
                               onMouseDown={(e) => {
                                 e.preventDefault() // Prevent input blur
-                                setValue('customerId', customer.id)
+                                setValue('customerId', customer.id, { shouldValidate: true, shouldDirty: true })
                                 setCustomerSearch(`${customer.customerId} - ${customer.customerName}`)
                                 setShowCustomerDropdown(false)
                               }}
@@ -675,37 +712,45 @@ const ProjectForm = () => {
                         </div>
                       )}
                     </div>
-                    <select
-                      {...register('customerId', { required: !isEdit ? 'Please select a customer' : false })}
-                      onChange={(e) => {
-                        if (!isEdit) {
-                          const selectedId = e.target.value
-                          if (selectedId) {
-                            const customer = customers?.customers?.find((c: any) => c.id === selectedId)
-                            if (customer) {
-                              setCustomerSearch(`${customer.customerId} - ${customer.customerName}`)
+                    <Controller
+                      name="customerId"
+                      control={control}
+                      rules={{ required: !isEdit ? 'Please select a customer' : false }}
+                      render={({ field }) => (
+                        <select
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e); // Update form state
+                            if (!isEdit) {
+                              const selectedId = e.target.value
+                              if (selectedId) {
+                                const customer = filteredCustomers?.find((c: any) => c.id === selectedId)
+                                if (customer) {
+                                  setCustomerSearch(`${customer.customerId} - ${customer.customerName}`)
+                                }
+                              } else {
+                                setCustomerSearch('')
+                              }
                             }
-                          } else {
-                            setCustomerSearch('')
-                          }
-                        }
-                      }}
-                      disabled={isEdit}
-                      className={`w-48 border border-gray-300 rounded-md px-3 py-2 ${
-                        isEdit ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''
-                      }`}
-                    >
-                      <option value="">Or select from list</option>
-                      {filteredCustomers && filteredCustomers.length > 0 ? (
-                        filteredCustomers.map((customer: any) => (
-                          <option key={customer.id} value={customer.id}>
-                            {customer.customerId} - {customer.customerName}
-                          </option>
-                        ))
-                      ) : (
-                        <option value="" disabled>No customers found</option>
+                          }}
+                          disabled={isEdit}
+                          className={`w-48 border border-gray-300 rounded-md px-3 py-2 ${
+                            isEdit ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''
+                          }`}
+                        >
+                          <option value="">Or select from list</option>
+                          {filteredCustomers && filteredCustomers.length > 0 ? (
+                            filteredCustomers.map((customer: any) => (
+                              <option key={customer.id} value={customer.id}>
+                                {customer.customerId} - {customer.customerName}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="" disabled>No customers found</option>
+                          )}
+                        </select>
                       )}
-                    </select>
+                    />
                   </div>
                   {customers?.customers && customers.customers.length === 0 && (
                     <p className="mt-2 text-xs text-yellow-600">
@@ -716,10 +761,7 @@ const ProjectForm = () => {
                       first.
                     </p>
                   )}
-                  <input
-                    type="hidden"
-                    {...register('customerId', { required: !isEdit ? 'Please select a customer' : false })}
-                  />
+                  {/* Hidden input removed - customerId is already registered on the select dropdown above */}
                 </>
               )}
               {selectedCustomerId && filteredCustomers && (
