@@ -7,6 +7,7 @@ import { Project, ProjectStatus, ProjectType, ProjectServiceType, UserRole } fro
 import { format } from 'date-fns'
 import MultiSelect from '../components/MultiSelect'
 import { useDebounce } from '../hooks/useDebounce'
+import toast from 'react-hot-toast'
 
 // Helper function to get status badge color classes
 const getStatusColorClasses = (status: ProjectStatus): string => {
@@ -36,10 +37,12 @@ const getStatusColorClasses = (status: ProjectStatus): string => {
 }
 
 const Projects = () => {
-  const { user } = useAuth()
+  const { user, hasRole } = useAuth()
   const [page, setPage] = useState(1)
   const [searchInput, setSearchInput] = useState('')
   const debouncedSearch = useDebounce(searchInput, 500) // 500ms debounce
+  const [showExportConfirm, setShowExportConfirm] = useState(false)
+  const [pendingExportType, setPendingExportType] = useState<'excel' | 'csv' | null>(null)
   
   const [filters, setFilters] = useState({
     status: [] as string[],
@@ -131,6 +134,61 @@ const Projects = () => {
     label: salesUser.name,
   })) || []
 
+  const handleExportClick = (type: 'excel' | 'csv') => {
+    setPendingExportType(type)
+    setShowExportConfirm(true)
+  }
+
+  const confirmExport = async () => {
+    if (!pendingExportType) return
+
+    try {
+      const params = new URLSearchParams()
+      
+      // Add all current filters
+      filters.status.forEach((value) => params.append('status', value))
+      filters.type.forEach((value) => params.append('type', value))
+      filters.projectServiceType.forEach((value) => params.append('projectServiceType', value))
+      filters.salespersonId.forEach((value) => params.append('salespersonId', value))
+      if (filters.search) params.append('search', filters.search)
+      if (filters.sortBy) {
+        params.append('sortBy', filters.sortBy)
+        params.append('sortOrder', filters.sortOrder)
+      }
+      
+      const endpoint = pendingExportType === 'excel' 
+        ? `/api/projects/export/excel` 
+        : `/api/projects/export/csv`
+      const fileExtension = pendingExportType === 'excel' ? 'xlsx' : 'csv'
+      
+      const response = await axios.get(`${endpoint}?${params.toString()}`, {
+        responseType: 'blob',
+      })
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `projects-export-${Date.now()}.${fileExtension}`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      
+      toast.success(`Projects exported to ${pendingExportType.toUpperCase()} successfully`)
+    } catch (error: any) {
+      console.error('Export error:', error)
+      toast.error(error.response?.data?.error || `Failed to export projects to ${pendingExportType.toUpperCase()}`)
+    } finally {
+      setShowExportConfirm(false)
+      setPendingExportType(null)
+    }
+  }
+
+  const cancelExport = () => {
+    setShowExportConfirm(false)
+    setPendingExportType(null)
+  }
+
   if (isLoading) return <div>Loading...</div>
 
   return (
@@ -218,7 +276,67 @@ const Projects = () => {
             </select>
           </div>
         </div>
+
+        {/* Export buttons - Only visible to Admin users */}
+        {hasRole([UserRole.ADMIN]) && (
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={() => handleExportClick('excel')}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Export to Excel
+            </button>
+            <button
+              onClick={() => handleExportClick('csv')}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Export to CSV
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Export Confirmation Modal */}
+      {showExportConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-red-600 mb-4">WARNING</h3>
+              <div className="border-t border-b border-gray-300 my-4 py-4">
+                <p className="text-gray-700 mb-4 leading-relaxed">
+                  The Data that is present in the CRM System is the exclusive property of Rayenna Energy Private Limited. Unauthorised Export of any data is prohibited and will be subject to disciplinary measures including and not limited to termination and legal procedures.
+                </p>
+                <p className="text-gray-700 mb-4 leading-relaxed font-medium">
+                  By exporting this data, you are confirming that you are authorised to access this data/info and have written approvals from the management.
+                </p>
+              </div>
+              <p className="text-gray-600 mb-6 font-medium">
+                Do you want to continue?
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={cancelExport}
+                  className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={confirmExport}
+                  className="px-6 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-medium"
+                >
+                  YES
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
         <ul className="divide-y divide-gray-200">

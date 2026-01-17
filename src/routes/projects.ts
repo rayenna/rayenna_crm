@@ -10,6 +10,7 @@ import { generateProposalContent, calculateFinancials } from '../utils/proposalG
 import { generateProposalPDF } from '../utils/pdfGenerator';
 import path from 'path';
 import fs from 'fs';
+import * as XLSX from 'xlsx';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -1685,5 +1686,308 @@ function generateHTMLPreview(
 </html>
   `;
 }
+
+// Helper function to get customer display name for export
+const getCustomerDisplayNameForExport = (customer: any): string => {
+  if (!customer) return '';
+  const parts = [customer.prefix, customer.firstName, customer.middleName, customer.lastName].filter(Boolean);
+  return parts.length > 0 ? parts.join(' ') : customer.customerName || '';
+};
+
+// Export projects to Excel (Admin only)
+router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest, res: Response) => {
+  try {
+    const {
+      status,
+      type,
+      projectServiceType,
+      salespersonId,
+      year,
+      search,
+      sortBy,
+      sortOrder = 'desc',
+    } = req.query;
+
+    let where: any = {};
+
+    // Handle array filters (multi-select) - express sends arrays when multiple values have same param name
+    const statusArray = Array.isArray(status) ? status : status ? [status] : [];
+    const typeArray = Array.isArray(type) ? type : type ? [type] : [];
+    const projectServiceTypeArray = Array.isArray(projectServiceType) ? projectServiceType : projectServiceType ? [projectServiceType] : [];
+    const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : salespersonId ? [salespersonId] : [];
+
+    // Role-based filtering - Sales users only see their own projects
+    if (req.user?.role === UserRole.SALES) {
+      where.salespersonId = req.user.id;
+    }
+
+    // Handle array filters
+    if (statusArray.length > 0) where.projectStatus = { in: statusArray as string[] };
+    if (typeArray.length > 0) where.type = { in: typeArray as string[] };
+    if (projectServiceTypeArray.length > 0) where.projectServiceType = { in: projectServiceTypeArray as string[] };
+    if (salespersonIdArray.length > 0 && req.user?.role !== UserRole.SALES) {
+      where.salespersonId = { in: salespersonIdArray as string[] };
+    }
+    if (year) where.year = year;
+
+    // Handle search - combine with existing conditions using AND
+    if (search) {
+      const searchConditions = {
+        OR: [
+          { customer: { customerName: { contains: search as string, mode: 'insensitive' } } },
+          { customer: { customerId: { contains: search as string, mode: 'insensitive' } } },
+          { customer: { consumerNumber: { contains: search as string, mode: 'insensitive' } } },
+        ],
+      };
+
+      const topLevelKeys = Object.keys(where).filter(key => key !== 'AND' && key !== 'OR');
+      if (topLevelKeys.length > 0) {
+        const existingConditions: any[] = [];
+        topLevelKeys.forEach(key => {
+          existingConditions.push({ [key]: where[key] });
+        });
+        where.AND = [...existingConditions, searchConditions];
+        topLevelKeys.forEach(key => {
+          delete where[key];
+        });
+      } else {
+        where.OR = searchConditions.OR;
+      }
+    }
+
+    // Build orderBy based on sortBy parameter
+    let orderBy: any[] = [];
+    if (sortBy) {
+      const order = sortOrder === 'asc' ? 'asc' : 'desc';
+      switch (sortBy) {
+        case 'systemCapacity':
+          orderBy = [{ systemCapacity: order }, { createdAt: 'desc' }];
+          break;
+        case 'projectCost':
+          orderBy = [{ projectCost: order }, { createdAt: 'desc' }];
+          break;
+        case 'confirmationDate':
+          orderBy = [{ confirmationDate: order }, { createdAt: 'desc' }];
+          break;
+        case 'profitability':
+          orderBy = [{ profitability: order }, { createdAt: 'desc' }];
+          break;
+        case 'customerName':
+          orderBy = [{ customer: { customerName: order } }, { createdAt: 'desc' }];
+          break;
+        default:
+          orderBy = [{ confirmationDate: 'desc' }, { createdAt: 'desc' }];
+      }
+    } else {
+      orderBy = [
+        { confirmationDate: 'desc' },
+        { createdAt: 'desc' },
+      ];
+    }
+
+    const projects = await prisma.project.findMany({
+      where,
+      include: {
+        customer: {
+          select: {
+            customerId: true,
+            customerName: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            prefix: true,
+            consumerNumber: true,
+          },
+        },
+        salesperson: {
+          select: { name: true, email: true },
+        },
+      },
+      orderBy,
+    });
+
+    // Format data for Excel
+    const exportData = projects.map((project) => {
+      return {
+        'SL No': project.slNo || '',
+        'Customer ID': project.customer?.customerId || '',
+        'Customer Name': getCustomerDisplayNameForExport(project.customer) || project.customer?.customerName || '',
+        'Consumer Number': project.customer?.consumerNumber || '',
+        'Project Type': project.type.replace(/_/g, ' ') || '',
+        'Project Service Type': project.projectServiceType?.replace(/_/g, ' ') || '',
+        'System Capacity (kW)': project.systemCapacity || 0,
+        'Project Cost': project.projectCost || 0,
+        'Project Status': project.projectStatus.replace(/_/g, ' ') || '',
+        'Payment Status': project.paymentStatus?.replace(/_/g, ' ') || '',
+        'Salesperson': project.salesperson?.name || '',
+        'Salesperson Email': project.salesperson?.email || '',
+        'Year': project.year || '',
+        'Confirmation Date': project.confirmationDate ? new Date(project.confirmationDate).toLocaleDateString('en-IN') : '',
+        'Created At': project.createdAt ? new Date(project.createdAt).toLocaleDateString('en-IN') : '',
+      };
+    });
+
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Projects');
+
+    // Generate buffer
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=projects-export-${Date.now()}.xlsx`);
+    res.send(buffer);
+  } catch (error: any) {
+    console.error('Error exporting projects to Excel:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Export projects to CSV (Admin only)
+router.get('/export/csv', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest, res: Response) => {
+  try {
+    const {
+      status,
+      type,
+      projectServiceType,
+      salespersonId,
+      year,
+      search,
+      sortBy,
+      sortOrder = 'desc',
+    } = req.query;
+
+    let where: any = {};
+
+    // Handle array filters (multi-select) - express sends arrays when multiple values have same param name
+    const statusArray = Array.isArray(status) ? status : status ? [status] : [];
+    const typeArray = Array.isArray(type) ? type : type ? [type] : [];
+    const projectServiceTypeArray = Array.isArray(projectServiceType) ? projectServiceType : projectServiceType ? [projectServiceType] : [];
+    const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : salespersonId ? [salespersonId] : [];
+
+    // Role-based filtering - Sales users only see their own projects
+    if (req.user?.role === UserRole.SALES) {
+      where.salespersonId = req.user.id;
+    }
+
+    // Handle array filters
+    if (statusArray.length > 0) where.projectStatus = { in: statusArray as string[] };
+    if (typeArray.length > 0) where.type = { in: typeArray as string[] };
+    if (projectServiceTypeArray.length > 0) where.projectServiceType = { in: projectServiceTypeArray as string[] };
+    if (salespersonIdArray.length > 0 && req.user?.role !== UserRole.SALES) {
+      where.salespersonId = { in: salespersonIdArray as string[] };
+    }
+    if (year) where.year = year;
+
+    // Handle search - combine with existing conditions using AND
+    if (search) {
+      const searchConditions = {
+        OR: [
+          { customer: { customerName: { contains: search as string, mode: 'insensitive' } } },
+          { customer: { customerId: { contains: search as string, mode: 'insensitive' } } },
+          { customer: { consumerNumber: { contains: search as string, mode: 'insensitive' } } },
+        ],
+      };
+
+      const topLevelKeys = Object.keys(where).filter(key => key !== 'AND' && key !== 'OR');
+      if (topLevelKeys.length > 0) {
+        const existingConditions: any[] = [];
+        topLevelKeys.forEach(key => {
+          existingConditions.push({ [key]: where[key] });
+        });
+        where.AND = [...existingConditions, searchConditions];
+        topLevelKeys.forEach(key => {
+          delete where[key];
+        });
+      } else {
+        where.OR = searchConditions.OR;
+      }
+    }
+
+    // Build orderBy based on sortBy parameter
+    let orderBy: any[] = [];
+    if (sortBy) {
+      const order = sortOrder === 'asc' ? 'asc' : 'desc';
+      switch (sortBy) {
+        case 'systemCapacity':
+          orderBy = [{ systemCapacity: order }, { createdAt: 'desc' }];
+          break;
+        case 'projectCost':
+          orderBy = [{ projectCost: order }, { createdAt: 'desc' }];
+          break;
+        case 'confirmationDate':
+          orderBy = [{ confirmationDate: order }, { createdAt: 'desc' }];
+          break;
+        case 'profitability':
+          orderBy = [{ profitability: order }, { createdAt: 'desc' }];
+          break;
+        case 'customerName':
+          orderBy = [{ customer: { customerName: order } }, { createdAt: 'desc' }];
+          break;
+        default:
+          orderBy = [{ confirmationDate: 'desc' }, { createdAt: 'desc' }];
+      }
+    } else {
+      orderBy = [
+        { confirmationDate: 'desc' },
+        { createdAt: 'desc' },
+      ];
+    }
+
+    const projects = await prisma.project.findMany({
+      where,
+      include: {
+        customer: {
+          select: {
+            customerId: true,
+            customerName: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
+            prefix: true,
+            consumerNumber: true,
+          },
+        },
+        salesperson: {
+          select: { name: true, email: true },
+        },
+      },
+      orderBy,
+    });
+
+    // Format data for CSV
+    const exportData = projects.map((project) => {
+      return {
+        'SL No': project.slNo || '',
+        'Customer ID': project.customer?.customerId || '',
+        'Customer Name': getCustomerDisplayNameForExport(project.customer) || project.customer?.customerName || '',
+        'Consumer Number': project.customer?.consumerNumber || '',
+        'Project Type': project.type.replace(/_/g, ' ') || '',
+        'Project Service Type': project.projectServiceType?.replace(/_/g, ' ') || '',
+        'System Capacity (kW)': project.systemCapacity || 0,
+        'Project Cost': project.projectCost || 0,
+        'Project Status': project.projectStatus.replace(/_/g, ' ') || '',
+        'Payment Status': project.paymentStatus?.replace(/_/g, ' ') || '',
+        'Salesperson': project.salesperson?.name || '',
+        'Salesperson Email': project.salesperson?.email || '',
+        'Year': project.year || '',
+        'Confirmation Date': project.confirmationDate ? new Date(project.confirmationDate).toLocaleDateString('en-IN') : '',
+        'Created At': project.createdAt ? new Date(project.createdAt).toLocaleDateString('en-IN') : '',
+      };
+    });
+
+    // Convert to CSV
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const csv = XLSX.utils.sheet_to_csv(worksheet);
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=projects-export-${Date.now()}.csv`);
+    res.send(csv);
+  } catch (error: any) {
+    console.error('Error exporting projects to CSV:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 export default router;

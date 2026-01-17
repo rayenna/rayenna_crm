@@ -21,6 +21,8 @@ const CustomerMaster = () => {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
+  const [showExportConfirm, setShowExportConfirm] = useState(false)
+  const [pendingExportType, setPendingExportType] = useState<'excel' | 'csv' | null>(null)
   
   // Filter state: For Sales users - 'all' or 'my', For others - salespersonId array
   const [customerFilter, setCustomerFilter] = useState<'all' | 'my'>('my') // Default to 'my' for Sales users
@@ -110,6 +112,58 @@ const CustomerMaster = () => {
     setCustomerToDelete(null)
   }
 
+  const handleExportClick = (type: 'excel' | 'csv') => {
+    setPendingExportType(type)
+    setShowExportConfirm(true)
+  }
+
+  const confirmExport = async () => {
+    if (!pendingExportType) return
+
+    try {
+      const params = new URLSearchParams()
+      if (debouncedSearch) params.append('search', debouncedSearch)
+      if (selectedSalespersonIds.length > 0) {
+        selectedSalespersonIds.forEach((id) => {
+          if (id && id.trim() !== '') {
+            params.append('salespersonId', id)
+          }
+        })
+      }
+      
+      const endpoint = pendingExportType === 'excel' 
+        ? `/api/customers/export/excel` 
+        : `/api/customers/export/csv`
+      const fileExtension = pendingExportType === 'excel' ? 'xlsx' : 'csv'
+      
+      const response = await axios.get(`${endpoint}?${params.toString()}`, {
+        responseType: 'blob',
+      })
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `customers-export-${Date.now()}.${fileExtension}`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      
+      toast.success(`Customers exported to ${pendingExportType.toUpperCase()} successfully`)
+    } catch (error: any) {
+      console.error('Export error:', error)
+      toast.error(error.response?.data?.error || `Failed to export customers to ${pendingExportType.toUpperCase()}`)
+    } finally {
+      setShowExportConfirm(false)
+      setPendingExportType(null)
+    }
+  }
+
+  const cancelExport = () => {
+    setShowExportConfirm(false)
+    setPendingExportType(null)
+  }
+
   if (isLoading) return <div className="px-4 py-6">Loading...</div>
 
   return (
@@ -190,37 +244,7 @@ const CustomerMaster = () => {
         {hasRole([UserRole.ADMIN]) && (
           <div className="mt-4 flex gap-2">
             <button
-              onClick={async () => {
-                try {
-                  const params = new URLSearchParams()
-                  if (debouncedSearch) params.append('search', debouncedSearch)
-                  if (selectedSalespersonIds.length > 0) {
-                    selectedSalespersonIds.forEach((id) => {
-                      if (id && id.trim() !== '') {
-                        params.append('salespersonId', id)
-                      }
-                    })
-                  }
-                  
-                  const response = await axios.get(`/api/customers/export/excel?${params.toString()}`, {
-                    responseType: 'blob',
-                  })
-                  
-                  const url = window.URL.createObjectURL(new Blob([response.data]))
-                  const link = document.createElement('a')
-                  link.href = url
-                  link.setAttribute('download', `customers-export-${Date.now()}.xlsx`)
-                  document.body.appendChild(link)
-                  link.click()
-                  link.remove()
-                  window.URL.revokeObjectURL(url)
-                  
-                  toast.success('Customers exported to Excel successfully')
-                } catch (error: any) {
-                  console.error('Export error:', error)
-                  toast.error(error.response?.data?.error || 'Failed to export customers to Excel')
-                }
-              }}
+              onClick={() => handleExportClick('excel')}
               className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -229,37 +253,7 @@ const CustomerMaster = () => {
               Export to Excel
             </button>
             <button
-              onClick={async () => {
-                try {
-                  const params = new URLSearchParams()
-                  if (debouncedSearch) params.append('search', debouncedSearch)
-                  if (selectedSalespersonIds.length > 0) {
-                    selectedSalespersonIds.forEach((id) => {
-                      if (id && id.trim() !== '') {
-                        params.append('salespersonId', id)
-                      }
-                    })
-                  }
-                  
-                  const response = await axios.get(`/api/customers/export/csv?${params.toString()}`, {
-                    responseType: 'blob',
-                  })
-                  
-                  const url = window.URL.createObjectURL(new Blob([response.data]))
-                  const link = document.createElement('a')
-                  link.href = url
-                  link.setAttribute('download', `customers-export-${Date.now()}.csv`)
-                  document.body.appendChild(link)
-                  link.click()
-                  link.remove()
-                  window.URL.revokeObjectURL(url)
-                  
-                  toast.success('Customers exported to CSV successfully')
-                } catch (error: any) {
-                  console.error('Export error:', error)
-                  toast.error(error.response?.data?.error || 'Failed to export customers to CSV')
-                }
-              }}
+              onClick={() => handleExportClick('csv')}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -308,6 +302,42 @@ const CustomerMaster = () => {
                 <button
                   onClick={confirmDelete}
                   className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium"
+                >
+                  YES
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Confirmation Modal */}
+      {showExportConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-red-600 mb-4">WARNING</h3>
+              <div className="border-t border-b border-gray-300 my-4 py-4">
+                <p className="text-gray-700 mb-4 leading-relaxed">
+                  The Data that is present in the CRM System is the exclusive property of Rayenna Energy Private Limited. Unauthorised Export of any data is prohibited and will be subject to disciplinary measures including and not limited to termination and legal procedures.
+                </p>
+                <p className="text-gray-700 mb-4 leading-relaxed font-medium">
+                  By exporting this data, you are confirming that you are authorised to access this data/info and have written approvals from the management.
+                </p>
+              </div>
+              <p className="text-gray-600 mb-6 font-medium">
+                Do you want to continue?
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={cancelExport}
+                  className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={confirmExport}
+                  className="px-6 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-medium"
                 >
                   YES
                 </button>

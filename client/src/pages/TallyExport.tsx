@@ -11,6 +11,7 @@ const TallyExport = () => {
   const [endDate, setEndDate] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showExportConfirm, setShowExportConfirm] = useState(false)
 
   // Check if user has access
   if (!hasRole([UserRole.ADMIN, UserRole.FINANCE])) {
@@ -23,7 +24,13 @@ const TallyExport = () => {
     )
   }
 
-  const handleExport = async () => {
+  const handleExport = () => {
+    // Show confirmation modal first
+    setShowExportConfirm(true)
+  }
+
+  const confirmExport = async () => {
+    setShowExportConfirm(false)
     setLoading(true)
     setError('')
 
@@ -75,6 +82,10 @@ const TallyExport = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const cancelExport = () => {
+    setShowExportConfirm(false)
   }
 
   return (
@@ -218,17 +229,56 @@ const TallyExport = () => {
           <div>
             <button
               onClick={handleExport}
-              disabled={loading}
+              disabled={loading || showExportConfirm}
               className={`w-full sm:w-auto px-6 py-3 rounded-lg font-semibold transition-colors ${
-                loading
+                loading || showExportConfirm
                   ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
                   : 'bg-primary-600 text-white hover:bg-primary-700'
               }`}
             >
-              {loading ? 'Exporting...' : `Export ${exportType.charAt(0).toUpperCase() + exportType.slice(1)} as ${format.toUpperCase()}`}
+              {loading ? 'Exporting...' : `Export ${exportType.charAt(0).toUpperCase() + exportType.slice(1)} as ${format.toUpperCase().replace('-', '/')}`}
             </button>
           </div>
         </div>
+
+        {/* Export Confirmation Modal */}
+        {showExportConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+              <div className="p-6">
+                <h3 className="text-xl font-bold text-red-600 mb-4">WARNING</h3>
+                <div className="border-t border-b border-gray-300 my-4 py-4">
+                  <p className="text-gray-700 mb-4 leading-relaxed">
+                    The Data that is present in the CRM System is the exclusive property of Rayenna Energy Private Limited.
+                  </p>
+                  <p className="text-gray-700 mb-4 leading-relaxed">
+                    Unauthorised Export of any data is prohibited and will be subject to disciplinary measures including and not limited to termination and legal procedures.
+                  </p>
+                  <p className="text-gray-700 mb-4 leading-relaxed font-medium">
+                    By exporting this data, you are confirming that you are authorised to access this data/info and have written approvals from the management.
+                  </p>
+                </div>
+                <p className="text-gray-600 mb-6 font-medium">
+                  Do you want to continue?
+                </p>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={cancelExport}
+                    className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                  >
+                    CANCEL
+                  </button>
+                  <button
+                    onClick={confirmExport}
+                    className="px-6 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-medium"
+                  >
+                    YES
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Help Section */}
         <div className="mt-6 bg-gray-50 rounded-lg p-6">
@@ -255,6 +305,13 @@ const TallyExport = () => {
               </ol>
             </div>
           </div>
+        </div>
+
+        {/* Warning Message */}
+        <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-sm text-red-800 leading-relaxed">
+            <strong>WARNING:</strong> Access to this page is monitored and downloading of data from this page is only with management approvals. All Data / Info in this CRM System is the exclusive property of Rayenna Energy Private Limited.
+          </p>
         </div>
       </div>
     </div>
