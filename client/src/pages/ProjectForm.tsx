@@ -43,20 +43,10 @@ const FileUploadSection = ({ projectId }: { projectId: string }) => {
 
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      // When FormData is passed, axios should automatically set Content-Type: multipart/form-data with boundary
-      // But the default 'application/json' header in axios instance may interfere
-      // Use transformRequest to remove Content-Type so axios can set it correctly
+      // Axios interceptor automatically handles FormData - removes Content-Type so browser sets it with boundary
       const res = await axiosInstance.post(
         `/api/documents/project/${projectId}`,
-        formData,
-        {
-          withCredentials: true,
-          transformRequest: [(data, headers) => {
-            // Remove Content-Type header - axios will set it automatically for FormData with boundary
-            delete headers['Content-Type'];
-            return data;
-          }],
-        }
+        formData
       )
       return res.data
     },
