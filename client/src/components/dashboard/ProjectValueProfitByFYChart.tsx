@@ -15,7 +15,7 @@ const ProjectValueProfitByFYChart = ({ data }: ProjectValueProfitByFYChartProps)
   const [selectedFY, setSelectedFY] = useState<string>('all')
 
   // Debug logging (can be removed in production)
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.DEV) {
     console.log('ProjectValueProfitByFYChart - Data received:', data)
   }
   
