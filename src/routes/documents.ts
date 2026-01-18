@@ -147,6 +147,9 @@ router.post(
   authorize(UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS),
   upload.single('file'),
   async (req: Request, res) => {
+    // Declare variables outside try block so they're accessible in catch block
+    let cloudinaryPublicId: string | undefined;
+    
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
@@ -175,7 +178,6 @@ router.post(
       // Handle file path/URL based on storage type
       let filePath: string;
       let fileSize: number;
-      let cloudinaryPublicId: string | undefined;
       
       if (useCloudinary) {
         // Upload buffer to Cloudinary using upload_stream (more reliable method)
