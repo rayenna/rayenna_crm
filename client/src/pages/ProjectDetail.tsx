@@ -448,11 +448,13 @@ const ProjectDetail = () => {
             <h3 className="text-md font-semibold mb-4">Uploaded Documents</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {project.documents.map((doc) => {
-                // For AI Generated Proposal PDFs, only admin can delete even in view mode
-                // For other documents, delete is disabled in view mode
+                // Admin can delete any document
+                // Uploader can delete their own documents (except Proposal PDFs which only admin can delete)
                 const isProposalPDF = doc.description === 'AI Generated Proposal PDF'
-                const canDelete = isProposalPDF && hasRole([UserRole.ADMIN])
-                const canView = hasRole([UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE]) || doc.uploadedById === user?.id
+                const isAdmin = hasRole([UserRole.ADMIN])
+                const isUploader = doc.uploadedById === user?.id
+                const canDelete = isAdmin || (isUploader && !isProposalPDF)
+                const canView = hasRole([UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE]) || isUploader
                 
                 return (
                   <div
