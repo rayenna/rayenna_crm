@@ -35,13 +35,15 @@ const prisma = new PrismaClient();
 const allowedOrigins = [
   'http://localhost:5173', // Local Vite dev server
   'http://localhost:3000', // Local backend (if needed)
-  process.env.FRONTEND_URL, // Production frontend from env
+  'https://rayenna-crm-kappa.vercel.app', // Production Vercel frontend
+  process.env.FRONTEND_URL, // Production frontend from env (if different)
 ].filter(Boolean) as string[];
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, etc.)
+    // Allow requests with no origin (mobile apps, curl, Postman, server-to-server)
     if (!origin) return callback(null, true);
+    
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -49,12 +51,20 @@ app.use(cors({
       if (process.env.NODE_ENV === 'development') {
         callback(null, true);
       } else {
+        console.error('Blocked by CORS:', origin);
         callback(new Error('Not allowed by CORS'));
       }
     }
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Type'],
 }));
+
+// Explicitly handle preflight OPTIONS requests for all routes
+app.options('*', cors());
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
