@@ -151,8 +151,29 @@ router.post(
     let cloudinaryPublicId: string | undefined;
     
     try {
+      // Debug logging for upload issues
+      console.log('📤 Upload request received:', {
+        hasFile: !!req.file,
+        contentType: req.headers['content-type'],
+        method: req.method,
+        bodyKeys: Object.keys(req.body || {}),
+        fileField: req.file ? {
+          fieldname: req.file.fieldname,
+          originalname: req.file.originalname,
+          mimetype: req.file.mimetype,
+          size: req.file.size,
+          hasBuffer: !!req.file.buffer,
+        } : null,
+      });
+
       if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
+        console.error('❌ No file in request. Multer did not process file.');
+        console.error('Request details:', {
+          headers: req.headers,
+          body: req.body,
+          files: (req as any).files,
+        });
+        return res.status(400).json({ error: 'No file uploaded. Please ensure a file is selected and try again.' });
       }
 
       const { projectId } = req.params;
