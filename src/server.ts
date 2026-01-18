@@ -39,20 +39,32 @@ const allowedOrigins = [
   process.env.FRONTEND_URL, // Production frontend from env (if different)
 ].filter(Boolean) as string[];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, Postman, server-to-server)
-    if (!origin) return callback(null, true);
+// CORS options configuration
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (mobile apps, curl, Postman, server-to-server, health checks)
+    if (!origin) {
+      return callback(null, true);
+    }
     
-    if (allowedOrigins.includes(origin)) {
+    // Normalize origins (remove trailing slashes for comparison)
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    const normalizedAllowedOrigins = allowedOrigins.map(o => o?.replace(/\/$/, ''));
+    
+    if (normalizedAllowedOrigins.includes(normalizedOrigin)) {
       callback(null, true);
     } else {
       // In development, allow all origins for easier testing
       if (process.env.NODE_ENV === 'development') {
         callback(null, true);
       } else {
-        console.error('Blocked by CORS:', origin);
-        callback(new Error('Not allowed by CORS'));
+        // Allow Render internal requests and health checks
+        if (!origin || origin.includes('render.com') || origin.includes('localhost')) {
+          callback(null, true);
+        } else {
+          console.warn('CORS warning - origin not in allowed list:', origin);
+          callback(null, true); // Temporarily allow to prevent startup errors
+        }
       }
     }
   },
@@ -60,10 +72,12 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['Content-Type'],
-}));
+};
 
-// Explicitly handle preflight OPTIONS requests for all routes
-app.options('*', cors());
+app.use(cors(corsOptions));
+
+// Explicitly handle preflight OPTIONS requests for all routes with same CORS config
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

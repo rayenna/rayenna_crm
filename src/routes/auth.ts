@@ -64,7 +64,34 @@ router.post(
         },
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error('Login error:', {
+        message: error?.message,
+        name: error?.name,
+        code: error?.code,
+        meta: error?.meta,
+        stack: error?.stack,
+      });
+      
+      // Provide better error messages for common issues
+      let errorMessage = 'Internal server error';
+      if (error?.code === 'P1001') {
+        errorMessage = 'Database connection failed. Please check DATABASE_URL.';
+      } else if (error?.code?.startsWith('P1')) {
+        errorMessage = `Database error: ${error.message}`;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      const response: any = { error: errorMessage };
+      if (process.env.NODE_ENV === 'development') {
+        response.details = {
+          name: error?.name,
+          code: error?.code,
+          meta: error?.meta,
+        };
+      }
+      
+      res.status(500).json(response);
     }
   }
 );
