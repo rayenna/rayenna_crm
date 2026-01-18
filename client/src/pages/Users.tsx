@@ -18,12 +18,13 @@ const Users = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
 
-  const { data: users, isLoading } = useQuery({
+  const { data: users, isLoading, error } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
       const res = await axiosInstance.get('/api/users')
       return res.data as User[]
     },
+    retry: 1,
   })
 
   const createMutation = useMutation({
@@ -82,6 +83,11 @@ const Users = () => {
   }
 
   if (isLoading) return <div>Loading...</div>
+
+  if (error) {
+    console.error('Users query error:', error)
+    return <div className="px-4 py-6 text-red-600">Error loading users: {error instanceof Error ? error.message : 'Unknown error'}</div>
+  }
 
   return (
     <div className="px-4 py-6 sm:px-0">
@@ -160,8 +166,13 @@ const Users = () => {
       )}
 
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <ul className="divide-y divide-gray-200">
-          {users?.map((user) => (
+        {!users || users.length === 0 ? (
+          <div className="px-4 py-8 text-center text-gray-500">
+            No users found. {users === undefined ? 'Loading...' : 'Click "New User" to create one.'}
+          </div>
+        ) : (
+          <ul className="divide-y divide-gray-200">
+            {users.map((user) => (
             <li key={user.id} className="px-4 py-4 sm:px-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -181,8 +192,9 @@ const Users = () => {
                 </div>
               </div>
             </li>
-          ))}
-        </ul>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}

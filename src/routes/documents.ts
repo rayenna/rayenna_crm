@@ -6,7 +6,7 @@ import { PrismaClient, UserRole } from '@prisma/client';
 import { authenticate, authorize } from '../middleware/auth';
 import { createAuditLog } from '../utils/audit';
 import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
+// Removed CloudinaryStorage - now using upload_stream with memoryStorage for better reliability
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -24,6 +24,13 @@ if (useCloudinary) {
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
   });
+  console.log('✅ Cloudinary configured:', {
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY ? '***' + process.env.CLOUDINARY_API_KEY.slice(-4) : 'missing',
+    api_secret: process.env.CLOUDINARY_API_SECRET ? '***' + process.env.CLOUDINARY_API_SECRET.slice(-4) : 'missing',
+  });
+} else {
+  console.warn('⚠️ Cloudinary not configured - using local file storage. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables to enable Cloudinary.');
 }
 
 // Ensure uploads directory exists (for local storage fallback)
@@ -32,21 +39,12 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Configure multer storage - use Cloudinary if configured, otherwise local disk
+// Configure multer storage - use memory storage for Cloudinary (upload_stream), disk storage for local
 let storage: multer.StorageEngine;
 
 if (useCloudinary) {
-  storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: async (req, file) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-      return {
-        folder: 'rayenna-crm',
-        public_id: `file-${uniqueSuffix}`,
-        resource_type: 'auto', // Automatically detect image, video, raw
-      };
-    },
-  }) as any;
+  // Use memory storage when Cloudinary is enabled - we'll upload buffer using upload_stream
+  storage = multer.memoryStorage();
 } else {
   // Local disk storage (development fallback)
   storage = multer.diskStorage({
@@ -157,26 +155,9 @@ router.post(
       const { projectId } = req.params;
       const { category, description } = req.body;
 
-      // Validate category
+      // Validate category first (before uploading to Cloudinary if needed)
       const validCategories = ['photos_videos', 'documents', 'sheets'];
       if (!category || !validCategories.includes(category)) {
-        // Delete uploaded file (handle both Cloudinary and local)
-        if (req.file) {
-          if (useCloudinary && (req.file as any).path) {
-            // Delete from Cloudinary
-            try {
-              const publicIdMatch = (req.file as any).path.match(/\/v\d+\/(.+)\./);
-              if (publicIdMatch) {
-                const publicId = publicIdMatch[1].replace(/rayenna-crm\//, '');
-                await cloudinary.uploader.destroy(`rayenna-crm/${publicId}`);
-              }
-            } catch (err) {
-              console.error('Error deleting from Cloudinary:', err);
-            }
-          } else if (req.file.path && fs.existsSync(req.file.path)) {
-            fs.unlinkSync(req.file.path);
-          }
-        }
         return res.status(400).json({ 
           error: `Invalid category. Must be one of: ${validCategories.join(', ')}` 
         });
@@ -188,45 +169,58 @@ router.post(
       });
 
       if (!project) {
-        // Delete uploaded file (handle both Cloudinary and local)
-        if (req.file) {
-          if (useCloudinary && (req.file as any).path) {
-            // Delete from Cloudinary
-            try {
-              const publicIdMatch = (req.file as any).path.match(/\/v\d+\/(.+)\./);
-              if (publicIdMatch) {
-                const publicId = publicIdMatch[1].replace(/rayenna-crm\//, '');
-                await cloudinary.uploader.destroy(`rayenna-crm/${publicId}`);
-              }
-            } catch (err) {
-              console.error('Error deleting from Cloudinary:', err);
-            }
-          } else if (req.file.path && fs.existsSync(req.file.path)) {
-            fs.unlinkSync(req.file.path);
-          }
-        }
         return res.status(404).json({ error: 'Project not found' });
       }
 
       // Handle file path/URL based on storage type
       let filePath: string;
       let fileSize: number;
+      let cloudinaryPublicId: string | undefined;
       
-      if (useCloudinary && (req.file as any).path) {
-        // Cloudinary returns secure_url in path property
-        filePath = (req.file as any).path; // This is the Cloudinary URL
-        fileSize = req.file.size || 0;
-        
-        // Clean up local temp file if it exists (Cloudinary sometimes creates one)
-        if (req.file.path && fs.existsSync(req.file.path) && req.file.path.startsWith(uploadsDir)) {
-          try {
-            fs.unlinkSync(req.file.path);
-          } catch (err) {
-            console.error('Error deleting temp file:', err);
-          }
+      if (useCloudinary) {
+        // Upload buffer to Cloudinary using upload_stream (more reliable method)
+        if (!req.file.buffer) {
+          return res.status(400).json({ error: 'File buffer not available for Cloudinary upload' });
+        }
+
+        try {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const uploadResult = await new Promise<any>((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+              {
+                folder: 'rayenna_crm',
+                public_id: `file-${uniqueSuffix}`,
+                resource_type: 'auto', // Automatically detect image, video, raw
+              },
+              (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+              }
+            );
+            uploadStream.end(req.file.buffer);
+          });
+
+          filePath = uploadResult.secure_url;
+          fileSize = uploadResult.bytes || req.file.size || 0;
+          cloudinaryPublicId = uploadResult.public_id;
+          
+          console.log('✅ File uploaded to Cloudinary:', {
+            fileName: req.file.originalname,
+            url: filePath,
+            publicId: cloudinaryPublicId,
+          });
+        } catch (uploadError: any) {
+          console.error('❌ Cloudinary upload failed:', uploadError);
+          return res.status(500).json({ 
+            error: 'Failed to upload file to Cloudinary',
+            details: uploadError.message,
+          });
         }
       } else {
         // Local storage - store relative path
+        if (!req.file.path) {
+          return res.status(400).json({ error: 'File path not available for local storage' });
+        }
         filePath = path.relative(uploadsDir, req.file.path).replace(/\\/g, '/');
         fileSize = req.file.size;
       }
@@ -261,24 +255,28 @@ router.post(
 
       res.status(201).json(document);
     } catch (error: any) {
-      // Cleanup on error (handle both Cloudinary and local)
-      if (req.file) {
-        if (useCloudinary && (req.file as any).path) {
-          // Delete from Cloudinary
-          try {
-            const publicIdMatch = (req.file as any).path.match(/\/v\d+\/(.+)\./);
-            if (publicIdMatch) {
-              const publicId = publicIdMatch[1].replace(/rayenna-crm\//, '');
-              await cloudinary.uploader.destroy(`rayenna-crm/${publicId}`);
-            }
-          } catch (err) {
-            console.error('Error deleting from Cloudinary:', err);
-          }
-        } else if (req.file.path && fs.existsSync(req.file.path)) {
+      // Cleanup on error - delete from Cloudinary if upload succeeded but DB insert failed
+      if (useCloudinary && cloudinaryPublicId) {
+        try {
+          await cloudinary.uploader.destroy(cloudinaryPublicId);
+          console.log('✅ Cleaned up Cloudinary file after error:', cloudinaryPublicId);
+        } catch (cleanupError) {
+          console.error('❌ Error cleaning up Cloudinary file:', cleanupError);
+        }
+      } else if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+        // Local storage cleanup
+        try {
           fs.unlinkSync(req.file.path);
+        } catch (cleanupError) {
+          console.error('❌ Error cleaning up local file:', cleanupError);
         }
       }
-      res.status(500).json({ error: error.message });
+      
+      console.error('❌ Document upload error:', error);
+      res.status(500).json({ 
+        error: error.message || 'Failed to upload document',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      });
     }
   }
 );

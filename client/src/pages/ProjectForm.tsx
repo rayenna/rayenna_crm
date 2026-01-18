@@ -43,8 +43,10 @@ const FileUploadSection = ({ projectId }: { projectId: string }) => {
 
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
+      // Don't set Content-Type manually - axios will set it with boundary for FormData
       const res = await axiosInstance.post(`/api/documents/project/${projectId}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        withCredentials: true,
+        // Axios automatically sets Content-Type: multipart/form-data with boundary for FormData
       })
       return res.data
     },
