@@ -91,6 +91,17 @@ rayenna-crm/
    OPENAI_API_KEY=<Your OpenAI key if using AI features>
    FRONTEND_URL=<Your Vercel frontend URL - set after Vercel deployment>
    ```
+   DATABASE_URL=psql 'postgresql://neondb_owner:npg_YBTlVfenu2k7@ep-twilight-water-a1ahtaf4-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+   JWT_SECRET=9c25dc50ac733514ca93cede8399df7673543e863d52344e4bb9ce4e978ea82647b02dead25305d8ed283bfd5cce599a27485741c68fd89e6b26ce08457ab517
+   NODE_ENV=production
+   PORT=10000
+   MAX_FILE_SIZE=26214400
+   CLOUDINARY_CLOUD_NAME=dwmwc2nzf
+   CLOUDINARY_API_KEY=998311513464496
+   CLOUDINARY_API_SECRET=efzCoLtJzYcRJJWlEJq36zOsUb4
+   OPENAI_API_KEY=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
+   FRONTEND_URL=<Your Vercel frontend URL - set after Vercel deployment>
+
 4. **Save Web Service** - Render will start building
 5. **Get Backend URL**: After deployment, note your service URL (e.g., `https://rayenna-crm-backend.onrender.com`)
 

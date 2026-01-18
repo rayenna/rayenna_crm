@@ -27,7 +27,7 @@ const ManagementDashboard = ({ selectedFYs, selectedMonths }: ManagementDashboar
   if (isLoading) return <div>Loading...</div>
 
   // Debug: Log data to console (can be removed in production)
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.DEV) {
     console.log('Management Dashboard Data:', data)
     console.log('Project Value Profit By FY:', data?.projectValueProfitByFY)
   }

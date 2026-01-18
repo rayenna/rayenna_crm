@@ -26,7 +26,7 @@ const SalesDashboard = ({ selectedFYs, selectedMonths }: SalesDashboardProps) =>
   if (isLoading) return <div>Loading...</div>
 
   // Debug: Log data to console (can be removed in production)
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.DEV) {
     console.log('Sales Dashboard Data:', data)
     console.log('Project Value Profit By FY:', data?.projectValueProfitByFY)
     console.log('Project Value By Type:', data?.projectValueByType)

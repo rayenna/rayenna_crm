@@ -81,7 +81,7 @@ const ProjectValuePieChart = ({ data, availableFYs = [], dashboardType = 'manage
     )
   }
 
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.DEV) {
     console.log('ProjectValuePieChart - Data received:', data)
     console.log('ProjectValuePieChart - Chart data (filtered):', chartData)
   }
@@ -149,7 +149,7 @@ const ProjectValuePieChart = ({ data, availableFYs = [], dashboardType = 'manage
               fill="#8884d8"
               dataKey="value"
             >
-              {displayData.map((entry: any, index: number) => (
+              {displayData.map((_entry: any, index: number) => (
                 <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
               ))}
             </Pie>

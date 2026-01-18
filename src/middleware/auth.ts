@@ -1,3 +1,4 @@
+/// <reference path="../@types/express.d.ts" />
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { PrismaClient, UserRole } from '@prisma/client';

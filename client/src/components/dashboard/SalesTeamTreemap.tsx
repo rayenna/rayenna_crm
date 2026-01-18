@@ -56,7 +56,7 @@ const SalesTeamTreemap = ({ availableFYs = [] }: SalesTeamTreemapProps) => {
 
   // Debug: Log component mount
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log('[SalesTeamTreemap] Component mounted')
       console.log('[SalesTeamTreemap] availableFYs:', availableFYs)
     }
@@ -126,7 +126,7 @@ const SalesTeamTreemap = ({ availableFYs = [] }: SalesTeamTreemapProps) => {
 
   // Debug logging
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log('[SalesTeamTreemap] Component rendered')
       console.log('[SalesTeamTreemap] Data received:', data)
       console.log('[SalesTeamTreemap] salesTeamData:', data?.salesTeamData)

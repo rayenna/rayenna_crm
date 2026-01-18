@@ -12,7 +12,7 @@ interface MetricCardProps {
   }
 }
 
-const MetricCard = ({ title, value, icon, gradient, iconColor = 'text-primary-600', trend }: MetricCardProps) => {
+const MetricCard = ({ title, value, icon, gradient, trend }: MetricCardProps) => {
   const defaultGradient = gradient || 'from-primary-500 to-primary-600'
 
   return (

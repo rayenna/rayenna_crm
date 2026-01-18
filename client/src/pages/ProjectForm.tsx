@@ -146,7 +146,7 @@ const ProjectForm = () => {
     enabled: isEdit,
   })
 
-  const { data: salespersons } = useQuery({
+  const { data: _salespersons } = useQuery({
     queryKey: ['salespersons'],
     queryFn: async () => {
       const res = await axiosInstance.get('/api/users/role/sales')
@@ -197,7 +197,7 @@ const ProjectForm = () => {
     }
   };
 
-  const { register, handleSubmit, setValue, getValues, watch, control, formState: { errors } } = useForm()
+  const { register, handleSubmit, setValue, getValues, watch, control } = useForm()
   const selectedCustomerId = watch('customerId')
   const confirmationDate = watch('confirmationDate')
   const projectStatus = watch('projectStatus')

@@ -92,10 +92,10 @@ const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudPro
     // Initial update
     updateDimensions()
     // Update on resize with debounce
-    let resizeTimeout: NodeJS.Timeout
+    let resizeTimeout: number
     const handleResize = () => {
       clearTimeout(resizeTimeout)
-      resizeTimeout = setTimeout(updateDimensions, 100)
+      resizeTimeout = setTimeout(updateDimensions, 100) as unknown as number
     }
     window.addEventListener('resize', handleResize)
     return () => {
@@ -106,7 +106,7 @@ const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudPro
 
   useEffect(() => {
     // Debug logging
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log('[WordCloud Component] Data received:', data)
       console.log('[WordCloud Component] wordCloudData length:', data?.wordCloudData?.length || 0)
       if (data?.wordCloudData && data.wordCloudData.length > 0) {
@@ -159,7 +159,7 @@ const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudPro
         gridSize: Math.round(dimensions.width / 50),
         weightFactor: 1,
         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-        color: (word: string, weight: number) => {
+        color: (_word: string, weight: number) => {
           // Color based on weight (profitability) - gradient from red to blue to green
           const normalizedWeight = (weight - minFontSize) / (maxFontSize - minFontSize)
           if (normalizedWeight > 0.7) {
