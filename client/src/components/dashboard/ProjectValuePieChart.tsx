@@ -137,7 +137,7 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
               disabled={isLoadingFiltered}
             >
               <option value="all">All Financial Years</option>
-              {finalAvailableFYs.map((fy) => (
+              {finalAvailableFYs.map((fy: string) => (
                 <option key={fy} value={fy}>
                   {fy}
                 </option>

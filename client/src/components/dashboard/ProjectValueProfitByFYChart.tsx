@@ -83,12 +83,14 @@ const ProjectValueProfitByFYChart = ({ data: initialData }: ProjectValueProfitBy
   }
 
   // Get unique financial years for the filter dropdown
-  const availableFYs = Array.from(new Set(chartData.map((item) => item.fy))).filter(fy => fy).sort()
+  const availableFYs = Array.from(new Set(chartData.map((item: FYData) => item.fy)))
+    .filter((fy): fy is string => typeof fy === 'string' && fy !== null && fy !== '')
+    .sort()
 
   // Filter data based on selected financial year
   const filteredData = selectedFY === 'all' 
     ? chartData 
-    : chartData.filter((item) => item.fy === selectedFY)
+    : chartData.filter((item: FYData) => item.fy === selectedFY)
 
   // Format currency for tooltip
   const formatCurrency = (value: number) => {
@@ -119,7 +121,7 @@ const ProjectValueProfitByFYChart = ({ data: initialData }: ProjectValueProfitBy
             onChange={(e) => setSelectedFY(e.target.value)}
           >
             <option value="all">All Financial Years</option>
-            {availableFYs.map((fy) => (
+            {availableFYs.map((fy: string) => (
               <option key={fy} value={fy}>
                 {fy}
               </option>
