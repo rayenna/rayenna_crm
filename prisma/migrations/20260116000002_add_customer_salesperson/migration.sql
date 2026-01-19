@@ -1,5 +1,14 @@
 -- AlterTable
-ALTER TABLE "customers" ADD COLUMN "salespersonId" TEXT;
+ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "salespersonId" TEXT;
 
 -- AddForeignKey
-ALTER TABLE "customers" ADD CONSTRAINT "customers_salespersonId_fkey" FOREIGN KEY ("salespersonId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$
+BEGIN
+  ALTER TABLE "customers"
+    ADD CONSTRAINT "customers_salespersonId_fkey"
+    FOREIGN KEY ("salespersonId") REFERENCES "users"("id")
+    ON DELETE SET NULL
+    ON UPDATE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
