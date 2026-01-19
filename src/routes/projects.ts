@@ -479,6 +479,66 @@ router.post(
         return isNaN(date.getTime()) ? null : date;
       };
 
+      // Fix slNo sequence if it's out of sync (prevents unique constraint violations)
+      // This can happen when data is migrated from another database
+      try {
+        // Get the current max slNo value
+        const maxSlNoResult = await prisma.$queryRaw<Array<{ max: bigint | null }>>`
+          SELECT MAX("slNo") as max FROM "projects"
+        `;
+        const currentMax = maxSlNoResult[0]?.max ? Number(maxSlNoResult[0].max) : 0;
+        const nextValue = currentMax + 1;
+        
+        // Find and reset the sequence for slNo column
+        // PostgreSQL creates sequences as: tablename_columnname_seq
+        // Query to find the actual sequence name
+        const seqResult = await prisma.$queryRaw<Array<{ sequence_name: string }>>`
+          SELECT sequence_name 
+          FROM information_schema.sequences 
+          WHERE sequence_schema = 'public' 
+          AND (sequence_name LIKE '%slNo%' OR sequence_name LIKE '%sl_no%' OR sequence_name LIKE '%slno%')
+        `;
+        
+        if (seqResult.length > 0) {
+          const seqName = seqResult[0].sequence_name;
+          await prisma.$executeRawUnsafe(
+            `SELECT setval('${seqName}', ${nextValue}, false)`
+          );
+          console.log(`✅ Reset sequence ${seqName} to ${nextValue}`);
+        } else {
+          // Fallback: try common sequence name patterns
+          const sequenceNames = [
+            'projects_slNo_seq',
+            'projects_"slNo"_seq',
+            '"projects"_"slNo"_seq',
+          ];
+          
+          let sequenceReset = false;
+          for (const seqName of sequenceNames) {
+            try {
+              await prisma.$executeRawUnsafe(
+                `SELECT setval('${seqName}', ${nextValue}, false)`
+              );
+              sequenceReset = true;
+              console.log(`✅ Reset sequence ${seqName} to ${nextValue}`);
+              break;
+            } catch (seqError: any) {
+              // Try next sequence name
+              continue;
+            }
+          }
+          
+          if (!sequenceReset) {
+            console.warn('⚠️  Could not find or reset slNo sequence, but continuing...');
+          }
+        }
+      } catch (seqError: any) {
+        // If sequence reset fails, log but continue
+        // Prisma will handle auto-increment, but we try to prevent conflicts
+        console.warn('⚠️  Could not reset slNo sequence:', seqError.message);
+        // Don't fail the project creation - let Prisma handle it
+      }
+
       const project = await prisma.project.create({
         data: {
           customerId,
