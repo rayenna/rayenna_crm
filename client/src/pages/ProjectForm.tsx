@@ -403,9 +403,26 @@ const ProjectForm = () => {
     const allValues = getValues();
     
     // Remove immutable/system fields that shouldn't be sent to backend
-    const immutableFields = ['id', 'slNo', 'count', 'createdById', 'createdAt', 'updatedAt', 'totalAmountReceived', 'balanceAmount', 'paymentStatus', 'expectedProfit', 'customer', 'remarks'];
+    const immutableFields = [
+      'id', 'slNo', 'count', 'createdById', 'createdAt', 'updatedAt', 
+      'totalAmountReceived', 'balanceAmount', 'paymentStatus', 'expectedProfit', 
+      'customer', 'remarks', 'createdBy', 'salesperson', 'opsPerson', 
+      'documents', 'auditLogs', 'grossProfit', 'profitability', 'finalProfit',
+      'totalProjectCost', 'projectValue', 'marginEstimate'
+    ];
     immutableFields.forEach((field) => {
       delete data[field];
+    });
+    
+    // Convert numeric fields from strings to numbers (form inputs return strings)
+    const numericFields = ['systemCapacity', 'projectCost', 'advanceReceived', 'payment1', 'payment2', 'payment3', 'lastPayment'];
+    numericFields.forEach((field) => {
+      if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
+        const numValue = parseFloat(String(data[field]));
+        data[field] = isNaN(numValue) ? null : numValue;
+      } else {
+        data[field] = null;
+      }
     });
     
     // Remove customerId from update requests (customer cannot be changed after project creation)
@@ -575,6 +592,58 @@ const ProjectForm = () => {
       // Keep as object, will be stringified on backend
     }
 
+    // Clean up any remaining nested objects or arrays that shouldn't be sent
+    Object.keys(data).forEach((key) => {
+      const value = data[key];
+      // Remove nested objects (these come from API responses, not form inputs)
+      if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+        // Check if it's a plain object (not Date, not null)
+        if (value.constructor === Object) {
+          delete data[key];
+        }
+      }
+      // Remove arrays (documents, auditLogs, etc.)
+      if (Array.isArray(value)) {
+        delete data[key];
+      }
+    });
+    
+    // For new project creation, only send fields that backend expects
+    if (!isEdit) {
+      // Backend only accepts these fields for creation:
+      const allowedFields = [
+        'customerId', 'type', 'projectServiceType', 'salespersonId', 'year',
+        'systemCapacity', 'projectCost', 'confirmationDate', 'loanDetails',
+        'incentiveEligible', 'leadSource', 'leadSourceDetails',
+        'roofType', 'systemType', 'projectStatus', 'lostDate', 'lostReason', 'lostOtherReason',
+        'leadId', 'assignedOpsId', 'panelBrand', 'inverterBrand',
+        'siteAddress', 'expectedCommissioningDate', 'internalNotes',
+        // Payment fields (optional for new projects)
+        'advanceReceived', 'advanceReceivedDate', 'payment1', 'payment1Date',
+        'payment2', 'payment2Date', 'payment3', 'payment3Date',
+        'lastPayment', 'lastPaymentDate',
+        // Execution fields (optional for new projects)
+        'mnrePortalRegistrationDate', 'feasibilityDate', 'registrationDate',
+        'installationCompletionDate', 'subsidyRequestDate', 'subsidyCreditedDate',
+        'mnreInstallationDetails',
+      ];
+      
+      // Remove any fields not in the allowed list
+      Object.keys(data).forEach((key) => {
+        if (!allowedFields.includes(key)) {
+          delete data[key];
+        }
+      });
+    }
+    
+    // Ensure empty strings for numeric fields are converted to null
+    if (data.systemCapacity === '' || data.systemCapacity === undefined) {
+      data.systemCapacity = null;
+    }
+    if (data.projectCost === '' || data.projectCost === undefined) {
+      data.projectCost = null;
+    }
+    
     console.log('Submitting data:', data); // Debug log
     // Debug: Log full data object
     console.log('Submitting data (full):', JSON.stringify(data, null, 2));
@@ -864,6 +933,8 @@ const ProjectForm = () => {
                   <option value={LeadSource.GOOGLE}>Google</option>
                   <option value={LeadSource.CHANNEL_PARTNER}>Channel Partner</option>
                   <option value={LeadSource.DIGITAL_MARKETING}>Digital Marketing</option>
+                  <option value={LeadSource.SALES}>Sales</option>
+                  <option value={LeadSource.MANAGEMENT_CONNECT}>Management Connect</option>
                   <option value={LeadSource.OTHER}>Other</option>
                 </select>
               </div>

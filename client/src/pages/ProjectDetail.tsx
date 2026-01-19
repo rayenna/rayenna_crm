@@ -142,6 +142,8 @@ const ProjectDetail = () => {
                     {project.leadSource === 'GOOGLE' && 'Google'}
                     {project.leadSource === 'CHANNEL_PARTNER' && 'Channel Partner'}
                     {project.leadSource === 'DIGITAL_MARKETING' && 'Digital Marketing'}
+                    {project.leadSource === 'SALES' && 'Sales'}
+                    {project.leadSource === 'MANAGEMENT_CONNECT' && 'Management Connect'}
                     {project.leadSource === 'OTHER' && 'Other'}
                     {project.leadSourceDetails && (
                       <span className="ml-2 text-gray-600">

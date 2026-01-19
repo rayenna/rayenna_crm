@@ -10,13 +10,23 @@ interface FinanceDashboardProps {
 }
 
 const FinanceDashboard = ({ selectedFYs, selectedMonths }: FinanceDashboardProps) => {
+  // Fetch dashboard metrics with filters (for metric cards only)
   const { data, isLoading } = useQuery({
-    queryKey: ['dashboard', 'finance', selectedFYs, selectedMonths],
+    queryKey: ['dashboard', 'finance', 'metrics', selectedFYs, selectedMonths],
     queryFn: async () => {
       const params = new URLSearchParams()
       selectedFYs.forEach((fy) => params.append('fy', fy))
       selectedMonths.forEach((month) => params.append('month', month))
       const res = await axiosInstance.get(`/api/dashboard/finance?${params.toString()}`)
+      return res.data
+    },
+  })
+
+  // Fetch unfiltered chart data separately (charts have their own filters)
+  const { data: chartData } = useQuery({
+    queryKey: ['dashboard', 'finance', 'charts'],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/api/dashboard/finance`)
       return res.data
     },
   })
@@ -67,8 +77,9 @@ const FinanceDashboard = ({ selectedFYs, selectedMonths }: FinanceDashboardProps
       </div>
 
       {/* Project Value and Profit by Financial Year - Grouped Column Chart */}
+      {/* Charts use unfiltered data and have their own independent filters */}
       <div className="w-full bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <ProjectValueProfitByFYChart data={data?.projectValueProfitByFY || []} />
+        <ProjectValueProfitByFYChart data={chartData?.projectValueProfitByFY || []} />
       </div>
     </div>
   )

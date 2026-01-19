@@ -11,13 +11,23 @@ interface OperationsDashboardProps {
 }
 
 const OperationsDashboard = ({ selectedFYs, selectedMonths }: OperationsDashboardProps) => {
+  // Fetch dashboard metrics with filters (for metric cards only)
   const { data, isLoading } = useQuery({
-    queryKey: ['dashboard', 'operations', selectedFYs, selectedMonths],
+    queryKey: ['dashboard', 'operations', 'metrics', selectedFYs, selectedMonths],
     queryFn: async () => {
       const params = new URLSearchParams()
       selectedFYs.forEach((fy) => params.append('fy', fy))
       selectedMonths.forEach((month) => params.append('month', month))
       const res = await axiosInstance.get(`/api/dashboard/operations?${params.toString()}`)
+      return res.data
+    },
+  })
+
+  // Fetch unfiltered chart data separately (charts have their own filters)
+  const { data: chartData } = useQuery({
+    queryKey: ['dashboard', 'operations', 'charts'],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/api/dashboard/operations`)
       return res.data
     },
   })
@@ -70,26 +80,20 @@ const OperationsDashboard = ({ selectedFYs, selectedMonths }: OperationsDashboar
       )}
 
       {/* Project Value and Profit by Financial Year - Grouped Column Chart */}
+      {/* Charts use unfiltered data and have their own independent filters */}
       <div className="w-full bg-gradient-to-br from-white via-primary-50/30 to-white rounded-2xl shadow-2xl p-6 border-2 border-primary-200/50 backdrop-blur-sm">
-        <ProjectValueProfitByFYChart data={data?.projectValueProfitByFY || []} />
+        <ProjectValueProfitByFYChart data={chartData?.projectValueProfitByFY || []} />
       </div>
 
       {/* Project Value by Segment Pie Chart */}
-      {data?.projectValueByType && data.projectValueByType.length > 0 ? (
-        <div className="w-full">
-          <ProjectValuePieChart 
-            data={data.projectValueByType} 
-            availableFYs={data?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []}
-            dashboardType="operations"
-          />
-        </div>
-      ) : (
-        <div className="w-full bg-gradient-to-br from-white via-primary-50/30 to-white shadow-xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-6 backdrop-blur-sm">
-          <div className="flex items-center justify-center h-64 text-gray-500">
-            <p>No project data available</p>
-          </div>
-        </div>
-      )}
+      {/* Chart fetches its own data independently based on its own filter */}
+      <div className="w-full">
+        <ProjectValuePieChart 
+          data={chartData?.projectValueByType || []} 
+          availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []}
+          dashboardType="operations"
+        />
+      </div>
     </div>
   )
 }

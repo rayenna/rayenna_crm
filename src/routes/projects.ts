@@ -369,6 +369,39 @@ router.post(
         incentiveEligible,
         leadSource,
         leadSourceDetails,
+        // Additional fields that may be sent from form
+        roofType,
+        systemType,
+        projectStatus,
+        lostDate,
+        lostReason,
+        lostOtherReason,
+        leadId,
+        assignedOpsId,
+        panelBrand,
+        inverterBrand,
+        siteAddress,
+        expectedCommissioningDate,
+        internalNotes,
+        // Payment fields (optional for new projects)
+        advanceReceived,
+        advanceReceivedDate,
+        payment1,
+        payment1Date,
+        payment2,
+        payment2Date,
+        payment3,
+        payment3Date,
+        lastPayment,
+        lastPaymentDate,
+        // Execution fields (optional for new projects)
+        mnrePortalRegistrationDate,
+        feasibilityDate,
+        registrationDate,
+        installationCompletionDate,
+        subsidyRequestDate,
+        subsidyCreditedDate,
+        mnreInstallationDetails,
       } = req.body;
 
       // Verify customer exists and get salespersonId
@@ -422,15 +455,29 @@ router.post(
       // Initially grossProfit is null, so profitability will be null
       const profitability = calculateProfitability(grossProfit, projectCostNum);
 
+      // Convert payment amounts from strings to numbers
+      const advanceReceivedNum = advanceReceived ? (isNaN(parseFloat(advanceReceived)) ? 0 : parseFloat(advanceReceived)) : 0;
+      const payment1Num = payment1 ? (isNaN(parseFloat(payment1)) ? 0 : parseFloat(payment1)) : 0;
+      const payment2Num = payment2 ? (isNaN(parseFloat(payment2)) ? 0 : parseFloat(payment2)) : 0;
+      const payment3Num = payment3 ? (isNaN(parseFloat(payment3)) ? 0 : parseFloat(payment3)) : 0;
+      const lastPaymentNum = lastPayment ? (isNaN(parseFloat(lastPayment)) ? 0 : parseFloat(lastPayment)) : 0;
+
       // Calculate payments
       const paymentCalculations = calculatePayments({
-        advanceReceived: 0,
-        payment1: 0,
-        payment2: 0,
-        payment3: 0,
-        lastPayment: 0,
+        advanceReceived: advanceReceivedNum,
+        payment1: payment1Num,
+        payment2: payment2Num,
+        payment3: payment3Num,
+        lastPayment: lastPaymentNum,
         projectCost: projectCostNum,
       });
+
+      // Convert date strings to Date objects
+      const convertDate = (dateStr: any): Date | null => {
+        if (!dateStr) return null;
+        const date = new Date(dateStr);
+        return isNaN(date.getTime()) ? null : date;
+      };
 
       const project = await prisma.project.create({
         data: {
@@ -451,6 +498,39 @@ router.post(
           expectedProfit,
           grossProfit,
           profitability,
+          // Additional fields
+          roofType: roofType || null,
+          systemType: systemType || null,
+          projectStatus: projectStatus || ProjectStatus.LEAD,
+          lostDate: convertDate(lostDate),
+          lostReason: lostReason || null,
+          lostOtherReason: lostOtherReason || null,
+          leadId: leadId || null,
+          assignedOpsId: assignedOpsId || null,
+          panelBrand: panelBrand || null,
+          inverterBrand: inverterBrand || null,
+          siteAddress: siteAddress || null,
+          expectedCommissioningDate: convertDate(expectedCommissioningDate),
+          internalNotes: internalNotes || null,
+          // Execution fields
+          mnrePortalRegistrationDate: convertDate(mnrePortalRegistrationDate),
+          feasibilityDate: convertDate(feasibilityDate),
+          registrationDate: convertDate(registrationDate),
+          installationCompletionDate: convertDate(installationCompletionDate),
+          subsidyRequestDate: convertDate(subsidyRequestDate),
+          subsidyCreditedDate: convertDate(subsidyCreditedDate),
+          mnreInstallationDetails: mnreInstallationDetails || null,
+          // Payment fields
+          advanceReceived: advanceReceivedNum,
+          advanceReceivedDate: convertDate(advanceReceivedDate),
+          payment1: payment1Num,
+          payment1Date: convertDate(payment1Date),
+          payment2: payment2Num,
+          payment2Date: convertDate(payment2Date),
+          payment3: payment3Num,
+          payment3Date: convertDate(payment3Date),
+          lastPayment: lastPaymentNum,
+          lastPaymentDate: convertDate(lastPaymentDate),
           ...paymentCalculations,
           createdById: req.user!.id,
         },
@@ -475,7 +555,20 @@ router.post(
 
       res.status(201).json(project);
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error('❌ Error creating project:', {
+        message: error.message,
+        code: error.code,
+        meta: error.meta,
+        stack: error.stack,
+        body: req.body,
+      });
+      res.status(500).json({ 
+        error: error.message || 'Failed to create project',
+        details: process.env.NODE_ENV === 'development' ? {
+          code: error.code,
+          meta: error.meta,
+        } : undefined,
+      });
     }
   }
 );

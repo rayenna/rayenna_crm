@@ -13,8 +13,9 @@ interface ManagementDashboardProps {
 }
 
 const ManagementDashboard = ({ selectedFYs, selectedMonths }: ManagementDashboardProps) => {
+  // Fetch dashboard metrics with filters (for metric cards only)
   const { data, isLoading } = useQuery({
-    queryKey: ['dashboard', 'management', selectedFYs, selectedMonths],
+    queryKey: ['dashboard', 'management', 'metrics', selectedFYs, selectedMonths],
     queryFn: async () => {
       const params = new URLSearchParams()
       selectedFYs.forEach((fy) => params.append('fy', fy))
@@ -24,17 +25,26 @@ const ManagementDashboard = ({ selectedFYs, selectedMonths }: ManagementDashboar
     },
   })
 
+  // Fetch unfiltered chart data separately (charts have their own filters)
+  const { data: chartData } = useQuery({
+    queryKey: ['dashboard', 'management', 'charts'],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/api/dashboard/management`)
+      return res.data
+    },
+  })
+
   if (isLoading) return <div>Loading...</div>
 
   // Debug: Log data to console (can be removed in production)
   if (import.meta.env.DEV) {
-    console.log('Management Dashboard Data:', data)
-    console.log('Project Value Profit By FY:', data?.projectValueProfitByFY)
+    console.log('Management Dashboard Data (Metrics):', data)
+    console.log('Management Dashboard Data (Charts):', chartData)
   }
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <MetricCard
           title="Total Leads"
           value={data?.sales?.totalLeads || 0}
@@ -89,26 +99,26 @@ const ManagementDashboard = ({ selectedFYs, selectedMonths }: ManagementDashboar
       </div>
 
       {/* Project Value and Profit by Financial Year - Grouped Column Chart */}
+      {/* Charts use unfiltered data and have their own independent filters */}
       <div className="w-full bg-gradient-to-br from-white via-primary-50/30 to-white rounded-2xl shadow-2xl p-6 border-2 border-primary-200/50 backdrop-blur-sm">
-        <ProjectValueProfitByFYChart data={data?.projectValueProfitByFY || []} />
+        <ProjectValueProfitByFYChart data={chartData?.projectValueProfitByFY || []} />
       </div>
 
       {/* Charts Section - Side by Side */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Project Value by Segment Pie Chart */}
-        {data?.projectValueByType && data.projectValueByType.length > 0 && (
-          <div className="w-full">
-            <ProjectValuePieChart 
-              data={data.projectValueByType} 
-              availableFYs={data?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []}
-              dashboardType="management"
-            />
-          </div>
-        )}
+        {/* Chart fetches its own data independently based on its own filter */}
+        <div className="w-full">
+          <ProjectValuePieChart 
+            data={chartData?.projectValueByType || []} 
+            availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []}
+            dashboardType="management"
+          />
+        </div>
         {/* Customer Profitability Word Cloud */}
         <div className="w-full">
           <ProfitabilityWordCloud 
-            availableFYs={data?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []} 
+            availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []} 
           />
         </div>
       </div>
@@ -116,7 +126,7 @@ const ManagementDashboard = ({ selectedFYs, selectedMonths }: ManagementDashboar
       {/* Sales Team Performance Treemap */}
       <div className="w-full">
         <SalesTeamTreemap 
-          availableFYs={data?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []} 
+          availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []} 
         />
       </div>
     </div>

@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import axiosInstance from '../../utils/axios'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 interface FYData {
@@ -8,21 +10,55 @@ interface FYData {
 }
 
 interface ProjectValueProfitByFYChartProps {
-  data: FYData[]
+  data?: FYData[] // Optional - chart can fetch its own data
 }
 
-const ProjectValueProfitByFYChart = ({ data }: ProjectValueProfitByFYChartProps) => {
+const ProjectValueProfitByFYChart = ({ data: initialData }: ProjectValueProfitByFYChartProps) => {
   const [selectedFY, setSelectedFY] = useState<string>('all')
+
+  // Fetch chart data independently based on chart's own filter
+  // This ensures the chart filter works independently from dashboard filters
+  const { data: fetchedData, isLoading } = useQuery({
+    queryKey: ['projectValueProfitByFY', selectedFY],
+    queryFn: async () => {
+      if (selectedFY === 'all') {
+        // Fetch all data when 'all' is selected
+        const res = await axiosInstance.get(`/api/dashboard/management`)
+        return res.data.projectValueProfitByFY || []
+      }
+      // Fetch filtered data when specific FY is selected
+      const res = await axiosInstance.get(`/api/dashboard/management?fy=${selectedFY}`)
+      return res.data.projectValueProfitByFY || []
+    },
+    enabled: true, // Always fetch - chart manages its own data
+    staleTime: 30000, // Cache for 30 seconds
+  })
+
+  // Use fetched data (chart manages its own filtering)
+  // Fallback to initialData only if no data fetched yet (for initial render)
+  const chartData = fetchedData || initialData || []
 
   // Debug logging (can be removed in production)
   if (import.meta.env.DEV) {
-    console.log('ProjectValueProfitByFYChart - Data received:', data)
+    console.log('ProjectValueProfitByFYChart - Initial data:', initialData)
+    console.log('ProjectValueProfitByFYChart - Fetched data:', fetchedData)
+    console.log('ProjectValueProfitByFYChart - Chart data (filtered):', chartData)
   }
-  
-  // Normalize data - ensure it's an array
-  const chartData = Array.isArray(data) ? data : []
 
   // Show placeholder if no data
+  if (isLoading) {
+    return (
+      <div className="bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-6 backdrop-blur-sm">
+        <div className="flex items-center justify-center h-64 sm:h-96">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            <p className="mt-4 text-sm text-gray-500">Loading chart data...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (!chartData || chartData.length === 0) {
     return (
       <div className="bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-6 backdrop-blur-sm">

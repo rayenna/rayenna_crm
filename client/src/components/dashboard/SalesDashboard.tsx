@@ -12,8 +12,9 @@ interface SalesDashboardProps {
 }
 
 const SalesDashboard = ({ selectedFYs, selectedMonths }: SalesDashboardProps) => {
+  // Fetch dashboard metrics with filters (for metric cards only)
   const { data, isLoading } = useQuery({
-    queryKey: ['dashboard', 'sales', selectedFYs, selectedMonths],
+    queryKey: ['dashboard', 'sales', 'metrics', selectedFYs, selectedMonths],
     queryFn: async () => {
       const params = new URLSearchParams()
       selectedFYs.forEach((fy) => params.append('fy', fy))
@@ -23,20 +24,27 @@ const SalesDashboard = ({ selectedFYs, selectedMonths }: SalesDashboardProps) =>
     },
   })
 
+  // Fetch unfiltered chart data separately (charts have their own filters)
+  const { data: chartData } = useQuery({
+    queryKey: ['dashboard', 'sales', 'charts'],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/api/dashboard/sales`)
+      return res.data
+    },
+  })
+
   if (isLoading) return <div>Loading...</div>
 
   // Debug: Log data to console (can be removed in production)
   if (import.meta.env.DEV) {
-    console.log('Sales Dashboard Data:', data)
-    console.log('Project Value Profit By FY:', data?.projectValueProfitByFY)
-    console.log('Project Value By Type:', data?.projectValueByType)
-    console.log('Word Cloud Data:', data?.wordCloudData)
+    console.log('Sales Dashboard Data (Metrics):', data)
+    console.log('Sales Dashboard Data (Charts):', chartData)
   }
 
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Top Metrics Row - 5 columns */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <MetricCard
           title="Total Leads"
           value={data?.leads?.total || 0}
@@ -92,33 +100,26 @@ const SalesDashboard = ({ selectedFYs, selectedMonths }: SalesDashboardProps) =>
       </div>
 
       {/* Project Value and Profit by Financial Year - Grouped Column Chart */}
+      {/* Charts use unfiltered data and have their own independent filters */}
       <div className="w-full bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <ProjectValueProfitByFYChart data={data?.projectValueProfitByFY || []} />
+        <ProjectValueProfitByFYChart data={chartData?.projectValueProfitByFY || []} />
       </div>
 
       {/* Charts Section - Side by Side */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Project Value by Segment Pie Chart */}
+        {/* Chart fetches its own data independently based on its own filter */}
         <div className="w-full">
-          {data?.projectValueByType && data.projectValueByType.length > 0 ? (
-            <ProjectValuePieChart 
-              data={data.projectValueByType} 
-              availableFYs={data?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []}
-              dashboardType="sales"
-            />
-          ) : (
-            <div className="w-full bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-6 flex items-center justify-center min-h-[500px] backdrop-blur-sm">
-              <div className="text-center text-gray-500">
-                <p className="text-base font-medium">No project data available</p>
-                <p className="text-sm mt-2">Project Value by Customer Segment chart will appear here when data is available.</p>
-              </div>
-            </div>
-          )}
+          <ProjectValuePieChart 
+            data={chartData?.projectValueByType || []} 
+            availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []}
+            dashboardType="sales"
+          />
         </div>
         {/* Customer Profitability Word Cloud */}
         <div className="w-full">
           <ProfitabilityWordCloud 
-            availableFYs={data?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []} 
+            availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []} 
           />
         </div>
       </div>

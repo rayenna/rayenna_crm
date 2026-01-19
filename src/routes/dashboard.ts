@@ -160,11 +160,15 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       prisma.project.count({
         where: { ...where, projectStatus: { not: ProjectStatus.LEAD } },
       }),
-      // Total capacity sold
-      prisma.project.aggregate({
-        where: { ...where, systemCapacity: { not: null } },
-        _sum: { systemCapacity: true },
-      }),
+      // Total capacity sold (only confirmed/completed projects, same filter as Total Revenue)
+      (async () => {
+        const capacityWhere = getRevenueWhere(where);
+        capacityWhere.systemCapacity = { not: null };
+        return await prisma.project.aggregate({
+          where: capacityWhere,
+          _sum: { systemCapacity: true },
+        });
+      })(),
       // Total revenue (only confirmed/completed projects, excluding leads/survey/proposal)
       (async () => {
         const revenueWhere = getRevenueWhere(where);
@@ -390,11 +394,12 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       },
     });
 
-    // Total Pipeline - Sum of projectCost for projects in Lead (null), Site Survey, or Proposal stages
+    // Total Pipeline - Sum of projectCost for projects in Lead (null), Site Survey, or Proposal stages (exclude LOST projects)
     const totalPipeline = await prisma.project.aggregate({
       where: {
         ...where,
         projectCost: { not: null },
+        projectStatus: { not: ProjectStatus.LOST }, // Exclude LOST projects
         OR: [
           { projectStage: null }, // Lead stage
           { projectStage: ProjectStage.SURVEY }, // Site Survey
@@ -842,13 +847,17 @@ router.get('/management', authenticate, async (req: Request, res) => {
       (async () => {
         const [totalLeads, totalCapacity, totalRevenue] = await Promise.all([
           prisma.project.count({ where: { ...where, projectStatus: ProjectStatus.LEAD } }),
-          prisma.project.aggregate({
-            _sum: { systemCapacity: true },
-            where: { ...where, systemCapacity: { not: null } },
-          }),
+          (async () => {
+            const capacityWhere = getRevenueWhere(where);
+            capacityWhere.systemCapacity = { not: null };
+            return await prisma.project.aggregate({
+              _sum: { systemCapacity: true },
+              where: capacityWhere, // Use same filter as Total Revenue (only confirmed/completed projects)
+            });
+          })(),
           prisma.project.aggregate({
             _sum: { projectCost: true },
-            where: { ...where, projectCost: { not: null } },
+            where: getRevenueWhere(where), // Use getRevenueWhere to exclude LOST and only include confirmed/completed projects
           }),
         ]);
         return {
@@ -976,11 +985,12 @@ router.get('/management', authenticate, async (req: Request, res) => {
         totalProfit: profitByFY.find((item) => item.year === fy)?._sum.grossProfit || 0,
       }));
 
-    // Total Pipeline - Sum of projectCost for projects in Lead (null), Site Survey, or Proposal stages
+    // Total Pipeline - Sum of projectCost for projects in Lead (null), Site Survey, or Proposal stages (exclude LOST projects)
     const totalPipeline = await prisma.project.aggregate({
       where: {
         ...where,
         projectCost: { not: null },
+        projectStatus: { not: ProjectStatus.LOST }, // Exclude LOST projects
         OR: [
           { projectStage: null }, // Lead stage
           { projectStage: ProjectStage.SURVEY }, // Site Survey

@@ -16,7 +16,7 @@ const MetricCard = ({ title, value, icon, gradient, trend }: MetricCardProps) =>
   const defaultGradient = gradient || 'from-primary-500 to-primary-600'
 
   return (
-    <div className="group relative bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border-2 border-transparent hover:border-primary-200 animate-slide-up transform hover:-translate-y-2">
+    <div className="group relative bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border-2 border-transparent hover:border-primary-200 animate-slide-up transform hover:-translate-y-2 min-w-0">
       {/* Animated Gradient Background */}
       <div className={`absolute inset-0 bg-gradient-to-br ${defaultGradient} opacity-0 group-hover:opacity-10 transition-opacity duration-500`}></div>
       
@@ -27,12 +27,12 @@ const MetricCard = ({ title, value, icon, gradient, trend }: MetricCardProps) =>
       {/* Shimmer Effect */}
       <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
       
-      <div className="relative p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className={`p-4 rounded-2xl bg-gradient-to-br ${defaultGradient} shadow-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 relative overflow-hidden`}>
+      <div className="relative p-4 sm:p-6">
+        <div className="flex items-start justify-between mb-3 sm:mb-4 gap-2">
+          <div className={`p-3 sm:p-4 rounded-2xl bg-gradient-to-br ${defaultGradient} shadow-2xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 relative overflow-hidden flex-shrink-0`}>
             {/* Icon glow effect */}
             <div className={`absolute inset-0 bg-gradient-to-br ${defaultGradient} opacity-50 blur-xl`}></div>
-            <div className="relative text-white text-3xl transform group-hover:scale-110 transition-transform duration-300">
+            <div className="relative text-white text-xl sm:text-2xl lg:text-3xl transform group-hover:scale-110 transition-transform duration-300">
               {icon}
             </div>
           </div>
@@ -48,11 +48,11 @@ const MetricCard = ({ title, value, icon, gradient, trend }: MetricCardProps) =>
           )}
         </div>
         
-        <div className="space-y-2">
-          <div className="text-4xl font-extrabold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent group-hover:from-primary-700 group-hover:via-primary-600 group-hover:to-primary-700 transition-all duration-300">
-            {value}
+        <div className="space-y-2 min-w-0 flex-1">
+          <div className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-extrabold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent group-hover:from-primary-700 group-hover:via-primary-600 group-hover:to-primary-700 transition-all duration-300 break-words leading-tight">
+            <span className="block" title={String(value)}>{value}</span>
           </div>
-          <div className="text-sm font-semibold text-gray-600 group-hover:text-primary-600 transition-colors">{title}</div>
+          <div className="text-xs sm:text-sm font-semibold text-gray-600 group-hover:text-primary-600 transition-colors" title={title}>{title}</div>
         </div>
       </div>
     </div>
