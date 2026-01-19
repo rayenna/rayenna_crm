@@ -266,7 +266,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
 
     const profitByFY = await prisma.project.groupBy({
       by: ['year'],
-      where: { grossProfit: { not: null }, ...where },
+      where: { ...getRevenueWhere(where), grossProfit: { not: null } },
       _sum: { grossProfit: true },
     });
 
@@ -618,7 +618,7 @@ router.get('/operations', authenticate, async (req: Request, res) => {
 
     const profitByFY = await prisma.project.groupBy({
       by: ['year'],
-      where: { grossProfit: { not: null } },
+      where: { ...getRevenueWhere(where), grossProfit: { not: null } },
       _sum: { grossProfit: true },
     });
 
@@ -795,7 +795,7 @@ router.get('/finance', authenticate, async (req: Request, res) => {
 
     const profitByFY = await prisma.project.groupBy({
       by: ['year'],
-      where: { grossProfit: { not: null } },
+      where: { ...getRevenueWhere(where), grossProfit: { not: null } },
       _sum: { grossProfit: true },
     });
 
@@ -967,7 +967,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
 
     const profitByFY = await prisma.project.groupBy({
       by: ['year'],
-      where: { grossProfit: { not: null } },
+      where: { ...getRevenueWhere(where), grossProfit: { not: null } },
       _sum: { grossProfit: true },
     });
 

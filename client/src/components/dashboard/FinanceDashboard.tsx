@@ -79,7 +79,10 @@ const FinanceDashboard = ({ selectedFYs, selectedMonths }: FinanceDashboardProps
       {/* Project Value and Profit by Financial Year - Grouped Column Chart */}
       {/* Charts use unfiltered data and have their own independent filters */}
       <div className="w-full bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <ProjectValueProfitByFYChart data={chartData?.projectValueProfitByFY || []} />
+        <ProjectValueProfitByFYChart 
+          data={chartData?.projectValueProfitByFY || []} 
+          dashboardType="finance"
+        />
       </div>
     </div>
   )

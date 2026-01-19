@@ -11,23 +11,25 @@ interface FYData {
 
 interface ProjectValueProfitByFYChartProps {
   data?: FYData[] // Optional - chart can fetch its own data
+  dashboardType?: 'management' | 'sales' | 'operations' | 'finance' // Dashboard type to determine API endpoint
 }
 
-const ProjectValueProfitByFYChart = ({ data: initialData }: ProjectValueProfitByFYChartProps) => {
+const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'management' }: ProjectValueProfitByFYChartProps) => {
   const [selectedFY, setSelectedFY] = useState<string>('all')
 
   // Fetch chart data independently based on chart's own filter
   // This ensures the chart filter works independently from dashboard filters
   const { data: fetchedData, isLoading } = useQuery({
-    queryKey: ['projectValueProfitByFY', selectedFY],
+    queryKey: ['projectValueProfitByFY', dashboardType, selectedFY],
     queryFn: async () => {
+      const endpoint = `/api/dashboard/${dashboardType}`
       if (selectedFY === 'all') {
         // Fetch all data when 'all' is selected
-        const res = await axiosInstance.get(`/api/dashboard/management`)
+        const res = await axiosInstance.get(endpoint)
         return res.data.projectValueProfitByFY || []
       }
       // Fetch filtered data when specific FY is selected
-      const res = await axiosInstance.get(`/api/dashboard/management?fy=${selectedFY}`)
+      const res = await axiosInstance.get(`${endpoint}?fy=${selectedFY}`)
       return res.data.projectValueProfitByFY || []
     },
     enabled: true, // Always fetch - chart manages its own data

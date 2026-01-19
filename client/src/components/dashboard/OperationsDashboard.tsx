@@ -82,7 +82,10 @@ const OperationsDashboard = ({ selectedFYs, selectedMonths }: OperationsDashboar
       {/* Project Value and Profit by Financial Year - Grouped Column Chart */}
       {/* Charts use unfiltered data and have their own independent filters */}
       <div className="w-full bg-gradient-to-br from-white via-primary-50/30 to-white rounded-2xl shadow-2xl p-6 border-2 border-primary-200/50 backdrop-blur-sm">
-        <ProjectValueProfitByFYChart data={chartData?.projectValueProfitByFY || []} />
+        <ProjectValueProfitByFYChart 
+          data={chartData?.projectValueProfitByFY || []} 
+          dashboardType="operations"
+        />
       </div>
 
       {/* Project Value by Segment Pie Chart */}
