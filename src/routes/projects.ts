@@ -910,6 +910,8 @@ router.put(
           'remarks',
           'internalNotes',
           'projectStatus', // Sales can update status
+          'leadSource', // Sales can update lead source
+          'leadSourceDetails', // Sales can update lead source details
         ];
         
         // Only process allowed fields
@@ -950,6 +952,21 @@ router.put(
               updateData[key] = numValue;
             } else if (key === 'incentiveEligible') {
               updateData[key] = Boolean(req.body[key]);
+            } else if (key === 'leadSource') {
+              // Handle enum field - must be a valid LeadSource value
+              const value = req.body[key];
+              if (value && value !== '' && Object.values(LeadSource).includes(value as LeadSource)) {
+                updateData[key] = value as LeadSource;
+              } else if (value === null || value === '' || value === 'null') {
+                updateData[key] = null;
+              }
+              // Skip invalid leadSource values (don't update)
+            } else if (key === 'leadSourceDetails') {
+              // Handle string field - convert to string or null
+              const value = req.body[key];
+              updateData[key] = value !== null && value !== undefined && value !== '' && value !== 'null'
+                ? String(value)
+                : null;
             } else {
               updateData[key] = req.body[key];
             }

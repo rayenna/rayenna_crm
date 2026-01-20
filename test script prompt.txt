@@ -1,0 +1,68 @@
+You are a senior QA automation engineer.
+
+This is a production React + Vite CRM deployed on:
+
+Frontend: https://rayenna-crm-kappa.vercel.app
+
+Backend: Render
+
+DB: Neon
+
+File uploads: Cloudinary
+
+I want you to:
+
+Install Playwright as a dev dependency
+
+Create a minimal but production-ready Playwright test suite
+
+Add tests for:
+
+App load
+
+Login (use existing valid test credentials)
+
+Dashboard load after login
+
+Customers page load
+
+One non-destructive document upload sanity test
+
+Create:
+
+playwright.config.ts
+
+tests/auth.spec.ts
+
+tests/dashboard.spec.ts
+
+tests/customers.spec.ts
+
+tests/upload.spec.ts
+
+Use best practices:
+
+Base URL config
+
+Headless mode
+
+Screenshots on failure
+
+No hard-coded secrets in code
+
+Ensure tests run with:
+
+npx playwright test
+
+
+Do NOT break existing code or configs.
+
+After generating files:
+
+Show me exactly which files were created or modified
+
+Explain how to run tests in Cursor terminal
+
+Highlight where I should update test user credentials
+
+Keep everything FREE and local-friendly.
