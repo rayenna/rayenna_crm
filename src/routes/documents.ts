@@ -387,7 +387,7 @@ router.delete(
   }
 );
 
-// View/Download document (only by uploader, admin, or management)
+// View/Download document (admin, management, sales, operations, finance, or uploader)
 router.get(
   '/:id/download',
   authenticate,
@@ -406,14 +406,18 @@ router.get(
         return res.status(404).json({ error: 'Document not found' });
       }
 
-      // Check if user is admin, management, or the uploader
+      // Check if user has permission to view/download the document
+      // Allow: ADMIN, MANAGEMENT, SALES, OPERATIONS, FINANCE, or the uploader
       const isAdmin = req.user?.role === UserRole.ADMIN;
       const isManagement = req.user?.role === UserRole.MANAGEMENT;
+      const isSales = req.user?.role === UserRole.SALES;
+      const isOperations = req.user?.role === UserRole.OPERATIONS;
+      const isFinance = req.user?.role === UserRole.FINANCE;
       const isUploader = document.uploadedById === req.user?.id;
 
-      if (!isAdmin && !isManagement && !isUploader) {
+      if (!isAdmin && !isManagement && !isSales && !isOperations && !isFinance && !isUploader) {
         return res.status(403).json({ 
-          error: 'You do not have permission to view/download this document. Only the uploader, admin, or management can access it.' 
+          error: 'You do not have permission to view/download this document. Only authorized roles or the uploader can access it.' 
         });
       }
 
