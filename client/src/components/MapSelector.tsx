@@ -25,48 +25,71 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
   // Function to parse Google Maps link and extract coordinates
   const parseMapLink = (link: string): { lat: number | null, lng: number | null } => {
     try {
+      if (!link || typeof link !== 'string') {
+        return { lat: null, lng: null }
+      }
+
+      const trimmedLink = link.trim()
+
       // Try to extract coordinates from various Google Maps URL formats
-      // Format 1: https://www.google.com/maps?q=12.9716,77.5946
-      const qMatch = link.match(/[?&]q=([+-]?\d+\.?\d*),([+-]?\d+\.?\d*)/)
-      if (qMatch) {
+      // Format 1: https://www.google.com/maps?q=12.9716,77.5946 or ?q=lat,lng
+      const qMatch = trimmedLink.match(/[?&]q=([+-]?\d+\.?\d+),([+-]?\d+\.?\d+)/)
+      if (qMatch && qMatch[1] && qMatch[2]) {
         const lat = parseFloat(qMatch[1])
         const lng = parseFloat(qMatch[2])
-        if (!isNaN(lat) && !isNaN(lng)) {
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+          console.log('Parsed coordinates from ?q= format:', { lat, lng })
           return { lat, lng }
         }
       }
 
-      // Format 2: https://www.google.com/maps/@12.9716,77.5946,15z
-      const atMatch = link.match(/@([+-]?\d+\.?\d*),([+-]?\d+\.?\d*)/)
-      if (atMatch) {
+      // Format 2: https://www.google.com/maps/@12.9716,77.5946,15z or @lat,lng
+      const atMatch = trimmedLink.match(/@([+-]?\d+\.?\d+),([+-]?\d+\.?\d+)/)
+      if (atMatch && atMatch[1] && atMatch[2]) {
         const lat = parseFloat(atMatch[1])
         const lng = parseFloat(atMatch[2])
-        if (!isNaN(lat) && !isNaN(lng)) {
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+          console.log('Parsed coordinates from @ format:', { lat, lng })
           return { lat, lng }
         }
       }
 
-      // Format 3: https://maps.google.com/?ll=12.9716,77.5946
-      const llMatch = link.match(/[?&]ll=([+-]?\d+\.?\d*),([+-]?\d+\.?\d*)/)
-      if (llMatch) {
+      // Format 3: https://maps.google.com/?ll=12.9716,77.5946 or ?ll=lat,lng
+      const llMatch = trimmedLink.match(/[?&]ll=([+-]?\d+\.?\d+),([+-]?\d+\.?\d+)/)
+      if (llMatch && llMatch[1] && llMatch[2]) {
         const lat = parseFloat(llMatch[1])
         const lng = parseFloat(llMatch[2])
-        if (!isNaN(lat) && !isNaN(lng)) {
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+          console.log('Parsed coordinates from ?ll= format:', { lat, lng })
           return { lat, lng }
         }
       }
 
-      // Format 4: Embed URL format
-      const embedMatch = link.match(/place\/.*@([+-]?\d+\.?\d*),([+-]?\d+\.?\d*)/)
-      if (embedMatch) {
+      // Format 4: Embed URL format or place/@lat,lng
+      const embedMatch = trimmedLink.match(/[\/@]([+-]?\d+\.?\d+),([+-]?\d+\.?\d+)/)
+      if (embedMatch && embedMatch[1] && embedMatch[2]) {
         const lat = parseFloat(embedMatch[1])
         const lng = parseFloat(embedMatch[2])
-        if (!isNaN(lat) && !isNaN(lng)) {
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+          console.log('Parsed coordinates from /@ format:', { lat, lng })
           return { lat, lng }
         }
       }
+
+      // Format 5: Search for any pattern like lat,lng in the URL
+      const coordPattern = trimmedLink.match(/([+-]?\d{1,2}\.\d{4,}),([+-]?\d{1,3}\.\d{4,})/)
+      if (coordPattern && coordPattern[1] && coordPattern[2]) {
+        const lat = parseFloat(coordPattern[1])
+        const lng = parseFloat(coordPattern[2])
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+          console.log('Parsed coordinates from pattern match:', { lat, lng })
+          return { lat, lng }
+        }
+      }
+
+      console.log('Could not parse coordinates from link:', trimmedLink)
     } catch (error) {
-      console.error('Error parsing map link:', error)
+      console.error('Error parsing map link:', error, link)
     }
     return { lat: null, lng: null }
   }
@@ -131,17 +154,36 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
   }
 
   const handleMapLinkChange = (value: string) => {
-    setMapLink(value)
-    if (value.trim()) {
-      const coords = parseMapLink(value)
+    console.log('handleMapLinkChange called with:', value)
+    
+    if (value && value.trim()) {
+      const trimmedValue = value.trim()
+      console.log('Parsing map link:', trimmedValue)
+      const coords = parseMapLink(trimmedValue)
+      console.log('Parsed coordinates:', coords)
+      
       if (coords.lat !== null && coords.lng !== null) {
+        // Update all state
+        setMapLink(trimmedValue)
         setLatInput(coords.lat.toString())
         setLngInput(coords.lng.toString())
         onLocationChange(coords.lat, coords.lng)
         // Update map URL
         const url = `https://maps.google.com/maps?q=${coords.lat},${coords.lng}&hl=en&z=15&output=embed`
         setMapUrl(url)
+        console.log('✅ Successfully extracted and set coordinates:', { lat: coords.lat, lng: coords.lng })
+      } else {
+        // Still update the link display even if we can't parse coordinates
+        setMapLink(trimmedValue)
+        console.log('⚠️ Could not extract valid coordinates from link:', trimmedValue)
       }
+    } else {
+      // Clear coordinates if link is empty
+      setMapLink('')
+      setLatInput('')
+      setLngInput('')
+      onLocationChange(null, null)
+      setMapUrl('')
     }
   }
 
@@ -325,13 +367,35 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Google Maps Link</label>
+              <div className="flex gap-2">
               <input
-                type="url"
+                type="text"
                 value={mapLink}
-                onChange={(e) => handleMapLinkChange(e.target.value)}
+                onChange={(e) => {
+                  handleMapLinkChange(e.target.value)
+                }}
+                onPaste={(e) => {
+                  // Handle paste event - wait for paste to complete
+                  setTimeout(() => {
+                    const pastedValue = (e.target as HTMLInputElement).value
+                    console.log('Pasted value:', pastedValue)
+                    handleMapLinkChange(pastedValue)
+                  }, 10)
+                }}
                 placeholder="https://www.google.com/maps?q=12.9716,77.5946"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
               />
+                {mapLink && (
+                  <a
+                    href={mapLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-primary-600 text-white text-sm rounded-md hover:bg-primary-700 transition-colors whitespace-nowrap"
+                  >
+                    Open Map
+                  </a>
+                )}
+              </div>
               <p className="text-xs text-gray-400 mt-1">Paste a Google Maps link to auto-fill coordinates and view map</p>
               {mapLink && (
                 <div className="mt-2">
