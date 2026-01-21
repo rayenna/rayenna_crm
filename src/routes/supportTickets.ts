@@ -370,4 +370,44 @@ router.patch(
   }
 );
 
+/**
+ * DELETE /api/support-tickets/:ticketId
+ * Delete a support ticket completely
+ * Auth: ADMIN only
+ */
+router.delete(
+  '/:ticketId',
+  authenticate,
+  async (req: Request, res: Response) => {
+    try {
+      // Check permissions - Only ADMIN can delete tickets
+      const userRole = req.user?.role;
+      if (userRole !== UserRole.ADMIN) {
+        return res.status(403).json({ error: 'Only ADMIN users can delete support tickets' });
+      }
+
+      const { ticketId } = req.params;
+
+      // Verify ticket exists
+      const ticket = await prisma.supportTicket.findUnique({
+        where: { id: ticketId },
+      });
+
+      if (!ticket) {
+        return res.status(404).json({ error: 'Support ticket not found' });
+      }
+
+      // Delete ticket (cascade will delete all activities)
+      await prisma.supportTicket.delete({
+        where: { id: ticketId },
+      });
+
+      res.json({ message: 'Support ticket deleted successfully' });
+    } catch (error: any) {
+      console.error('Error deleting support ticket:', error);
+      res.status(500).json({ error: error.message || 'Failed to delete ticket' });
+    }
+  }
+);
+
 export default router;

@@ -20,6 +20,7 @@ const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) =
   const [followUpDate, setFollowUpDate] = useState('')
 
   const canManageTickets = hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS])
+  const isAdmin = hasRole([UserRole.ADMIN])
 
   // Fetch full ticket details with activities
   const { data: fullTicket, isLoading } = useQuery({
@@ -65,6 +66,20 @@ const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) =
     },
   })
 
+  const deleteTicketMutation = useMutation({
+    mutationFn: async () => {
+      await axiosInstance.delete(`/api/support-tickets/${ticket.id}`)
+    },
+    onSuccess: () => {
+      toast.success('Ticket deleted successfully')
+      queryClient.invalidateQueries({ queryKey: ['support-tickets', ticket.projectId] })
+      onClose() // Close modal after deletion
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to delete ticket')
+    },
+  })
+
   const getStatusColor = (status: SupportTicketStatus) => {
     switch (status) {
       case SupportTicketStatus.OPEN:
@@ -107,6 +122,12 @@ const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) =
   const handleCloseTicket = () => {
     if (window.confirm(`Are you sure you want to close ticket ${ticket.ticketNumber}?`)) {
       closeTicketMutation.mutate()
+    }
+  }
+
+  const handleDeleteTicket = () => {
+    if (window.confirm(`Are you sure you want to permanently delete ticket ${ticket.ticketNumber}? This action cannot be undone and will delete all associated activities.`)) {
+      deleteTicketMutation.mutate()
     }
   }
 
@@ -267,8 +288,8 @@ const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) =
               </div>
 
               {/* Actions */}
-              {canManageTickets && displayTicket.status !== SupportTicketStatus.CLOSED && (
-                <div className="flex justify-end pt-4 border-t">
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                {canManageTickets && displayTicket.status !== SupportTicketStatus.CLOSED && (
                   <button
                     onClick={handleCloseTicket}
                     className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
@@ -276,8 +297,17 @@ const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) =
                   >
                     {closeTicketMutation.isPending ? 'Closing...' : '✅ Close Ticket'}
                   </button>
-                </div>
-              )}
+                )}
+                {isAdmin && (
+                  <button
+                    onClick={handleDeleteTicket}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    disabled={deleteTicketMutation.isPending}
+                  >
+                    {deleteTicketMutation.isPending ? 'Deleting...' : '🗑️ Delete Ticket'}
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>

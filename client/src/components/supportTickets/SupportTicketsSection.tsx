@@ -19,6 +19,7 @@ const SupportTicketsSection = ({ projectId }: SupportTicketsSectionProps) => {
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null)
 
   const canManageTickets = hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS])
+  const isAdmin = hasRole([UserRole.ADMIN])
 
   const { data: tickets, isLoading } = useQuery({
     queryKey: ['support-tickets', projectId],
@@ -39,6 +40,19 @@ const SupportTicketsSection = ({ projectId }: SupportTicketsSectionProps) => {
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Failed to close ticket')
+    },
+  })
+
+  const deleteTicketMutation = useMutation({
+    mutationFn: async (ticketId: string) => {
+      await axiosInstance.delete(`/api/support-tickets/${ticketId}`)
+    },
+    onSuccess: () => {
+      toast.success('Ticket deleted successfully')
+      queryClient.invalidateQueries({ queryKey: ['support-tickets', projectId] })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to delete ticket')
     },
   })
 
@@ -71,6 +85,12 @@ const SupportTicketsSection = ({ projectId }: SupportTicketsSectionProps) => {
   const handleCloseTicket = (ticket: SupportTicket) => {
     if (window.confirm(`Are you sure you want to close ticket ${ticket.ticketNumber}?`)) {
       closeTicketMutation.mutate(ticket.id)
+    }
+  }
+
+  const handleDeleteTicket = (ticket: SupportTicket) => {
+    if (window.confirm(`Are you sure you want to permanently delete ticket ${ticket.ticketNumber}? This action cannot be undone.`)) {
+      deleteTicketMutation.mutate(ticket.id)
     }
   }
 
@@ -170,6 +190,16 @@ const SupportTicketsSection = ({ projectId }: SupportTicketsSectionProps) => {
                             disabled={closeTicketMutation.isPending}
                           >
                             ✅ Close
+                          </button>
+                        )}
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleDeleteTicket(ticket)}
+                            className="text-red-600 hover:text-red-900"
+                            title="Delete Ticket (Admin Only)"
+                            disabled={deleteTicketMutation.isPending}
+                          >
+                            🗑️ Delete
                           </button>
                         )}
                       </div>
