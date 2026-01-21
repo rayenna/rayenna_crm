@@ -89,9 +89,36 @@ router.get(
         where.salespersonId = req.user.id;
       }
 
-      // Handle array filters (multi-select) - express sends arrays when multiple values have same param name
-      // Note: Sales users don't see the salespersonId filter, so salespersonIdArray will be empty for them
-      if (statusArray.length > 0) where.projectStatus = { in: statusArray as string[] };
+      // Operations users can only see projects with specific statuses
+      // Operations can only see: CONFIRMED, UNDER_INSTALLATION, COMPLETED, COMPLETED_SUBSIDY_CREDITED
+      const operationsAllowedStatuses = [
+        ProjectStatus.CONFIRMED,
+        ProjectStatus.UNDER_INSTALLATION,
+        ProjectStatus.COMPLETED,
+        ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
+      ];
+
+      if (req.user?.role === UserRole.OPERATIONS) {
+        // If Operations user provides status filter, validate it's within allowed statuses
+        if (statusArray.length > 0) {
+          // Filter statusArray to only include allowed statuses
+          const filteredStatusArray = statusArray.filter((status) =>
+            operationsAllowedStatuses.includes(status as ProjectStatus)
+          );
+          if (filteredStatusArray.length > 0) {
+            where.projectStatus = { in: filteredStatusArray as string[] };
+          } else {
+            // If all provided statuses are invalid, set to allowed statuses (or empty result)
+            where.projectStatus = { in: operationsAllowedStatuses as string[] };
+          }
+        } else {
+          // No status filter provided, show all allowed statuses
+          where.projectStatus = { in: operationsAllowedStatuses as string[] };
+        }
+      } else if (statusArray.length > 0) {
+        // Non-Operations users can filter by any status
+        where.projectStatus = { in: statusArray as string[] };
+      }
       if (typeArray.length > 0) where.type = { in: typeArray as string[] };
       if (projectServiceTypeArray.length > 0) where.projectServiceType = { in: projectServiceTypeArray as string[] };
       // Only apply salespersonId filter for non-Sales users (Sales users already filtered above)
@@ -270,6 +297,22 @@ router.get('/:id', authenticate, async (req: Request, res) => {
       project.salespersonId !== req.user.id
     ) {
       return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Operations users can only access projects with specific statuses
+    // Operations can only see: CONFIRMED, UNDER_INSTALLATION, COMPLETED, COMPLETED_SUBSIDY_CREDITED
+    if (req.user?.role === UserRole.OPERATIONS) {
+      const allowedStatuses = [
+        ProjectStatus.CONFIRMED,
+        ProjectStatus.UNDER_INSTALLATION,
+        ProjectStatus.COMPLETED,
+        ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
+      ];
+      if (!allowedStatuses.includes(project.projectStatus)) {
+        return res.status(403).json({ 
+          error: 'Access denied. Operations users can only access projects with status: Confirmed, Installation, Completed, or Completed - Subsidy Credited.' 
+        });
+      }
     }
 
     // Always verify and recalculate grossProfit and profitability if we have the required values
@@ -642,6 +685,22 @@ router.put(
       // Prevent editing projects in Lost status (only Admin can delete)
       if (project.projectStatus === ProjectStatus.LOST && req.user?.role !== UserRole.ADMIN) {
         return res.status(403).json({ error: 'Projects in Lost status cannot be edited. Only Admin can delete them.' });
+      }
+
+      // Operations users can only edit projects with specific statuses
+      // Operations can only edit: CONFIRMED, UNDER_INSTALLATION, COMPLETED, COMPLETED_SUBSIDY_CREDITED
+      if (req.user?.role === UserRole.OPERATIONS) {
+        const allowedStatuses = [
+          ProjectStatus.CONFIRMED,
+          ProjectStatus.UNDER_INSTALLATION,
+          ProjectStatus.COMPLETED,
+          ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
+        ];
+        if (!allowedStatuses.includes(project.projectStatus)) {
+          return res.status(403).json({ 
+            error: 'Access denied. Operations users can only edit projects with status: Confirmed, Installation, Completed, or Completed - Subsidy Credited.' 
+          });
+        }
       }
 
       // Role-based access control
