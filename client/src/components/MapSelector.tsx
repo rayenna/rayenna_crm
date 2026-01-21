@@ -22,14 +22,35 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
     return ''
   }
 
+  // Check if link is a short link (goo.gl or maps.app.goo.gl)
+  const isShortLink = (link: string): boolean => {
+    return /maps\.app\.goo\.gl|goo\.gl\/maps|bit\.ly/.test(link)
+  }
+
   // Function to parse Google Maps link and extract coordinates
-  const parseMapLink = (link: string): { lat: number | null, lng: number | null } => {
+  const parseMapLink = async (link: string): Promise<{ lat: number | null, lng: number | null }> => {
     try {
       if (!link || typeof link !== 'string') {
         return { lat: null, lng: null }
       }
 
       const trimmedLink = link.trim()
+
+      // Check if it's a short link - these don't contain coordinates directly
+      if (isShortLink(trimmedLink)) {
+        console.log('Detected short link - coordinates cannot be extracted automatically')
+        // Try to follow redirect if possible (limited by CORS)
+        try {
+          const response = await fetch(trimmedLink, { method: 'HEAD', redirect: 'follow' })
+          const finalUrl = response.url || trimmedLink
+          console.log('Short link redirects to:', finalUrl)
+          // Recursively try to parse the final URL
+          return await parseMapLink(finalUrl)
+        } catch (error) {
+          console.log('Cannot follow short link redirect due to CORS restrictions')
+          return { lat: null, lng: null }
+        }
+      }
 
       // Try to extract coordinates from various Google Maps URL formats
       // Format 1: https://www.google.com/maps?q=12.9716,77.5946 or ?q=lat,lng
@@ -153,18 +174,26 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
     }
   }
 
-  const handleMapLinkChange = (value: string) => {
+  const handleMapLinkChange = async (value: string) => {
     console.log('handleMapLinkChange called with:', value)
     
     if (value && value.trim()) {
       const trimmedValue = value.trim()
+      setMapLink(trimmedValue) // Update link display immediately
+      
+      // Check if it's a short link
+      if (isShortLink(trimmedValue)) {
+        console.log('⚠️ Short link detected - please use the full Google Maps URL or enter coordinates manually')
+        // Don't try to parse short links - just show the link
+        return
+      }
+      
       console.log('Parsing map link:', trimmedValue)
-      const coords = parseMapLink(trimmedValue)
+      const coords = await parseMapLink(trimmedValue)
       console.log('Parsed coordinates:', coords)
       
       if (coords.lat !== null && coords.lng !== null) {
         // Update all state
-        setMapLink(trimmedValue)
         setLatInput(coords.lat.toString())
         setLngInput(coords.lng.toString())
         onLocationChange(coords.lat, coords.lng)
@@ -173,9 +202,8 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
         setMapUrl(url)
         console.log('✅ Successfully extracted and set coordinates:', { lat: coords.lat, lng: coords.lng })
       } else {
-        // Still update the link display even if we can't parse coordinates
-        setMapLink(trimmedValue)
         console.log('⚠️ Could not extract valid coordinates from link:', trimmedValue)
+        // Link is still stored, but coordinates aren't extracted
       }
     } else {
       // Clear coordinates if link is empty
@@ -302,7 +330,14 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
                   </a>
                 )}
               </div>
-              <p className="text-xs text-gray-400 mt-1">Paste a Google Maps link to auto-fill coordinates and view map</p>
+              <p className="text-xs text-gray-400 mt-1">
+                Paste a Google Maps link to auto-fill coordinates and view map
+                {mapLink && isShortLink(mapLink) && (
+                  <span className="block text-amber-600 mt-1 font-medium">
+                    ⚠️ Short links cannot be parsed automatically. Please use the full URL (right-click on Google Maps → "Copy link address") or enter coordinates manually.
+                  </span>
+                )}
+              </p>
             </div>
         </div>
       ) : (
@@ -396,7 +431,14 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
                   </a>
                 )}
               </div>
-              <p className="text-xs text-gray-400 mt-1">Paste a Google Maps link to auto-fill coordinates and view map</p>
+              <p className="text-xs text-gray-400 mt-1">
+                Paste a Google Maps link to auto-fill coordinates and view map
+                {mapLink && isShortLink(mapLink) && (
+                  <span className="block text-amber-600 mt-1 font-medium">
+                    ⚠️ Short links cannot be parsed automatically. Please use the full URL (right-click on Google Maps → "Copy link address") or enter coordinates manually.
+                  </span>
+                )}
+              </p>
               {mapLink && (
                 <div className="mt-2">
                   <a
