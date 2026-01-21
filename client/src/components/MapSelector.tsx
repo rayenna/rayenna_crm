@@ -10,8 +10,66 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
   const [inputMode, setInputMode] = useState<'map' | 'coordinates'>('coordinates')
   const [latInput, setLatInput] = useState<string>(latitude?.toString() || '')
   const [lngInput, setLngInput] = useState<string>(longitude?.toString() || '')
+  const [mapLink, setMapLink] = useState<string>('')
   const [mapUrl, setMapUrl] = useState<string>('')
   const mapRef = useRef<HTMLIFrameElement>(null)
+
+  // Function to generate Google Maps link from coordinates
+  const generateMapLink = (lat: number | null, lng: number | null): string => {
+    if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
+      return `https://www.google.com/maps?q=${lat},${lng}`
+    }
+    return ''
+  }
+
+  // Function to parse Google Maps link and extract coordinates
+  const parseMapLink = (link: string): { lat: number | null, lng: number | null } => {
+    try {
+      // Try to extract coordinates from various Google Maps URL formats
+      // Format 1: https://www.google.com/maps?q=12.9716,77.5946
+      const qMatch = link.match(/[?&]q=([+-]?\d+\.?\d*),([+-]?\d+\.?\d*)/)
+      if (qMatch) {
+        const lat = parseFloat(qMatch[1])
+        const lng = parseFloat(qMatch[2])
+        if (!isNaN(lat) && !isNaN(lng)) {
+          return { lat, lng }
+        }
+      }
+
+      // Format 2: https://www.google.com/maps/@12.9716,77.5946,15z
+      const atMatch = link.match(/@([+-]?\d+\.?\d*),([+-]?\d+\.?\d*)/)
+      if (atMatch) {
+        const lat = parseFloat(atMatch[1])
+        const lng = parseFloat(atMatch[2])
+        if (!isNaN(lat) && !isNaN(lng)) {
+          return { lat, lng }
+        }
+      }
+
+      // Format 3: https://maps.google.com/?ll=12.9716,77.5946
+      const llMatch = link.match(/[?&]ll=([+-]?\d+\.?\d*),([+-]?\d+\.?\d*)/)
+      if (llMatch) {
+        const lat = parseFloat(llMatch[1])
+        const lng = parseFloat(llMatch[2])
+        if (!isNaN(lat) && !isNaN(lng)) {
+          return { lat, lng }
+        }
+      }
+
+      // Format 4: Embed URL format
+      const embedMatch = link.match(/place\/.*@([+-]?\d+\.?\d*),([+-]?\d+\.?\d*)/)
+      if (embedMatch) {
+        const lat = parseFloat(embedMatch[1])
+        const lng = parseFloat(embedMatch[2])
+        if (!isNaN(lat) && !isNaN(lng)) {
+          return { lat, lng }
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing map link:', error)
+    }
+    return { lat: null, lng: null }
+  }
 
   useEffect(() => {
     if (latitude && longitude) {
@@ -20,6 +78,11 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
       // Create Google Maps embed URL (using place query)
       const url = `https://www.google.com/maps?q=${latitude},${longitude}&output=embed&z=15`
       setMapUrl(url)
+      // Generate map link
+      setMapLink(generateMapLink(latitude, longitude))
+    } else {
+      setMapLink('')
+      setMapUrl('')
     }
   }, [latitude, longitude])
 
@@ -33,11 +96,15 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
         // Update map URL
         const url = `https://www.google.com/maps?q=${lat},${lng}&output=embed&z=15`
         setMapUrl(url)
+        // Update map link
+        setMapLink(generateMapLink(lat, lng))
       } else {
         onLocationChange(lat, null)
+        setMapLink(generateMapLink(lat, null))
       }
     } else if (value === '') {
       onLocationChange(null, parseFloat(lngInput) || null)
+      setMapLink(generateMapLink(null, parseFloat(lngInput) || null))
     }
   }
 
@@ -51,11 +118,30 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
         // Update map URL
         const url = `https://www.google.com/maps?q=${lat},${lng}&output=embed&z=15`
         setMapUrl(url)
+        // Update map link
+        setMapLink(generateMapLink(lat, lng))
       } else {
         onLocationChange(null, lng)
+        setMapLink(generateMapLink(null, lng))
       }
     } else if (value === '') {
       onLocationChange(parseFloat(latInput) || null, null)
+      setMapLink(generateMapLink(parseFloat(latInput) || null, null))
+    }
+  }
+
+  const handleMapLinkChange = (value: string) => {
+    setMapLink(value)
+    if (value.trim()) {
+      const coords = parseMapLink(value)
+      if (coords.lat !== null && coords.lng !== null) {
+        setLatInput(coords.lat.toString())
+        setLngInput(coords.lng.toString())
+        onLocationChange(coords.lat, coords.lng)
+        // Update map URL
+        const url = `https://www.google.com/maps?q=${coords.lat},${coords.lng}&output=embed&z=15`
+        setMapUrl(url)
+      }
     }
   }
 
@@ -78,8 +164,10 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
           setLngInput(lng.toString())
           onLocationChange(lat, lng)
           // Update map URL
-          const url = `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6d-s6V4qZzq7hE0&q=${lat},${lng}&zoom=15`
+          const url = `https://www.google.com/maps?q=${lat},${lng}&output=embed&z=15`
           setMapUrl(url)
+          // Update map link
+          setMapLink(generateMapLink(lat, lng))
         },
         (error) => {
           console.error('Error getting location:', error)
@@ -124,30 +212,43 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
       </div>
 
       {inputMode === 'coordinates' ? (
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Latitude</label>
-            <input
-              type="number"
-              step="any"
-              value={latInput}
-              onChange={(e) => handleLatChange(e.target.value)}
-              placeholder="e.g., 12.9716"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            />
-            <p className="text-xs text-gray-400 mt-1">Range: -90 to 90</p>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Latitude</label>
+              <input
+                type="number"
+                step="any"
+                value={latInput}
+                onChange={(e) => handleLatChange(e.target.value)}
+                placeholder="e.g., 12.9716"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              />
+              <p className="text-xs text-gray-400 mt-1">Range: -90 to 90</p>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Longitude</label>
+              <input
+                type="number"
+                step="any"
+                value={lngInput}
+                onChange={(e) => handleLngChange(e.target.value)}
+                placeholder="e.g., 77.5946"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              />
+              <p className="text-xs text-gray-400 mt-1">Range: -180 to 180</p>
+            </div>
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Longitude</label>
+            <label className="block text-xs text-gray-500 mb-1">Google Maps Link</label>
             <input
-              type="number"
-              step="any"
-              value={lngInput}
-              onChange={(e) => handleLngChange(e.target.value)}
-              placeholder="e.g., 77.5946"
+              type="url"
+              value={mapLink}
+              onChange={(e) => handleMapLinkChange(e.target.value)}
+              placeholder="https://www.google.com/maps?q=12.9716,77.5946"
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
             />
-            <p className="text-xs text-gray-400 mt-1">Range: -180 to 180</p>
+            <p className="text-xs text-gray-400 mt-1">Paste a Google Maps link to auto-fill coordinates</p>
           </div>
         </div>
       ) : (
@@ -170,28 +271,41 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
               </div>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Latitude</label>
-              <input
-                type="number"
-                step="any"
-                value={latInput}
-                onChange={(e) => handleLatChange(e.target.value)}
-                placeholder="e.g., 12.9716"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-              />
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Latitude</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={latInput}
+                  onChange={(e) => handleLatChange(e.target.value)}
+                  placeholder="e.g., 12.9716"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Longitude</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={lngInput}
+                  onChange={(e) => handleLngChange(e.target.value)}
+                  placeholder="e.g., 77.5946"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                />
+              </div>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Longitude</label>
+              <label className="block text-xs text-gray-500 mb-1">Google Maps Link</label>
               <input
-                type="number"
-                step="any"
-                value={lngInput}
-                onChange={(e) => handleLngChange(e.target.value)}
-                placeholder="e.g., 77.5946"
+                type="url"
+                value={mapLink}
+                onChange={(e) => handleMapLinkChange(e.target.value)}
+                placeholder="https://www.google.com/maps?q=12.9716,77.5946"
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
               />
+              <p className="text-xs text-gray-400 mt-1">Paste a Google Maps link to auto-fill coordinates and view map</p>
             </div>
           </div>
         </div>
