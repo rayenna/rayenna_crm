@@ -191,44 +191,26 @@ router.get(
         });
 
         if (ticketFilterConditions.length > 0) {
-          // Combine ticket filter conditions with existing where conditions
-          if (ticketFilterConditions.length === 1) {
-            // Single condition - can merge directly if no existing AND
-            if (where.AND) {
-              where.AND.push(ticketFilterConditions[0]);
-            } else if (Object.keys(where).length > 0) {
-              // Has existing conditions, wrap in AND
-              const existingConditions: any[] = [];
-              Object.keys(where).forEach(key => {
-                if (key !== 'AND' && key !== 'OR') {
-                  existingConditions.push({ [key]: where[key] });
-                  delete where[key];
-                }
-              });
-              where.AND = [...existingConditions, ticketFilterConditions[0]];
-            } else {
-              // No existing conditions, add directly
-              Object.assign(where, ticketFilterConditions[0]);
-            }
-          } else {
-            // Multiple conditions - use OR for ticket filters
-            if (where.AND) {
-              where.AND.push({ OR: ticketFilterConditions });
-            } else if (Object.keys(where).length > 0) {
-              // Has existing conditions, wrap in AND
-              const existingConditions: any[] = [];
-              Object.keys(where).forEach(key => {
-                if (key !== 'AND' && key !== 'OR') {
-                  existingConditions.push({ [key]: where[key] });
-                  delete where[key];
-                }
-              });
-              where.AND = [...existingConditions, { OR: ticketFilterConditions }];
-            } else {
-              // No existing conditions
-              where.OR = ticketFilterConditions;
-            }
+          // Build the ticket filter condition
+          const ticketFilter = ticketFilterConditions.length === 1 
+            ? ticketFilterConditions[0]
+            : { OR: ticketFilterConditions };
+
+          // Ensure AND array exists
+          if (!where.AND) {
+            // Move all existing top-level conditions to AND
+            const existingConditions: any[] = [];
+            Object.keys(where).forEach(key => {
+              if (key !== 'AND' && key !== 'OR') {
+                existingConditions.push({ [key]: where[key] });
+                delete where[key];
+              }
+            });
+            where.AND = existingConditions.length > 0 ? existingConditions : [];
           }
+
+          // Add ticket filter to AND array
+          where.AND.push(ticketFilter);
         }
       }
       
@@ -242,23 +224,24 @@ router.get(
           ],
         };
         
-        // If we already have top-level conditions (like salespersonId), we need to wrap in AND
-        const topLevelKeys = Object.keys(where).filter(key => key !== 'AND' && key !== 'OR');
-        if (topLevelKeys.length > 0) {
+        // Ensure AND array exists (may have been created by ticket filter)
+        if (!where.AND) {
           // Move all existing top-level conditions into AND array
-          const existingConditions: any[] = [];
-          topLevelKeys.forEach(key => {
-            existingConditions.push({ [key]: where[key] });
-          });
-          where.AND = [...existingConditions, searchConditions];
-          // Remove moved conditions from top level
-          topLevelKeys.forEach(key => {
-            delete where[key];
-          });
-        } else {
-          // No top-level conditions, can add OR directly
-          where.OR = searchConditions.OR;
+          const topLevelKeys = Object.keys(where).filter(key => key !== 'AND' && key !== 'OR');
+          if (topLevelKeys.length > 0) {
+            const existingConditions: any[] = [];
+            topLevelKeys.forEach(key => {
+              existingConditions.push({ [key]: where[key] });
+              delete where[key];
+            });
+            where.AND = existingConditions;
+          } else {
+            where.AND = [];
+          }
         }
+
+        // Add search condition to AND array (preserving existing AND conditions including ticket filter)
+        where.AND.push(searchConditions);
       }
 
       // Build orderBy based on sortBy parameter
