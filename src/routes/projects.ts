@@ -91,7 +91,7 @@ router.get(
 
       // Operations users can only see projects with specific statuses
       // Operations can only see: CONFIRMED, UNDER_INSTALLATION, COMPLETED, COMPLETED_SUBSIDY_CREDITED
-      const operationsAllowedStatuses = [
+      const operationsAllowedStatuses: ProjectStatus[] = [
         ProjectStatus.CONFIRMED,
         ProjectStatus.UNDER_INSTALLATION,
         ProjectStatus.COMPLETED,
@@ -102,18 +102,18 @@ router.get(
         // If Operations user provides status filter, validate it's within allowed statuses
         if (statusArray.length > 0) {
           // Filter statusArray to only include allowed statuses
-          const filteredStatusArray = statusArray.filter((status) =>
+          const filteredStatusArray = statusArray.filter((status): status is ProjectStatus =>
             operationsAllowedStatuses.includes(status as ProjectStatus)
           );
           if (filteredStatusArray.length > 0) {
-            where.projectStatus = { in: filteredStatusArray as string[] };
+            where.projectStatus = { in: filteredStatusArray };
           } else {
             // If all provided statuses are invalid, set to allowed statuses (or empty result)
-            where.projectStatus = { in: operationsAllowedStatuses as string[] };
+            where.projectStatus = { in: operationsAllowedStatuses };
           }
         } else {
           // No status filter provided, show all allowed statuses
-          where.projectStatus = { in: operationsAllowedStatuses as string[] };
+          where.projectStatus = { in: operationsAllowedStatuses };
         }
       } else if (statusArray.length > 0) {
         // Non-Operations users can filter by any status
@@ -302,7 +302,7 @@ router.get('/:id', authenticate, async (req: Request, res) => {
     // Operations users can only access projects with specific statuses
     // Operations can only see: CONFIRMED, UNDER_INSTALLATION, COMPLETED, COMPLETED_SUBSIDY_CREDITED
     if (req.user?.role === UserRole.OPERATIONS) {
-      const allowedStatuses = [
+      const allowedStatuses: ProjectStatus[] = [
         ProjectStatus.CONFIRMED,
         ProjectStatus.UNDER_INSTALLATION,
         ProjectStatus.COMPLETED,
@@ -690,7 +690,7 @@ router.put(
       // Operations users can only edit projects with specific statuses
       // Operations can only edit: CONFIRMED, UNDER_INSTALLATION, COMPLETED, COMPLETED_SUBSIDY_CREDITED
       if (req.user?.role === UserRole.OPERATIONS) {
-        const allowedStatuses = [
+        const allowedStatuses: ProjectStatus[] = [
           ProjectStatus.CONFIRMED,
           ProjectStatus.UNDER_INSTALLATION,
           ProjectStatus.COMPLETED,
