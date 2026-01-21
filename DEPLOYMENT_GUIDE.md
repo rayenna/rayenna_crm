@@ -263,6 +263,15 @@ npm run dev
 - Check Neon dashboard for connection limits
 - Verify IP isn't blocked (Neon free tier may have restrictions)
 
+### Migration deploy timeout errors (P1002)
+- **Symptom**: `Error: P1002 - The database server was reached but timed out` during build
+- **Cause**: Neon connection pooler doesn't support PostgreSQL advisory locks well
+- **Solution**: The build script now includes automatic retry logic
+- **Manual Fix**: 
+  - Use Neon's direct connection string (not pooler) for migrations
+  - In Neon dashboard, get connection string without `-pooler` suffix
+  - Or wait a few minutes and redeploy (lock may have cleared)
+
 ### File uploads fail
 - Check Cloudinary credentials in Render
 - Verify Cloudinary free tier limits
