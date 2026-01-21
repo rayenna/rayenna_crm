@@ -85,6 +85,7 @@ const Projects = () => {
       filters.type.forEach((value) => params.append('type', value))
       filters.projectServiceType.forEach((value) => params.append('projectServiceType', value))
       filters.salespersonId.forEach((value) => params.append('salespersonId', value))
+      filters.supportTicketStatus.forEach((value) => params.append('supportTicketStatus', value))
       if (filters.search) params.append('search', filters.search)
       if (filters.sortBy) {
         params.append('sortBy', filters.sortBy)
@@ -221,14 +222,19 @@ const Projects = () => {
       </div>
 
       <div className="bg-white shadow rounded-lg mb-4 p-4">
-        <div className="grid grid-cols-1 gap-4 mb-4 md:grid-cols-6">
+        {/* Row 1: Search Bar */}
+        <div className="mb-4">
           <input
             type="text"
             placeholder="Search across all projects..."
-            className="border border-gray-300 rounded-md px-3 py-2"
+            className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
           />
+        </div>
+
+        {/* Row 2: Primary Filters */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           <MultiSelect
             options={statusOptions}
             selectedValues={filters.status}
@@ -247,6 +253,10 @@ const Projects = () => {
             onChange={(values) => setFilters({ ...filters, projectServiceType: values })}
             placeholder="All Project Types"
           />
+        </div>
+
+        {/* Row 3: Secondary Filters */}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${user?.role !== UserRole.SALES ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} gap-4 mb-4`}>
           <MultiSelect
             options={supportTicketStatusOptions}
             selectedValues={filters.supportTicketStatus}

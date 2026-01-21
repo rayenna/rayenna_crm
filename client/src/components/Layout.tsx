@@ -36,13 +36,13 @@ const Layout = () => {
                   className="h-12 w-auto"
                 />
               </Link>
-              {/* Desktop Navigation */}
-              <div className="hidden sm:ml-6 sm:flex sm:space-x-4">
+              {/* Desktop Navigation - Show on large screens only (lg and above) */}
+              <div className="hidden lg:ml-6 lg:flex lg:space-x-3 xl:space-x-4">
                 {filteredNav.map((item) => (
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`inline-flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                    className={`inline-flex items-center px-3 xl:px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
                       location.pathname.startsWith(item.path)
                         ? 'bg-white/25 text-white shadow-2xl font-bold backdrop-blur-md border-2 border-white/30 transform scale-105'
                         : 'text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm transform hover:scale-105'
@@ -53,28 +53,29 @@ const Layout = () => {
                 ))}
               </div>
             </div>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              {/* User info - hide on very small screens */}
-              <span className="hidden sm:inline text-sm text-white/90 font-medium">{user?.name}</span>
-              <span className="hidden lg:inline text-xs text-primary-700 bg-gradient-to-r from-white to-primary-50 px-3 sm:px-4 py-2 rounded-full font-bold shadow-lg border-2 border-white/50">
+            <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4">
+              {/* User info - show on medium screens and above, but hide when hamburger is visible */}
+              <span className="hidden md:inline lg:hidden text-sm text-white/90 font-medium truncate max-w-[100px]">{user?.name}</span>
+              <span className="hidden xl:inline text-sm text-white/90 font-medium">{user?.name}</span>
+              <span className="hidden xl:inline text-xs text-primary-700 bg-gradient-to-r from-white to-primary-50 px-3 py-2 rounded-full font-bold shadow-lg border-2 border-white/50">
                 {user?.role}
               </span>
               <Link
                 to="/change-password"
-                className="hidden sm:inline text-xs sm:text-sm text-white font-semibold hover:text-white hover:bg-white/20 px-3 py-2 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 border-2 border-white/20 hover:border-white/40 whitespace-nowrap"
+                className="hidden xl:inline text-xs sm:text-sm text-white font-semibold hover:text-white hover:bg-white/20 px-3 py-2 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 border-2 border-white/20 hover:border-white/40 whitespace-nowrap"
               >
                 Change Password
               </Link>
               <button
                 onClick={logout}
-                className="text-xs sm:text-sm text-white font-semibold hover:text-white hover:bg-white/20 px-3 py-2 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 border-2 border-white/20 hover:border-white/40 whitespace-nowrap"
+                className="hidden xl:inline text-xs sm:text-sm text-white font-semibold hover:text-white hover:bg-white/20 px-3 py-2 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 border-2 border-white/20 hover:border-white/40 whitespace-nowrap"
               >
                 Logout
               </button>
-              {/* Mobile menu button */}
+              {/* Hamburger menu button - Show on screens below lg (includes mobile landscape) */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="sm:hidden ml-2 inline-flex items-center justify-center p-2 rounded-xl text-white hover:bg-white/20 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/50 transition-all duration-300 border-2 border-white/20"
+                className="lg:hidden ml-2 inline-flex items-center justify-center p-2 rounded-xl text-white hover:bg-white/20 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/50 transition-all duration-300 border-2 border-white/20"
                 aria-label="Toggle menu"
               >
                 {mobileMenuOpen ? (
@@ -89,9 +90,9 @@ const Layout = () => {
               </button>
             </div>
           </div>
-          {/* Mobile Navigation Menu */}
+          {/* Mobile Navigation Menu - Show on screens below lg (includes mobile landscape) */}
           {mobileMenuOpen && (
-            <div className="sm:hidden pb-4 pt-2">
+            <div className="lg:hidden pb-4 pt-2">
               <div className="space-y-2">
                 {filteredNav.map((item) => (
                   <Link
