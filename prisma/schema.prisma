@@ -190,6 +190,8 @@ model Customer {
   state          String?
   country        String?
   pinCode        String? // pincode
+  latitude       Float? // Location latitude (from Google Maps)
+  longitude      Float? // Location longitude (from Google Maps)
   gstNumber      String? // GST number
   contactNumbers String? // JSON array of phone numbers (legacy)
   consumerNumber String?

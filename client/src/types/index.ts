@@ -199,6 +199,8 @@ export interface Customer {
   state?: string
   country?: string
   pinCode?: string
+  latitude?: number | null
+  longitude?: number | null
   contactNumbers?: string
   consumerNumber?: string
   email?: string

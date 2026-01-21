@@ -9,6 +9,7 @@ import { format } from 'date-fns'
 import { countries, getStatesByCountry, getCitiesByState } from '../utils/locationData'
 import { useDebounce } from '../hooks/useDebounce'
 import MultiSelect from '../components/MultiSelect'
+import MapSelector from '../components/MapSelector'
 
 const CustomerMaster = () => {
   const { user, hasRole } = useAuth()
@@ -550,6 +551,10 @@ const CustomerForm = ({
       return [customer.email]
     }
   })() : [''])
+
+  // Location coordinates state
+  const [latitude, setLatitude] = useState<number | null>(customer?.latitude || null)
+  const [longitude, setLongitude] = useState<number | null>(customer?.longitude || null)
   
   // Watch country and state for cascading dropdowns
   const selectedCountry = watch('country')
@@ -606,6 +611,8 @@ const CustomerForm = ({
       ...data,
       contactNumbers: contactNumbers.filter(cn => cn.trim() !== ''),
       email: emails.filter(e => e.trim() !== ''),
+      latitude: latitude,
+      longitude: longitude,
     }
     
     // Remove salespersonId if user doesn't have permission to change it (Sales users)
@@ -829,6 +836,15 @@ const CustomerForm = ({
                 maxLength={10}
               />
             </div>
+
+            <MapSelector
+              latitude={latitude}
+              longitude={longitude}
+              onLocationChange={(lat, lng) => {
+                setLatitude(lat)
+                setLongitude(lng)
+              }}
+            />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

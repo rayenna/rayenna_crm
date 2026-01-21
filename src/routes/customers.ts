@@ -330,6 +330,8 @@ router.post(
         state, 
         country, 
         pinCode,
+        latitude,
+        longitude,
         contactNumbers, 
         consumerNumber,
         email,
@@ -399,6 +401,8 @@ router.post(
           state: state || null,
           country: country || null,
           pinCode: pinCode || null,
+          latitude: latitude !== undefined && latitude !== null ? parseFloat(String(latitude)) : null,
+          longitude: longitude !== undefined && longitude !== null ? parseFloat(String(longitude)) : null,
           contactNumbers: contactNumbersStr,
           consumerNumber: consumerNumber || null,
           email: emailsStr,
@@ -521,6 +525,8 @@ router.put(
         state, 
         country, 
         pinCode,
+        latitude,
+        longitude,
         contactNumbers, 
         consumerNumber,
         email,
@@ -573,6 +579,12 @@ router.put(
       if (state !== undefined) updateData.state = state || null;
       if (country !== undefined) updateData.country = country || null;
       if (pinCode !== undefined) updateData.pinCode = pinCode || null;
+      if (latitude !== undefined) {
+        updateData.latitude = latitude !== null && latitude !== '' ? parseFloat(String(latitude)) : null;
+      }
+      if (longitude !== undefined) {
+        updateData.longitude = longitude !== null && longitude !== '' ? parseFloat(String(longitude)) : null;
+      }
       if (consumerNumber !== undefined) updateData.consumerNumber = consumerNumber || null;
       if (email !== undefined) updateData.email = email || null;
       if (idProofNumber !== undefined) updateData.idProofNumber = idProofNumber || null;
