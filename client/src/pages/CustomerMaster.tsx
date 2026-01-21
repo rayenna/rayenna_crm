@@ -556,6 +556,17 @@ const CustomerForm = ({
   const [latitude, setLatitude] = useState<number | null>(customer?.latitude || null)
   const [longitude, setLongitude] = useState<number | null>(customer?.longitude || null)
   
+  // Sync coordinates when customer changes (for edit mode)
+  useEffect(() => {
+    if (customer) {
+      setLatitude(customer.latitude || null)
+      setLongitude(customer.longitude || null)
+    } else {
+      setLatitude(null)
+      setLongitude(null)
+    }
+  }, [customer?.id, customer?.latitude, customer?.longitude])
+  
   // Watch country and state for cascading dropdowns
   const selectedCountry = watch('country')
   const selectedState = watch('state')
@@ -614,6 +625,12 @@ const CustomerForm = ({
       latitude: latitude,
       longitude: longitude,
     }
+    
+    console.log('Submitting customer data with coordinates:', {
+      latitude,
+      longitude,
+      submitData
+    })
     
     // Remove salespersonId if user doesn't have permission to change it (Sales users)
     // Only Management and Admin can change salespersonId

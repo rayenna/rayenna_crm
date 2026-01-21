@@ -180,6 +180,8 @@ router.get(
             state: true,
             country: true,
             pinCode: true,
+            latitude: true,
+            longitude: true,
             consumerNumber: true,
             contactNumbers: true,
             email: true,
@@ -246,6 +248,8 @@ router.get('/:id', authenticate, async (req: Request, res: Response) => {
         state: true,
         country: true,
         pinCode: true,
+        latitude: true,
+        longitude: true,
         gstNumber: true,
         contactNumbers: true,
         consumerNumber: true,
@@ -401,8 +405,12 @@ router.post(
           state: state || null,
           country: country || null,
           pinCode: pinCode || null,
-          latitude: latitude !== undefined && latitude !== null ? parseFloat(String(latitude)) : null,
-          longitude: longitude !== undefined && longitude !== null ? parseFloat(String(longitude)) : null,
+          latitude: latitude !== undefined && latitude !== null && latitude !== '' 
+            ? (isNaN(parseFloat(String(latitude))) ? null : parseFloat(String(latitude)))
+            : null,
+          longitude: longitude !== undefined && longitude !== null && longitude !== '' 
+            ? (isNaN(parseFloat(String(longitude))) ? null : parseFloat(String(longitude)))
+            : null,
           contactNumbers: contactNumbersStr,
           consumerNumber: consumerNumber || null,
           email: emailsStr,
@@ -580,10 +588,20 @@ router.put(
       if (country !== undefined) updateData.country = country || null;
       if (pinCode !== undefined) updateData.pinCode = pinCode || null;
       if (latitude !== undefined) {
-        updateData.latitude = latitude !== null && latitude !== '' ? parseFloat(String(latitude)) : null;
+        if (latitude === null || latitude === '') {
+          updateData.latitude = null;
+        } else {
+          const latNum = parseFloat(String(latitude));
+          updateData.latitude = isNaN(latNum) ? null : latNum;
+        }
       }
       if (longitude !== undefined) {
-        updateData.longitude = longitude !== null && longitude !== '' ? parseFloat(String(longitude)) : null;
+        if (longitude === null || longitude === '') {
+          updateData.longitude = null;
+        } else {
+          const lngNum = parseFloat(String(longitude));
+          updateData.longitude = isNaN(lngNum) ? null : lngNum;
+        }
       }
       if (consumerNumber !== undefined) updateData.consumerNumber = consumerNumber || null;
       if (email !== undefined) updateData.email = email || null;
