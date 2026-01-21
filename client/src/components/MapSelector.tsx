@@ -75,8 +75,8 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
     if (latitude && longitude) {
       setLatInput(latitude.toString())
       setLngInput(longitude.toString())
-      // Create Google Maps embed URL (using place query)
-      const url = `https://www.google.com/maps?q=${latitude},${longitude}&output=embed&z=15`
+      // Create Google Maps embed URL (proper embed format)
+      const url = `https://maps.google.com/maps?q=${latitude},${longitude}&hl=en&z=15&output=embed`
       setMapUrl(url)
       // Generate map link
       setMapLink(generateMapLink(latitude, longitude))
@@ -94,7 +94,7 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
       if (!isNaN(lng) && lng >= -180 && lng <= 180) {
         onLocationChange(lat, lng)
         // Update map URL
-        const url = `https://www.google.com/maps?q=${lat},${lng}&output=embed&z=15`
+        const url = `https://maps.google.com/maps?q=${lat},${lng}&hl=en&z=15&output=embed`
         setMapUrl(url)
         // Update map link
         setMapLink(generateMapLink(lat, lng))
@@ -116,7 +116,7 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
       if (!isNaN(lat) && lat >= -90 && lat <= 90) {
         onLocationChange(lat, lng)
         // Update map URL
-        const url = `https://www.google.com/maps?q=${lat},${lng}&output=embed&z=15`
+        const url = `https://maps.google.com/maps?q=${lat},${lng}&hl=en&z=15&output=embed`
         setMapUrl(url)
         // Update map link
         setMapLink(generateMapLink(lat, lng))
@@ -139,7 +139,7 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
         setLngInput(coords.lng.toString())
         onLocationChange(coords.lat, coords.lng)
         // Update map URL
-        const url = `https://www.google.com/maps?q=${coords.lat},${coords.lng}&output=embed&z=15`
+        const url = `https://maps.google.com/maps?q=${coords.lat},${coords.lng}&hl=en&z=15&output=embed`
         setMapUrl(url)
       }
     }
@@ -164,7 +164,7 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
           setLngInput(lng.toString())
           onLocationChange(lat, lng)
           // Update map URL
-          const url = `https://www.google.com/maps?q=${lat},${lng}&output=embed&z=15`
+          const url = `https://maps.google.com/maps?q=${lat},${lng}&hl=en&z=15&output=embed`
           setMapUrl(url)
           // Update map link
           setMapLink(generateMapLink(lat, lng))
@@ -239,38 +239,65 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
               <p className="text-xs text-gray-400 mt-1">Range: -180 to 180</p>
             </div>
           </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Google Maps Link</label>
-            <input
-              type="url"
-              value={mapLink}
-              onChange={(e) => handleMapLinkChange(e.target.value)}
-              placeholder="https://www.google.com/maps?q=12.9716,77.5946"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            />
-            <p className="text-xs text-gray-400 mt-1">Paste a Google Maps link to auto-fill coordinates</p>
-          </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Google Maps Link</label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={mapLink}
+                  onChange={(e) => handleMapLinkChange(e.target.value)}
+                  placeholder="https://www.google.com/maps?q=12.9716,77.5946"
+                  className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
+                />
+                {mapLink && (
+                  <a
+                    href={mapLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-primary-600 text-white text-sm rounded-md hover:bg-primary-700 transition-colors whitespace-nowrap"
+                  >
+                    Open Map
+                  </a>
+                )}
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Paste a Google Maps link to auto-fill coordinates and view map</p>
+            </div>
         </div>
       ) : (
         <div className="space-y-2">
           <div className="border border-gray-300 rounded-md overflow-hidden" style={{ height: '300px' }}>
             {mapUrl ? (
-              <iframe
-                ref={mapRef}
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                src={mapUrl}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              ></iframe>
+              <>
+                <iframe
+                  ref={mapRef}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  src={mapUrl}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Google Maps"
+                ></iframe>
+              </>
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                <p className="text-gray-500 text-sm">Enter coordinates to view map</p>
+                <p className="text-gray-500 text-sm">Enter coordinates or paste a Google Maps link to view map</p>
               </div>
             )}
           </div>
+          {mapLink && (
+            <div className="mt-2">
+              <a
+                href={mapLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary-600 hover:text-primary-800 text-sm font-medium underline inline-flex items-center gap-1"
+              >
+                🗺️ View on Google Maps (opens in new tab)
+              </a>
+            </div>
+          )}
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -306,6 +333,18 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
               />
               <p className="text-xs text-gray-400 mt-1">Paste a Google Maps link to auto-fill coordinates and view map</p>
+              {mapLink && (
+                <div className="mt-2">
+                  <a
+                    href={mapLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary-600 hover:text-primary-800 text-sm font-medium underline inline-flex items-center gap-1"
+                  >
+                    🗺️ View on Google Maps (opens in new tab)
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         </div>
