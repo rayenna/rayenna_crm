@@ -221,7 +221,7 @@ const Projects = () => {
       </div>
 
       <div className="bg-white shadow rounded-lg mb-4 p-4">
-        <div className={`grid grid-cols-1 gap-4 mb-4 ${user?.role === UserRole.SALES ? 'md:grid-cols-5' : 'md:grid-cols-6'}`}>
+        <div className="grid grid-cols-1 gap-4 mb-4 md:grid-cols-6">
           <input
             type="text"
             placeholder="Search across all projects..."
