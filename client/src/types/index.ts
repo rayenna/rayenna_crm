@@ -51,6 +51,46 @@ export enum ProjectStage {
   LOST = 'LOST',
 }
 
+export enum SupportTicketStatus {
+  OPEN = 'OPEN',
+  IN_PROGRESS = 'IN_PROGRESS',
+  CLOSED = 'CLOSED',
+}
+
+export interface SupportTicket {
+  id: string
+  ticketNumber: string
+  projectId: string
+  title: string
+  description?: string | null
+  status: SupportTicketStatus
+  createdById: string
+  createdBy: {
+    id: string
+    name: string
+    email: string
+  }
+  closedAt?: string | null
+  createdAt: string
+  updatedAt: string
+  project?: Project
+  activities?: SupportTicketActivity[]
+}
+
+export interface SupportTicketActivity {
+  id: string
+  supportTicketId: string
+  note: string
+  followUpDate?: string | null
+  createdById: string
+  createdBy: {
+    id: string
+    name: string
+    email: string
+  }
+  createdAt: string
+}
+
 export enum LostReason {
   LOST_TO_COMPETITION = 'LOST_TO_COMPETITION',
   NO_BUDGET = 'NO_BUDGET',

@@ -147,6 +147,8 @@ model User {
   projectRemarks    ProjectRemark[] @relation("RemarkAuthor")
   createdCustomers  Customer[]      @relation("CustomerCreatedBy")
   salesCustomers    Customer[]      @relation("CustomerSalesPerson")
+  createdTickets    SupportTicket[] @relation("TicketCreatedBy")
+  ticketActivities  SupportTicketActivity[] @relation("ActivityCreatedBy")
 
   @@map("users")
 }
@@ -310,6 +312,7 @@ model Project {
   invoices       Invoice[]
   amcContracts   AMCContract[]
   serviceTickets ServiceTicket[]
+  supportTickets SupportTicket[] @relation("SupportTickets")
   projectRemarks ProjectRemark[]
 
   createdAt DateTime @default(now())
@@ -454,6 +457,50 @@ model AMCContract {
   @@map("amc_contracts")
 }
 
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+model SupportTicket {
+  id            String              @id @default(cuid())
+  ticketNumber  String              @unique // Format: RE######## (8-digit random)
+  projectId     String
+  project       Project             @relation("SupportTickets", fields: [projectId], references: [id], onDelete: Cascade)
+  title         String              @db.VarChar(500)
+  description   String?             @db.Text
+  status        SupportTicketStatus @default(OPEN)
+  createdById   String
+  createdBy     User                @relation("TicketCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  closedAt      DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  activities SupportTicketActivity[]
+
+  @@index([projectId])
+  @@index([ticketNumber])
+  @@index([status])
+  @@map("support_tickets")
+}
+
+model SupportTicketActivity {
+  id             String        @id @default(cuid())
+  supportTicketId String
+  supportTicket  SupportTicket @relation(fields: [supportTicketId], references: [id], onDelete: Cascade)
+  note           String        @db.Text
+  followUpDate   DateTime?
+  createdById    String
+  createdBy      User          @relation("ActivityCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt      DateTime      @default(now())
+
+  @@index([supportTicketId])
+  @@index([createdById])
+  @@map("support_ticket_activities")
+}
+
+// Legacy ServiceTicket model - kept for backward compatibility but will be deprecated
 model ServiceTicket {
   id         String    @id @default(cuid())
   projectId  String

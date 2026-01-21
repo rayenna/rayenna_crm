@@ -22,6 +22,7 @@ import installationRoutes from './routes/installations';
 import invoiceRoutes from './routes/invoices';
 import amcRoutes from './routes/amc';
 import serviceTicketRoutes from './routes/serviceTickets';
+import supportTicketsRoutes from './routes/supportTickets';
 import salesTeamPerformanceRoutes from './routes/salesTeamPerformance';
 import remarksRoutes from './routes/remarks';
 
@@ -107,6 +108,7 @@ app.use('/api/installations', installationRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/amc', amcRoutes);
 app.use('/api/service-tickets', serviceTicketRoutes);
+app.use('/api/support-tickets', supportTicketsRoutes);
 app.use('/api/sales-team-performance', salesTeamPerformanceRoutes);
 app.use('/api/remarks', remarksRoutes);
 

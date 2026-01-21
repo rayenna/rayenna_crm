@@ -5,6 +5,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Project, UserRole, ProjectStatus } from '../types'
 import RemarksSection from '../components/remarks/RemarksSection'
+import SupportTicketsSection from '../components/supportTickets/SupportTicketsSection'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import ProposalPreview from '../components/proposal/ProposalPreview'
@@ -444,6 +445,11 @@ const ProjectDetail = () => {
 
       {/* Remarks - View Only */}
       <RemarksSection projectId={project.id} isEditMode={false} />
+
+      {/* Support / Service Tickets */}
+      <div className="mt-6">
+        <SupportTicketsSection projectId={project.id} />
+      </div>
 
       {/* Key Artifacts - View Only */}
       <div className="mt-6 bg-white shadow rounded-lg p-6">
