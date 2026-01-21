@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../utils/axios'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Project, ProjectStatus, ProjectType, ProjectServiceType, UserRole } from '../types'
+import { Project, ProjectStatus, ProjectType, ProjectServiceType, UserRole, SupportTicketStatus } from '../types'
 import { format } from 'date-fns'
 import MultiSelect from '../components/MultiSelect'
 import { useDebounce } from '../hooks/useDebounce'
@@ -49,6 +49,7 @@ const Projects = () => {
     type: [] as string[],
     projectServiceType: [] as string[],
     salespersonId: [] as string[],
+    supportTicketStatus: [] as string[],
     search: '',
     sortBy: '',
     sortOrder: 'desc',
@@ -63,7 +64,7 @@ const Projects = () => {
   // Reset page when other filters change
   useEffect(() => {
     setPage(1)
-  }, [filters.status, filters.type, filters.projectServiceType, filters.salespersonId, filters.sortBy])
+  }, [filters.status, filters.type, filters.projectServiceType, filters.salespersonId, filters.supportTicketStatus, filters.sortBy])
 
   // Fetch sales users for the filter dropdown (only for non-SALES users)
   const { data: salesUsers } = useQuery({
@@ -133,6 +134,15 @@ const Projects = () => {
     value: salesUser.id,
     label: salesUser.name,
   })) || []
+
+  // Support Ticket Status filter options
+  const supportTicketStatusOptions = [
+    { value: 'HAS_TICKETS', label: 'Has Tickets (Any Status)' },
+    { value: 'OPEN', label: 'Has Open Tickets' },
+    { value: 'IN_PROGRESS', label: 'Has In-Progress Tickets' },
+    { value: 'CLOSED', label: 'Has Closed Tickets' },
+    { value: 'NO_TICKETS', label: 'No Tickets' },
+  ]
 
   const handleExportClick = (type: 'excel' | 'csv') => {
     setPendingExportType(type)
@@ -211,7 +221,7 @@ const Projects = () => {
       </div>
 
       <div className="bg-white shadow rounded-lg mb-4 p-4">
-        <div className={`grid grid-cols-1 gap-4 mb-4 ${user?.role === UserRole.SALES ? 'md:grid-cols-4' : 'md:grid-cols-5'}`}>
+        <div className={`grid grid-cols-1 gap-4 mb-4 ${user?.role === UserRole.SALES ? 'md:grid-cols-5' : 'md:grid-cols-6'}`}>
           <input
             type="text"
             placeholder="Search across all projects..."
@@ -236,6 +246,12 @@ const Projects = () => {
             selectedValues={filters.projectServiceType}
             onChange={(values) => setFilters({ ...filters, projectServiceType: values })}
             placeholder="All Project Types"
+          />
+          <MultiSelect
+            options={supportTicketStatusOptions}
+            selectedValues={filters.supportTicketStatus}
+            onChange={(values) => setFilters({ ...filters, supportTicketStatus: values })}
+            placeholder="All Ticket Statuses"
           />
           {user?.role !== UserRole.SALES && (
             <MultiSelect

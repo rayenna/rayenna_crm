@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
-import { PrismaClient, ProjectStatus, ProjectType, ProjectServiceType, ProjectStage, UserRole, LeadSource } from '@prisma/client';
+import { PrismaClient, ProjectStatus, ProjectType, ProjectServiceType, ProjectStage, UserRole, LeadSource, SupportTicketStatus } from '@prisma/client';
 import { authenticate, authorize } from '../middleware/auth';
 import { createAuditLog } from '../utils/audit';
 import { calculatePayments, calculateExpectedProfit, calculateGrossProfit, calculateProfitability, calculateFY } from '../utils/calculations';
@@ -44,6 +44,12 @@ router.get(
       const values = Array.isArray(value) ? value : [value];
       return values.every(v => typeof v === 'string');
     }).withMessage('Invalid salespersonId value'),
+    query('supportTicketStatus').optional().custom((value) => {
+      if (!value) return true;
+      const values = Array.isArray(value) ? value : [value];
+      const validValues = ['HAS_TICKETS', 'OPEN', 'IN_PROGRESS', 'CLOSED', 'NO_TICKETS'];
+      return values.every(v => validValues.includes(v as string));
+    }).withMessage('Invalid supportTicketStatus value'),
     query('year').optional().isString(),
     query('search').optional().isString(),
     query('page').optional().isInt({ min: 1 }),
@@ -64,6 +70,7 @@ router.get(
         type,
         projectServiceType,
         salespersonId,
+        supportTicketStatus,
         year,
         search,
         page = '1',
@@ -82,6 +89,7 @@ router.get(
       const typeArray = Array.isArray(type) ? type : type ? [type] : [];
       const projectServiceTypeArray = Array.isArray(projectServiceType) ? projectServiceType : projectServiceType ? [projectServiceType] : [];
       const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : salespersonId ? [salespersonId] : [];
+      const supportTicketStatusArray = Array.isArray(supportTicketStatus) ? supportTicketStatus : supportTicketStatus ? [supportTicketStatus] : [];
 
       // Role-based filtering - Sales users only see their own projects
       // This should be applied before other filters
@@ -126,6 +134,103 @@ router.get(
         where.salespersonId = { in: salespersonIdArray as string[] };
       }
       if (year) where.year = year;
+
+      // Handle support ticket status filter
+      if (supportTicketStatusArray.length > 0) {
+        const ticketFilterConditions: any[] = [];
+
+        supportTicketStatusArray.forEach((filterValue: string) => {
+          switch (filterValue) {
+            case 'HAS_TICKETS':
+              // Projects with any tickets
+              ticketFilterConditions.push({
+                supportTickets: {
+                  some: {},
+                },
+              });
+              break;
+            case 'OPEN':
+              // Projects with at least one open ticket
+              ticketFilterConditions.push({
+                supportTickets: {
+                  some: {
+                    status: SupportTicketStatus.OPEN,
+                  },
+                },
+              });
+              break;
+            case 'IN_PROGRESS':
+              // Projects with at least one in-progress ticket
+              ticketFilterConditions.push({
+                supportTickets: {
+                  some: {
+                    status: SupportTicketStatus.IN_PROGRESS,
+                  },
+                },
+              });
+              break;
+            case 'CLOSED':
+              // Projects with at least one closed ticket
+              ticketFilterConditions.push({
+                supportTickets: {
+                  some: {
+                    status: SupportTicketStatus.CLOSED,
+                  },
+                },
+              });
+              break;
+            case 'NO_TICKETS':
+              // Projects without any tickets
+              ticketFilterConditions.push({
+                supportTickets: {
+                  none: {},
+                },
+              });
+              break;
+          }
+        });
+
+        if (ticketFilterConditions.length > 0) {
+          // Combine ticket filter conditions with existing where conditions
+          if (ticketFilterConditions.length === 1) {
+            // Single condition - can merge directly if no existing AND
+            if (where.AND) {
+              where.AND.push(ticketFilterConditions[0]);
+            } else if (Object.keys(where).length > 0) {
+              // Has existing conditions, wrap in AND
+              const existingConditions: any[] = [];
+              Object.keys(where).forEach(key => {
+                if (key !== 'AND' && key !== 'OR') {
+                  existingConditions.push({ [key]: where[key] });
+                  delete where[key];
+                }
+              });
+              where.AND = [...existingConditions, ticketFilterConditions[0]];
+            } else {
+              // No existing conditions, add directly
+              Object.assign(where, ticketFilterConditions[0]);
+            }
+          } else {
+            // Multiple conditions - use OR for ticket filters
+            if (where.AND) {
+              where.AND.push({ OR: ticketFilterConditions });
+            } else if (Object.keys(where).length > 0) {
+              // Has existing conditions, wrap in AND
+              const existingConditions: any[] = [];
+              Object.keys(where).forEach(key => {
+                if (key !== 'AND' && key !== 'OR') {
+                  existingConditions.push({ [key]: where[key] });
+                  delete where[key];
+                }
+              });
+              where.AND = [...existingConditions, { OR: ticketFilterConditions }];
+            } else {
+              // No existing conditions
+              where.OR = ticketFilterConditions;
+            }
+          }
+        }
+      }
       
       // Handle search - combine with existing conditions using AND
       if (search) {
