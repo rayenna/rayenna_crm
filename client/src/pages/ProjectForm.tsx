@@ -464,6 +464,7 @@ const ProjectForm = () => {
       { field: 'feasibilityDate', label: 'Feasibility Date' },
       { field: 'registrationDate', label: 'Registration Date' },
       { field: 'installationCompletionDate', label: 'Installation Completion Date' },
+      { field: 'completionReportSubmissionDate', label: 'Completion Report Submission Date' },
       { field: 'subsidyRequestDate', label: 'Subsidy Request Date' },
       { field: 'lostDate', label: 'Lost Date' },
     ];
@@ -624,7 +625,7 @@ const ProjectForm = () => {
         'lastPayment', 'lastPaymentDate',
         // Execution fields (optional for new projects)
         'mnrePortalRegistrationDate', 'feasibilityDate', 'registrationDate',
-        'installationCompletionDate', 'subsidyRequestDate', 'subsidyCreditedDate',
+        'installationCompletionDate', 'completionReportSubmissionDate', 'subsidyRequestDate', 'subsidyCreditedDate',
         'mnreInstallationDetails',
       ];
       
@@ -1279,6 +1280,16 @@ const ProjectForm = () => {
                 <input
                   type="date"
                   {...register('installationCompletionDate')}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Completion Report Submission Date
+                </label>
+                <input
+                  type="date"
+                  {...register('completionReportSubmissionDate')}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                 />
               </div>

@@ -315,6 +315,14 @@ const ProjectDetail = () => {
                 </dd>
               </div>
             )}
+            {project.completionReportSubmissionDate && (
+              <div>
+                <dt className="text-sm text-gray-500">Completion Report Submission</dt>
+                <dd className="text-sm font-medium">
+                  {format(new Date(project.completionReportSubmissionDate), 'MMM dd, yyyy')}
+                </dd>
+              </div>
+            )}
             {project.subsidyRequestDate && (
               <div>
                 <dt className="text-sm text-gray-500">Net Meter Installation Date</dt>

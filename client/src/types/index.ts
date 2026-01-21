@@ -106,6 +106,7 @@ export interface Project {
   feasibilityDate?: string
   registrationDate?: string
   installationCompletionDate?: string
+  completionReportSubmissionDate?: string
   mnreInstallationDetails?: string
   subsidyRequestDate?: string
   subsidyCreditedDate?: string

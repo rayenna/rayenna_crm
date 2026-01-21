@@ -1,0 +1,7 @@
+CR Ver 1.0 - 21st Jan
+
+a. Add another date field in the Project status called "Completion Report Submission Date"
+b. Add another option in the Create Customer Screen under the Address section to add Google Map co-ordinates
+c. Operations user will be able to see in their Projects View only from Confirmed order onwards. Projects in Lead, Site Survey, Proposal and Lost will not be part of Operations default view.
+d. Default view in Projects will be "All Status MINUS" Lost for all Users.
+e. Support Tile to be included in the Projects Section for Sales and Operations to create, update and View. Management should have view option and Admin will have full access. Delete option only for Admin.

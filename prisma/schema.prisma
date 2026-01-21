@@ -174,9 +174,9 @@ model Lead {
 model Customer {
   id             String        @id @default(cuid())
   customerId     String        @unique // 6-digit alphanumeric ID
-  customerName   String        // Legacy field, kept for backward compatibility
-  prefix         String?       // Mr., Ms., Mrs., Mx., Dr., etc.
-  firstName      String?       // Will be required after migration
+  customerName   String // Legacy field, kept for backward compatibility
+  prefix         String? // Mr., Ms., Mrs., Mx., Dr., etc.
+  firstName      String? // Will be required after migration
   middleName     String?
   lastName       String?
   customerType   CustomerType? // Residential, Apartment, Commercial
@@ -202,7 +202,7 @@ model Customer {
   createdBy   User?   @relation("CustomerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   salespersonId String?
-  salesperson   User?  @relation("CustomerSalesPerson", fields: [salespersonId], references: [id], onDelete: SetNull)
+  salesperson   User?   @relation("CustomerSalesPerson", fields: [salespersonId], references: [id], onDelete: SetNull)
 
   projects Project[]
   leads    Lead[]
@@ -256,22 +256,23 @@ model Project {
   marginEstimate    Float? // Margin estimate
   confirmationDate  DateTime?
   loanDetails       String? // JSON: { hasLoan: boolean, remarks: string }
-  incentiveEligible Boolean   @default(false)
+  incentiveEligible Boolean     @default(false)
   expectedProfit    Float? // Auto-calculated
   grossProfit       Float? // Auto-calculated: Order Value - Total Project Cost
   profitability     Float? // Auto-calculated: (Gross Profit / Order Value) × 100
   finalProfit       Float?
 
   // Project Execution & Compliance
-  mnrePortalRegistrationDate DateTime?
-  feasibilityDate            DateTime? // KSEB
-  registrationDate           DateTime? // KSEB
-  installationCompletionDate DateTime?
-  mnreInstallationDetails    String? // JSON or text
-  subsidyRequestDate         DateTime?
-  subsidyCreditedDate        DateTime?
-  projectStatus              ProjectStatus @default(LEAD)
-  totalProjectCost           Float? // Overall cost incurred in the project
+  mnrePortalRegistrationDate     DateTime?
+  feasibilityDate                DateTime? // KSEB
+  registrationDate               DateTime? // KSEB
+  installationCompletionDate     DateTime?
+  completionReportSubmissionDate DateTime?
+  mnreInstallationDetails        String? // JSON or text
+  subsidyRequestDate             DateTime?
+  subsidyCreditedDate            DateTime?
+  projectStatus                  ProjectStatus @default(LEAD)
+  totalProjectCost               Float? // Overall cost incurred in the project
 
   // Payment Tracking (Legacy - kept for backward compatibility)
   advanceReceived     Float?        @default(0)
@@ -474,7 +475,7 @@ model ProjectRemark {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("project_remarks")
   @@index([projectId])
   @@index([userId])
+  @@map("project_remarks")
 }
