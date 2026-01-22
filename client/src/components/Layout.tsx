@@ -27,26 +27,26 @@ const Layout = () => {
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent_50%)]"></div>
         </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="flex justify-between h-20">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 relative z-10">
+          <div className="flex justify-between items-center h-20">
             <div className="flex items-center">
-              <Link to="/dashboard" className="flex-shrink-0 flex items-center mr-6 hover:opacity-80 transition-opacity">
+              <Link to="/dashboard" className="flex-shrink-0 flex items-center mr-3 xl:mr-6 hover:opacity-80 transition-opacity">
                 <img 
                   src="/rayenna_logo.jpg" 
                   alt="Rayenna Energy Logo" 
-                  className="h-12 w-auto"
+                  className="h-10 xl:h-12 w-auto"
                 />
               </Link>
               {/* Desktop Navigation - Show on large screens only (lg and above) */}
-              <div className="hidden lg:ml-6 lg:flex lg:space-x-3 xl:space-x-4">
+              <div className="hidden lg:ml-4 lg:flex lg:space-x-1.5 xl:space-x-3 2xl:space-x-4">
                 {filteredNav.map((item) => (
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`inline-flex items-center px-3 xl:px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
+                    className={`inline-flex items-center px-2 xl:px-3 2xl:px-4 py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs xl:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
                       location.pathname.startsWith(item.path)
-                        ? 'bg-white/25 text-white shadow-2xl font-bold backdrop-blur-md border-2 border-white/30 transform scale-105'
-                        : 'text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm transform hover:scale-105'
+                        ? 'bg-white/25 text-white shadow-xl xl:shadow-2xl font-bold backdrop-blur-md border-2 border-white/30'
+                        : 'text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm'
                     }`}
                   >
                     {item.name}
@@ -54,22 +54,22 @@ const Layout = () => {
                 ))}
               </div>
             </div>
-            <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4">
+            <div className="flex items-center space-x-1.5 sm:space-x-2 lg:space-x-2 xl:space-x-3">
               {/* User info - show on medium screens and above, but hide when hamburger is visible */}
               <span className="hidden md:inline lg:hidden text-sm text-white/90 font-medium truncate max-w-[100px]">{user?.name}</span>
-              <span className="hidden xl:inline text-sm text-white/90 font-medium">{user?.name}</span>
-              <span className="hidden xl:inline text-xs text-primary-700 bg-gradient-to-r from-white to-primary-50 px-3 py-2 rounded-full font-bold shadow-lg border-2 border-white/50">
+              <span className="hidden lg:inline text-xs xl:text-sm text-white/90 font-medium truncate max-w-[120px] xl:max-w-none">{user?.name}</span>
+              <span className="hidden lg:inline text-xs text-primary-700 bg-gradient-to-r from-white to-primary-50 px-2 xl:px-3 py-1.5 xl:py-2 rounded-full font-bold shadow-lg border-2 border-white/50">
                 {user?.role}
               </span>
               <Link
                 to="/change-password"
-                className="hidden xl:inline text-xs sm:text-sm text-white font-semibold hover:text-white hover:bg-white/20 px-3 py-2 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 border-2 border-white/20 hover:border-white/40 whitespace-nowrap"
+                className="hidden lg:inline text-xs xl:text-sm text-white font-semibold hover:text-white hover:bg-white/20 px-2 xl:px-3 py-1.5 xl:py-2 rounded-lg xl:rounded-xl transition-all duration-300 shadow-md hover:shadow-lg border-2 border-white/20 hover:border-white/40 whitespace-nowrap"
               >
                 Change Password
               </Link>
               <button
                 onClick={logout}
-                className="hidden xl:inline text-xs sm:text-sm text-white font-semibold hover:text-white hover:bg-white/20 px-3 py-2 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 border-2 border-white/20 hover:border-white/40 whitespace-nowrap"
+                className="hidden lg:inline text-xs xl:text-sm text-white font-semibold hover:text-white hover:bg-white/20 px-2 xl:px-3 py-1.5 xl:py-2 rounded-lg xl:rounded-xl transition-all duration-300 shadow-md hover:shadow-lg border-2 border-white/20 hover:border-white/40 whitespace-nowrap"
               >
                 Logout
               </button>
