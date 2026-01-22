@@ -13,6 +13,7 @@ import TallyExport from './pages/TallyExport'
 import About from './pages/About'
 import ChangePassword from './pages/ChangePassword'
 import SupportTicketsDashboard from './pages/SupportTicketsDashboard'
+import Help from './pages/Help'
 import Layout from './components/Layout'
 
 function App() {
@@ -41,6 +42,8 @@ function App() {
             <Route path="tally-export" element={<TallyExport />} />
             <Route path="support-tickets" element={<SupportTicketsDashboard />} />
             <Route path="change-password" element={<ChangePassword />} />
+            <Route path="help" element={<Help />} />
+            <Route path="help/:section" element={<Help />} />
             <Route path="about" element={<About />} />
           </Route>
         </Routes>

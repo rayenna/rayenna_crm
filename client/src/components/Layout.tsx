@@ -7,6 +7,7 @@ const Layout = () => {
   const { user, logout, hasRole } = useAuth()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [helpDropdownOpen, setHelpDropdownOpen] = useState(false)
 
   const navigation = [
     { name: 'Dashboard', path: '/dashboard', roles: [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE, UserRole.MANAGEMENT] },
@@ -15,10 +16,17 @@ const Layout = () => {
     { name: 'Support Tickets', path: '/support-tickets', roles: [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS] },
     { name: 'Tally Export', path: '/tally-export', roles: [UserRole.ADMIN, UserRole.FINANCE] },
     { name: 'Users', path: '/users', roles: [UserRole.ADMIN] },
-    { name: 'About', path: '/about', roles: [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE, UserRole.MANAGEMENT] },
   ]
 
   const filteredNav = navigation.filter((nav) => hasRole(nav.roles))
+  
+  // Help menu items - visible to all logged-in users
+  const helpMenuItems = [
+    { name: 'Help (F1)', path: '/help' },
+    { name: 'About', path: '/about' },
+  ]
+  
+  const isHelpActive = location.pathname.startsWith('/help') || location.pathname.startsWith('/about')
 
   return (
     <div className="min-h-screen">
@@ -38,7 +46,7 @@ const Layout = () => {
                 />
               </Link>
               {/* Desktop Navigation - Show on large screens only (lg and above) */}
-              <div className="hidden lg:ml-4 lg:flex lg:space-x-1.5 xl:space-x-3 2xl:space-x-4">
+              <div className="hidden lg:ml-4 lg:flex lg:space-x-1.5 xl:space-x-3 2xl:space-x-4 items-center">
                 {filteredNav.map((item) => (
                   <Link
                     key={item.path}
@@ -52,6 +60,51 @@ const Layout = () => {
                     {item.name}
                   </Link>
                 ))}
+                
+                {/* Help Dropdown Menu */}
+                <div 
+                  className="relative"
+                  onMouseEnter={() => setHelpDropdownOpen(true)}
+                  onMouseLeave={() => setHelpDropdownOpen(false)}
+                >
+                  <button
+                    className={`inline-flex items-center px-2 xl:px-3 2xl:px-4 py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs xl:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
+                      isHelpActive
+                        ? 'bg-white/25 text-white shadow-xl xl:shadow-2xl font-bold backdrop-blur-md border-2 border-white/30'
+                        : 'text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm'
+                    }`}
+                  >
+                    Help
+                    <svg className="ml-1 h-3 w-3 xl:h-4 xl:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  
+                  {/* Dropdown Menu */}
+                  {helpDropdownOpen && (
+                    <div className="absolute top-full left-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-50">
+                      {helpMenuItems.map((item) => (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          state={{ from: { pathname: location.pathname } }}
+                          onClick={() => {
+                            // Store current route for context-sensitive help
+                            sessionStorage.setItem('helpReferrer', location.pathname)
+                            setHelpDropdownOpen(false)
+                          }}
+                          className={`block px-4 py-2 text-sm font-medium transition-colors ${
+                            location.pathname.startsWith(item.path)
+                              ? 'bg-primary-50 text-primary-700'
+                              : 'text-gray-700 hover:bg-gray-50 hover:text-primary-600'
+                          }`}
+                        >
+                          {item.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-center space-x-1.5 sm:space-x-2 lg:space-x-2 xl:space-x-3">
@@ -96,6 +149,21 @@ const Layout = () => {
             <div className="lg:hidden pb-4 pt-2">
               <div className="space-y-2">
                 {filteredNav.map((item) => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                      location.pathname.startsWith(item.path)
+                        ? 'bg-white/25 text-white shadow-2xl font-bold backdrop-blur-md border-2 border-white/30'
+                        : 'text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm'
+                    }`}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+                {/* Help Menu Items for Mobile */}
+                {helpMenuItems.map((item) => (
                   <Link
                     key={item.path}
                     to={item.path}
