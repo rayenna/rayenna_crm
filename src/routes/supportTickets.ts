@@ -410,4 +410,138 @@ router.delete(
   }
 );
 
+/**
+ * GET /api/support-tickets
+ * Get all support tickets with optional filters and statistics
+ * Returns tickets with project info and statistics
+ */
+router.get(
+  '/',
+  authenticate,
+  async (req: Request, res: Response) => {
+    try {
+      const { status, projectId } = req.query;
+
+      // Build where clause
+      const where: any = {};
+
+      // Role-based filtering - Sales users only see tickets for their projects
+      if (req.user?.role === UserRole.SALES) {
+        where.project = {
+          salespersonId: req.user.id,
+        };
+      }
+
+      // Apply status filter if provided
+      if (status) {
+        const statusArray = Array.isArray(status) ? status : [status];
+        where.status = { in: statusArray as SupportTicketStatus[] };
+      }
+
+      // Apply project filter if provided
+      if (projectId) {
+        where.projectId = projectId as string;
+      }
+
+      // Get tickets
+      const tickets = await prisma.supportTicket.findMany({
+        where,
+        include: {
+          project: {
+            include: {
+              customer: {
+                select: {
+                  id: true,
+                  customerName: true,
+                  firstName: true,
+                  middleName: true,
+                  lastName: true,
+                  prefix: true,
+                },
+              },
+            },
+          },
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          activities: {
+            orderBy: { createdAt: 'desc' },
+            take: 1, // Get latest activity for list view
+            include: {
+              createdBy: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      // Calculate statistics (always use base where clause without status filter)
+      const statsWhere: any = {};
+
+      // Role-based filtering for stats
+      if (req.user?.role === UserRole.SALES) {
+        statsWhere.project = {
+          salespersonId: req.user.id,
+        };
+      }
+
+      const [openCount, inProgressCount, closedCount] = await Promise.all([
+        prisma.supportTicket.count({
+          where: { ...statsWhere, status: SupportTicketStatus.OPEN },
+        }),
+        prisma.supportTicket.count({
+          where: { ...statsWhere, status: SupportTicketStatus.IN_PROGRESS },
+        }),
+        prisma.supportTicket.count({
+          where: { ...statsWhere, status: SupportTicketStatus.CLOSED },
+        }),
+      ]);
+
+      // Calculate overdue tickets (OPEN or IN_PROGRESS with follow-up date in the past)
+      const overdueTickets = await prisma.supportTicket.findMany({
+        where: {
+          ...statsWhere,
+          status: {
+            in: [SupportTicketStatus.OPEN, SupportTicketStatus.IN_PROGRESS],
+          },
+          activities: {
+            some: {
+              followUpDate: {
+                lte: new Date(),
+              },
+            },
+          },
+        },
+        select: { id: true },
+      });
+
+      const overdueCount = overdueTickets.length;
+
+      res.json({
+        tickets,
+        statistics: {
+          open: openCount,
+          inProgress: inProgressCount,
+          closed: closedCount,
+          overdue: overdueCount,
+          total: openCount + inProgressCount + closedCount,
+        },
+      });
+    } catch (error: any) {
+      console.error('Error fetching support tickets:', error);
+      res.status(500).json({ error: error.message || 'Failed to fetch support tickets' });
+    }
+  }
+);
+
 export default router;
