@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 
@@ -8,6 +8,7 @@ const Layout = () => {
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [helpDropdownOpen, setHelpDropdownOpen] = useState(false)
+  const helpDropdownRef = useRef<HTMLDivElement>(null)
 
   const navigation = [
     { name: 'Dashboard', path: '/dashboard', roles: [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE, UserRole.MANAGEMENT] },
@@ -28,9 +29,26 @@ const Layout = () => {
   
   const isHelpActive = location.pathname.startsWith('/help') || location.pathname.startsWith('/about')
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (helpDropdownRef.current && !helpDropdownRef.current.contains(event.target as Node)) {
+        setHelpDropdownOpen(false)
+      }
+    }
+
+    if (helpDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [helpDropdownOpen])
+
   return (
     <div className="min-h-screen">
-      <nav className="bg-gradient-to-r from-primary-600 via-primary-500 to-green-600 shadow-2xl border-b-4 border-primary-400 relative overflow-hidden">
+      <nav className="bg-gradient-to-r from-primary-600 via-primary-500 to-green-600 shadow-2xl border-b-4 border-primary-400 relative">
         {/* Animated background pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent_50%)]"></div>
@@ -63,11 +81,13 @@ const Layout = () => {
                 
                 {/* Help Dropdown Menu */}
                 <div 
+                  ref={helpDropdownRef}
                   className="relative"
                   onMouseEnter={() => setHelpDropdownOpen(true)}
                   onMouseLeave={() => setHelpDropdownOpen(false)}
                 >
                   <button
+                    onClick={() => setHelpDropdownOpen(!helpDropdownOpen)}
                     className={`inline-flex items-center px-2 xl:px-3 2xl:px-4 py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs xl:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
                       isHelpActive
                         ? 'bg-white/25 text-white shadow-xl xl:shadow-2xl font-bold backdrop-blur-md border-2 border-white/30'
@@ -75,14 +95,14 @@ const Layout = () => {
                     }`}
                   >
                     Help
-                    <svg className="ml-1 h-3 w-3 xl:h-4 xl:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className={`ml-1 h-3 w-3 xl:h-4 xl:w-4 transition-transform ${helpDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
                   
                   {/* Dropdown Menu */}
                   {helpDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-50">
+                    <div className="absolute top-full left-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[100]">
                       {helpMenuItems.map((item) => (
                         <Link
                           key={item.path}
