@@ -400,7 +400,7 @@ const ProjectDetail = () => {
             <div>
               <dt className="text-sm text-gray-500">Payment Status</dt>
               <dd className="text-sm font-medium">
-                {(!project.projectCost || 
+                {((!project.projectCost || project.projectCost === 0 || project.projectCost === null || project.projectCost === undefined) || 
                   project.projectStatus === ProjectStatus.LEAD ||
                   project.projectStatus === ProjectStatus.SITE_SURVEY ||
                   project.projectStatus === ProjectStatus.PROPOSAL ||
