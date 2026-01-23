@@ -1,4 +1,5 @@
 import { useState } from 'react'
+// Payment Status: Shows N/A in red for projects without Order Value or in early/lost stages
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import axiosInstance from '../utils/axios'
 import { useParams, Link } from 'react-router-dom'
