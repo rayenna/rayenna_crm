@@ -400,27 +400,35 @@ const ProjectDetail = () => {
             <div>
               <dt className="text-sm text-gray-500">Payment Status</dt>
               <dd className="text-sm font-medium">
-                {((!project.projectCost || project.projectCost === 0 || project.projectCost === null || project.projectCost === undefined) || 
-                  project.projectStatus === ProjectStatus.LEAD ||
-                  project.projectStatus === ProjectStatus.SITE_SURVEY ||
-                  project.projectStatus === ProjectStatus.PROPOSAL ||
-                  project.projectStatus === ProjectStatus.LOST) ? (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                    N/A
-                  </span>
-                ) : (
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      project.paymentStatus === 'FULLY_PAID'
-                        ? 'bg-green-100 text-green-800'
-                        : project.paymentStatus === 'PARTIAL'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    {project.paymentStatus.replace(/_/g, ' ')}
-                  </span>
-                )}
+                {(() => {
+                  const hasNoOrderValue = !project.projectCost || project.projectCost === 0 || project.projectCost === null || project.projectCost === undefined
+                  const isEarlyOrLostStage = project.projectStatus === ProjectStatus.LEAD ||
+                    project.projectStatus === ProjectStatus.SITE_SURVEY ||
+                    project.projectStatus === ProjectStatus.PROPOSAL ||
+                    project.projectStatus === ProjectStatus.LOST
+                  
+                  if (hasNoOrderValue || isEarlyOrLostStage) {
+                    return (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        N/A
+                      </span>
+                    )
+                  }
+                  
+                  return (
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        project.paymentStatus === 'FULLY_PAID'
+                          ? 'bg-green-100 text-green-800'
+                          : project.paymentStatus === 'PARTIAL'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}
+                    >
+                      {project.paymentStatus.replace(/_/g, ' ')}
+                    </span>
+                  )
+                })()}
               </dd>
             </div>
             {project.projectCost && (

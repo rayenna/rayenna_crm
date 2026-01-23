@@ -76,63 +76,35 @@ const Projects = () => {
       .map(option => option.value)
   }, [statusOptions])
 
-  // Initialize filters with default status values (all active statuses except LOST)
-  const [filters, setFilters] = useState(() => {
-    // Compute default status values on initial render
-    const allStatusOptions = [
-      { value: ProjectStatus.LEAD, label: 'Lead' },
-      { value: ProjectStatus.SITE_SURVEY, label: 'Site Survey' },
-      { value: ProjectStatus.PROPOSAL, label: 'Proposal' },
-      { value: ProjectStatus.CONFIRMED, label: 'Confirmed Order' },
-      { value: ProjectStatus.UNDER_INSTALLATION, label: 'Installation' },
-      { value: ProjectStatus.COMPLETED, label: 'Completed' },
-      { value: ProjectStatus.COMPLETED_SUBSIDY_CREDITED, label: 'Completed - Subsidy Credited' },
-      { value: ProjectStatus.LOST, label: 'Lost' },
-    ]
-    
-    // For Operations users, filter to only allowed statuses
-    const statusOptions = user?.role === UserRole.OPERATIONS
-      ? allStatusOptions.filter(option => 
-          option.value === ProjectStatus.CONFIRMED ||
-          option.value === ProjectStatus.UNDER_INSTALLATION ||
-          option.value === ProjectStatus.COMPLETED ||
-          option.value === ProjectStatus.COMPLETED_SUBSIDY_CREDITED
-        )
-      : allStatusOptions
-    
-    // Default: all statuses except LOST
-    const defaultStatus = statusOptions
-      .filter(option => option.value !== ProjectStatus.LOST)
-      .map(option => option.value)
-    
-    return {
-      status: defaultStatus,
-      type: [] as string[],
-      projectServiceType: [] as string[],
-      salespersonId: [] as string[],
-      supportTicketStatus: [] as string[],
-      search: '',
-      sortBy: '',
-      sortOrder: 'desc',
-    }
+  const [filters, setFilters] = useState({
+    status: [] as string[],
+    type: [] as string[],
+    projectServiceType: [] as string[],
+    salespersonId: [] as string[],
+    supportTicketStatus: [] as string[],
+    search: '',
+    sortBy: '',
+    sortOrder: 'desc',
   })
 
-  // Update status filter when user loads or role changes, but only if filter hasn't been manually changed
+  // Track if status filter has been manually changed by user
   const statusFilterManuallyChanged = useRef(false)
+  const hasInitialized = useRef(false)
   
+  // Initialize default status filter (all active statuses except LOST) when statusOptions are ready
   useEffect(() => {
-    if (defaultStatusValues.length > 0 && !statusFilterManuallyChanged.current) {
-      // Check if current filter is empty or doesn't match the expected default
-      const currentStatusSet = new Set(filters.status)
-      const defaultStatusSet = new Set(defaultStatusValues)
-      const isDifferent = filters.status.length !== defaultStatusValues.length ||
-        !defaultStatusValues.every(val => currentStatusSet.has(val))
-      
-      if (isDifferent) {
-        setFilters(prev => ({ ...prev, status: defaultStatusValues }))
-      }
+    // Only set default once on initial load, if filter hasn't been manually changed and is currently empty
+    if (defaultStatusValues.length > 0 && !hasInitialized.current && !statusFilterManuallyChanged.current) {
+      setFilters(prev => {
+        // Only update if status filter is empty
+        if (prev.status.length === 0) {
+          hasInitialized.current = true
+          return { ...prev, status: defaultStatusValues }
+        }
+        return prev
+      })
     }
-  }, [defaultStatusValues, filters.status])
+  }, [defaultStatusValues])
   
   // Track when user manually changes status filter
   const handleStatusChange = (values: string[]) => {
