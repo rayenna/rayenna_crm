@@ -99,7 +99,8 @@ const Projects = () => {
   })
 
   // Prepare options for multi-selects - matching exactly the Project Status dropdown in Sales & Commercial section
-  const statusOptions = [
+  // Operations users can only see: CONFIRMED, UNDER_INSTALLATION, COMPLETED, COMPLETED_SUBSIDY_CREDITED
+  const allStatusOptions = [
     { value: ProjectStatus.LEAD, label: 'Lead' },
     { value: ProjectStatus.SITE_SURVEY, label: 'Site Survey' },
     { value: ProjectStatus.PROPOSAL, label: 'Proposal' },
@@ -109,6 +110,16 @@ const Projects = () => {
     { value: ProjectStatus.COMPLETED_SUBSIDY_CREDITED, label: 'Completed - Subsidy Credited' },
     { value: ProjectStatus.LOST, label: 'Lost' },
   ]
+
+  // Filter status options based on user role
+  const statusOptions = user?.role === UserRole.OPERATIONS
+    ? allStatusOptions.filter(option => 
+        option.value === ProjectStatus.CONFIRMED ||
+        option.value === ProjectStatus.UNDER_INSTALLATION ||
+        option.value === ProjectStatus.COMPLETED ||
+        option.value === ProjectStatus.COMPLETED_SUBSIDY_CREDITED
+      )
+    : allStatusOptions
 
   const typeOptions = Object.values(ProjectType).map(type => ({
     value: type,
