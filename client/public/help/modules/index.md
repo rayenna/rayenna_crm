@@ -216,14 +216,9 @@ Each ticket displays:
 
 ## Permissions Summary
 
-| Action | Sales | Operations | Admin |
-|--------|-------|------------|-------|
-| Create Tickets | ✓ (Own projects) | ✓ (All projects) | ✓ (All projects) |
-| Add Follow-ups | ✓ | ✓ | ✓ |
-| Close Tickets | ✓ | ✓ | ✓ |
-| View Tickets | ✓ (Own projects) | ✓ (All projects) | ✓ (All projects) |
-| Delete Tickets | ✗ | ✗ | ✓ |
-| Add to Closed Tickets | ✗ | ✗ | ✓ |
+A quick reference showing which features each role can access:
+
+![Permission Matrix](/help/docs/overview/access_matrix.jpg)
 
 ## Getting Help
 
