@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, Suspense } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import { helpSections, HelpSection, getHelpSectionForRoute } from '../help/sections'
 import HelpSidebar from '../components/help/HelpSidebar'
+import ErrorBoundary from '../components/ErrorBoundary'
 
 const Help = () => {
   const { section } = useParams<{ section?: string }>()
@@ -56,6 +57,7 @@ const Help = () => {
   useEffect(() => {
     if (!selectedSection) {
       setLoading(false)
+      setMarkdownContent('')
       return
     }
 
@@ -66,22 +68,30 @@ const Help = () => {
     let cancelled = false
     setLoading(true)
     setError(null)
+    setMarkdownContent('') // Clear previous content
 
     const loadMarkdown = async () => {
       try {
+        // Add timeout to prevent hanging
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+        
         const response = await fetch(selectedSection.markdownPath, {
           cache: 'no-cache',
+          signal: controller.signal,
           headers: {
             'Cache-Control': 'no-cache'
           }
         })
+        
+        clearTimeout(timeoutId)
         
         if (cancelled || !mountedRef.current) return
         
         if (response.ok) {
           const content = await response.text()
           if (!cancelled && mountedRef.current) {
-            setMarkdownContent(content)
+            setMarkdownContent(content || `# ${selectedSection.title}\n\nContent for ${selectedSection.title} is coming soon.`)
             setError(null)
           }
         } else {
@@ -90,10 +100,14 @@ const Help = () => {
             setError(null)
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error loading markdown:', err)
         if (!cancelled && mountedRef.current) {
-          setError('Failed to load help content. Please try refreshing the page.')
+          if (err.name === 'AbortError') {
+            setError('Request timed out. Please try again.')
+          } else {
+            setError('Failed to load help content. Please try refreshing the page.')
+          }
           setMarkdownContent(`# ${selectedSection.title}\n\nContent for ${selectedSection.title} is coming soon.`)
         }
       } finally {
@@ -104,13 +118,17 @@ const Help = () => {
       }
     }
 
-    loadMarkdown()
+    // Small delay to prevent race conditions on hard refresh
+    const timeoutId = setTimeout(() => {
+      loadMarkdown()
+    }, 50)
     
     return () => {
       cancelled = true
       loadingRef.current = false
+      clearTimeout(timeoutId)
     }
-  }, [selectedSection])
+  }, [selectedSection?.id]) // Only depend on section ID to prevent unnecessary reloads
 
   // Cleanup on unmount
   useEffect(() => {
@@ -173,15 +191,25 @@ const Help = () => {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
                   <span className="ml-3 text-gray-600">Loading content...</span>
                 </div>
-              ) : (
-                <div className="max-w-none">
-                  {error && (
-                    <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-800 text-sm">
-                      {error}
+              ) : markdownContent ? (
+                <ErrorBoundary
+                  fallback={
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
+                      <p className="font-semibold mb-2">Error rendering content</p>
+                      <p className="text-sm">Please try refreshing the page.</p>
                     </div>
-                  )}
-                  <ReactMarkdown
-                    components={{
+                  }
+                >
+                  <div className="max-w-none">
+                    {error && (
+                      <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-800 text-sm">
+                        {error}
+                      </div>
+                    )}
+                    <Suspense fallback={<div className="text-center py-4">Loading...</div>}>
+                      {markdownContent && markdownContent.trim() ? (
+                        <ReactMarkdown
+                          components={{
                       h1: ({ node, ...props }) => (
                         <h1 className="text-3xl font-bold text-gray-900 mb-4 mt-6 first:mt-0" {...props} />
                       ),
@@ -303,10 +331,22 @@ const Help = () => {
                           </div>
                         )
                       },
-                    }}
-                  >
-                    {markdownContent}
-                  </ReactMarkdown>
+                          }}
+                        >
+                          {markdownContent}
+                        </ReactMarkdown>
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          No content available
+                        </div>
+                      )}
+                    </Suspense>
+                  </div>
+                </ErrorBoundary>
+              ) : (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                  <span className="ml-3 text-gray-600">Loading content...</span>
                 </div>
               )}
             </div>
