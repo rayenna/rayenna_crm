@@ -192,20 +192,9 @@ Rayenna Energy CRM uses role-based access control to ensure users have appropria
 
 ### Permission Matrix
 
-A quick reference table showing which features each role can access:
+A quick reference showing which features each role can access:
 
-| Feature | ADMIN | SALES | OPERATIONS | FINANCE | MANAGEMENT |
-|---------|-------|-------|------------|---------|------------|
-| Dashboard | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Customers | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Projects | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Support Tickets | ✓ | ✓ | ✓ | - | - |
-| Tally Export | ✓ | - | - | ✓ | - |
-| Users | ✓ | - | - | - | - |
-
-**Legend:**
-- ✓ = Full access
-- - = No access
+![Permission Matrix](/help/docs/overview/access_matrix.jpg)
 
 ### Module Access
 

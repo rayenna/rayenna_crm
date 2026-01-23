@@ -226,6 +226,13 @@ const Help = () => {
                       td: ({ node, ...props }) => (
                         <td className="px-4 py-3 text-sm text-gray-700 border-b border-gray-200" {...props} />
                       ),
+                      img: ({ node, ...props }: any) => (
+                        <img
+                          {...props}
+                          className="max-w-full h-auto rounded-lg shadow-md my-4"
+                          alt={props.alt || 'Image'}
+                        />
+                      ),
                     }}
                   >
                     {markdownContent}
