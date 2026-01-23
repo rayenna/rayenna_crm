@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import { helpSections, HelpSection, getHelpSectionForRoute } from '../help/sections'
@@ -11,6 +11,8 @@ const Help = () => {
   const [markdownContent, setMarkdownContent] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [selectedSection, setSelectedSection] = useState<HelpSection | null>(null)
+  const sectionInitialized = useRef(false)
+  const locationStateRef = useRef(location.state)
 
   // Esc key to close Help
   useEffect(() => {
@@ -34,7 +36,8 @@ const Help = () => {
     // If explicit section in URL, use it
     if (section) {
       currentSection = helpSections.find(s => s.routeKey === section) || null
-    } else {
+    } else if (!sectionInitialized.current) {
+      // Only do context-sensitive detection on first load (not on hard refresh)
       // Context-sensitive: detect route from referrer or document.referrer
       let referrerPath = sessionStorage.getItem('helpReferrer')
       
@@ -52,9 +55,13 @@ const Help = () => {
         }
       }
       
-      // Also check location state
-      if (!referrerPath && location.state?.from?.pathname) {
-        referrerPath = location.state.from.pathname
+      // Also check location state (safely) - use ref to avoid stale closures
+      locationStateRef.current = location.state
+      if (!referrerPath && locationStateRef.current && typeof locationStateRef.current === 'object' && 'from' in locationStateRef.current) {
+        const stateFrom = (locationStateRef.current as any).from
+        if (stateFrom && stateFrom.pathname) {
+          referrerPath = stateFrom.pathname
+        }
       }
       
       if (referrerPath) {
@@ -70,38 +77,74 @@ const Help = () => {
       currentSection = helpSections.find(s => s.id === 'getting-started') || helpSections[0]
     }
     
+    // Update section if it changed
     setSelectedSection(currentSection)
-  }, [section, location.state])
+    sectionInitialized.current = true
+  }, [section]) // Only depend on section param, not location.state to prevent loops
 
   // Load markdown content
   useEffect(() => {
-    if (!selectedSection) return
+    if (!selectedSection) {
+      setLoading(false)
+      return
+    }
+
+    let cancelled = false
 
     const loadMarkdown = async () => {
       setLoading(true)
       try {
         // Load markdown from public folder
-        const response = await fetch(selectedSection.markdownPath)
+        const response = await fetch(selectedSection.markdownPath, {
+          cache: 'no-cache' // Prevent caching issues on hard refresh
+        })
+        if (cancelled) return
+        
         if (response.ok) {
           const content = await response.text()
-          setMarkdownContent(content)
+          if (!cancelled) {
+            setMarkdownContent(content)
+          }
         } else {
           // Fallback to placeholder content if file doesn't exist
-          setMarkdownContent(`# ${selectedSection.title}\n\nContent for ${selectedSection.title} is coming soon.`)
+          if (!cancelled) {
+            setMarkdownContent(`# ${selectedSection.title}\n\nContent for ${selectedSection.title} is coming soon.`)
+          }
         }
       } catch (error) {
+        console.error('Error loading markdown:', error)
         // Fallback to placeholder content
-        setMarkdownContent(`# ${selectedSection.title}\n\nContent for ${selectedSection.title} is coming soon.`)
+        if (!cancelled) {
+          setMarkdownContent(`# ${selectedSection.title}\n\nContent for ${selectedSection.title} is coming soon.`)
+        }
       } finally {
-        setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+        }
       }
     }
 
     loadMarkdown()
+    
+    return () => {
+      cancelled = true
+    }
   }, [selectedSection])
 
   const handleSectionSelect = (section: HelpSection) => {
     navigate(`/help/${section.routeKey}`)
+  }
+
+  // Safety check - ensure we have a section before rendering
+  if (!selectedSection && !loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading help content...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -110,17 +153,19 @@ const Help = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left Sidebar */}
           <div className="lg:col-span-1 min-h-[400px]">
-            <HelpSidebar
-              sections={helpSections}
-              selectedSection={selectedSection}
-              onSectionSelect={handleSectionSelect}
-            />
+            {selectedSection && (
+              <HelpSidebar
+                sections={helpSections}
+                selectedSection={selectedSection}
+                onSectionSelect={handleSectionSelect}
+              />
+            )}
           </div>
 
           {/* Right Content Area */}
           <div className="lg:col-span-3">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 lg:p-8">
-              {loading ? (
+              {loading || !selectedSection ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
                   <span className="ml-3 text-gray-600">Loading content...</span>
@@ -246,13 +291,11 @@ const Help = () => {
                               className="max-w-full h-auto rounded-lg shadow-lg border-2 border-gray-300 mx-auto"
                               alt={props.alt || 'Permission Matrix'}
                               style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
+                              loading="lazy"
                               onError={(e) => {
                                 console.error('Image failed to load:', src)
-                                // Show error message instead of hiding
-                                const parent = e.currentTarget.parentElement
-                                if (parent) {
-                                  parent.innerHTML = `<div class="p-4 bg-red-50 border border-red-200 rounded text-red-700 text-sm">Image failed to load: ${src}</div>`
-                                }
+                                // Use React-safe approach - just hide the image
+                                e.currentTarget.style.display = 'none'
                               }}
                             />
                           </div>
