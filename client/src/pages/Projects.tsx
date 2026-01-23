@@ -87,28 +87,20 @@ const Projects = () => {
     sortOrder: 'desc',
   })
 
-  // Track if status filter has been manually changed by user
-  const statusFilterManuallyChanged = useRef(false)
-  const hasInitialized = useRef(false)
+  // Track if we've initialized the default status filter
+  const hasInitializedDefault = useRef(false)
   
-  // Initialize default status filter (all active statuses except LOST) when statusOptions are ready
+  // Initialize default status filter (all active statuses except LOST) when ready
   useEffect(() => {
-    // Only set default once on initial load, if filter hasn't been manually changed and is currently empty
-    if (defaultStatusValues.length > 0 && !hasInitialized.current && !statusFilterManuallyChanged.current) {
-      setFilters(prev => {
-        // Only update if status filter is empty
-        if (prev.status.length === 0) {
-          hasInitialized.current = true
-          return { ...prev, status: defaultStatusValues }
-        }
-        return prev
-      })
+    // Set default status filter once when defaultStatusValues is ready and filter is empty
+    if (defaultStatusValues.length > 0 && !hasInitializedDefault.current && filters.status.length === 0) {
+      setFilters(prev => ({ ...prev, status: defaultStatusValues }))
+      hasInitializedDefault.current = true
     }
   }, [defaultStatusValues])
   
   // Track when user manually changes status filter
   const handleStatusChange = (values: string[]) => {
-    statusFilterManuallyChanged.current = true
     setFilters(prev => ({ ...prev, status: values }))
   }
 

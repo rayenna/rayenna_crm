@@ -401,12 +401,18 @@ const ProjectDetail = () => {
               <dt className="text-sm text-gray-500">Payment Status</dt>
               <dd className="text-sm font-medium">
                 {(() => {
-                  const hasNoOrderValue = !project.projectCost || project.projectCost === 0 || project.projectCost === null || project.projectCost === undefined
-                  const isEarlyOrLostStage = project.projectStatus === ProjectStatus.LEAD ||
+                  // Check if project has no order value (null, undefined, 0, or falsy)
+                  const projectCost = project.projectCost
+                  const hasNoOrderValue = projectCost == null || projectCost === 0 || Number(projectCost) === 0
+                  
+                  // Check if project is in early stages or lost
+                  const isEarlyOrLostStage = 
+                    project.projectStatus === ProjectStatus.LEAD ||
                     project.projectStatus === ProjectStatus.SITE_SURVEY ||
                     project.projectStatus === ProjectStatus.PROPOSAL ||
                     project.projectStatus === ProjectStatus.LOST
                   
+                  // Show N/A if no order value OR if in early/lost stage
                   if (hasNoOrderValue || isEarlyOrLostStage) {
                     return (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
@@ -415,6 +421,7 @@ const ProjectDetail = () => {
                     )
                   }
                   
+                  // Otherwise show actual payment status
                   return (
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -425,7 +432,7 @@ const ProjectDetail = () => {
                           : 'bg-red-100 text-red-800'
                       }`}
                     >
-                      {project.paymentStatus.replace(/_/g, ' ')}
+                      {project.paymentStatus?.replace(/_/g, ' ') || 'PENDING'}
                     </span>
                   )
                 })()}
