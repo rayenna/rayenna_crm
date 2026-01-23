@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
-import { SupportTicket, SupportTicketStatus, UserRole } from '../../types'
+import { SupportTicket, SupportTicketStatus, UserRole, ProjectStatus } from '../../types'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import CreateTicketModal from './CreateTicketModal'
@@ -10,9 +10,10 @@ import ViewTicketModal from './ViewTicketModal'
 
 interface SupportTicketsSectionProps {
   projectId: string
+  projectStatus?: ProjectStatus
 }
 
-const SupportTicketsSection = ({ projectId }: SupportTicketsSectionProps) => {
+const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSectionProps) => {
   const { hasRole } = useAuth()
   const queryClient = useQueryClient()
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -20,6 +21,7 @@ const SupportTicketsSection = ({ projectId }: SupportTicketsSectionProps) => {
 
   const canManageTickets = hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS])
   const isAdmin = hasRole([UserRole.ADMIN])
+  const isProjectLost = projectStatus === ProjectStatus.LOST
 
   const { data: tickets, isLoading } = useQuery({
     queryKey: ['support-tickets', projectId],
@@ -101,8 +103,14 @@ const SupportTicketsSection = ({ projectId }: SupportTicketsSectionProps) => {
           <h2 className="text-lg font-semibold">Support / Service Tickets</h2>
           {canManageTickets && (
             <button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium text-sm flex items-center gap-2"
+              onClick={() => !isProjectLost && setShowCreateModal(true)}
+              disabled={isProjectLost}
+              className={`px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 ${
+                isProjectLost
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-primary-600 text-white hover:bg-primary-700'
+              }`}
+              title={isProjectLost ? 'Cannot create tickets for projects in Lost stage' : 'Create Ticket'}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -119,8 +127,14 @@ const SupportTicketsSection = ({ projectId }: SupportTicketsSectionProps) => {
             <p>No support tickets found for this project.</p>
             {canManageTickets && (
               <button
-                onClick={() => setShowCreateModal(true)}
-                className="mt-4 text-primary-600 hover:text-primary-700 font-medium"
+                onClick={() => !isProjectLost && setShowCreateModal(true)}
+                disabled={isProjectLost}
+                className={`mt-4 font-medium ${
+                  isProjectLost
+                    ? 'text-gray-400 cursor-not-allowed'
+                    : 'text-primary-600 hover:text-primary-700'
+                }`}
+                title={isProjectLost ? 'Cannot create tickets for projects in Lost stage' : 'Create the first ticket'}
               >
                 Create the first ticket
               </button>

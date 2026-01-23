@@ -209,7 +209,7 @@ const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudPro
   }
 
   return (
-    <div className="w-full bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-6 flex flex-col backdrop-blur-sm min-h-[600px] lg:min-h-[650px]">
+    <div className="w-full bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-6 flex flex-col backdrop-blur-sm h-[500px] sm:h-[550px] lg:h-[650px]">
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -357,28 +357,28 @@ const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudPro
       </div>
 
       {/* Word Cloud Canvas or Loading/No Data */}
-      <div className="flex-1 flex flex-col min-h-[300px] sm:min-h-[350px] lg:min-h-[400px]">
+      <div className="flex-1 flex flex-col" style={{ minHeight: 0 }}>
         {isLoading ? (
-          <div className="flex items-center justify-center flex-1 min-h-[300px]">
+          <div className="flex items-center justify-center flex-1">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
               <p className="mt-4 text-sm text-gray-500">Loading...</p>
             </div>
           </div>
         ) : !data?.wordCloudData || data.wordCloudData.length === 0 ? (
-          <div className="flex items-center justify-center flex-1 min-h-[300px]">
+          <div className="flex items-center justify-center flex-1">
             <p className="text-sm text-gray-500">No profitability data available for selected filters.</p>
           </div>
         ) : (
           <>
-            <div className="w-full flex justify-center overflow-hidden flex-1 min-h-[300px] sm:min-h-[350px] lg:min-h-[400px]">
+            <div className="w-full flex justify-center overflow-hidden flex-1" style={{ minHeight: 0 }}>
               <canvas
                 ref={canvasRef}
                 className="max-w-full h-auto"
                 style={{ maxWidth: '100%', height: 'auto' }}
               />
             </div>
-            <div className="mt-4 text-xs text-gray-500 text-center">
+            <div className="mt-4 text-xs text-gray-500 text-center flex-shrink-0">
               <p>Font size represents profitability percentage</p>
             </div>
           </>

@@ -448,7 +448,7 @@ const ProjectDetail = () => {
 
       {/* Support / Service Tickets */}
       <div className="mt-6">
-        <SupportTicketsSection projectId={project.id} />
+        <SupportTicketsSection projectId={project.id} projectStatus={project.projectStatus} />
       </div>
 
       {/* Key Artifacts - View Only */}
