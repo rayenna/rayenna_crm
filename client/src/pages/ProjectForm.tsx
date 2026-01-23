@@ -402,6 +402,15 @@ const ProjectForm = () => {
     // Get all form values including empty fields
     const allValues = getValues();
     
+    // Define confirmed and later stages once for reuse
+    const confirmedAndLaterStages = [
+      ProjectStatus.CONFIRMED,
+      ProjectStatus.UNDER_INSTALLATION,
+      ProjectStatus.SUBMITTED_FOR_SUBSIDY,
+      ProjectStatus.COMPLETED,
+      ProjectStatus.COMPLETED_SUBSIDY_CREDITED
+    ];
+    
     // Remove immutable/system fields that shouldn't be sent to backend
     const immutableFields = [
       'id', 'slNo', 'count', 'createdById', 'createdAt', 'updatedAt', 
@@ -496,14 +505,6 @@ const ProjectForm = () => {
     }
     
     // Validate Order Value is required for CONFIRMED stage and onwards
-    const confirmedAndLaterStages = [
-      ProjectStatus.CONFIRMED,
-      ProjectStatus.UNDER_INSTALLATION,
-      ProjectStatus.SUBMITTED_FOR_SUBSIDY,
-      ProjectStatus.COMPLETED,
-      ProjectStatus.COMPLETED_SUBSIDY_CREDITED
-    ];
-    
     if (confirmedAndLaterStages.includes(data.projectStatus)) {
       const projectCostValue = allValues.projectCost !== undefined ? allValues.projectCost : data.projectCost;
       if (!projectCostValue || projectCostValue === '' || projectCostValue === null || parseFloat(String(projectCostValue)) <= 0) {
@@ -659,13 +660,6 @@ const ProjectForm = () => {
       data.systemCapacity = null;
     }
     // Only convert projectCost to null if not in CONFIRMED or later stages
-    const confirmedAndLaterStages = [
-      ProjectStatus.CONFIRMED,
-      ProjectStatus.UNDER_INSTALLATION,
-      ProjectStatus.SUBMITTED_FOR_SUBSIDY,
-      ProjectStatus.COMPLETED,
-      ProjectStatus.COMPLETED_SUBSIDY_CREDITED
-    ];
     if (!confirmedAndLaterStages.includes(data.projectStatus)) {
       if (data.projectCost === '' || data.projectCost === undefined) {
         data.projectCost = null;
