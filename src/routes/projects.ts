@@ -8,6 +8,7 @@ import { predictProjectDelay } from '../utils/ai';
 import { suggestOptimalPricing } from '../utils/ai';
 import { generateProposalContent, calculateFinancials } from '../utils/proposalGenerator';
 import { generateProposalPDF } from '../utils/pdfGenerator';
+import { rateLimit } from '../middleware/rateLimit';
 import path from 'path';
 import fs from 'fs';
 import * as XLSX from 'xlsx';
@@ -1585,119 +1586,204 @@ router.post(
 );
 
 // Generate AI Proposal
-router.post('/:id/generate-proposal', authenticate, async (req: Request, res) => {
-  try {
-    const projectId = req.params.id;
+// Rate limit: 5 requests per user per hour (to prevent abuse and control costs)
+router.post(
+  '/:id/generate-proposal',
+  authenticate,
+  rateLimit(5, 60 * 60 * 1000), // 5 requests per hour
+  async (req: Request, res) => {
+    try {
+      const projectId = req.params.id;
 
-    // Get project with related data
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      include: {
-        customer: true,
-        salesperson: {
-          select: { id: true, name: true, email: true },
+      // Check OpenAI API key is configured
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(503).json({
+          error: 'AI proposal generation is not available. OpenAI API key is not configured.',
+        });
+      }
+
+      // Restrict to SALES and ADMIN roles only
+      if (req.user?.role !== UserRole.ADMIN && req.user?.role !== UserRole.SALES) {
+        return res.status(403).json({
+          error: 'Access denied. Only Sales and Admin users can generate proposals.',
+        });
+      }
+
+      // Get project with related data
+      const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        include: {
+          customer: true,
+          salesperson: {
+            select: { id: true, name: true, email: true },
+          },
         },
-      },
-    });
+      });
 
-    if (!project) {
-      return res.status(404).json({ error: 'Project not found' });
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+
+      // Additional access check: Sales users can only generate for their own projects
+      if (
+        req.user?.role === UserRole.SALES &&
+        project.salespersonId !== req.user?.id &&
+        project.createdById !== req.user?.id
+      ) {
+        return res.status(403).json({
+          error: 'Access denied. You can only generate proposals for your own projects.',
+        });
+      }
+
+      if (!project.customer) {
+        return res.status(400).json({ error: 'Customer information not found' });
+      }
+
+      // Validate required project data
+      if (!project.systemCapacity || !project.projectCost) {
+        return res.status(400).json({
+          error: 'Project must have system capacity and project cost to generate a proposal.',
+        });
+      }
+
+      // Prepare proposal data
+      const proposalData = {
+        customer: {
+          name: project.customer.customerName,
+          address: project.customer.address || undefined,
+          addressLine1: project.customer.addressLine1 || undefined,
+          addressLine2: project.customer.addressLine2 || undefined,
+          city: project.customer.city || undefined,
+          state: project.customer.state || undefined,
+          pinCode: project.customer.pinCode || undefined,
+          phone: project.customer.phone || undefined,
+          email: project.customer.email || undefined,
+          customerType: project.customer.customerType || undefined,
+        },
+        project: {
+          systemCapacity: project.systemCapacity || undefined,
+          projectCost: project.projectCost || undefined,
+          systemType: project.systemType || undefined,
+          roofType: project.roofType || undefined,
+          panelBrand: project.panelBrand || undefined,
+          inverterBrand: project.inverterBrand || undefined,
+          incentiveEligible: project.incentiveEligible,
+          loanDetails: project.loanDetails || undefined,
+        },
+        salesperson: {
+          name: project.salesperson?.name || 'Rayenna Energy Team',
+        },
+      };
+
+      // Calculate financials
+      const financials = calculateFinancials(proposalData);
+
+      // Generate AI content
+      let content;
+      try {
+        content = await generateProposalContent(proposalData, financials);
+      } catch (error: any) {
+        // Log error without exposing API key or sensitive details
+        console.error('OpenAI API error:', {
+          message: error.message,
+          projectId,
+          userId: req.user?.id,
+          timestamp: new Date().toISOString(),
+        });
+        
+        // Provide user-friendly error message
+        if (error.message?.includes('API key') || error.message?.includes('authentication')) {
+          return res.status(503).json({
+            error: 'AI service is temporarily unavailable. Please try again later or contact support.',
+          });
+        }
+        
+        if (error.message?.includes('rate limit') || error.message?.includes('quota')) {
+          return res.status(429).json({
+            error: 'AI service rate limit exceeded. Please try again later.',
+          });
+        }
+        
+        return res.status(500).json({
+          error: 'Failed to generate proposal content. Please try again later.',
+        });
+      }
+
+      // Return HTML preview (for now, PDF generation on demand)
+      const htmlPreview = generateHTMLPreview(proposalData, financials, content);
+
+      res.json({
+        success: true,
+        content,
+        financials,
+        htmlPreview,
+        proposalData,
+      });
+    } catch (error: any) {
+      // Log error without exposing secrets
+      console.error('Error generating proposal:', {
+        message: error.message,
+        projectId: req.params.id,
+        userId: req.user?.id,
+        timestamp: new Date().toISOString(),
+      });
+      
+      res.status(500).json({
+        error: error.message || 'Failed to generate proposal',
+      });
     }
-
-    // Check access permissions
-    if (
-      req.user?.role !== UserRole.ADMIN &&
-      req.user?.role !== UserRole.MANAGEMENT &&
-      req.user?.role !== UserRole.SALES &&
-      project.salespersonId !== req.user?.id
-    ) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    if (!project.customer) {
-      return res.status(400).json({ error: 'Customer information not found' });
-    }
-
-    // Prepare proposal data
-    const proposalData = {
-      customer: {
-        name: project.customer.customerName,
-        address: project.customer.address || undefined,
-        addressLine1: project.customer.addressLine1 || undefined,
-        addressLine2: project.customer.addressLine2 || undefined,
-        city: project.customer.city || undefined,
-        state: project.customer.state || undefined,
-        pinCode: project.customer.pinCode || undefined,
-        phone: project.customer.phone || undefined,
-        email: project.customer.email || undefined,
-        customerType: project.customer.customerType || undefined,
-      },
-      project: {
-        systemCapacity: project.systemCapacity || undefined,
-        projectCost: project.projectCost || undefined,
-        systemType: project.systemType || undefined,
-        roofType: project.roofType || undefined,
-        panelBrand: project.panelBrand || undefined,
-        inverterBrand: project.inverterBrand || undefined,
-        incentiveEligible: project.incentiveEligible,
-        loanDetails: project.loanDetails || undefined,
-      },
-      salesperson: {
-        name: project.salesperson?.name || 'Rayenna Energy Team',
-      },
-    };
-
-    // Calculate financials
-    const financials = calculateFinancials(proposalData);
-
-    // Generate AI content
-    const content = await generateProposalContent(proposalData, financials);
-
-    // Return HTML preview (for now, PDF generation on demand)
-    const htmlPreview = generateHTMLPreview(proposalData, financials, content);
-
-    res.json({
-      success: true,
-      content,
-      financials,
-      htmlPreview,
-      proposalData,
-    });
-  } catch (error: any) {
-    console.error('Error generating proposal:', error);
-    res.status(500).json({ error: error.message || 'Failed to generate proposal' });
   }
-});
+);
 
 // Download proposal as PDF
-router.get('/:id/proposal-pdf', authenticate, async (req: Request, res) => {
-  try {
-    const projectId = req.params.id;
+// Rate limit: 3 PDFs per user per hour
+router.get(
+  '/:id/proposal-pdf',
+  authenticate,
+  rateLimit(3, 60 * 60 * 1000), // 3 requests per hour
+  async (req: Request, res) => {
+    try {
+      const projectId = req.params.id;
 
-    // Get project with related data
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      include: {
-        customer: true,
-        salesperson: {
-          select: { id: true, name: true, email: true },
+      // Check OpenAI API key is configured
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(503).json({
+          error: 'AI proposal generation is not available. OpenAI API key is not configured.',
+        });
+      }
+
+      // Restrict to SALES and ADMIN roles only
+      if (req.user?.role !== UserRole.ADMIN && req.user?.role !== UserRole.SALES) {
+        return res.status(403).json({
+          error: 'Access denied. Only Sales and Admin users can generate proposal PDFs.',
+        });
+      }
+
+      // Get project with related data
+      const project = await prisma.project.findUnique({
+        where: { id: projectId },
+        include: {
+          customer: true,
+          salesperson: {
+            select: { id: true, name: true, email: true },
+          },
         },
-      },
-    });
+      });
 
-    if (!project || !project.customer) {
-      return res.status(404).json({ error: 'Project not found' });
-    }
+      if (!project || !project.customer) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
 
-    // Check access permissions
-    if (
-      req.user?.role !== UserRole.ADMIN &&
-      req.user?.role !== UserRole.MANAGEMENT &&
-      req.user?.role !== UserRole.SALES &&
-      project.salespersonId !== req.user?.id
-    ) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+      // Additional access check: Sales users can only generate for their own projects
+      if (
+        req.user?.role === UserRole.SALES &&
+        project.salespersonId !== req.user?.id &&
+        project.createdById !== req.user?.id
+      ) {
+        return res.status(403).json({
+          error: 'Access denied. You can only generate proposal PDFs for your own projects.',
+        });
+      }
 
     // Prepare proposal data
     const proposalData = {
@@ -1728,14 +1814,62 @@ router.get('/:id/proposal-pdf', authenticate, async (req: Request, res) => {
       },
     };
 
+    // Validate required project data
+    if (!project.systemCapacity || !project.projectCost) {
+      return res.status(400).json({
+        error: 'Project must have system capacity and project cost to generate a proposal PDF.',
+      });
+    }
+
     // Calculate financials
     const financials = calculateFinancials(proposalData);
 
     // Generate AI content
-    const content = await generateProposalContent(proposalData, financials);
+    let content;
+    try {
+      content = await generateProposalContent(proposalData, financials);
+    } catch (error: any) {
+      // Log error without exposing API key or sensitive details
+      console.error('OpenAI API error in PDF generation:', {
+        message: error.message,
+        projectId,
+        userId: req.user?.id,
+        timestamp: new Date().toISOString(),
+      });
+      
+      // Provide user-friendly error message
+      if (error.message?.includes('API key') || error.message?.includes('authentication')) {
+        return res.status(503).json({
+          error: 'AI service is temporarily unavailable. Please try again later or contact support.',
+        });
+      }
+      
+      if (error.message?.includes('rate limit') || error.message?.includes('quota')) {
+        return res.status(429).json({
+          error: 'AI service rate limit exceeded. Please try again later.',
+        });
+      }
+      
+      return res.status(500).json({
+        error: 'Failed to generate proposal content. Please try again later.',
+      });
+    }
 
     // Generate PDF
-    const pdfBuffer = await generateProposalPDF(proposalData, financials, content);
+    let pdfBuffer;
+    try {
+      pdfBuffer = await generateProposalPDF(proposalData, financials, content);
+    } catch (error: any) {
+      console.error('PDF generation error:', {
+        message: error.message,
+        projectId,
+        userId: req.user?.id,
+        timestamp: new Date().toISOString(),
+      });
+      return res.status(500).json({
+        error: 'Failed to generate PDF. Please try again later.',
+      });
+    }
 
     // Save PDF to file system and create document record
     const uploadsDir = path.join(__dirname, '../../uploads');
@@ -1783,8 +1917,17 @@ router.get('/:id/proposal-pdf', authenticate, async (req: Request, res) => {
 
     res.send(pdfBuffer);
   } catch (error: any) {
-    console.error('Error generating PDF:', error);
-    res.status(500).json({ error: error.message || 'Failed to generate PDF' });
+    // Log error without exposing secrets
+    console.error('Error generating proposal PDF:', {
+      message: error.message,
+      projectId: req.params.id,
+      userId: req.user?.id,
+      timestamp: new Date().toISOString(),
+    });
+    
+    res.status(500).json({
+      error: error.message || 'Failed to generate proposal PDF',
+    });
   }
 });
 

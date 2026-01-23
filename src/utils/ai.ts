@@ -89,9 +89,24 @@ Format the response as a professional proposal document.`;
     });
 
     return completion.choices[0]?.message?.content || 'Failed to generate proposal';
-  } catch (error) {
-    console.error('Error generating proposal:', error);
-    throw new Error('Failed to generate proposal content');
+  } catch (error: any) {
+    // Log error without exposing API key or sensitive details
+    console.error('OpenAI API error:', {
+      message: error.message,
+      type: error.constructor.name,
+      timestamp: new Date().toISOString(),
+    });
+    
+    // Provide user-friendly error messages
+    if (error.message?.includes('API key') || error.message?.includes('authentication')) {
+      throw new Error('AI service authentication failed. Please contact support.');
+    }
+    
+    if (error.message?.includes('rate limit') || error.message?.includes('quota')) {
+      throw new Error('AI service rate limit exceeded. Please try again later.');
+    }
+    
+    throw new Error('Failed to generate proposal content. Please try again later.');
   }
 }
 
@@ -197,8 +212,15 @@ Respond in JSON format: {"predictedDelay": number, "riskLevel": "LOW|MEDIUM|HIGH
       riskLevel: response.riskLevel || 'LOW',
       reasons: response.reasons || [],
     };
-  } catch (error) {
-    console.error('Error predicting delay:', error);
+  } catch (error: any) {
+    // Log error without exposing API key or sensitive details
+    console.error('OpenAI API error in delay prediction:', {
+      message: error.message,
+      type: error.constructor.name,
+      projectId,
+      timestamp: new Date().toISOString(),
+    });
+    
     return {
       predictedDelay: 0,
       riskLevel: 'LOW',
@@ -288,8 +310,15 @@ Respond in JSON format: {"suggestedPrice": number, "priceRange": {"min": number,
       priceRange: response.priceRange || { min: avgPrice * 0.9, max: avgPrice * 1.1 },
       reasoning: response.reasoning || 'Based on historical data',
     };
-  } catch (error) {
-    console.error('Error suggesting pricing:', error);
+  } catch (error: any) {
+    // Log error without exposing API key or sensitive details
+    console.error('OpenAI API error in pricing suggestion:', {
+      message: error.message,
+      type: error.constructor.name,
+      systemCapacity,
+      timestamp: new Date().toISOString(),
+    });
+    
     return {
       suggestedPrice: avgPrice,
       priceRange: { min: avgPrice * 0.9, max: avgPrice * 1.1 },

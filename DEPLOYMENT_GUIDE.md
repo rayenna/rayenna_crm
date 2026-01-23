@@ -99,7 +99,7 @@ rayenna-crm/
    CLOUDINARY_CLOUD_NAME=dwmwc2nzf
    CLOUDINARY_API_KEY=998311513464496
    CLOUDINARY_API_SECRET=efzCoLtJzYcRJJWlEJq36zOsUb4
-   OPENAI_API_KEY=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
+   OPENAI_API_KEY=<Your OpenAI API Key - get from https://platform.openai.com/api-keys>
    FRONTEND_URL=<Your Vercel frontend URL - set after Vercel deployment>
 
 4. **Save Web Service** - Render will start building

@@ -216,8 +216,23 @@ Respond ONLY in valid JSON format with these exact keys: executiveSummary, about
       nextSteps: parsed.nextSteps || '1. Site visit\n2. Agreement\n3. Installation',
       fullContent: parsed.fullContent || parsed.executiveSummary || '',
     };
-  } catch (error) {
-    console.error('Error generating proposal:', error);
-    throw new Error('Failed to generate proposal content');
+  } catch (error: any) {
+    // Log error without exposing API key or sensitive details
+    console.error('OpenAI API error in proposal generation:', {
+      message: error.message,
+      type: error.constructor.name,
+      timestamp: new Date().toISOString(),
+    });
+    
+    // Provide user-friendly error messages
+    if (error.message?.includes('API key') || error.message?.includes('authentication')) {
+      throw new Error('AI service authentication failed. Please contact support.');
+    }
+    
+    if (error.message?.includes('rate limit') || error.message?.includes('quota')) {
+      throw new Error('AI service rate limit exceeded. Please try again later.');
+    }
+    
+    throw new Error('Failed to generate proposal content. Please try again later.');
   }
 }

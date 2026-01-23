@@ -11,6 +11,11 @@ build/
 .env
 .env.local
 .env.*.local
+.env.production
+.env.development
+.env.test
+*.env
+*.env.*
 
 # Uploads and generated files
 uploads/
