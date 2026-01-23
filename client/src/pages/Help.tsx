@@ -126,7 +126,7 @@ const Help = () => {
                   <span className="ml-3 text-gray-600">Loading content...</span>
                 </div>
               ) : (
-                <div className="prose prose-sm sm:prose-base lg:prose-lg max-w-none">
+                <div className="max-w-none">
                   <ReactMarkdown
                     components={{
                       h1: ({ node, ...props }) => (
@@ -226,13 +226,38 @@ const Help = () => {
                       td: ({ node, ...props }) => (
                         <td className="px-4 py-3 text-sm text-gray-700 border-b border-gray-200" {...props} />
                       ),
-                      img: ({ node, ...props }: any) => (
-                        <img
-                          {...props}
-                          className="max-w-full h-auto rounded-lg shadow-md my-4"
-                          alt={props.alt || 'Image'}
-                        />
-                      ),
+                      img: ({ node, ...props }: any) => {
+                        // Handle image paths - ensure they're properly resolved
+                        let src = props.src || ''
+                        // If it's a relative path (doesn't start with /, http, or //), resolve it
+                        if (src && !src.startsWith('http') && !src.startsWith('//') && !src.startsWith('/')) {
+                          // Relative path - resolve based on current markdown file location
+                          const currentPath = selectedSection?.markdownPath || ''
+                          const basePath = currentPath.substring(0, currentPath.lastIndexOf('/'))
+                          src = `${basePath}/${src}`
+                        }
+                        // Ensure absolute paths from public folder work correctly
+                        // Paths starting with / are served from public folder root
+                        return (
+                          <div className="my-6 flex justify-center w-full">
+                            <img
+                              {...props}
+                              src={src}
+                              className="max-w-full h-auto rounded-lg shadow-lg border-2 border-gray-300 mx-auto"
+                              alt={props.alt || 'Permission Matrix'}
+                              style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
+                              onError={(e) => {
+                                console.error('Image failed to load:', src)
+                                // Show error message instead of hiding
+                                const parent = e.currentTarget.parentElement
+                                if (parent) {
+                                  parent.innerHTML = `<div class="p-4 bg-red-50 border border-red-200 rounded text-red-700 text-sm">Image failed to load: ${src}</div>`
+                                }
+                              }}
+                            />
+                          </div>
+                        )
+                      },
                     }}
                   >
                     {markdownContent}

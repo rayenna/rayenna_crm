@@ -37,11 +37,6 @@ The Rayenna CRM system supports multiple user roles, each with specific permissi
 
 ## Permission Matrix
 
-| Feature | ADMIN | SALES | OPERATIONS | FINANCE | MANAGEMENT |
-|---------|-------|-------|------------|---------|-------------|
-| Dashboard | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Customers | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Projects | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Support Tickets | ✓ | ✓ | ✓ | - | - |
-| Tally Export | ✓ | - | - | ✓ | - |
-| Users | ✓ | - | - | - | - |
+A quick reference showing which features each role can access:
+
+![Permission Matrix](/help/docs/overview/access_matrix.jpg)
