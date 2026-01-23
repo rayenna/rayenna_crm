@@ -13,7 +13,7 @@ The Rayenna CRM is a comprehensive customer relationship management system desig
 1. **Login**: Use your credentials to access the system
 2. **Dashboard**: View your personalized dashboard based on your role
 3. **Navigation**: Use the top navigation menu to access different modules
-4. **Help**: Press F1 or click Help in the menu for assistance
+4. **Help**: Press **?** or click Help in the menu for assistance
 
 ## Next Steps
 

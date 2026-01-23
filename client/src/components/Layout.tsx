@@ -42,7 +42,10 @@ const Layout = () => {
         target.closest('[contenteditable="true"]') !== null
 
       // ? key to open Help (only if not typing in an input)
-      if (event.key === '?' && !isInputFocused && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      // Note: ? is typically Shift+/, so we need to allow shiftKey
+      // Check for both '?' key and Shift+'/' combination
+      const isQuestionMark = event.key === '?' || (event.key === '/' && event.shiftKey)
+      if (isQuestionMark && !isInputFocused && !event.ctrlKey && !event.metaKey && !event.altKey) {
         // Don't open if already on help page
         if (!location.pathname.startsWith('/help')) {
           event.preventDefault()

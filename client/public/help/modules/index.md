@@ -223,6 +223,6 @@ A quick reference showing which features each role can access:
 ## Getting Help
 
 If you need assistance with the Support Tickets module:
-- Press **F1** or click **Help** in the navigation menu
+- Press **?** or click **Help** in the navigation menu
 - Review the **FAQ** section for common questions
 - Contact your system administrator for access or permission issues
