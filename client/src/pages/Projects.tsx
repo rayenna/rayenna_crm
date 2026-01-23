@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../utils/axios'
 import { Link } from 'react-router-dom'
@@ -44,8 +44,40 @@ const Projects = () => {
   const [showExportConfirm, setShowExportConfirm] = useState(false)
   const [pendingExportType, setPendingExportType] = useState<'excel' | 'csv' | null>(null)
   
+  // Prepare options for multi-selects - matching exactly the Project Status dropdown in Sales & Commercial section
+  // Operations users can only see: CONFIRMED, UNDER_INSTALLATION, COMPLETED, COMPLETED_SUBSIDY_CREDITED
+  const allStatusOptions = useMemo(() => [
+    { value: ProjectStatus.LEAD, label: 'Lead' },
+    { value: ProjectStatus.SITE_SURVEY, label: 'Site Survey' },
+    { value: ProjectStatus.PROPOSAL, label: 'Proposal' },
+    { value: ProjectStatus.CONFIRMED, label: 'Confirmed Order' },
+    { value: ProjectStatus.UNDER_INSTALLATION, label: 'Installation' },
+    { value: ProjectStatus.COMPLETED, label: 'Completed' },
+    { value: ProjectStatus.COMPLETED_SUBSIDY_CREDITED, label: 'Completed - Subsidy Credited' },
+    { value: ProjectStatus.LOST, label: 'Lost' },
+  ], [])
+
+  // Filter status options based on user role
+  const statusOptions = useMemo(() => {
+    return user?.role === UserRole.OPERATIONS
+      ? allStatusOptions.filter(option => 
+          option.value === ProjectStatus.CONFIRMED ||
+          option.value === ProjectStatus.UNDER_INSTALLATION ||
+          option.value === ProjectStatus.COMPLETED ||
+          option.value === ProjectStatus.COMPLETED_SUBSIDY_CREDITED
+        )
+      : allStatusOptions
+  }, [user?.role, allStatusOptions])
+
+  // Default status filter: All active statuses (all statuses except LOST)
+  const defaultStatusValues = useMemo(() => {
+    return statusOptions
+      .filter(option => option.value !== ProjectStatus.LOST)
+      .map(option => option.value)
+  }, [statusOptions])
+
   const [filters, setFilters] = useState({
-    status: [] as string[],
+    status: defaultStatusValues,
     type: [] as string[],
     projectServiceType: [] as string[],
     salespersonId: [] as string[],
@@ -97,29 +129,6 @@ const Projects = () => {
       return res.data
     },
   })
-
-  // Prepare options for multi-selects - matching exactly the Project Status dropdown in Sales & Commercial section
-  // Operations users can only see: CONFIRMED, UNDER_INSTALLATION, COMPLETED, COMPLETED_SUBSIDY_CREDITED
-  const allStatusOptions = [
-    { value: ProjectStatus.LEAD, label: 'Lead' },
-    { value: ProjectStatus.SITE_SURVEY, label: 'Site Survey' },
-    { value: ProjectStatus.PROPOSAL, label: 'Proposal' },
-    { value: ProjectStatus.CONFIRMED, label: 'Confirmed Order' },
-    { value: ProjectStatus.UNDER_INSTALLATION, label: 'Installation' },
-    { value: ProjectStatus.COMPLETED, label: 'Completed' },
-    { value: ProjectStatus.COMPLETED_SUBSIDY_CREDITED, label: 'Completed - Subsidy Credited' },
-    { value: ProjectStatus.LOST, label: 'Lost' },
-  ]
-
-  // Filter status options based on user role
-  const statusOptions = user?.role === UserRole.OPERATIONS
-    ? allStatusOptions.filter(option => 
-        option.value === ProjectStatus.CONFIRMED ||
-        option.value === ProjectStatus.UNDER_INSTALLATION ||
-        option.value === ProjectStatus.COMPLETED ||
-        option.value === ProjectStatus.COMPLETED_SUBSIDY_CREDITED
-      )
-    : allStatusOptions
 
   const typeOptions = Object.values(ProjectType).map(type => ({
     value: type,
