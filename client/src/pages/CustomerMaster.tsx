@@ -94,6 +94,36 @@ const CustomerMaster = () => {
     return parts.length > 0 ? parts.join(' ') : customer.customerName || 'Unknown'
   }
 
+  const getCustomerGoogleMapsUrl = (customer: Customer) => {
+    const lat = customer.latitude
+    const lng = customer.longitude
+    if (typeof lat !== 'number' || typeof lng !== 'number') return null
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`
+  }
+
+  const GoogleMapsIconButton = ({ href }: { href: string }) => {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Open in Google Maps"
+        aria-label="Open in Google Maps"
+        className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300 shadow-sm transition"
+      >
+        {/* Compact Google-Maps-like pin icon */}
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 2c-3.86 0-7 3.14-7 7 0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7z"
+            fill="#EA4335"
+          />
+          <circle cx="12" cy="9" r="2.5" fill="#FFFFFF" />
+        </svg>
+      </a>
+    )
+  }
+
   const handleDelete = (customer: Customer) => {
     setCustomerToDelete(customer)
     setShowDeleteConfirm(true)
@@ -368,13 +398,30 @@ const CustomerMaster = () => {
                       )}
                     </div>
                     <div className="mt-2 text-sm text-gray-500">
-                      {(customer.addressLine1 || customer.city || customer.state || customer.country) && (
-                        <span>
-                          {[customer.addressLine1, customer.addressLine2, customer.city, customer.state, customer.country, customer.pinCode]
-                            .filter(Boolean)
-                            .join(', ')}
-                        </span>
-                      )}
+                      {(() => {
+                        const hasAnyAddress =
+                          customer.addressLine1 || customer.addressLine2 || customer.city || customer.state || customer.country || customer.pinCode
+                        const mapsUrl = getCustomerGoogleMapsUrl(customer)
+                        if (!hasAnyAddress && !mapsUrl) return null
+
+                        const addressText = [
+                          customer.addressLine1,
+                          customer.addressLine2,
+                          customer.city,
+                          customer.state,
+                          customer.country,
+                          customer.pinCode,
+                        ]
+                          .filter(Boolean)
+                          .join(', ')
+
+                        return (
+                          <span className="inline-flex items-center gap-2">
+                            {addressText && <span>{addressText}</span>}
+                            {mapsUrl && <GoogleMapsIconButton href={mapsUrl} />}
+                          </span>
+                        )
+                      })()}
                       {customer.consumerNumber && (
                         <span className="ml-4">Consumer: {customer.consumerNumber}</span>
                       )}
