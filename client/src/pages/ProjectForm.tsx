@@ -495,6 +495,23 @@ const ProjectForm = () => {
       data.totalProjectCost = 0;
     }
     
+    // Validate Order Value is required for CONFIRMED stage and onwards
+    const confirmedAndLaterStages = [
+      ProjectStatus.CONFIRMED,
+      ProjectStatus.UNDER_INSTALLATION,
+      ProjectStatus.SUBMITTED_FOR_SUBSIDY,
+      ProjectStatus.COMPLETED,
+      ProjectStatus.COMPLETED_SUBSIDY_CREDITED
+    ];
+    
+    if (confirmedAndLaterStages.includes(data.projectStatus)) {
+      const projectCostValue = allValues.projectCost !== undefined ? allValues.projectCost : data.projectCost;
+      if (!projectCostValue || projectCostValue === '' || projectCostValue === null || parseFloat(String(projectCostValue)) <= 0) {
+        toast.error('Order Value is required and must be greater than 0 for Confirmed Order stage and onwards');
+        return;
+      }
+    }
+    
     // Validate all dates before proceeding
     const dateErrors: string[] = [];
     
@@ -641,8 +658,18 @@ const ProjectForm = () => {
     if (data.systemCapacity === '' || data.systemCapacity === undefined) {
       data.systemCapacity = null;
     }
-    if (data.projectCost === '' || data.projectCost === undefined) {
-      data.projectCost = null;
+    // Only convert projectCost to null if not in CONFIRMED or later stages
+    const confirmedAndLaterStages = [
+      ProjectStatus.CONFIRMED,
+      ProjectStatus.UNDER_INSTALLATION,
+      ProjectStatus.SUBMITTED_FOR_SUBSIDY,
+      ProjectStatus.COMPLETED,
+      ProjectStatus.COMPLETED_SUBSIDY_CREDITED
+    ];
+    if (!confirmedAndLaterStages.includes(data.projectStatus)) {
+      if (data.projectCost === '' || data.projectCost === undefined) {
+        data.projectCost = null;
+      }
     }
     
     console.log('Submitting data:', data); // Debug log
@@ -973,11 +1000,38 @@ const ProjectForm = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Order Value (₹)</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Order Value (₹)
+                  {(projectStatus === ProjectStatus.CONFIRMED ||
+                    projectStatus === ProjectStatus.UNDER_INSTALLATION ||
+                    projectStatus === ProjectStatus.SUBMITTED_FOR_SUBSIDY ||
+                    projectStatus === ProjectStatus.COMPLETED ||
+                    projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED) && ' *'}
+                </label>
                 <input
                   type="number"
                   step="0.01"
-                  {...register('projectCost')}
+                  {...register('projectCost', {
+                    required: (projectStatus === ProjectStatus.CONFIRMED ||
+                      projectStatus === ProjectStatus.UNDER_INSTALLATION ||
+                      projectStatus === ProjectStatus.SUBMITTED_FOR_SUBSIDY ||
+                      projectStatus === ProjectStatus.COMPLETED ||
+                      projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED) 
+                      ? 'Order Value is required for Confirmed Order stage and onwards'
+                      : false,
+                    validate: (value) => {
+                      if (projectStatus === ProjectStatus.CONFIRMED ||
+                          projectStatus === ProjectStatus.UNDER_INSTALLATION ||
+                          projectStatus === ProjectStatus.SUBMITTED_FOR_SUBSIDY ||
+                          projectStatus === ProjectStatus.COMPLETED ||
+                          projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED) {
+                        if (!value || value === '' || parseFloat(value) <= 0) {
+                          return 'Order Value must be greater than 0 for Confirmed Order stage and onwards';
+                        }
+                      }
+                      return true;
+                    }
+                  })}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                 />
               </div>
