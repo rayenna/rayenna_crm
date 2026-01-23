@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './contexts/AuthContext'
 import PrivateRoute from './components/PrivateRoute'
+import ErrorBoundary from './components/ErrorBoundary'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import CustomerMaster from './pages/CustomerMaster'
@@ -42,8 +43,22 @@ function App() {
             <Route path="tally-export" element={<TallyExport />} />
             <Route path="support-tickets" element={<SupportTicketsDashboard />} />
             <Route path="change-password" element={<ChangePassword />} />
-            <Route path="help" element={<Help />} />
-            <Route path="help/:section" element={<Help />} />
+            <Route 
+              path="help" 
+              element={
+                <ErrorBoundary>
+                  <Help />
+                </ErrorBoundary>
+              } 
+            />
+            <Route 
+              path="help/:section" 
+              element={
+                <ErrorBoundary>
+                  <Help />
+                </ErrorBoundary>
+              } 
+            />
             <Route path="about" element={<About />} />
           </Route>
         </Routes>

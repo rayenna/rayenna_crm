@@ -16,26 +16,36 @@ const Help = () => {
 
   // Determine current section - simplified and safe for hard refresh
   const selectedSection = useMemo(() => {
-    // If explicit section in URL, use it
-    if (section) {
-      const found = helpSections.find(s => s.routeKey === section)
-      if (found) return found
-    }
-    
-    // On hard refresh without section param, default to getting-started
-    // Only do context-sensitive detection if we have a referrer stored
-    const referrerPath = sessionStorage.getItem('helpReferrer')
-    if (referrerPath) {
-      const contextSectionId = getHelpSectionForRoute(referrerPath)
-      const found = helpSections.find(s => s.id === contextSectionId)
-      if (found) {
-        sessionStorage.removeItem('helpReferrer')
-        return found
+    try {
+      // If explicit section in URL, use it
+      if (section) {
+        const found = helpSections.find(s => s.routeKey === section)
+        if (found) return found
       }
+      
+      // On hard refresh without section param, default to getting-started
+      // Only do context-sensitive detection if we have a referrer stored
+      try {
+        const referrerPath = sessionStorage.getItem('helpReferrer')
+        if (referrerPath) {
+          const contextSectionId = getHelpSectionForRoute(referrerPath)
+          const found = helpSections.find(s => s.id === contextSectionId)
+          if (found) {
+            sessionStorage.removeItem('helpReferrer')
+            return found
+          }
+        }
+      } catch (e) {
+        // Ignore sessionStorage errors
+        console.warn('Error accessing sessionStorage:', e)
+      }
+      
+      // Fallback to getting started
+      return helpSections.find(s => s.id === 'getting-started') || helpSections[0] || null
+    } catch (error) {
+      console.error('Error determining section:', error)
+      return helpSections[0] || null
     }
-    
-    // Fallback to getting started
-    return helpSections.find(s => s.id === 'getting-started') || helpSections[0]
   }, [section])
 
   // Esc key to close Help
@@ -170,17 +180,31 @@ const Help = () => {
     )
   }
 
+  // Ensure we have a valid section before rendering
+  if (!selectedSection) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Initializing help content...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left Sidebar */}
           <div className="lg:col-span-1 min-h-[400px]">
-            <HelpSidebar
-              sections={helpSections}
-              selectedSection={selectedSection}
-              onSectionSelect={handleSectionSelect}
-            />
+            {selectedSection && (
+              <HelpSidebar
+                sections={helpSections}
+                selectedSection={selectedSection}
+                onSectionSelect={handleSectionSelect}
+              />
+            )}
           </div>
 
           {/* Right Content Area */}
@@ -208,8 +232,16 @@ const Help = () => {
                     )}
                     <Suspense fallback={<div className="text-center py-4">Loading...</div>}>
                       {markdownContent && markdownContent.trim() ? (
-                        <ReactMarkdown
-                          components={{
+                        <ErrorBoundary
+                          fallback={
+                            <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
+                              <p className="font-semibold mb-2">Error rendering content</p>
+                              <p className="text-sm">The help content could not be displayed. Please try refreshing the page.</p>
+                            </div>
+                          }
+                        >
+                          <ReactMarkdown
+                            components={{
                       h1: ({ node, ...props }) => (
                         <h1 className="text-3xl font-bold text-gray-900 mb-4 mt-6 first:mt-0" {...props} />
                       ),
@@ -331,10 +363,11 @@ const Help = () => {
                           </div>
                         )
                       },
-                          }}
-                        >
-                          {markdownContent}
-                        </ReactMarkdown>
+                            }}
+                          >
+                            {markdownContent}
+                          </ReactMarkdown>
+                        </ErrorBoundary>
                       ) : (
                         <div className="text-center py-8 text-gray-500">
                           No content available
