@@ -706,7 +706,7 @@ Data governance ensures data is accurate, consistent, secure, and used appropria
 - Check system logs
 - Review audit trails
 - Consult with team members
-- Use Help (F1) feature
+- Use Help (?) feature
 
 **External Support**:
 - Contact technical support

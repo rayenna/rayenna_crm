@@ -88,7 +88,7 @@
 
 If troubleshooting doesn't resolve the issue:
 
-1. **Check Help documentation** (F1)
+1. **Check Help documentation** (?)
 2. **Review FAQ section** for similar issues
 3. **Contact your administrator** for access issues
 4. **Report technical problems** to support team

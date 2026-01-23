@@ -607,7 +607,7 @@ Every project in the CRM is linked to a customer. This relationship enables comp
 
 ### Using Help Features
 
-- Press **F1** from Customers page for context-sensitive help
+- Press **?** from Customers page for context-sensitive help
 - Click **Help** in navigation menu
 - Review this guide for detailed information
 

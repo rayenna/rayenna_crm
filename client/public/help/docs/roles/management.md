@@ -538,7 +538,7 @@ Your Management Dashboard provides a comprehensive, aggregated view of all busin
 ### Using Help Features
 
 **Context-Sensitive Help**:
-- Press **F1** from any page for relevant help
+- Press **?** from any page for relevant help
 - Help automatically shows information for your current page
 - Use this for quick answers
 

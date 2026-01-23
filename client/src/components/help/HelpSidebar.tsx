@@ -13,7 +13,7 @@ const HelpSidebar = ({ sections, selectedSection, onSectionSelect }: HelpSidebar
       {/* Header */}
       <div className="px-4 lg:px-6 pt-4 lg:pt-6 pb-4 border-b border-gray-200">
         <h2 className="text-lg font-bold text-gray-900">Help Topics</h2>
-        <p className="text-xs text-gray-500 mt-1">Press F1 for help</p>
+        <p className="text-xs text-gray-500 mt-1">Press ? for help</p>
       </div>
 
       {/* Scrollable Navigation */}

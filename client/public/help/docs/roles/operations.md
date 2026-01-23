@@ -585,7 +585,7 @@ Documents are stored securely in the system and can be accessed by authorized us
 ### Using Help Features
 
 **Context-Sensitive Help**:
-- Press **F1** from any page for relevant help
+- Press **?** from any page for relevant help
 - Help automatically shows information for your current page
 - Use this for quick answers
 
@@ -624,7 +624,7 @@ Documents are stored securely in the system and can be accessed by authorized us
 - Ask for training if needed
 
 **Ongoing Support**:
-- Use Help (F1) for quick questions
+- Use Help (?) for quick questions
 - Review help documentation regularly
 - Attend training sessions when offered
 - Share feedback with administrators

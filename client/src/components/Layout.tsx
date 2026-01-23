@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
@@ -6,6 +6,7 @@ import { UserRole } from '../types'
 const Layout = () => {
   const { user, logout, hasRole } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [helpDropdownOpen, setHelpDropdownOpen] = useState(false)
   const helpDropdownRef = useRef<HTMLDivElement>(null)
@@ -23,11 +24,45 @@ const Layout = () => {
   
   // Help menu items - visible to all logged-in users
   const helpMenuItems = [
-    { name: 'Help (F1)', path: '/help' },
+    { name: 'Help (?)', path: '/help' },
     { name: 'About', path: '/about' },
   ]
   
   const isHelpActive = location.pathname.startsWith('/help') || location.pathname.startsWith('/about')
+
+  // Keyboard shortcuts: ? to open Help, Esc to close Help
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check if user is typing in an input, textarea, or contenteditable element
+      const target = event.target as HTMLElement
+      const isInputFocused = 
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable ||
+        target.closest('[contenteditable="true"]') !== null
+
+      // ? key to open Help (only if not typing in an input)
+      if (event.key === '?' && !isInputFocused && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        // Don't open if already on help page
+        if (!location.pathname.startsWith('/help')) {
+          event.preventDefault()
+          sessionStorage.setItem('helpReferrer', location.pathname)
+          navigate('/help')
+        }
+      }
+
+      // Esc key to close Help (only if on help page)
+      if (event.key === 'Escape' && location.pathname.startsWith('/help')) {
+        event.preventDefault()
+        navigate('/dashboard')
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [location.pathname, navigate])
 
   // Close dropdown when clicking outside
   useEffect(() => {

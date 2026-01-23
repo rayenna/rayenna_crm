@@ -626,7 +626,7 @@ Documents are organized into categories to help you find and manage files more e
 
 ### Using Help Features
 
-- Press **F1** from Projects page for context-sensitive help
+- Press **?** from Projects page for context-sensitive help
 - Click **Help** in navigation menu
 - Review this guide for detailed information
 

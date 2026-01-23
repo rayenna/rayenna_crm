@@ -1041,7 +1041,7 @@ Projects can have multiple support tickets and documents linked to them. These r
 
 ### Using Help Features
 
-- Press **F1** from Projects page for context-sensitive help
+- Press **?** from Projects page for context-sensitive help
 - Click **Help** in navigation menu
 - Review this guide for detailed information
 

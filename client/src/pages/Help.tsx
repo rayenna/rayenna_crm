@@ -12,6 +12,21 @@ const Help = () => {
   const [loading, setLoading] = useState(true)
   const [selectedSection, setSelectedSection] = useState<HelpSection | null>(null)
 
+  // Esc key to close Help
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        navigate('/dashboard')
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [navigate])
+
   // Determine current section - context-sensitive or explicit
   useEffect(() => {
     let currentSection: HelpSection | null = null
@@ -151,9 +166,49 @@ const Help = () => {
                       pre: ({ node, ...props }) => (
                         <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4" {...props} />
                       ),
-                      a: ({ node, ...props }) => (
-                        <a className="text-primary-600 hover:text-primary-700 underline" {...props} />
-                      ),
+                      a: ({ node, ...props }: any) => {
+                        const href = props.href
+                        // Intercept help links and navigate within the Help component
+                        if (href && href.startsWith('/help/')) {
+                          // Extract section key, removing /help/ prefix and any query params or trailing slashes
+                          const sectionKey = href
+                            .replace('/help/', '')
+                            .split('?')[0] // Remove query params
+                            .split('#')[0] // Remove hash
+                            .replace(/\/$/, '') // Remove trailing slash
+                          
+                          const targetSection = helpSections.find(s => s.routeKey === sectionKey)
+                          
+                          if (targetSection) {
+                            return (
+                              <a
+                                {...props}
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  handleSectionSelect(targetSection)
+                                }}
+                                className="text-primary-600 hover:text-primary-700 underline cursor-pointer"
+                              />
+                            )
+                          }
+                        }
+                        // External links open in new tab
+                        if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
+                          return (
+                            <a
+                              {...props}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary-600 hover:text-primary-700 underline"
+                            />
+                          )
+                        }
+                        // Regular links
+                        return (
+                          <a className="text-primary-600 hover:text-primary-700 underline" {...props} />
+                        )
+                      },
                       blockquote: ({ node, ...props }) => (
                         <blockquote className="border-l-4 border-primary-500 pl-4 italic text-gray-600 my-4" {...props} />
                       ),

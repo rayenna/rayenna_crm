@@ -859,7 +859,7 @@ The Support Tickets Dashboard provides comprehensive tracking and monitoring cap
 
 ### Using Help Features
 
-- Press **F1** from Support Tickets Dashboard for context-sensitive help
+- Press **?** from Support Tickets Dashboard for context-sensitive help
 - Click **Help** in navigation menu
 - Review this guide for detailed information
 

@@ -65,7 +65,7 @@
 ## Efficiency Tips
 
 ### Navigation
-- Use keyboard shortcuts (F1 for help)
+- Use keyboard shortcuts (? for help)
 - Bookmark frequently used pages
 - Use browser back/forward buttons
 - Take advantage of search and filters
@@ -119,7 +119,7 @@
 
 ## Getting Help
 
-- **Press F1** for context-sensitive help
+- **Press ?** for context-sensitive help
 - **Browse Help sections** for detailed guides
 - **Check FAQ** for common questions
 - **Contact administrator** for access issues

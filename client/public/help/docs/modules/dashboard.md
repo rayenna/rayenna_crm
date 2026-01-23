@@ -694,7 +694,7 @@ Charts provide visual representations of your data, making it easier to understa
 
 ### Using Help Features
 
-- Press **F1** from Dashboard for context-sensitive help
+- Press **?** from Dashboard for context-sensitive help
 - Click **Help** in navigation menu
 - Review this guide for detailed information
 

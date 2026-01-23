@@ -54,12 +54,12 @@ When you first log into Rayenna Energy CRM, you'll see your personalized dashboa
 
 The top navigation menu provides access to all major modules. The menu items you see depend on your role—ensuring you have access to the features you need without being overwhelmed by options you don't use. A Help menu is always available, providing quick access to documentation and support.
 
-Begin by exploring your dashboard to familiarize yourself with the key metrics. Then, navigate to the modules you'll use most frequently. Each module includes search and filter capabilities to help you find information quickly. As you work, remember that pressing **F1** or clicking **Help** provides context-sensitive assistance based on the page you're viewing.
+Begin by exploring your dashboard to familiarize yourself with the key metrics. Then, navigate to the modules you'll use most frequently. Each module includes search and filter capabilities to help you find information quickly. As you work, remember that pressing **?** or clicking **Help** provides context-sensitive assistance based on the page you're viewing.
 
 Start with the modules most relevant to your role. Sales users might begin by reviewing their pipeline and creating new projects. Operations staff might check pending installations and update project statuses. Management might review analytics and performance metrics. The system is designed to be intuitive, but comprehensive help documentation is always available when you need it.
 
 ## Getting Help
 
-Help is always just a click away. Press **F1** or click **Help** in the navigation menu to access context-sensitive documentation. The help system automatically shows information relevant to the page you're viewing, making it easy to find answers to your questions. You can also browse help topics by category or search for specific information.
+Help is always just a click away. Press **?** or click **Help** in the navigation menu to access context-sensitive documentation. The help system automatically shows information relevant to the page you're viewing, making it easy to find answers to your questions. You can also browse help topics by category or search for specific information.
 
 Welcome to Rayenna Energy CRM. We're here to help you succeed.

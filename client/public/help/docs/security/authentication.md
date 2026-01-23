@@ -600,7 +600,7 @@ Login is the process of verifying your identity to access the system. It's the f
 
 ### Using Help Features
 
-- Press **F1** from any page for context-sensitive help
+- Press **?** from any page for context-sensitive help
 - Click **Help** in navigation menu
 - Review this guide for detailed information
 

@@ -144,7 +144,7 @@ The top menu shows modules available to your role:
 
 - Click **Help** in the navigation menu
 - Browse help topics relevant to your role
-- Press **F1** for context-sensitive help
+- Press **?** for context-sensitive help
 - Review role-specific guides
 
 ### 6. Practice Basic Tasks
@@ -273,7 +273,7 @@ After completing your first login:
 ## Getting Help
 
 Remember:
-- Press **F1** or click **Help** for context-sensitive assistance
+- Press **?** or click **Help** for context-sensitive assistance
 - Browse help topics in the Help menu
 - Review role-specific guides
 - Contact your administrator for access or technical issues

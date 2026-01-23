@@ -453,7 +453,7 @@ This guide covers the most frequently performed actions in Rayenna Energy CRM. T
 
 - **Use keyboard shortcuts**: Tab to navigate, Enter to submit
 - **Bookmark common pages**: Save frequently accessed pages
-- **Use Help (F1)**: Quick access to context-sensitive help
+- **Use Help (?)**: Quick access to context-sensitive help
 - **Learn your role's features**: Focus on tools available to you
 
 ## Troubleshooting Common Issues
@@ -495,7 +495,7 @@ This guide covers the most frequently performed actions in Rayenna Energy CRM. T
 
 ## Getting Help
 
-- Press **F1** from any page for context-sensitive help
+- Press **?** from any page for context-sensitive help
 - Click **Help** in the navigation menu
 - Review role-specific guides
 - Contact your administrator for access issues

@@ -40,9 +40,9 @@ Menu items are displayed based on your user role:
 
 Located in the top navigation bar:
 
-- **Help (F1)**: Opens context-sensitive help documentation
+- **Help (?)**: Opens context-sensitive help documentation
   - Automatically shows relevant help based on your current page
-  - Press F1 from any page for quick help access
+  - Press ? from any page for quick help access
 - **About**: System information and version details
 
 ### User Actions Menu
@@ -407,7 +407,7 @@ Accessible from the top navigation menu (Sales, Operations, Admin only).
 
 ### Keyboard Shortcuts
 
-- **F1**: Open Help documentation
+- **?**: Open Help documentation
 - **Tab**: Navigate between form fields and buttons
 - **Enter/Space**: Activate buttons and links
 - **Esc**: Close modals and drawers (where applicable)
@@ -422,7 +422,7 @@ Accessible from the top navigation menu (Sales, Operations, Admin only).
 
 ## Getting Help
 
-- Press **F1** from any page for context-sensitive help
+- Press **?** from any page for context-sensitive help
 - Click **Help** in the navigation menu
 - Review role-specific guides
 - Contact your administrator for access issues

@@ -548,7 +548,7 @@ This chart displays the performance of your sales team members, showing how much
 
 ### Using Help Features
 
-- Press **F1** from Dashboard for context-sensitive help
+- Press **?** from Dashboard for context-sensitive help
 - Click **Help** in navigation menu
 - Review this guide for detailed information
 
