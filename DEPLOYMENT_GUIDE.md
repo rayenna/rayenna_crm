@@ -125,11 +125,50 @@ rayenna-crm/
    ```
    (Use the Render backend URL from step 3)
 4. **Deploy** - Vercel will build and deploy
-5. **Get Frontend URL**: Note your Vercel URL (e.g., `https://rayenna-crm.vercel.app`)
+5. **Get Frontend URL**: Note your Vercel URL (e.g., `https://rayenna-crm.vercel.app` or `https://rayenna-crm-kappa.vercel.app`)
 6. **Update Render Environment Variable**:
    - Go back to Render dashboard
    - Update `FRONTEND_URL` to your Vercel URL
    - Render will automatically restart with new CORS settings
+
+#### Where to see (and change) Root Directory in Vercel
+
+If Vercel is **not auto-deploying** after Git push, the cause is often a **Root Directory** mismatch. Fix it in the Vercel UI (not in GitHub):
+
+1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
+2. Click your **frontend project** (e.g. the one at `rayenna-crm-kappa.vercel.app`)
+3. Click **Settings** (top menu)
+4. Open **General**
+5. Scroll to **Build & Development Settings**
+6. Find **Root Directory**
+
+**What you’ll see:**  
+`Root Directory: /` **or** `Root Directory: client`
+
+**What it must be for this repo (frontend in `client/`):**
+
+| Root Directory | Use when |
+|----------------|----------|
+| **`client`**   | Frontend lives in `client/` (this repo) ✅ |
+| **`/`**        | Frontend at repo root (not this repo) |
+
+➡️ **Set Root Directory to `client`**, then **Save**.
+
+**After changing Root Directory:**
+
+1. Go to **Deployments**
+2. Click **Redeploy** on the latest deployment
+3. Choose **Redeploy without cache**
+4. Your latest Git push should deploy correctly.
+
+**Sanity check in build logs:**  
+You should see something like:
+
+```text
+Running "npm run build" in /vercel/path0/client
+```
+
+If you see `/client` in the path, the Root Directory is correct.
 
 ---
 
