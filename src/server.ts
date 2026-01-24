@@ -28,6 +28,11 @@ import remarksRoutes from './routes/remarks';
 
 dotenv.config();
 
+// Validate required environment variables at startup
+if (!process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET is not set");
+}
+
 const app = express();
 const prisma = new PrismaClient();
 

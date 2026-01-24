@@ -17,7 +17,7 @@ export const authenticate = async (
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
       userId: string;
       email: string;
       role: UserRole;
