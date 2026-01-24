@@ -242,17 +242,7 @@ If **Lead Source** is Referral, Channel Partner, or Other, the corresponding det
 
 ## Project Status Stages
 
-| Status | Description | Typical Actions |
-|--------|-------------|-----------------|
-| **Lead** | Initial inquiry, no commitment yet | Contact customer, gather requirements, schedule site survey |
-| **Site Survey** | Site visited and assessed | Document site, prepare proposal, move to proposal |
-| **Proposal** | Proposal sent to customer | Generate proposal (AI-assisted), follow up, address queries |
-| **Confirmed Order** | Customer has confirmed | Set confirmation date, plan execution |
-| **Installation** | Installation in progress | Track progress, update milestones, monitor completion |
-| **Submitted for Subsidy** | Subsidy application submitted | Track approval, follow up |
-| **Completed** | Installation complete, system operational | Final documentation, customer handover |
-| **Completed - Subsidy Credited** | Subsidy received | Final accounting, closure |
-| **Lost** | Customer did not proceed | Record Lost Date and Reason; project cannot be edited |
+![Project Status Workflow](/help/docs/overview/CRM_Workflow.jpg)
 
 **Sales** typically update status from Lead through Confirmed Order. **Operations** update status from Installation onward and manage execution milestones. **Finance** can view all statuses but cannot change them.
 
