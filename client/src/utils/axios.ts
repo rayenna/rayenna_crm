@@ -4,6 +4,14 @@ import axios from 'axios';
 // Falls back to empty string (relative URLs) for local development with Vite proxy
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
+// Warn if API base is missing in production (causes login/API calls to fail)
+if (!API_BASE_URL && typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
+  console.warn(
+    '[Rayenna CRM] VITE_API_BASE_URL is not set. Login and API calls will fail. ' +
+    'Set it on your host (e.g. Render Static Site Environment) and redeploy.'
+  );
+}
+
 // Create axios instance with base URL
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,

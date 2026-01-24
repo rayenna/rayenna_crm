@@ -293,9 +293,26 @@ npm run dev
 ## 🐛 Troubleshooting
 
 ### Frontend can't connect to backend
-- Check `VITE_API_BASE_URL` in Vercel environment variables
-- Verify backend URL is correct (with https://)
+- Check `VITE_API_BASE_URL` in Vercel (or Render static site) environment variables
+- Verify backend URL is correct (with `https://`, no trailing slash)
 - Check browser console for CORS errors
+
+### Render frontend: Cannot log in / password not working for any user
+
+**Symptom:** Login form always fails (“Invalid credentials” or “Login failed”) even with correct passwords.
+
+**Cause:** The frontend is not calling the **backend** API. It uses `VITE_API_BASE_URL` to know where the API lives. That value is **baked in at build time**. If it’s missing or was added **after** the first deploy, the app calls the wrong URL (or relative `/api/...` against the static site) and login fails.
+
+**Fix:**
+
+1. **Render Dashboard** → your **Static Site** (e.g. `rayenna-crm-frontend`) → **Environment**
+2. Add **`VITE_API_BASE_URL`** = `https://rayenna-crm-backend.onrender.com`  
+   - Use your actual backend URL; no trailing slash.
+3. **Redeploy** the static site (e.g. **Manual Deploy** → **Deploy latest commit**).  
+   - A new build is required so the env var is included.
+4. **Backend** → **Environment**: set **`FRONTEND_URL`** to your **Render frontend** URL (e.g. `https://rayenna-crm-frontend.onrender.com`) so CORS allows it. **Save** and let the backend restart.
+
+**Check:** Open the frontend → DevTools → **Network**. Log in and look at the login request. It should go to `https://...-backend.onrender.com/api/auth/login`, not to the frontend URL. If it goes to the frontend host, `VITE_API_BASE_URL` is still wrong or missing — fix env and **redeploy** again.
 
 ### Backend can't connect to database
 - Verify `DATABASE_URL` in Render includes `?sslmode=require`
@@ -506,11 +523,9 @@ Move the frontend **off Vercel** onto **Render** as a Static Site. Backend is al
    - **Root Directory:** `client`
    - **Build Command:** `npm install && npm run build`
    - **Publish Directory:** `dist`
-   - **Environment:** Add `VITE_API_BASE_URL` = `https://rayenna-crm-backend.onrender.com`
-4. **Redirects / Rewrites** (SPA routing): Add a **Rewrite** rule
-   - **Source:** `/*`
-   - **Destination:** `/index.html`
-   - (So `/dashboard`, `/help`, etc. work on refresh. Rule is in Dashboard → Static Site → **Redirects/Rewrites**.)
+   - **Environment:** Add `VITE_API_BASE_URL` = `https://rayenna-crm-backend.onrender.com`  
+     **Important:** This is baked in at build time. If you add or change it later, **redeploy** the static site (Manual Deploy → Deploy latest commit) or login/API will fail.
+4. **SPA routing:** The build outputs `404.html` (copy of `index.html`). Render serves it for missing paths, so `/dashboard`, `/help`, etc. work on refresh. **No Redirects/Rewrites** in the Dashboard needed. (If that UI shows "Not Found", you can ignore it.)
 5. **Create Static Site.** Wait for build.
 6. **Note the URL** (e.g. `https://rayenna-crm-frontend.onrender.com`)
 7. **Render** → backend service → **Environment** → **FRONTEND_URL** = new static site URL → **Save**
@@ -519,6 +534,47 @@ Move the frontend **off Vercel** onto **Render** as a Static Site. Backend is al
 **Alternative:** Use **New + Blueprint** → connect repo → apply. The root `render.yaml` defines the static site only; add the Rewrite rule in Dashboard afterward.
 
 **Updates:** Push to `main` → Render rebuilds the static site automatically (like the backend).
+
+---
+
+#### Render Static Site — Add env, redirects, redeploy (click-by-click)
+
+**1. Add `VITE_API_BASE_URL` on the static site**
+
+1. Go to [Render Dashboard](https://dashboard.render.com).
+2. Click your **static site** (e.g. `rayenna-crm-frontend`) in the list.
+3. In the left sidebar, click **Environment**.
+4. Under **Environment Variables**, click **Add Environment Variable** (or **+ Add**).
+5. **Key:** `VITE_API_BASE_URL`  
+   **Value:** `https://rayenna-crm-backend.onrender.com`  
+   (Use your real backend URL; no `https://` trailing slash.)
+6. Click **Save Changes**.
+
+**2. Redeploy the static site** (so the new env is baked into the build)
+
+1. Stay on the **static site** page.
+2. Top-right: click **Manual Deploy** → **Deploy latest commit** (or **Clear build cache & deploy** if you want a clean build).
+3. Wait for the build to finish (status **Live**).
+
+**3. Set `FRONTEND_URL` on the backend**
+
+1. In the Render Dashboard, click your **backend** service (e.g. `rayenna-crm-backend`).
+2. Left sidebar → **Environment**.
+3. Find **FRONTEND_URL**. If it exists, **Edit**; otherwise **Add Environment Variable**.
+4. **Key:** `FRONTEND_URL`  
+   **Value:** your **static site** URL, e.g. `https://rayenna-crm-frontend.onrender.com` (no trailing slash).
+5. **Save Changes.** Render will restart the backend.
+
+**4. SPA routing (direct URLs / refresh)** — **404.html workaround (no Redirects/Rewrites UI needed)**
+
+The build now copies `index.html` → `404.html`. Render serves `404.html` for paths that don’t exist (e.g. `/dashboard`, `/help`), so the SPA loads and client-side routing works. **You do not need to configure Redirects/Rewrites in the Dashboard.**
+
+If you see **"Not Found"** when opening **Redirects/Rewrites** (Dashboard → Static Site → Redirects/Rewrites), that’s fine — the **404.html** workaround replaces it. Just redeploy the static site so the new build (with `404.html`) is deployed.
+
+**Optional — if Redirects/Rewrites *is* available:**  
+Left sidebar → **Redirects/Rewrites** (or **Settings** → **Redirects/Rewrites**). **Add Rule** → **Type:** Rewrite → **Source:** `/*` → **Destination:** `/index.html` → **Save.** Not required if you use 404.html.
+
+Then open your frontend URL, try logging in, and check DevTools → Network that the login request goes to the **backend** URL.
 
 ---
 
