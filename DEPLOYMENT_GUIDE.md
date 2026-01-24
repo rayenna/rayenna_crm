@@ -573,14 +573,17 @@ Move the frontend **off Vercel** onto **Render** as a Static Site. Backend is al
 4. Under **Environment Variables**, click **Add Environment Variable** (or **+ Add**).
 5. **Key:** `VITE_API_BASE_URL`  
    **Value:** `https://rayenna-crm-backend.onrender.com`  
-   (Use your real backend URL; no `https://` trailing slash.)
+   (Use your real backend URL; no trailing slash.)
 6. Click **Save Changes**.
 
-**2. Redeploy the static site** (so the new env is baked into the build)
+**2. Redeploy the static site** (required — the env var is baked in at build time)
+
+**Adding the variable is not enough.** You must trigger a **new build** or it won’t be used.
 
 1. Stay on the **static site** page.
-2. Top-right: click **Manual Deploy** → **Deploy latest commit** (or **Clear build cache & deploy** if you want a clean build).
+2. Top-right: click **Manual Deploy** → **Deploy latest commit** (or **Clear build cache & deploy**).
 3. Wait for the build to finish (status **Live**).
+4. **Check:** Open the **login page** → scroll down. You should see **"API base (for login):"** with your backend URL. If it says **"NOT SET"**, the var wasn’t in the build — add it, **Save**, then **Manual Deploy** again.
 
 **3. Set `FRONTEND_URL` on the backend**
 
