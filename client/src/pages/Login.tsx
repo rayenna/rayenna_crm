@@ -113,16 +113,6 @@ const Login = () => {
             By signing in, you acknowledge and agree to the Credits, Copyright, intellectual property and Terms of Usage of this product. Refer the About section to know more
           </p>
         </div>
-        {isProd && (
-          <div className="mt-4 p-2 rounded bg-gray-100 text-left text-xs text-gray-600 font-mono">
-            <div className="font-semibold text-gray-700 mb-1">API base (for login):</div>
-            {apiBaseUrl ? (
-              <div className="break-all">{apiBaseUrl}</div>
-            ) : (
-              <div className="text-amber-700 font-medium">NOT SET — add VITE_API_BASE_URL in Render (Static Site → Environment), then redeploy.</div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   )
