@@ -18,6 +18,7 @@ import Help from './pages/Help'
 import Layout from './components/Layout'
 
 function App() {
+  console.log('VERCEL DEPLOY CHECK – Jan 24, 2026 – v1')
   return (
     <BrowserRouter>
       <AuthProvider>
