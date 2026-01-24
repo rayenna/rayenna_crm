@@ -203,6 +203,7 @@ const ProjectForm = () => {
   const selectedCustomerId = watch('customerId')
   const confirmationDate = watch('confirmationDate')
   const projectStatus = watch('projectStatus')
+  const projectType = watch('type')
   const [customerSearch, setCustomerSearch] = useState('')
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
   const customerDropdownRef = useRef<HTMLDivElement>(null)
@@ -248,6 +249,17 @@ const ProjectForm = () => {
       setValue('leadSourceDetails', '');
     }
   }, [leadSource, setValue])
+
+  // Auto-select Panel Type based on Segment (only for new projects, not edits)
+  useEffect(() => {
+    if (!isEdit && projectType) {
+      if (projectType === ProjectType.RESIDENTIAL_SUBSIDY) {
+        setValue('panelType', 'DCR');
+      } else if (projectType === ProjectType.RESIDENTIAL_NON_SUBSIDY || projectType === ProjectType.COMMERCIAL_INDUSTRIAL) {
+        setValue('panelType', 'Non-DCR');
+      }
+    }
+  }, [projectType, isEdit, setValue])
 
   // Filter customers based on search and user permissions
   const filteredCustomers = useMemo(() => {

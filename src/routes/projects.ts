@@ -634,6 +634,16 @@ router.post(
       const systemCapacityNum = systemCapacity ? (isNaN(parseFloat(systemCapacity)) ? null : parseFloat(systemCapacity)) : null;
       const projectCostNum = projectCost ? (isNaN(parseFloat(projectCost)) ? null : parseFloat(projectCost)) : null;
 
+      // Auto-select Panel Type based on Segment if not provided
+      let finalPanelType = panelType;
+      if (!finalPanelType) {
+        if (type === ProjectType.RESIDENTIAL_SUBSIDY) {
+          finalPanelType = 'DCR';
+        } else if (type === ProjectType.RESIDENTIAL_NON_SUBSIDY || type === ProjectType.COMMERCIAL_INDUSTRIAL) {
+          finalPanelType = 'Non-DCR';
+        }
+      }
+
       // Auto-calculate expected profit
       const expectedProfit = calculateExpectedProfit(projectCostNum, systemCapacityNum);
       
@@ -716,7 +726,7 @@ router.post(
           leadId: leadId || null,
           assignedOpsId: assignedOpsId || null,
           panelBrand: panelBrand || null,
-          panelType: panelType || null,
+          panelType: finalPanelType || null,
           inverterBrand: inverterBrand || null,
           siteAddress: siteAddress || null,
           expectedCommissioningDate: convertDate(expectedCommissioningDate),
