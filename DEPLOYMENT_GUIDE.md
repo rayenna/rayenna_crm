@@ -312,7 +312,9 @@ npm run dev
    - A new build is required so the env var is included.
 4. **Backend** → **Environment**: set **`FRONTEND_URL`** to your **Render frontend** URL (e.g. `https://rayenna-crm-frontend.onrender.com`) so CORS allows it. **Save** and let the backend restart.
 
-**Check:** Open the frontend → DevTools → **Network**. Log in and look at the login request. It should go to `https://...-backend.onrender.com/api/auth/login`, not to the frontend URL. If it goes to the frontend host, `VITE_API_BASE_URL` is still wrong or missing — fix env and **redeploy** again.
+**Check:** Open the frontend → DevTools → **Network**. Log in and look at the login request. It should go to `https://YOUR-BACKEND.onrender.com/api/auth/login`, not to the frontend URL. If it goes to the frontend host, `VITE_API_BASE_URL` is still wrong or missing — fix env and **redeploy** again.
+
+**Use the exact backend URL from Render:** In Render Dashboard → your **backend** service → note the **primary URL** (e.g. `https://rayenna-crm.onrender.com`). It may *not* be `rayenna-crm-backend.onrender.com`. Set `VITE_API_BASE_URL` to that **exact** URL. Wrong URL → 404 + CORS errors.
 
 ---
 
