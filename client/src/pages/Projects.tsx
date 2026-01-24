@@ -9,6 +9,45 @@ import MultiSelect from '../components/MultiSelect'
 import { useDebounce } from '../hooks/useDebounce'
 import toast from 'react-hot-toast'
 
+// Helper function to get payment status badge with color coding
+const getPaymentStatusBadge = (project: Project) => {
+  // Check if project has no order value (null, undefined, 0, or falsy)
+  const projectCost = project?.projectCost
+  const hasNoOrderValue = !projectCost || projectCost === 0 || projectCost === null || projectCost === undefined || Number(projectCost) <= 0
+  
+  // Check if project is in early stages or lost
+  const isEarlyOrLostStage = 
+    project.projectStatus === ProjectStatus.LEAD ||
+    project.projectStatus === ProjectStatus.SITE_SURVEY ||
+    project.projectStatus === ProjectStatus.PROPOSAL ||
+    project.projectStatus === ProjectStatus.LOST
+  
+  // Show N/A if no order value OR if in early/lost stage
+  if (hasNoOrderValue || isEarlyOrLostStage) {
+    return (
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+        N/A
+      </span>
+    )
+  }
+  
+  // Otherwise show actual payment status with color coding
+  const paymentStatus = project.paymentStatus || 'PENDING'
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+        paymentStatus === 'FULLY_PAID'
+          ? 'bg-green-100 text-green-800'
+          : paymentStatus === 'PARTIAL'
+          ? 'bg-yellow-100 text-yellow-800'
+          : 'bg-red-100 text-red-800'
+      }`}
+    >
+      {String(paymentStatus).replace(/_/g, ' ')}
+    </span>
+  )
+}
+
 // Helper function to get status badge color classes
 const getStatusColorClasses = (status: ProjectStatus): string => {
   switch (status) {
@@ -439,9 +478,9 @@ const Projects = () => {
                     <p className="text-sm text-gray-500">
                       {format(new Date(project.createdAt), 'MMM dd, yyyy')}
                     </p>
-                    <p className="text-sm font-medium text-gray-900">
-                      {project.paymentStatus.replace(/_/g, ' ')}
-                    </p>
+                    <div className="mt-1">
+                      {getPaymentStatusBadge(project)}
+                    </div>
                   </div>
                 </div>
               </Link>
