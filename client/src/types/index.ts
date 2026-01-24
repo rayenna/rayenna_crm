@@ -162,6 +162,7 @@ export interface Project {
   statusIndicator?: 'GREEN' | 'AMBER' | 'RED'
   systemType?: SystemType
   panelBrand?: string
+  panelType?: string
   inverterBrand?: string
   roofType?: string
   siteAddress?: string

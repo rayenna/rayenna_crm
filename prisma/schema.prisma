@@ -239,6 +239,7 @@ model Project {
   systemCapacity            Float? // kW
   systemType                SystemType? // On-grid, Off-grid, Hybrid
   panelBrand                String?
+  panelType                 String? // DCR, Non-DCR
   inverterBrand             String?
   roofType                  String? // Concrete-Flat, Concrete-Sloped, Tile, Thatched, Asbestos, Metal, Others
   projectStage              ProjectStage? // Survey, Proposal, Approved, Installation, Billing, Live, AMC, Lost

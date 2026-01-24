@@ -1378,6 +1378,29 @@ const ProjectForm = () => {
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Panel Type</label>
+                <div className="flex gap-4 mt-1">
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      {...register('panelType')}
+                      value="DCR"
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-700">DCR</span>
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      {...register('panelType')}
+                      value="Non-DCR"
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-700">Non-DCR</span>
+                  </label>
+                </div>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700">Inverter Brand</label>
                 <input
                   type="text"

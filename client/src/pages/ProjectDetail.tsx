@@ -430,6 +430,12 @@ const ProjectDetail = () => {
                 </dd>
               </div>
             )}
+            {project.panelType && (
+              <div>
+                <dt className="text-sm text-gray-500">Panel Type</dt>
+                <dd className="text-sm font-medium">{project.panelType}</dd>
+              </div>
+            )}
             {/* Lost Stage Information */}
             {project.projectStatus === ProjectStatus.LOST && (
               <>
