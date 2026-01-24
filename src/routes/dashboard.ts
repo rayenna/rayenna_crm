@@ -881,13 +881,8 @@ router.get('/finance', authenticate, async (req: Request, res) => {
     res.json({
       totalProjectValue: totalProjectValue._sum.projectCost || 0,
       totalAmountReceived: totalAmountReceived._sum.totalAmountReceived || 0,
-      totalOutstanding: totalOutstanding._sum.balanceAmount || 0,
-      projectsByPaymentStatus: projectsByPaymentStatus.map((p) => ({
-        status: p.paymentStatus,
-        count: p._count.id,
-        totalValue: p._sum.projectCost || 0,
-        outstanding: p._sum.balanceAmount || 0,
-      })),
+      totalOutstanding: totalOutstanding, // Use the calculated totalOutstanding (only PENDING and PARTIAL)
+      projectsByPaymentStatus, // Use the calculated effective payment status
       profitByProject,
       profitBySalesperson: profitBreakdown,
       projectValueByType: valueByTypeWithPercentage,
