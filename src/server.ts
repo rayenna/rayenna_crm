@@ -37,37 +37,29 @@ const allowedOrigins = [
   'http://localhost:5173', // Local Vite dev server
   'http://localhost:3000', // Local backend (if needed)
   'https://rayenna-crm-kappa.vercel.app', // Production Vercel frontend
+  'https://rayenna-crm-frontend.onrender.com', // Production Render frontend (Option B)
   process.env.FRONTEND_URL, // Production frontend from env (if different)
 ].filter(Boolean) as string[];
+
+const normalizeOrigin = (o: string) => o?.replace(/\/$/, '') ?? '';
+
+function isOriginAllowed(origin: string | undefined): boolean {
+  if (!origin) return true;
+  const n = normalizeOrigin(origin);
+  if (allowedOrigins.map(normalizeOrigin).includes(n)) return true;
+  if (process.env.NODE_ENV === 'development') return true;
+  if (origin.includes('render.com') || origin.includes('localhost')) return true;
+  return false;
+}
 
 // CORS options configuration
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    // Allow requests with no origin (mobile apps, curl, Postman, server-to-server, health checks)
-    if (!origin) {
+    if (isOriginAllowed(origin)) {
       return callback(null, true);
     }
-    
-    // Normalize origins (remove trailing slashes for comparison)
-    const normalizedOrigin = origin.replace(/\/$/, '');
-    const normalizedAllowedOrigins = allowedOrigins.map(o => o?.replace(/\/$/, ''));
-    
-    if (normalizedAllowedOrigins.includes(normalizedOrigin)) {
-      callback(null, true);
-    } else {
-      // In development, allow all origins for easier testing
-      if (process.env.NODE_ENV === 'development') {
-        callback(null, true);
-      } else {
-        // Allow Render internal requests and health checks
-        if (!origin || origin.includes('render.com') || origin.includes('localhost')) {
-          callback(null, true);
-        } else {
-          console.warn('CORS warning - origin not in allowed list:', origin);
-          callback(null, true); // Temporarily allow to prevent startup errors
-        }
-      }
-    }
+    console.warn('CORS: origin not allowed:', origin);
+    callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
@@ -75,9 +67,22 @@ const corsOptions = {
   exposedHeaders: ['Content-Type'],
 };
 
-app.use(cors(corsOptions));
+// Handle preflight OPTIONS first — ensure CORS headers on 204 (avoids 404 without CORS)
+app.use((req, res, next) => {
+  if (req.method !== 'OPTIONS') return next();
+  const origin = req.headers.origin as string | undefined;
+  if (!isOriginAllowed(origin)) {
+    return res.status(403).end();
+  }
+  if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  return res.status(204).end();
+});
 
-// Explicitly handle preflight OPTIONS requests for all routes with same CORS config
+app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 app.use(express.json());
