@@ -496,9 +496,16 @@ const ProjectDetail = () => {
                 // Uploader can delete their own documents (except Proposal PDFs which only admin can delete)
                 const isProposalPDF = doc.description === 'AI Generated Proposal PDF'
                 const isAdmin = hasRole([UserRole.ADMIN])
+                const isManagement = hasRole([UserRole.MANAGEMENT])
+                const isSales = hasRole([UserRole.SALES])
+                const isOperations = hasRole([UserRole.OPERATIONS])
+                const isFinance = hasRole([UserRole.FINANCE])
                 const isUploader = doc.uploadedById === user?.id
+                // Sales users can only view/download documents from their own projects
+                const salesHasProjectAccess = isSales && project.salespersonId === user?.id
                 const canDelete = isAdmin || (isUploader && !isProposalPDF)
-                const canView = hasRole([UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE]) || isUploader
+                // View/Download: Admin, Management, Operations, Finance, or Sales (only their projects), or uploader
+                const canView = isAdmin || isManagement || isOperations || isFinance || salesHasProjectAccess || isUploader
                 
                 return (
                   <div

@@ -407,7 +407,7 @@ router.get(
       }
 
       // Check if user has permission to view/download the document
-      // Allow: ADMIN, MANAGEMENT, SALES, OPERATIONS, FINANCE, or the uploader
+      // Allow: ADMIN, MANAGEMENT, SALES (only their projects), OPERATIONS, FINANCE, or the uploader
       const isAdmin = req.user?.role === UserRole.ADMIN;
       const isManagement = req.user?.role === UserRole.MANAGEMENT;
       const isSales = req.user?.role === UserRole.SALES;
@@ -415,7 +415,17 @@ router.get(
       const isFinance = req.user?.role === UserRole.FINANCE;
       const isUploader = document.uploadedById === req.user?.id;
 
-      if (!isAdmin && !isManagement && !isSales && !isOperations && !isFinance && !isUploader) {
+      // For Sales users, check if they have access to the project
+      let salesHasAccess = false;
+      if (isSales) {
+        const project = await prisma.project.findUnique({
+          where: { id: document.projectId },
+          select: { salespersonId: true },
+        });
+        salesHasAccess = project?.salespersonId === req.user?.id;
+      }
+
+      if (!isAdmin && !isManagement && !(isSales && salesHasAccess) && !isOperations && !isFinance && !isUploader) {
         return res.status(403).json({ 
           error: 'You do not have permission to view/download this document. Only authorized roles or the uploader can access it.' 
         });
