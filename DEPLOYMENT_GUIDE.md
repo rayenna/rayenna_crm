@@ -321,6 +321,83 @@ npm run dev
 - Check backend logs in Render dashboard
 - Ensure `FRONTEND_URL` includes `https://`
 
+### Vercel not deploying latest commit (Deployments show N-1)
+
+**Symptom:** You push to `main`, but Vercel’s latest deployment is still the previous commit. Production Branch may be hard to find in the current Vercel UI.
+
+---
+
+#### ✅ **Recommended fix: Deploy Hooks (no Production Branch needed)**
+
+Deploy Hooks let you **trigger a deploy on demand** from latest `main`. No Git webhook, no Production Branch required.
+
+1. **Vercel Dashboard** → your project → **Settings** → **Git**
+2. Scroll to **Deploy Hooks**
+3. **Name**: e.g. `Deploy latest main`
+4. **Branch to deploy**: select **`main`**
+5. Click **Create Hook**
+6. Copy the **hook URL** (looks like `https://api.vercel.com/v1/integrations/deploy/...`)
+
+**Trigger a deploy:**
+
+- **Browser:** Paste the hook URL in the address bar and press Enter (GET works).
+- **PowerShell:**
+  ```powershell
+  Invoke-WebRequest -Uri "YOUR_HOOK_URL" -Method POST
+  ```
+- **curl:** `curl -X POST "YOUR_HOOK_URL"`
+
+Each time you run it, Vercel builds and deploys the **latest commit on `main`**. Use this after every `git push origin main` when auto-deploy isn’t working.
+
+---
+
+#### Other options
+
+**Disconnect and reconnect Git**
+
+- **Settings** → **Git** → **Disconnect** → **Connect** same repo again, **Save**
+- Then push a small change and check **Deployments**
+
+**Production Branch** (if you find it)
+
+- **Settings** → **Git** (or **Environments**). Look for **Production Branch** or **Git Branch**.
+- Set to **`main`** and **Save**. Vercel’s UI changes; it may be under **Git Integration** or **Advanced**.
+
+**Vercel CLI**
+
+```bash
+cd client
+npx vercel --prod
+```
+
+Log in / link project if prompted. Deploys from your local `client/` folder.
+
+---
+
+#### Deploy Hook ran but site still not updating? Debug checklist
+
+1. **Deployments** → find the **newest** deployment (top of list, created when you triggered the hook).
+   - **Status**: Building / Ready / Error?
+   - **Commit**: What commit does it show? Compare to `git log origin/main -1 --oneline` locally.
+
+2. **If status is Error or Failed**
+   - Click the deployment → **View Build Logs**.
+   - Check for: Root Directory wrong, missing env vars, `npm run build` failure, Out of Memory, etc.
+   - Fix the cause (e.g. Root Directory = `client`, env vars in Vercel), then trigger the hook again.
+
+3. **If status is Ready**
+   - Confirm the **commit** matches latest on `main`. If not, the hook may be deploying a different branch — recreate the hook and select **main**.
+   - Open the **Production** URL (e.g. `https://rayenna-crm-kappa.vercel.app`), not a Preview URL.
+   - **Hard refresh**: `Ctrl+Shift+R` (Windows) or `Cmd+Shift+R` (Mac). Or try **Incognito/Private** window.
+   - If it still looks old, try a different browser or device to rule out cache.
+
+4. **Production vs Preview**
+   - **Production** = the live site (main domain). Deploy Hook for `main` should update Production.
+   - **Preview** = per-deployment URLs. Make sure you’re checking the **Production** deployment, not an old Preview.
+
+5. **Trigger hook again after a new push**
+   - `git push origin main` → wait a few seconds → trigger Deploy Hook URL → check Deployments for a **new** deployment with the **new** commit.
+
 ---
 
 ## 📝 Important Notes
