@@ -376,7 +376,30 @@ Log in / link project if prompted. Deploys from your local `client/` folder.
 
 #### No new deployment appears at all (only old build in Deployments)
 
-**Symptom:** You trigger the Deploy Hook (or push to `main`), but **no new deployment** shows up — you only see the old build(s).
+**Symptom:** You trigger the Deploy Hook (or push to `main`), but **no new deployment** shows up — you only see the old build(s). The hook may return **201** with `"state":"PENDING"` but nothing appears in Deployments (even with **only one project**).
+
+**Still stuck?** → Scroll to **🚨 STUCK: No new deployments ever — escape options** (Option A: new Vercel project; Option B: Render Static Site).
+
+---
+
+**▶ Reliable workaround: Deploy via Vercel CLI (bypasses Git & hooks)**
+
+Deploy **from your local `client/` folder**. No GitHub, no Deploy Hook — just your current code.
+
+**First time (login + link):**
+
+1. `cd client`
+2. `npx vercel login` — log in via browser if you see *"The specified token is not valid"*.
+3. `npx vercel --prod` — **no** `--yes`. When asked **"Link to existing project?"** → **Y** → select your frontend project (e.g. rayenna-crm-kappa).
+
+**After that:**
+
+```bash
+cd client
+npm run deploy
+```
+
+A **new** deployment will appear in Deployments and update Production. Use this after each `git pull` or change when hooks aren't working.
 
 ---
 
@@ -430,6 +453,72 @@ npx vercel --prod
 
 - **Settings** → **Git**. Is the repo connected? Try **Disconnect** → **Connect** same repo → **Save**.
 - Push a small change, then trigger the Deploy Hook. See if a new deployment appears.
+
+**6. Hook returns 201 (job PENDING) but no deployment — one project only**
+
+- Deploy Hooks **require** the project to be connected to Git. If Git is disconnected or broken, the job can be created but no deployment is created.
+- **Fix:** **Settings** → **Git** → **Disconnect** → **Connect** the same repo (`rayenna/rayenna_crm`) again → **Save**. Then trigger the hook again.
+- Ensure **Root Directory** is **`client`** (Settings → General → Build & Development Settings).
+- If it still doesn’t work, **use CLI deploy** (see workaround above): `cd client && npm run deploy`.
+
+---
+
+### 🚨 STUCK: No new deployments ever — escape options
+
+If **nothing** creates new deployments (hook returns 201, Redeploy, CLI, one project only), use one of these to get unstuck.
+
+---
+
+#### Option A: New Vercel project (fresh start)
+
+Create a **new** Vercel project from the same repo. Fresh Git link often fixes “no deployments” issues.
+
+1. **Vercel Dashboard** → **Add New** → **Project**
+2. **Import** `rayenna/rayenna_crm` from GitHub (same repo)
+3. **Configure:**
+   - **Root Directory:** `client`
+   - **Framework Preset:** Vite
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `dist`
+   - **Environment Variable:** `VITE_API_BASE_URL` = `https://rayenna-crm-backend.onrender.com`
+4. **Deploy.** Wait for the first build to finish.
+5. **Note the new URL** (e.g. `https://rayenna-crm-xyz.vercel.app`)
+6. **Render** → your backend service → **Environment** → set **FRONTEND_URL** to the **new** Vercel URL → **Save**
+7. Use the new frontend URL. The old Vercel project can be ignored or deleted.
+
+**Updates:** Push to `main` → new project should auto-deploy (or use its Deploy Hook).
+
+---
+
+#### Option B: Deploy frontend to Render (Static Site) — leave Vercel
+
+Move the frontend **off Vercel** onto **Render** as a Static Site. Backend is already on Render.
+
+**Repo ready:** `client/public/redirects` (SPA rewrites) is included and copied to `dist/` on build. Root `render.yaml` defines the static site for optional **Blueprint** use; you can also create the Static Site manually below.
+
+**Step-by-step (manual):**
+
+1. **Render Dashboard** → **New +** → **Static Site**
+2. **Connect** `rayenna/rayenna_crm` (same repo as backend)
+3. **Configure:**
+   - **Name:** `rayenna-crm-frontend`
+   - **Branch:** `main`
+   - **Root Directory:** `client`
+   - **Build Command:** `npm install && npm run build`
+   - **Publish Directory:** `dist`
+   - **Environment:** Add `VITE_API_BASE_URL` = `https://rayenna-crm-backend.onrender.com`
+4. **Redirects / Rewrites** (SPA routing): Add a **Rewrite** rule
+   - **Source:** `/*`
+   - **Destination:** `/index.html`
+   - (So `/dashboard`, `/help`, etc. work on refresh. Rule is in Dashboard → Static Site → **Redirects/Rewrites**.)
+5. **Create Static Site.** Wait for build.
+6. **Note the URL** (e.g. `https://rayenna-crm-frontend.onrender.com`)
+7. **Render** → backend service → **Environment** → **FRONTEND_URL** = new static site URL → **Save**
+8. Backend CORS uses `FRONTEND_URL`; you’re set.
+
+**Alternative:** Use **New + Blueprint** → connect repo → apply. The root `render.yaml` defines the static site only; add the Rewrite rule in Dashboard afterward.
+
+**Updates:** Push to `main` → Render rebuilds the static site automatically (like the backend).
 
 ---
 
