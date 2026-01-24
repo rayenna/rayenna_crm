@@ -374,6 +374,65 @@ Log in / link project if prompted. Deploys from your local `client/` folder.
 
 ---
 
+#### No new deployment appears at all (only old build in Deployments)
+
+**Symptom:** You trigger the Deploy Hook (or push to `main`), but **no new deployment** shows up — you only see the old build(s).
+
+---
+
+**1. Confirm you're viewing the right project**
+
+- Deploy Hooks live under **one specific Vercel project**: Settings → Git → Deploy Hooks.
+- **Deployments** are per project. You must be on **that same project's** Deployments page.
+- If you have multiple projects (e.g. `rayenna-crm`, `rayenna-crm-kappa`), ensure:
+  - The Deploy Hook was created in the project you care about.
+  - You're looking at **Deployments** for that exact project (check project name in the top-left or URL).
+
+---
+
+**2. Redeploy test (prove new deploys can appear)**
+
+- Go to **Deployments** → click the **latest** (old) deployment.
+- Click **Redeploy** (or ⋮ → Redeploy).
+- Choose **Redeploy without cache** → confirm.
+- Does a **new** deployment appear at the top?
+  - **Yes** → The project accepts new deploys. The issue is Git/hooks (wrong project, wrong repo, or hook misconfigured).
+  - **No** → Unusual; try another browser, clear cache, or check Vercel status.
+
+---
+
+**3. Use Vercel CLI — deploy from local (bypass Git entirely)**
+
+This deploys **your local `client/` folder** to Vercel. It does **not** use GitHub, webhooks, or Deploy Hooks.
+
+```bash
+cd client
+npx vercel --prod
+```
+
+- Log in or link the project if prompted. When asked "Link to existing project?", choose **Y** and select your frontend project (e.g. `rayenna-crm-kappa`).
+- After it finishes, check **Deployments** — you should see a **new** deployment from "Vercel CLI".
+- **Workaround:** After each `git pull` or local change, run `cd client && npx vercel --prod` to push the latest build. Your Production URL will update.
+
+---
+
+**4. Recreate the Deploy Hook**
+
+- **Settings** → **Git** → **Deploy Hooks**.
+- Delete the existing hook, then **Create Hook** again:
+  - Name: e.g. `Deploy latest main`
+  - Branch: **`main`**
+- Trigger the **new** hook URL. Check **Deployments** for the **same project**.
+
+---
+
+**5. Check Git connection**
+
+- **Settings** → **Git**. Is the repo connected? Try **Disconnect** → **Connect** same repo → **Save**.
+- Push a small change, then trigger the Deploy Hook. See if a new deployment appears.
+
+---
+
 #### Deploy Hook ran but site still not updating? Debug checklist
 
 1. **Deployments** → find the **newest** deployment (top of list, created when you triggered the hook).
