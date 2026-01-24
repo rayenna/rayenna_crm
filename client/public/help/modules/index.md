@@ -52,6 +52,304 @@ Each module includes:
 
 ---
 
+# Customer Master Module
+
+## Purpose
+
+The **Customer Master** (Customers) module is your central database for all customer information. It is the foundation for projects, support, and business operations in the CRM. Every project is linked to a customer—you create or select a customer before creating a project. The module helps you manage contact details, addresses, location mapping, salesperson assignment, and customer–project relationships. Keeping the Customer Master accurate and up to date is essential for effective sales, operations, and customer service.
+
+## Understanding Customer IDs
+
+Each customer is assigned a unique **Customer ID** when created. This ID:
+
+- Is **automatically generated** by the system (sequential, SL No)
+- **Cannot be changed** after creation
+- Uniquely identifies the customer across the CRM
+- Is used when searching for customers, creating projects, and in exports
+
+## Creating Customers
+
+### From the Customers Page
+
+1. Navigate to **Customers** from the top menu (Customer Master).
+2. Click the **New Customer** button (top right).
+3. Fill in **name**:
+   - **Individual**: Use **Prefix** (Mr., Ms., etc.), **First Name** (required), **Middle Name**, **Last Name**.
+   - **Business**: Use **Customer Name** for company name.
+   - You must provide either **Customer Name** or **First Name**.
+4. Enter **address**: Address Line 1 & 2, **Country** (required for state/city), **State**, **City**, **Pin Code**.
+5. **Location**: Use the **Map Selector** to set customer location coordinates; they are saved automatically.
+6. Add **Contact Information**:
+   - **Contact Numbers**: At least one required. Use "+ Add Contact Number" for more.
+   - **Email IDs**: Optional. Use "+ Add E-mail ID" for more.
+7. Optionally add **Business** details: **DISCOM Consumer Number**, **Company Name**, **Company GST#**.
+8. **Identification**: If you enter **Id Proof#**, select **Type of Id Proof** (Aadhaar, PAN, Voters Card, DL, Passport, Others).
+9. **Salesperson** (Management and Admin only): Assign the customer to a sales team member.
+10. Click **Create**. The customer is saved and assigned a Customer ID.
+
+### Who Can Create Customers
+
+- **Sales** users can create customers for their own use.
+- **Admin** users can create customers for any salesperson.
+
+**Operations**, **Finance**, and **Management** users do not create customers; they work with customers created by Sales or Admin.
+
+### Required Fields
+
+- **Name**: Either **Customer Name** (business) or **First Name** (individual).
+- **At least one Contact Number**.
+
+If **Id Proof#** is provided, **Type of Id Proof** is required. **Country** must be selected before **State**; **State** before **City**.
+
+## Managing Customers
+
+### Editing Customers
+
+- **Sales** users can edit **their own** customers (in **My Customers** view).
+- **Admin** users can edit any customer.
+- **Management** can view but not edit.
+
+**How to edit**: Open the **Customers** page → find the customer (search/filters) → click **Edit** → update fields → click **Update**.
+
+**Salesperson** assignment can be changed only by **Management** or **Admin**.
+
+### My Customers vs All Customers (Sales)
+
+- **My Customers**: Customers you created or are assigned to. You can create, edit, and manage them.
+- **All Customers**: View-only list of all customers. You cannot edit others’ customers.
+
+Use the toggle on the Customers page to switch between **My Customers** and **All Customers**.
+
+## Viewing and Finding Customers
+
+### Customers List
+
+1. Navigate to **Customers** from the top menu.
+2. Use the **search bar** to find customers by **customer name**, **Customer ID**, or **consumer number** (real-time, case-insensitive).
+3. Apply **filters**:
+   - **Sales users**: Toggle **My Customers** / **All Customers**.
+   - **Other users**: Use **Sales Person** filter to view customers for selected salesperson(s). Leave empty to see all.
+4. The list shows customer name, ID, address, contact info, **project count** badge, and creation date.
+
+### Customer Information Displayed
+
+- **Customer ID**, **Name** (or individual name components)
+- **Address**, **Pin Code**
+- **Contact numbers**, **Email IDs**
+- **DISCOM Consumer Number**, **Company Name** (if provided)
+- **Project count** (number of projects linked to the customer)
+
+## Relationship to Projects
+
+- **Every project is linked to a customer.** Projects cannot exist without a customer.
+- When **creating a project**, you must select an existing customer or create one first from Customer Master.
+- **One customer** can have **multiple projects**. The project count badge on each customer shows how many projects they have.
+- From **Projects**, you can search by customer name, ID, or consumer number to link the right customer.
+
+**Typical workflow**: Create customer in Customer Master → Create project and select that customer → Project is linked. For repeat customers, search and select the existing customer when creating a new project.
+
+## Exporting Customer Data
+
+- **Who can export**: **Administrators** only.
+- **Formats**: **Excel (.xlsx)** or **CSV (.csv)**.
+- **How**: Apply any filters (e.g. Sales Person, My/All) → click **Export to Excel** or **Export to CSV** → confirm → file downloads.
+
+Exports include all customer information and respect current filters and search.
+
+## Best Practices
+
+1. **Create customers** before creating projects; use **Customer Master** as the single source of truth.
+2. **Use consistent naming**: Individual vs business format, standard address style.
+3. **Add complete contact and address** details to support operations and follow-up.
+4. **Set location coordinates** via the map for service planning and geographic analysis.
+5. **Keep data current**: Update contact details, address, and business info when they change.
+6. **Use DISCOM Consumer Number** and **GST** where relevant for utility and compliance.
+7. **Assign salesperson** (Management/Admin) so **My Customers** / **All Customers** and reporting work correctly.
+
+## Permissions Summary
+
+A quick reference for Customer Master access:
+
+![Permission Matrix](/help/docs/overview/access_matrix.jpg)
+
+- **Sales**: Create customers, edit own customers (My Customers), view All Customers (read-only). Cannot change salesperson.
+- **Operations / Finance**: View customers (via filters). Cannot create or edit.
+- **Management**: View all customers, assign/change salesperson. Cannot create or edit other fields.
+- **Admin**: Full access; create, edit, export.
+
+## Getting Help
+
+If you need assistance with the Customer Master module:
+
+- Press **?** or click **Help** in the navigation menu for context-sensitive help
+- Review the **FAQ** section for common questions
+- Contact your system administrator for access or permission issues
+
+---
+
+# Projects Module
+
+## Purpose
+
+The Projects module is the **core** of Rayenna CRM. It manages the complete lifecycle of solar energy projects—from initial lead to final completion—and serves as the central hub for coordinating sales, operations, finance, and customer service. Every customer engagement, installation, payment, and support ticket ties back to a project. Understanding and using the Projects module effectively is essential for running your business.
+
+## Understanding Project Numbers and the Lifecycle
+
+Each project is assigned a unique **Project Number (SL No)** when created. This number:
+
+- Is **automatically generated** by the system (sequential)
+- **Cannot be changed** after creation
+- Uniquely identifies the project across the CRM
+- Is used when referencing projects in reports, exports, and communications
+
+Projects move through a **status lifecycle**. The typical flow is:
+
+**Lead** → **Site Survey** → **Proposal** → **Confirmed Order** → **Installation** → **Submitted for Subsidy** → **Completed** → **Completed - Subsidy Credited**
+
+At any stage, a project may be marked **Lost** if the customer does not proceed. Lost projects cannot be edited; only Admin can delete them.
+
+## Creating Projects
+
+### From the Projects Page
+
+1. Navigate to the **Projects** page from the top menu
+2. Click the **New Project** button (top right)
+3. **Select the customer** (required): Search by name, ID, or consumer number. The customer cannot be changed after creation. If the customer does not exist, create them first from **Customer Master**.
+4. Fill in **Customer & Project Details**:
+   - **Segment** (required): Residential Subsidy, Residential Non-Subsidy, or Commercial Industrial
+   - **Project Type** (required): EPC Project, Panel Cleaning, Maintenance, Repair, Consulting, Resale, or Other Services
+5. Complete **Sales & Commercial Information**:
+   - **Lead Source**: Website, Referral, Google, Channel Partner, Digital Marketing, Sales, Management Connect, or Other (additional details required for some options)
+   - **System Capacity (kW)**, **Order Value (₹)**, **Confirmation Date** (required), **Project Status**
+   - **Roof Type** and **System Type** (technical details)
+6. If status is **Lost**, enter **Lost Date** and **Reason for Loss** (required).
+7. Click **Create**. The project is saved, assigned a Project Number, and you are redirected to the Projects list.
+
+### Who Can Create Projects
+
+- **Sales** users can create projects for their assigned customers
+- **Admin** users can create projects for any customer
+
+**Operations** and **Finance** users do not create projects; they work with projects created by Sales or Admin.
+
+### Required Fields
+
+- **Customer** (must be selected)
+- **Segment** and **Project Type**
+- **Confirmation Date**
+
+If **Lead Source** is Referral, Channel Partner, or Other, the corresponding detail field is required. If status is **Lost**, **Lost Date** and **Reason for Loss** are required.
+
+## Project Status Stages
+
+| Status | Description | Typical Actions |
+|--------|-------------|-----------------|
+| **Lead** | Initial inquiry, no commitment yet | Contact customer, gather requirements, schedule site survey |
+| **Site Survey** | Site visited and assessed | Document site, prepare proposal, move to proposal |
+| **Proposal** | Proposal sent to customer | Generate proposal (AI-assisted), follow up, address queries |
+| **Confirmed Order** | Customer has confirmed | Set confirmation date, plan execution |
+| **Installation** | Installation in progress | Track progress, update milestones, monitor completion |
+| **Submitted for Subsidy** | Subsidy application submitted | Track approval, follow up |
+| **Completed** | Installation complete, system operational | Final documentation, customer handover |
+| **Completed - Subsidy Credited** | Subsidy received | Final accounting, closure |
+| **Lost** | Customer did not proceed | Record Lost Date and Reason; project cannot be edited |
+
+**Sales** typically update status from Lead through Confirmed Order. **Operations** update status from Installation onward and manage execution milestones. **Finance** can view all statuses but cannot change them.
+
+## Managing Projects
+
+### Status and Lifecycle
+
+- Update **Project Status** as the project progresses. Keep it current so the rest of the team and reports reflect reality.
+- **Operations** use the **Project Lifecycle** section to record: MNRE Portal Registration Date, DISCOM Feasibility/Registration dates, Installation Completion Date, Completion Report Submission Date, Net Meter Installation Date, Total Project Cost, Panel and Inverter brands.
+
+### Financial Tracking
+
+- **Finance** (and **Admin**) manage **Payment Tracking**: Advance Received, Payment 1–3, and Last Payment (each with amount and date).
+- **Total Amount Received**, **Balance Amount**, and **Payment Status** (Pending, Partial, Fully Paid) are calculated automatically.
+- Update payments as soon as they are received to keep cash flow and reporting accurate.
+
+### Sales & Commercial
+
+- **Sales** and **Admin** maintain **Lead Source**, **Order Value**, **Confirmation Date**, **System Capacity**, **Roof Type**, and **System Type**.
+- Use **Remarks** for internal notes and decisions. Remarks are versioned and visible to users with project access.
+
+### Support Tickets and Documents
+
+- Create **Support Tickets** from the project’s **Support / Service Tickets** section to track customer issues and follow-ups.
+- Upload **documents** (photos, videos, PDFs, spreadsheets) in **Key Artifacts**, and choose the appropriate category (e.g. Photos/Videos, Documents, Sheets). Use descriptions to help others find and understand files.
+
+## Viewing Projects
+
+### Projects List
+
+1. Navigate to **Projects** from the top menu.
+2. Use the **search bar** to find projects by customer name, customer ID, or consumer number.
+3. Apply **filters**:
+   - **Status**: Lead, Site Survey, Proposal, Confirmed, Installation, Completed, etc.
+   - **Segment**: Residential Subsidy, Residential Non-Subsidy, Commercial Industrial
+   - **Service Type**: EPC Project, Panel Cleaning, Maintenance, etc.
+   - **Support Ticket Status**: Has Tickets, Open, In Progress, Closed, No Tickets
+   - **Salesperson** (for non-Sales users): Filter by assigned salesperson
+4. Sort by creation date, confirmation date, value, customer name, or status. Default is newest first.
+5. Click a **project row** or **project number** to open the **Project Detail** page.
+
+### Project Detail Page
+
+The detail page shows:
+
+- **Customer** information, **Project** and **Sales & Commercial** details
+- **Project Lifecycle** (execution dates, costs, equipment)
+- **Payment Tracking** (status, amounts, balance)
+- **Remarks** (versioned history)
+- **Support / Service Tickets** (create, view, manage)
+- **Key Artifacts** (view, download, manage documents)
+
+From here you can **Edit** the project (within your role’s permissions), **Generate AI Proposal** (for Lead, Site Survey, or Proposal stages), or use **Back** to return to the Projects list.
+
+## Project Information at a Glance
+
+Each project displays:
+
+- **Project Number (SL No)**, **Customer**, **Segment**, **Project Type**
+- **Order Value**, **Payment Status**, **Balance**
+- **Confirmation Date**, **Financial Year**
+- **Project Status**, **Lead Source**
+- **System Capacity**, **Roof Type**, **System Type**
+- **Support tickets** (count and status) and **documents** (in Key Artifacts)
+
+## Best Practices
+
+1. **Create projects promptly** when a lead converts or an order is confirmed.
+2. **Keep status up to date** so pipeline, dashboards, and reports stay accurate.
+3. **Enter complete commercial and technical details** at creation and update as needed.
+4. **Update payments** as soon as they are received.
+5. **Use remarks** for important decisions, handoffs, and context.
+6. **Create support tickets** for customer issues and **add follow-ups** regularly.
+7. **Upload and categorize documents** clearly so the team can find them easily.
+8. **Respect role boundaries**: edit only the sections you are permitted to change.
+
+## Permissions Summary
+
+A quick reference for project-related access:
+
+![Permission Matrix](/help/docs/overview/access_matrix.jpg)
+
+- **Sales**: Create projects (own customers), edit Sales & Commercial, update status through Confirmed, add remarks, create tickets, upload documents. Cannot edit Lifecycle or Payments.
+- **Operations**: View all projects, edit Project Lifecycle, update status from Installation onward, add remarks, create tickets, upload documents. Cannot edit Sales & Commercial or Payments.
+- **Finance**: View all projects, edit Payment Tracking only. Cannot edit other sections or change status.
+- **Admin**: Full access; can delete Lost projects.
+
+## Getting Help
+
+If you need assistance with the Projects module:
+
+- Press **?** or click **Help** in the navigation menu for context-sensitive help
+- Review the **FAQ** section for common questions
+- Contact your system administrator for access or permission issues
+
+---
+
 # Support Tickets Module
 
 ## Purpose
