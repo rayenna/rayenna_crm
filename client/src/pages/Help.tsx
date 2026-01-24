@@ -48,6 +48,13 @@ const Help = () => {
     }
   }, [section])
 
+  // Sync URL to section so hard refresh preserves current help section (fix: losing formatting on hard refresh)
+  useEffect(() => {
+    if (!section && selectedSection) {
+      navigate(`/help/${selectedSection.routeKey}`, { replace: true })
+    }
+  }, [section, selectedSection, navigate])
+
   // Esc key to close Help
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
