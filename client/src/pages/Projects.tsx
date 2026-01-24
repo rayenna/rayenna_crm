@@ -121,6 +121,7 @@ const Projects = () => {
     projectServiceType: [] as string[],
     salespersonId: [] as string[],
     supportTicketStatus: [] as string[],
+    paymentStatus: [] as string[],
     search: '',
     sortBy: '',
     sortOrder: 'desc',
@@ -154,7 +155,7 @@ const Projects = () => {
   // Reset page when other filters change
   useEffect(() => {
     setPage(1)
-  }, [filters.status, filters.type, filters.projectServiceType, filters.salespersonId, filters.supportTicketStatus, filters.sortBy])
+  }, [filters.status, filters.type, filters.projectServiceType, filters.salespersonId, filters.supportTicketStatus, filters.paymentStatus, filters.sortBy])
 
   // Fetch sales users for the filter dropdown (only for non-SALES users)
   const { data: salesUsers } = useQuery({
@@ -176,6 +177,7 @@ const Projects = () => {
       filters.projectServiceType.forEach((value) => params.append('projectServiceType', value))
       filters.salespersonId.forEach((value) => params.append('salespersonId', value))
       filters.supportTicketStatus.forEach((value) => params.append('supportTicketStatus', value))
+      filters.paymentStatus.forEach((value) => params.append('paymentStatus', value))
       if (filters.search) params.append('search', filters.search)
       if (filters.sortBy) {
         params.append('sortBy', filters.sortBy)
@@ -223,6 +225,20 @@ const Projects = () => {
     { value: 'NO_TICKETS', label: 'No Tickets' },
   ]
 
+  // Payment Status filter options - only show for Finance, Sales, Management, Admin
+  const paymentStatusOptions = useMemo(() => {
+    const canSeePaymentFilter = hasRole([UserRole.FINANCE, UserRole.MANAGEMENT, UserRole.ADMIN]) || 
+                                 (hasRole([UserRole.SALES]) && user?.id) // Sales can filter their own projects
+    if (!canSeePaymentFilter) return []
+    
+    return [
+      { value: 'FULLY_PAID', label: 'Fully Paid' },
+      { value: 'PARTIAL', label: 'Partial' },
+      { value: 'PENDING', label: 'Pending' },
+      { value: 'NA', label: 'N/A' }, // For projects without order value or in early/lost stages
+    ]
+  }, [user?.role, user?.id, hasRole])
+
   const handleExportClick = (type: 'excel' | 'csv') => {
     setPendingExportType(type)
     setShowExportConfirm(true)
@@ -239,6 +255,7 @@ const Projects = () => {
       filters.type.forEach((value) => params.append('type', value))
       filters.projectServiceType.forEach((value) => params.append('projectServiceType', value))
       filters.salespersonId.forEach((value) => params.append('salespersonId', value))
+      filters.paymentStatus.forEach((value) => params.append('paymentStatus', value))
       if (filters.search) params.append('search', filters.search)
       if (filters.sortBy) {
         params.append('sortBy', filters.sortBy)
@@ -334,13 +351,21 @@ const Projects = () => {
         </div>
 
         {/* Row 3: Secondary Filters */}
-        <div className={`grid grid-cols-1 sm:grid-cols-2 ${user?.role !== UserRole.SALES ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} gap-4 mb-4`}>
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${user?.role !== UserRole.SALES ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-4 mb-4`}>
           <MultiSelect
             options={supportTicketStatusOptions}
             selectedValues={filters.supportTicketStatus}
             onChange={(values) => setFilters({ ...filters, supportTicketStatus: values })}
             placeholder="All Ticket Statuses"
           />
+          {paymentStatusOptions.length > 0 && (
+            <MultiSelect
+              options={paymentStatusOptions}
+              selectedValues={filters.paymentStatus}
+              onChange={(values) => setFilters({ ...filters, paymentStatus: values })}
+              placeholder="All Payment Statuses"
+            />
+          )}
           {user?.role !== UserRole.SALES && (
             <MultiSelect
               options={salesUserOptions}

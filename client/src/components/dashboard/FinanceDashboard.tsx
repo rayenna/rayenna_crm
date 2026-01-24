@@ -64,14 +64,31 @@ const FinanceDashboard = ({ selectedFYs, selectedMonths }: FinanceDashboardProps
         </div>
         <div className="px-6 py-4">
           <div className="space-y-3">
-            {data?.projectsByPaymentStatus?.map((item: any) => (
-              <div key={item.status} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                <span className="text-sm font-medium text-gray-700">{item.status}</span>
-                <span className="text-sm font-bold text-gray-900">
-                  {item.count} <span className="text-primary-600">(₹{item.outstanding?.toLocaleString('en-IN') || 0})</span>
-                </span>
-              </div>
-            ))}
+            {data?.projectsByPaymentStatus?.map((item: any) => {
+              // Format status label
+              const statusLabel = item.status === 'N/A' 
+                ? 'N/A' 
+                : item.status.replace(/_/g, ' ');
+              
+              // Get color based on status
+              const getStatusColor = (status: string) => {
+                if (status === 'N/A') return 'bg-red-100 text-red-800';
+                if (status === 'FULLY_PAID') return 'bg-green-100 text-green-800';
+                if (status === 'PARTIAL') return 'bg-yellow-100 text-yellow-800';
+                return 'bg-red-100 text-red-800'; // PENDING
+              };
+              
+              return (
+                <div key={item.status} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
+                    {statusLabel}
+                  </span>
+                  <span className="text-sm font-bold text-gray-900">
+                    {item.count} <span className="text-primary-600">(₹{item.outstanding?.toLocaleString('en-IN') || 0})</span>
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

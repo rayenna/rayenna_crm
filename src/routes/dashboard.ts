@@ -668,11 +668,9 @@ router.get('/finance', authenticate, async (req: Request, res) => {
     const baseWhere: any = {};
     const where = applyDateFilters(baseWhere, fyFilters, monthFilters);
     
-    const [
+      const [
       totalProjectValue,
       totalAmountReceived,
-      totalOutstanding,
-      projectsByPaymentStatus,
       profitByProject,
       profitBySalesperson,
     ] = await Promise.all([
@@ -685,18 +683,6 @@ router.get('/finance', authenticate, async (req: Request, res) => {
       prisma.project.aggregate({
         _sum: { totalAmountReceived: true },
         where,
-      }),
-      // Total outstanding
-      prisma.project.aggregate({
-        _sum: { balanceAmount: true },
-        where,
-      }),
-      // Projects by payment status
-      prisma.project.groupBy({
-        by: ['paymentStatus'],
-        where: { ...where },
-        _count: { id: true },
-        _sum: { projectCost: true, balanceAmount: true },
       }),
       // Profit by project
       prisma.project.findMany({
@@ -725,6 +711,85 @@ router.get('/finance', authenticate, async (req: Request, res) => {
         _count: { id: true },
       }),
     ]);
+    
+    // Calculate total outstanding - only include PENDING and PARTIAL (exclude N/A and FULLY_PAID)
+    const projectsForOutstanding = await prisma.project.findMany({
+      where: { ...where },
+      select: {
+        id: true,
+        paymentStatus: true,
+        projectCost: true,
+        projectStatus: true,
+        balanceAmount: true,
+      },
+    });
+    
+    const totalOutstanding = projectsForOutstanding
+      .filter((project) => {
+        // Check if project should show N/A
+        const hasNoOrderValue = !project.projectCost || project.projectCost === 0;
+        const isEarlyOrLostStage = 
+          project.projectStatus === ProjectStatus.LEAD ||
+          project.projectStatus === ProjectStatus.SITE_SURVEY ||
+          project.projectStatus === ProjectStatus.PROPOSAL ||
+          project.projectStatus === ProjectStatus.LOST;
+        
+        // Exclude N/A projects
+        if (hasNoOrderValue || isEarlyOrLostStage) return false;
+        
+        // Only include PENDING and PARTIAL
+        return project.paymentStatus === 'PENDING' || project.paymentStatus === 'PARTIAL';
+      })
+      .reduce((sum, project) => sum + (project.balanceAmount || 0), 0);
+    
+    // Projects by payment status - calculate effective payment status
+    const allProjects = await prisma.project.findMany({
+      where: { ...where },
+      select: {
+        id: true,
+        paymentStatus: true,
+        projectCost: true,
+        projectStatus: true,
+        balanceAmount: true,
+      },
+    });
+    
+    // Calculate effective payment status for each project
+    const projectsByEffectiveStatus: Record<string, { count: number; totalValue: number; outstanding: number }> = {};
+    
+    allProjects.forEach((project) => {
+      // Check if project should show N/A
+      const hasNoOrderValue = !project.projectCost || project.projectCost === 0;
+      const isEarlyOrLostStage = 
+        project.projectStatus === ProjectStatus.LEAD ||
+        project.projectStatus === ProjectStatus.SITE_SURVEY ||
+        project.projectStatus === ProjectStatus.PROPOSAL ||
+        project.projectStatus === ProjectStatus.LOST;
+      
+      const effectiveStatus = (hasNoOrderValue || isEarlyOrLostStage) ? 'N/A' : (project.paymentStatus || 'PENDING');
+      
+      if (!projectsByEffectiveStatus[effectiveStatus]) {
+        projectsByEffectiveStatus[effectiveStatus] = {
+          count: 0,
+          totalValue: 0,
+          outstanding: 0,
+        };
+      }
+      
+      projectsByEffectiveStatus[effectiveStatus].count++;
+      projectsByEffectiveStatus[effectiveStatus].totalValue += project.projectCost || 0;
+      // Only add outstanding for PENDING and PARTIAL (not N/A or FULLY_PAID)
+      if (effectiveStatus === 'PENDING' || effectiveStatus === 'PARTIAL') {
+        projectsByEffectiveStatus[effectiveStatus].outstanding += project.balanceAmount || 0;
+      }
+    });
+    
+    const projectsByPaymentStatus = Object.entries(projectsByEffectiveStatus).map(([status, data]) => ({
+      status,
+      count: data.count,
+      totalValue: data.totalValue,
+      outstanding: data.outstanding,
+    }));
 
     // Get salesperson names for profit breakdown
     let profitBreakdown: Array<{

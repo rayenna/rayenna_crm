@@ -72,6 +72,7 @@ router.get(
         projectServiceType,
         salespersonId,
         supportTicketStatus,
+        paymentStatus,
         year,
         search,
         page = '1',
@@ -91,6 +92,7 @@ router.get(
       const projectServiceTypeArray = Array.isArray(projectServiceType) ? projectServiceType : projectServiceType ? [projectServiceType] : [];
       const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : salespersonId ? [salespersonId] : [];
       const supportTicketStatusArray = Array.isArray(supportTicketStatus) ? supportTicketStatus : supportTicketStatus ? [supportTicketStatus] : [];
+      const paymentStatusArray = Array.isArray(paymentStatus) ? paymentStatus : paymentStatus ? [paymentStatus] : [];
 
       // Role-based filtering - Sales users only see their own projects
       // This should be applied before other filters
@@ -212,6 +214,60 @@ router.get(
 
           // Add ticket filter to AND array
           where.AND.push(ticketFilter);
+        }
+      }
+      
+      // Handle payment status filter
+      if (paymentStatusArray.length > 0) {
+        const paymentStatusConditions: any[] = [];
+        
+        paymentStatusArray.forEach((filterValue: string) => {
+          if (filterValue === 'NA') {
+            // N/A: Projects without order value OR in early/lost stages
+            paymentStatusConditions.push({
+              OR: [
+                // No order value (null, 0, or undefined)
+                { projectCost: null },
+                { projectCost: 0 },
+                // OR in early/lost stages
+                { projectStatus: { in: [ProjectStatus.LEAD, ProjectStatus.SITE_SURVEY, ProjectStatus.PROPOSAL, ProjectStatus.LOST] } },
+              ],
+            });
+          } else {
+            // Actual payment status (FULLY_PAID, PARTIAL, PENDING)
+            // But exclude projects that should show N/A
+            paymentStatusConditions.push({
+              AND: [
+                { paymentStatus: filterValue },
+                // Must have order value
+                { projectCost: { not: null } },
+                { projectCost: { not: 0 } },
+                // Must not be in early/lost stages
+                { projectStatus: { notIn: [ProjectStatus.LEAD, ProjectStatus.SITE_SURVEY, ProjectStatus.PROPOSAL, ProjectStatus.LOST] } },
+              ],
+            });
+          }
+        });
+        
+        if (paymentStatusConditions.length > 0) {
+          const paymentFilter = paymentStatusConditions.length === 1 
+            ? paymentStatusConditions[0]
+            : { OR: paymentStatusConditions };
+          
+          // Ensure AND array exists
+          if (!where.AND) {
+            const existingConditions: any[] = [];
+            Object.keys(where).forEach(key => {
+              if (key !== 'AND' && key !== 'OR') {
+                existingConditions.push({ [key]: where[key] });
+                delete where[key];
+              }
+            });
+            where.AND = existingConditions.length > 0 ? existingConditions : [];
+          }
+          
+          // Add payment status filter to AND array
+          where.AND.push(paymentFilter);
         }
       }
       
