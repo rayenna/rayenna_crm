@@ -1567,19 +1567,59 @@ router.delete(
     try {
       const project = await prisma.project.findUnique({
         where: { id: req.params.id },
+        include: {
+          customer: {
+            select: {
+              customerName: true,
+              customerId: true,
+            },
+          },
+          supportTickets: {
+            select: {
+              id: true,
+              ticketNumber: true,
+            },
+          },
+        },
       });
 
       if (!project) {
         return res.status(404).json({ error: 'Project not found' });
       }
 
+      // Count support tickets before deletion
+      const supportTicketCount = project.supportTickets.length;
+      const supportTicketNumbers = project.supportTickets.map(t => t.ticketNumber);
+
+      // Delete project (this will cascade delete all related records including support tickets)
       await prisma.project.delete({
         where: { id: req.params.id },
       });
 
-      res.json({ message: 'Project deleted successfully' });
+      res.json({ 
+        message: 'Project deleted successfully',
+        deleted: {
+          project: {
+            id: project.id,
+            slNo: project.slNo,
+            customerName: project.customer?.customerName || 'N/A',
+            customerId: project.customer?.customerId || 'N/A',
+          },
+          supportTickets: {
+            count: supportTicketCount,
+            ticketNumbers: supportTicketNumbers,
+          },
+        },
+      });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error('Error deleting project:', error);
+      // Handle foreign key constraint errors
+      if (error.code === 'P2003') {
+        return res.status(400).json({ 
+          error: 'Cannot delete project. It may have dependencies that prevent deletion.' 
+        });
+      }
+      res.status(500).json({ error: error.message || 'Failed to delete project' });
     }
   }
 );
