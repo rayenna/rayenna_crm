@@ -314,6 +314,32 @@ npm run dev
 
 **Check:** Open the frontend → DevTools → **Network**. Log in and look at the login request. It should go to `https://...-backend.onrender.com/api/auth/login`, not to the frontend URL. If it goes to the frontend host, `VITE_API_BASE_URL` is still wrong or missing — fix env and **redeploy** again.
 
+---
+
+**Still can't log in? Debug checklist**
+
+1. **Login page shows “API not configured” banner**  
+   → `VITE_API_BASE_URL` is missing. Add it in Render (Static Site → Environment), then **Manual Deploy** → **Deploy latest commit**. Wait for **Live**, then hard-refresh the login page.
+
+2. **Toast: “Cannot reach API. Set VITE_API_BASE_URL…”**  
+   → Same as above. The request never hits the backend (wrong or empty API URL). Add env, **redeploy** the static site, then try again.
+
+3. **Toast: “Invalid credentials”**  
+   → The request **is** reaching the backend. Check email/password. If correct, check backend logs (Render → backend → Logs) for DB or auth errors.
+
+4. **DevTools → Console:** `[Rayenna CRM] VITE_API_BASE_URL is not set`  
+   → Env not in build. Add `VITE_API_BASE_URL` on the static site, **redeploy**, then hard-refresh (Ctrl+Shift+R).
+
+5. **DevTools → Network:** login request goes to **frontend** URL (e.g. `...-frontend.onrender.com/...`)  
+   → API base wrong or missing. Fix env, **redeploy**, clear cache / hard-refresh.
+
+6. **DevTools → Network:** login request goes to **backend** URL but **red** (CORS or 4xx/5xx)  
+   - **CORS error:** Set **FRONTEND_URL** on the **backend** to the exact frontend URL (e.g. `https://...-frontend.onrender.com`), **Save**, wait for restart.  
+   - **401:** Invalid email/password (or user missing in DB).  
+   - **5xx:** Check backend **Logs** on Render.
+
+7. **Backend reachable?** Open `https://YOUR-BACKEND.onrender.com/api/health` in a browser. You should see `{"status":"ok",...}`. If not, the backend is down or wrong URL.
+
 ### Backend can't connect to database
 - Verify `DATABASE_URL` in Render includes `?sslmode=require`
 - Check Neon dashboard for connection limits

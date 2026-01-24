@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { apiBaseUrl } from '../utils/axios'
 import toast from 'react-hot-toast'
+
+const isProd = typeof window !== 'undefined' && !window.location.hostname.includes('localhost')
+const apiNotConfigured = isProd && !apiBaseUrl
 
 const Login = () => {
   const [email, setEmail] = useState('')
@@ -19,7 +23,8 @@ const Login = () => {
       toast.success('Login successful')
       navigate('/dashboard')
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Login failed')
+      const msg = error.response?.data?.error ?? (error.response ? 'Login failed' : 'Cannot reach API. Set VITE_API_BASE_URL on the static site and redeploy.')
+      toast.error(msg)
     } finally {
       setIsLoading(false)
     }
@@ -36,6 +41,11 @@ const Login = () => {
       }}
     >
       <div className="max-w-md w-full space-y-8 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 border-2 border-white/20">
+        {apiNotConfigured && (
+          <div className="mb-4 p-3 rounded-lg bg-amber-100 border border-amber-400 text-amber-900 text-sm">
+            <strong>API not configured.</strong> Set <code className="bg-amber-200/60 px-1 rounded">VITE_API_BASE_URL</code> in Render (Static Site → Environment), then <strong>redeploy</strong>. Login will not work until then.
+          </div>
+        )}
         <div className="text-center">
           <div className="mb-6">
             <img 

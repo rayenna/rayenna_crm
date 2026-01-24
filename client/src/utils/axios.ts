@@ -4,6 +4,9 @@ import axios from 'axios';
 // Falls back to empty string (relative URLs) for local development with Vite proxy
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
+/** Exported for Login-page check when API is not configured (production). */
+export const apiBaseUrl = API_BASE_URL;
+
 // Warn if API base is missing in production (causes login/API calls to fail)
 if (!API_BASE_URL && typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
   console.warn(
