@@ -13,12 +13,10 @@ interface RevenueByLeadSourceData {
 }
 
 interface RevenueByLeadSourceChartProps {
-  selectedFYs?: string[]
-  selectedMonths?: string[]
   availableFYs?: string[] // Available FYs for filter dropdown
 }
 
-const RevenueByLeadSourceChart = ({ selectedFYs = [], selectedMonths = [], availableFYs = [] }: RevenueByLeadSourceChartProps) => {
+const RevenueByLeadSourceChart = ({ availableFYs = [] }: RevenueByLeadSourceChartProps) => {
   const { user } = useAuth()
   const [selectedFY, setSelectedFY] = useState<string>('all')
   const [selectedMonth, setSelectedMonth] = useState<string>('all')
@@ -228,7 +226,7 @@ const RevenueByLeadSourceChart = ({ selectedFYs = [], selectedMonths = [], avail
                 name="Revenue (₹)" 
                 radius={[4, 4, 0, 0]}
               >
-                {chartData.map((entry, index) => (
+                {chartData.map((_, index) => (
                   <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                 ))}
               </Bar>

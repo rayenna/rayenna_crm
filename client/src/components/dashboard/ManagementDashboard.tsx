@@ -137,8 +137,6 @@ const ManagementDashboard = ({ selectedFYs, selectedMonths }: ManagementDashboar
       {/* Revenue by Lead Source Chart */}
       <div className="w-full">
         <RevenueByLeadSourceChart 
-          selectedFYs={selectedFYs}
-          selectedMonths={selectedMonths}
           availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []}
         />
       </div>
