@@ -681,22 +681,25 @@ router.post(
 
       // Manually calculate and set slNo to prevent unique constraint violations
       // This is necessary when data is migrated and sequences are out of sync
-      let nextSlNo: number;
-      try {
-        // Get the current max slNo value
-        const maxSlNoResult = await prisma.$queryRaw<Array<{ max: bigint | null }>>`
-          SELECT MAX("slNo") as max FROM "projects"
-        `;
-        const currentMax = maxSlNoResult[0]?.max ? Number(maxSlNoResult[0].max) : 0;
-        nextSlNo = currentMax + 1;
-        console.log(`📝 Calculated next slNo: ${nextSlNo} (max was: ${currentMax})`);
-      } catch (slNoError: any) {
-        // If we can't get max, start from 1
-        console.warn('⚠️  Could not get max slNo, starting from 1:', slNoError.message);
-        nextSlNo = 1;
-      }
+      // Wrap in transaction to prevent race condition: MAX query + create must be atomic
+      const project = await prisma.$transaction(async (tx) => {
+        let nextSlNo: number;
+        try {
+          // Get the current max slNo value (within transaction for consistency)
+          const maxSlNoResult = await tx.$queryRaw<Array<{ max: bigint | null }>>`
+            SELECT MAX("slNo") as max FROM "projects"
+          `;
+          const currentMax = maxSlNoResult[0]?.max ? Number(maxSlNoResult[0].max) : 0;
+          nextSlNo = currentMax + 1;
+          console.log(`📝 Calculated next slNo: ${nextSlNo} (max was: ${currentMax})`);
+        } catch (slNoError: any) {
+          // If we can't get max, start from 1
+          console.warn('⚠️  Could not get max slNo, starting from 1:', slNoError.message);
+          nextSlNo = 1;
+        }
 
-      const project = await prisma.project.create({
+        // Create project within the same transaction (atomic with MAX query)
+        return await tx.project.create({
         data: {
           slNo: nextSlNo, // Explicitly set slNo to prevent sequence conflicts
           customerId,
@@ -764,6 +767,7 @@ router.post(
           },
         },
       });
+      }); // End transaction - MAX query + create are now atomic
 
       // Update the sequence to match the manually set slNo (for future auto-increment)
       // This keeps the sequence in sync for any future uses
@@ -778,9 +782,9 @@ router.post(
         if (seqResult.length > 0) {
           const seqName = seqResult[0].sequence_name;
           await prisma.$executeRawUnsafe(
-            `SELECT setval('${seqName}', ${nextSlNo}, true)`
+            `SELECT setval('${seqName}', ${project.slNo}, true)`
           );
-          console.log(`✅ Updated sequence ${seqName} to ${nextSlNo}`);
+          console.log(`✅ Updated sequence ${seqName} to ${project.slNo}`);
         }
       } catch (seqError: any) {
         // Non-critical - sequence update failed, but project was created successfully
