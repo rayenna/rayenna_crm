@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { UserRole, ProjectStatus, LeadStatus, ProjectStage } from '@prisma/client';
+import { UserRole, ProjectStatus, LeadStatus, ProjectStage, LeadSource } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
 
@@ -1106,6 +1106,107 @@ router.get('/management', authenticate, async (req: Request, res) => {
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Revenue by Lead Source Analytics Endpoint
+// Accessible to ADMIN, MANAGEMENT, and SALES roles only
+router.get('/revenue-by-lead-source', authenticate, async (req: Request, res: Response) => {
+  try {
+    const role = req.user?.role;
+    const userId = req.user?.id;
+
+    // Role-based access control: Only ADMIN, MANAGEMENT, and SALES can access
+    if (role !== UserRole.ADMIN && role !== UserRole.MANAGEMENT && role !== UserRole.SALES) {
+      return res.status(403).json({ error: 'Access denied. This endpoint is only available to Admin, Management, and Sales roles.' });
+    }
+
+    // Parse query parameters for FY and Month filters
+    const fyFilters = req.query.fy ? (Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[] : [];
+    const monthFilters = req.query.month ? (Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[] : [];
+
+    // Build base where clause
+    const baseWhere: any = {};
+    
+    // For SALES users, filter by their salespersonId
+    if (role === UserRole.SALES) {
+      baseWhere.salespersonId = userId;
+    }
+
+    // Apply FY and month filters using existing helper function
+    const where = applyDateFilters(baseWhere, fyFilters, monthFilters);
+
+    // Get revenue filter: Only confirmed/completed projects
+    // Statuses: CONFIRMED, UNDER_INSTALLATION, COMPLETED, COMPLETED_SUBSIDY_CREDITED
+    const revenueWhere = getRevenueWhere(where);
+
+    // Group by leadSource and sum projectCost (revenue)
+    // Using Prisma groupBy for safe aggregation
+    const revenueByLeadSource = await prisma.project.groupBy({
+      by: ['leadSource'],
+      where: {
+        ...revenueWhere,
+        leadSource: { not: null }, // Exclude projects without lead source
+      },
+      _sum: {
+        projectCost: true, // Sum of orderValue (revenue)
+      },
+      _count: {
+        id: true, // Count of projects per lead source
+      },
+    });
+
+    // Format response data with readable lead source labels
+    const formattedData = revenueByLeadSource.map((item) => {
+      let label = '';
+      switch (item.leadSource) {
+        case LeadSource.WEBSITE:
+          label = 'Website';
+          break;
+        case LeadSource.REFERRAL:
+          label = 'Referral';
+          break;
+        case LeadSource.GOOGLE:
+          label = 'Google';
+          break;
+        case LeadSource.CHANNEL_PARTNER:
+          label = 'Channel Partner';
+          break;
+        case LeadSource.DIGITAL_MARKETING:
+          label = 'Digital Marketing';
+          break;
+        case LeadSource.SALES:
+          label = 'Sales';
+          break;
+        case LeadSource.MANAGEMENT_CONNECT:
+          label = 'Management Connect';
+          break;
+        case LeadSource.OTHER:
+          label = 'Other';
+          break;
+        default:
+          label = item.leadSource || 'Unknown';
+      }
+
+      return {
+        leadSource: item.leadSource,
+        leadSourceLabel: label,
+        revenue: item._sum.projectCost || 0,
+        projectCount: item._count.id,
+      };
+    });
+
+    // Sort by revenue descending
+    formattedData.sort((a, b) => b.revenue - a.revenue);
+
+    res.json({
+      revenueByLeadSource: formattedData,
+      totalRevenue: formattedData.reduce((sum, item) => sum + item.revenue, 0),
+      totalProjects: formattedData.reduce((sum, item) => sum + item.projectCount, 0),
+    });
+  } catch (error: any) {
+    console.error('[Revenue by Lead Source API] Error:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch revenue by lead source' });
   }
 });
 

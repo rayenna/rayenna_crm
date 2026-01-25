@@ -4,6 +4,7 @@ import { FaUsers, FaBolt, FaRupeeSign, FaCheckCircle, FaClipboardList, FaExclama
 import ProjectValuePieChart from './ProjectValuePieChart'
 import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
 import ProfitabilityWordCloud from './ProfitabilityWordCloud'
+import RevenueByLeadSourceChart from './RevenueByLeadSourceChart'
 import MetricCard from './MetricCard'
 
 interface SalesDashboardProps {
@@ -125,6 +126,15 @@ const SalesDashboard = ({ selectedFYs, selectedMonths }: SalesDashboardProps) =>
             availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []} 
           />
         </div>
+      </div>
+
+      {/* Revenue by Lead Source Chart */}
+      <div className="w-full">
+        <RevenueByLeadSourceChart 
+          selectedFYs={selectedFYs}
+          selectedMonths={selectedMonths}
+          availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []}
+        />
       </div>
     </div>
   )

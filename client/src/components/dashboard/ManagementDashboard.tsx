@@ -5,6 +5,7 @@ import ProjectValuePieChart from './ProjectValuePieChart'
 import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
 import ProfitabilityWordCloud from './ProfitabilityWordCloud'
 import SalesTeamTreemap from './SalesTeamTreemap'
+import RevenueByLeadSourceChart from './RevenueByLeadSourceChart'
 import MetricCard from './MetricCard'
 
 interface ManagementDashboardProps {
@@ -130,6 +131,15 @@ const ManagementDashboard = ({ selectedFYs, selectedMonths }: ManagementDashboar
       <div className="w-full">
         <SalesTeamTreemap 
           availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []} 
+        />
+      </div>
+
+      {/* Revenue by Lead Source Chart */}
+      <div className="w-full">
+        <RevenueByLeadSourceChart 
+          selectedFYs={selectedFYs}
+          selectedMonths={selectedMonths}
+          availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []}
         />
       </div>
     </div>
