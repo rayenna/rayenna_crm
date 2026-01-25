@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
-import { ProjectStatus, ProjectType, ProjectServiceType, ProjectStage, UserRole, LeadSource, SupportTicketStatus } from '@prisma/client';
+import { ProjectStatus, ProjectType, ProjectServiceType, ProjectStage, UserRole, LeadSource, SupportTicketStatus, SystemType } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { createAuditLog } from '../utils/audit';
@@ -1029,6 +1029,8 @@ router.put(
           'subsidyCreditedDate',
           'projectStatus',
           'totalProjectCost',
+          'panelBrand', // Operations can update panel brand
+          'inverterBrand', // Operations can update inverter brand
         ];
         for (const field of allowedFields) {
           if (req.body[field] !== undefined) {
@@ -1070,6 +1072,12 @@ router.put(
               // Handle string field - convert to string or null
               const value = req.body[field];
               updateData[field] = value !== null && value !== undefined && value !== '' && value !== 0
+                ? String(value)
+                : null;
+            } else if (field === 'panelBrand' || field === 'inverterBrand') {
+              // Handle string fields - convert to string or null
+              const value = req.body[field];
+              updateData[field] = value !== null && value !== undefined && value !== '' && value !== 'null'
                 ? String(value)
                 : null;
             } else if (field === 'projectStatus') {
@@ -1135,6 +1143,8 @@ router.put(
           'projectStatus', // Sales can update status
           'leadSource', // Sales can update lead source
           'leadSourceDetails', // Sales can update lead source details
+          'roofType', // Sales can update roof type
+          'systemType', // Sales can update system type
         ];
         
         // Only process allowed fields
@@ -1190,6 +1200,21 @@ router.put(
               updateData[key] = value !== null && value !== undefined && value !== '' && value !== 'null'
                 ? String(value)
                 : null;
+            } else if (key === 'roofType') {
+              // Handle string field - convert to string or null
+              const value = req.body[key];
+              updateData[key] = value !== null && value !== undefined && value !== '' && value !== 'null'
+                ? String(value)
+                : null;
+            } else if (key === 'systemType') {
+              // Handle enum field - must be a valid SystemType value
+              const value = req.body[key];
+              if (value && value !== '' && Object.values(SystemType).includes(value as SystemType)) {
+                updateData[key] = value as SystemType;
+              } else if (value === null || value === '' || value === 'null') {
+                updateData[key] = null;
+              }
+              // Skip invalid systemType values (don't update)
             } else {
               updateData[key] = req.body[key];
             }
