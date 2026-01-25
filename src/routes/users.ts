@@ -1,11 +1,11 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { body, validationResult } from 'express-validator';
-import { PrismaClient, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
+import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Get all users (Admin only)
 router.get('/', authenticate, authorize(UserRole.ADMIN), async (req: Request, res: Response) => {

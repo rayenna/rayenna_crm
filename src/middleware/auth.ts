@@ -1,9 +1,8 @@
 /// <reference path="../@types/express.d.ts" />
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { PrismaClient, UserRole } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { UserRole } from '@prisma/client';
+import prisma from '../prisma';
 
 export const authenticate = async (
   req: Request,

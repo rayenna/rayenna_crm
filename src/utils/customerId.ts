@@ -1,11 +1,12 @@
 import { PrismaClient } from '@prisma/client';
+import prismaInstance from '../prisma';
 
 /**
  * Generates a unique 6-digit alphanumeric customer ID
  * Format: 3 letters + 3 numbers (e.g., ABC123)
  */
 export async function generateCustomerId(prisma?: PrismaClient): Promise<string> {
-  const client = prisma || new PrismaClient();
+  const client = prisma || prismaInstance;
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const numbers = '0123456789';
   
@@ -31,17 +32,10 @@ export async function generateCustomerId(prisma?: PrismaClient): Promise<string>
     });
     
     if (!existing) {
-      if (!prisma) {
-        await client.$disconnect();
-      }
       return customerId;
     }
     
     attempts++;
-  }
-  
-  if (!prisma) {
-    await client.$disconnect();
   }
   
   // Fallback: if we can't generate a unique ID after max attempts, throw error

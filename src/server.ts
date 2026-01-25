@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
-import { PrismaClient } from '@prisma/client';
+import prisma from './prisma';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -34,7 +34,6 @@ if (!process.env.JWT_SECRET) {
 }
 
 const app = express();
-const prisma = new PrismaClient();
 
 // Middleware
 // CORS configuration - allow local development and production frontend

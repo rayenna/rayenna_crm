@@ -1,11 +1,11 @@
 import express, { Request, Response } from 'express';
-import { PrismaClient, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
+import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import * as XLSX from 'xlsx';
 import { Builder } from 'xml2js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Helper function to format date for Tally
 const formatTallyDate = (date: Date): string => {

@@ -1,12 +1,12 @@
 import express, { Request, Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
-import { PrismaClient, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
+import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { generateCustomerId } from '../utils/customerId';
 import * as XLSX from 'xlsx';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Helper function to check if user can create customers (only Sales and Admin)
 const canCreateCustomer = (role: UserRole): boolean => {

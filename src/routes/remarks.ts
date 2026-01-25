@@ -1,10 +1,9 @@
 import express, { Request, Response } from 'express';
 import { body, param, validationResult } from 'express-validator';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Debug: Test endpoint to verify route is accessible
 router.get('/test', authenticate, (req: Request, res: Response) => {

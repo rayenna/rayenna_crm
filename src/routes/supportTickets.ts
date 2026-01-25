@@ -1,10 +1,10 @@
 import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
-import { PrismaClient, SupportTicketStatus, UserRole } from '@prisma/client';
+import { SupportTicketStatus, UserRole } from '@prisma/client';
+import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 /**
  * Generate unique ticket number in format RE######## (8-digit random number)

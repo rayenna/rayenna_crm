@@ -2,14 +2,14 @@ import express, { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { PrismaClient, UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
+import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { createAuditLog } from '../utils/audit';
 import { v2 as cloudinary } from 'cloudinary';
 // Removed CloudinaryStorage - now using upload_stream with memoryStorage for better reliability
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Cloudinary configuration (optional - only if env vars are set)
 const useCloudinary = !!(

@@ -1,11 +1,11 @@
 import express, { Request, Response } from 'express';
-import { PrismaClient, UserRole, ProjectStatus, ProjectStage } from '@prisma/client';
+import { UserRole, ProjectStatus, ProjectStage } from '@prisma/client';
+import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
 import { getProjectsByStageWithSLA, calculateStatusIndicator } from '../utils/projectLifecycle';
 import { predictProjectDelay } from '../utils/ai';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Sales Dashboard - Enhanced with Leads and Pipeline
 router.get('/sales', authenticate, async (req: Request, res) => {

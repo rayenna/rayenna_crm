@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
-import { PrismaClient, ProjectStatus, ProjectType, ProjectServiceType, ProjectStage, UserRole, LeadSource, SupportTicketStatus } from '@prisma/client';
+import { ProjectStatus, ProjectType, ProjectServiceType, ProjectStage, UserRole, LeadSource, SupportTicketStatus } from '@prisma/client';
+import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { createAuditLog } from '../utils/audit';
 import { calculatePayments, calculateExpectedProfit, calculateGrossProfit, calculateProfitability, calculateFY } from '../utils/calculations';
@@ -14,7 +15,6 @@ import fs from 'fs';
 import * as XLSX from 'xlsx';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Get all projects with filters
 router.get(

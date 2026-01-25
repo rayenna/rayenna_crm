@@ -1,11 +1,11 @@
 import express, { Request, Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
-import { PrismaClient, LeadSource, LeadStatus, UserRole } from '@prisma/client';
+import { LeadSource, LeadStatus, UserRole } from '@prisma/client';
+import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { calculateFY } from '../utils/calculations';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Get all leads
 router.get(

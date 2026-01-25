@@ -1,11 +1,11 @@
 import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
-import { PrismaClient, ProposalStatus } from '@prisma/client';
+import { ProposalStatus } from '@prisma/client';
+import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
 import { generateProposalContent } from '../utils/ai';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Get proposals for a project
 router.get('/project/:projectId', authenticate, async (req: Request, res: express.Response) => {

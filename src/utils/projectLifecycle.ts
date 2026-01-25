@@ -1,6 +1,5 @@
-import { PrismaClient, ProjectStage } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { ProjectStage } from '@prisma/client';
+import prisma from '../prisma';
 
 // SLA configuration for each stage (in days)
 const STAGE_SLA: Record<ProjectStage, number> = {

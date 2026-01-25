@@ -1,9 +1,9 @@
 import express, { Request, Response } from 'express';
-import { PrismaClient, UserRole, ProjectStatus, LeadStatus, ProjectStage } from '@prisma/client';
+import { UserRole, ProjectStatus, LeadStatus, ProjectStage } from '@prisma/client';
+import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Helper function to apply FY and Month filters to project queries
 function applyDateFilters(
