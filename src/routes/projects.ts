@@ -1031,6 +1031,7 @@ router.put(
           'totalProjectCost',
           'panelBrand', // Operations can update panel brand
           'inverterBrand', // Operations can update inverter brand
+          'panelType', // Operations can update panel type
         ];
         for (const field of allowedFields) {
           if (req.body[field] !== undefined) {
@@ -1074,7 +1075,7 @@ router.put(
               updateData[field] = value !== null && value !== undefined && value !== '' && value !== 0
                 ? String(value)
                 : null;
-            } else if (field === 'panelBrand' || field === 'inverterBrand') {
+            } else if (field === 'panelBrand' || field === 'inverterBrand' || field === 'panelType') {
               // Handle string fields - convert to string or null
               const value = req.body[field];
               updateData[field] = value !== null && value !== undefined && value !== '' && value !== 'null'
