@@ -129,13 +129,15 @@ enum PaymentMode {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  role      UserRole
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String
+  password         String
+  role             UserRole
+  resetToken       String?   @unique
+  resetTokenExpiry DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   createdProjects   Project[]       @relation("CreatedBy")
   salesProjects     Project[]       @relation("SalesPerson")
@@ -150,6 +152,7 @@ model User {
   createdTickets    SupportTicket[] @relation("TicketCreatedBy")
   ticketActivities  SupportTicketActivity[] @relation("ActivityCreatedBy")
 
+  @@index([resetToken])
   @@map("users")
 }
 

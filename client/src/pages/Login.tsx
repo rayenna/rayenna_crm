@@ -108,6 +108,18 @@ const Login = () => {
           </div>
         </form>
         
+        <div className="mt-4 text-center">
+          <p className="text-xs text-gray-600">
+            Forgot your password?{' '}
+            <span className="text-gray-500 italic">
+              Contact your administrator to request a password reset link.
+            </span>
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Administrators can reset passwords from the Users page.
+          </p>
+        </div>
+        
         <div className="mt-6 pt-6 border-t border-gray-200">
           <p className="text-xs text-gray-500 text-center leading-relaxed">
             By signing in, you acknowledge and agree to the Credits, Copyright, intellectual property and Terms of Usage of this product. Refer the About section to know more

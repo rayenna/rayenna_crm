@@ -13,6 +13,7 @@ import Users from './pages/Users'
 import TallyExport from './pages/TallyExport'
 import About from './pages/About'
 import ChangePassword from './pages/ChangePassword'
+import ResetPassword from './pages/ResetPassword'
 import SupportTicketsDashboard from './pages/SupportTicketsDashboard'
 import Help from './pages/Help'
 import Layout from './components/Layout'
@@ -25,6 +26,7 @@ function App() {
         <Toaster position="top-right" />
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route
             path="/"
             element={

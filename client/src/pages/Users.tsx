@@ -17,6 +17,7 @@ const Users = () => {
   })
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
+  const [resetPasswordModal, setResetPasswordModal] = useState<{ user: User | null; resetLink: string | null }>({ user: null, resetLink: null })
 
   const { data: users, isLoading, error } = useQuery({
     queryKey: ['users'],
@@ -55,6 +56,21 @@ const Users = () => {
     },
   })
 
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await axiosInstance.post('/api/auth/admin/reset-password', { userId })
+      return res.data
+    },
+    onSuccess: (data, userId) => {
+      const user = users?.find(u => u.id === userId)
+      setResetPasswordModal({ user: user || null, resetLink: data.resetLink })
+      toast.success('Password reset token generated successfully')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to generate reset token')
+    },
+  })
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     createMutation.mutate(formData)
@@ -76,6 +92,21 @@ const Users = () => {
   const cancelDelete = () => {
     setShowDeleteConfirm(false)
     setUserToDelete(null)
+  }
+
+  const handleResetPassword = (user: User) => {
+    resetPasswordMutation.mutate(user.id)
+  }
+
+  const copyResetLink = () => {
+    if (resetPasswordModal.resetLink) {
+      navigator.clipboard.writeText(resetPasswordModal.resetLink)
+      toast.success('Reset link copied to clipboard')
+    }
+  }
+
+  const closeResetModal = () => {
+    setResetPasswordModal({ user: null, resetLink: null })
   }
 
   if (!hasRole([UserRole.ADMIN])) {
@@ -184,6 +215,13 @@ const Users = () => {
                     {user.role}
                   </span>
                   <button
+                    onClick={() => handleResetPassword(user)}
+                    disabled={resetPasswordMutation.isPending}
+                    className="text-blue-600 hover:text-blue-800 text-sm disabled:opacity-50"
+                  >
+                    {resetPasswordMutation.isPending ? 'Generating...' : 'Reset Password'}
+                  </button>
+                  <button
                     onClick={() => handleDelete(user)}
                     className="text-red-600 hover:text-red-800 text-sm"
                   >
@@ -221,6 +259,40 @@ const Users = () => {
                   className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium"
                 >
                   YES
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Password Modal */}
+      {resetPasswordModal.user && resetPasswordModal.resetLink && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-blue-600 mb-4">Password Reset Link Generated</h3>
+              <p className="text-gray-700 mb-4">
+                Reset link for <strong>{resetPasswordModal.user.name}</strong> ({resetPasswordModal.user.email}):
+              </p>
+              <div className="bg-gray-50 border border-gray-300 rounded-md p-3 mb-4 break-all">
+                <code className="text-sm text-gray-800">{resetPasswordModal.resetLink}</code>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Share this link with the user. The token expires in 24 hours.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={copyResetLink}
+                  className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                >
+                  Copy Link
+                </button>
+                <button
+                  onClick={closeResetModal}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+                >
+                  Close
                 </button>
               </div>
             </div>

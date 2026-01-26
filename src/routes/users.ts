@@ -73,6 +73,18 @@ router.post(
 
       const { email, name, password, role } = req.body;
 
+      // Enforce single ADMIN user constraint
+      if (role === UserRole.ADMIN) {
+        const existingAdmin = await prisma.user.findFirst({
+          where: { role: UserRole.ADMIN },
+        });
+        if (existingAdmin) {
+          return res.status(400).json({ 
+            error: 'Only one ADMIN user is allowed. An ADMIN user already exists.' 
+          });
+        }
+      }
+
       // Check if user already exists
       const existingUser = await prisma.user.findUnique({
         where: { email },
@@ -127,6 +139,43 @@ router.put(
       }
 
       const { email, name, password, role } = req.body;
+      const userId = req.params.id;
+
+      // Get current user data
+      const currentUser = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!currentUser) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Enforce single ADMIN user constraint when changing role to ADMIN
+      if (role === UserRole.ADMIN && currentUser.role !== UserRole.ADMIN) {
+        const existingAdmin = await prisma.user.findFirst({
+          where: { 
+            role: UserRole.ADMIN,
+            id: { not: userId }, // Exclude current user
+          },
+        });
+        if (existingAdmin) {
+          return res.status(400).json({ 
+            error: 'Only one ADMIN user is allowed. An ADMIN user already exists.' 
+          });
+        }
+      }
+
+      // Prevent changing ADMIN role to another role if it's the only ADMIN
+      if (currentUser.role === UserRole.ADMIN && role && role !== UserRole.ADMIN) {
+        const adminCount = await prisma.user.count({
+          where: { role: UserRole.ADMIN },
+        });
+        if (adminCount === 1) {
+          return res.status(400).json({ 
+            error: 'Cannot change ADMIN role. At least one ADMIN user must exist.' 
+          });
+        }
+      }
 
       const updateData: any = {};
       if (email) updateData.email = email;
@@ -137,7 +186,7 @@ router.put(
       }
 
       const user = await prisma.user.update({
-        where: { id: req.params.id },
+        where: { id: userId },
         data: updateData,
         select: {
           id: true,
