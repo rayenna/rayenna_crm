@@ -39,7 +39,7 @@ const MetricCard = ({ title, value, icon, gradient, trend }: MetricCardProps) =>
           {trend && (
             <div className={`flex items-center px-3 py-1.5 rounded-full text-sm font-bold shadow-md ${
               trend.isPositive 
-                ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white' 
+                ? 'bg-gradient-to-r from-yellow-400 to-amber-500 text-white' 
                 : 'bg-gradient-to-r from-red-400 to-rose-500 text-white'
             }`}>
               <span className="mr-1">{trend.isPositive ? '↑' : '↓'}</span>

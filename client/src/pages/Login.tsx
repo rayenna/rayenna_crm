@@ -54,7 +54,7 @@ const Login = () => {
               className="h-32 w-auto mx-auto mb-4 drop-shadow-lg"
             />
           </div>
-          <h2 className="text-4xl font-extrabold bg-gradient-to-r from-primary-600 via-primary-500 to-green-600 bg-clip-text text-transparent mb-2">
+          <h2 className="text-4xl font-extrabold bg-gradient-to-r from-primary-600 via-primary-500 to-yellow-500 bg-clip-text text-transparent mb-2">
             Rayenna CRM
           </h2>
           <p className="mt-2 text-sm font-medium text-gray-600">

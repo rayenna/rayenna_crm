@@ -86,28 +86,28 @@ const Layout = () => {
 
   return (
     <div className="min-h-screen">
-      <nav className="bg-gradient-to-r from-primary-600 via-primary-500 to-green-600 shadow-2xl border-b-4 border-primary-400 relative">
+      <nav className="bg-gradient-to-r from-primary-600 via-primary-500 to-yellow-500 shadow-2xl border-b-4 border-primary-400 relative">
         {/* Animated background pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent_50%)]"></div>
         </div>
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 relative z-10">
-          <div className="flex justify-between items-center h-20">
+          <div className="flex justify-between items-center h-20 gap-2 lg:gap-4">
             <div className="flex items-center">
-              <Link to="/dashboard" className="flex-shrink-0 flex items-center mr-3 xl:mr-6 hover:opacity-80 transition-opacity">
+              <Link to="/dashboard" className="flex-shrink-0 flex items-center mr-2 lg:mr-3 xl:mr-4 hover:opacity-80 transition-opacity">
                 <img 
                   src="/rayenna_logo.jpg" 
                   alt="Rayenna Energy Logo" 
-                  className="h-10 xl:h-12 w-auto"
+                  className="h-12 xl:h-[3.6rem] w-auto"
                 />
               </Link>
               {/* Desktop Navigation - Show on large screens only (lg and above) */}
-              <div className="hidden lg:ml-4 lg:flex lg:space-x-1.5 xl:space-x-3 2xl:space-x-4 items-center">
+              <div className="hidden lg:ml-4 lg:flex lg:space-x-2 xl:space-x-3 2xl:space-x-4 items-center flex-wrap lg:gap-1.5 xl:gap-0">
                 {filteredNav.map((item) => (
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`inline-flex items-center px-2 xl:px-3 2xl:px-4 py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs xl:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
+                    className={`inline-flex items-center px-3 xl:px-3 2xl:px-4 py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs xl:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
                       location.pathname.startsWith(item.path)
                         ? 'bg-white/25 text-white shadow-xl xl:shadow-2xl font-bold backdrop-blur-md border-2 border-white/30'
                         : 'text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm'
@@ -126,7 +126,7 @@ const Layout = () => {
                 >
                   <button
                     onClick={() => setHelpDropdownOpen(!helpDropdownOpen)}
-                    className={`inline-flex items-center px-2 xl:px-3 2xl:px-4 py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs xl:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
+                    className={`inline-flex items-center px-3 xl:px-3 2xl:px-4 py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs xl:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
                       isHelpActive
                         ? 'bg-white/25 text-white shadow-xl xl:shadow-2xl font-bold backdrop-blur-md border-2 border-white/30'
                         : 'text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm'
@@ -165,7 +165,7 @@ const Layout = () => {
                 </div>
               </div>
             </div>
-            <div className="flex items-center space-x-1.5 sm:space-x-2 lg:space-x-2 xl:space-x-3">
+            <div className="flex items-center space-x-1.5 sm:space-x-2 lg:space-x-2.5 xl:space-x-3 flex-shrink-0">
               {/* User info - show on medium screens and above, but hide when hamburger is visible */}
               <span className="hidden md:inline lg:hidden text-sm text-white/90 font-medium truncate max-w-[100px]">{user?.name}</span>
               <span className="hidden lg:inline text-xs xl:text-sm text-white/90 font-medium truncate max-w-[120px] xl:max-w-none">{user?.name}</span>

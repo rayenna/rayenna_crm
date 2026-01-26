@@ -78,35 +78,71 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
   // Fallback to initialData only if no data fetched yet (for initial render)
   const chartData = filteredData || initialData || []
 
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [chartKey, setChartKey] = useState(0)
+
   useEffect(() => {
     const updateRadius = () => {
-      if (window.innerWidth < 640) {
+      const width = window.innerWidth
+      if (width < 640) {
         setOuterRadius(80)
         setChartHeight(280)
-      } else if (window.innerWidth < 1024) {
+      } else if (width < 1024) {
         setOuterRadius(100)
         setChartHeight(320)
       } else {
         setOuterRadius(120)
         setChartHeight(350)
       }
+      // Force chart re-render on resize/zoom to fix disappearing issue
+      setChartKey((prev) => prev + 1)
     }
+    
+    // Initial update
     updateRadius()
+    
+    // Handle window resize
     window.addEventListener('resize', updateRadius)
-    return () => window.removeEventListener('resize', updateRadius)
+    
+    // Handle zoom changes using ResizeObserver on the container
+    let resizeObserver: ResizeObserver | null = null
+    if (containerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        // Debounce to avoid too many updates
+        setTimeout(updateRadius, 100)
+      })
+      resizeObserver.observe(containerRef.current)
+    }
+    
+    // Also listen for visual viewport changes (zoom)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateRadius)
+      window.visualViewport.addEventListener('scroll', updateRadius)
+    }
+    
+    return () => {
+      window.removeEventListener('resize', updateRadius)
+      if (resizeObserver) {
+        resizeObserver.disconnect()
+      }
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', updateRadius)
+        window.visualViewport.removeEventListener('scroll', updateRadius)
+      }
+    }
   }, [])
 
   if (!chartData || chartData.length === 0) {
     return (
       <div className="w-full bg-gradient-to-br from-white via-primary-50/30 to-white shadow-xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-6 flex flex-col backdrop-blur-sm h-[500px] sm:h-[550px] lg:h-[650px]">
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-primary-600 to-primary-700">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent">
             Project Value by Customer Segment
           </h2>
         </div>
@@ -129,13 +165,13 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
     <div className="w-full bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-6 flex flex-col backdrop-blur-sm h-[500px] sm:h-[550px] lg:h-[650px]">
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-primary-600 to-primary-700">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent">
             Project Value by Customer Segment
           </h2>
         </div>
@@ -212,9 +248,9 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
           </div>
         )}
       </div>
-      <div className="w-full overflow-x-auto flex-1 flex flex-col">
+      <div className="w-full overflow-x-auto flex-1 flex flex-col" ref={containerRef}>
         <div className="min-w-[280px] w-full" style={{ height: `${chartHeight}px` }}>
-        <ResponsiveContainer width="100%" height={chartHeight}>
+        <ResponsiveContainer key={chartKey} width="100%" height={chartHeight}>
           <PieChart>
             <Pie
               data={displayData}

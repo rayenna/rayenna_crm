@@ -62,7 +62,7 @@ const ManagementDashboard = ({ selectedFYs, selectedMonths }: ManagementDashboar
           title="Total Revenue"
           value={`₹${Math.round(data?.finance?.totalValue || 0).toLocaleString('en-IN')}`}
           icon={<FaRupeeSign />}
-          gradient="from-green-500 to-emerald-500"
+          gradient="from-primary-600 to-primary-700"
         />
         <MetricCard
           title="Total Pipeline"
@@ -95,7 +95,7 @@ const ManagementDashboard = ({ selectedFYs, selectedMonths }: ManagementDashboar
           title="Subsidy Credited"
           value={data?.operations?.subsidyCredited || 0}
           icon={<FaCheckCircle />}
-          gradient="from-green-500 to-teal-500"
+          gradient="from-yellow-500 to-amber-500"
         />
       </div>
 

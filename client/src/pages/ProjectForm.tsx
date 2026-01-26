@@ -712,7 +712,7 @@ const ProjectForm = () => {
 
   return (
     <div className="px-4 py-6 sm:px-0">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">
+      <h1 className="text-4xl font-extrabold text-primary-800 mb-6">
         {isEdit ? 'Edit Project' : 'New Project'}
       </h1>
 

@@ -62,7 +62,7 @@ const SalesDashboard = ({ selectedFYs, selectedMonths }: SalesDashboardProps) =>
           title="Total Revenue"
           value={`₹${Math.round(data?.revenue?.totalRevenue || 0).toLocaleString('en-IN')}`}
           icon={<FaRupeeSign />}
-          gradient="from-green-500 to-emerald-500"
+          gradient="from-primary-600 to-primary-700"
         />
         <MetricCard
           title="Total Pipeline"

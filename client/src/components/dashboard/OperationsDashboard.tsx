@@ -53,7 +53,7 @@ const OperationsDashboard = ({ selectedFYs, selectedMonths }: OperationsDashboar
           title="Subsidy Credited"
           value={data?.subsidyCredited || 0}
           icon={<FaCheckCircle />}
-          gradient="from-green-500 to-teal-500"
+          gradient="from-yellow-500 to-amber-500"
         />
       </div>
 

@@ -122,21 +122,21 @@ const Users = () => {
 
   return (
     <div className="px-4 py-6 sm:px-0">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-5xl font-extrabold bg-gradient-to-r from-primary-600 via-primary-500 via-green-500 to-primary-600 bg-clip-text text-transparent mb-3 drop-shadow-lg">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <h1 className="text-4xl font-extrabold text-primary-800 mb-3">
           Users
         </h1>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium shadow-md hover:shadow-lg transition-all"
+          className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
         >
           {showForm ? 'Cancel' : 'New User'}
         </button>
       </div>
 
       {showForm && (
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4">Create New User</h2>
+        <div className="bg-white shadow rounded-lg p-4 sm:p-6 mb-6">
+          <h2 className="text-base sm:text-lg font-semibold mb-4">Create New User</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Email *</label>
@@ -205,25 +205,25 @@ const Users = () => {
           <ul className="divide-y divide-gray-200">
             {users.map((user) => (
             <li key={user.id} className="px-4 py-4 sm:px-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                  <p className="text-sm text-gray-500">{user.email}</p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
+                  <p className="text-sm text-gray-500 truncate">{user.email}</p>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 whitespace-nowrap">
                     {user.role}
                   </span>
                   <button
                     onClick={() => handleResetPassword(user)}
                     disabled={resetPasswordMutation.isPending}
-                    className="text-blue-600 hover:text-blue-800 text-sm disabled:opacity-50"
+                    className="text-blue-600 hover:text-blue-800 text-sm disabled:opacity-50 whitespace-nowrap"
                   >
                     {resetPasswordMutation.isPending ? 'Generating...' : 'Reset Password'}
                   </button>
                   <button
                     onClick={() => handleDelete(user)}
-                    className="text-red-600 hover:text-red-800 text-sm"
+                    className="text-red-600 hover:text-red-800 text-sm whitespace-nowrap"
                   >
                     Delete
                   </button>
@@ -237,26 +237,26 @@ const Users = () => {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && userToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-red-600 mb-4">WARNING</h3>
-              <p className="text-gray-700 mb-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-4 sm:p-6">
+              <h3 className="text-lg sm:text-xl font-bold text-red-600 mb-4">WARNING</h3>
+              <p className="text-sm sm:text-base text-gray-700 mb-6">
                 User Details once deleted cannot be recovered
               </p>
-              <p className="text-gray-600 mb-6 font-medium">
+              <p className="text-sm sm:text-base text-gray-600 mb-6 font-medium">
                 Are you sure to Proceed?
               </p>
-              <div className="flex gap-3 justify-end">
+              <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
                 <button
                   onClick={cancelDelete}
-                  className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                  className="w-full sm:w-auto px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmDelete}
-                  className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium"
+                  className="w-full sm:w-auto px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium"
                 >
                   YES
                 </button>
@@ -268,29 +268,29 @@ const Users = () => {
 
       {/* Reset Password Modal */}
       {resetPasswordModal.user && resetPasswordModal.resetLink && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-blue-600 mb-4">Password Reset Link Generated</h3>
-              <p className="text-gray-700 mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-4 sm:p-6">
+              <h3 className="text-lg sm:text-xl font-bold text-blue-600 mb-4">Password Reset Link Generated</h3>
+              <p className="text-sm sm:text-base text-gray-700 mb-4">
                 Reset link for <strong>{resetPasswordModal.user.name}</strong> ({resetPasswordModal.user.email}):
               </p>
-              <div className="bg-gray-50 border border-gray-300 rounded-md p-3 mb-4 break-all">
-                <code className="text-sm text-gray-800">{resetPasswordModal.resetLink}</code>
+              <div className="bg-gray-50 border border-gray-300 rounded-md p-3 mb-4 break-all overflow-x-auto">
+                <code className="text-xs sm:text-sm text-gray-800">{resetPasswordModal.resetLink}</code>
               </div>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-xs sm:text-sm text-gray-600 mb-4">
                 Share this link with the user. The token expires in 24 hours.
               </p>
-              <div className="flex gap-3 justify-end">
+              <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
                 <button
                   onClick={copyResetLink}
-                  className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                  className="w-full sm:w-auto px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
                 >
                   Copy Link
                 </button>
                 <button
                   onClick={closeResetModal}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+                  className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
                 >
                   Close
                 </button>

@@ -124,7 +124,7 @@ const AboutSection = () => {
   return (
     <section aria-label="About" className="mt-10">
       <div className="bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm">
-        <div className="px-6 py-5 sm:px-8 sm:py-6 border-b border-primary-100 bg-gradient-to-r from-primary-600 via-primary-500 to-green-600">
+        <div className="px-6 py-5 sm:px-8 sm:py-6 border-b border-primary-100 bg-gradient-to-r from-primary-600 via-primary-500 to-yellow-500">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-white/20 border border-white/30 backdrop-blur-md">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,7 +150,7 @@ const AboutSection = () => {
                       <h3 className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-primary-700 to-primary-600 bg-clip-text text-transparent">
                         {b.text}
                       </h3>
-                      <div className="h-1 w-24 rounded-full bg-gradient-to-r from-primary-600 to-green-500" />
+                      <div className="h-1 w-24 rounded-full bg-gradient-to-r from-primary-600 to-yellow-500" />
                     </div>
                   )
                 }
@@ -166,7 +166,7 @@ const AboutSection = () => {
                     <ul key={idx} className="space-y-2">
                       {b.items.map((it, j) => (
                         <li key={j} className="flex gap-3">
-                          <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-primary-600 to-green-600 text-white text-xs shadow">
+                          <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-primary-600 to-yellow-500 text-white text-xs shadow">
                             ✓
                           </span>
                           <span 
