@@ -61,7 +61,7 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
   const getStatusColor = (status: SupportTicketStatus) => {
     switch (status) {
       case SupportTicketStatus.OPEN:
-        return 'bg-blue-100 text-blue-800'
+        return 'bg-indigo-100 text-indigo-800'
       case SupportTicketStatus.IN_PROGRESS:
         return 'bg-yellow-100 text-yellow-800'
       case SupportTicketStatus.CLOSED:

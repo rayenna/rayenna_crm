@@ -128,7 +128,7 @@ const SupportTicketsDashboard = () => {
   const getStatusColor = (status: SupportTicketStatus) => {
     switch (status) {
       case SupportTicketStatus.OPEN:
-        return 'bg-blue-100 text-blue-800'
+        return 'bg-indigo-100 text-indigo-800'
       case SupportTicketStatus.IN_PROGRESS:
         return 'bg-yellow-100 text-yellow-800'
       case SupportTicketStatus.CLOSED:
@@ -191,13 +191,13 @@ const SupportTicketsDashboard = () => {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <button
           onClick={() => handleKPIClick(SupportTicketStatus.OPEN)}
-          className={`text-left transition-transform hover:scale-105 ${selectedStatus === SupportTicketStatus.OPEN ? 'ring-2 ring-blue-500 rounded-lg' : ''}`}
+          className={`text-left transition-transform hover:scale-105 ${selectedStatus === SupportTicketStatus.OPEN ? 'ring-2 ring-indigo-500 rounded-lg' : ''}`}
         >
           <MetricCard
             title="Open"
             value={stats.open}
             icon={<FaTicketAlt />}
-            gradient="from-blue-500 to-cyan-500"
+            gradient="from-indigo-500 to-cyan-500"
           />
         </button>
         <button

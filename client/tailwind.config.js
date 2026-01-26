@@ -7,18 +7,18 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Rayenna Energy brand colors - dark blue and yellow theme
+        // Rayenna Energy brand colors - dark indigo and yellow theme
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6', // Main blue
-          600: '#2563eb', // Primary brand dark blue
-          700: '#1d4ed8',
-          800: '#1e40af', // Dark blue
-          900: '#1e3a8a', // Darker blue
+          50: '#eef2ff',
+          100: '#e0e7ff',
+          200: '#c7d2fe',
+          300: '#a5b4fc',
+          400: '#818cf8',
+          500: '#6366f1', // Main indigo
+          600: '#4f46e5', // Primary brand dark indigo
+          700: '#4338ca',
+          800: '#3730a3', // Dark indigo
+          900: '#312e81', // Darker indigo
         },
         secondary: {
           50: '#f8fafc',
@@ -33,7 +33,7 @@ export default {
           900: '#0f172a',
         },
         accent: {
-          blue: '#3b82f6',
+          indigo: '#6366f1',
           purple: '#8b5cf6',
           pink: '#ec4899',
           orange: '#f97316',

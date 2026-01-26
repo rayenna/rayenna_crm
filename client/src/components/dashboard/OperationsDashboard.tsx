@@ -41,7 +41,7 @@ const OperationsDashboard = ({ selectedFYs, selectedMonths }: OperationsDashboar
           title="Pending Installation"
           value={data?.pendingInstallation || 0}
           icon={<FaCog />}
-          gradient="from-indigo-500 to-blue-500"
+          gradient="from-indigo-500 to-indigo-600"
         />
         <MetricCard
           title="Submitted for Subsidy"

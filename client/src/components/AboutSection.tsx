@@ -194,7 +194,7 @@ const AboutSection = () => {
 
             <div className="space-y-5">
               <div className="p-5 rounded-2xl border border-primary-100 bg-white/70 shadow-lg">
-                <h4 className="text-base sm:text-lg font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-3">
+                <h4 className="text-base sm:text-lg font-bold bg-gradient-to-r from-indigo-600 to-cyan-600 bg-clip-text text-transparent mb-3">
                   Quick Summary
                 </h4>
                 <div className="space-y-2 text-sm sm:text-base text-gray-700">

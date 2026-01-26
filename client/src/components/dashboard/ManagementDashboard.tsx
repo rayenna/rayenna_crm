@@ -50,7 +50,7 @@ const ManagementDashboard = ({ selectedFYs, selectedMonths }: ManagementDashboar
           title="Total Leads"
           value={data?.sales?.totalLeads || 0}
           icon={<FaUsers />}
-          gradient="from-blue-500 to-cyan-500"
+          gradient="from-indigo-500 to-cyan-500"
         />
         <MetricCard
           title="Total Capacity"
@@ -83,7 +83,7 @@ const ManagementDashboard = ({ selectedFYs, selectedMonths }: ManagementDashboar
           title="Pending Installation"
           value={data?.operations?.pendingInstallation || 0}
           icon={<FaCog />}
-          gradient="from-indigo-500 to-blue-500"
+          gradient="from-indigo-500 to-indigo-600"
         />
         <MetricCard
           title="Pending Subsidy"

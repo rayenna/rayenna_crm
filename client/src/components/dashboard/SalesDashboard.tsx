@@ -50,7 +50,7 @@ const SalesDashboard = ({ selectedFYs, selectedMonths }: SalesDashboardProps) =>
           title="Total Leads"
           value={data?.leads?.total || 0}
           icon={<FaUsers />}
-          gradient="from-blue-500 to-cyan-500"
+          gradient="from-indigo-500 to-cyan-500"
         />
         <MetricCard
           title="Total Capacity"
@@ -84,7 +84,7 @@ const SalesDashboard = ({ selectedFYs, selectedMonths }: SalesDashboardProps) =>
           title="Survey Stage"
           value={data?.pipeline?.survey || 0}
           icon={<FaClipboardList />}
-          gradient="from-indigo-500 to-blue-500"
+          gradient="from-indigo-500 to-indigo-600"
         />
         <MetricCard
           title="Proposal Stage"

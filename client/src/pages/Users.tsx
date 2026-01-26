@@ -217,7 +217,7 @@ const Users = () => {
                   <button
                     onClick={() => handleResetPassword(user)}
                     disabled={resetPasswordMutation.isPending}
-                    className="text-blue-600 hover:text-blue-800 text-sm disabled:opacity-50 whitespace-nowrap"
+                    className="text-indigo-600 hover:text-indigo-800 text-sm disabled:opacity-50 whitespace-nowrap"
                   >
                     {resetPasswordMutation.isPending ? 'Generating...' : 'Reset Password'}
                   </button>
@@ -271,7 +271,7 @@ const Users = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="p-4 sm:p-6">
-              <h3 className="text-lg sm:text-xl font-bold text-blue-600 mb-4">Password Reset Link Generated</h3>
+              <h3 className="text-lg sm:text-xl font-bold text-indigo-600 mb-4">Password Reset Link Generated</h3>
               <p className="text-sm sm:text-base text-gray-700 mb-4">
                 Reset link for <strong>{resetPasswordModal.user.name}</strong> ({resetPasswordModal.user.email}):
               </p>
@@ -290,7 +290,7 @@ const Users = () => {
                 </button>
                 <button
                   onClick={closeResetModal}
-                  className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+                  className="w-full sm:w-auto px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium"
                 >
                   Close
                 </button>

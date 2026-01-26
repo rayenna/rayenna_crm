@@ -46,7 +46,7 @@ const FinanceDashboard = ({ selectedFYs, selectedMonths }: FinanceDashboardProps
           title="Amount Received"
           value={`₹${(data?.totalAmountReceived || 0).toLocaleString('en-IN')}`}
           icon={<FaCheckCircle />}
-          gradient="from-blue-500 to-cyan-500"
+          gradient="from-indigo-500 to-cyan-500"
         />
         <MetricCard
           title="Outstanding Balance"
@@ -56,8 +56,8 @@ const FinanceDashboard = ({ selectedFYs, selectedMonths }: FinanceDashboardProps
         />
       </div>
 
-      <div className="bg-gradient-to-br from-white via-blue-50/50 to-white shadow-2xl rounded-2xl border-2 border-blue-200/50 overflow-hidden backdrop-blur-sm">
-        <div className="bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-600 px-6 py-4 shadow-lg">
+      <div className="bg-gradient-to-br from-white via-indigo-50/50 to-white shadow-2xl rounded-2xl border-2 border-indigo-200/50 overflow-hidden backdrop-blur-sm">
+        <div className="bg-gradient-to-r from-indigo-500 via-cyan-500 to-indigo-600 px-6 py-4 shadow-lg">
           <h3 className="text-lg font-bold text-white drop-shadow-md">
             Projects by Payment Status
           </h3>
