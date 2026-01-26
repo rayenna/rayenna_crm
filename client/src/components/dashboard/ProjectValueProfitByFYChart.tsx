@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
@@ -15,21 +15,37 @@ interface ProjectValueProfitByFYChartProps {
 }
 
 const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'management' }: ProjectValueProfitByFYChartProps) => {
-  const [selectedFY, setSelectedFY] = useState<string>('all')
+  const [selectedFYs, setSelectedFYs] = useState<string[]>([])
+  const [showFYDropdown, setShowFYDropdown] = useState(false)
+  const fyDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (fyDropdownRef.current && !fyDropdownRef.current.contains(event.target as Node)) {
+        setShowFYDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Fetch chart data independently based on chart's own filter
   // This ensures the chart filter works independently from dashboard filters
   const { data: fetchedData, isLoading } = useQuery({
-    queryKey: ['projectValueProfitByFY', dashboardType, selectedFY],
+    queryKey: ['projectValueProfitByFY', dashboardType, selectedFYs],
     queryFn: async () => {
       const endpoint = `/api/dashboard/${dashboardType}`
-      if (selectedFY === 'all') {
-        // Fetch all data when 'all' is selected
+      if (selectedFYs.length === 0) {
+        // Fetch all data when no FY is selected
         const res = await axiosInstance.get(endpoint)
         return res.data.projectValueProfitByFY || []
       }
-      // Fetch filtered data when specific FY is selected
-      const res = await axiosInstance.get(`${endpoint}?fy=${selectedFY}`)
+      // Fetch filtered data when specific FYs are selected
+      const params = new URLSearchParams()
+      selectedFYs.forEach((fy) => params.append('fy', fy))
+      const res = await axiosInstance.get(`${endpoint}?${params.toString()}`)
       return res.data.projectValueProfitByFY || []
     },
     enabled: true, // Always fetch - chart manages its own data
@@ -89,10 +105,20 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
     .filter((fy): fy is string => typeof fy === 'string' && fy !== null && fy !== '')
     .sort()
 
-  // Filter data based on selected financial year
-  const filteredData = selectedFY === 'all' 
+  // Filter data based on selected financial years
+  const filteredData = selectedFYs.length === 0
     ? chartData 
-    : chartData.filter((item: FYData) => item.fy === selectedFY)
+    : chartData.filter((item: FYData) => selectedFYs.includes(item.fy))
+
+  const toggleFY = (fy: string) => {
+    setSelectedFYs((prev) => 
+      prev.includes(fy) ? prev.filter((f) => f !== fy) : [...prev, fy]
+    )
+  }
+
+  const clearFYFilter = () => {
+    setSelectedFYs([])
+  }
 
   // Format currency for tooltip
   const formatCurrency = (value: number) => {
@@ -113,22 +139,66 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
           </h2>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-          <label htmlFor="fy-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">
-            Filter by FY:
-          </label>
-          <select
-            id="fy-filter"
-            className="border-2 border-primary-300 rounded-xl px-4 py-2.5 text-sm font-medium bg-gradient-to-r from-white to-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 w-full sm:w-auto sm:min-w-[150px] shadow-md hover:shadow-lg transition-all duration-200"
-            value={selectedFY}
-            onChange={(e) => setSelectedFY(e.target.value)}
-          >
-            <option value="all">All Financial Years</option>
-            {availableFYs.map((fy: string) => (
-              <option key={fy} value={fy}>
-                {fy}
-              </option>
-            ))}
-          </select>
+          <div className="relative w-[192px]" ref={fyDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setShowFYDropdown(!showFYDropdown)}
+              className="w-full text-left border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 flex items-center justify-between"
+            >
+              <span className={selectedFYs.length === 0 ? 'text-gray-500' : 'text-gray-900'}>
+                {selectedFYs.length === 0
+                  ? 'Select FY'
+                  : selectedFYs.length === 1
+                  ? selectedFYs[0]
+                  : `${selectedFYs.length} selected`}
+              </span>
+              <svg
+                className={`ml-2 h-4 w-4 text-gray-400 transition-transform flex-shrink-0 ${
+                  showFYDropdown ? 'transform rotate-180' : ''
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {showFYDropdown && (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                {availableFYs.length > 0 ? (
+                  <>
+                    {availableFYs.map((fy: string) => (
+                      <label
+                        key={fy}
+                        className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedFYs.includes(fy)}
+                          onChange={() => toggleFY(fy)}
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-900">{fy}</span>
+                      </label>
+                    ))}
+                    {selectedFYs.length > 0 && (
+                      <div className="border-t border-gray-200 px-4 py-2">
+                        <button
+                          type="button"
+                          onClick={clearFYFilter}
+                          className="text-xs text-primary-600 hover:text-primary-800"
+                        >
+                          Clear selection
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="px-4 py-2 text-sm text-gray-500">No FYs available</div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <div className="w-full overflow-x-auto">
@@ -147,7 +217,7 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
             <XAxis 
               dataKey="fy" 
               tick={{ fontSize: 12 }}
-              label={{ value: selectedFY === 'all' ? 'Financial Year (FY)' : `FY: ${selectedFY}`, position: 'insideBottom', offset: -5, style: { fontSize: '12px' } }}
+              label={{ value: selectedFYs.length === 0 ? 'Financial Year (FY)' : selectedFYs.length === 1 ? `FY: ${selectedFYs[0]}` : `FY: ${selectedFYs.length} selected`, position: 'insideBottom', offset: -5, style: { fontSize: '12px' } }}
             />
             <YAxis 
               tick={{ fontSize: 12 }}

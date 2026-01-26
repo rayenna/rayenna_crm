@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
@@ -22,7 +22,21 @@ const CHART_COLORS = ['#ef4444', '#3b82f6', '#10b981'] // Red, Blue, Green
 const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardType = 'management' }: ProjectValuePieChartProps) => {
   const [outerRadius, setOuterRadius] = useState(120)
   const [chartHeight, setChartHeight] = useState(350)
-  const [selectedFY, setSelectedFY] = useState<string>('all')
+  const [selectedFYs, setSelectedFYs] = useState<string[]>([])
+  const [showFYDropdown, setShowFYDropdown] = useState(false)
+  const fyDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (fyDropdownRef.current && !fyDropdownRef.current.contains(event.target as Node)) {
+        setShowFYDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
   
   // Fetch available FYs if not provided
   const { data: fyData } = useQuery({
@@ -42,17 +56,18 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
   // Fetch chart data independently based on chart's own filter
   // This ensures the chart filter works independently from dashboard filters
   const { data: filteredData, isLoading: isLoadingFiltered } = useQuery({
-    queryKey: ['projectValueByType', dashboardType, selectedFY],
+    queryKey: ['projectValueByType', dashboardType, selectedFYs],
     queryFn: async () => {
-      if (selectedFY === 'all') {
-        // Fetch all data when 'all' is selected
-        const endpoint = `/api/dashboard/${dashboardType}`
+      const endpoint = `/api/dashboard/${dashboardType}`
+      if (selectedFYs.length === 0) {
+        // Fetch all data when no FY is selected
         const res = await axiosInstance.get(endpoint)
         return res.data.projectValueByType || []
       }
-      // Fetch filtered data when specific FY is selected
-      const endpoint = `/api/dashboard/${dashboardType}?fy=${selectedFY}`
-      const res = await axiosInstance.get(endpoint)
+      // Fetch filtered data when specific FYs are selected
+      const params = new URLSearchParams()
+      selectedFYs.forEach((fy) => params.append('fy', fy))
+      const res = await axiosInstance.get(`${endpoint}?${params.toString()}`)
       return res.data.projectValueByType || []
     },
     enabled: true, // Always fetch - chart manages its own data
@@ -126,23 +141,71 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
         </div>
         {finalAvailableFYs && finalAvailableFYs.length > 0 && (
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <label htmlFor="pie-fy-filter" className="text-sm font-medium text-gray-700 whitespace-nowrap">
-              Filter by FY:
-            </label>
-            <select
-              id="pie-fy-filter"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 w-full sm:w-auto sm:min-w-[150px]"
-              value={selectedFY}
-              onChange={(e) => setSelectedFY(e.target.value)}
-              disabled={isLoadingFiltered}
-            >
-              <option value="all">All Financial Years</option>
-              {finalAvailableFYs.map((fy: string) => (
-                <option key={fy} value={fy}>
-                  {fy}
-                </option>
-              ))}
-            </select>
+            <div className="relative w-[192px]" ref={fyDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setShowFYDropdown(!showFYDropdown)}
+                disabled={isLoadingFiltered}
+                className="w-full text-left border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 flex items-center justify-between disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400"
+              >
+                <span className={selectedFYs.length === 0 ? 'text-gray-500' : 'text-gray-900'}>
+                  {selectedFYs.length === 0
+                    ? 'Select FY'
+                    : selectedFYs.length === 1
+                    ? selectedFYs[0]
+                    : `${selectedFYs.length} selected`}
+                </span>
+                <svg
+                  className={`ml-2 h-4 w-4 text-gray-400 transition-transform flex-shrink-0 ${
+                    showFYDropdown ? 'transform rotate-180' : ''
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {showFYDropdown && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                  {finalAvailableFYs.length > 0 ? (
+                    <>
+                      {finalAvailableFYs.map((fy: string) => (
+                        <label
+                          key={fy}
+                          className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedFYs.includes(fy)}
+                            onChange={() => {
+                              setSelectedFYs((prev) => 
+                                prev.includes(fy) ? prev.filter((f) => f !== fy) : [...prev, fy]
+                              )
+                            }}
+                            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          />
+                          <span className="ml-2 text-sm text-gray-900">{fy}</span>
+                        </label>
+                      ))}
+                      {selectedFYs.length > 0 && (
+                        <div className="border-t border-gray-200 px-4 py-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedFYs([])}
+                            className="text-xs text-primary-600 hover:text-primary-800"
+                          >
+                            Clear selection
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="px-4 py-2 text-sm text-gray-500">No FYs available</div>
+                  )}
+                </div>
+              )}
+            </div>
             {isLoadingFiltered && (
               <span className="text-xs text-gray-500">Loading...</span>
             )}

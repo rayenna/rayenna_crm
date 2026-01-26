@@ -226,9 +226,6 @@ const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudPro
         <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
           {/* FY Filter Dropdown */}
           <div className="relative flex-1" ref={fyDropdownRef}>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Financial Year:
-            </label>
             <button
               type="button"
               onClick={() => setShowFYDropdown(!showFYDropdown)}
@@ -291,9 +288,6 @@ const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudPro
 
           {/* Month Filter Dropdown */}
           <div className="relative flex-1" ref={monthDropdownRef}>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Month:
-            </label>
             <button
               type="button"
               onClick={() => selectedFYs.length === 1 && setShowMonthDropdown(!showMonthDropdown)}

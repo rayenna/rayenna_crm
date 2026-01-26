@@ -98,7 +98,15 @@ const SalesTeamTreemap = ({ availableFYs = [] }: SalesTeamTreemapProps) => {
   })
 
   const toggleFY = (fy: string) => {
-    setSelectedFYs((prev) => (prev.includes(fy) ? prev.filter((f) => f !== fy) : [...prev, fy]))
+    setSelectedFYs((prev) => {
+      const newFYs = prev.includes(fy) ? prev.filter((f) => f !== fy) : [...prev, fy]
+      // Clear months if not exactly one FY selected
+      if (newFYs.length !== 1) {
+        setSelectedMonths([])
+        setShowMonthDropdown(false)
+      }
+      return newFYs
+    })
   }
 
   const toggleMonth = (month: string) => {
@@ -107,7 +115,8 @@ const SalesTeamTreemap = ({ availableFYs = [] }: SalesTeamTreemapProps) => {
 
   const clearFYFilter = () => {
     setSelectedFYs([])
-    setSelectedMonths([])
+    setSelectedMonths([]) // Clear months when FY is cleared
+    setShowMonthDropdown(false) // Close month dropdown when FY is cleared
   }
 
   const clearMonthFilter = () => {
@@ -121,8 +130,6 @@ const SalesTeamTreemap = ({ availableFYs = [] }: SalesTeamTreemapProps) => {
     projectCount: item.projectCount,
     fill: COLORS[index % COLORS.length],
   })) || []
-
-  const isMonthFilterDisabled = selectedFYs.length !== 1
 
   // Debug logging
   useEffect(() => {
@@ -177,36 +184,37 @@ const SalesTeamTreemap = ({ availableFYs = [] }: SalesTeamTreemapProps) => {
             </button>
             {showFYDropdown && (
               <div className="absolute z-10 mt-1 w-full sm:w-auto min-w-[200px] bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-                <div className="p-2">
-                  {availableFYs.length > 0 ? (
-                    <>
-                      {availableFYs.map((fy) => (
-                        <label
-                          key={fy}
-                          className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer rounded"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedFYs.includes(fy)}
-                            onChange={() => toggleFY(fy)}
-                            className="mr-2 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                          />
-                          <span className="text-sm text-gray-700">{fy}</span>
-                        </label>
-                      ))}
-                      {selectedFYs.length > 0 && (
+                {availableFYs.length > 0 ? (
+                  <>
+                    {availableFYs.map((fy) => (
+                      <label
+                        key={fy}
+                        className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedFYs.includes(fy)}
+                          onChange={() => toggleFY(fy)}
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-900">{fy}</span>
+                      </label>
+                    ))}
+                    {selectedFYs.length > 0 && (
+                      <div className="border-t border-gray-200 px-4 py-2">
                         <button
+                          type="button"
                           onClick={clearFYFilter}
-                          className="w-full mt-2 px-3 py-2 text-sm text-primary-600 hover:bg-primary-50 rounded"
+                          className="text-xs text-primary-600 hover:text-primary-800"
                         >
-                          Clear Filter
+                          Clear selection
                         </button>
-                      )}
-                    </>
-                  ) : (
-                    <div className="px-3 py-2 text-sm text-gray-500">No FY data available</div>
-                  )}
-                </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="px-4 py-2 text-sm text-gray-500">No FYs available</div>
+                )}
               </div>
             )}
           </div>
@@ -215,10 +223,10 @@ const SalesTeamTreemap = ({ availableFYs = [] }: SalesTeamTreemapProps) => {
           <div className="relative" ref={monthDropdownRef}>
             <button
               type="button"
-              onClick={() => !isMonthFilterDisabled && setShowMonthDropdown(!showMonthDropdown)}
-              disabled={isMonthFilterDisabled}
+              onClick={() => selectedFYs.length === 1 && setShowMonthDropdown(!showMonthDropdown)}
+              disabled={selectedFYs.length !== 1}
               className={`flex items-center justify-between w-full sm:w-auto min-w-[180px] px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                isMonthFilterDisabled
+                selectedFYs.length !== 1
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-white hover:bg-gray-50 text-gray-700'
               }`}
@@ -232,7 +240,7 @@ const SalesTeamTreemap = ({ availableFYs = [] }: SalesTeamTreemapProps) => {
               </span>
               <svg
                 className={`ml-2 h-4 w-4 transition-transform ${showMonthDropdown ? 'rotate-180' : ''} ${
-                  isMonthFilterDisabled ? 'text-gray-400' : 'text-gray-500'
+                  selectedFYs.length !== 1 ? 'text-gray-400' : 'text-gray-500'
                 }`}
                 fill="none"
                 stroke="currentColor"
@@ -241,36 +249,39 @@ const SalesTeamTreemap = ({ availableFYs = [] }: SalesTeamTreemapProps) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
-            {!isMonthFilterDisabled && showMonthDropdown && (
+            {showMonthDropdown && selectedFYs.length === 1 && (
               <div className="absolute z-10 mt-1 w-full sm:w-auto min-w-[200px] bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-                <div className="p-2">
-                  {MONTHS.map((month) => (
-                    <label
-                      key={month.value}
-                      className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer rounded"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedMonths.includes(month.value)}
-                        onChange={() => toggleMonth(month.value)}
-                        className="mr-2 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                      />
-                      <span className="text-sm text-gray-700">{month.label}</span>
-                    </label>
-                  ))}
-                  {selectedMonths.length > 0 && (
+                {MONTHS.map((month) => (
+                  <label
+                    key={month.value}
+                    className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedMonths.includes(month.value)}
+                      onChange={() => toggleMonth(month.value)}
+                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-900">{month.label}</span>
+                  </label>
+                ))}
+                {selectedMonths.length > 0 && (
+                  <div className="border-t border-gray-200 px-4 py-2">
                     <button
+                      type="button"
                       onClick={clearMonthFilter}
-                      className="w-full mt-2 px-3 py-2 text-sm text-primary-600 hover:bg-primary-50 rounded"
+                      className="text-xs text-primary-600 hover:text-primary-800"
                     >
-                      Clear Filter
+                      Clear selection
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             )}
-            {isMonthFilterDisabled && (
-              <p className="mt-1 text-xs text-gray-500">Select exactly one FY to filter by month</p>
+            {selectedFYs.length !== 1 && (
+              <p className="mt-1 text-xs text-gray-500">
+                {selectedFYs.length === 0 ? 'Select one FY to enable month filter' : 'Select only one FY to enable month filter'}
+              </p>
             )}
           </div>
         </div>
