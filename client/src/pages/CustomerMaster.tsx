@@ -561,58 +561,142 @@ const CustomerForm = ({
     },
   })
 
-  const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm({
+  // Fetch full customer data when editing (to get all fields including idProofNumber, idProofType, companyName, companyGst)
+  const { data: fullCustomerData } = useQuery({
+    queryKey: ['customer', customer?.id],
+    queryFn: async () => {
+      if (!customer?.id) return null
+      const res = await axiosInstance.get(`/api/customers/${customer.id}`)
+      return res.data as Customer
+    },
+    enabled: !!customer?.id, // Only fetch if we have a customer ID
+  })
+
+  // Use full customer data if available, otherwise fall back to customer prop
+  const customerData = fullCustomerData || customer
+
+  const { register, handleSubmit, formState: { errors }, watch, setValue, reset } = useForm({
     defaultValues: {
-      prefix: customer?.prefix || '',
-      firstName: customer?.firstName || '',
-      middleName: customer?.middleName || '',
-      lastName: customer?.lastName || '',
-      addressLine1: customer?.addressLine1 || '',
-      addressLine2: customer?.addressLine2 || '',
-      city: customer?.city || '',
-      state: customer?.state || '',
-      country: customer?.country || '',
-      pinCode: customer?.pinCode || '',
-      consumerNumber: customer?.consumerNumber || '',
-      idProofNumber: customer?.idProofNumber || '',
-      idProofType: customer?.idProofType || '',
-      companyName: customer?.companyName || '',
-      companyGst: customer?.companyGst || '',
-      salespersonId: customer?.salespersonId || '',
+      prefix: customerData?.prefix || '',
+      firstName: customerData?.firstName || '',
+      middleName: customerData?.middleName || '',
+      lastName: customerData?.lastName || '',
+      addressLine1: customerData?.addressLine1 || '',
+      addressLine2: customerData?.addressLine2 || '',
+      city: customerData?.city || '',
+      state: customerData?.state || '',
+      country: customerData?.country || '',
+      pinCode: customerData?.pinCode || '',
+      consumerNumber: customerData?.consumerNumber || '',
+      idProofNumber: customerData?.idProofNumber || '',
+      idProofType: customerData?.idProofType || '',
+      companyName: customerData?.companyName || '',
+      companyGst: customerData?.companyGst || '',
+      salespersonId: customerData?.salespersonId || '',
     }
   })
-  const [contactNumbers, setContactNumbers] = useState<string[]>(customer?.contactNumbers ? (() => {
+
+  // Reset form when customer data changes (for edit mode)
+  useEffect(() => {
+    if (customerData) {
+      reset({
+        prefix: customerData.prefix || '',
+        firstName: customerData.firstName || '',
+        middleName: customerData.middleName || '',
+        lastName: customerData.lastName || '',
+        addressLine1: customerData.addressLine1 || '',
+        addressLine2: customerData.addressLine2 || '',
+        city: customerData.city || '',
+        state: customerData.state || '',
+        country: customerData.country || '',
+        pinCode: customerData.pinCode || '',
+        consumerNumber: customerData.consumerNumber || '',
+        idProofNumber: customerData.idProofNumber || '',
+        idProofType: customerData.idProofType || '',
+        companyName: customerData.companyName || '',
+        companyGst: customerData.companyGst || '',
+        salespersonId: customerData.salespersonId || '',
+      })
+    } else {
+      reset({
+        prefix: '',
+        firstName: '',
+        middleName: '',
+        lastName: '',
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        state: '',
+        country: '',
+        pinCode: '',
+        consumerNumber: '',
+        idProofNumber: '',
+        idProofType: '',
+        companyName: '',
+        companyGst: '',
+        salespersonId: '',
+      })
+    }
+  }, [customerData?.id, customerData?.idProofNumber, customerData?.idProofType, customerData?.companyName, customerData?.companyGst, reset])
+  const [contactNumbers, setContactNumbers] = useState<string[]>(customerData?.contactNumbers ? (() => {
     try {
-      const parsed = JSON.parse(customer.contactNumbers)
-      return Array.isArray(parsed) ? parsed : [customer.contactNumbers]
+      const parsed = JSON.parse(customerData.contactNumbers)
+      return Array.isArray(parsed) ? parsed : [customerData.contactNumbers]
     } catch {
-      return [customer.contactNumbers]
+      return [customerData.contactNumbers]
     }
   })() : [''])
 
-  const [emails, setEmails] = useState<string[]>(customer?.email ? (() => {
+  const [emails, setEmails] = useState<string[]>(customerData?.email ? (() => {
     try {
-      const parsed = JSON.parse(customer.email)
-      return Array.isArray(parsed) ? parsed : [customer.email]
+      const parsed = JSON.parse(customerData.email)
+      return Array.isArray(parsed) ? parsed : [customerData.email]
     } catch {
-      return [customer.email]
+      return [customerData.email]
     }
   })() : [''])
 
   // Location coordinates state
-  const [latitude, setLatitude] = useState<number | null>(customer?.latitude || null)
-  const [longitude, setLongitude] = useState<number | null>(customer?.longitude || null)
+  const [latitude, setLatitude] = useState<number | null>(customerData?.latitude || null)
+  const [longitude, setLongitude] = useState<number | null>(customerData?.longitude || null)
   
   // Sync coordinates when customer changes (for edit mode)
   useEffect(() => {
-    if (customer) {
-      setLatitude(customer.latitude || null)
-      setLongitude(customer.longitude || null)
+    if (customerData) {
+      setLatitude(customerData.latitude || null)
+      setLongitude(customerData.longitude || null)
     } else {
       setLatitude(null)
       setLongitude(null)
     }
-  }, [customer?.id, customer?.latitude, customer?.longitude])
+  }, [customerData?.id, customerData?.latitude, customerData?.longitude])
+
+  // Sync contactNumbers and emails when customer data changes
+  useEffect(() => {
+    if (customerData?.contactNumbers) {
+      try {
+        const parsed = JSON.parse(customerData.contactNumbers)
+        setContactNumbers(Array.isArray(parsed) ? parsed : [customerData.contactNumbers])
+      } catch {
+        setContactNumbers([customerData.contactNumbers])
+      }
+    } else {
+      setContactNumbers([''])
+    }
+  }, [customerData?.id, customerData?.contactNumbers])
+
+  useEffect(() => {
+    if (customerData?.email) {
+      try {
+        const parsed = JSON.parse(customerData.email)
+        setEmails(Array.isArray(parsed) ? parsed : [customerData.email])
+      } catch {
+        setEmails([customerData.email])
+      }
+    } else {
+      setEmails([''])
+    }
+  }, [customerData?.id, customerData?.email])
   
   // Watch country and state for cascading dropdowns
   const selectedCountry = watch('country')
@@ -621,36 +705,36 @@ const CustomerForm = ({
   
   // Get states and cities based on selections
   // When editing, use customer's country/state if available, otherwise use watched values
-  const countryForStates = selectedCountry || customer?.country || ''
-  const stateForCities = selectedState || customer?.state || ''
+  const countryForStates = selectedCountry || customerData?.country || ''
+  const stateForCities = selectedState || customerData?.state || ''
   const availableStates = countryForStates ? getStatesByCountry(countryForStates) : []
   const availableCities = stateForCities && countryForStates ? getCitiesByState(stateForCities, countryForStates) : []
   
   // Reset state and city when country changes (only if country actually changed from existing value)
   useEffect(() => {
-    if (selectedCountry && customer?.country !== selectedCountry) {
+    if (selectedCountry && customerData?.country !== selectedCountry) {
       setValue('state', '')
       setValue('city', '')
     }
-  }, [selectedCountry, setValue, customer?.country])
+  }, [selectedCountry, setValue, customerData?.country])
   
   // Reset city when state changes (only if state actually changed from existing value)
   useEffect(() => {
-    if (selectedState && customer?.state !== selectedState) {
+    if (selectedState && customerData?.state !== selectedState) {
       setValue('city', '')
     }
-  }, [selectedState, setValue, customer?.state])
+  }, [selectedState, setValue, customerData?.state])
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
-      if (customer) {
-        return axiosInstance.put(`/api/customers/${customer.id}`, data)
+      if (customerData) {
+        return axiosInstance.put(`/api/customers/${customerData.id}`, data)
       } else {
         return axiosInstance.post('/api/customers', data)
       }
     },
     onSuccess: () => {
-      toast.success(customer ? 'Customer updated successfully' : 'Customer created successfully')
+      toast.success(customerData ? 'Customer updated successfully' : 'Customer created successfully')
       onSuccess()
     },
     onError: (error: any) => {
@@ -667,6 +751,11 @@ const CustomerForm = ({
     
     const submitData: any = {
       ...data,
+      // Explicitly include these fields to ensure they're sent
+      idProofNumber: data.idProofNumber || null,
+      idProofType: data.idProofType || null,
+      companyName: data.companyName || null,
+      companyGst: data.companyGst || null,
       contactNumbers: contactNumbers.filter(cn => cn.trim() !== ''),
       email: emails.filter(e => e.trim() !== ''),
       latitude: latitude,
@@ -741,7 +830,6 @@ const CustomerForm = ({
                 </label>
                 <select
                   {...register('prefix')}
-                  defaultValue={customer?.prefix || ''}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                 >
                   <option value="">None</option>
@@ -760,7 +848,6 @@ const CustomerForm = ({
                 </label>
                 <input
                   {...register('firstName', { required: 'First name is required' })}
-                  defaultValue={customer?.firstName || ''}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                   placeholder="First Name"
                 />
@@ -774,7 +861,6 @@ const CustomerForm = ({
                 </label>
                 <input
                   {...register('middleName')}
-                  defaultValue={customer?.middleName || ''}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                   placeholder="Middle Name"
                 />
@@ -785,7 +871,6 @@ const CustomerForm = ({
                 </label>
                 <input
                   {...register('lastName')}
-                  defaultValue={customer?.lastName || ''}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                   placeholder="Last Name"
                 />
@@ -798,7 +883,6 @@ const CustomerForm = ({
               </label>
               <input
                 {...register('addressLine1')}
-                defaultValue={customer?.addressLine1 || ''}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
                 placeholder="Street address, P.O. Box, etc."
               />
@@ -810,7 +894,6 @@ const CustomerForm = ({
               </label>
               <input
                 {...register('addressLine2')}
-                defaultValue={customer?.addressLine2 || ''}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
                 placeholder="Apartment, suite, unit, building, floor, etc."
               />
@@ -823,10 +906,10 @@ const CustomerForm = ({
                 </label>
                 <select
                   {...register('country')}
-                  value={selectedCountry || customer?.country || ''}
+                  value={selectedCountry || customerData?.country || ''}
                   onChange={(e) => {
                     setValue('country', e.target.value)
-                    if (e.target.value !== customer?.country) {
+                    if (e.target.value !== customerData?.country) {
                       setValue('state', '')
                       setValue('city', '')
                     }
@@ -848,10 +931,10 @@ const CustomerForm = ({
                 </label>
                 <select
                   {...register('state')}
-                  value={selectedState || customer?.state || ''}
+                  value={selectedState || customerData?.state || ''}
                   onChange={(e) => {
                     setValue('state', e.target.value)
-                    if (e.target.value !== customer?.state) {
+                    if (e.target.value !== customerData?.state) {
                       setValue('city', '')
                     }
                   }}
@@ -873,7 +956,7 @@ const CustomerForm = ({
                 </label>
                 <select
                   {...register('city')}
-                  value={watch('city') || customer?.city || ''}
+                  value={watch('city') || customerData?.city || ''}
                   onChange={(e) => setValue('city', e.target.value)}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                   disabled={!stateForCities}
@@ -894,7 +977,6 @@ const CustomerForm = ({
               </label>
               <input
                 {...register('pinCode')}
-                defaultValue={customer?.pinCode || ''}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
                 placeholder="Postal/ZIP code"
                 maxLength={10}
@@ -949,7 +1031,6 @@ const CustomerForm = ({
               </label>
               <input
                 {...register('consumerNumber')}
-                defaultValue={customer?.consumerNumber || ''}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
             </div>
@@ -994,7 +1075,6 @@ const CustomerForm = ({
                 </label>
                 <input
                   {...register('idProofNumber')}
-                  defaultValue={customer?.idProofNumber || ''}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                   placeholder="Enter ID proof number"
                 />
@@ -1014,7 +1094,6 @@ const CustomerForm = ({
                       return true
                     }
                   })}
-                  defaultValue={customer?.idProofType || ''}
                   className={`w-full border border-gray-300 rounded-md px-3 py-2 ${idProofNumber && idProofNumber.trim() !== '' && !watch('idProofType') ? 'border-red-300' : ''}`}
                 >
                   <option value="">Select Type</option>
@@ -1037,7 +1116,6 @@ const CustomerForm = ({
               </label>
               <input
                 {...register('companyName')}
-                defaultValue={customer?.companyName || ''}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
                 placeholder="Enter company name"
               />
@@ -1049,14 +1127,13 @@ const CustomerForm = ({
               </label>
               <input
                 {...register('companyGst')}
-                defaultValue={customer?.companyGst || ''}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
                 placeholder="Enter GST number"
               />
             </div>
 
             {/* Salesperson field - Only visible to Management and Admin */}
-            {(hasRole([UserRole.MANAGEMENT]) || hasRole([UserRole.ADMIN])) && customer && (
+            {(hasRole([UserRole.MANAGEMENT]) || hasRole([UserRole.ADMIN])) && customerData && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Salesperson
