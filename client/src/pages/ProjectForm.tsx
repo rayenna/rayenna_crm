@@ -424,12 +424,14 @@ const ProjectForm = () => {
     ];
     
     // Remove immutable/system fields that shouldn't be sent to backend
+    // Note: totalProjectCost is intentionally NOT treated as immutable so that
+    // Operations/Admin users can update it from the Project Lifecycle section.
     const immutableFields = [
       'id', 'slNo', 'count', 'createdById', 'createdAt', 'updatedAt', 
       'totalAmountReceived', 'balanceAmount', 'paymentStatus', 'expectedProfit', 
       'customer', 'remarks', 'createdBy', 'salesperson', 'opsPerson', 
       'documents', 'auditLogs', 'grossProfit', 'profitability', 'finalProfit',
-      'totalProjectCost', 'projectValue', 'marginEstimate'
+      'projectValue', 'marginEstimate'
     ];
     immutableFields.forEach((field) => {
       delete data[field];
@@ -657,6 +659,8 @@ const ProjectForm = () => {
         'mnrePortalRegistrationDate', 'feasibilityDate', 'registrationDate',
         'installationCompletionDate', 'completionReportSubmissionDate', 'subsidyRequestDate', 'subsidyCreditedDate',
         'mnreInstallationDetails',
+        // Execution cost field (used later for gross profit / profitability)
+        'totalProjectCost',
       ];
       
       // Remove any fields not in the allowed list

@@ -285,112 +285,79 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       }));
 
     // Build leads where clause with salesperson and date filters
-    const leadsWhere: any = {};
-    if (role === UserRole.SALES) {
-      leadsWhere.assignedSalesId = userId;
-    }
-    
-    // Apply date filters to leads based on createdAt
-    if (fyFilters.length > 0) {
-      // Build date filters for leads (filter by createdAt)
-      if (monthFilters.length > 0 && fyFilters.length === 1) {
-        // Month filter only applies if exactly one FY is selected
-        const fy = fyFilters[0];
-        const yearMatch = fy.match(/(\d{4})/);
-        if (yearMatch) {
-          const startYear = parseInt(yearMatch[1]);
-          const dateFilters: any[] = [];
-          
-          monthFilters.forEach((month) => {
-            const monthNum = parseInt(month);
-            let year = startYear;
-            
-            // Months 1-3 (Jan-Mar) belong to the second year of the FY
-            // Months 4-12 (Apr-Dec) belong to the first year of the FY
-            if (monthNum >= 1 && monthNum <= 3) {
-              year = startYear + 1;
-            }
-            
-            const startDate = new Date(year, monthNum - 1, 1);
-            const endDate = new Date(year, monthNum, 0, 23, 59, 59, 999);
-            
-            dateFilters.push({
-              createdAt: { gte: startDate, lte: endDate },
-            });
-          });
-          
-          if (dateFilters.length > 0) {
-            leadsWhere.OR = dateFilters;
-          }
-        }
-      } else {
-        // Only FY filter (no month) - filter by FY date range
-        const fyDateRanges: any[] = [];
-        fyFilters.forEach((fy) => {
-          const yearMatch = fy.match(/(\d{4})/);
-          if (yearMatch) {
-            const startYear = parseInt(yearMatch[1]);
-            const startDate = new Date(startYear, 3, 1); // April 1
-            const endDate = new Date(startYear + 1, 2, 31, 23, 59, 59, 999); // March 31
-            fyDateRanges.push({
-              createdAt: { gte: startDate, lte: endDate },
-            });
-          }
-        });
-        
-        if (fyDateRanges.length > 0) {
-          leadsWhere.OR = fyDateRanges;
-        }
-      }
-    }
-    
-    // Get leads data
-    const leadsData = await prisma.lead.findMany({
-      where: leadsWhere,
-      select: {
-        status: true,
-        source: true,
-        expectedValue: true,
-      },
-    });
+    // "Total Leads" on the Sales dashboard is derived from projects in the
+    // early pipeline stages, not from the separate Leads module. This keeps
+    // the tile meaningful even if the Leads module is not actively used.
+    //
+    // We define "leads" as all projects that are currently in:
+    // - LEAD
+    // - SITE_SURVEY
+    // - PROPOSAL
+    const leadLikeStatuses: ProjectStatus[] = [
+      ProjectStatus.LEAD,
+      ProjectStatus.SITE_SURVEY,
+      ProjectStatus.PROPOSAL,
+    ];
 
-    const totalLeadsCount = leadsData.length;
-    const newLeads = leadsData.filter((l) => l.status === LeadStatus.NEW).length;
-    const qualifiedLeads = leadsData.filter((l) => l.status === LeadStatus.QUALIFIED).length;
-    const convertedLeads = leadsData.filter((l) => l.status === LeadStatus.CONVERTED).length;
-    const conversionRate = totalLeadsCount > 0 ? ((convertedLeads / totalLeadsCount) * 100).toFixed(1) : '0';
+    // Reuse the existing projectsByStatus result to avoid extra queries
+    const totalLeadsCount =
+      projectsByStatus
+        ?.filter((p) => leadLikeStatuses.includes(p.projectStatus as ProjectStatus))
+        .reduce((sum, p) => sum + (p._count?.id || 0), 0) || 0;
 
-    // Leads by source
-    const leadsBySource = leadsData.reduce((acc: any, lead) => {
-      const source = lead.source || 'UNKNOWN';
-      if (!acc[source]) {
-        acc[source] = { count: 0, expectedValue: 0 };
-      }
-      acc[source].count++;
-      acc[source].expectedValue += lead.expectedValue || 0;
-      return acc;
-    }, {});
+    // The detailed LeadStatus-based metrics (NEW / QUALIFIED / CONVERTED) and
+    // expected values are not used on the frontend today, so we keep them as
+    // zeroed placeholders for now to avoid confusing empty data.
+    const newLeads = 0;
+    const qualifiedLeads = 0;
+    const convertedLeads = 0;
+    const conversionRate = '0';
 
-    const leadsBySourceArray = Object.entries(leadsBySource).map(([source, data]: [string, any]) => ({
-      source,
-      count: data.count,
-      expectedValue: data.expectedValue,
-    }));
+    const leadsBySourceArray: Array<{ source: string; count: number; expectedValue: number }> = [];
 
     // Pipeline by stage
+    // NOTE:
+    // The newer project lifecycle implementation does not currently maintain
+    // the legacy projectStage / statusIndicator fields. To keep the Sales
+    // dashboard tiles meaningful (especially for Sales users), we derive the
+    // pipeline counts directly from the primary projectStatus field instead of
+    // relying on projectStage / statusIndicator.
+    //
+    // This ensures the tiles always reflect the actual pipeline even if
+    // stage/SLA tracking is not enabled.
     const pipelineSurvey = await prisma.project.count({
-      where: { ...where, projectStage: ProjectStage.SURVEY },
+      where: { 
+        ...where,
+        projectStatus: ProjectStatus.SITE_SURVEY,
+      },
     });
     const pipelineProposal = await prisma.project.count({
-      where: { ...where, projectStage: ProjectStage.PROPOSAL },
+      where: { 
+        ...where,
+        projectStatus: ProjectStatus.PROPOSAL,
+      },
     });
     const pipelineApproved = await prisma.project.count({
-      where: { ...where, projectStage: ProjectStage.APPROVED },
+      where: { 
+        ...where,
+        projectStatus: ProjectStatus.CONFIRMED,
+      },
     });
     const pipelineAtRisk = await prisma.project.count({
       where: {
         ...where,
-        statusIndicator: 'RED',
+        // "At Risk" = active opportunities that are neither completed nor lost.
+        // This mirrors the business dashboard expectation more reliably than
+        // the unused statusIndicator field.
+        projectStatus: {
+          in: [
+            ProjectStatus.LEAD,
+            ProjectStatus.SITE_SURVEY,
+            ProjectStatus.PROPOSAL,
+            ProjectStatus.UNDER_INSTALLATION,
+            ProjectStatus.SUBMITTED_FOR_SUBSIDY,
+          ],
+        },
       },
     });
 
