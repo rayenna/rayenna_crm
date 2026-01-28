@@ -543,12 +543,12 @@ router.get(
         const isDownload = req.query.download === 'true';
 
         // Derive Cloudinary resource_type from MIME type:
-        // - Standard images (image/*) and PDFs (often stored under "image" in Cloudinary UI): image
-        // - Videos: video
-        // - Everything else: raw
+        // - Images (image/*): image
+        // - Videos (video/*): video
+        // - PDFs and all other types: raw
         const mimeType = document.fileType || 'application/octet-stream';
         let resourceType: 'raw' | 'image' | 'video' = 'raw';
-        if (mimeType.startsWith('image/') || mimeType === 'application/pdf') {
+        if (mimeType.startsWith('image/')) {
           resourceType = 'image';
         } else if (mimeType.startsWith('video/')) {
           resourceType = 'video';
@@ -619,15 +619,46 @@ router.get(
           cloudinaryResponse.data.pipe(res);
           return;
         } catch (remoteError: any) {
-          console.error('Error fetching document from Cloudinary:', {
+          console.error('Error fetching document from Cloudinary via signed URL:', {
             message: remoteError?.message,
             status: remoteError?.response?.status,
+            data: remoteError?.response?.data,
             url: document.filePath,
           });
-          if (!res.headersSent) {
-            res.status(500).json({ error: 'Failed to retrieve document from storage' });
+
+          // Fallback: try redirecting to an unsigned Cloudinary URL so that the user
+          // can still see the asset if it is publicly accessible.
+          try {
+            let fallbackId = document.filePath;
+            if (document.filePath.startsWith('http')) {
+              const urlObj = new URL(document.filePath);
+              const segments = urlObj.pathname.split('/').filter(Boolean);
+              const uploadIdx = segments.findIndex((s) => s === 'upload');
+              if (uploadIdx !== -1) {
+                let publicAndFile = segments.slice(uploadIdx + 1).join('/');
+                publicAndFile = publicAndFile.replace(/^v\d+\//, '');
+                fallbackId = publicAndFile;
+              }
+            } else {
+              fallbackId = document.filePath.replace(/^v\d+\//, '');
+            }
+
+            const fallbackUrl = cloudinary.url(fallbackId, {
+              resource_type: resourceType,
+              secure: true,
+            });
+
+            return res.redirect(fallbackUrl);
+          } catch (fallbackError: any) {
+            console.error('Fallback Cloudinary redirect failed:', {
+              message: fallbackError?.message,
+              url: document.filePath,
+            });
+            if (!res.headersSent) {
+              res.status(500).json({ error: 'Failed to retrieve document from storage' });
+            }
+            return;
           }
-          return;
         }
       } else if (!document.filePath.startsWith('http')) {
         // Local storage - stream from filesystem
