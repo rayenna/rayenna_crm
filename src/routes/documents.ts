@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -474,8 +474,16 @@ router.delete(
 // View/Download document (admin, management, sales, operations, finance, or uploader)
 router.get(
   '/:id/download',
-  authenticate,
-  async (req: Request, res) => {
+  // Allow JWT to be passed via query string (`?token=...`) for cases where
+  // the browser cannot set Authorization headers (e.g., window.open).
+  (req: Request, res: Response, next: NextFunction) => {
+    const token = (req.query.token as string | undefined)?.trim();
+    if (token && !req.headers.authorization) {
+      req.headers.authorization = `Bearer ${token}`;
+    }
+    return authenticate(req, res, next);
+  },
+  async (req: Request, res: Response) => {
     try {
       const document = await prisma.document.findUnique({
         where: { id: req.params.id },
@@ -712,11 +720,26 @@ router.get(
 
       const isDownload = req.query.download === 'true';
 
-      // Always return a backend URL so the browser never talks to Cloudinary
-      const downloadUrl = `/api/documents/${document.id}/download${
-        isDownload ? '?download=true' : ''
-      }`;
-      return res.json({ url: downloadUrl });
+      // Always return a backend URL so the browser never talks to Cloudinary.
+      // Include the caller's JWT as a `token` query parameter so that when
+      // the frontend does window.open(), the backend can still authenticate.
+      const tokenFromHeader = req.headers.authorization
+        ? String(req.headers.authorization).replace('Bearer ', '').trim()
+        : undefined;
+
+      const params = new URLSearchParams();
+      if (isDownload) {
+        params.set('download', 'true');
+      }
+      if (tokenFromHeader) {
+        params.set('token', tokenFromHeader);
+      }
+
+      const basePath = `/api/documents/${document.id}/download`;
+      const url =
+        params.toString().length > 0 ? `${basePath}?${params.toString()}` : basePath;
+
+      return res.json({ url });
     } catch (error: any) {
       console.error('Error generating signed URL for document:', error);
       return res.status(500).json({ error: error.message || 'Failed to generate signed URL' });
