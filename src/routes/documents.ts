@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import axios from 'axios';
 import { UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
@@ -446,44 +447,47 @@ router.get(
       if (useCloudinary && document.filePath.startsWith('http')) {
         // Cloudinary URL - fetch and proxy the file to maintain authentication
         const isDownload = req.query.download === 'true';
-        
+
         try {
-          // Fetch file from Cloudinary
+          // Build Cloudinary URL with optional download flag
           let cloudinaryUrl = document.filePath;
           if (isDownload) {
-            // Add download flag to URL (Cloudinary allows this)
-            cloudinaryUrl += '?fl_attachment';
+            const separator = cloudinaryUrl.includes('?') ? '&' : '?';
+            cloudinaryUrl += `${separator}fl_attachment`;
           }
-          
-          const cloudinaryResponse = await fetch(cloudinaryUrl);
-          if (!cloudinaryResponse.ok) {
-            return res.status(404).json({ error: 'File not found in Cloudinary' });
-          }
-          
+
+          // Fetch file from Cloudinary using axios (works reliably on all Node versions)
+          const cloudinaryResponse = await axios.get<ArrayBuffer>(cloudinaryUrl, {
+            responseType: 'arraybuffer',
+          });
+
           // Get content type from Cloudinary response or use stored type
-          const contentType = cloudinaryResponse.headers.get('content-type') || 
-                             document.fileType || 
-                             'application/octet-stream';
-          
+          const contentType =
+            cloudinaryResponse.headers['content-type'] ||
+            document.fileType ||
+            'application/octet-stream';
+
           // Set headers for file download/view
           res.setHeader('Content-Type', contentType);
-          res.setHeader('Content-Disposition', isDownload 
-            ? `attachment; filename="${encodeURIComponent(document.fileName)}"`
-            : `inline; filename="${encodeURIComponent(document.fileName)}"`);
-          
+          res.setHeader(
+            'Content-Disposition',
+            isDownload
+              ? `attachment; filename="${encodeURIComponent(document.fileName)}"`
+              : `inline; filename="${encodeURIComponent(document.fileName)}"`
+          );
+
           // Get content length if available
-          const contentLength = cloudinaryResponse.headers.get('content-length');
+          const contentLength = cloudinaryResponse.headers['content-length'];
           if (contentLength) {
-            res.setHeader('Content-Length', contentLength);
+            res.setHeader('Content-Length', String(contentLength));
           }
-          
-          // Pipe Cloudinary response to Express response
-          const arrayBuffer = await cloudinaryResponse.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
+
+          // Send the file buffer
+          const buffer = Buffer.from(cloudinaryResponse.data);
           res.send(buffer);
           return;
         } catch (fetchError: any) {
-          console.error('Error fetching from Cloudinary:', fetchError);
+          console.error('Error fetching from Cloudinary:', fetchError?.message || fetchError);
           return res.status(500).json({ error: 'Failed to retrieve file from Cloudinary' });
         }
       } else {
