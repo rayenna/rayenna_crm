@@ -647,12 +647,12 @@ const ProjectDetail = () => {
                     </td>
                     <td className="px-3 py-2 text-center align-middle">
                       {canView && (
-                        <DocumentViewButton documentId={doc.id} fileName={doc.fileName} />
+                        <DocumentViewButton documentId={doc.id} />
                       )}
                     </td>
                     <td className="px-3 py-2 text-center align-middle">
                       {canView && (
-                        <DocumentDownloadButton documentId={doc.id} fileName={doc.fileName} />
+                        <DocumentDownloadButton documentId={doc.id} />
                       )}
                     </td>
                     <td className="px-3 py-2 text-center align-middle">
@@ -680,11 +680,11 @@ const ProjectDetail = () => {
 }
 
 // Document View Button Component
-const DocumentViewButton = ({ documentId, fileName }: { documentId: string; fileName: string }) => {
+const DocumentViewButton = ({ documentId }: { documentId: string }) => {
   const { token } = useAuth()
   const [viewing, setViewing] = useState(false)
 
-  const handleView = async () => {
+  const handleView = () => {
     if (!token) {
       toast.error('Authentication required')
       return
@@ -692,102 +692,22 @@ const DocumentViewButton = ({ documentId, fileName }: { documentId: string; file
 
     setViewing(true)
     try {
-      const response = await axiosInstance.get(`/api/documents/${documentId}/download`, {
-        responseType: 'blob',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      
-      // Get content type from response headers
-      // Axios normalizes headers to lowercase, so check both variations
-      const contentType = response.headers['content-type'] || 
-                          response.headers['Content-Type'] || 
-                          getContentTypeFromFileName(fileName)
-      
-      // Create blob with proper MIME type - this is crucial for proper viewing
-      const blob = new Blob([response.data], { type: contentType })
-      const blobUrl = window.URL.createObjectURL(blob)
-      
-      // For certain file types (PDFs, images), we want to open them inline
-      // For others, we may need to download
-      const isViewableInline = contentType.startsWith('image/') || 
-                                contentType === 'application/pdf' ||
-                                contentType.startsWith('text/') ||
-                                contentType.includes('video/')
-      
-      if (isViewableInline) {
-        // Open in new tab with the blob URL
-        const newWindow = window.open(blobUrl, '_blank')
-        
-        if (!newWindow) {
-          toast.error('Please allow popups to view files')
-          window.URL.revokeObjectURL(blobUrl)
-          return
-        }
-        
-        // Clean up blob URL after the window loads
-        // For blob URLs, browsers will keep them active as long as the window is open
-        // We'll clean up after a reasonable delay (5 minutes) or when window closes
-        const cleanup = () => {
-          try {
-            if (newWindow.closed) {
-              window.URL.revokeObjectURL(blobUrl)
-            } else {
-              // Check again after delay
-              setTimeout(cleanup, 60000) // Check every minute
-            }
-          } catch (e) {
-            // Cross-origin restriction - can't check, cleanup after delay
-            setTimeout(() => window.URL.revokeObjectURL(blobUrl), 300000) // 5 minutes
-          }
-        }
-        
-        // Start cleanup checking after a short delay
-        setTimeout(cleanup, 5000)
-      } else {
-        // For non-viewable types, prompt download instead
-        const link = document.createElement('a')
-        link.href = blobUrl
-        link.download = fileName
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        window.URL.revokeObjectURL(blobUrl)
-        toast.success('File opened')
+      const baseUrl = apiBaseUrl || axiosInstance.defaults.baseURL || ''
+      if (!baseUrl) {
+        toast.error('View URL is not configured')
+        setViewing(false)
+        return
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to open file')
-    } finally {
+
+      const url = `${baseUrl}/api/documents/${documentId}/download`
+      // Let the browser follow the redirect and handle PDF directly
+      window.open(url, '_blank')
+
+      setTimeout(() => setViewing(false), 2000)
+    } catch {
+      toast.error('Failed to open file')
       setViewing(false)
     }
-  }
-
-  // Helper function to determine content type from file extension
-  const getContentTypeFromFileName = (filename: string): string => {
-    const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'))
-    const contentTypes: Record<string, string> = {
-      '.pdf': 'application/pdf',
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.gif': 'image/gif',
-      '.webp': 'image/webp',
-      '.bmp': 'image/bmp',
-      '.doc': 'application/msword',
-      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      '.xls': 'application/vnd.ms-excel',
-      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      '.ppt': 'application/vnd.ms-powerpoint',
-      '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      '.txt': 'text/plain',
-      '.csv': 'text/csv',
-      '.mp4': 'video/mp4',
-      '.mpeg': 'video/mpeg',
-      '.mov': 'video/quicktime',
-      '.avi': 'video/x-msvideo',
-    }
-    return contentTypes[ext] || 'application/octet-stream'
   }
 
   return (
@@ -822,7 +742,7 @@ const DocumentViewButton = ({ documentId, fileName }: { documentId: string; file
 }
 
 // Document Download Button Component
-const DocumentDownloadButton = ({ documentId }: { documentId: string; fileName: string }) => {
+const DocumentDownloadButton = ({ documentId }: { documentId: string }) => {
   const { token } = useAuth()
   const [downloading, setDownloading] = useState(false)
 
