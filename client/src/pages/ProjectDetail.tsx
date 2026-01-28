@@ -406,6 +406,14 @@ const ProjectDetail = () => {
                 </dd>
               </div>
             )}
+            {project.mnreInstallationDetails && (
+              <div>
+                <dt className="text-sm text-gray-500">MNRE Installation Details</dt>
+                <dd className="text-sm font-medium whitespace-pre-line">
+                  {project.mnreInstallationDetails}
+                </dd>
+              </div>
+            )}
             {project.subsidyRequestDate && (
               <div>
                 <dt className="text-sm text-gray-500">Net Meter Installation Date</dt>
@@ -428,6 +436,18 @@ const ProjectDetail = () => {
                 <dd className="text-sm font-medium">
                   ₹{project.totalProjectCost.toLocaleString('en-IN')}
                 </dd>
+              </div>
+            )}
+            {project.panelBrand && (
+              <div>
+                <dt className="text-sm text-gray-500">Panel Brand</dt>
+                <dd className="text-sm font-medium">{project.panelBrand}</dd>
+              </div>
+            )}
+            {project.inverterBrand && (
+              <div>
+                <dt className="text-sm text-gray-500">Inverter Brand</dt>
+                <dd className="text-sm font-medium">{project.inverterBrand}</dd>
               </div>
             )}
             {project.panelType && (
