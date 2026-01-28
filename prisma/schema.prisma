@@ -339,6 +339,8 @@ model Document {
 
   // Cloudinary resource_type from upload (image | raw | video). Never infer from extension.
   cloudinaryResourceType String?
+  // Cloudinary format from upload result (e.g. pdf, xlsx, jpg). Used for correct delivery URLs.
+  cloudinaryFormat       String?
 
   uploadedById String
   uploadedBy   User   @relation("UploadedBy", fields: [uploadedById], references: [id])

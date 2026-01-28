@@ -44,11 +44,13 @@ if (!fs.existsSync(uploadsDir)) {
 /** Build Cloudinary delivery URL. Use stored resourceType only – never infer from extension. */
 function getCloudinaryDeliveryUrl(
   publicId: string,
-  resourceType: 'image' | 'raw' | 'video'
+  resourceType: 'image' | 'raw' | 'video',
+  format?: string
 ): string {
   return cloudinary.url(publicId, {
     resource_type: resourceType,
     secure: true,
+    ...(format ? { format } : {}),
   });
 }
 
@@ -164,6 +166,7 @@ router.post(
     // Declare variables outside try block so they're accessible in catch block
     let cloudinaryPublicId: string | undefined;
     let cloudinaryResourceType: string | undefined;
+    let cloudinaryFormat: string | undefined;
 
     try {
       // Debug logging for upload issues
@@ -250,15 +253,18 @@ router.post(
 
           const publicId = uploadResult.public_id;
           const resourceType = uploadResult.resource_type ?? 'raw'; // Cloudinary decides: image | raw | video
+          const format = uploadResult.format;
           filePath = publicId;
           fileSize = uploadResult.bytes || req.file.size || 0;
           cloudinaryPublicId = publicId;
           cloudinaryResourceType = resourceType;
+          cloudinaryFormat = typeof format === 'string' ? format : undefined;
 
           console.log('✅ File uploaded to Cloudinary:', {
             fileName: req.file.originalname,
             publicId,
             resourceType,
+            format: cloudinaryFormat,
           });
         } catch (uploadError: any) {
           console.error('❌ Cloudinary upload failed:', uploadError);
@@ -286,6 +292,7 @@ router.post(
           category,
           description,
           cloudinaryResourceType: cloudinaryResourceType ?? undefined,
+          cloudinaryFormat: cloudinaryFormat ?? undefined,
           uploadedById: req.user!.id,
         },
         include: {
@@ -514,7 +521,22 @@ router.get(
           else if (pathLower.includes('/video/')) resourceType = 'video';
         }
 
-        const fileUrl = getCloudinaryDeliveryUrl(publicId, resourceType);
+        // Prefer stored Cloudinary format (e.g. pdf/xlsx). If missing, we do NOT change resource_type,
+        // but we may fall back to the filename extension to ensure Cloudinary serves the correct file format.
+        let format: string | undefined =
+          typeof (document as any).cloudinaryFormat === 'string' ? (document as any).cloudinaryFormat : undefined;
+        if (!format) {
+          const name = (document.fileName || '').toLowerCase();
+          const dot = name.lastIndexOf('.');
+          if (dot > -1 && dot < name.length - 1) {
+            format = name.substring(dot + 1);
+          }
+        }
+        if (format && !/^[a-z0-9]{1,10}$/.test(format)) {
+          format = undefined;
+        }
+
+        const fileUrl = getCloudinaryDeliveryUrl(publicId, resourceType, format);
         return res.redirect(fileUrl);
       }
 
