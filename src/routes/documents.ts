@@ -235,13 +235,21 @@ router.post(
         }
 
         try {
+          // PDFs and all non-images must be uploaded as `raw`. Only images use `image`, videos use `video`.
+          const mime = req.file.mimetype || 'application/octet-stream';
+          const uploadResourceType: 'image' | 'raw' | 'video' = mime.startsWith('image/')
+            ? 'image'
+            : mime.startsWith('video/')
+              ? 'video'
+              : 'raw';
+
           const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
           const uploadResult = await new Promise<any>((resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
               {
                 folder: 'rayenna_crm',
                 public_id: `file-${uniqueSuffix}`,
-                resource_type: 'auto', // Automatically detect image, video, raw
+                resource_type: uploadResourceType,
               },
               (error, result) => {
                 if (error) reject(error);

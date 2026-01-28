@@ -222,6 +222,8 @@ router.post(
   async (req: Request, res) => {
     // Declare variables outside try block so they're accessible in catch block
     let cloudinaryPublicId: string | undefined;
+    let cloudinaryResourceType: string | undefined;
+    let cloudinaryFormat: string | undefined;
     
     try {
       // Debug logging for upload issues
@@ -290,13 +292,21 @@ router.post(
         }
 
         try {
+          // PDFs and all non-images must be uploaded as `raw`. Only images use `image`, videos use `video`.
+          const mime = req.file.mimetype || 'application/octet-stream';
+          const uploadResourceType: 'image' | 'raw' | 'video' = mime.startsWith('image/')
+            ? 'image'
+            : mime.startsWith('video/')
+              ? 'video'
+              : 'raw';
+
           const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
           const uploadResult = await new Promise<any>((resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
               {
                 folder: 'rayenna_crm',
                 public_id: `file-${uniqueSuffix}`,
-                resource_type: 'auto', // Automatically detect image, video, raw
+                resource_type: uploadResourceType,
               },
               (error, result) => {
                 if (error) reject(error);
@@ -306,15 +316,21 @@ router.post(
             uploadStream.end(req.file.buffer);
           });
 
-          // Store only the Cloudinary public_id (e.g. "rayenna_crm/file-xxxx")
-          filePath = uploadResult.public_id;
+          const publicId = uploadResult.public_id;
+          const resourceType = uploadResult.resource_type ?? uploadResourceType;
+          const format = uploadResult.format;
+
+          filePath = publicId;
           fileSize = uploadResult.bytes || req.file.size || 0;
-          cloudinaryPublicId = uploadResult.public_id;
+          cloudinaryPublicId = publicId;
+          cloudinaryResourceType = resourceType;
+          cloudinaryFormat = typeof format === 'string' ? format : undefined;
           
           console.log('✅ File uploaded to Cloudinary:', {
             fileName: req.file.originalname,
-            url: filePath,
-            publicId: cloudinaryPublicId,
+            publicId,
+            resourceType,
+            format: cloudinaryFormat,
           });
         } catch (uploadError: any) {
           console.error('❌ Cloudinary upload failed:', uploadError);
@@ -336,11 +352,13 @@ router.post(
         data: {
           projectId,
           fileName: req.file.originalname,
-          filePath: filePath, // Either Cloudinary URL or relative local path
+          filePath,
           fileType: req.file.mimetype,
-          fileSize: fileSize,
-          category: category,
+          fileSize,
+          category,
           description,
+          cloudinaryResourceType: cloudinaryResourceType ?? undefined,
+          cloudinaryFormat: cloudinaryFormat ?? undefined,
           uploadedById: req.user!.id,
         },
         include: {
