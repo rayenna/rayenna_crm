@@ -22,6 +22,9 @@ if (useCloudinary) {
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
+    // Do not auto-inject "/v1/" into delivery URLs (Cloudinary SDK default when publicId contains "/").
+    // We rely on Cloudinary to resolve the latest version.
+    force_version: false,
   });
   console.log('✅ Cloudinary configured:', {
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -41,13 +44,11 @@ if (!fs.existsSync(uploadsDir)) {
 /** Build Cloudinary delivery URL. Use stored resourceType only – never infer from extension. */
 function getCloudinaryDeliveryUrl(
   publicId: string,
-  resourceType: 'image' | 'raw' | 'video',
-  format?: string
+  resourceType: 'image' | 'raw' | 'video'
 ): string {
   return cloudinary.url(publicId, {
     resource_type: resourceType,
     secure: true,
-    ...(format ? { format } : {}),
   });
 }
 
@@ -483,7 +484,6 @@ router.get(
           document.filePath.startsWith('rayenna_crm'))
       ) {
         let publicId = document.filePath;
-        let format: string | undefined;
 
         if (document.filePath.startsWith('http')) {
           const urlObj = new URL(document.filePath);
@@ -493,19 +493,13 @@ router.get(
             let afterUpload = segments.slice(uploadIndex + 1).join('/');
             afterUpload = afterUpload.replace(/^v\d+\//, '');
             const lastDot = afterUpload.lastIndexOf('.');
-            if (lastDot > afterUpload.lastIndexOf('/')) {
-              format = afterUpload.substring(lastDot + 1);
-              publicId = afterUpload.substring(0, lastDot);
-            } else {
-              publicId = afterUpload;
-            }
+            publicId = lastDot > afterUpload.lastIndexOf('/') ? afterUpload.substring(0, lastDot) : afterUpload;
           }
         } else {
           publicId = document.filePath.replace(/^v\d+\//, '');
           const lastSlash = publicId.lastIndexOf('/');
           const lastDot = publicId.lastIndexOf('.');
           if (lastDot > lastSlash) {
-            format = publicId.substring(lastDot + 1);
             publicId = publicId.substring(0, lastDot);
           }
         }
@@ -520,21 +514,7 @@ router.get(
           else if (pathLower.includes('/video/')) resourceType = 'video';
         }
 
-        // If we couldn't extract format from the stored path, fall back to the original filename extension.
-        // This does NOT affect resource_type; it only ensures the delivery URL includes the correct suffix (e.g. .pdf, .xlsx).
-        if (!format) {
-          const name = (document.fileName || '').toLowerCase();
-          const dot = name.lastIndexOf('.');
-          if (dot > -1 && dot < name.length - 1) {
-            format = name.substring(dot + 1);
-          }
-        }
-        // Sanitize format (Cloudinary expects simple extensions like "pdf", "xlsx", "jpg")
-        if (format && !/^[a-z0-9]{1,10}$/.test(format)) {
-          format = undefined;
-        }
-
-        const fileUrl = getCloudinaryDeliveryUrl(publicId, resourceType, format);
+        const fileUrl = getCloudinaryDeliveryUrl(publicId, resourceType);
         return res.redirect(fileUrl);
       }
 
