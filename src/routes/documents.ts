@@ -542,13 +542,22 @@ router.get(
       ) {
         const isDownload = req.query.download === 'true';
 
-        // Derive Cloudinary resource_type from MIME type:
-        // - Images (image/*): image
-        // - Videos (video/*): video
-        // - PDFs and all other types: raw
+        // Derive Cloudinary resource_type from MIME type and fileName (fileName overrides
+        // in case fileType in DB is wrong – e.g. PDF/Excel must use raw, not image).
         const mimeType = document.fileType || 'application/octet-stream';
+        const fileNameLower = (document.fileName || '').toLowerCase();
         let resourceType: 'raw' | 'image' | 'video' = 'raw';
-        if (mimeType.startsWith('image/')) {
+        if (
+          fileNameLower.endsWith('.pdf') ||
+          fileNameLower.endsWith('.xlsx') ||
+          fileNameLower.endsWith('.xls') ||
+          fileNameLower.endsWith('.doc') ||
+          fileNameLower.endsWith('.docx') ||
+          mimeType === 'application/pdf' ||
+          mimeType.startsWith('application/vnd.')
+        ) {
+          resourceType = 'raw';
+        } else if (mimeType.startsWith('image/')) {
           resourceType = 'image';
         } else if (mimeType.startsWith('video/')) {
           resourceType = 'video';
@@ -593,11 +602,28 @@ router.get(
             expires_at: Math.floor(Date.now() / 1000) + 300,
           });
 
+          console.log('Cloudinary download request:', {
+            publicId,
+            resourceType,
+            fileName: document.fileName,
+          });
+
           const cloudinaryResponse = await axios.get(signedUrl, {
             responseType: 'stream',
           });
 
-          res.setHeader('Content-Type', mimeType);
+          // Ensure correct Content-Type (especially for Excel/PDF) so browsers don't corrupt the file
+          const contentType =
+            mimeType !== 'application/octet-stream'
+              ? mimeType
+              : fileNameLower.endsWith('.xlsx')
+                ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                : fileNameLower.endsWith('.xls')
+                  ? 'application/vnd.ms-excel'
+                  : fileNameLower.endsWith('.pdf')
+                    ? 'application/pdf'
+                    : mimeType;
+          res.setHeader('Content-Type', contentType);
           res.setHeader(
             'Content-Disposition',
             isDownload
@@ -622,43 +648,19 @@ router.get(
           console.error('Error fetching document from Cloudinary via signed URL:', {
             message: remoteError?.message,
             status: remoteError?.response?.status,
-            data: remoteError?.response?.data,
-            url: document.filePath,
+            url: remoteError?.config?.url ?? document.filePath,
+            filePath: document.filePath,
+            resourceType,
           });
 
-          // Fallback: try redirecting to an unsigned Cloudinary URL so that the user
-          // can still see the asset if it is publicly accessible.
-          try {
-            let fallbackId = document.filePath;
-            if (document.filePath.startsWith('http')) {
-              const urlObj = new URL(document.filePath);
-              const segments = urlObj.pathname.split('/').filter(Boolean);
-              const uploadIdx = segments.findIndex((s) => s === 'upload');
-              if (uploadIdx !== -1) {
-                let publicAndFile = segments.slice(uploadIdx + 1).join('/');
-                publicAndFile = publicAndFile.replace(/^v\d+\//, '');
-                fallbackId = publicAndFile;
-              }
-            } else {
-              fallbackId = document.filePath.replace(/^v\d+\//, '');
-            }
-
-            const fallbackUrl = cloudinary.url(fallbackId, {
-              resource_type: resourceType,
-              secure: true,
+          // Do not redirect to unsigned URL – private raw assets return 404 there.
+          if (!res.headersSent) {
+            res.status(502).json({
+              error: 'Failed to retrieve document from storage',
+              details: remoteError?.response?.status === 404 ? 'Resource not found in storage (check resource type and public id).' : undefined,
             });
-
-            return res.redirect(fallbackUrl);
-          } catch (fallbackError: any) {
-            console.error('Fallback Cloudinary redirect failed:', {
-              message: fallbackError?.message,
-              url: document.filePath,
-            });
-            if (!res.headersSent) {
-              res.status(500).json({ error: 'Failed to retrieve document from storage' });
-            }
-            return;
           }
+          return;
         }
       } else if (!document.filePath.startsWith('http')) {
         // Local storage - stream from filesystem
