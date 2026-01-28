@@ -40,6 +40,76 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+// Helper to build a Cloudinary signed download URL from the stored value
+// The stored value should be a clean public_id like "rayenna_crm/file-xxxx",
+// but we also support legacy values that may include a version prefix or full URL.
+function getCloudinarySignedUrlFromStoredValue(
+  storedValue: string,
+  isDownload: boolean
+): string {
+  let publicId = storedValue;
+  let format: string | undefined;
+
+  // If stored as a full URL (legacy), extract publicId and format from the path
+  if (storedValue.startsWith('http')) {
+    const urlObj = new URL(storedValue);
+    const segments = urlObj.pathname.split('/').filter(Boolean);
+    const uploadIndex = segments.findIndex((s) => s === 'upload');
+
+    if (uploadIndex !== -1) {
+      let publicAndFile = segments.slice(uploadIndex + 1).join('/');
+
+      // Strip leading version prefix like "v1234/" if present
+      if (publicAndFile.startsWith('v')) {
+        const firstSlash = publicAndFile.indexOf('/');
+        if (firstSlash > 1) {
+          const maybeVersion = publicAndFile.substring(1, firstSlash);
+          if (/^\d+$/.test(maybeVersion)) {
+            publicAndFile = publicAndFile.substring(firstSlash + 1);
+          }
+        }
+      }
+
+      const lastDot = publicAndFile.lastIndexOf('.');
+      if (lastDot !== -1) {
+        publicId = publicAndFile.substring(0, lastDot);
+        format = publicAndFile.substring(lastDot + 1);
+      } else {
+        publicId = publicAndFile;
+      }
+    }
+  } else {
+    // Stored as public_id or "v1234/..." – normalise to remove version prefix
+    let publicAndFile = storedValue;
+
+    if (publicAndFile.startsWith('v')) {
+      const firstSlash = publicAndFile.indexOf('/');
+      if (firstSlash > 1) {
+        const maybeVersion = publicAndFile.substring(1, firstSlash);
+        if (/^\d+$/.test(maybeVersion)) {
+          publicAndFile = publicAndFile.substring(firstSlash + 1);
+        }
+      }
+    }
+
+    const lastDot = publicAndFile.lastIndexOf('.');
+    if (lastDot !== -1) {
+      publicId = publicAndFile.substring(0, lastDot);
+      format = publicAndFile.substring(lastDot + 1);
+    } else {
+      publicId = publicAndFile;
+    }
+  }
+
+  const expiresAt = Math.floor(Date.now() / 1000) + 300; // 5 minutes from now
+
+  return cloudinary.utils.private_download_url(publicId, format, {
+    resource_type: 'raw',
+    attachment: isDownload,
+    expires_at: expiresAt,
+  });
+}
+
 // Configure multer storage - use memory storage for Cloudinary (upload_stream), disk storage for local
 let storage: multer.StorageEngine;
 
@@ -235,7 +305,8 @@ router.post(
             uploadStream.end(req.file.buffer);
           });
 
-          filePath = uploadResult.secure_url;
+          // Store only the Cloudinary public_id (e.g. "rayenna_crm/file-xxxx")
+          filePath = uploadResult.public_id;
           fileSize = uploadResult.bytes || req.file.size || 0;
           cloudinaryPublicId = uploadResult.public_id;
           
@@ -452,50 +523,17 @@ router.get(
       }
 
       // Handle file retrieval based on storage type
-      // If the stored path is a full URL (e.g. Cloudinary), redirect the client to a
-      // signed Cloudinary URL. The browser then opens/downloads the PDF directly.
-      if (document.filePath.startsWith('http')) {
-        // Remote URL (typically Cloudinary)
+      // If the stored path is a Cloudinary reference (public_id or legacy URL),
+      // redirect the client to a signed Cloudinary URL. The browser then opens/
+      // downloads the PDF directly.
+      if (useCloudinary && (document.filePath.startsWith('http') || document.filePath.startsWith('v') || document.filePath.startsWith('rayenna_crm'))) {
         const isDownload = req.query.download === 'true';
 
         try {
-          let redirectUrl = document.filePath;
-
-          // If Cloudinary is configured and the URL points to Cloudinary, generate a
-          // signed private download URL for PDFs using resource_type "raw".
-          if (useCloudinary && redirectUrl.includes('res.cloudinary.com')) {
-            try {
-              const urlObj = new URL(redirectUrl);
-              const segments = urlObj.pathname.split('/').filter(Boolean);
-              const uploadIndex = segments.findIndex((s) => s === 'upload');
-
-              if (uploadIndex !== -1) {
-                // Everything after /upload/ is publicId + extension
-                const publicAndFile = segments.slice(uploadIndex + 1).join('/');
-                const lastDot = publicAndFile.lastIndexOf('.');
-                const publicId =
-                  lastDot !== -1 ? publicAndFile.substring(0, lastDot) : publicAndFile;
-                const format =
-                  lastDot !== -1 ? publicAndFile.substring(lastDot + 1) : undefined;
-
-                const signedUrl = cloudinary.utils.private_download_url(publicId, format, {
-                  resource_type: 'raw',
-                  attachment: !!isDownload,
-                });
-
-                redirectUrl = signedUrl;
-              }
-            } catch (parseError: any) {
-              console.error(
-                'Error generating Cloudinary signed URL, falling back to stored URL:',
-                {
-                  message: parseError?.message,
-                  url: document.filePath,
-                }
-              );
-            }
-          }
-
+          const redirectUrl = getCloudinarySignedUrlFromStoredValue(
+            document.filePath,
+            isDownload
+          );
           return res.redirect(redirectUrl);
         } catch (remoteError: any) {
           console.error('Error preparing remote document redirect:', {
@@ -508,7 +546,7 @@ router.get(
           }
           return;
         }
-      } else {
+      } else if (!document.filePath.startsWith('http')) {
         // Local storage - stream from filesystem
         const filePath = path.isAbsolute(document.filePath)
           ? document.filePath
@@ -607,38 +645,29 @@ router.get(
 
       const isDownload = req.query.download === 'true';
 
-      // If Cloudinary URL, return a signed URL; otherwise, return the backend download URL
-      if (document.filePath.startsWith('http') && useCloudinary && document.filePath.includes('res.cloudinary.com')) {
-        let signedUrl = document.filePath;
-
+      // If this looks like a Cloudinary reference (public_id or legacy URL) and
+      // Cloudinary is configured, return a signed URL directly.
+      if (
+        useCloudinary &&
+        (document.filePath.startsWith('http') ||
+          document.filePath.startsWith('v') ||
+          document.filePath.startsWith('rayenna_crm'))
+      ) {
         try {
-          const urlObj = new URL(document.filePath);
-          const segments = urlObj.pathname.split('/').filter(Boolean);
-          const uploadIndex = segments.findIndex((s) => s === 'upload');
-
-          if (uploadIndex !== -1) {
-            const publicAndFile = segments.slice(uploadIndex + 1).join('/');
-            const lastDot = publicAndFile.lastIndexOf('.');
-            const publicId =
-              lastDot !== -1 ? publicAndFile.substring(0, lastDot) : publicAndFile;
-            const format =
-              lastDot !== -1 ? publicAndFile.substring(lastDot + 1) : undefined;
-
-            signedUrl = cloudinary.utils.private_download_url(publicId, format, {
-              resource_type: 'raw',
-              attachment: !!isDownload,
-            });
-          }
+          const signedUrl = getCloudinarySignedUrlFromStoredValue(
+            document.filePath,
+            isDownload
+          );
+          return res.json({ url: signedUrl });
         } catch (parseError: any) {
-          console.error('Error generating Cloudinary signed URL:', {
+          console.error('Error generating Cloudinary signed URL in /signed-url:', {
             message: parseError?.message,
             url: document.filePath,
           });
-          // Fall back to original URL if parsing fails
-          signedUrl = document.filePath;
+          return res
+            .status(500)
+            .json({ error: 'Failed to generate Cloudinary signed URL' });
         }
-
-        return res.json({ url: signedUrl });
       }
 
       // Fallback for non-Cloudinary documents: use backend download route
