@@ -41,11 +41,13 @@ if (!fs.existsSync(uploadsDir)) {
 /** Build Cloudinary delivery URL. Use stored resourceType only – never infer from extension. */
 function getCloudinaryDeliveryUrl(
   publicId: string,
-  resourceType: 'image' | 'raw' | 'video'
+  resourceType: 'image' | 'raw' | 'video',
+  format?: string
 ): string {
   return cloudinary.url(publicId, {
     resource_type: resourceType,
     secure: true,
+    ...(format ? { format } : {}),
   });
 }
 
@@ -481,6 +483,7 @@ router.get(
           document.filePath.startsWith('rayenna_crm'))
       ) {
         let publicId = document.filePath;
+        let format: string | undefined;
 
         if (document.filePath.startsWith('http')) {
           const urlObj = new URL(document.filePath);
@@ -490,13 +493,19 @@ router.get(
             let afterUpload = segments.slice(uploadIndex + 1).join('/');
             afterUpload = afterUpload.replace(/^v\d+\//, '');
             const lastDot = afterUpload.lastIndexOf('.');
-            publicId = lastDot > afterUpload.lastIndexOf('/') ? afterUpload.substring(0, lastDot) : afterUpload;
+            if (lastDot > afterUpload.lastIndexOf('/')) {
+              format = afterUpload.substring(lastDot + 1);
+              publicId = afterUpload.substring(0, lastDot);
+            } else {
+              publicId = afterUpload;
+            }
           }
         } else {
           publicId = document.filePath.replace(/^v\d+\//, '');
           const lastSlash = publicId.lastIndexOf('/');
           const lastDot = publicId.lastIndexOf('.');
           if (lastDot > lastSlash) {
+            format = publicId.substring(lastDot + 1);
             publicId = publicId.substring(0, lastDot);
           }
         }
@@ -511,7 +520,21 @@ router.get(
           else if (pathLower.includes('/video/')) resourceType = 'video';
         }
 
-        const fileUrl = getCloudinaryDeliveryUrl(publicId, resourceType);
+        // If we couldn't extract format from the stored path, fall back to the original filename extension.
+        // This does NOT affect resource_type; it only ensures the delivery URL includes the correct suffix (e.g. .pdf, .xlsx).
+        if (!format) {
+          const name = (document.fileName || '').toLowerCase();
+          const dot = name.lastIndexOf('.');
+          if (dot > -1 && dot < name.length - 1) {
+            format = name.substring(dot + 1);
+          }
+        }
+        // Sanitize format (Cloudinary expects simple extensions like "pdf", "xlsx", "jpg")
+        if (format && !/^[a-z0-9]{1,10}$/.test(format)) {
+          format = undefined;
+        }
+
+        const fileUrl = getCloudinaryDeliveryUrl(publicId, resourceType, format);
         return res.redirect(fileUrl);
       }
 
