@@ -444,55 +444,19 @@ router.get(
       }
 
       // Handle file retrieval based on storage type
-      // If the stored path is a full URL (e.g. Cloudinary), always proxy it via HTTP,
-      // regardless of the current storage mode. This ensures older files uploaded
-      // when Cloudinary was enabled remain accessible even if configuration changes.
+      // If the stored path is a full URL (e.g. Cloudinary), redirect the client to it
+      // after permission checks. This avoids server-side HTTP proxying issues and works
+      // across different Node/hosting environments while still enforcing access control.
       if (document.filePath.startsWith('http')) {
-        // Remote URL (typically Cloudinary) - fetch and proxy the file
+        // Remote URL (typically Cloudinary)
         const isDownload = req.query.download === 'true';
-
-        try {
-          // Build Cloudinary URL with optional download flag
-          let cloudinaryUrl = document.filePath;
-          if (isDownload) {
-            const separator = cloudinaryUrl.includes('?') ? '&' : '?';
-            cloudinaryUrl += `${separator}fl_attachment`;
-          }
-
-          // Fetch file from Cloudinary using axios (works reliably on all Node versions)
-          const cloudinaryResponse = await axios.get<ArrayBuffer>(cloudinaryUrl, {
-            responseType: 'arraybuffer',
-          });
-
-          // Get content type from Cloudinary response or use stored type
-          const contentType =
-            cloudinaryResponse.headers['content-type'] ||
-            document.fileType ||
-            'application/octet-stream';
-
-          // Set headers for file download/view
-          res.setHeader('Content-Type', contentType);
-          res.setHeader(
-            'Content-Disposition',
-            isDownload
-              ? `attachment; filename="${encodeURIComponent(document.fileName)}"`
-              : `inline; filename="${encodeURIComponent(document.fileName)}"`
-          );
-
-          // Get content length if available
-          const contentLength = cloudinaryResponse.headers['content-length'];
-          if (contentLength) {
-            res.setHeader('Content-Length', String(contentLength));
-          }
-
-          // Send the file buffer
-          const buffer = Buffer.from(cloudinaryResponse.data);
-          res.send(buffer);
-          return;
-        } catch (fetchError: any) {
-          console.error('Error fetching from Cloudinary:', fetchError?.message || fetchError);
-          return res.status(500).json({ error: 'Failed to retrieve file from Cloudinary' });
+        // Build URL with optional download flag
+        let redirectUrl = document.filePath;
+        if (isDownload) {
+          const separator = redirectUrl.includes('?') ? '&' : '?';
+          redirectUrl += `${separator}fl_attachment`;
         }
+        return res.redirect(redirectUrl);
       } else {
         // Local storage - stream from filesystem
         const filePath = path.isAbsolute(document.filePath) 
