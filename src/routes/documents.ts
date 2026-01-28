@@ -444,46 +444,39 @@ router.get(
       }
 
       // Handle file retrieval based on storage type
-      // If the stored path is a full URL (e.g. Cloudinary), fetch it server-side and
-      // stream it back to the client so the browser never talks to Cloudinary directly
-      // (avoids CORS issues while still enforcing access control).
+      // If the stored path is a full URL (e.g. Cloudinary), redirect the client to a
+      // signed Cloudinary URL. The browser then opens/downloads the PDF directly.
       if (document.filePath.startsWith('http')) {
         // Remote URL (typically Cloudinary)
         const isDownload = req.query.download === 'true';
 
         try {
-          let remoteUrl = document.filePath;
+          let redirectUrl = document.filePath;
 
           // If Cloudinary is configured and the URL points to Cloudinary, generate a
-          // signed private download URL so that protected PDFs can be accessed.
-          if (useCloudinary && remoteUrl.includes('res.cloudinary.com')) {
+          // signed private download URL for PDFs using resource_type "raw".
+          if (useCloudinary && redirectUrl.includes('res.cloudinary.com')) {
             try {
-              const urlObj = new URL(remoteUrl);
+              const urlObj = new URL(redirectUrl);
               const segments = urlObj.pathname.split('/').filter(Boolean);
               const uploadIndex = segments.findIndex((s) => s === 'upload');
 
-              // Detect resource type from URL path (image/raw/video)
-              let resourceType: 'image' | 'raw' | 'video' = 'raw';
-              if (uploadIndex > 0) {
-                const typeSegment = segments[uploadIndex - 1];
-                if (typeSegment === 'image' || typeSegment === 'raw' || typeSegment === 'video') {
-                  resourceType = typeSegment;
-                }
+              if (uploadIndex !== -1) {
+                // Everything after /upload/ is publicId + extension
+                const publicAndFile = segments.slice(uploadIndex + 1).join('/');
+                const lastDot = publicAndFile.lastIndexOf('.');
+                const publicId =
+                  lastDot !== -1 ? publicAndFile.substring(0, lastDot) : publicAndFile;
+                const format =
+                  lastDot !== -1 ? publicAndFile.substring(lastDot + 1) : undefined;
+
+                const signedUrl = cloudinary.utils.private_download_url(publicId, format, {
+                  resource_type: 'raw',
+                  attachment: !!isDownload,
+                });
+
+                redirectUrl = signedUrl;
               }
-
-              // Extract publicId and format from the path after /upload/
-              const publicAndFile = segments.slice(uploadIndex + 1).join('/');
-              const lastDot = publicAndFile.lastIndexOf('.');
-              const publicId =
-                lastDot !== -1 ? publicAndFile.substring(0, lastDot) : publicAndFile;
-              const format =
-                lastDot !== -1 ? publicAndFile.substring(lastDot + 1) : undefined;
-
-              const signedUrl = cloudinary.utils.private_download_url(publicId, format, {
-                resource_type: resourceType,
-              });
-
-              remoteUrl = signedUrl;
             } catch (parseError: any) {
               console.error('Error generating Cloudinary signed URL, falling back to stored URL:', {
                 message: parseError?.message,
@@ -492,48 +485,17 @@ router.get(
             }
           }
 
-          const remoteResponse = await axios.get(remoteUrl, {
-            responseType: 'stream',
-          });
-
-          const contentType =
-            remoteResponse.headers['content-type'] ||
-            document.fileType ||
-            'application/octet-stream';
-
-          res.setHeader('Content-Type', contentType);
-          res.setHeader(
-            'Content-Disposition',
-            isDownload
-              ? `attachment; filename="${encodeURIComponent(document.fileName)}"`
-              : `inline; filename="${encodeURIComponent(document.fileName)}"`
-          );
-
-          const contentLength = remoteResponse.headers['content-length'];
-          if (contentLength) {
-            res.setHeader('Content-Length', String(contentLength));
-          }
-
-          // Pipe the remote stream directly to the response
-          remoteResponse.data.on('error', (err: any) => {
-            console.error('Error streaming remote document:', {
-              message: err?.message,
-              url: remoteUrl,
-            });
-            if (!res.headersSent) {
-              res.status(500).end('Error streaming file');
-            }
-          });
-
-          remoteResponse.data.pipe(res);
-          return;
+          return res.redirect(redirectUrl);
         } catch (remoteError: any) {
-          console.error('Error fetching remote document:', {
+          console.error('Error preparing remote document redirect:', {
             message: remoteError?.message,
-            status: remoteError?.response?.status,
             url: document.filePath,
           });
-          return res.status(500).json({ error: 'Failed to retrieve file from remote storage' });
+          // As per constraints, avoid JSON here; send minimal text response.
+          if (!res.headersSent) {
+            res.status(500).send('Failed to open document');
+          }
+          return;
         }
       } else {
         // Local storage - stream from filesystem
