@@ -1,7 +1,7 @@
 import { useState } from 'react'
 // Payment Status: Shows N/A in red for projects without Order Value or in early/lost stages
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import axiosInstance from '../utils/axios'
+import axiosInstance, { apiBaseUrl } from '../utils/axios'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Project, UserRole, ProjectStatus } from '../types'
@@ -822,11 +822,11 @@ const DocumentViewButton = ({ documentId, fileName }: { documentId: string; file
 }
 
 // Document Download Button Component
-const DocumentDownloadButton = ({ documentId, fileName }: { documentId: string; fileName: string }) => {
+const DocumentDownloadButton = ({ documentId }: { documentId: string; fileName: string }) => {
   const { token } = useAuth()
   const [downloading, setDownloading] = useState(false)
 
-  const handleDownload = async () => {
+  const handleDownload = () => {
     if (!token) {
       toast.error('Authentication required')
       return
@@ -834,31 +834,21 @@ const DocumentDownloadButton = ({ documentId, fileName }: { documentId: string; 
 
     setDownloading(true)
     try {
-      const response = await axiosInstance.get(`/api/documents/${documentId}/download?download=true`, {
-        responseType: 'blob',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      const baseUrl = apiBaseUrl || axiosInstance.defaults.baseURL || ''
+      if (!baseUrl) {
+        toast.error('Download URL is not configured')
+        setDownloading(false)
+        return
+      }
 
-      // Determine content type for the blob (important for PDFs and Office docs)
-      const contentType = response.headers['content-type'] || response.headers['Content-Type'] || 'application/octet-stream'
+      const url = `${baseUrl}/api/documents/${documentId}/download?download=true`
+      // Use window.open so the browser handles the file download directly
+      window.open(url, '_blank')
 
-      // Create blob and trigger download
-      const blob = new Blob([response.data], { type: contentType })
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = fileName
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-      
-      toast.success('File downloaded successfully')
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to download file')
-    } finally {
+      // We can't reliably detect completion, so reset state after a short delay
+      setTimeout(() => setDownloading(false), 2000)
+    } catch {
+      toast.error('Failed to start download')
       setDownloading(false)
     }
   }

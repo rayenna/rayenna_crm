@@ -452,8 +452,53 @@ router.get(
         const isDownload = req.query.download === 'true';
 
         try {
-          const remoteResponse = await axios.get<ArrayBuffer>(document.filePath, {
-            responseType: 'arraybuffer',
+          let remoteUrl = document.filePath;
+
+          // If Cloudinary is configured and the URL points to Cloudinary, generate a
+          // signed private download URL so that protected PDFs can be accessed.
+          if (useCloudinary && remoteUrl.includes('res.cloudinary.com')) {
+            try {
+              const urlObj = new URL(remoteUrl);
+              const segments = urlObj.pathname.split('/').filter(Boolean);
+              const uploadIndex = segments.findIndex((s) => s === 'upload');
+
+              // Detect resource type from URL path (image/raw/video)
+              let resourceType: 'image' | 'raw' | 'video' = 'raw';
+              if (uploadIndex > 0) {
+                const typeSegment = segments[uploadIndex - 1];
+                if (typeSegment === 'image' || typeSegment === 'raw' || typeSegment === 'video') {
+                  resourceType = typeSegment;
+                }
+              }
+
+              // Extract publicId and format from the path after /upload/
+              const publicAndFile = segments.slice(uploadIndex + 1).join('/');
+              const lastDot = publicAndFile.lastIndexOf('.');
+              const publicId =
+                lastDot !== -1 ? publicAndFile.substring(0, lastDot) : publicAndFile;
+              const format =
+                lastDot !== -1 ? publicAndFile.substring(lastDot + 1) : undefined;
+
+              const signedUrl = cloudinary.utils.private_download_url(
+                publicId,
+                format,
+                {
+                  resource_type: resourceType,
+                  sign_url: true,
+                }
+              );
+
+              remoteUrl = signedUrl;
+            } catch (parseError: any) {
+              console.error('Error generating Cloudinary signed URL, falling back to stored URL:', {
+                message: parseError?.message,
+                url: document.filePath,
+              });
+            }
+          }
+
+          const remoteResponse = await axios.get(remoteUrl, {
+            responseType: 'stream',
           });
 
           const contentType =
@@ -474,8 +519,18 @@ router.get(
             res.setHeader('Content-Length', String(contentLength));
           }
 
-          const buffer = Buffer.from(remoteResponse.data);
-          res.send(buffer);
+          // Pipe the remote stream directly to the response
+          remoteResponse.data.on('error', (err: any) => {
+            console.error('Error streaming remote document:', {
+              message: err?.message,
+              url: remoteUrl,
+            });
+            if (!res.headersSent) {
+              res.status(500).end('Error streaming file');
+            }
+          });
+
+          remoteResponse.data.pipe(res);
           return;
         } catch (remoteError: any) {
           console.error('Error fetching remote document:', {
