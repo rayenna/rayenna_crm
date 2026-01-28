@@ -437,9 +437,17 @@ router.get(
         salesHasAccess = project?.salespersonId === req.user?.id;
       }
 
-      if (!isAdmin && !isManagement && !(isSales && salesHasAccess) && !isOperations && !isFinance && !isUploader) {
-        return res.status(403).json({ 
-          error: 'You do not have permission to view/download this document. Only authorized roles or the uploader can access it.' 
+      if (
+        !isAdmin &&
+        !isManagement &&
+        !(isSales && salesHasAccess) &&
+        !isOperations &&
+        !isFinance &&
+        !isUploader
+      ) {
+        return res.status(403).json({
+          error:
+            'You do not have permission to view/download this document. Only authorized roles or the uploader can access it.',
         });
       }
 
@@ -478,10 +486,13 @@ router.get(
                 redirectUrl = signedUrl;
               }
             } catch (parseError: any) {
-              console.error('Error generating Cloudinary signed URL, falling back to stored URL:', {
-                message: parseError?.message,
-                url: document.filePath,
-              });
+              console.error(
+                'Error generating Cloudinary signed URL, falling back to stored URL:',
+                {
+                  message: parseError?.message,
+                  url: document.filePath,
+                }
+              );
             }
           }
 
@@ -499,8 +510,8 @@ router.get(
         }
       } else {
         // Local storage - stream from filesystem
-        const filePath = path.isAbsolute(document.filePath) 
-          ? document.filePath 
+        const filePath = path.isAbsolute(document.filePath)
+          ? document.filePath
           : path.join(uploadsDir, document.filePath);
 
         if (!fs.existsSync(filePath)) {
@@ -509,15 +520,18 @@ router.get(
 
         // Determine content type
         const contentType = document.fileType || 'application/octet-stream';
-        
+
         // Check if it's a download request (query param) or view request
         const isDownload = req.query.download === 'true';
-        
+
         // Set headers for file download/view
         res.setHeader('Content-Type', contentType);
-        res.setHeader('Content-Disposition', isDownload 
-          ? `attachment; filename="${encodeURIComponent(document.fileName)}"`
-          : `inline; filename="${encodeURIComponent(document.fileName)}"`);
+        res.setHeader(
+          'Content-Disposition',
+          isDownload
+            ? `attachment; filename="${encodeURIComponent(document.fileName)}"`
+            : `inline; filename="${encodeURIComponent(document.fileName)}"`
+        );
         res.setHeader('Content-Length', document.fileSize);
 
         // Stream the file
@@ -537,6 +551,104 @@ router.get(
       if (!res.headersSent) {
         res.status(500).json({ error: error.message });
       }
+    }
+  }
+);
+
+// Get signed URL for document (Cloudinary or local download URL)
+router.get(
+  '/:id/signed-url',
+  authenticate,
+  async (req: Request, res: Response) => {
+    try {
+      const document = await prisma.document.findUnique({
+        where: { id: req.params.id },
+        include: {
+          uploadedBy: {
+            select: { id: true },
+          },
+        },
+      });
+
+      if (!document) {
+        return res.status(404).json({ error: 'Document not found' });
+      }
+
+      // Reuse the same permission rules as the download endpoint
+      const isAdmin = req.user?.role === UserRole.ADMIN;
+      const isManagement = req.user?.role === UserRole.MANAGEMENT;
+      const isSales = req.user?.role === UserRole.SALES;
+      const isOperations = req.user?.role === UserRole.OPERATIONS;
+      const isFinance = req.user?.role === UserRole.FINANCE;
+      const isUploader = document.uploadedById === req.user?.id;
+
+      let salesHasAccess = false;
+      if (isSales) {
+        const project = await prisma.project.findUnique({
+          where: { id: document.projectId },
+          select: { salespersonId: true },
+        });
+        salesHasAccess = project?.salespersonId === req.user?.id;
+      }
+
+      if (
+        !isAdmin &&
+        !isManagement &&
+        !(isSales && salesHasAccess) &&
+        !isOperations &&
+        !isFinance &&
+        !isUploader
+      ) {
+        return res.status(403).json({
+          error:
+            'You do not have permission to view/download this document. Only authorized roles or the uploader can access it.',
+        });
+      }
+
+      const isDownload = req.query.download === 'true';
+
+      // If Cloudinary URL, return a signed URL; otherwise, return the backend download URL
+      if (document.filePath.startsWith('http') && useCloudinary && document.filePath.includes('res.cloudinary.com')) {
+        let signedUrl = document.filePath;
+
+        try {
+          const urlObj = new URL(document.filePath);
+          const segments = urlObj.pathname.split('/').filter(Boolean);
+          const uploadIndex = segments.findIndex((s) => s === 'upload');
+
+          if (uploadIndex !== -1) {
+            const publicAndFile = segments.slice(uploadIndex + 1).join('/');
+            const lastDot = publicAndFile.lastIndexOf('.');
+            const publicId =
+              lastDot !== -1 ? publicAndFile.substring(0, lastDot) : publicAndFile;
+            const format =
+              lastDot !== -1 ? publicAndFile.substring(lastDot + 1) : undefined;
+
+            signedUrl = cloudinary.utils.private_download_url(publicId, format, {
+              resource_type: 'raw',
+              attachment: !!isDownload,
+            });
+          }
+        } catch (parseError: any) {
+          console.error('Error generating Cloudinary signed URL:', {
+            message: parseError?.message,
+            url: document.filePath,
+          });
+          // Fall back to original URL if parsing fails
+          signedUrl = document.filePath;
+        }
+
+        return res.json({ url: signedUrl });
+      }
+
+      // Fallback for non-Cloudinary documents: use backend download route
+      const downloadUrl = `/api/documents/${document.id}/download${
+        isDownload ? '?download=true' : ''
+      }`;
+      return res.json({ url: downloadUrl });
+    } catch (error: any) {
+      console.error('Error generating signed URL for document:', error);
+      return res.status(500).json({ error: error.message || 'Failed to generate signed URL' });
     }
   }
 );

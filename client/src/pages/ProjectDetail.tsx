@@ -1,7 +1,7 @@
 import { useState } from 'react'
 // Payment Status: Shows N/A in red for projects without Order Value or in early/lost stages
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import axiosInstance, { apiBaseUrl } from '../utils/axios'
+import axiosInstance from '../utils/axios'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Project, UserRole, ProjectStatus } from '../types'
@@ -684,7 +684,7 @@ const DocumentViewButton = ({ documentId }: { documentId: string }) => {
   const { token } = useAuth()
   const [viewing, setViewing] = useState(false)
 
-  const handleView = () => {
+  const handleView = async () => {
     if (!token) {
       toast.error('Authentication required')
       return
@@ -692,20 +692,27 @@ const DocumentViewButton = ({ documentId }: { documentId: string }) => {
 
     setViewing(true)
     try {
-      const baseUrl = apiBaseUrl || axiosInstance.defaults.baseURL || ''
-      if (!baseUrl) {
-        toast.error('View URL is not configured')
+      const response = await axiosInstance.get<{ url: string }>(
+        `/api/documents/${documentId}/signed-url`,
+        {
+          params: { download: false },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      const url = response.data?.url
+      if (!url) {
+        toast.error('Failed to generate document link')
         setViewing(false)
         return
       }
 
-      const url = `${baseUrl}/api/documents/${documentId}/download`
-      // Let the browser follow the redirect and handle PDF directly
       window.open(url, '_blank')
-
-      setTimeout(() => setViewing(false), 2000)
-    } catch {
-      toast.error('Failed to open file')
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to open file')
+    } finally {
       setViewing(false)
     }
   }
@@ -746,7 +753,7 @@ const DocumentDownloadButton = ({ documentId }: { documentId: string }) => {
   const { token } = useAuth()
   const [downloading, setDownloading] = useState(false)
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!token) {
       toast.error('Authentication required')
       return
@@ -754,21 +761,27 @@ const DocumentDownloadButton = ({ documentId }: { documentId: string }) => {
 
     setDownloading(true)
     try {
-      const baseUrl = apiBaseUrl || axiosInstance.defaults.baseURL || ''
-      if (!baseUrl) {
-        toast.error('Download URL is not configured')
+      const response = await axiosInstance.get<{ url: string }>(
+        `/api/documents/${documentId}/signed-url`,
+        {
+          params: { download: true },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      const url = response.data?.url
+      if (!url) {
+        toast.error('Failed to generate download link')
         setDownloading(false)
         return
       }
 
-      const url = `${baseUrl}/api/documents/${documentId}/download?download=true`
-      // Use window.open so the browser handles the file download directly
       window.open(url, '_blank')
-
-      // We can't reliably detect completion, so reset state after a short delay
-      setTimeout(() => setDownloading(false), 2000)
-    } catch {
-      toast.error('Failed to start download')
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to download file')
+    } finally {
       setDownloading(false)
     }
   }
