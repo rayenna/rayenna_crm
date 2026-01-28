@@ -736,10 +736,16 @@ router.get(
       }
 
       const basePath = `/api/documents/${document.id}/download`;
-      const url =
+      const pathWithQuery =
         params.toString().length > 0 ? `${basePath}?${params.toString()}` : basePath;
 
-      return res.json({ url });
+      // Build an absolute URL on the backend host so that window.open()
+      // hits the API service directly, not the frontend host.
+      const protocol = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'https';
+      const host = req.get('host');
+      const absoluteUrl = `${protocol}://${host}${pathWithQuery}`;
+
+      return res.json({ url: absoluteUrl });
     } catch (error: any) {
       console.error('Error generating signed URL for document:', error);
       return res.status(500).json({ error: error.message || 'Failed to generate signed URL' });
