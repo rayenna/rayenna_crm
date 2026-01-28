@@ -37,6 +37,7 @@
     "@types/node": "^20.10.5",
     "@types/pdfkit": "^0.17.4",
     "@types/xml2js": "^0.4.14",
+    "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^1.41.3",
     "cors": "^2.8.5",
