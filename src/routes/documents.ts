@@ -444,19 +444,47 @@ router.get(
       }
 
       // Handle file retrieval based on storage type
-      // If the stored path is a full URL (e.g. Cloudinary), redirect the client to it
-      // after permission checks. This avoids server-side HTTP proxying issues and works
-      // across different Node/hosting environments while still enforcing access control.
+      // If the stored path is a full URL (e.g. Cloudinary), fetch it server-side and
+      // stream it back to the client so the browser never talks to Cloudinary directly
+      // (avoids CORS issues while still enforcing access control).
       if (document.filePath.startsWith('http')) {
         // Remote URL (typically Cloudinary)
         const isDownload = req.query.download === 'true';
-        // Build URL with optional download flag
-        let redirectUrl = document.filePath;
-        if (isDownload) {
-          const separator = redirectUrl.includes('?') ? '&' : '?';
-          redirectUrl += `${separator}fl_attachment`;
+
+        try {
+          const remoteResponse = await axios.get<ArrayBuffer>(document.filePath, {
+            responseType: 'arraybuffer',
+          });
+
+          const contentType =
+            remoteResponse.headers['content-type'] ||
+            document.fileType ||
+            'application/octet-stream';
+
+          res.setHeader('Content-Type', contentType);
+          res.setHeader(
+            'Content-Disposition',
+            isDownload
+              ? `attachment; filename="${encodeURIComponent(document.fileName)}"`
+              : `inline; filename="${encodeURIComponent(document.fileName)}"`
+          );
+
+          const contentLength = remoteResponse.headers['content-length'];
+          if (contentLength) {
+            res.setHeader('Content-Length', String(contentLength));
+          }
+
+          const buffer = Buffer.from(remoteResponse.data);
+          res.send(buffer);
+          return;
+        } catch (remoteError: any) {
+          console.error('Error fetching remote document:', {
+            message: remoteError?.message,
+            status: remoteError?.response?.status,
+            url: document.filePath,
+          });
+          return res.status(500).json({ error: 'Failed to retrieve file from remote storage' });
         }
-        return res.redirect(redirectUrl);
       } else {
         // Local storage - stream from filesystem
         const filePath = path.isAbsolute(document.filePath) 
