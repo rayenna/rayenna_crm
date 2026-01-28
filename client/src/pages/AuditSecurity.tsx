@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
+import { UserRole } from '../types'
 import { format } from 'date-fns'
 
 const PAGE_SIZE = 20
@@ -50,7 +51,7 @@ export default function AuditSecurity () {
         accessByAction: { actionType: string; count: number }[]
       }
     },
-    enabled: hasRole(['ADMIN']),
+    enabled: hasRole([UserRole.ADMIN]),
   })
 
   const params = new URLSearchParams()
@@ -67,7 +68,7 @@ export default function AuditSecurity () {
       const res = await axiosInstance.get(`/api/admin/audit/logs?${params.toString()}`)
       return res.data as { logs: any[]; pagination: { page: number; limit: number; total: number; totalPages: number } }
     },
-    enabled: hasRole(['ADMIN']),
+    enabled: hasRole([UserRole.ADMIN]),
   })
 
   const { data: failedLoginsData } = useQuery({
@@ -78,10 +79,10 @@ export default function AuditSecurity () {
       )
       return res.data as { logs: { email?: string; ip?: string; userAgent?: string; createdAt: string }[] }
     },
-    enabled: hasRole(['ADMIN']),
+    enabled: hasRole([UserRole.ADMIN]),
   })
 
-  if (!hasRole(['ADMIN'])) {
+  if (!hasRole([UserRole.ADMIN])) {
     return (
       <div className="px-4 py-6 sm:px-0">
         <p className="text-red-600 font-medium">Access denied. This page is for Administrators only.</p>
