@@ -2,13 +2,11 @@ import express, { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import axios from 'axios';
 import { UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { createAuditLog } from '../utils/audit';
 import { v2 as cloudinary } from 'cloudinary';
-// Removed CloudinaryStorage - now using upload_stream with memoryStorage for better reliability
 
 const router = express.Router();
 
@@ -40,74 +38,14 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Helper to build a Cloudinary signed download URL from the stored value.
-// The stored value should be a clean public_id like "rayenna_crm/file-xxxx",
-// but we also support legacy values that may include a version prefix or full URL.
-function getCloudinarySignedUrlFromStoredValue(
-  storedValue: string,
-  isDownload: boolean,
-  resourceType: 'raw' | 'image' | 'video'
+/** Build Cloudinary delivery URL. Use stored resourceType only – never infer from extension. */
+function getCloudinaryDeliveryUrl(
+  publicId: string,
+  resourceType: 'image' | 'raw' | 'video'
 ): string {
-  let publicId = storedValue;
-  let format: string | undefined;
-
-  // If stored as a full URL (legacy), extract publicId and format from the path
-  if (storedValue.startsWith('http')) {
-    const urlObj = new URL(storedValue);
-    const segments = urlObj.pathname.split('/').filter(Boolean);
-    const uploadIndex = segments.findIndex((s) => s === 'upload');
-
-    if (uploadIndex !== -1) {
-      let publicAndFile = segments.slice(uploadIndex + 1).join('/');
-
-      // Strip leading version prefix like "v1234/" if present
-      if (publicAndFile.startsWith('v')) {
-        const firstSlash = publicAndFile.indexOf('/');
-        if (firstSlash > 1) {
-          const maybeVersion = publicAndFile.substring(1, firstSlash);
-          if (/^\d+$/.test(maybeVersion)) {
-            publicAndFile = publicAndFile.substring(firstSlash + 1);
-          }
-        }
-      }
-
-      const lastDot = publicAndFile.lastIndexOf('.');
-      if (lastDot !== -1) {
-        publicId = publicAndFile.substring(0, lastDot);
-        format = publicAndFile.substring(lastDot + 1);
-      } else {
-        publicId = publicAndFile;
-      }
-    }
-  } else {
-    // Stored as public_id or "v1234/..." – normalise to remove version prefix
-    let publicAndFile = storedValue;
-
-    if (publicAndFile.startsWith('v')) {
-      const firstSlash = publicAndFile.indexOf('/');
-      if (firstSlash > 1) {
-        const maybeVersion = publicAndFile.substring(1, firstSlash);
-        if (/^\d+$/.test(maybeVersion)) {
-          publicAndFile = publicAndFile.substring(firstSlash + 1);
-        }
-      }
-    }
-
-    const lastDot = publicAndFile.lastIndexOf('.');
-    if (lastDot !== -1) {
-      publicId = publicAndFile.substring(0, lastDot);
-      format = publicAndFile.substring(lastDot + 1);
-    } else {
-      publicId = publicAndFile;
-    }
-  }
-
-  const expiresAt = Math.floor(Date.now() / 1000) + 300; // 5 minutes from now
-
-  return cloudinary.utils.private_download_url(publicId, format, {
+  return cloudinary.url(publicId, {
     resource_type: resourceType,
-    attachment: isDownload,
-    expires_at: expiresAt,
+    secure: true,
   });
 }
 
@@ -222,7 +160,8 @@ router.post(
   async (req: Request, res) => {
     // Declare variables outside try block so they're accessible in catch block
     let cloudinaryPublicId: string | undefined;
-    
+    let cloudinaryResourceType: string | undefined;
+
     try {
       // Debug logging for upload issues
       console.log('📤 Upload request received:', {
@@ -306,17 +245,17 @@ router.post(
             uploadStream.end(req.file.buffer);
           });
 
-          // Store public_id with version when available so delivery URL can be built correctly
           const publicId = uploadResult.public_id;
-          const ver = uploadResult.version;
-          filePath = ver != null ? `v${ver}/${publicId}` : publicId;
+          const resourceType = uploadResult.resource_type ?? 'raw'; // Cloudinary decides: image | raw | video
+          filePath = publicId;
           fileSize = uploadResult.bytes || req.file.size || 0;
           cloudinaryPublicId = publicId;
-          
+          cloudinaryResourceType = resourceType;
+
           console.log('✅ File uploaded to Cloudinary:', {
             fileName: req.file.originalname,
-            url: filePath,
-            publicId: cloudinaryPublicId,
+            publicId,
+            resourceType,
           });
         } catch (uploadError: any) {
           console.error('❌ Cloudinary upload failed:', uploadError);
@@ -338,11 +277,12 @@ router.post(
         data: {
           projectId,
           fileName: req.file.originalname,
-          filePath: filePath, // Either Cloudinary URL or relative local path
+          filePath,
           fileType: req.file.mimetype,
-          fileSize: fileSize,
-          category: category,
+          fileSize,
+          category,
           description,
+          cloudinaryResourceType: cloudinaryResourceType ?? undefined,
           uploadedById: req.user!.id,
         },
         include: {
@@ -533,164 +473,50 @@ router.get(
         });
       }
 
-      // Handle file retrieval based on storage type
-      // Cloudinary-backed documents are always streamed server-side so the browser
-      // never talks to Cloudinary directly.
+      // Cloudinary: redirect to delivery URL. Use stored resourceType only – never infer from extension.
       if (
         useCloudinary &&
         (document.filePath.startsWith('http') ||
           document.filePath.startsWith('v') ||
           document.filePath.startsWith('rayenna_crm'))
       ) {
-        const isDownload = req.query.download === 'true';
+        let publicId = document.filePath;
 
-        // Derive Cloudinary resource_type from MIME type and fileName (fileName overrides
-        // in case fileType in DB is wrong – e.g. PDF/Excel must use raw, not image).
-        const mimeType = document.fileType || 'application/octet-stream';
-        const fileNameLower = (document.fileName || '').toLowerCase();
-        let resourceType: 'raw' | 'image' | 'video' = 'raw';
-        if (
-          fileNameLower.endsWith('.pdf') ||
-          fileNameLower.endsWith('.xlsx') ||
-          fileNameLower.endsWith('.xls') ||
-          fileNameLower.endsWith('.doc') ||
-          fileNameLower.endsWith('.docx') ||
-          mimeType === 'application/pdf' ||
-          mimeType.startsWith('application/vnd.')
-        ) {
-          resourceType = 'raw';
-        } else if (mimeType.startsWith('image/')) {
-          resourceType = 'image';
-        } else if (mimeType.startsWith('video/')) {
-          resourceType = 'video';
+        if (document.filePath.startsWith('http')) {
+          const urlObj = new URL(document.filePath);
+          const segments = urlObj.pathname.split('/').filter(Boolean);
+          const uploadIndex = segments.findIndex((s) => s === 'upload');
+          if (uploadIndex !== -1) {
+            let afterUpload = segments.slice(uploadIndex + 1).join('/');
+            afterUpload = afterUpload.replace(/^v\d+\//, '');
+            const lastDot = afterUpload.lastIndexOf('.');
+            publicId = lastDot > afterUpload.lastIndexOf('/') ? afterUpload.substring(0, lastDot) : afterUpload;
+          }
         } else {
-          resourceType = 'raw';
-        }
-
-        try {
-          // Normalize public_id and optionally extract version from full URL.
-          // - Stored as "rayenna_crm/file-xxxx" or "v123/rayenna_crm/file-xxxx"
-          // - Or full URL: https://res.cloudinary.com/.../upload/v12345/rayenna_crm/file-xxxx.pdf
-          let stored = document.filePath;
-          let publicId = stored;
-          let version: number | undefined;
-
-          if (stored.startsWith('http')) {
-            const urlObj = new URL(stored);
-            const segments = urlObj.pathname.split('/').filter(Boolean);
-            const uploadIndex = segments.findIndex((s) => s === 'upload');
-            if (uploadIndex !== -1) {
-              const afterUpload = segments.slice(uploadIndex + 1);
-              // First segment may be version (v12345)
-              const first = afterUpload[0];
-              if (first && /^v\d+$/.test(first)) {
-                version = parseInt(first.slice(1), 10);
-                publicId = afterUpload.slice(1).join('/');
-              } else {
-                publicId = afterUpload.join('/');
-              }
-            }
-          } else {
-            const vMatch = stored.match(/^v(\d+)\/(.+)$/);
-            if (vMatch) {
-              version = parseInt(vMatch[1], 10);
-              publicId = vMatch[2];
-            } else {
-              publicId = stored.replace(/^v\d+\//, '');
-            }
-          }
-
-          // Cloudinary public_id should NOT include the file extension for url().
+          publicId = document.filePath.replace(/^v\d+\//, '');
           const lastSlash = publicId.lastIndexOf('/');
-          const lastDotInId = publicId.lastIndexOf('.');
-          if (lastDotInId > lastSlash) {
-            publicId = publicId.substring(0, lastDotInId);
+          const lastDot = publicId.lastIndexOf('.');
+          if (lastDot > lastSlash) {
+            publicId = publicId.substring(0, lastDot);
           }
-
-          // Use delivery URL (res.cloudinary.com) instead of download API (api.cloudinary.com/download).
-          // The download API returns 404 for assets; delivery URL works for public uploads.
-          const urlOptions: { resource_type: 'raw' | 'image' | 'video'; secure: true; version?: number; force_version?: boolean; format?: string } = {
-            resource_type: resourceType,
-            secure: true,
-          };
-          if (version != null) {
-            urlOptions.version = version;
-            urlOptions.force_version = true;
-          } else {
-            urlOptions.force_version = false;
-          }
-          // For raw assets, add format so Cloudinary serves the right file (e.g. .pdf, .xlsx)
-          if (resourceType === 'raw') {
-            if (fileNameLower.endsWith('.pdf')) urlOptions.format = 'pdf';
-            else if (fileNameLower.endsWith('.xlsx')) urlOptions.format = 'xlsx';
-            else if (fileNameLower.endsWith('.xls')) urlOptions.format = 'xls';
-            else if (fileNameLower.endsWith('.doc')) urlOptions.format = 'doc';
-            else if (fileNameLower.endsWith('.docx')) urlOptions.format = 'docx';
-          }
-          const deliveryUrl = cloudinary.url(publicId, urlOptions);
-
-          console.log('Cloudinary delivery request:', {
-            publicId,
-            resourceType,
-            version: version ?? 'none',
-            fileName: document.fileName,
-          });
-
-          const cloudinaryResponse = await axios.get(deliveryUrl, {
-            responseType: 'stream',
-          });
-
-          // Ensure correct Content-Type (especially for Excel/PDF) so browsers don't corrupt the file
-          const contentType =
-            mimeType !== 'application/octet-stream'
-              ? mimeType
-              : fileNameLower.endsWith('.xlsx')
-                ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                : fileNameLower.endsWith('.xls')
-                  ? 'application/vnd.ms-excel'
-                  : fileNameLower.endsWith('.pdf')
-                    ? 'application/pdf'
-                    : mimeType;
-          res.setHeader('Content-Type', contentType);
-          res.setHeader(
-            'Content-Disposition',
-            isDownload
-              ? `attachment; filename="${document.fileName}"`
-              : `inline; filename="${document.fileName}"`
-          );
-
-          // Stream Cloudinary response to client
-          cloudinaryResponse.data.on('error', (err: any) => {
-            console.error('Error streaming from Cloudinary:', {
-              message: err?.message,
-              url: deliveryUrl,
-            });
-            if (!res.headersSent) {
-              res.status(500).end('Error streaming file');
-            }
-          });
-
-          cloudinaryResponse.data.pipe(res);
-          return;
-        } catch (remoteError: any) {
-          console.error('Error fetching document from Cloudinary via delivery URL:', {
-            message: remoteError?.message,
-            status: remoteError?.response?.status,
-            url: remoteError?.config?.url ?? document.filePath,
-            filePath: document.filePath,
-            resourceType,
-          });
-
-          // Do not redirect to unsigned URL – private raw assets return 404 there.
-          if (!res.headersSent) {
-            res.status(502).json({
-              error: 'Failed to retrieve document from storage',
-              details: remoteError?.response?.status === 404 ? 'Resource not found in storage (check resource type and public id).' : undefined,
-            });
-          }
-          return;
         }
-      } else if (!document.filePath.startsWith('http')) {
+
+        // Use stored resourceType only. Legacy: if null, infer only from full-URL path (/image/ or /raw/), else default 'image'.
+        let resourceType: 'image' | 'raw' | 'video' = 'image';
+        if (document.cloudinaryResourceType === 'image' || document.cloudinaryResourceType === 'raw' || document.cloudinaryResourceType === 'video') {
+          resourceType = document.cloudinaryResourceType;
+        } else if (document.filePath.startsWith('http')) {
+          const pathLower = new URL(document.filePath).pathname.toLowerCase();
+          if (pathLower.includes('/raw/')) resourceType = 'raw';
+          else if (pathLower.includes('/video/')) resourceType = 'video';
+        }
+
+        const fileUrl = getCloudinaryDeliveryUrl(publicId, resourceType);
+        return res.redirect(fileUrl);
+      }
+
+      // Local storage: stream from filesystem
+      if (!document.filePath.startsWith('http')) {
         // Local storage - stream from filesystem
         const filePath = path.isAbsolute(document.filePath)
           ? document.filePath

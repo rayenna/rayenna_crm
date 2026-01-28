@@ -337,6 +337,9 @@ model Document {
   category    String // proposal, agreement, kseb, mnre, invoice, payment_proof
   description String?
 
+  // Cloudinary resource_type from upload (image | raw | video). Never infer from extension.
+  cloudinaryResourceType String?
+
   uploadedById String
   uploadedBy   User   @relation("UploadedBy", fields: [uploadedById], references: [id])
 
