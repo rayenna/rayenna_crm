@@ -519,18 +519,7 @@ router.get(
           }
         }
 
-        // Use stored resourceType only. Legacy: if null, infer only from full-URL path (/image/ or /raw/), else default 'image'.
-        let resourceType: 'image' | 'raw' | 'video' = 'image';
-        if (document.cloudinaryResourceType === 'image' || document.cloudinaryResourceType === 'raw' || document.cloudinaryResourceType === 'video') {
-          resourceType = document.cloudinaryResourceType;
-        } else if (document.filePath.startsWith('http')) {
-          const pathLower = new URL(document.filePath).pathname.toLowerCase();
-          if (pathLower.includes('/raw/')) resourceType = 'raw';
-          else if (pathLower.includes('/video/')) resourceType = 'video';
-        }
-
-        // Prefer stored Cloudinary format (e.g. pdf/xlsx). If missing, we do NOT change resource_type,
-        // but we may fall back to the filename extension to ensure Cloudinary serves the correct file format.
+        // Prefer stored Cloudinary format (e.g. pdf/xlsx). If missing, fall back to filename extension.
         let format: string | undefined =
           typeof (document as any).cloudinaryFormat === 'string' ? (document as any).cloudinaryFormat : undefined;
         if (!format) {
@@ -542,6 +531,23 @@ router.get(
         }
         if (format && !/^[a-z0-9]{1,10}$/.test(format)) {
           format = undefined;
+        }
+
+        // PDFs and office docs must be delivered as raw. Use stored resourceType only for images/videos.
+        const docFormats = ['pdf', 'xlsx', 'xls', 'doc', 'docx'];
+        const isDocFormat = format && docFormats.includes(format.toLowerCase());
+        let resourceType: 'image' | 'raw' | 'video' = 'raw';
+        if (isDocFormat) {
+          resourceType = 'raw';
+        } else if (document.cloudinaryResourceType === 'image' || document.cloudinaryResourceType === 'raw' || document.cloudinaryResourceType === 'video') {
+          resourceType = document.cloudinaryResourceType;
+        } else if (document.filePath.startsWith('http')) {
+          const pathLower = new URL(document.filePath).pathname.toLowerCase();
+          if (pathLower.includes('/raw/')) resourceType = 'raw';
+          else if (pathLower.includes('/video/')) resourceType = 'video';
+          else resourceType = 'image';
+        } else {
+          resourceType = 'image';
         }
 
         const fileUrl = getCloudinaryDeliveryUrl(publicId, resourceType, format);
