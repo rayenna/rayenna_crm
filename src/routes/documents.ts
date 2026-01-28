@@ -534,13 +534,13 @@ router.get(
       ) {
         const isDownload = req.query.download === 'true';
 
-        // Derive resource_type from MIME type:
-        // - PDFs and other docs: raw
-        // - Images: image
+        // Derive Cloudinary resource_type from MIME type:
+        // - Standard images (image/*) and PDFs (often stored under "image" in Cloudinary UI): image
         // - Videos: video
+        // - Everything else: raw
         const mimeType = document.fileType || 'application/octet-stream';
         let resourceType: 'raw' | 'image' | 'video' = 'raw';
-        if (mimeType.startsWith('image/')) {
+        if (mimeType.startsWith('image/') || mimeType === 'application/pdf') {
           resourceType = 'image';
         } else if (mimeType.startsWith('video/')) {
           resourceType = 'video';
