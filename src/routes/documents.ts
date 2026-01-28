@@ -40,12 +40,13 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Helper to build a Cloudinary signed download URL from the stored value
+// Helper to build a Cloudinary signed download URL from the stored value.
 // The stored value should be a clean public_id like "rayenna_crm/file-xxxx",
 // but we also support legacy values that may include a version prefix or full URL.
 function getCloudinarySignedUrlFromStoredValue(
   storedValue: string,
-  isDownload: boolean
+  isDownload: boolean,
+  resourceType: 'raw' | 'image' | 'video'
 ): string {
   let publicId = storedValue;
   let format: string | undefined;
@@ -104,7 +105,7 @@ function getCloudinarySignedUrlFromStoredValue(
   const expiresAt = Math.floor(Date.now() / 1000) + 300; // 5 minutes from now
 
   return cloudinary.utils.private_download_url(publicId, format, {
-    resource_type: 'raw',
+    resource_type: resourceType,
     attachment: isDownload,
     expires_at: expiresAt,
   });
@@ -525,14 +526,34 @@ router.get(
       // Handle file retrieval based on storage type
       // If the stored path is a Cloudinary reference (public_id or legacy URL),
       // redirect the client to a signed Cloudinary URL. The browser then opens/
-      // downloads the PDF directly.
-      if (useCloudinary && (document.filePath.startsWith('http') || document.filePath.startsWith('v') || document.filePath.startsWith('rayenna_crm'))) {
+      // or downloads the file directly.
+      if (
+        useCloudinary &&
+        (document.filePath.startsWith('http') ||
+          document.filePath.startsWith('v') ||
+          document.filePath.startsWith('rayenna_crm'))
+      ) {
         const isDownload = req.query.download === 'true';
+
+        // Choose Cloudinary resource_type based on MIME type:
+        // - PDFs and other docs: raw
+        // - Images: image
+        // - Videos: video
+        const mime = document.fileType || '';
+        let resourceType: 'raw' | 'image' | 'video' = 'raw';
+        if (mime.startsWith('image/')) {
+          resourceType = 'image';
+        } else if (mime.startsWith('video/')) {
+          resourceType = 'video';
+        } else {
+          resourceType = 'raw';
+        }
 
         try {
           const redirectUrl = getCloudinarySignedUrlFromStoredValue(
             document.filePath,
-            isDownload
+            isDownload,
+            resourceType
           );
           return res.redirect(redirectUrl);
         } catch (remoteError: any) {
@@ -653,10 +674,22 @@ router.get(
           document.filePath.startsWith('v') ||
           document.filePath.startsWith('rayenna_crm'))
       ) {
+        // Derive resource_type from MIME for correct lookup
+        const mime = document.fileType || '';
+        let resourceType: 'raw' | 'image' | 'video' = 'raw';
+        if (mime.startsWith('image/')) {
+          resourceType = 'image';
+        } else if (mime.startsWith('video/')) {
+          resourceType = 'video';
+        } else {
+          resourceType = 'raw';
+        }
+
         try {
           const signedUrl = getCloudinarySignedUrlFromStoredValue(
             document.filePath,
-            isDownload
+            isDownload,
+            resourceType
           );
           return res.json({ url: signedUrl });
         } catch (parseError: any) {
