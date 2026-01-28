@@ -479,14 +479,9 @@ router.get(
               const format =
                 lastDot !== -1 ? publicAndFile.substring(lastDot + 1) : undefined;
 
-              const signedUrl = cloudinary.utils.private_download_url(
-                publicId,
-                format,
-                {
-                  resource_type: resourceType,
-                  sign_url: true,
-                }
-              );
+              const signedUrl = cloudinary.utils.private_download_url(publicId, format, {
+                resource_type: resourceType,
+              });
 
               remoteUrl = signedUrl;
             } catch (parseError: any) {
