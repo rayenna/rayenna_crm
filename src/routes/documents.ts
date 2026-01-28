@@ -444,8 +444,11 @@ router.get(
       }
 
       // Handle file retrieval based on storage type
-      if (useCloudinary && document.filePath.startsWith('http')) {
-        // Cloudinary URL - fetch and proxy the file to maintain authentication
+      // If the stored path is a full URL (e.g. Cloudinary), always proxy it via HTTP,
+      // regardless of the current storage mode. This ensures older files uploaded
+      // when Cloudinary was enabled remain accessible even if configuration changes.
+      if (document.filePath.startsWith('http')) {
+        // Remote URL (typically Cloudinary) - fetch and proxy the file
         const isDownload = req.query.download === 'true';
 
         try {
