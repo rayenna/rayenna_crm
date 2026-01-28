@@ -524,9 +524,8 @@ router.get(
       }
 
       // Handle file retrieval based on storage type
-      // If the stored path is a Cloudinary reference (public_id or legacy URL),
-      // redirect the client to a signed Cloudinary URL. The browser then opens/
-      // or downloads the file directly.
+      // Cloudinary-backed documents are always streamed server-side so the browser
+      // never talks to Cloudinary directly.
       if (
         useCloudinary &&
         (document.filePath.startsWith('http') ||
@@ -535,35 +534,82 @@ router.get(
       ) {
         const isDownload = req.query.download === 'true';
 
-        // Choose Cloudinary resource_type based on MIME type:
+        // Derive resource_type from MIME type:
         // - PDFs and other docs: raw
         // - Images: image
         // - Videos: video
-        const mime = document.fileType || '';
+        const mimeType = document.fileType || 'application/octet-stream';
         let resourceType: 'raw' | 'image' | 'video' = 'raw';
-        if (mime.startsWith('image/')) {
+        if (mimeType.startsWith('image/')) {
           resourceType = 'image';
-        } else if (mime.startsWith('video/')) {
+        } else if (mimeType.startsWith('video/')) {
           resourceType = 'video';
         } else {
           resourceType = 'raw';
         }
 
         try {
-          const redirectUrl = getCloudinarySignedUrlFromStoredValue(
-            document.filePath,
-            isDownload,
-            resourceType
+          // Normalize public_id – handle values like:
+          // - "rayenna_crm/file-xxxx"
+          // - "v123456/rayenna_crm/file-xxxx"
+          // - full secure URLs with /upload/v1234/... paths (legacy)
+          let stored = document.filePath;
+          let publicId = stored;
+
+          if (stored.startsWith('http')) {
+            const urlObj = new URL(stored);
+            const segments = urlObj.pathname.split('/').filter(Boolean);
+            const uploadIndex = segments.findIndex((s) => s === 'upload');
+            if (uploadIndex !== -1) {
+              let publicAndFile = segments.slice(uploadIndex + 1).join('/');
+              // Strip leading "v1234/" if present
+              publicAndFile = publicAndFile.replace(/^v\d+\//, '');
+              publicId = publicAndFile;
+            }
+          } else {
+            // Strip simple "v1234/" prefix if present
+            publicId = stored.replace(/^v\d+\//, '');
+          }
+
+          const signedUrl = cloudinary.utils.private_download_url(publicId, undefined, {
+            resource_type: resourceType,
+            attachment: isDownload,
+            expires_at: Math.floor(Date.now() / 1000) + 300,
+          });
+
+          const cloudinaryResponse = await axios.get(signedUrl, {
+            responseType: 'stream',
+          });
+
+          res.setHeader('Content-Type', mimeType);
+          res.setHeader(
+            'Content-Disposition',
+            isDownload
+              ? `attachment; filename="${document.fileName}"`
+              : `inline; filename="${document.fileName}"`
           );
-          return res.redirect(redirectUrl);
+
+          // Stream Cloudinary response to client
+          cloudinaryResponse.data.on('error', (err: any) => {
+            console.error('Error streaming from Cloudinary:', {
+              message: err?.message,
+              url: signedUrl,
+            });
+            if (!res.headersSent) {
+              res.status(500).end('Error streaming file');
+            }
+          });
+
+          cloudinaryResponse.data.pipe(res);
+          return;
         } catch (remoteError: any) {
-          console.error('Error preparing remote document redirect:', {
+          console.error('Error fetching document from Cloudinary:', {
             message: remoteError?.message,
+            status: remoteError?.response?.status,
             url: document.filePath,
           });
-          // As per constraints, avoid JSON here; send minimal text response.
           if (!res.headersSent) {
-            res.status(500).send('Failed to open document');
+            res.status(500).json({ error: 'Failed to retrieve document from storage' });
           }
           return;
         }
@@ -666,44 +712,7 @@ router.get(
 
       const isDownload = req.query.download === 'true';
 
-      // If this looks like a Cloudinary reference (public_id or legacy URL) and
-      // Cloudinary is configured, return a signed URL directly.
-      if (
-        useCloudinary &&
-        (document.filePath.startsWith('http') ||
-          document.filePath.startsWith('v') ||
-          document.filePath.startsWith('rayenna_crm'))
-      ) {
-        // Derive resource_type from MIME for correct lookup
-        const mime = document.fileType || '';
-        let resourceType: 'raw' | 'image' | 'video' = 'raw';
-        if (mime.startsWith('image/')) {
-          resourceType = 'image';
-        } else if (mime.startsWith('video/')) {
-          resourceType = 'video';
-        } else {
-          resourceType = 'raw';
-        }
-
-        try {
-          const signedUrl = getCloudinarySignedUrlFromStoredValue(
-            document.filePath,
-            isDownload,
-            resourceType
-          );
-          return res.json({ url: signedUrl });
-        } catch (parseError: any) {
-          console.error('Error generating Cloudinary signed URL in /signed-url:', {
-            message: parseError?.message,
-            url: document.filePath,
-          });
-          return res
-            .status(500)
-            .json({ error: 'Failed to generate Cloudinary signed URL' });
-        }
-      }
-
-      // Fallback for non-Cloudinary documents: use backend download route
+      // Always return a backend URL so the browser never talks to Cloudinary
       const downloadUrl = `/api/documents/${document.id}/download${
         isDownload ? '?download=true' : ''
       }`;
