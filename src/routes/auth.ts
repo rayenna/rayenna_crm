@@ -7,6 +7,7 @@ import { UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { logPasswordReset } from '../utils/passwordResetAudit';
+import { logAccess, logSecurityAudit } from '../utils/auditLogger';
 
 const router = express.Router();
 
@@ -32,11 +33,13 @@ router.post(
       });
 
       if (!user) {
+        logAccess({ actionType: 'login_failure', email: email ?? undefined, success: false, req });
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
       const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
+        logAccess({ actionType: 'login_failure', email: user.email, success: false, req });
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
@@ -65,6 +68,8 @@ router.post(
           role: user.role,
         },
       });
+      logAccess({ userId: user.id, email: user.email, role: user.role, actionType: 'login_success', success: true, req });
+      logSecurityAudit({ userId: user.id, role: user.role, actionType: 'login', entityType: 'User', entityId: user.id, summary: `Login: ${user.email}`, req });
     } catch (error: any) {
       console.error('Login error:', {
         message: error?.message,
@@ -230,6 +235,7 @@ router.post(
         initiatedBy: req.user.id,
         token: resetToken.substring(0, 8) + '...', // Log partial token for tracking
       });
+      logSecurityAudit({ userId: req.user.id, role: req.user.role, actionType: 'password_reset_initiated', entityType: 'User', entityId: targetUser.id, summary: `Admin initiated reset for ${targetUser.email}`, req });
 
       // Return reset token (admin can share this link with user)
       res.json({
@@ -342,6 +348,7 @@ router.post(
         action: 'reset_completed',
         token: token.substring(0, 8) + '...',
       });
+      logSecurityAudit({ userId: user.id, role: user.role, actionType: 'password_reset_completed', entityType: 'User', entityId: user.id, summary: 'Password reset completed', req });
 
       res.json({ message: 'Password reset successfully' });
     } catch (error: any) {

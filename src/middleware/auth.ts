@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '@prisma/client';
 import prisma from '../prisma';
+import { logAccess } from '../utils/auditLogger';
 
 export const authenticate = async (
   req: Request,
@@ -13,6 +14,7 @@ export const authenticate = async (
     const token = req.headers.authorization?.replace('Bearer ', '');
 
     if (!token) {
+      logAccess({ actionType: 'auth_failure', req });
       return res.status(401).json({ error: 'Authentication required' });
     }
 
@@ -28,6 +30,7 @@ export const authenticate = async (
     });
 
     if (!user) {
+      logAccess({ actionType: 'auth_failure', userId: decoded.userId, email: decoded.email, role: decoded.role, req });
       return res.status(401).json({ error: 'User not found' });
     }
 
@@ -39,6 +42,7 @@ export const authenticate = async (
 
     next();
   } catch (error) {
+    logAccess({ actionType: 'auth_failure', req });
     return res.status(401).json({ error: 'Invalid token' });
   }
 };
@@ -46,10 +50,12 @@ export const authenticate = async (
 export const authorize = (...roles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
+      logAccess({ actionType: 'auth_failure', req });
       return res.status(401).json({ error: 'Authentication required' });
     }
 
     if (!roles.includes(req.user.role as UserRole)) {
+      logAccess({ actionType: 'auth_failure', userId: req.user.id, email: req.user.email, role: req.user.role, req });
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
 

@@ -18,6 +18,7 @@ const Layout = () => {
     { name: 'Support Tickets', path: '/support-tickets', roles: [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS] },
     { name: 'Tally Export', path: '/tally-export', roles: [UserRole.ADMIN, UserRole.FINANCE] },
     { name: 'Users', path: '/users', roles: [UserRole.ADMIN] },
+    { name: 'Audit & Security', path: '/audit-security', roles: [UserRole.ADMIN] },
   ]
 
   const filteredNav = navigation.filter((nav) => hasRole(nav.roles))

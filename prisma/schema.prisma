@@ -532,3 +532,40 @@ model ProjectRemark {
   @@index([userId])
   @@map("project_remarks")
 }
+
+// --- Admin Audit & Security (additive only; no relations to existing models) ---
+model SecurityAuditLog {
+  id         String   @id @default(cuid())
+  userId     String   // Actor who performed the action (no FK to avoid touching User)
+  role       String   // UserRole at time of action
+  actionType String   // e.g. user_created, project_status_changed, support_ticket_closed
+  entityType String?  // e.g. User, Project, SupportTicket
+  entityId   String?  // Target entity id
+  summary    String?  @db.Text
+  ip         String?  @db.VarChar(45)
+  userAgent  String?  @db.VarChar(500)
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([actionType])
+  @@index([entityType])
+  @@index([createdAt])
+  @@map("security_audit_logs")
+}
+
+model AccessLog {
+  id         String   @id @default(cuid())
+  userId     String?  // Set on login_success; null on login_failure
+  email      String?  @db.VarChar(255)
+  role       String?  @db.VarChar(50)
+  actionType String   // login_success | login_failure | auth_failure
+  success    Boolean?
+  ip         String?  @db.VarChar(45)
+  userAgent  String?  @db.VarChar(500)
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([actionType])
+  @@index([createdAt])
+  @@map("access_logs")
+}

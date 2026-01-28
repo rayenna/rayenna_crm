@@ -4,6 +4,7 @@ import { body, validationResult } from 'express-validator';
 import { UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
+import { logSecurityAudit } from '../utils/auditLogger';
 
 const router = express.Router();
 
@@ -113,6 +114,9 @@ router.post(
         },
       });
 
+      if (req.user) {
+        logSecurityAudit({ userId: req.user.id, role: req.user.role, actionType: 'user_created', entityType: 'User', entityId: user.id, summary: `Created user ${user.email} (${user.role})`, req });
+      }
       res.status(201).json(user);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -198,6 +202,9 @@ router.put(
         },
       });
 
+      if (req.user && role !== undefined && role !== currentUser.role) {
+        logSecurityAudit({ userId: req.user.id, role: req.user.role, actionType: 'user_role_changed', entityType: 'User', entityId: userId, summary: `Role ${currentUser.role} -> ${role}`, req });
+      }
       res.json(user);
     } catch (error: any) {
       if (error.code === 'P2025') {

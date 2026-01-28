@@ -3,6 +3,7 @@ import { body, validationResult } from 'express-validator';
 import { SupportTicketStatus, UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
+import { logSecurityAudit } from '../utils/auditLogger';
 
 const router = express.Router();
 
@@ -116,6 +117,9 @@ router.post(
         },
       });
 
+      if (req.user) {
+        logSecurityAudit({ userId: createdById, role: req.user.role, actionType: 'support_ticket_created', entityType: 'SupportTicket', entityId: ticket.id, summary: `Ticket ${ticket.ticketNumber} created`, req });
+      }
       res.status(201).json(ticket);
     } catch (error: any) {
       console.error('Error creating support ticket:', error);
@@ -362,6 +366,9 @@ router.patch(
         },
       });
 
+      if (req.user) {
+        logSecurityAudit({ userId: req.user.id, role: req.user.role, actionType: 'support_ticket_closed', entityType: 'SupportTicket', entityId: ticketId, summary: `Ticket ${ticket.ticketNumber} closed`, req });
+      }
       res.json(updatedTicket);
     } catch (error: any) {
       console.error('Error closing support ticket:', error);

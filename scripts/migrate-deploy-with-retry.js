@@ -5,8 +5,8 @@
 
 const { execSync } = require('child_process');
 
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 5000; // 5 seconds
+const MAX_RETRIES = 5;
+const RETRY_DELAY = 8000; // 8 seconds — helps with Neon advisory lock contention during deploy
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));

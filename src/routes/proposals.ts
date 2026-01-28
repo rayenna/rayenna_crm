@@ -4,6 +4,7 @@ import { ProposalStatus } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
 import { generateProposalContent } from '../utils/ai';
+import { logSecurityAudit } from '../utils/auditLogger';
 
 const router = express.Router();
 
@@ -139,6 +140,9 @@ router.post(
         },
       });
 
+      if (req.user) {
+        logSecurityAudit({ userId: req.user.id, role: req.user.role, actionType: 'proposal_generated', entityType: 'Proposal', entityId: proposal.id, summary: `Proposal for project ${projectId}`, req });
+      }
       // If AI generated, you might want to save the content as a document
       // For now, we'll just return it in the response
       res.status(201).json({

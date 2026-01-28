@@ -25,6 +25,7 @@ import serviceTicketRoutes from './routes/serviceTickets';
 import supportTicketsRoutes from './routes/supportTickets';
 import salesTeamPerformanceRoutes from './routes/salesTeamPerformance';
 import remarksRoutes from './routes/remarks';
+import adminAuditRoutes from './routes/adminAudit';
 
 dotenv.config();
 
@@ -120,6 +121,7 @@ app.use('/api/service-tickets', serviceTicketRoutes);
 app.use('/api/support-tickets', supportTicketsRoutes);
 app.use('/api/sales-team-performance', salesTeamPerformanceRoutes);
 app.use('/api/remarks', remarksRoutes);
+app.use('/api/admin/audit', adminAuditRoutes);
 
 // Health check (for Render and monitoring)
 app.get('/health', (req, res) => {

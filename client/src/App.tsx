@@ -10,6 +10,7 @@ import Projects from './pages/Projects'
 import ProjectDetail from './pages/ProjectDetail'
 import ProjectForm from './pages/ProjectForm'
 import Users from './pages/Users'
+import AuditSecurity from './pages/AuditSecurity'
 import TallyExport from './pages/TallyExport'
 import About from './pages/About'
 import ChangePassword from './pages/ChangePassword'
@@ -43,6 +44,7 @@ function App() {
             <Route path="projects/:id" element={<ProjectDetail />} />
             <Route path="projects/:id/edit" element={<ProjectForm />} />
             <Route path="users" element={<Users />} />
+            <Route path="audit-security" element={<AuditSecurity />} />
             <Route path="tally-export" element={<TallyExport />} />
             <Route path="support-tickets" element={<SupportTicketsDashboard />} />
             <Route path="change-password" element={<ChangePassword />} />

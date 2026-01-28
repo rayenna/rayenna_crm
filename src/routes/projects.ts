@@ -4,6 +4,7 @@ import { ProjectStatus, ProjectType, ProjectServiceType, ProjectStage, UserRole,
 import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { createAuditLog } from '../utils/audit';
+import { logSecurityAudit } from '../utils/auditLogger';
 import { calculatePayments, calculateExpectedProfit, calculateGrossProfit, calculateProfitability, calculateFY } from '../utils/calculations';
 import { predictProjectDelay } from '../utils/ai';
 import { suggestOptimalPricing } from '../utils/ai';
@@ -798,6 +799,7 @@ router.post(
         action: 'created',
         remarks: 'Project created',
       });
+      logSecurityAudit({ userId: req.user!.id, role: req.user!.role, actionType: 'project_created', entityType: 'Project', entityId: project.id, summary: `Project #${project.slNo} created`, req });
 
       res.status(201).json(project);
     } catch (error: any) {
@@ -1567,6 +1569,9 @@ router.put(
         },
       });
 
+      if (updateData.projectStatus !== undefined && req.user) {
+        logSecurityAudit({ userId: req.user.id, role: req.user.role, actionType: 'project_status_changed', entityType: 'Project', entityId: req.params.id, summary: `Status ${project.projectStatus} -> ${updateData.projectStatus}`, req });
+      }
       // Create audit log for significant changes
       const changedFields = Object.keys(updateData);
       for (const field of changedFields) {
