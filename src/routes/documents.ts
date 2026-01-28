@@ -579,6 +579,14 @@ router.get(
             publicId = stored.replace(/^v\d+\//, '');
           }
 
+          // Cloudinary public_id should NOT include the file extension.
+          // If the last "." comes after the last "/", strip the extension.
+          const lastSlash = publicId.lastIndexOf('/');
+          const lastDotInId = publicId.lastIndexOf('.');
+          if (lastDotInId > lastSlash) {
+            publicId = publicId.substring(0, lastDotInId);
+          }
+
           const signedUrl = cloudinary.utils.private_download_url(publicId, undefined, {
             resource_type: resourceType,
             attachment: isDownload,
