@@ -69,7 +69,8 @@ const blockedExtensions = [
 const upload = multer({
   storage,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE || '26214400'), // 25MB default
+    // 10MB per file by default (can be overridden via MAX_FILE_SIZE env)
+    fileSize: parseInt(process.env.MAX_FILE_SIZE || String(10 * 1024 * 1024)),
   },
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
@@ -194,6 +195,16 @@ router.post(
 
       if (!project) {
         return res.status(404).json({ error: 'Project not found' });
+      }
+
+      // Enforce maximum number of files per project (10)
+      const existingCount = await prisma.document.count({
+        where: { projectId },
+      });
+      if (existingCount >= 10) {
+        return res.status(400).json({
+          error: 'Maximum of 10 files per project reached. Please delete an existing file before uploading a new one.',
+        });
       }
 
       // Handle file path/URL based on storage type

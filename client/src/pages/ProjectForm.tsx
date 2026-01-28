@@ -9,7 +9,7 @@ import toast from 'react-hot-toast'
 import RemarksSection from '../components/remarks/RemarksSection'
 
 // File Upload Component
-const FileUploadSection = ({ projectId }: { projectId: string }) => {
+const FileUploadSection = ({ projectId, existingCount = 0, maxFiles = 10 }: { projectId: string; existingCount?: number; maxFiles?: number }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [category, setCategory] = useState<string>('')
   const [description, setDescription] = useState<string>('')
@@ -17,6 +17,10 @@ const FileUploadSection = ({ projectId }: { projectId: string }) => {
   const queryClient = useQueryClient()
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (existingCount >= maxFiles) {
+      toast.error(`Maximum of ${maxFiles} files per project reached.`)
+      return
+    }
     const file = e.target.files?.[0]
     if (file) {
       // Validate file type
@@ -64,6 +68,10 @@ const FileUploadSection = ({ projectId }: { projectId: string }) => {
   })
 
   const handleUpload = () => {
+    if (existingCount >= maxFiles) {
+      toast.error(`Maximum of ${maxFiles} files per project reached.`)
+      return
+    }
     if (!selectedFile || !category) {
       toast.error('Please select a file and category')
       return
@@ -82,6 +90,9 @@ const FileUploadSection = ({ projectId }: { projectId: string }) => {
     <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
       <h3 className="text-md font-semibold mb-4">Upload File</h3>
       <div className="space-y-4">
+        <p className="text-xs text-gray-600">
+          You can upload up to {maxFiles} files per project. Currently uploaded: {existingCount}.
+        </p>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             File
@@ -89,6 +100,7 @@ const FileUploadSection = ({ projectId }: { projectId: string }) => {
           <input
             type="file"
             onChange={handleFileChange}
+            disabled={existingCount >= maxFiles}
             className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
           />
         </div>
@@ -121,7 +133,7 @@ const FileUploadSection = ({ projectId }: { projectId: string }) => {
         </div>
         <button
           onClick={handleUpload}
-          disabled={!selectedFile || !category || uploading}
+          disabled={!selectedFile || !category || uploading || existingCount >= maxFiles}
           className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
           {uploading ? 'Uploading...' : 'Upload File'}
@@ -1438,7 +1450,11 @@ const ProjectForm = () => {
         {isEdit && id && hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS]) && canEditOtherSections && (
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-lg font-semibold mb-4">File Uploads</h2>
-            <FileUploadSection projectId={id} />
+            <FileUploadSection 
+              projectId={id} 
+              existingCount={project?.documents?.length || 0}
+              maxFiles={10}
+            />
           </div>
         )}
 

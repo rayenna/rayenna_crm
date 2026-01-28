@@ -597,8 +597,20 @@ const ProjectDetail = () => {
         {project.documents && project.documents.length > 0 && (
           <div>
             <h3 className="text-md font-semibold mb-4">Uploaded Documents</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {project.documents.map((doc) => {
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-700 w-16">Sl No.</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-700">File Name</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-700">Description</th>
+                    <th className="px-3 py-2 text-center font-semibold text-gray-700">View</th>
+                    <th className="px-3 py-2 text-center font-semibold text-gray-700">Download</th>
+                    <th className="px-3 py-2 text-center font-semibold text-gray-700">Delete</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+              {project.documents.map((doc, index) => {
                 // Admin can delete any document
                 // Uploader can delete their own documents (except Proposal PDFs which only admin can delete)
                 const isProposalPDF = doc.description === 'AI Generated Proposal PDF'
@@ -613,37 +625,46 @@ const ProjectDetail = () => {
                 const canDelete = isAdmin || (isUploader && !isProposalPDF)
                 // View/Download: Admin, Management, Operations, Finance, or Sales (only their projects), or uploader
                 const canView = isAdmin || isManagement || isOperations || isFinance || salesHasProjectAccess || isUploader
-                
+
                 return (
-                  <div
-                    key={doc.id}
-                    className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 group"
-                  >
-                    <div className="flex-1 flex items-center">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">{doc.fileName}</p>
-                        <p className="text-xs text-gray-500">
-                          {doc.category === 'photos_videos' ? 'Photos / Videos' :
-                           doc.category === 'documents' ? 'Documents' :
-                           doc.category === 'sheets' ? 'Sheets' : doc.category}
-                          {doc.uploadedBy && ` • Uploaded by ${doc.uploadedBy.name}`}
-                        </p>
+                  <tr key={doc.id} className="group hover:bg-gray-50">
+                    <td className="px-3 py-2 text-gray-700 align-middle">{index + 1}</td>
+                    <td className="px-3 py-2 align-middle">
+                      <div className="font-medium text-gray-900 truncate max-w-xs">
+                        {doc.fileName}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 ml-2">
+                      <div className="text-xs text-gray-500">
+                        {doc.category === 'photos_videos' ? 'Photos / Videos' :
+                         doc.category === 'documents' ? 'Documents' :
+                         doc.category === 'sheets' ? 'Sheets' : doc.category}
+                        {doc.uploadedBy && <> • Uploaded by {doc.uploadedBy.name}</>}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 text-gray-700 align-middle max-w-xs">
+                      <span className="block truncate" title={doc.description || ''}>
+                        {doc.description || '—'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-center align-middle">
                       {canView && (
-                        <>
-                          <DocumentViewButton documentId={doc.id} fileName={doc.fileName} />
-                          <DocumentDownloadButton documentId={doc.id} fileName={doc.fileName} />
-                        </>
+                        <DocumentViewButton documentId={doc.id} fileName={doc.fileName} />
                       )}
+                    </td>
+                    <td className="px-3 py-2 text-center align-middle">
+                      {canView && (
+                        <DocumentDownloadButton documentId={doc.id} fileName={doc.fileName} />
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-center align-middle">
                       {canDelete && (
                         <DocumentDeleteButton documentId={doc.id} projectId={project.id} />
                       )}
-                    </div>
-                  </div>
+                    </td>
+                  </tr>
                 )
               })}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -820,8 +841,11 @@ const DocumentDownloadButton = ({ documentId, fileName }: { documentId: string; 
         },
       })
 
+      // Determine content type for the blob (important for PDFs and Office docs)
+      const contentType = response.headers['content-type'] || response.headers['Content-Type'] || 'application/octet-stream'
+
       // Create blob and trigger download
-      const blob = new Blob([response.data])
+      const blob = new Blob([response.data], { type: contentType })
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
