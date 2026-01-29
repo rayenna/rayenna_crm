@@ -319,8 +319,10 @@ router.post(
           const publicId = uploadResult.public_id;
           const resourceType = uploadResult.resource_type ?? uploadResourceType;
           const format = uploadResult.format;
+          const version = typeof uploadResult.version === 'number' ? uploadResult.version : undefined;
 
-          filePath = publicId;
+          // Store versioned path when available so raw deliveries can include /v{version}/
+          filePath = version != null ? `v${version}/${publicId}` : publicId;
           fileSize = uploadResult.bytes || req.file.size || 0;
           cloudinaryPublicId = publicId;
           cloudinaryResourceType = resourceType;

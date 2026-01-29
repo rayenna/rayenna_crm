@@ -41,17 +41,20 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-/** Build Cloudinary delivery URL. Use stored resourceType only – never infer from extension. */
+/** Build Cloudinary delivery URL using Cloudinary SDK (no manual string concat). */
 function getCloudinaryDeliveryUrl(
   publicId: string,
   resourceType: 'image' | 'raw' | 'video',
-  format?: string
+  version?: number
 ): string {
-  return cloudinary.url(publicId, {
+  const options: any = {
     resource_type: resourceType,
     secure: true,
-    ...(format ? { format } : {}),
-  });
+  };
+  if (typeof version === 'number') {
+    options.version = version; // ⇒ /.../{resource_type}/upload/v{version}/{publicId}
+  }
+  return cloudinary.url(publicId, options);
 }
 
 // Configure multer storage - use memory storage for Cloudinary (upload_stream), disk storage for local
@@ -262,7 +265,10 @@ router.post(
           const publicId = uploadResult.public_id;
           const resourceType = uploadResult.resource_type ?? 'raw'; // Cloudinary decides: image | raw | video
           const format = uploadResult.format;
-          filePath = publicId;
+          const version = typeof uploadResult.version === 'number' ? uploadResult.version : undefined;
+
+          // Store versioned path when available so raw deliveries can include /v{version}/
+          filePath = version != null ? `v${version}/${publicId}` : publicId;
           fileSize = uploadResult.bytes || req.file.size || 0;
           cloudinaryPublicId = publicId;
           cloudinaryResourceType = resourceType;
@@ -491,66 +497,76 @@ router.get(
         });
       }
 
-      // Cloudinary: redirect to delivery URL. Use stored resourceType only – never infer from extension.
+      // Cloudinary: redirect to delivery URL. Use stored resourceType & version (for raw).
       if (
         useCloudinary &&
         (document.filePath.startsWith('http') ||
           document.filePath.startsWith('v') ||
           document.filePath.startsWith('rayenna_crm'))
       ) {
-        let publicId = document.filePath;
+        let publicId: string = document.filePath;
+        let version: number | undefined;
 
-        if (document.filePath.startsWith('http')) {
-          const urlObj = new URL(document.filePath);
+        const stored = document.filePath;
+        if (stored.startsWith('http')) {
+          const urlObj = new URL(stored);
           const segments = urlObj.pathname.split('/').filter(Boolean);
           const uploadIndex = segments.findIndex((s) => s === 'upload');
           if (uploadIndex !== -1) {
-            let afterUpload = segments.slice(uploadIndex + 1).join('/');
-            afterUpload = afterUpload.replace(/^v\d+\//, '');
-            const lastDot = afterUpload.lastIndexOf('.');
-            publicId = lastDot > afterUpload.lastIndexOf('/') ? afterUpload.substring(0, lastDot) : afterUpload;
+            const afterUpload = segments.slice(uploadIndex + 1); // e.g. ['v1769','rayenna_crm','file-...pdf']
+            const first = afterUpload[0];
+            let pathParts: string[];
+            if (first && /^v\d+$/.test(first)) {
+              version = parseInt(first.slice(1), 10);
+              pathParts = afterUpload.slice(1);
+            } else {
+              pathParts = afterUpload;
+            }
+            let pathAfterUpload = pathParts.join('/');
+            const lastSlash = pathAfterUpload.lastIndexOf('/');
+            const lastDot = pathAfterUpload.lastIndexOf('.');
+            if (lastDot > lastSlash) {
+              publicId = pathAfterUpload.substring(0, lastDot);
+            } else {
+              publicId = pathAfterUpload;
+            }
           }
         } else {
-          publicId = document.filePath.replace(/^v\d+\//, '');
-          const lastSlash = publicId.lastIndexOf('/');
-          const lastDot = publicId.lastIndexOf('.');
+          // stored as "v{version}/publicId" or "publicId"
+          let pathPart = stored;
+          const m = pathPart.match(/^v(\d+)\/(.+)$/);
+          if (m) {
+            version = parseInt(m[1], 10);
+            pathPart = m[2];
+          } else if (pathPart.startsWith('v') && pathPart.includes('/')) {
+            const firstSlash = pathPart.indexOf('/');
+            const maybeVersion = pathPart.substring(1, firstSlash);
+            if (/^\d+$/.test(maybeVersion)) {
+              version = parseInt(maybeVersion, 10);
+              pathPart = pathPart.substring(firstSlash + 1);
+            }
+          }
+          const lastSlash = pathPart.lastIndexOf('/');
+          const lastDot = pathPart.lastIndexOf('.');
           if (lastDot > lastSlash) {
-            publicId = publicId.substring(0, lastDot);
+            publicId = pathPart.substring(0, lastDot);
+          } else {
+            publicId = pathPart;
           }
         }
 
-        // Prefer stored Cloudinary format (e.g. pdf/xlsx). If missing, fall back to filename extension.
-        let format: string | undefined =
-          typeof (document as any).cloudinaryFormat === 'string' ? (document as any).cloudinaryFormat : undefined;
-        if (!format) {
-          const name = (document.fileName || '').toLowerCase();
-          const dot = name.lastIndexOf('.');
-          if (dot > -1 && dot < name.length - 1) {
-            format = name.substring(dot + 1);
-          }
-        }
-        if (format && !/^[a-z0-9]{1,10}$/.test(format)) {
-          format = undefined;
-        }
-
-        // PDFs and office docs must be delivered as raw. Use stored resourceType only for images/videos.
-        const docFormats = ['pdf', 'xlsx', 'xls', 'doc', 'docx'];
-        const isDocFormat = format && docFormats.includes(format.toLowerCase());
-        let resourceType: 'image' | 'raw' | 'video' = 'raw';
-        if (isDocFormat) {
-          resourceType = 'raw';
-        } else if (document.cloudinaryResourceType === 'image' || document.cloudinaryResourceType === 'raw' || document.cloudinaryResourceType === 'video') {
+        // Use stored Cloudinary resource type when available; only fall back to path when missing.
+        let resourceType: 'image' | 'raw' | 'video' = 'image';
+        if (document.cloudinaryResourceType === 'image' || document.cloudinaryResourceType === 'raw' || document.cloudinaryResourceType === 'video') {
           resourceType = document.cloudinaryResourceType;
-        } else if (document.filePath.startsWith('http')) {
-          const pathLower = new URL(document.filePath).pathname.toLowerCase();
+        } else if (stored.startsWith('http')) {
+          const pathLower = new URL(stored).pathname.toLowerCase();
           if (pathLower.includes('/raw/')) resourceType = 'raw';
           else if (pathLower.includes('/video/')) resourceType = 'video';
-          else resourceType = 'image';
-        } else {
-          resourceType = 'image';
         }
 
-        const fileUrl = getCloudinaryDeliveryUrl(publicId, resourceType, format);
+        const urlVersion = resourceType === 'raw' ? version : undefined;
+        const fileUrl = getCloudinaryDeliveryUrl(publicId, resourceType, urlVersion);
         return res.redirect(fileUrl);
       }
 
