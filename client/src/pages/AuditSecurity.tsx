@@ -71,6 +71,20 @@ export default function AuditSecurity () {
     enabled: hasRole([UserRole.ADMIN]),
   })
 
+  const activityIps = Array.from(
+    new Set((logsData?.logs ?? []).map((l: any) => l?.ip).filter(Boolean))
+  ) as string[]
+
+  const { data: ipLocations } = useQuery({
+    queryKey: ['admin', 'audit', 'ip-locations', activityIps.join(',')],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/api/admin/audit/ip-locations?ips=${encodeURIComponent(activityIps.join(','))}`)
+      return res.data as { locations: Record<string, { location: string | null }> }
+    },
+    enabled: hasRole([UserRole.ADMIN]) && activityIps.length > 0,
+    staleTime: 1000 * 60 * 60, // 1h
+  })
+
   const { data: failedLoginsData } = useQuery({
     queryKey: ['admin', 'audit', 'access-logs', 'failure'],
     queryFn: async () => {
@@ -198,28 +212,49 @@ export default function AuditSecurity () {
         ) : logsData?.logs?.length ? (
           <>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
+              <table className="min-w-[1200px] w-full table-fixed divide-y divide-gray-200">
                 <thead>
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">User / Role</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Entity</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Summary</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap w-40">Time</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap w-52">User / Role</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap w-64">E-mail id</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap w-52">Action</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap w-64">IP / Location</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap w-44">Entity</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap w-[28rem]">Summary</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {logsData.logs.map((log: any) => (
                     <tr key={log.id}>
-                      <td className="px-4 py-2 text-sm text-gray-700">
+                      <td className="px-4 py-2 text-sm text-gray-700 whitespace-nowrap align-top">
                         {log.createdAt ? format(new Date(log.createdAt), 'PPp') : '—'}
                       </td>
-                      <td className="px-4 py-2 text-sm text-gray-700">{log.userId} / {log.role}</td>
-                      <td className="px-4 py-2 text-sm text-gray-700">{log.actionType}</td>
-                      <td className="px-4 py-2 text-sm text-gray-700">
+                      <td className="px-4 py-2 text-sm text-gray-700 whitespace-nowrap align-top truncate" title={`${log.userId ?? ''} / ${log.role ?? ''}`}>
+                        {log.userId} / {log.role}
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-700 whitespace-nowrap align-top truncate" title={log.email ?? ''}>
+                        {log.email ?? '—'}
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-700 whitespace-nowrap align-top truncate" title={log.actionType ?? ''}>
+                        {log.actionType}
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-700 whitespace-nowrap align-top truncate" title={log.ip ? `${log.ip}${ipLocations?.locations?.[log.ip]?.location ? ` • ${ipLocations.locations[log.ip].location}` : ''}` : ''}>
+                        {log.ip
+                          ? (
+                              <span>
+                                <span>{log.ip}</span>
+                                {ipLocations?.locations?.[log.ip]?.location ? (
+                                  <span className="text-gray-500"> • {ipLocations.locations[log.ip].location}</span>
+                                ) : null}
+                              </span>
+                            )
+                          : '—'}
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-700 whitespace-nowrap align-top truncate" title={log.entityType && log.entityId ? `${log.entityType}#${log.entityId}` : ''}>
                         {log.entityType && log.entityId ? `${log.entityType}#${log.entityId.slice(0, 8)}` : '—'}
                       </td>
-                      <td className="px-4 py-2 text-sm text-gray-700 max-w-xs truncate" title={log.summary ?? ''}>
+                      <td className="px-4 py-2 text-sm text-gray-700 align-top truncate" title={log.summary ?? ''}>
                         {log.summary ?? '—'}
                       </td>
                     </tr>

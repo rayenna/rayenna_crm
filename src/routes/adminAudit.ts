@@ -21,6 +21,89 @@ function parseDate(s: string | undefined): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
+function isPrivateIp(ip: string): boolean {
+  const v = ip.trim();
+  if (!v) return true;
+  if (v === '127.0.0.1' || v === '::1') return true;
+  if (v.startsWith('10.')) return true;
+  if (v.startsWith('192.168.')) return true;
+  // 172.16.0.0 – 172.31.255.255
+  if (v.startsWith('172.')) {
+    const second = Number(v.split('.')[1]);
+    if (!Number.isNaN(second) && second >= 16 && second <= 31) return true;
+  }
+  if (v.startsWith('169.254.')) return true; // link-local
+  if (v.startsWith('fc') || v.startsWith('fd')) return true; // IPv6 ULA (very rough)
+  return false;
+}
+
+type IpLocation = { ip: string; location: string | null };
+const ipLocationCache = new Map<string, { v: IpLocation; expiresAt: number }>();
+const IP_LOCATION_CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24h
+const IP_LOCATION_CACHE_MAX = 1500;
+
+function cacheGet(ip: string): IpLocation | null {
+  const hit = ipLocationCache.get(ip);
+  if (!hit) return null;
+  if (hit.expiresAt < Date.now()) {
+    ipLocationCache.delete(ip);
+    return null;
+  }
+  return hit.v;
+}
+
+function cacheSet(ip: string, v: IpLocation): void {
+  if (ipLocationCache.size >= IP_LOCATION_CACHE_MAX) {
+    // cheap eviction: remove first inserted item
+    const firstKey = ipLocationCache.keys().next().value as string | undefined;
+    if (firstKey) ipLocationCache.delete(firstKey);
+  }
+  ipLocationCache.set(ip, { v, expiresAt: Date.now() + IP_LOCATION_CACHE_TTL_MS });
+}
+
+function toLocationString(city?: string | null, region?: string | null, country?: string | null): string | null {
+  const parts = [city, region, country].map((x) => (x ? String(x).trim() : '')).filter(Boolean);
+  return parts.length ? parts.join(', ') : null;
+}
+
+async function lookupIpLocation(ip: string): Promise<IpLocation> {
+  const cached = cacheGet(ip);
+  if (cached) return cached;
+
+  if (isPrivateIp(ip)) {
+    const v = { ip, location: 'Private network' };
+    cacheSet(ip, v);
+    return v;
+  }
+
+  // Best-effort public IP geolocation. If it fails, we return null location.
+  try {
+    const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, {
+      headers: { accept: 'application/json' },
+    });
+    if (!res.ok) {
+      const v = { ip, location: null };
+      cacheSet(ip, v);
+      return v;
+    }
+    const data: any = await res.json();
+    // ipapi.co returns { error: true, reason, message } on failure
+    if (data?.error) {
+      const v = { ip, location: null };
+      cacheSet(ip, v);
+      return v;
+    }
+    const location = toLocationString(data?.city, data?.region, data?.country_name) ?? null;
+    const v = { ip, location };
+    cacheSet(ip, v);
+    return v;
+  } catch {
+    const v = { ip, location: null };
+    cacheSet(ip, v);
+    return v;
+  }
+}
+
 /**
  * GET /api/admin/audit/logs
  * Paginated security audit logs. Filters: actionType, entityType, userId, dateFrom, dateTo.
@@ -84,8 +167,18 @@ router.get(
         prisma.securityAuditLog.count({ where }),
       ]);
 
+      // Enrich with email (read-only) for UI display.
+      const userIds = Array.from(new Set(logs.map((l) => l.userId).filter(Boolean)));
+      const users = userIds.length
+        ? await prisma.user.findMany({
+            where: { id: { in: userIds } },
+            select: { id: true, email: true },
+          })
+        : [];
+      const emailByUserId = new Map(users.map((u) => [u.id, u.email]));
+
       res.json({
-        logs,
+        logs: logs.map((l) => ({ ...l, email: emailByUserId.get(l.userId) ?? null })),
         pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
       });
     } catch (e) {
@@ -202,6 +295,46 @@ router.get(
       });
     } catch (e) {
       res.status(500).json({ error: 'Failed to fetch access logs' });
+    }
+  }
+);
+
+/**
+ * GET /api/admin/audit/ip-locations?ips=1.1.1.1,8.8.8.8
+ * Best-effort IP -> location resolution (cached). Admin-only.
+ */
+router.get(
+  '/ip-locations',
+  authenticate,
+  authorize(UserRole.ADMIN),
+  [query('ips').optional().isString()],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const ipsRaw = typeof req.query.ips === 'string' ? req.query.ips : '';
+      const ips = Array.from(
+        new Set(
+          ipsRaw
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .slice(0, 60)
+        )
+      );
+
+      if (!ips.length) return res.json({ locations: {} });
+
+      const results = await Promise.all(ips.map((ip) => lookupIpLocation(ip)));
+      const locations: Record<string, { location: string | null }> = {};
+      for (const r of results) locations[r.ip] = { location: r.location };
+
+      return res.json({ locations });
+    } catch {
+      return res.status(500).json({ error: 'Failed to resolve IP locations' });
     }
   }
 );
