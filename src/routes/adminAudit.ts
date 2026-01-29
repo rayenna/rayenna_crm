@@ -7,6 +7,7 @@ import { query, validationResult } from 'express-validator';
 import { Prisma, UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
+import PDFDocument from 'pdfkit';
 
 const router = express.Router();
 
@@ -14,6 +15,7 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 const MAX_DAYS_RANGE = 93; // ~3 months
+const MAX_EXPORT_LIMIT = 5000;
 
 const ACTION_TYPES_FOR_DISTRIBUTION = [
   'login',
@@ -129,6 +131,41 @@ function ymd(d: Date): string {
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
+}
+
+type ExportWhereInput = { where: any; dateFrom: Date | null; dateTo: Date | null };
+
+function buildLogsWhereFromQuery(req: Request): ExportWhereInput {
+  const actionType = typeof req.query.actionType === 'string' ? req.query.actionType.trim() || undefined : undefined;
+  const entityType = typeof req.query.entityType === 'string' ? req.query.entityType.trim() || undefined : undefined;
+  const dateFrom = parseDate(req.query.dateFrom as string);
+  const dateTo = parseDate(req.query.dateTo as string);
+  const where: any = {};
+  if (actionType) where.actionType = actionType;
+  if (entityType) where.entityType = entityType;
+  if (dateFrom || dateTo) {
+    where.createdAt = {};
+    if (dateFrom) where.createdAt.gte = dateFrom;
+    if (dateTo) {
+      const end = new Date(dateTo);
+      end.setHours(23, 59, 59, 999);
+      where.createdAt.lte = end;
+    }
+  }
+  if (dateFrom && dateTo) {
+    const days = (dateTo.getTime() - dateFrom.getTime()) / (24 * 60 * 60 * 1000);
+    if (days > MAX_DAYS_RANGE) {
+      throw new Error(`Date range must not exceed ${MAX_DAYS_RANGE} days`);
+    }
+  }
+  return { where, dateFrom, dateTo };
+}
+
+function escapeCsvCell(s: string | null | undefined): string {
+  if (s == null) return '';
+  const t = String(s);
+  if (/[",\n\r]/.test(t)) return `"${t.replace(/"/g, '""')}"`;
+  return t;
 }
 
 /**
@@ -429,6 +466,234 @@ router.get(
     }
   }
 );
+
+/**
+ * GET /api/admin/audit/export/csv?dateFrom=&dateTo=&actionType=&entityType=
+ * Date-range export of security audit logs as CSV. Admin-only.
+ */
+router.get(
+  '/export/csv',
+  authenticate,
+  authorize(UserRole.ADMIN),
+  [
+    query('dateFrom').optional().isISO8601(),
+    query('dateTo').optional().isISO8601(),
+    query('actionType').optional().isString(),
+    query('entityType').optional().isString(),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+      const { where } = buildLogsWhereFromQuery(req);
+      const logs = await prisma.securityAuditLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: MAX_EXPORT_LIMIT,
+      });
+      const userIds = Array.from(new Set(logs.map((l) => l.userId).filter(Boolean)));
+      const users = userIds.length
+        ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, email: true } })
+        : [];
+      const emailByUserId = new Map(users.map((u) => [u.id, u.email]));
+      const header = 'Time,User ID,Role,Email,Action,Entity Type,Entity ID,Summary,IP,User Agent';
+      const rows = logs.map((l) => {
+        const email = emailByUserId.get(l.userId) ?? '';
+        const time = l.createdAt ? new Date(l.createdAt).toISOString() : '';
+        return [
+          escapeCsvCell(time),
+          escapeCsvCell(l.userId),
+          escapeCsvCell(l.role),
+          escapeCsvCell(email),
+          escapeCsvCell(l.actionType),
+          escapeCsvCell(l.entityType),
+          escapeCsvCell(l.entityId),
+          escapeCsvCell(l.summary),
+          escapeCsvCell(l.ip),
+          escapeCsvCell(l.userAgent),
+        ].join(',');
+      });
+      const csv = [header, ...rows].join('\r\n');
+      const filename = `audit-logs-${ymd(new Date())}.csv`;
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send('\uFEFF' + csv);
+    } catch (e: any) {
+      if (e?.message?.includes('Date range')) return res.status(400).json({ error: e.message });
+      res.status(500).json({ error: 'Failed to export CSV' });
+    }
+  }
+);
+
+/**
+ * GET /api/admin/audit/export/pdf?dateFrom=&dateTo=&actionType=&entityType=
+ * Date-range export of security audit logs as PDF. Admin-only.
+ */
+router.get(
+  '/export/pdf',
+  authenticate,
+  authorize(UserRole.ADMIN),
+  [
+    query('dateFrom').optional().isISO8601(),
+    query('dateTo').optional().isISO8601(),
+    query('actionType').optional().isString(),
+    query('entityType').optional().isString(),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+      const { where } = buildLogsWhereFromQuery(req);
+      const logs = await prisma.securityAuditLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: MAX_EXPORT_LIMIT,
+      });
+      const userIds = Array.from(new Set(logs.map((l) => l.userId).filter(Boolean)));
+      const users = userIds.length
+        ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, email: true } })
+        : [];
+      const emailByUserId = new Map(users.map((u) => [u.id, u.email]));
+      const rows = logs.map((l) => ({
+        time: l.createdAt ? new Date(l.createdAt).toISOString() : '',
+        userId: l.userId,
+        role: l.role,
+        email: emailByUserId.get(l.userId) ?? '',
+        actionType: l.actionType,
+        entity: l.entityType && l.entityId ? `${l.entityType}#${(l.entityId as string).slice(0, 8)}` : '',
+        summary: (l.summary ?? '').slice(0, 80),
+        ip: l.ip ?? '',
+      }));
+      const buf = await buildAuditPdfBuffer(rows, false);
+      const filename = `audit-logs-${ymd(new Date())}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(buf);
+    } catch (e: any) {
+      if (e?.message?.includes('Date range')) return res.status(400).json({ error: e.message });
+      res.status(500).json({ error: 'Failed to export PDF' });
+    }
+  }
+);
+
+/**
+ * GET /api/admin/audit/export/signed-pdf?dateFrom=&dateTo=&actionType=&entityType=
+ * Signed audit export (PDF with footer). Admin-only.
+ */
+router.get(
+  '/export/signed-pdf',
+  authenticate,
+  authorize(UserRole.ADMIN),
+  [
+    query('dateFrom').optional().isISO8601(),
+    query('dateTo').optional().isISO8601(),
+    query('actionType').optional().isString(),
+    query('entityType').optional().isString(),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+      const { where } = buildLogsWhereFromQuery(req);
+      const logs = await prisma.securityAuditLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: MAX_EXPORT_LIMIT,
+      });
+      const userIds = Array.from(new Set(logs.map((l) => l.userId).filter(Boolean)));
+      const users = userIds.length
+        ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, email: true } })
+        : [];
+      const emailByUserId = new Map(users.map((u) => [u.id, u.email]));
+      const rows = logs.map((l) => ({
+        time: l.createdAt ? new Date(l.createdAt).toISOString() : '',
+        userId: l.userId,
+        role: l.role,
+        email: emailByUserId.get(l.userId) ?? '',
+        actionType: l.actionType,
+        entity: l.entityType && l.entityId ? `${l.entityType}#${(l.entityId as string).slice(0, 8)}` : '',
+        summary: (l.summary ?? '').slice(0, 80),
+        ip: l.ip ?? '',
+      }));
+      const signed = true;
+      const buf = await buildAuditPdfBuffer(rows, signed, req.user?.email);
+      const filename = `signed-audit-export-${ymd(new Date())}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(buf);
+    } catch (e: any) {
+      if (e?.message?.includes('Date range')) return res.status(400).json({ error: e.message });
+      res.status(500).json({ error: 'Failed to export signed PDF' });
+    }
+  }
+);
+
+function buildAuditPdfBuffer(
+  rows: Array<{ time: string; userId: string; role: string; email: string; actionType: string; entity: string; summary: string; ip: string }>,
+  signed: boolean,
+  signedByEmail?: string
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ size: 'A4', margin: 40, info: { Title: 'Audit & Security Export', Author: 'Rayenna CRM' } });
+      const chunks: Buffer[] = [];
+      doc.on('data', (chunk) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+      const darkGray = '#374151';
+      const lightGray = '#6b7280';
+      const colWidths = [70, 50, 42, 52, 50, 38, 90];
+      const headers = ['Time', 'User', 'Role', 'Email', 'Action', 'Entity', 'Summary'];
+
+      function drawHeader(atY: number) {
+        doc.font('Helvetica-Bold').fontSize(8).fillColor(darkGray);
+        doc.text(headers[0], 40, atY);
+        doc.text(headers[1], 40 + colWidths[0], atY);
+        doc.text(headers[2], 40 + colWidths[0] + colWidths[1], atY);
+        doc.text(headers[3], 40 + colWidths[0] + colWidths[1] + colWidths[2], atY);
+        doc.text(headers[4], 40 + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], atY);
+        doc.text(headers[5], 40 + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4], atY);
+        doc.text(headers[6], 40 + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + colWidths[5], atY);
+      }
+
+      doc.fillColor(darkGray).fontSize(16).font('Helvetica-Bold').text('Audit & Security — Activity Export', 40, 40);
+      doc.fillColor(lightGray).fontSize(10).font('Helvetica').text(`Generated: ${new Date().toISOString()} | Total rows: ${rows.length}`, 40, 62);
+      let y = 90;
+      drawHeader(y);
+      y += 14;
+      doc.font('Helvetica').fillColor(lightGray);
+      for (const r of rows) {
+        if (y > 700) {
+          doc.addPage();
+          y = 40;
+          drawHeader(y);
+          y += 14;
+        }
+        doc.fontSize(7);
+        doc.text(r.time.slice(0, 19), 40, y, { width: colWidths[0] });
+        doc.text((r.userId ?? '').slice(0, 8), 40 + colWidths[0], y, { width: colWidths[1] });
+        doc.text((r.role ?? '').slice(0, 12), 40 + colWidths[0] + colWidths[1], y, { width: colWidths[2] });
+        doc.text((r.email ?? '').slice(0, 14), 40 + colWidths[0] + colWidths[1] + colWidths[2], y, { width: colWidths[3] });
+        doc.text((r.actionType ?? '').slice(0, 14), 40 + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], y, { width: colWidths[4] });
+        doc.text((r.entity ?? '').slice(0, 10), 40 + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4], y, { width: colWidths[5] });
+        doc.text((r.summary ?? '').slice(0, 28), 40 + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + colWidths[5], y, { width: colWidths[6] });
+        y += 12;
+      }
+      if (signed) {
+        const footerY = doc.page.height - 50;
+        doc.fillColor(lightGray).fontSize(9).font('Helvetica').text(
+          `Signed audit export — Generated on ${new Date().toISOString()} by ${signedByEmail ?? 'Admin'}. For official use.`,
+          40,
+          footerY,
+          { align: 'center', width: doc.page.width - 80 }
+        );
+      }
+      doc.end();
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
 
 /**
  * GET /api/admin/audit/ip-locations?ips=1.1.1.1,8.8.8.8

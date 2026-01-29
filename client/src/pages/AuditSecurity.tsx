@@ -43,6 +43,24 @@ const ENTITY_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: 'Proposal', label: 'Proposal' },
 ]
 
+function buildExportParams(dateFrom: string, dateTo: string, actionType: string, entityType: string): URLSearchParams {
+  const p = new URLSearchParams()
+  if (dateFrom) p.set('dateFrom', dateFrom)
+  if (dateTo) p.set('dateTo', dateTo)
+  if (actionType) p.set('actionType', actionType)
+  if (entityType) p.set('entityType', entityType)
+  return p
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export default function AuditSecurity () {
   const { hasRole } = useAuth()
   const [page, setPage] = useState(1)
@@ -51,6 +69,7 @@ export default function AuditSecurity () {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [trendDays, setTrendDays] = useState<(typeof TREND_DAYS_OPTIONS)[number]>(7)
+  const [exporting, setExporting] = useState<'csv' | 'pdf' | 'signed' | null>(null)
 
   const actionLabelByValue = new Map(ACTION_TYPE_OPTIONS.filter(o => o.value).map((o) => [o.value, o.label]))
 
@@ -159,6 +178,48 @@ export default function AuditSecurity () {
     }
     return Object.values(byAction).sort((x: any, y: any) => (y.total ?? 0) - (x.total ?? 0))
   })()
+
+  const handleExportCsv = async () => {
+    setExporting('csv')
+    try {
+      const params = buildExportParams(dateFrom, dateTo, actionType, entityType)
+      const res = await axiosInstance.get(`/api/admin/audit/export/csv?${params.toString()}`, { responseType: 'blob' })
+      const name = res.headers['content-disposition']?.match(/filename="?([^"]+)"?/)?.[1] ?? `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`
+      downloadBlob(res.data, name)
+    } catch {
+      // Error handled by axios / toast if configured
+    } finally {
+      setExporting(null)
+    }
+  }
+
+  const handleExportPdf = async () => {
+    setExporting('pdf')
+    try {
+      const params = buildExportParams(dateFrom, dateTo, actionType, entityType)
+      const res = await axiosInstance.get(`/api/admin/audit/export/pdf?${params.toString()}`, { responseType: 'blob' })
+      const name = res.headers['content-disposition']?.match(/filename="?([^"]+)"?/)?.[1] ?? `audit-logs-${new Date().toISOString().slice(0, 10)}.pdf`
+      downloadBlob(res.data, name)
+    } catch {
+      //
+    } finally {
+      setExporting(null)
+    }
+  }
+
+  const handleExportSignedPdf = async () => {
+    setExporting('signed')
+    try {
+      const params = buildExportParams(dateFrom, dateTo, actionType, entityType)
+      const res = await axiosInstance.get(`/api/admin/audit/export/signed-pdf?${params.toString()}`, { responseType: 'blob' })
+      const name = res.headers['content-disposition']?.match(/filename="?([^"]+)"?/)?.[1] ?? `signed-audit-export-${new Date().toISOString().slice(0, 10)}.pdf`
+      downloadBlob(res.data, name)
+    } catch {
+      //
+    } finally {
+      setExporting(null)
+    }
+  }
 
   if (!hasRole([UserRole.ADMIN])) {
     return (
@@ -283,6 +344,43 @@ export default function AuditSecurity () {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Export audit logs — date-range export, CSV / PDF / Signed audit export */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-gray-900 mb-2">Export audit logs</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Date-range export uses the date range and filters set in the Activity timeline below. Set optional date range and filters there, then choose format.
+        </p>
+        <div className="flex flex-wrap gap-3 items-center">
+          <button
+            type="button"
+            disabled={!!exporting}
+            onClick={handleExportCsv}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {exporting === 'csv' ? 'Exporting…' : 'Export CSV'}
+          </button>
+          <button
+            type="button"
+            disabled={!!exporting}
+            onClick={handleExportPdf}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-700 text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {exporting === 'pdf' ? 'Exporting…' : 'Export PDF'}
+          </button>
+          <button
+            type="button"
+            disabled={!!exporting}
+            onClick={handleExportSignedPdf}
+            className="px-4 py-2 rounded-lg text-sm font-medium border-2 border-primary-600 text-primary-700 hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {exporting === 'signed' ? 'Exporting…' : 'Signed audit export'}
+          </button>
+        </div>
+        <p className="mt-3 text-xs text-gray-500">
+          Signed audit export includes a footer: generated date and exporter email. For official use.
+        </p>
       </div>
 
       {/* Failed login trend / recent failures */}
