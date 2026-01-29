@@ -222,24 +222,26 @@ export default function AuditSecurity () {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="border border-gray-200 rounded-lg p-4">
             <div className="text-sm font-semibold text-gray-900 mb-2">Login activity trend</div>
-            <div className="h-64">
+            <div className="h-64 overflow-x-auto">
               {loginTrendLoading ? (
                 <p className="text-sm text-gray-500">Loading…</p>
               ) : loginTrendChartData.length ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={loginTrendChartData} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="label" tickMargin={8} />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip
-                      formatter={(value: any) => [value, 'Count']}
-                      labelFormatter={(label: any, payload: any) => (payload?.[0]?.payload?.date ? payload[0].payload.date : label)}
-                    />
-                    <Legend />
-                    <Line type="monotone" dataKey="success" name="Successful logins" stroke="#16a34a" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="failure" name="Failed logins" stroke="#dc2626" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
+                <div className="min-w-[640px] h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={loginTrendChartData} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="label" tickMargin={8} />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip
+                        formatter={(value: any) => [value, 'Count']}
+                        labelFormatter={(label: any, payload: any) => (payload?.[0]?.payload?.date ? payload[0].payload.date : label)}
+                      />
+                      <Legend />
+                      <Line type="monotone" dataKey="success" name="Successful logins" stroke="#16a34a" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="failure" name="Failed logins" stroke="#dc2626" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               ) : (
                 <p className="text-sm text-gray-500">No login activity in this range.</p>
               )}
