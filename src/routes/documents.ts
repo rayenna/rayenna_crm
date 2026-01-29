@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import axios from 'axios';
 import { UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
@@ -45,8 +46,7 @@ if (!fs.existsSync(uploadsDir)) {
 function getCloudinaryDeliveryUrl(
   publicId: string,
   resourceType: 'image' | 'raw' | 'video',
-  version?: number,
-  attachmentFilename?: string
+  version?: number
 ): string {
   const options: any = {
     resource_type: resourceType,
@@ -56,11 +56,6 @@ function getCloudinaryDeliveryUrl(
   if (typeof version === 'number') {
     // Ensure raw assets use versioned delivery URLs: /{type}/upload/v{version}/{publicId}
     options.version = version;
-  }
-
-  // For explicit downloads, let Cloudinary set Content-Disposition & filename via fl_attachment
-  if (attachmentFilename) {
-    options.flags = `attachment:${attachmentFilename}`;
   }
 
   return cloudinary.url(publicId, options);
@@ -577,8 +572,30 @@ router.get(
         }
 
         const urlVersion = resourceType === 'raw' ? version : undefined;
-        const attachmentName = isDownload ? document.fileName : undefined;
-        const fileUrl = getCloudinaryDeliveryUrl(publicId, resourceType, urlVersion, attachmentName);
+        const fileUrl = getCloudinaryDeliveryUrl(publicId, resourceType, urlVersion);
+
+        // For explicit download, proxy the file so we can set Content-Disposition with correct filename/extension.
+        if (isDownload) {
+          const axiosResponse = await axios.get(fileUrl, { responseType: 'stream' });
+          res.setHeader(
+            'Content-Type',
+            document.fileType || 'application/octet-stream'
+          );
+          res.setHeader(
+            'Content-Disposition',
+            `attachment; filename="${encodeURIComponent(document.fileName)}"`
+          );
+          if (axiosResponse.headers['content-length']) {
+            res.setHeader('Content-Length', axiosResponse.headers['content-length']);
+          }
+          axiosResponse.data.pipe(res);
+          axiosResponse.data.on('error', (err: Error) => {
+            console.error('Error proxying Cloudinary download:', err);
+            if (!res.headersSent) res.status(500).json({ error: 'Download failed' });
+          });
+          return;
+        }
+
         return res.redirect(fileUrl);
       }
 
