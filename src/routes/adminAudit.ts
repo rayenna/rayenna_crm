@@ -4,7 +4,7 @@
  */
 import express, { Request, Response } from 'express';
 import { query, validationResult } from 'express-validator';
-import { UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
 
@@ -14,6 +14,19 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 const MAX_DAYS_RANGE = 93; // ~3 months
+
+const ACTION_TYPES_FOR_DISTRIBUTION = [
+  'login',
+  'password_reset_initiated',
+  'password_reset_completed',
+  'user_created',
+  'user_role_changed',
+  'project_created',
+  'project_status_changed',
+  'support_ticket_created',
+  'support_ticket_closed',
+  'proposal_generated',
+] as const;
 
 function parseDate(s: string | undefined): Date | null {
   if (!s || typeof s !== 'string') return null;
@@ -102,6 +115,20 @@ async function lookupIpLocation(ip: string): Promise<IpLocation> {
     cacheSet(ip, v);
     return v;
   }
+}
+
+function startOfDay(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function ymd(d: Date): string {
+  // Always return YYYY-MM-DD
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 /**
@@ -295,6 +322,110 @@ router.get(
       });
     } catch (e) {
       res.status(500).json({ error: 'Failed to fetch access logs' });
+    }
+  }
+);
+
+/**
+ * GET /api/admin/audit/login-trend?days=7|30|90
+ * Time-series of login_success and login_failure counts by date.
+ */
+router.get(
+  '/login-trend',
+  authenticate,
+  authorize(UserRole.ADMIN),
+  [query('days').optional().isInt({ min: 1, max: 90 }).toInt()],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const days = Math.min(Number(req.query.days) || 7, 90);
+      const today = startOfDay(new Date());
+      const since = startOfDay(new Date());
+      since.setDate(since.getDate() - (days - 1));
+
+      // Postgres: group by date-truncated createdAt.
+      const rows = await prisma.$queryRaw<Array<{ day: Date; actionType: string; count: bigint }>>`
+        SELECT date_trunc('day', "createdAt")::date AS day,
+               "actionType" AS "actionType",
+               COUNT(*)::bigint AS count
+        FROM access_logs
+        WHERE "createdAt" >= ${since}
+          AND "createdAt" < ${new Date(today.getTime() + 24 * 60 * 60 * 1000)}
+          AND "actionType" IN ('login_success', 'login_failure')
+        GROUP BY 1, 2
+        ORDER BY 1 ASC;
+      `;
+
+      const byDay: Record<string, { success: number; failure: number }> = {};
+      for (let i = 0; i < days; i++) {
+        const d = new Date(since);
+        d.setDate(since.getDate() + i);
+        byDay[ymd(d)] = { success: 0, failure: 0 };
+      }
+
+      for (const r of rows) {
+        const key = ymd(new Date(r.day));
+        const n = Number(r.count ?? 0);
+        if (!byDay[key]) byDay[key] = { success: 0, failure: 0 };
+        if (r.actionType === 'login_success') byDay[key].success += n;
+        if (r.actionType === 'login_failure') byDay[key].failure += n;
+      }
+
+      const series = Object.entries(byDay)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, v]) => ({ date, success: v.success, failure: v.failure }));
+
+      return res.json({ since: since.toISOString(), days, series });
+    } catch {
+      return res.status(500).json({ error: 'Failed to fetch login trend' });
+    }
+  }
+);
+
+/**
+ * GET /api/admin/audit/action-distribution?days=7|30|90
+ * Counts of security audit events grouped by actionType and entityType (for stacked bars).
+ */
+router.get(
+  '/action-distribution',
+  authenticate,
+  authorize(UserRole.ADMIN),
+  [query('days').optional().isInt({ min: 1, max: 90 }).toInt()],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const days = Math.min(Number(req.query.days) || 7, 90);
+      const since = startOfDay(new Date());
+      since.setDate(since.getDate() - (days - 1));
+
+      const rows = await prisma.$queryRaw<Array<{ actionType: string; entityType: string | null; count: bigint }>>`
+        SELECT "actionType" AS "actionType",
+               COALESCE("entityType", 'Other') AS "entityType",
+               COUNT(*)::bigint AS count
+        FROM security_audit_logs
+        WHERE "createdAt" >= ${since}
+          AND "actionType" IN (${Prisma.join(ACTION_TYPES_FOR_DISTRIBUTION as unknown as string[])})
+        GROUP BY 1, 2
+        ORDER BY 1 ASC;
+      `;
+
+      const series = rows.map((r) => ({
+        actionType: r.actionType,
+        entityType: r.entityType ?? 'Other',
+        count: Number(r.count ?? 0),
+      }));
+
+      return res.json({ since: since.toISOString(), days, series });
+    } catch {
+      return res.status(500).json({ error: 'Failed to fetch action distribution' });
     }
   }
 );

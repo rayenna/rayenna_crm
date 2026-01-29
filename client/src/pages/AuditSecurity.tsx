@@ -4,9 +4,22 @@ import axiosInstance from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import { format } from 'date-fns'
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  BarChart,
+  Bar,
+} from 'recharts'
 
 const PAGE_SIZE = 20
 const SUMMARY_DAYS = 7
+const TREND_DAYS_OPTIONS = [7, 30, 90] as const
 
 const ACTION_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: '', label: 'All actions' },
@@ -37,6 +50,9 @@ export default function AuditSecurity () {
   const [entityType, setEntityType] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [trendDays, setTrendDays] = useState<(typeof TREND_DAYS_OPTIONS)[number]>(7)
+
+  const actionLabelByValue = new Map(ACTION_TYPE_OPTIONS.filter(o => o.value).map((o) => [o.value, o.label]))
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['admin', 'audit', 'security-summary', SUMMARY_DAYS],
@@ -50,6 +66,24 @@ export default function AuditSecurity () {
         auditByAction: { actionType: string; count: number }[]
         accessByAction: { actionType: string; count: number }[]
       }
+    },
+    enabled: hasRole([UserRole.ADMIN]),
+  })
+
+  const { data: loginTrendData, isLoading: loginTrendLoading } = useQuery({
+    queryKey: ['admin', 'audit', 'login-trend', trendDays],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/api/admin/audit/login-trend?days=${trendDays}`)
+      return res.data as { since: string; days: number; series: { date: string; success: number; failure: number }[] }
+    },
+    enabled: hasRole([UserRole.ADMIN]),
+  })
+
+  const { data: actionDistributionData, isLoading: actionDistributionLoading } = useQuery({
+    queryKey: ['admin', 'audit', 'action-distribution', trendDays],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/api/admin/audit/action-distribution?days=${trendDays}`)
+      return res.data as { since: string; days: number; series: { actionType: string; entityType: string; count: number }[] }
     },
     enabled: hasRole([UserRole.ADMIN]),
   })
@@ -96,6 +130,36 @@ export default function AuditSecurity () {
     enabled: hasRole([UserRole.ADMIN]),
   })
 
+  const loginTrendChartData = (loginTrendData?.series ?? []).map((p) => ({
+    ...p,
+    label: p.date ? format(new Date(`${p.date}T00:00:00`), 'MMM d') : p.date,
+  }))
+
+  const entityKeys = ['User', 'Project', 'SupportTicket', 'Proposal', 'Other'] as const
+  const entityColors: Record<(typeof entityKeys)[number], string> = {
+    User: '#2563eb', // blue-600
+    Project: '#16a34a', // green-600
+    SupportTicket: '#f59e0b', // amber-500
+    Proposal: '#7c3aed', // violet-600
+    Other: '#6b7280', // gray-500
+  }
+
+  const actionDistributionChartData = (() => {
+    const rows = actionDistributionData?.series ?? []
+    const byAction: Record<string, any> = {}
+    for (const r of rows) {
+      const a = r.actionType
+      const entity = (entityKeys.includes(r.entityType as any) ? r.entityType : 'Other') as (typeof entityKeys)[number]
+      if (!byAction[a]) {
+        byAction[a] = { actionType: a, actionLabel: actionLabelByValue.get(a) ?? a, total: 0 }
+        for (const k of entityKeys) byAction[a][k] = 0
+      }
+      byAction[a][entity] += r.count ?? 0
+      byAction[a].total += r.count ?? 0
+    }
+    return Object.values(byAction).sort((x: any, y: any) => (y.total ?? 0) - (x.total ?? 0))
+  })()
+
   if (!hasRole([UserRole.ADMIN])) {
     return (
       <div className="px-4 py-6 sm:px-0">
@@ -133,6 +197,88 @@ export default function AuditSecurity () {
           <div className="text-sm font-medium text-gray-500">Access events (last {SUMMARY_DAYS}d)</div>
           <div className="mt-1 text-2xl font-bold text-primary-700">
             {summaryLoading ? '…' : (summary?.accessByAction?.reduce((s, x) => s + x.count, 0) ?? 0)}
+          </div>
+        </div>
+      </div>
+
+      {/* Charts */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Security insights</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">Range</span>
+            <select
+              className="border border-gray-300 rounded-md px-2 py-1.5 text-sm bg-white"
+              value={trendDays}
+              onChange={(e) => setTrendDays(Number(e.target.value) as any)}
+            >
+              {TREND_DAYS_OPTIONS.map((d) => (
+                <option key={d} value={d}>Last {d} days</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="border border-gray-200 rounded-lg p-4">
+            <div className="text-sm font-semibold text-gray-900 mb-2">Login activity trend</div>
+            <div className="h-64">
+              {loginTrendLoading ? (
+                <p className="text-sm text-gray-500">Loading…</p>
+              ) : loginTrendChartData.length ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={loginTrendChartData} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="label" tickMargin={8} />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip
+                      formatter={(value: any) => [value, 'Count']}
+                      labelFormatter={(label: any, payload: any) => (payload?.[0]?.payload?.date ? payload[0].payload.date : label)}
+                    />
+                    <Legend />
+                    <Line type="monotone" dataKey="success" name="Successful logins" stroke="#16a34a" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="failure" name="Failed logins" stroke="#dc2626" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-sm text-gray-500">No login activity in this range.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="border border-gray-200 rounded-lg p-4">
+            <div className="text-sm font-semibold text-gray-900 mb-2">Action distribution</div>
+            <div className="overflow-x-auto">
+              <div className="h-64 min-w-[640px]">
+                {actionDistributionLoading ? (
+                  <p className="text-sm text-gray-500">Loading…</p>
+                ) : actionDistributionChartData.length ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={actionDistributionChartData} margin={{ top: 8, right: 12, left: 0, bottom: 48 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="actionLabel"
+                        interval={0}
+                        angle={-30}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Legend />
+                      {entityKeys.map((k) => (
+                        <Bar key={k} dataKey={k} stackId="a" fill={entityColors[k]} />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-sm text-gray-500">No audit events in this range.</p>
+                )}
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-gray-500">
+              Stacked by entity type. Action types match the “All actions” filter list.
+            </p>
           </div>
         </div>
       </div>
