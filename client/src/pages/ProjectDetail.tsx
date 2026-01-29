@@ -604,8 +604,7 @@ const ProjectDetail = () => {
                     <th className="px-3 py-2 text-left font-semibold text-gray-700 w-16">Sl No.</th>
                     <th className="px-3 py-2 text-left font-semibold text-gray-700">File Name</th>
                     <th className="px-3 py-2 text-left font-semibold text-gray-700">Description</th>
-                    <th className="px-3 py-2 text-center font-semibold text-gray-700">View</th>
-                    <th className="px-3 py-2 text-center font-semibold text-gray-700">Download</th>
+                    <th className="px-3 py-2 text-center font-semibold text-gray-700">View/Download</th>
                     <th className="px-3 py-2 text-center font-semibold text-gray-700">Delete</th>
                   </tr>
                 </thead>
@@ -647,11 +646,6 @@ const ProjectDetail = () => {
                     </td>
                     <td className="px-3 py-2 text-center align-middle">
                       {canView && (
-                        <DocumentViewButton documentId={doc.id} />
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-center align-middle">
-                      {canView && (
                         <DocumentDownloadButton documentId={doc.id} />
                       )}
                     </td>
@@ -679,76 +673,7 @@ const ProjectDetail = () => {
   )
 }
 
-// Document View Button Component
-const DocumentViewButton = ({ documentId }: { documentId: string }) => {
-  const { token } = useAuth()
-  const [viewing, setViewing] = useState(false)
-
-  const handleView = async () => {
-    if (!token) {
-      toast.error('Authentication required')
-      return
-    }
-
-    setViewing(true)
-    try {
-      const response = await axiosInstance.get<{ url: string }>(
-        `/api/documents/${documentId}/signed-url`,
-        {
-          params: { download: false },
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      )
-
-      const url = response.data?.url
-      if (!url) {
-        toast.error('Failed to generate document link')
-        setViewing(false)
-        return
-      }
-
-      window.open(url, '_blank')
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to open file')
-    } finally {
-      setViewing(false)
-    }
-  }
-
-  return (
-    <button
-      onClick={handleView}
-      disabled={viewing}
-      className="text-primary-600 hover:text-primary-800 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-      title="View file"
-    >
-      <svg
-        className="w-5 h-5"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-        />
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-        />
-      </svg>
-    </button>
-  )
-}
-
-// Document Download Button Component
+// Document Download Button Component (View/Download - opens download with correct filename)
 const DocumentDownloadButton = ({ documentId }: { documentId: string }) => {
   const { token } = useAuth()
   const [downloading, setDownloading] = useState(false)
@@ -791,7 +716,7 @@ const DocumentDownloadButton = ({ documentId }: { documentId: string }) => {
       onClick={handleDownload}
       disabled={downloading}
       className="text-primary-600 hover:text-primary-800 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-      title="Download file"
+      title="View/Download file"
     >
       <svg
         className="w-5 h-5"
