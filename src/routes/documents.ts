@@ -41,19 +41,28 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-/** Build Cloudinary delivery URL using Cloudinary SDK (no manual string concat). */
+/** Build Cloudinary delivery URL via Cloudinary SDK (no manual string concatenation). */
 function getCloudinaryDeliveryUrl(
   publicId: string,
   resourceType: 'image' | 'raw' | 'video',
-  version?: number
+  version?: number,
+  attachmentFilename?: string
 ): string {
   const options: any = {
     resource_type: resourceType,
     secure: true,
   };
+
   if (typeof version === 'number') {
-    options.version = version; // ⇒ /.../{resource_type}/upload/v{version}/{publicId}
+    // Ensure raw assets use versioned delivery URLs: /{type}/upload/v{version}/{publicId}
+    options.version = version;
   }
+
+  // For explicit downloads, let Cloudinary set Content-Disposition & filename via fl_attachment
+  if (attachmentFilename) {
+    options.flags = `attachment:${attachmentFilename}`;
+  }
+
   return cloudinary.url(publicId, options);
 }
 
@@ -497,7 +506,9 @@ router.get(
         });
       }
 
-      // Cloudinary: redirect to delivery URL. Use stored resourceType & version (for raw).
+      const isDownload = req.query.download === 'true';
+
+      // Cloudinary-backed documents: redirect; browser talks directly to Cloudinary.
       if (
         useCloudinary &&
         (document.filePath.startsWith('http') ||
@@ -566,7 +577,8 @@ router.get(
         }
 
         const urlVersion = resourceType === 'raw' ? version : undefined;
-        const fileUrl = getCloudinaryDeliveryUrl(publicId, resourceType, urlVersion);
+        const attachmentName = isDownload ? document.fileName : undefined;
+        const fileUrl = getCloudinaryDeliveryUrl(publicId, resourceType, urlVersion, attachmentName);
         return res.redirect(fileUrl);
       }
 
@@ -583,9 +595,6 @@ router.get(
 
         // Determine content type
         const contentType = document.fileType || 'application/octet-stream';
-
-        // Check if it's a download request (query param) or view request
-        const isDownload = req.query.download === 'true';
 
         // Set headers for file download/view
         res.setHeader('Content-Type', contentType);
