@@ -77,18 +77,34 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
         />
       </div>
 
-      {/* Project Value and Profit by Financial Year - Grouped Column Chart */}
-      <div className="w-full bg-gradient-to-br from-white via-primary-50/30 to-white rounded-2xl shadow-2xl p-6 border-2 border-primary-200/50 backdrop-blur-sm">
-        <ProjectValueProfitByFYChart 
-          data={data?.projectValueProfitByFY || []} 
-          dashboardType="management"
-          filterControlledByParent
-        />
+      {/* Row 1: Three main charts – same height, compact, symmetrical (a, b, c) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 items-stretch">
+        <div className="w-full min-h-[360px] flex flex-col">
+          <RevenueByLeadSourceChart 
+            availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
+            dashboardFilter={dashboardFilter}
+          />
+        </div>
+        <div className="w-full min-h-[360px] flex flex-col">
+          <SalesTeamTreemap 
+            availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
+            dashboardFilter={dashboardFilter}
+          />
+        </div>
+        <div className="w-full min-h-[360px] flex flex-col">
+          <div className="h-full flex-1 min-h-0 bg-gradient-to-br from-white via-primary-50/30 to-white rounded-2xl shadow-2xl p-4 sm:p-5 border-2 border-primary-200/50 backdrop-blur-sm flex flex-col">
+            <ProjectValueProfitByFYChart 
+              data={data?.projectValueProfitByFY || []} 
+              dashboardType="management"
+              filterControlledByParent
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Charts Section - Side by Side */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="w-full">
+      {/* Row 2: Pie chart and Word cloud – side by side on large screens */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+        <div className="w-full min-h-0">
           <ProjectValuePieChart 
             data={data?.projectValueByType || []} 
             availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
@@ -96,29 +112,13 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
             filterControlledByParent
           />
         </div>
-        <div className="w-full">
+        <div className="w-full min-h-0">
           <ProfitabilityWordCloud 
             wordCloudData={data?.wordCloudData}
             availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
             filterControlledByParent
           />
         </div>
-      </div>
-
-      {/* Sales Team Performance Treemap */}
-      <div className="w-full">
-        <SalesTeamTreemap 
-          availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
-          dashboardFilter={dashboardFilter}
-        />
-      </div>
-
-      {/* Revenue by Lead Source Chart */}
-      <div className="w-full">
-        <RevenueByLeadSourceChart 
-          availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
-          dashboardFilter={dashboardFilter}
-        />
       </div>
     </div>
   )

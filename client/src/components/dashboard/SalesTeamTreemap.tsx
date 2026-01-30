@@ -144,7 +144,7 @@ const SalesTeamTreemap = ({ availableFYs = [], dashboardFilter }: SalesTeamTreem
   })) || []
 
   return (
-    <div className="bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-6 h-full flex flex-col backdrop-blur-sm">
+    <div className="h-full flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-2 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600">
@@ -290,18 +290,18 @@ const SalesTeamTreemap = ({ availableFYs = [], dashboardFilter }: SalesTeamTreem
       </div>
 
       {/* Column Chart */}
-      <div className="flex-1 flex flex-col" style={{ minHeight: '400px' }}>
+      <div className="flex-1 flex flex-col" style={{ minHeight: '320px' }}>
         {isLoading ? (
-          <div className="flex items-center justify-center" style={{ height: '400px' }}>
+          <div className="flex items-center justify-center" style={{ height: '320px' }}>
             <p className="text-gray-500">Loading...</p>
           </div>
         ) : !treemapData || treemapData.length === 0 ? (
-          <div className="flex items-center justify-center" style={{ height: '400px' }}>
+          <div className="flex items-center justify-center" style={{ height: '320px' }}>
             <p className="text-gray-500">No sales team data available for the selected filters</p>
           </div>
         ) : (
-          <div style={{ width: '100%', height: '400px' }}>
-            <ResponsiveContainer width="100%" height={400}>
+          <div style={{ width: '100%', height: '320px' }}>
+            <ResponsiveContainer width="100%" height={320}>
               <BarChart
                 data={treemapData}
                 margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
@@ -352,54 +352,6 @@ const SalesTeamTreemap = ({ availableFYs = [], dashboardFilter }: SalesTeamTreem
           </div>
         )}
       </div>
-
-      {/* Summary Table */}
-      {treemapData && treemapData.length > 0 && (
-        <div className="mt-4 sm:mt-6 overflow-x-auto -mx-4 sm:mx-0">
-          <div className="inline-block min-w-full align-middle">
-            <div className="overflow-hidden shadow-sm ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Salesperson
-                    </th>
-                    <th className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Projects
-                    </th>
-                    <th className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total Order Value
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {treemapData
-                    .sort((a: any, b: any) => b.value - a.value)
-                    .map((item: any, index: number) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-3 sm:px-4 py-2 sm:py-3">
-                          <div className="flex items-center">
-                            <div
-                              className="w-3 h-3 sm:w-4 sm:h-4 rounded-full mr-2 flex-shrink-0"
-                              style={{ backgroundColor: item.fill }}
-                            ></div>
-                            <span className="text-xs sm:text-sm font-medium text-gray-900 truncate">{item.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm text-gray-900">
-                          {item.projectCount}
-                        </td>
-                        <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-semibold text-gray-900">
-                          ₹{item.value.toLocaleString('en-IN')}
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

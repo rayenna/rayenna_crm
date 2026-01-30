@@ -54,7 +54,7 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
   if (!filterControlledByParent && isLoading) {
     return (
       <div className="bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-6 backdrop-blur-sm">
-        <div className="flex items-center justify-center" style={{ height: '400px' }}>
+        <div className="flex items-center justify-center" style={{ height: '320px' }}>
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             <p className="mt-4 text-sm text-gray-500">Loading chart data...</p>
@@ -77,7 +77,7 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
             Total Revenue and Total Profit by Financial Year
           </h2>
         </div>
-      <div className="flex items-center justify-center text-gray-500" style={{ height: '400px' }}>
+      <div className="flex items-center justify-center text-gray-500" style={{ height: '320px' }}>
         <div className="text-center px-4">
           <p className="mb-2 text-sm sm:text-base">No data available.</p>
           <p className="text-xs sm:text-sm text-gray-600">Projects with financial year information will appear here.</p>
@@ -191,7 +191,7 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
         )}
       </div>
       <div className="w-full overflow-x-auto">
-        <div className="min-w-[300px]" style={{ height: '400px' }}>
+        <div className="min-w-[280px]" style={{ height: '320px' }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={filteredData}

@@ -300,27 +300,13 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
     }));
 
-    // Calculate project value, profit, capacity and pipeline by financial year
-    const projectValueByFY = await prisma.project.groupBy({
-      by: ['year'],
-      where: getRevenueWhere(where),
-      _sum: { projectCost: true },
-    });
-
-    const profitByFY = await prisma.project.groupBy({
-      by: ['year'],
-      where: { ...getRevenueWhere(where), grossProfit: { not: null } },
-      _sum: { grossProfit: true },
-    });
-
-    const capacityByFY = await prisma.project.groupBy({
-      by: ['year'],
-      where: { ...getRevenueWhere(where), systemCapacity: { not: null } },
-      _sum: { systemCapacity: true },
-    });
-
-    const pipelineWhere = {
-      ...where,
+    // Calculate project value, profit, capacity and pipeline by financial year.
+    // When exactly one FY is selected, include previous FY in the series (full-year only) so YoY can compare current vs previous year.
+    const fyForSeries = fyFilters.length === 1 ? [fyFilters[0], getPreviousFY(fyFilters[0])].filter(Boolean) : undefined;
+    const whereFYSeries = fyForSeries
+      ? { ...getRevenueWhere(baseWhere), year: { in: fyForSeries } }
+      : getRevenueWhere(where);
+    const pipelineWhereBase = {
       projectCost: { not: null },
       projectStatus: { not: ProjectStatus.LOST },
       OR: [
@@ -329,9 +315,32 @@ router.get('/sales', authenticate, async (req: Request, res) => {
         { projectStage: ProjectStage.PROPOSAL },
       ],
     };
+    const pipelineWhereFY = fyForSeries
+      ? { ...baseWhere, ...pipelineWhereBase, year: { in: fyForSeries } }
+      : { ...where, ...pipelineWhereBase };
+    const pipelineWhereForTiles = { ...where, ...pipelineWhereBase };
+
+    const projectValueByFY = await prisma.project.groupBy({
+      by: ['year'],
+      where: whereFYSeries,
+      _sum: { projectCost: true },
+    });
+
+    const profitByFY = await prisma.project.groupBy({
+      by: ['year'],
+      where: { ...whereFYSeries, grossProfit: { not: null } },
+      _sum: { grossProfit: true },
+    });
+
+    const capacityByFY = await prisma.project.groupBy({
+      by: ['year'],
+      where: { ...whereFYSeries, systemCapacity: { not: null } },
+      _sum: { systemCapacity: true },
+    });
+
     const pipelineByFY = await prisma.project.groupBy({
       by: ['year'],
-      where: pipelineWhere,
+      where: pipelineWhereFY,
       _sum: { projectCost: true },
     });
 
@@ -1103,27 +1112,13 @@ router.get('/management', authenticate, async (req: Request, res) => {
       percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
     }));
 
-    // Calculate project value, profit, capacity and pipeline by financial year
-    const projectValueByFY = await prisma.project.groupBy({
-      by: ['year'],
-      where: getRevenueWhere(where),
-      _sum: { projectCost: true },
-    });
-
-    const profitByFY = await prisma.project.groupBy({
-      by: ['year'],
-      where: { ...getRevenueWhere(where), grossProfit: { not: null } },
-      _sum: { grossProfit: true },
-    });
-
-    const capacityByFY = await prisma.project.groupBy({
-      by: ['year'],
-      where: { ...getRevenueWhere(where), systemCapacity: { not: null } },
-      _sum: { systemCapacity: true },
-    });
-
-    const pipelineWhereFY = {
-      ...where,
+    // Calculate project value, profit, capacity and pipeline by financial year.
+    // When exactly one FY is selected, include previous FY in the series (full-year only) so YoY can compare current vs previous year.
+    const fyForSeriesMgmt = fyFilters.length === 1 ? [fyFilters[0], getPreviousFY(fyFilters[0])].filter(Boolean) : undefined;
+    const whereFYSeriesMgmt = fyForSeriesMgmt
+      ? { ...getRevenueWhere(baseWhere), year: { in: fyForSeriesMgmt } }
+      : getRevenueWhere(where);
+    const pipelineWhereBaseMgmt = {
       projectCost: { not: null },
       projectStatus: { not: ProjectStatus.LOST },
       OR: [
@@ -1132,9 +1127,32 @@ router.get('/management', authenticate, async (req: Request, res) => {
         { projectStage: ProjectStage.PROPOSAL },
       ],
     };
+    const pipelineWhereFYMgmt = fyForSeriesMgmt
+      ? { ...baseWhere, ...pipelineWhereBaseMgmt, year: { in: fyForSeriesMgmt } }
+      : { ...where, ...pipelineWhereBaseMgmt };
+    const pipelineWhereForTilesMgmt = { ...where, ...pipelineWhereBaseMgmt };
+
+    const projectValueByFY = await prisma.project.groupBy({
+      by: ['year'],
+      where: whereFYSeriesMgmt,
+      _sum: { projectCost: true },
+    });
+
+    const profitByFY = await prisma.project.groupBy({
+      by: ['year'],
+      where: { ...whereFYSeriesMgmt, grossProfit: { not: null } },
+      _sum: { grossProfit: true },
+    });
+
+    const capacityByFY = await prisma.project.groupBy({
+      by: ['year'],
+      where: { ...whereFYSeriesMgmt, systemCapacity: { not: null } },
+      _sum: { systemCapacity: true },
+    });
+
     const pipelineByFY = await prisma.project.groupBy({
       by: ['year'],
-      where: pipelineWhereFY,
+      where: pipelineWhereFYMgmt,
       _sum: { projectCost: true },
     });
 
@@ -1156,9 +1174,9 @@ router.get('/management', authenticate, async (req: Request, res) => {
         totalPipeline: pipelineByFY.find((item) => item.year === fy)?._sum.projectCost || 0,
       }));
 
-    // Total Pipeline - Sum of projectCost for projects in Lead (null), Site Survey, or Proposal stages (exclude LOST projects)
+    // Total Pipeline - Sum of projectCost for projects in Lead (null), Site Survey, or Proposal stages (exclude LOST projects) - use filtered selection only
     const totalPipeline = await prisma.project.aggregate({
-      where: pipelineWhereFY,
+      where: pipelineWhereForTilesMgmt,
       _sum: { projectCost: true },
     });
 

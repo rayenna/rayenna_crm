@@ -153,7 +153,7 @@ const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: Revenu
   ]
 
   return (
-    <div className="bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-6 backdrop-blur-sm">
+    <div className="h-full flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
         <div className="flex flex-col gap-3 mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
@@ -302,23 +302,23 @@ const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: Revenu
         )}
         </div>
       {/* Chart or Loading/No Data */}
-      <div className="w-full overflow-x-auto">
+      <div className="flex-1 min-h-0 w-full overflow-x-auto flex flex-col">
         {isLoading ? (
-          <div className="flex items-center justify-center" style={{ minHeight: '400px' }}>
+          <div className="flex items-center justify-center" style={{ minHeight: '320px' }}>
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
               <p className="mt-4 text-sm text-gray-500">Loading chart data...</p>
             </div>
           </div>
         ) : !chartData || chartData.length === 0 ? (
-          <div className="flex items-center justify-center" style={{ minHeight: '400px' }}>
+          <div className="flex items-center justify-center" style={{ minHeight: '320px' }}>
             <div className="text-center px-4">
               <p className="mb-2 text-sm sm:text-base text-gray-500">No data for selected period</p>
               <p className="text-xs sm:text-sm text-gray-600">Revenue data will appear here when projects are confirmed and completed.</p>
             </div>
           </div>
         ) : (
-          <div className="min-w-[300px]" style={{ height: '400px' }}>
+          <div className="min-w-[280px]" style={{ height: '320px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
