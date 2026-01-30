@@ -58,6 +58,8 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
           revenue={data?.finance?.totalValue ?? 0}
           profit={data?.finance?.totalProfit ?? 0}
           projectValueProfitByFY={projectValueProfitByFY}
+          selectedFYs={selectedFYs}
+          previousYearSamePeriod={data?.previousYearSamePeriod ?? undefined}
         />
       </div>
 

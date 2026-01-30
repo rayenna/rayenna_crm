@@ -57,6 +57,8 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Sales
           revenue={data?.revenue?.totalRevenue ?? 0}
           profit={data?.totalProfit ?? 0}
           projectValueProfitByFY={projectValueProfitByFY}
+          selectedFYs={selectedFYs}
+          previousYearSamePeriod={data?.previousYearSamePeriod ?? undefined}
         />
       </div>
 

@@ -13,6 +13,24 @@ const QUARTER_TO_MONTHS: Record<string, string[]> = {
   Q4: ['01', '02', '03'],
 };
 
+/** e.g. "2024-25" -> "2023-24", "2024-2025" -> "2023-2024" */
+function getPreviousFY(fy: string): string {
+  const s = String(fy).trim();
+  const twoDigit = s.match(/^(\d{4})-(\d{2})$/);
+  if (twoDigit) {
+    const start = parseInt(twoDigit[1], 10);
+    const end = parseInt(twoDigit[2], 10);
+    return `${start - 1}-${String(end - 1).padStart(2, '0')}`;
+  }
+  const fourDigit = s.match(/^(\d{4})-(\d{4})$/);
+  if (fourDigit) {
+    const start = parseInt(fourDigit[1], 10);
+    const end = parseInt(fourDigit[2], 10);
+    return `${start - 1}-${end - 1}`;
+  }
+  return '';
+}
+
 // Helper function to apply FY, Quarter and Month filters to project queries (dashboard tiles only)
 function applyDateFilters(
   baseWhere: any,
@@ -282,7 +300,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
     }));
 
-    // Calculate project value and profit by financial year (only confirmed/completed projects)
+    // Calculate project value, profit, capacity and pipeline by financial year
     const projectValueByFY = await prisma.project.groupBy({
       by: ['year'],
       where: getRevenueWhere(where),
@@ -295,10 +313,34 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       _sum: { grossProfit: true },
     });
 
+    const capacityByFY = await prisma.project.groupBy({
+      by: ['year'],
+      where: { ...getRevenueWhere(where), systemCapacity: { not: null } },
+      _sum: { systemCapacity: true },
+    });
+
+    const pipelineWhere = {
+      ...where,
+      projectCost: { not: null },
+      projectStatus: { not: ProjectStatus.LOST },
+      OR: [
+        { projectStage: null },
+        { projectStage: ProjectStage.SURVEY },
+        { projectStage: ProjectStage.PROPOSAL },
+      ],
+    };
+    const pipelineByFY = await prisma.project.groupBy({
+      by: ['year'],
+      where: pipelineWhere,
+      _sum: { projectCost: true },
+    });
+
     // Combine the data by financial year
     const allFYs = new Set([
       ...projectValueByFY.map((item) => item.year),
       ...profitByFY.map((item) => item.year),
+      ...capacityByFY.map((item) => item.year),
+      ...pipelineByFY.map((item) => item.year),
     ]);
 
     const projectValueProfitByFY = Array.from(allFYs)
@@ -307,6 +349,8 @@ router.get('/sales', authenticate, async (req: Request, res) => {
         fy,
         totalProjectValue: projectValueByFY.find((item) => item.year === fy)?._sum.projectCost || 0,
         totalProfit: profitByFY.find((item) => item.year === fy)?._sum.grossProfit || 0,
+        totalCapacity: capacityByFY.find((item) => item.year === fy)?._sum.systemCapacity || 0,
+        totalPipeline: pipelineByFY.find((item) => item.year === fy)?._sum.projectCost || 0,
       }));
 
     // Build leads where clause with salesperson and date filters
@@ -439,6 +483,50 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       };
     });
 
+    // When one FY and quarter/month selected: same period in previous year for YoY
+    let previousYearSamePeriod: { totalCapacity: number; totalPipeline: number; totalRevenue: number; totalProfit: number } | null = null;
+    if (fyFilters.length === 1 && (quarterFilters.length > 0 || monthFilters.length > 0)) {
+      const previousFY = getPreviousFY(fyFilters[0]);
+      if (previousFY) {
+        const wherePrev = applyDateFilters(baseWhere, [previousFY], monthFilters, quarterFilters);
+        const revenueWherePrev = getRevenueWhere(wherePrev);
+        const pipelineWherePrev = {
+          ...wherePrev,
+          projectCost: { not: null },
+          projectStatus: { not: ProjectStatus.LOST },
+          OR: [
+            { projectStage: null },
+            { projectStage: ProjectStage.SURVEY },
+            { projectStage: ProjectStage.PROPOSAL },
+          ],
+        };
+        const [prevCapacity, prevRevenue, prevProfit, prevPipeline] = await Promise.all([
+          prisma.project.aggregate({
+            where: { ...revenueWherePrev, systemCapacity: { not: null } },
+            _sum: { systemCapacity: true },
+          }),
+          prisma.project.aggregate({
+            where: revenueWherePrev,
+            _sum: { projectCost: true },
+          }),
+          prisma.project.aggregate({
+            where: { ...revenueWherePrev, grossProfit: { not: null } },
+            _sum: { grossProfit: true },
+          }),
+          prisma.project.aggregate({
+            where: pipelineWherePrev,
+            _sum: { projectCost: true },
+          }),
+        ]);
+        previousYearSamePeriod = {
+          totalCapacity: prevCapacity._sum.systemCapacity ?? 0,
+          totalRevenue: prevRevenue._sum.projectCost ?? 0,
+          totalProfit: prevProfit._sum.grossProfit ?? 0,
+          totalPipeline: prevPipeline._sum.projectCost ?? 0,
+        };
+      }
+    }
+
     res.json({
       leads: {
         total: totalLeadsCount,
@@ -461,6 +549,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       },
       totalPipeline: totalPipeline._sum.projectCost || 0,
       totalProfit: totalProfit._sum.grossProfit ?? 0,
+      previousYearSamePeriod,
       revenueBySalesperson: revenueBreakdown,
       projectValueByType: valueByTypeWithPercentage,
       projectValueProfitByFY,
@@ -1014,7 +1103,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
       percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
     }));
 
-    // Calculate project value and profit by financial year
+    // Calculate project value, profit, capacity and pipeline by financial year
     const projectValueByFY = await prisma.project.groupBy({
       by: ['year'],
       where: getRevenueWhere(where),
@@ -1027,10 +1116,34 @@ router.get('/management', authenticate, async (req: Request, res) => {
       _sum: { grossProfit: true },
     });
 
+    const capacityByFY = await prisma.project.groupBy({
+      by: ['year'],
+      where: { ...getRevenueWhere(where), systemCapacity: { not: null } },
+      _sum: { systemCapacity: true },
+    });
+
+    const pipelineWhereFY = {
+      ...where,
+      projectCost: { not: null },
+      projectStatus: { not: ProjectStatus.LOST },
+      OR: [
+        { projectStage: null },
+        { projectStage: ProjectStage.SURVEY },
+        { projectStage: ProjectStage.PROPOSAL },
+      ],
+    };
+    const pipelineByFY = await prisma.project.groupBy({
+      by: ['year'],
+      where: pipelineWhereFY,
+      _sum: { projectCost: true },
+    });
+
     // Combine the data by financial year
     const allFYs = new Set([
       ...projectValueByFY.map((item) => item.year),
       ...profitByFY.map((item) => item.year),
+      ...capacityByFY.map((item) => item.year),
+      ...pipelineByFY.map((item) => item.year),
     ]);
 
     const projectValueProfitByFY = Array.from(allFYs)
@@ -1039,20 +1152,13 @@ router.get('/management', authenticate, async (req: Request, res) => {
         fy,
         totalProjectValue: projectValueByFY.find((item) => item.year === fy)?._sum.projectCost || 0,
         totalProfit: profitByFY.find((item) => item.year === fy)?._sum.grossProfit || 0,
+        totalCapacity: capacityByFY.find((item) => item.year === fy)?._sum.systemCapacity || 0,
+        totalPipeline: pipelineByFY.find((item) => item.year === fy)?._sum.projectCost || 0,
       }));
 
     // Total Pipeline - Sum of projectCost for projects in Lead (null), Site Survey, or Proposal stages (exclude LOST projects)
     const totalPipeline = await prisma.project.aggregate({
-      where: {
-        ...where,
-        projectCost: { not: null },
-        projectStatus: { not: ProjectStatus.LOST }, // Exclude LOST projects
-        OR: [
-          { projectStage: null }, // Lead stage
-          { projectStage: ProjectStage.SURVEY }, // Site Survey
-          { projectStage: ProjectStage.PROPOSAL }, // Proposal
-        ],
-      },
+      where: pipelineWhereFY,
       _sum: { projectCost: true },
     });
 
@@ -1091,11 +1197,57 @@ router.get('/management', authenticate, async (req: Request, res) => {
       };
     });
 
+    // When one FY and quarter/month selected: same period in previous year for YoY
+    let previousYearSamePeriod: { totalCapacity: number; totalPipeline: number; totalRevenue: number; totalProfit: number } | null = null;
+    if (fyFilters.length === 1 && (quarterFilters.length > 0 || monthFilters.length > 0)) {
+      const previousFY = getPreviousFY(fyFilters[0]);
+      if (previousFY) {
+        const baseWhereMgmt: any = {};
+        const wherePrev = applyDateFilters(baseWhereMgmt, [previousFY], monthFilters, quarterFilters);
+        const revenueWherePrev = getRevenueWhere(wherePrev);
+        const pipelineWherePrev = {
+          ...wherePrev,
+          projectCost: { not: null },
+          projectStatus: { not: ProjectStatus.LOST },
+          OR: [
+            { projectStage: null },
+            { projectStage: ProjectStage.SURVEY },
+            { projectStage: ProjectStage.PROPOSAL },
+          ],
+        };
+        const [prevCapacity, prevRevenue, prevProfit, prevPipeline] = await Promise.all([
+          prisma.project.aggregate({
+            where: { ...revenueWherePrev, systemCapacity: { not: null } },
+            _sum: { systemCapacity: true },
+          }),
+          prisma.project.aggregate({
+            where: revenueWherePrev,
+            _sum: { projectCost: true },
+          }),
+          prisma.project.aggregate({
+            where: { ...revenueWherePrev, grossProfit: { not: null } },
+            _sum: { grossProfit: true },
+          }),
+          prisma.project.aggregate({
+            where: pipelineWherePrev,
+            _sum: { projectCost: true },
+          }),
+        ]);
+        previousYearSamePeriod = {
+          totalCapacity: prevCapacity._sum.systemCapacity ?? 0,
+          totalRevenue: prevRevenue._sum.projectCost ?? 0,
+          totalProfit: prevProfit._sum.grossProfit ?? 0,
+          totalPipeline: prevPipeline._sum.projectCost ?? 0,
+        };
+      }
+    }
+
     res.json({
       sales,
       operations,
       finance,
       totalPipeline: totalPipeline._sum.projectCost || 0,
+      previousYearSamePeriod,
       projectValueByType: valueByTypeWithPercentage,
       projectValueProfitByFY,
       wordCloudData,

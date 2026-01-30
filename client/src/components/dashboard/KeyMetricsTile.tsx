@@ -4,6 +4,15 @@ export interface FYRow {
   fy: string
   totalProjectValue: number
   totalProfit: number
+  totalCapacity?: number
+  totalPipeline?: number
+}
+
+export interface PreviousYearSamePeriod {
+  totalCapacity: number
+  totalPipeline: number
+  totalRevenue: number
+  totalProfit: number
 }
 
 interface KeyMetricsTileProps {
@@ -12,11 +21,33 @@ interface KeyMetricsTileProps {
   revenue: number
   profit: number | null
   projectValueProfitByFY: FYRow[]
+  /** When exactly one FY is selected, YoY is current vs previous year; if previous is missing/zero, show N/A */
+  selectedFYs?: string[]
+  /** When one FY + quarter/month selected, API returns same period in previous year for YoY */
+  previousYearSamePeriod?: PreviousYearSamePeriod | null
+}
+
+/** e.g. "2024-25" -> "2023-24", "2024-2025" -> "2023-2024" */
+function getPreviousFY(fy: string): string {
+  const s = String(fy).trim()
+  const twoDigit = s.match(/^(\d{4})-(\d{2})$/)
+  if (twoDigit) {
+    const start = parseInt(twoDigit[1], 10)
+    const end = parseInt(twoDigit[2], 10)
+    return `${start - 1}-${String(end - 1).padStart(2, '0')}`
+  }
+  const fourDigit = s.match(/^(\d{4})-(\d{4})$/)
+  if (fourDigit) {
+    const start = parseInt(fourDigit[1], 10)
+    const end = parseInt(fourDigit[2], 10)
+    return `${start - 1}-${end - 1}`
+  }
+  return ''
 }
 
 function computeYoY(
   current: number,
-  previous: number
+  previous: number | null | undefined
 ): { value: number | null; label: string } {
   if (previous == null || previous === 0) return { value: null, label: 'N/A' }
   const pct = ((current - previous) / previous) * 100
@@ -62,25 +93,54 @@ const KeyMetricsTile = ({
   revenue,
   profit,
   projectValueProfitByFY,
+  selectedFYs,
+  previousYearSamePeriod,
 }: KeyMetricsTileProps) => {
-  const sortedFY = [...projectValueProfitByFY].sort(
-    (a, b) => String(a.fy).localeCompare(String(b.fy))
-  )
-  const currentFY = sortedFY[sortedFY.length - 1]
-  const previousFY = sortedFY[sortedFY.length - 2]
+  // YoY is only relevant when exactly one FY is selected (optionally with quarter/month).
+  // Default view (no FY) or multiple FYs → show N/A for all YoY.
+  const singleFYSelected = selectedFYs?.length === 1
+  const selectedFY = singleFYSelected ? selectedFYs[0]! : null
+  const previousFYLabel = selectedFY ? getPreviousFY(selectedFY) : null
 
-  const revenueCurrent = currentFY?.totalProjectValue ?? 0
-  const revenuePrevious = previousFY?.totalProjectValue ?? 0
-  const profitCurrent = currentFY?.totalProfit ?? 0
-  const profitPrevious = previousFY?.totalProfit ?? 0
+  const naYoY = { value: null as number | null, label: 'N/A' }
 
-  const capacityYoY = { value: null, label: 'N/A' }
-  const pipelineYoY = { value: null, label: 'N/A' }
-  const revenueYoY = computeYoY(revenueCurrent, revenuePrevious)
+  // When quarter/month selected, API returns previousYearSamePeriod (same period in previous year).
+  // Use displayed metrics as current and previousYearSamePeriod as previous.
+  const usePeriodYoY = singleFYSelected && previousYearSamePeriod != null
+
+  let capacityPrevious: number | undefined
+  let pipelinePrevious: number | undefined
+  let revenuePrevious: number | undefined
+  let profitPrevious: number | undefined
+
+  if (usePeriodYoY) {
+    capacityPrevious = previousYearSamePeriod.totalCapacity
+    pipelinePrevious = previousYearSamePeriod.totalPipeline
+    revenuePrevious = previousYearSamePeriod.totalRevenue
+    profitPrevious = previousYearSamePeriod.totalProfit
+  } else if (singleFYSelected && selectedFY) {
+    const previousRow = previousFYLabel
+      ? projectValueProfitByFY.find((r) => r.fy === previousFYLabel)
+      : undefined
+    revenuePrevious = previousRow?.totalProjectValue
+    profitPrevious = previousRow?.totalProfit
+    capacityPrevious = previousRow?.totalCapacity
+    pipelinePrevious = previousRow?.totalPipeline
+  }
+
+  const capacityYoY = singleFYSelected
+    ? computeYoY(capacity, capacityPrevious)
+    : naYoY
+  const pipelineYoY = singleFYSelected
+    ? computeYoY(pipeline, pipelinePrevious)
+    : naYoY
+  const revenueYoY = singleFYSelected
+    ? computeYoY(revenue, revenuePrevious)
+    : naYoY
   const profitYoY =
-    profit != null
-      ? computeYoY(profitCurrent, profitPrevious)
-      : { value: null, label: 'N/A' }
+    singleFYSelected && profit != null
+      ? computeYoY(profit, profitPrevious)
+      : naYoY
 
   const formatCurrency = (n: number) =>
     `₹${Math.round(n).toLocaleString('en-IN')}`
@@ -136,11 +196,11 @@ const KeyMetricsTile = ({
   return (
     <div className="w-full rounded-2xl border-2 border-primary-200/60 bg-gradient-to-br from-white via-primary-50/30 to-white shadow-xl overflow-hidden hover:shadow-2xl transition-shadow duration-300 min-h-0">
       <div className="p-4 sm:p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5 xl:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[minmax(0,0.7fr)_1.1fr_1.1fr_1.1fr] gap-4 sm:gap-5 xl:gap-6">
           {metrics.map((m) => (
             <div
               key={m.key}
-              className={`relative flex flex-col rounded-xl ${m.bgLight} p-4 sm:p-6 border border-white/80 shadow-sm hover:shadow-md transition-shadow`}
+              className={`relative flex flex-col rounded-xl ${m.bgLight} p-4 sm:p-6 border border-white/80 shadow-sm hover:shadow-md transition-shadow min-w-0`}
             >
               {/* YoY badge – top right */}
               <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
@@ -152,12 +212,12 @@ const KeyMetricsTile = ({
               >
                 {m.icon}
               </div>
-              {/* Main value – prominent, not truncated */}
-              <div className="flex-1 min-w-0 mt-auto">
-                <div className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-extrabold text-gray-900 break-words leading-tight" title={m.value}>
+              {/* Main value – single line on xl, full value in title */}
+              <div className="flex-1 min-w-0 mt-auto overflow-hidden">
+                <div className="text-xl sm:text-2xl lg:text-3xl xl:text-2xl xl:whitespace-nowrap xl:min-w-0 xl:overflow-hidden xl:text-ellipsis font-extrabold text-gray-900 leading-tight" title={m.value}>
                   {m.value}
                 </div>
-                <div className="text-xs sm:text-sm font-semibold text-gray-600 mt-1" title={m.label}>
+                <div className="text-xs sm:text-sm font-semibold text-gray-600 mt-1 truncate" title={m.label}>
                   {m.label}
                 </div>
               </div>
