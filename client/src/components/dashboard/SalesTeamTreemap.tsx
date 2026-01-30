@@ -10,8 +10,16 @@ interface SalesTeamData {
   projectCount: number
 }
 
+interface DashboardFilterState {
+  selectedFYs: string[]
+  selectedQuarters: string[]
+  selectedMonths: string[]
+}
+
 interface SalesTeamTreemapProps {
-  availableFYs?: string[] // Available FYs from dashboard data
+  availableFYs?: string[] // Available FYs from dashboard data (when not using dashboard filter)
+  /** When set, chart uses dashboard FY/Qtr/Month filter only; no chart-level filter UI. */
+  dashboardFilter?: DashboardFilterState | null
 }
 
 // Months ordered from April to March (Financial Year order)
@@ -46,7 +54,8 @@ const COLORS = [
 
 // Column chart doesn't need custom content component
 
-const SalesTeamTreemap = ({ availableFYs = [] }: SalesTeamTreemapProps) => {
+const SalesTeamTreemap = ({ availableFYs = [], dashboardFilter }: SalesTeamTreemapProps) => {
+  const filterControlledByParent = !!dashboardFilter
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [selectedMonths, setSelectedMonths] = useState<string[]>([])
   const [showFYDropdown, setShowFYDropdown] = useState(false)
@@ -54,13 +63,15 @@ const SalesTeamTreemap = ({ availableFYs = [] }: SalesTeamTreemapProps) => {
   const fyDropdownRef = useRef<HTMLDivElement>(null)
   const monthDropdownRef = useRef<HTMLDivElement>(null)
 
-  // Debug: Log component mount
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      console.log('[SalesTeamTreemap] Component mounted')
-      console.log('[SalesTeamTreemap] availableFYs:', availableFYs)
-    }
-  }, [availableFYs])
+  const effectiveFYs = filterControlledByParent
+    ? (Array.isArray(dashboardFilter?.selectedFYs) ? dashboardFilter.selectedFYs : [])
+    : selectedFYs
+  const effectiveMonths = filterControlledByParent
+    ? (Array.isArray(dashboardFilter?.selectedMonths) ? dashboardFilter.selectedMonths : [])
+    : selectedMonths
+  const effectiveQuarters = filterControlledByParent
+    ? (Array.isArray(dashboardFilter?.selectedQuarters) ? dashboardFilter.selectedQuarters : [])
+    : []
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -77,20 +88,21 @@ const SalesTeamTreemap = ({ availableFYs = [] }: SalesTeamTreemapProps) => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Clear months if FY selection changes to not exactly one FY
+  // Clear months if FY selection changes to not exactly one FY (only when using own filters)
   useEffect(() => {
-    if (selectedFYs.length !== 1) {
+    if (!filterControlledByParent && selectedFYs.length !== 1) {
       setSelectedMonths([])
     }
-  }, [selectedFYs])
+  }, [filterControlledByParent, selectedFYs])
 
-  // Fetch sales team performance data with filters
+  // Fetch sales team performance: use dashboard filter when provided, else chart's own filters
   const { data, isLoading } = useQuery({
-    queryKey: ['salesTeamPerformance', selectedFYs, selectedMonths],
+    queryKey: ['salesTeamPerformance', effectiveFYs, effectiveMonths, effectiveQuarters],
     queryFn: async () => {
       const params = new URLSearchParams()
-      selectedFYs.forEach((fy) => params.append('fy', fy))
-      selectedMonths.forEach((month) => params.append('month', month))
+      effectiveFYs.forEach((fy) => params.append('fy', fy))
+      effectiveQuarters.forEach((q) => params.append('quarter', q))
+      effectiveMonths.forEach((month) => params.append('month', month))
       const res = await axiosInstance.get(`/api/sales-team-performance?${params.toString()}`)
       return res.data
     },
@@ -131,18 +143,6 @@ const SalesTeamTreemap = ({ availableFYs = [] }: SalesTeamTreemapProps) => {
     fill: COLORS[index % COLORS.length],
   })) || []
 
-  // Debug logging
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      console.log('[SalesTeamTreemap] Component rendered')
-      console.log('[SalesTeamTreemap] Data received:', data)
-      console.log('[SalesTeamTreemap] salesTeamData:', data?.salesTeamData)
-      console.log('[SalesTeamTreemap] treemapData:', treemapData)
-      console.log('[SalesTeamTreemap] isLoading:', isLoading)
-      console.log('[SalesTeamTreemap] treemapData length:', treemapData?.length || 0)
-    }
-  }, [data, treemapData, isLoading])
-
   return (
     <div className="bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-6 h-full flex flex-col backdrop-blur-sm">
       <div className="flex flex-col gap-3 mb-4">
@@ -157,7 +157,8 @@ const SalesTeamTreemap = ({ availableFYs = [] }: SalesTeamTreemapProps) => {
           </h2>
         </div>
 
-        {/* Filters */}
+        {/* Filters - only when not controlled by dashboard (FY, Qtr, Month at top) */}
+        {!filterControlledByParent && (
         <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
           {/* FY Filter */}
           <div className="relative" ref={fyDropdownRef}>
@@ -285,21 +286,22 @@ const SalesTeamTreemap = ({ availableFYs = [] }: SalesTeamTreemapProps) => {
             )}
           </div>
         </div>
+        )}
       </div>
 
       {/* Column Chart */}
-      <div className="flex-1 flex flex-col" style={{ minHeight: '500px' }}>
+      <div className="flex-1 flex flex-col" style={{ minHeight: '400px' }}>
         {isLoading ? (
-          <div className="flex items-center justify-center" style={{ height: '500px' }}>
+          <div className="flex items-center justify-center" style={{ height: '400px' }}>
             <p className="text-gray-500">Loading...</p>
           </div>
         ) : !treemapData || treemapData.length === 0 ? (
-          <div className="flex items-center justify-center" style={{ height: '500px' }}>
+          <div className="flex items-center justify-center" style={{ height: '400px' }}>
             <p className="text-gray-500">No sales team data available for the selected filters</p>
           </div>
         ) : (
-          <div style={{ width: '100%', height: '500px' }}>
-            <ResponsiveContainer width="100%" height={500}>
+          <div style={{ width: '100%', height: '400px' }}>
+            <ResponsiveContainer width="100%" height={400}>
               <BarChart
                 data={treemapData}
                 margin={{ top: 20, right: 30, left: 20, bottom: 60 }}

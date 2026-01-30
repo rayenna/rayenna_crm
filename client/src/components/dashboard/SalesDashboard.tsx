@@ -15,9 +15,9 @@ interface SalesDashboardProps {
 }
 
 const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: SalesDashboardProps) => {
-  // Fetch dashboard metrics with filters (for metric cards only)
+  // Single filtered query for tiles and all charts (same FY, Qtr, Month as dashboard filter)
   const { data, isLoading } = useQuery({
-    queryKey: ['dashboard', 'sales', 'metrics', selectedFYs, selectedQuarters, selectedMonths],
+    queryKey: ['dashboard', 'sales', selectedFYs, selectedQuarters, selectedMonths],
     queryFn: async () => {
       const params = new URLSearchParams()
       selectedFYs.forEach((fy) => params.append('fy', fy))
@@ -28,24 +28,10 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Sales
     },
   })
 
-  // Fetch unfiltered chart data separately (charts have their own filters)
-  const { data: chartData } = useQuery({
-    queryKey: ['dashboard', 'sales', 'charts'],
-    queryFn: async () => {
-      const res = await axiosInstance.get(`/api/dashboard/sales`)
-      return res.data
-    },
-  })
-
   if (isLoading) return <div>Loading...</div>
 
-  // Debug: Log data to console (can be removed in production)
-  if (import.meta.env.DEV) {
-    console.log('Sales Dashboard Data (Metrics):', data)
-    console.log('Sales Dashboard Data (Charts):', chartData)
-  }
-
-  const projectValueProfitByFY = chartData?.projectValueProfitByFY ?? []
+  const projectValueProfitByFY = data?.projectValueProfitByFY ?? []
+  const dashboardFilter = { selectedFYs, selectedQuarters, selectedMonths }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -97,29 +83,29 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Sales
       </div>
 
       {/* Project Value and Profit by Financial Year - Grouped Column Chart */}
-      {/* Charts use unfiltered data and have their own independent filters */}
       <div className="w-full bg-white rounded-xl shadow-lg p-6 border border-gray-100">
         <ProjectValueProfitByFYChart 
-          data={chartData?.projectValueProfitByFY || []} 
+          data={data?.projectValueProfitByFY || []} 
           dashboardType="sales"
+          filterControlledByParent
         />
       </div>
 
       {/* Charts Section - Side by Side */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Project Value by Segment Pie Chart */}
-        {/* Chart fetches its own data independently based on its own filter */}
         <div className="w-full">
           <ProjectValuePieChart 
-            data={chartData?.projectValueByType || []} 
-            availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []}
+            data={data?.projectValueByType || []} 
+            availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
             dashboardType="sales"
+            filterControlledByParent
           />
         </div>
-        {/* Customer Profitability Word Cloud */}
         <div className="w-full">
           <ProfitabilityWordCloud 
-            availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []} 
+            wordCloudData={data?.wordCloudData}
+            availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
+            filterControlledByParent
           />
         </div>
       </div>
@@ -127,7 +113,8 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Sales
       {/* Revenue by Lead Source Chart */}
       <div className="w-full">
         <RevenueByLeadSourceChart 
-          availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []}
+          availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
+          dashboardFilter={dashboardFilter}
         />
       </div>
     </div>

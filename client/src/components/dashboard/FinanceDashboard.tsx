@@ -11,24 +11,15 @@ interface FinanceDashboardProps {
 }
 
 const FinanceDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: FinanceDashboardProps) => {
-  // Fetch dashboard metrics with filters (for metric cards only)
+  // Single filtered query for tiles and all charts (same FY, Qtr, Month as dashboard filter)
   const { data, isLoading } = useQuery({
-    queryKey: ['dashboard', 'finance', 'metrics', selectedFYs, selectedQuarters, selectedMonths],
+    queryKey: ['dashboard', 'finance', selectedFYs, selectedQuarters, selectedMonths],
     queryFn: async () => {
       const params = new URLSearchParams()
       selectedFYs.forEach((fy) => params.append('fy', fy))
       selectedQuarters.forEach((q) => params.append('quarter', q))
       selectedMonths.forEach((month) => params.append('month', month))
       const res = await axiosInstance.get(`/api/dashboard/finance?${params.toString()}`)
-      return res.data
-    },
-  })
-
-  // Fetch unfiltered chart data separately (charts have their own filters)
-  const { data: chartData } = useQuery({
-    queryKey: ['dashboard', 'finance', 'charts'],
-    queryFn: async () => {
-      const res = await axiosInstance.get(`/api/dashboard/finance`)
       return res.data
     },
   })
@@ -96,11 +87,11 @@ const FinanceDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Fin
       </div>
 
       {/* Project Value and Profit by Financial Year - Grouped Column Chart */}
-      {/* Charts use unfiltered data and have their own independent filters */}
       <div className="w-full bg-white rounded-xl shadow-lg p-6 border border-gray-100">
         <ProjectValueProfitByFYChart 
-          data={chartData?.projectValueProfitByFY || []} 
+          data={data?.projectValueProfitByFY || []} 
           dashboardType="finance"
+          filterControlledByParent
         />
       </div>
     </div>

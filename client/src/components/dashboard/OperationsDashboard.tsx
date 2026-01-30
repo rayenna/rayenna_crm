@@ -12,24 +12,15 @@ interface OperationsDashboardProps {
 }
 
 const OperationsDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: OperationsDashboardProps) => {
-  // Fetch dashboard metrics with filters (for metric cards only)
+  // Single filtered query for tiles and all charts (same FY, Qtr, Month as dashboard filter)
   const { data, isLoading } = useQuery({
-    queryKey: ['dashboard', 'operations', 'metrics', selectedFYs, selectedQuarters, selectedMonths],
+    queryKey: ['dashboard', 'operations', selectedFYs, selectedQuarters, selectedMonths],
     queryFn: async () => {
       const params = new URLSearchParams()
       selectedFYs.forEach((fy) => params.append('fy', fy))
       selectedQuarters.forEach((q) => params.append('quarter', q))
       selectedMonths.forEach((month) => params.append('month', month))
       const res = await axiosInstance.get(`/api/dashboard/operations?${params.toString()}`)
-      return res.data
-    },
-  })
-
-  // Fetch unfiltered chart data separately (charts have their own filters)
-  const { data: chartData } = useQuery({
-    queryKey: ['dashboard', 'operations', 'charts'],
-    queryFn: async () => {
-      const res = await axiosInstance.get(`/api/dashboard/operations`)
       return res.data
     },
   })
@@ -82,21 +73,21 @@ const OperationsDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
       )}
 
       {/* Project Value and Profit by Financial Year - Grouped Column Chart */}
-      {/* Charts use unfiltered data and have their own independent filters */}
       <div className="w-full bg-gradient-to-br from-white via-primary-50/30 to-white rounded-2xl shadow-2xl p-6 border-2 border-primary-200/50 backdrop-blur-sm">
         <ProjectValueProfitByFYChart 
-          data={chartData?.projectValueProfitByFY || []} 
+          data={data?.projectValueProfitByFY || []} 
           dashboardType="operations"
+          filterControlledByParent
         />
       </div>
 
       {/* Project Value by Segment Pie Chart */}
-      {/* Chart fetches its own data independently based on its own filter */}
       <div className="w-full">
         <ProjectValuePieChart 
-          data={chartData?.projectValueByType || []} 
-          availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []}
+          data={data?.projectValueByType || []} 
+          availableFYs={data?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []}
           dashboardType="operations"
+          filterControlledByParent
         />
       </div>
     </div>

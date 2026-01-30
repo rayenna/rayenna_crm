@@ -16,9 +16,9 @@ interface ManagementDashboardProps {
 }
 
 const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: ManagementDashboardProps) => {
-  // Fetch dashboard metrics with filters (for metric cards only)
+  // Single filtered query for tiles and all charts (same FY, Qtr, Month as dashboard filter)
   const { data, isLoading } = useQuery({
-    queryKey: ['dashboard', 'management', 'metrics', selectedFYs, selectedQuarters, selectedMonths],
+    queryKey: ['dashboard', 'management', selectedFYs, selectedQuarters, selectedMonths],
     queryFn: async () => {
       const params = new URLSearchParams()
       selectedFYs.forEach((fy) => params.append('fy', fy))
@@ -29,24 +29,10 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
     },
   })
 
-  // Fetch unfiltered chart data separately (charts have their own filters)
-  const { data: chartData } = useQuery({
-    queryKey: ['dashboard', 'management', 'charts'],
-    queryFn: async () => {
-      const res = await axiosInstance.get(`/api/dashboard/management`)
-      return res.data
-    },
-  })
-
   if (isLoading) return <div>Loading...</div>
 
-  // Debug: Log data to console (can be removed in production)
-  if (import.meta.env.DEV) {
-    console.log('Management Dashboard Data (Metrics):', data)
-    console.log('Management Dashboard Data (Charts):', chartData)
-  }
-
-  const projectValueProfitByFY = chartData?.projectValueProfitByFY ?? []
+  const projectValueProfitByFY = data?.projectValueProfitByFY ?? []
+  const dashboardFilter = { selectedFYs, selectedQuarters, selectedMonths }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -92,29 +78,29 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
       </div>
 
       {/* Project Value and Profit by Financial Year - Grouped Column Chart */}
-      {/* Charts use unfiltered data and have their own independent filters */}
       <div className="w-full bg-gradient-to-br from-white via-primary-50/30 to-white rounded-2xl shadow-2xl p-6 border-2 border-primary-200/50 backdrop-blur-sm">
         <ProjectValueProfitByFYChart 
-          data={chartData?.projectValueProfitByFY || []} 
+          data={data?.projectValueProfitByFY || []} 
           dashboardType="management"
+          filterControlledByParent
         />
       </div>
 
       {/* Charts Section - Side by Side */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Project Value by Segment Pie Chart */}
-        {/* Chart fetches its own data independently based on its own filter */}
         <div className="w-full">
           <ProjectValuePieChart 
-            data={chartData?.projectValueByType || []} 
-            availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []}
+            data={data?.projectValueByType || []} 
+            availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
             dashboardType="management"
+            filterControlledByParent
           />
         </div>
-        {/* Customer Profitability Word Cloud */}
         <div className="w-full">
           <ProfitabilityWordCloud 
-            availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []} 
+            wordCloudData={data?.wordCloudData}
+            availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
+            filterControlledByParent
           />
         </div>
       </div>
@@ -122,14 +108,16 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
       {/* Sales Team Performance Treemap */}
       <div className="w-full">
         <SalesTeamTreemap 
-          availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []} 
+          availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
+          dashboardFilter={dashboardFilter}
         />
       </div>
 
       {/* Revenue by Lead Source Chart */}
       <div className="w-full">
         <RevenueByLeadSourceChart 
-          availableFYs={chartData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []}
+          availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
+          dashboardFilter={dashboardFilter}
         />
       </div>
     </div>

@@ -14,12 +14,13 @@ interface ProjectValueByType {
 interface ProjectValuePieChartProps {
   data?: ProjectValueByType[] // Optional - chart will fetch its own data if not provided
   availableFYs?: string[] // Available financial years from dashboard
-  dashboardType?: 'management' | 'sales' | 'operations' | 'finance' // Dashboard type to determine API endpoint
+  dashboardType?: 'management' | 'sales' | 'operations' | 'finance'
+  filterControlledByParent?: boolean
 }
 
 const CHART_COLORS = ['#ef4444', '#3b82f6', '#10b981'] // Red, Blue, Green
 
-const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardType = 'management' }: ProjectValuePieChartProps) => {
+const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardType = 'management', filterControlledByParent }: ProjectValuePieChartProps) => {
   const [outerRadius, setOuterRadius] = useState(120)
   const [chartHeight, setChartHeight] = useState(350)
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
@@ -53,30 +54,24 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
     ? availableFYs 
     : fyData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []
 
-  // Fetch chart data independently based on chart's own filter
-  // This ensures the chart filter works independently from dashboard filters
   const { data: filteredData, isLoading: isLoadingFiltered } = useQuery({
     queryKey: ['projectValueByType', dashboardType, selectedFYs],
     queryFn: async () => {
       const endpoint = `/api/dashboard/${dashboardType}`
       if (selectedFYs.length === 0) {
-        // Fetch all data when no FY is selected
         const res = await axiosInstance.get(endpoint)
         return res.data.projectValueByType || []
       }
-      // Fetch filtered data when specific FYs are selected
       const params = new URLSearchParams()
       selectedFYs.forEach((fy) => params.append('fy', fy))
       const res = await axiosInstance.get(`${endpoint}?${params.toString()}`)
       return res.data.projectValueByType || []
     },
-    enabled: true, // Always fetch - chart manages its own data
-    staleTime: 30000, // Cache for 30 seconds
+    enabled: !filterControlledByParent,
+    staleTime: 30000,
   })
-  
-  // Use fetched data (chart manages its own filtering)
-  // Fallback to initialData only if no data fetched yet (for initial render)
-  const chartData = filteredData || initialData || []
+
+  const chartData = filterControlledByParent ? (initialData || []) : (filteredData || initialData || [])
 
   const containerRef = useRef<HTMLDivElement>(null)
   const [chartKey, setChartKey] = useState(0)
@@ -175,7 +170,7 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
             Project Value by Customer Segment
           </h2>
         </div>
-        {finalAvailableFYs && finalAvailableFYs.length > 0 && (
+        {!filterControlledByParent && finalAvailableFYs && finalAvailableFYs.length > 0 && (
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="relative w-[192px]" ref={fyDropdownRef}>
               <button

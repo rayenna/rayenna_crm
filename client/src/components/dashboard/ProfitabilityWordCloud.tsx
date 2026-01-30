@@ -9,7 +9,11 @@ interface WordCloudData {
 }
 
 interface ProfitabilityWordCloudProps {
-  availableFYs?: string[] // Available FYs from dashboard data
+  availableFYs?: string[]
+  /** When provided with filterControlledByParent, use this data instead of fetching */
+  wordCloudData?: WordCloudData[]
+  /** When true, filter is the dashboard FY/Qtr/Month; use wordCloudData prop, no chart filter UI */
+  filterControlledByParent?: boolean
 }
 
 // Months ordered from April to March (Financial Year order)
@@ -28,7 +32,7 @@ const MONTHS = [
   { value: '03', label: 'March' },
 ]
 
-const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudProps) => {
+const ProfitabilityWordCloud = ({ availableFYs = [], wordCloudData: wordCloudDataProp, filterControlledByParent }: ProfitabilityWordCloudProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [dimensions, setDimensions] = useState({ width: 600, height: 400 })
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
@@ -53,7 +57,6 @@ const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudPro
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Fetch word cloud data with filters
   const { data, isLoading } = useQuery({
     queryKey: ['wordcloud', selectedFYs, selectedMonths],
     queryFn: async () => {
@@ -63,8 +66,11 @@ const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudPro
       const res = await axiosInstance.get(`/api/dashboard/wordcloud?${params.toString()}`)
       return res.data
     },
-    enabled: true, // Always fetch, even with no filters (shows all data)
+    enabled: !filterControlledByParent,
   })
+
+  const cloudData = filterControlledByParent && wordCloudDataProp ? wordCloudDataProp : data?.wordCloudData
+  const showLoading = !filterControlledByParent && isLoading
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -114,7 +120,7 @@ const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudPro
       }
     }
 
-    if (!canvasRef.current || !data?.wordCloudData || data.wordCloudData.length === 0) {
+    if (!canvasRef.current || !cloudData || cloudData.length === 0) {
       // Clear canvas if no data
       const canvas = canvasRef.current
       if (canvas) {
@@ -133,13 +139,13 @@ const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudPro
     // Normalize values for font size (min 10px, max based on screen size)
     const maxFontSize = window.innerWidth < 640 ? 40 : window.innerWidth < 1024 ? 50 : 60
     const minFontSize = window.innerWidth < 640 ? 12 : 16
-    const values = data.wordCloudData.map((d: WordCloudData) => d.value)
+    const values = cloudData.map((d: WordCloudData) => d.value)
     const minValue = Math.min(...values)
     const maxValue = Math.max(...values)
     const valueRange = maxValue - minValue || 1
 
-    // Prepare data for wordcloud library
-    const wordCloudList: [string, number][] = data.wordCloudData.map((item: WordCloudData) => {
+    // Prepare data for wordcloud library (use cloudData, which may come from parent when filterControlledByParent)
+    const wordCloudList: [string, number][] = cloudData.map((item: WordCloudData) => {
       // Scale profitability value to font size
       const normalizedValue = (item.value - minValue) / valueRange
       const fontSize = minFontSize + normalizedValue * (maxFontSize - minFontSize)
@@ -178,7 +184,7 @@ const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudPro
     } catch (error) {
       console.error('Error generating word cloud:', error)
     }
-  }, [data, dimensions])
+  }, [cloudData, dimensions])
 
   const toggleFY = (fy: string) => {
     setSelectedFYs((prev) => {
@@ -221,7 +227,8 @@ const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudPro
         </h2>
       </div>
 
-      {/* Filters - Side by Side */}
+      {/* Filters - only when not controlled by dashboard (FY, Qtr, Month at top) */}
+      {!filterControlledByParent && (
       <div className="mb-4">
         <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
           {/* FY Filter Dropdown */}
@@ -349,17 +356,17 @@ const ProfitabilityWordCloud = ({ availableFYs = [] }: ProfitabilityWordCloudPro
           </div>
         </div>
       </div>
+      )}
 
-      {/* Word Cloud Canvas or Loading/No Data */}
       <div className="flex-1 flex flex-col" style={{ minHeight: 0 }}>
-        {isLoading ? (
+        {showLoading ? (
           <div className="flex items-center justify-center flex-1">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
               <p className="mt-4 text-sm text-gray-500">Loading...</p>
             </div>
           </div>
-        ) : !data?.wordCloudData || data.wordCloudData.length === 0 ? (
+        ) : !cloudData || cloudData.length === 0 ? (
           <div className="flex items-center justify-center flex-1">
             <p className="text-sm text-gray-500">No profitability data available for selected filters.</p>
           </div>

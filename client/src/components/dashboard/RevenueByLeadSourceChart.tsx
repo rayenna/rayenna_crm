@@ -12,8 +12,16 @@ interface RevenueByLeadSourceData {
   projectCount: number
 }
 
+export interface DashboardFilterState {
+  selectedFYs: string[]
+  selectedQuarters: string[]
+  selectedMonths: string[]
+}
+
 interface RevenueByLeadSourceChartProps {
-  availableFYs?: string[] // Available FYs for filter dropdown
+  availableFYs?: string[] // Available FYs for filter dropdown (when not using dashboard filter)
+  /** When set, chart uses dashboard FY/Qtr/Month filter only; no chart-level filter UI. */
+  dashboardFilter?: DashboardFilterState | null
 }
 
 // Months ordered from April to March (Financial Year order)
@@ -32,14 +40,25 @@ const MONTHS = [
   { value: '03', label: 'March' },
 ]
 
-const RevenueByLeadSourceChart = ({ availableFYs = [] }: RevenueByLeadSourceChartProps) => {
+const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: RevenueByLeadSourceChartProps) => {
   const { user } = useAuth()
+  const filterControlledByParent = !!dashboardFilter
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [selectedMonths, setSelectedMonths] = useState<string[]>([])
   const [showFYDropdown, setShowFYDropdown] = useState(false)
   const [showMonthDropdown, setShowMonthDropdown] = useState(false)
   const fyDropdownRef = useRef<HTMLDivElement>(null)
   const monthDropdownRef = useRef<HTMLDivElement>(null)
+
+  const effectiveFYs = filterControlledByParent
+    ? (Array.isArray(dashboardFilter?.selectedFYs) ? dashboardFilter.selectedFYs : [])
+    : selectedFYs
+  const effectiveMonths = filterControlledByParent
+    ? (Array.isArray(dashboardFilter?.selectedMonths) ? dashboardFilter.selectedMonths : [])
+    : selectedMonths
+  const effectiveQuarters = filterControlledByParent
+    ? (Array.isArray(dashboardFilter?.selectedQuarters) ? dashboardFilter.selectedQuarters : [])
+    : []
 
   // Role-based access: Only show for ADMIN, MANAGEMENT, SALES
   const canView = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGEMENT || user?.role === UserRole.SALES
@@ -59,20 +78,21 @@ const RevenueByLeadSourceChart = ({ availableFYs = [] }: RevenueByLeadSourceChar
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Clear months if FY selection changes to not exactly one FY
+  // Clear months if FY selection changes to not exactly one FY (only when using own filters)
   useEffect(() => {
-    if (selectedFYs.length !== 1) {
+    if (!filterControlledByParent && selectedFYs.length !== 1) {
       setSelectedMonths([])
     }
-  }, [selectedFYs])
+  }, [filterControlledByParent, selectedFYs])
 
-  // Fetch chart data independently based on chart's own filters
+  // Fetch chart data: use dashboard filter when provided, else chart's own filters
   const { data, isLoading } = useQuery({
-    queryKey: ['revenueByLeadSource', selectedFYs, selectedMonths],
+    queryKey: ['revenueByLeadSource', effectiveFYs, effectiveMonths, effectiveQuarters],
     queryFn: async () => {
       const params = new URLSearchParams()
-      selectedFYs.forEach((fy) => params.append('fy', fy))
-      selectedMonths.forEach((month) => params.append('month', month))
+      effectiveFYs.forEach((fy) => params.append('fy', fy))
+      effectiveQuarters.forEach((q) => params.append('quarter', q))
+      effectiveMonths.forEach((month) => params.append('month', month))
       const res = await axiosInstance.get(`/api/dashboard/revenue-by-lead-source?${params.toString()}`)
       return res.data
     },
@@ -134,7 +154,7 @@ const RevenueByLeadSourceChart = ({ availableFYs = [] }: RevenueByLeadSourceChar
 
   return (
     <div className="bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-6 backdrop-blur-sm">
-      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex flex-col gap-3 mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,7 +166,8 @@ const RevenueByLeadSourceChart = ({ availableFYs = [] }: RevenueByLeadSourceChar
           </h2>
         </div>
 
-        {/* Filters - Side by Side */}
+        {/* Filters - only when not controlled by dashboard (FY, Qtr, Month at top) */}
+        {!filterControlledByParent && (
         <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
           {/* FY Filter Dropdown */}
           <div className="relative flex-1" ref={fyDropdownRef}>
@@ -278,25 +299,26 @@ const RevenueByLeadSourceChart = ({ availableFYs = [] }: RevenueByLeadSourceChar
             )}
           </div>
         </div>
-      </div>
+        )}
+        </div>
       {/* Chart or Loading/No Data */}
       <div className="w-full overflow-x-auto">
         {isLoading ? (
-          <div className="flex items-center justify-center" style={{ minHeight: '300px' }}>
+          <div className="flex items-center justify-center" style={{ minHeight: '400px' }}>
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
               <p className="mt-4 text-sm text-gray-500">Loading chart data...</p>
             </div>
           </div>
         ) : !chartData || chartData.length === 0 ? (
-          <div className="flex items-center justify-center" style={{ minHeight: '300px' }}>
+          <div className="flex items-center justify-center" style={{ minHeight: '400px' }}>
             <div className="text-center px-4">
               <p className="mb-2 text-sm sm:text-base text-gray-500">No data for selected period</p>
               <p className="text-xs sm:text-sm text-gray-600">Revenue data will appear here when projects are confirmed and completed.</p>
             </div>
           </div>
         ) : (
-          <div className="min-w-[300px]" style={{ height: '300px' }}>
+          <div className="min-w-[300px]" style={{ height: '400px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
@@ -341,12 +363,12 @@ const RevenueByLeadSourceChart = ({ availableFYs = [] }: RevenueByLeadSourceChar
                           <p className="text-sm text-gray-600 mt-1">
                             Projects: <span className="font-medium">{data.projectCount}</span>
                           </p>
-                          {selectedFYs.length > 0 && (
-                            <p className="text-xs text-gray-500 mt-1">FY: {selectedFYs.join(', ')}</p>
+                          {effectiveFYs.length > 0 && (
+                            <p className="text-xs text-gray-500 mt-1">FY: {effectiveFYs.join(', ')}</p>
                           )}
-                          {selectedMonths.length > 0 && (
+                          {effectiveMonths.length > 0 && (
                             <p className="text-xs text-gray-500 mt-1">
-                              Month: {selectedMonths.map(m => MONTHS.find(month => month.value === m)?.label).join(', ')}
+                              Month: {effectiveMonths.map(m => MONTHS.find(month => month.value === m)?.label).join(', ')}
                             </p>
                           )}
                         </div>

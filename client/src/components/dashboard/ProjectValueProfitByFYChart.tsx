@@ -10,64 +10,51 @@ interface FYData {
 }
 
 interface ProjectValueProfitByFYChartProps {
-  data?: FYData[] // Optional - chart can fetch its own data
-  dashboardType?: 'management' | 'sales' | 'operations' | 'finance' // Dashboard type to determine API endpoint
+  data?: FYData[]
+  dashboardType?: 'management' | 'sales' | 'operations' | 'finance'
+  /** When true, filter is the dashboard FY/Qtr/Month; use only data prop, no chart filter UI */
+  filterControlledByParent?: boolean
 }
 
-const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'management' }: ProjectValueProfitByFYChartProps) => {
+const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'management', filterControlledByParent }: ProjectValueProfitByFYChartProps) => {
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [showFYDropdown, setShowFYDropdown] = useState(false)
   const fyDropdownRef = useRef<HTMLDivElement>(null)
 
-  // Close dropdown when clicking outside
   useEffect(() => {
+    if (filterControlledByParent) return
     const handleClickOutside = (event: MouseEvent) => {
       if (fyDropdownRef.current && !fyDropdownRef.current.contains(event.target as Node)) {
         setShowFYDropdown(false)
       }
     }
-
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [filterControlledByParent])
 
-  // Fetch chart data independently based on chart's own filter
-  // This ensures the chart filter works independently from dashboard filters
   const { data: fetchedData, isLoading } = useQuery({
     queryKey: ['projectValueProfitByFY', dashboardType, selectedFYs],
     queryFn: async () => {
       const endpoint = `/api/dashboard/${dashboardType}`
       if (selectedFYs.length === 0) {
-        // Fetch all data when no FY is selected
         const res = await axiosInstance.get(endpoint)
         return res.data.projectValueProfitByFY || []
       }
-      // Fetch filtered data when specific FYs are selected
       const params = new URLSearchParams()
       selectedFYs.forEach((fy) => params.append('fy', fy))
       const res = await axiosInstance.get(`${endpoint}?${params.toString()}`)
       return res.data.projectValueProfitByFY || []
     },
-    enabled: true, // Always fetch - chart manages its own data
-    staleTime: 30000, // Cache for 30 seconds
+    enabled: !filterControlledByParent,
+    staleTime: 30000,
   })
 
-  // Use fetched data (chart manages its own filtering)
-  // Fallback to initialData only if no data fetched yet (for initial render)
-  const chartData = fetchedData || initialData || []
+  const chartData = filterControlledByParent ? (initialData || []) : (fetchedData || initialData || [])
 
-  // Debug logging (can be removed in production)
-  if (import.meta.env.DEV) {
-    console.log('ProjectValueProfitByFYChart - Initial data:', initialData)
-    console.log('ProjectValueProfitByFYChart - Fetched data:', fetchedData)
-    console.log('ProjectValueProfitByFYChart - Chart data (filtered):', chartData)
-  }
-
-  // Show placeholder if no data
-  if (isLoading) {
+  if (!filterControlledByParent && isLoading) {
     return (
       <div className="bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-6 backdrop-blur-sm">
-        <div className="flex items-center justify-center h-64 sm:h-96">
+        <div className="flex items-center justify-center" style={{ height: '400px' }}>
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             <p className="mt-4 text-sm text-gray-500">Loading chart data...</p>
@@ -90,7 +77,7 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
             Total Revenue and Total Profit by Financial Year
           </h2>
         </div>
-      <div className="flex items-center justify-center h-64 sm:h-96 text-gray-500">
+      <div className="flex items-center justify-center text-gray-500" style={{ height: '400px' }}>
         <div className="text-center px-4">
           <p className="mb-2 text-sm sm:text-base">No data available.</p>
           <p className="text-xs sm:text-sm text-gray-600">Projects with financial year information will appear here.</p>
@@ -138,6 +125,7 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
             Project Value & Profit by Financial Year
           </h2>
         </div>
+        {!filterControlledByParent && (
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <div className="relative w-[192px]" ref={fyDropdownRef}>
             <button
@@ -200,9 +188,10 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
             )}
           </div>
         </div>
+        )}
       </div>
       <div className="w-full overflow-x-auto">
-        <div className="min-w-[300px]" style={{ height: '300px' }}>
+        <div className="min-w-[300px]" style={{ height: '400px' }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={filteredData}

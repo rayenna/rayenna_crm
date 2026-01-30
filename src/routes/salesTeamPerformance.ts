@@ -5,7 +5,15 @@ import { authenticate, authorize } from '../middleware/auth';
 
 const router = express.Router();
 
-// Get sales team performance data with FY and Month filters
+// Quarter definition: Q1 Apr-Jun, Q2 Jul-Sep, Q3 Oct-Dec, Q4 Jan-Mar (same as dashboard)
+const QUARTER_TO_MONTHS: Record<string, string[]> = {
+  Q1: ['04', '05', '06'],
+  Q2: ['07', '08', '09'],
+  Q3: ['10', '11', '12'],
+  Q4: ['01', '02', '03'],
+};
+
+// Get sales team performance data with FY, Quarter and Month filters (aligned with dashboard)
 router.get(
   '/',
   authenticate,
@@ -14,6 +22,7 @@ router.get(
     try {
       const fyFilters = req.query.fy ? (Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[] : [];
       const monthFilters = req.query.month ? (Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[] : [];
+      const quarterFilters = req.query.quarter ? (Array.isArray(req.query.quarter) ? req.query.quarter : [req.query.quarter]) as string[] : [];
 
       const where: any = {
         salespersonId: { not: null },
@@ -23,6 +32,23 @@ router.get(
       // Apply FY filter
       if (fyFilters.length > 0) {
         where.year = { in: fyFilters };
+      }
+
+      // Effective month filter: quarter expands to months; if both quarter and month, use intersection
+      let effectiveMonthFilters: string[] = [];
+      if (fyFilters.length === 1) {
+        if (quarterFilters.length > 0) {
+          const quarterMonths = new Set<string>();
+          quarterFilters.forEach((q) => {
+            const months = QUARTER_TO_MONTHS[q];
+            if (months) months.forEach((m) => quarterMonths.add(m));
+          });
+          effectiveMonthFilters = monthFilters.length > 0
+            ? monthFilters.filter((m) => quarterMonths.has(m))
+            : Array.from(quarterMonths);
+        } else {
+          effectiveMonthFilters = monthFilters;
+        }
       }
 
       // Get all projects matching FY filter
@@ -44,20 +70,18 @@ router.get(
         },
       });
 
-      // Filter by month if provided
+      // Filter by month/quarter if provided (only when exactly one FY)
       let filteredProjects = allProjects;
-      if (monthFilters.length > 0 && fyFilters.length === 1) {
-        // Only apply month filter if exactly one FY is selected
+      if (effectiveMonthFilters.length > 0 && fyFilters.length === 1) {
         filteredProjects = allProjects.filter((project) => {
           if (!project.confirmationDate) {
-            // If no confirmation date, use createdAt
             const date = new Date(project.createdAt);
             const month = String(date.getMonth() + 1).padStart(2, '0');
-            return monthFilters.includes(month);
+            return effectiveMonthFilters.includes(month);
           }
           const date = new Date(project.confirmationDate);
           const month = String(date.getMonth() + 1).padStart(2, '0');
-          return monthFilters.includes(month);
+          return effectiveMonthFilters.includes(month);
         });
       }
 
