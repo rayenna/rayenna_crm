@@ -111,15 +111,6 @@ const ProfitabilityWordCloud = ({ availableFYs = [], wordCloudData: wordCloudDat
   }, [])
 
   useEffect(() => {
-    // Debug logging
-    if (import.meta.env.DEV) {
-      console.log('[WordCloud Component] Data received:', data)
-      console.log('[WordCloud Component] wordCloudData length:', data?.wordCloudData?.length || 0)
-      if (data?.wordCloudData && data.wordCloudData.length > 0) {
-        console.log('[WordCloud Component] Sample data:', data.wordCloudData.slice(0, 3))
-      }
-    }
-
     if (!canvasRef.current || !cloudData || cloudData.length === 0) {
       // Clear canvas if no data
       const canvas = canvasRef.current

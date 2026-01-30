@@ -148,11 +148,6 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
     )
   }
 
-  if (import.meta.env.DEV) {
-    console.log('ProjectValuePieChart - Initial data:', initialData)
-    console.log('ProjectValuePieChart - Chart data (filtered):', chartData)
-  }
-
   // Use chart data (already filtered by chart's own filter)
   const displayData = chartData
 

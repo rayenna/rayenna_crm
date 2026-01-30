@@ -20,9 +20,8 @@ import Help from './pages/Help'
 import Layout from './components/Layout'
 
 function App() {
-  console.log('VERCEL DEPLOY CHECK – Jan 24, 2026 – v1')
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <Toaster position="top-right" />
         <Routes>
