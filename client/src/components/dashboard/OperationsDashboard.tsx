@@ -7,16 +7,18 @@ import MetricCard from './MetricCard'
 
 interface OperationsDashboardProps {
   selectedFYs: string[]
+  selectedQuarters: string[]
   selectedMonths: string[]
 }
 
-const OperationsDashboard = ({ selectedFYs, selectedMonths }: OperationsDashboardProps) => {
+const OperationsDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: OperationsDashboardProps) => {
   // Fetch dashboard metrics with filters (for metric cards only)
   const { data, isLoading } = useQuery({
-    queryKey: ['dashboard', 'operations', 'metrics', selectedFYs, selectedMonths],
+    queryKey: ['dashboard', 'operations', 'metrics', selectedFYs, selectedQuarters, selectedMonths],
     queryFn: async () => {
       const params = new URLSearchParams()
       selectedFYs.forEach((fy) => params.append('fy', fy))
+      selectedQuarters.forEach((q) => params.append('quarter', q))
       selectedMonths.forEach((month) => params.append('month', month))
       const res = await axiosInstance.get(`/api/dashboard/operations?${params.toString()}`)
       return res.data

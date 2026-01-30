@@ -12,6 +12,7 @@ import axiosInstance from '../utils/axios'
 const Dashboard = () => {
   const { user } = useAuth()
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
+  const [selectedQuarters, setSelectedQuarters] = useState<string[]>([])
   const [selectedMonths, setSelectedMonths] = useState<string[]>([])
 
   // Fetch available FYs from dashboard data based on user role
@@ -36,33 +37,35 @@ const Dashboard = () => {
   const getDashboardComponent = () => {
     switch (user?.role) {
       case UserRole.SALES:
-        return <SalesDashboard selectedFYs={selectedFYs} selectedMonths={selectedMonths} />
+        return <SalesDashboard selectedFYs={selectedFYs} selectedQuarters={selectedQuarters} selectedMonths={selectedMonths} />
       case UserRole.OPERATIONS:
-        return <OperationsDashboard selectedFYs={selectedFYs} selectedMonths={selectedMonths} />
+        return <OperationsDashboard selectedFYs={selectedFYs} selectedQuarters={selectedQuarters} selectedMonths={selectedMonths} />
       case UserRole.FINANCE:
-        return <FinanceDashboard selectedFYs={selectedFYs} selectedMonths={selectedMonths} />
+        return <FinanceDashboard selectedFYs={selectedFYs} selectedQuarters={selectedQuarters} selectedMonths={selectedMonths} />
       case UserRole.MANAGEMENT:
-        return <ManagementDashboard selectedFYs={selectedFYs} selectedMonths={selectedMonths} />
+        return <ManagementDashboard selectedFYs={selectedFYs} selectedQuarters={selectedQuarters} selectedMonths={selectedMonths} />
       case UserRole.ADMIN:
-        return <ManagementDashboard selectedFYs={selectedFYs} selectedMonths={selectedMonths} />
+        return <ManagementDashboard selectedFYs={selectedFYs} selectedQuarters={selectedQuarters} selectedMonths={selectedMonths} />
       default:
         return <div>No dashboard available</div>
     }
   }
 
   return (
-    <div className="px-4 py-6 sm:px-0">
+    <div className="px-4 py-6 sm:px-0 max-w-full overflow-x-hidden">
       <div className="mb-6 animate-slide-up">
-        <h1 className="text-4xl font-extrabold text-primary-800 mb-3">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-primary-800 mb-2 sm:mb-3">
           Dashboard
         </h1>
-        <p className="text-gray-600 font-medium text-lg">Monitor your business performance at a glance</p>
+        <p className="text-gray-600 font-medium text-base sm:text-lg">Monitor your business performance at a glance</p>
       </div>
       <DashboardFilters
         availableFYs={availableFYs}
         selectedFYs={selectedFYs}
+        selectedQuarters={selectedQuarters}
         selectedMonths={selectedMonths}
         onFYChange={setSelectedFYs}
+        onQuarterChange={setSelectedQuarters}
         onMonthChange={setSelectedMonths}
       />
       {getDashboardComponent()}

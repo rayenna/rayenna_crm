@@ -1,24 +1,27 @@
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
-import { FaUsers, FaBolt, FaRupeeSign, FaCheckCircle, FaClipboardList, FaExclamationTriangle, FaChartLine } from 'react-icons/fa'
+import { FaUsers, FaCheckCircle, FaClipboardList, FaExclamationTriangle } from 'react-icons/fa'
 import ProjectValuePieChart from './ProjectValuePieChart'
 import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
 import ProfitabilityWordCloud from './ProfitabilityWordCloud'
 import RevenueByLeadSourceChart from './RevenueByLeadSourceChart'
 import MetricCard from './MetricCard'
+import KeyMetricsTile from './KeyMetricsTile'
 
 interface SalesDashboardProps {
   selectedFYs: string[]
+  selectedQuarters: string[]
   selectedMonths: string[]
 }
 
-const SalesDashboard = ({ selectedFYs, selectedMonths }: SalesDashboardProps) => {
+const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: SalesDashboardProps) => {
   // Fetch dashboard metrics with filters (for metric cards only)
   const { data, isLoading } = useQuery({
-    queryKey: ['dashboard', 'sales', 'metrics', selectedFYs, selectedMonths],
+    queryKey: ['dashboard', 'sales', 'metrics', selectedFYs, selectedQuarters, selectedMonths],
     queryFn: async () => {
       const params = new URLSearchParams()
       selectedFYs.forEach((fy) => params.append('fy', fy))
+      selectedQuarters.forEach((q) => params.append('quarter', q))
       selectedMonths.forEach((month) => params.append('month', month))
       const res = await axiosInstance.get(`/api/dashboard/sales?${params.toString()}`)
       return res.data
@@ -42,9 +45,22 @@ const SalesDashboard = ({ selectedFYs, selectedMonths }: SalesDashboardProps) =>
     console.log('Sales Dashboard Data (Charts):', chartData)
   }
 
+  const projectValueProfitByFY = chartData?.projectValueProfitByFY ?? []
+
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Top Metrics Row - 5 columns */}
+      {/* Year on Year – full width row */}
+      <div className="w-full">
+        <KeyMetricsTile
+          capacity={data?.revenue?.totalCapacity ?? 0}
+          pipeline={data?.totalPipeline ?? 0}
+          revenue={data?.revenue?.totalRevenue ?? 0}
+          profit={data?.totalProfit ?? 0}
+          projectValueProfitByFY={projectValueProfitByFY}
+        />
+      </div>
+
+      {/* Other tiles – same width as each other */}
       <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <MetricCard
           title="Total Leads"
@@ -53,33 +69,11 @@ const SalesDashboard = ({ selectedFYs, selectedMonths }: SalesDashboardProps) =>
           gradient="from-indigo-500 to-cyan-500"
         />
         <MetricCard
-          title="Total Capacity"
-          value={`${Math.round(data?.revenue?.totalCapacity || 0)} kW`}
-          icon={<FaBolt />}
-          gradient="from-yellow-500 to-orange-500"
-        />
-        <MetricCard
-          title="Total Revenue"
-          value={`₹${Math.round(data?.revenue?.totalRevenue || 0).toLocaleString('en-IN')}`}
-          icon={<FaRupeeSign />}
-          gradient="from-primary-600 to-primary-700"
-        />
-        <MetricCard
-          title="Total Pipeline"
-          value={`₹${Math.round(data?.totalPipeline || 0).toLocaleString('en-IN')}`}
-          icon={<FaChartLine />}
-          gradient="from-indigo-500 to-purple-500"
-        />
-        <MetricCard
           title="Approved Projects"
           value={data?.pipeline?.approved || 0}
           icon={<FaCheckCircle />}
           gradient="from-purple-500 to-pink-500"
         />
-      </div>
-
-      {/* Second Metrics Row - 3 columns */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
         <MetricCard
           title="Survey Stage"
           value={data?.pipeline?.survey || 0}

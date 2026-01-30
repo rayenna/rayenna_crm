@@ -5,11 +5,20 @@ import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 
-// Helper function to apply FY and Month filters to project queries
+// Quarter definition: Q1 Apr-Jun, Q2 Jul-Sep, Q3 Oct-Dec, Q4 Jan-Mar
+const QUARTER_TO_MONTHS: Record<string, string[]> = {
+  Q1: ['04', '05', '06'],
+  Q2: ['07', '08', '09'],
+  Q3: ['10', '11', '12'],
+  Q4: ['01', '02', '03'],
+};
+
+// Helper function to apply FY, Quarter and Month filters to project queries (dashboard tiles only)
 function applyDateFilters(
   baseWhere: any,
   fyFilters: string[],
-  monthFilters: string[]
+  monthFilters: string[],
+  quarterFilters: string[] = []
 ): any {
   let where = { ...baseWhere };
 
@@ -18,46 +27,55 @@ function applyDateFilters(
     where.year = { in: fyFilters };
   }
 
-  // Apply month filter using date range filtering
-  // Month filter only applies if exactly one FY is selected
-  if (monthFilters.length > 0 && fyFilters.length === 1) {
-    const fy = fyFilters[0];
-    // Extract year from FY (e.g., "2024-25" -> 2024 or 2025)
-    const yearMatch = fy.match(/(\d{4})/);
-    if (yearMatch) {
-      const startYear = parseInt(yearMatch[1]);
-      
-      // Build date filters for each selected month
-      const dateFilters: any[] = [];
-      
-      monthFilters.forEach((month) => {
-        const monthNum = parseInt(month);
-        let year = startYear;
-        
-        // Months 1-3 (Jan-Mar) belong to the second year of the FY
-        // Months 4-12 (Apr-Dec) belong to the first year of the FY
-        if (monthNum >= 1 && monthNum <= 3) {
-          year = startYear + 1;
-        }
-        
-        const startDate = new Date(year, monthNum - 1, 1);
-        const endDate = new Date(year, monthNum, 0, 23, 59, 59, 999);
-        
-        dateFilters.push({
-          OR: [
-            { confirmationDate: { gte: startDate, lte: endDate } },
-            { createdAt: { gte: startDate, lte: endDate } },
-          ],
-        });
+  // Month/Quarter filter only applies if exactly one FY is selected
+  if (fyFilters.length === 1) {
+    let effectiveMonthFilters: string[] = [];
+
+    if (quarterFilters.length > 0) {
+      const quarterMonths = new Set<string>();
+      quarterFilters.forEach((q) => {
+        const months = QUARTER_TO_MONTHS[q];
+        if (months) months.forEach((m) => quarterMonths.add(m));
       });
-      
-      if (dateFilters.length > 0) {
-        where.AND = [
-          ...(where.AND || []),
-          {
-            OR: dateFilters,
-          },
-        ];
+      if (monthFilters.length > 0) {
+        // Both quarter and month selected: use intersection
+        effectiveMonthFilters = monthFilters.filter((m) => quarterMonths.has(m));
+      } else {
+        effectiveMonthFilters = Array.from(quarterMonths);
+      }
+    } else {
+      effectiveMonthFilters = monthFilters;
+    }
+
+    if (effectiveMonthFilters.length > 0) {
+      const fy = fyFilters[0];
+      const yearMatch = fy.match(/(\d{4})/);
+      if (yearMatch) {
+        const startYear = parseInt(yearMatch[1]);
+        const dateFilters: any[] = [];
+
+        effectiveMonthFilters.forEach((month) => {
+          const monthNum = parseInt(month);
+          let year = startYear;
+          if (monthNum >= 1 && monthNum <= 3) {
+            year = startYear + 1;
+          }
+          const startDate = new Date(year, monthNum - 1, 1);
+          const endDate = new Date(year, monthNum, 0, 23, 59, 59, 999);
+          dateFilters.push({
+            OR: [
+              { confirmationDate: { gte: startDate, lte: endDate } },
+              { createdAt: { gte: startDate, lte: endDate } },
+            ],
+          });
+        });
+
+        if (dateFilters.length > 0) {
+          where.AND = [
+            ...(where.AND || []),
+            { OR: dateFilters },
+          ];
+        }
       }
     }
   }
@@ -119,14 +137,15 @@ router.get('/sales', authenticate, async (req: Request, res) => {
     const role = req.user?.role;
     const fyFilters = req.query.fy ? (Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[] : [];
     const monthFilters = req.query.month ? (Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[] : [];
+    const quarterFilters = req.query.quarter ? (Array.isArray(req.query.quarter) ? req.query.quarter : [req.query.quarter]) as string[] : [];
 
     const baseWhere: any = {};
     if (role === UserRole.SALES) {
       baseWhere.salespersonId = userId;
     }
     
-    // Apply FY and month filters
-    const where = applyDateFilters(baseWhere, fyFilters, monthFilters);
+    // Apply FY, quarter and month filters (dashboard tiles only)
+    const where = applyDateFilters(baseWhere, fyFilters, monthFilters, quarterFilters);
 
     // Debug: Check revenue filter
     const revenueWhere = getRevenueWhere(where);
@@ -149,6 +168,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       confirmedProjects,
       totalCapacity,
       totalRevenue,
+      totalProfit,
       projectsByStatus,
       revenueBySalesperson,
     ] = await Promise.all([
@@ -180,6 +200,11 @@ router.get('/sales', authenticate, async (req: Request, res) => {
         console.log('[SALES DASHBOARD] Revenue result:', result);
         return result;
       })(),
+      // Total profit (grossProfit for same project set as revenue)
+      prisma.project.aggregate({
+        where: { ...getRevenueWhere(where), grossProfit: { not: null } },
+        _sum: { grossProfit: true },
+      }),
       // Projects by status
       prisma.project.groupBy({
         by: ['projectStatus'],
@@ -435,6 +460,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
         atRisk: pipelineAtRisk,
       },
       totalPipeline: totalPipeline._sum.projectCost || 0,
+      totalProfit: totalProfit._sum.grossProfit ?? 0,
       revenueBySalesperson: revenueBreakdown,
       projectValueByType: valueByTypeWithPercentage,
       projectValueProfitByFY,
@@ -450,9 +476,10 @@ router.get('/operations', authenticate, async (req: Request, res) => {
   try {
     const fyFilters = req.query.fy ? (Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[] : [];
     const monthFilters = req.query.month ? (Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[] : [];
-    
+    const quarterFilters = req.query.quarter ? (Array.isArray(req.query.quarter) ? req.query.quarter : [req.query.quarter]) as string[] : [];
+
     const baseWhere: any = {};
-    const where = applyDateFilters(baseWhere, fyFilters, monthFilters);
+    const where = applyDateFilters(baseWhere, fyFilters, monthFilters, quarterFilters);
     
     const [
       pendingInstallation,
@@ -631,9 +658,10 @@ router.get('/finance', authenticate, async (req: Request, res) => {
   try {
     const fyFilters = req.query.fy ? (Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[] : [];
     const monthFilters = req.query.month ? (Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[] : [];
-    
+    const quarterFilters = req.query.quarter ? (Array.isArray(req.query.quarter) ? req.query.quarter : [req.query.quarter]) as string[] : [];
+
     const baseWhere: any = {};
-    const where = applyDateFilters(baseWhere, fyFilters, monthFilters);
+    const where = applyDateFilters(baseWhere, fyFilters, monthFilters, quarterFilters);
     
       const [
       totalProjectValue,
@@ -865,9 +893,10 @@ router.get('/management', authenticate, async (req: Request, res) => {
   try {
     const fyFilters = req.query.fy ? (Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[] : [];
     const monthFilters = req.query.month ? (Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[] : [];
-    
+    const quarterFilters = req.query.quarter ? (Array.isArray(req.query.quarter) ? req.query.quarter : [req.query.quarter]) as string[] : [];
+
     const baseWhere: any = {};
-    const where = applyDateFilters(baseWhere, fyFilters, monthFilters);
+    const where = applyDateFilters(baseWhere, fyFilters, monthFilters, quarterFilters);
 
     const [sales, operations, finance] = await Promise.all([
       // Sales metrics
@@ -1088,9 +1117,10 @@ router.get('/revenue-by-lead-source', authenticate, async (req: Request, res: Re
       return res.status(403).json({ error: 'Access denied. This endpoint is only available to Admin, Management, and Sales roles.' });
     }
 
-    // Parse query parameters for FY and Month filters
+    // Parse query parameters for FY, Quarter and Month filters (dashboard tiles only)
     const fyFilters = req.query.fy ? (Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[] : [];
     const monthFilters = req.query.month ? (Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[] : [];
+    const quarterFilters = req.query.quarter ? (Array.isArray(req.query.quarter) ? req.query.quarter : [req.query.quarter]) as string[] : [];
 
     // Build base where clause
     const baseWhere: any = {};
@@ -1100,8 +1130,8 @@ router.get('/revenue-by-lead-source', authenticate, async (req: Request, res: Re
       baseWhere.salespersonId = userId;
     }
 
-    // Apply FY and month filters using existing helper function
-    const where = applyDateFilters(baseWhere, fyFilters, monthFilters);
+    // Apply FY, quarter and month filters using existing helper function
+    const where = applyDateFilters(baseWhere, fyFilters, monthFilters, quarterFilters);
 
     // Get revenue filter: Only confirmed/completed projects
     // Statuses: CONFIRMED, UNDER_INSTALLATION, COMPLETED, COMPLETED_SUBSIDY_CREDITED

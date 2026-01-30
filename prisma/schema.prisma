@@ -103,6 +103,12 @@ enum LostReason {
   OTHER
 }
 
+enum LostToCompetitionReason {
+  LOST_DUE_TO_PRICE
+  LOST_DUE_TO_FEATURES
+  LOST_DUE_TO_RELATIONSHIP_OTHER
+}
+
 enum ProposalStatus {
   DRAFT
   SENT
@@ -250,7 +256,9 @@ model Project {
   // Lost stage fields
   lostDate                  DateTime? // Date when project was marked as Lost (must be current or past date)
   lostReason                LostReason? // Reason for losing the project
+  lostToCompetitionReason   LostToCompetitionReason? // Required when lostReason is LOST_TO_COMPETITION
   lostOtherReason           String? // Free text if lostReason is OTHER
+  lostRevenue               Float? // Order value at time of loss (for lost deal analysis); projectCost is stored as 0
   slaDays                   Int? // SLA days for current stage
   statusIndicator           String? // GREEN, AMBER, RED (based on SLA)
   siteAddress               String?       @db.Text // Site address for installation

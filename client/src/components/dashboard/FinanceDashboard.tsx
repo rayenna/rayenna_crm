@@ -6,16 +6,18 @@ import MetricCard from './MetricCard'
 
 interface FinanceDashboardProps {
   selectedFYs: string[]
+  selectedQuarters: string[]
   selectedMonths: string[]
 }
 
-const FinanceDashboard = ({ selectedFYs, selectedMonths }: FinanceDashboardProps) => {
+const FinanceDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: FinanceDashboardProps) => {
   // Fetch dashboard metrics with filters (for metric cards only)
   const { data, isLoading } = useQuery({
-    queryKey: ['dashboard', 'finance', 'metrics', selectedFYs, selectedMonths],
+    queryKey: ['dashboard', 'finance', 'metrics', selectedFYs, selectedQuarters, selectedMonths],
     queryFn: async () => {
       const params = new URLSearchParams()
       selectedFYs.forEach((fy) => params.append('fy', fy))
+      selectedQuarters.forEach((q) => params.append('quarter', q))
       selectedMonths.forEach((month) => params.append('month', month))
       const res = await axiosInstance.get(`/api/dashboard/finance?${params.toString()}`)
       return res.data

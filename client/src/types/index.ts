@@ -98,6 +98,12 @@ export enum LostReason {
   OTHER = 'OTHER',
 }
 
+export enum LostToCompetitionReason {
+  LOST_DUE_TO_PRICE = 'LOST_DUE_TO_PRICE',
+  LOST_DUE_TO_FEATURES = 'LOST_DUE_TO_FEATURES',
+  LOST_DUE_TO_RELATIONSHIP_OTHER = 'LOST_DUE_TO_RELATIONSHIP_OTHER',
+}
+
 export enum LeadSource {
   WEBSITE = 'WEBSITE',
   REFERRAL = 'REFERRAL',
@@ -158,7 +164,9 @@ export interface Project {
   // Lost stage fields
   lostDate?: string
   lostReason?: LostReason
+  lostToCompetitionReason?: LostToCompetitionReason // Required when lostReason is LOST_TO_COMPETITION
   lostOtherReason?: string
+  lostRevenue?: number // Order value at time of loss (for lost deal analysis)
   statusIndicator?: 'GREEN' | 'AMBER' | 'RED'
   systemType?: SystemType
   panelBrand?: string

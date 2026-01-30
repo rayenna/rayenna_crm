@@ -483,6 +483,21 @@ const ProjectDetail = () => {
                     </dd>
                   </div>
                 )}
+                {project.lostReason === 'LOST_TO_COMPETITION' && project.lostToCompetitionReason && (
+                  <div>
+                    <dt className="text-sm text-gray-500">Why lost to competition</dt>
+                    <dd className="text-sm font-medium">
+                      {(() => {
+                        const compReasonMap: Record<string, string> = {
+                          'LOST_DUE_TO_PRICE': 'Lost due to Price',
+                          'LOST_DUE_TO_FEATURES': 'Lost due to Features',
+                          'LOST_DUE_TO_RELATIONSHIP_OTHER': 'Lost due to Relationship/Other factors',
+                        };
+                        return compReasonMap[project.lostToCompetitionReason!] || project.lostToCompetitionReason;
+                      })()}
+                    </dd>
+                  </div>
+                )}
                 {project.lostOtherReason && (
                   <div>
                     <dt className="text-sm text-gray-500">Other Reason Details</dt>

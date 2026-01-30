@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axiosInstance from '../utils/axios'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Project, ProjectType, ProjectServiceType, UserRole, ProjectStatus, LostReason, LeadSource } from '../types'
+import { Project, ProjectType, ProjectServiceType, UserRole, ProjectStatus, LostReason, LostToCompetitionReason, LeadSource } from '../types'
 import toast from 'react-hot-toast'
 import RemarksSection from '../components/remarks/RemarksSection'
 
@@ -238,16 +238,14 @@ const ProjectForm = () => {
     }
   }, [confirmationDate, setValue])
 
-  // Auto-set costs to 0 when Lost is selected
+  // For Lost: set lostDate to today if not set; do not zero projectCost (order value is required and stored as lost revenue)
   useEffect(() => {
+    if (projectStatus === ProjectStatus.LOST && !watch('lostDate')) {
+      const today = new Date().toISOString().split('T')[0];
+      setValue('lostDate', today);
+    }
     if (projectStatus === ProjectStatus.LOST) {
-      setValue('projectCost', 0);
       setValue('totalProjectCost', 0);
-      // Set lostDate to today if not set
-      if (!watch('lostDate')) {
-        const today = new Date().toISOString().split('T')[0];
-        setValue('lostDate', today);
-      }
     }
   }, [projectStatus, setValue, watch])
 
@@ -346,9 +344,17 @@ const ProjectForm = () => {
   useEffect(() => {
     if (project && isEdit) {
       const immutableFields = ['id', 'slNo', 'count', 'createdById', 'createdAt', 'updatedAt', 'totalAmountReceived', 'balanceAmount', 'paymentStatus', 'expectedProfit', 'customer'];
+      // When editing a Lost project, show order value from lostRevenue (projectCost is stored as 0)
+      if (project.projectStatus === ProjectStatus.LOST && (project.lostRevenue != null || project.projectCost != null)) {
+        setValue('projectCost', project.lostRevenue ?? project.projectCost ?? 0);
+      }
       Object.keys(project).forEach((key) => {
         // Skip immutable/system fields
         if (immutableFields.includes(key)) {
+          return;
+        }
+        // For Lost projects, projectCost was already set from lostRevenue above; skip overwriting with 0
+        if (key === 'projectCost' && project.projectStatus === ProjectStatus.LOST) {
           return;
         }
         // Set customerId from project
@@ -525,13 +531,32 @@ const ProjectForm = () => {
         toast.error('Please enter the reason for loss');
         return;
       }
-      // Auto-set costs to 0
-      data.projectCost = 0;
+      if (data.lostReason === LostReason.LOST_TO_COMPETITION && !data.lostToCompetitionReason) {
+        toast.error('Please select why the deal was lost to competition');
+        return;
+      }
+      // Confirmation Date (order lost date) is required for Lost - current or past
+      if (!data.confirmationDate) {
+        toast.error('Confirmation Date (order lost date) is required for Lost projects');
+        return;
+      }
+      const confDate = new Date(data.confirmationDate);
+      if (confDate > today) {
+        toast.error('Confirmation Date (order lost date) cannot be a future date');
+        return;
+      }
+      // Order value is required for Lost (stored as lost revenue); project cost will be saved as 0 by backend
+      const orderValue = allValues.projectCost !== undefined ? allValues.projectCost : data.projectCost;
+      if (orderValue === undefined || orderValue === '' || orderValue === null || parseFloat(String(orderValue)) <= 0) {
+        toast.error('Order Value is required and must be greater than 0 for Lost projects (stored as lost revenue for analysis)');
+        return;
+      }
       data.totalProjectCost = 0;
+      // Keep data.projectCost as the order value; backend will set lostRevenue = projectCost, projectCost = 0
     }
     
-    // Validate Order Value is required for CONFIRMED stage and onwards
-    if (confirmedAndLaterStages.includes(data.projectStatus)) {
+    // Validate Order Value is required for CONFIRMED stage and onwards (and LOST handled above)
+    if (confirmedAndLaterStages.includes(data.projectStatus) && data.projectStatus !== ProjectStatus.LOST) {
       const projectCostValue = allValues.projectCost !== undefined ? allValues.projectCost : data.projectCost;
       if (!projectCostValue || projectCostValue === '' || projectCostValue === null || parseFloat(String(projectCostValue)) <= 0) {
         toast.error('Order Value is required and must be greater than 0 for Confirmed Order stage and onwards');
@@ -660,7 +685,7 @@ const ProjectForm = () => {
         'customerId', 'type', 'projectServiceType', 'salespersonId', 'year',
         'systemCapacity', 'projectCost', 'confirmationDate', 'loanDetails',
         'incentiveEligible', 'leadSource', 'leadSourceDetails',
-        'roofType', 'systemType', 'projectStatus', 'lostDate', 'lostReason', 'lostOtherReason',
+        'roofType', 'systemType', 'projectStatus', 'lostDate', 'lostReason', 'lostToCompetitionReason', 'lostOtherReason',
         'leadId', 'assignedOpsId', 'panelBrand', 'inverterBrand',
         'siteAddress', 'expectedCommissioningDate', 'internalNotes',
         // Payment fields (optional for new projects)
@@ -687,8 +712,8 @@ const ProjectForm = () => {
     if (data.systemCapacity === '' || data.systemCapacity === undefined) {
       data.systemCapacity = null;
     }
-    // Only convert projectCost to null if not in CONFIRMED or later stages
-    if (!confirmedAndLaterStages.includes(data.projectStatus)) {
+    // Only convert projectCost to null if not in CONFIRMED or later stages (LOST sends order value; backend zeros it)
+    if (!confirmedAndLaterStages.includes(data.projectStatus) && data.projectStatus !== ProjectStatus.LOST) {
       if (data.projectCost === '' || data.projectCost === undefined) {
         data.projectCost = null;
       }
@@ -1028,7 +1053,8 @@ const ProjectForm = () => {
                     projectStatus === ProjectStatus.UNDER_INSTALLATION ||
                     projectStatus === ProjectStatus.SUBMITTED_FOR_SUBSIDY ||
                     projectStatus === ProjectStatus.COMPLETED ||
-                    projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED) && ' *'}
+                    projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED ||
+                    projectStatus === ProjectStatus.LOST) && ' *'}
                 </label>
                 <input
                   type="number"
@@ -1038,38 +1064,47 @@ const ProjectForm = () => {
                       projectStatus === ProjectStatus.UNDER_INSTALLATION ||
                       projectStatus === ProjectStatus.SUBMITTED_FOR_SUBSIDY ||
                       projectStatus === ProjectStatus.COMPLETED ||
-                      projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED) 
-                      ? 'Order Value is required for Confirmed Order stage and onwards'
+                      projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED ||
+                      projectStatus === ProjectStatus.LOST)
+                      ? (projectStatus === ProjectStatus.LOST ? 'Order Value is required for Lost projects (stored as lost revenue)' : 'Order Value is required for Confirmed Order stage and onwards')
                       : false,
                     validate: (value) => {
                       if (projectStatus === ProjectStatus.CONFIRMED ||
                           projectStatus === ProjectStatus.UNDER_INSTALLATION ||
                           projectStatus === ProjectStatus.SUBMITTED_FOR_SUBSIDY ||
                           projectStatus === ProjectStatus.COMPLETED ||
-                          projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED) {
+                          projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED ||
+                          projectStatus === ProjectStatus.LOST) {
                         if (!value || value === '' || parseFloat(value) <= 0) {
-                          return 'Order Value must be greater than 0 for Confirmed Order stage and onwards';
+                          return projectStatus === ProjectStatus.LOST
+                            ? 'Order Value must be greater than 0 for Lost projects (stored as lost revenue)'
+                            : 'Order Value must be greater than 0 for Confirmed Order stage and onwards';
                         }
                       }
                       return true;
                     }
                   })}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  readOnly={isLost}
                 />
+                {projectStatus === ProjectStatus.LOST && (
+                  <p className="mt-1 text-xs text-gray-500">Order value (stored as lost revenue for analysis). Project cost will be saved as 0.</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Confirmation Date {projectStatus !== ProjectStatus.LOST && '*'}
+                  Confirmation Date (order lost date when status is Lost) *
                 </label>
                 <input
                   type="date"
-                  {...register('confirmationDate', { required: projectStatus !== ProjectStatus.LOST })}
+                  {...register('confirmationDate', { required: true })}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  disabled={projectStatus === ProjectStatus.LOST}
-                  style={projectStatus === ProjectStatus.LOST ? { backgroundColor: '#f3f4f6', cursor: 'not-allowed' } : {}}
+                  disabled={isLost}
+                  style={isLost ? { backgroundColor: '#f3f4f6', cursor: 'not-allowed' } : {}}
+                  max={projectStatus === ProjectStatus.LOST ? new Date().toISOString().split('T')[0] : undefined}
                 />
                 {projectStatus === ProjectStatus.LOST && (
-                  <p className="mt-1 text-xs text-gray-500">Confirmation Date is not required for Lost projects</p>
+                  <p className="mt-1 text-xs text-gray-500">Confirmation Date is the order lost date (current or past only).</p>
                 )}
               </div>
               <div>
@@ -1147,6 +1182,24 @@ const ProjectForm = () => {
                       <option value={LostReason.OTHER}>Other</option>
                     </select>
                   </div>
+                  {watch('lostReason') === LostReason.LOST_TO_COMPETITION && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Why lost to competition *
+                      </label>
+                      <select
+                        {...register('lostToCompetitionReason', { 
+                          required: watch('lostReason') === LostReason.LOST_TO_COMPETITION ? 'Please select why the deal was lost to competition' : false 
+                        })}
+                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                      >
+                        <option value="">Select option</option>
+                        <option value={LostToCompetitionReason.LOST_DUE_TO_PRICE}>Lost due to Price</option>
+                        <option value={LostToCompetitionReason.LOST_DUE_TO_FEATURES}>Lost due to Features</option>
+                        <option value={LostToCompetitionReason.LOST_DUE_TO_RELATIONSHIP_OTHER}>Lost due to Relationship/Other factors</option>
+                      </select>
+                    </div>
+                  )}
                   {watch('lostReason') === LostReason.OTHER && (
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700">
