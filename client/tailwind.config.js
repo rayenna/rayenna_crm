@@ -7,18 +7,18 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Rayenna Energy brand colors - dark indigo and yellow theme
+        // Rayenna Energy brand colors - #0d1b3a (R:13, G:27, B:58) and yellow theme
         primary: {
-          50: '#eef2ff',
-          100: '#e0e7ff',
-          200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1', // Main indigo
-          600: '#4f46e5', // Primary brand dark indigo
-          700: '#4338ca',
-          800: '#3730a3', // Dark indigo
-          900: '#312e81', // Darker indigo
+          50: '#e8eaf0',
+          100: '#c5cad8',
+          200: '#9ea5bc',
+          300: '#6b7594',
+          400: '#3d4868',
+          500: '#1e2848',
+          600: '#0d1b3a', // Brand color
+          700: '#0a1530',
+          800: '#080f22',
+          900: '#050914',
         },
         secondary: {
           50: '#f8fafc',
@@ -32,8 +32,21 @@ export default {
           800: '#1e293b',
           900: '#0f172a',
         },
+        // Override Tailwind indigo so indigo-* classes use brand color #0d1b3a
+        indigo: {
+          50: '#e8eaf0',
+          100: '#c5cad8',
+          200: '#9ea5bc',
+          300: '#6b7594',
+          400: '#3d4868',
+          500: '#1e2848',
+          600: '#0d1b3a',
+          700: '#0a1530',
+          800: '#080f22',
+          900: '#050914',
+        },
         accent: {
-          indigo: '#6366f1',
+          indigo: '#0d1b3a',
           purple: '#8b5cf6',
           pink: '#ec4899',
           orange: '#f97316',

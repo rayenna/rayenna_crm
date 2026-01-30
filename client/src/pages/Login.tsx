@@ -110,13 +110,7 @@ const Login = () => {
         
         <div className="mt-4 text-center">
           <p className="text-xs text-gray-600">
-            Forgot your password?{' '}
-            <span className="text-gray-500 italic">
-              Contact your administrator to request a password reset link.
-            </span>
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            Administrators can reset passwords from the Users page.
+            Forgot your Password? Contact your administrator
           </p>
         </div>
         
