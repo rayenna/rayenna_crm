@@ -206,11 +206,9 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
             <XAxis 
               dataKey="fy" 
               tick={{ fontSize: 12 }}
-              label={{ value: selectedFYs.length === 0 ? 'Financial Year (FY)' : selectedFYs.length === 1 ? `FY: ${selectedFYs[0]}` : `FY: ${selectedFYs.length} selected`, position: 'insideBottom', offset: -5, style: { fontSize: '12px' } }}
             />
             <YAxis 
               tick={{ fontSize: 12 }}
-              label={{ value: 'Value (₹)', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }}
               tickFormatter={(value) => {
                 if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`
                 if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`
