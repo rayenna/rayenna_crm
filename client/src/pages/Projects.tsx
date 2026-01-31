@@ -31,16 +31,16 @@ const getPaymentStatusBadge = (project: Project) => {
     )
   }
   
-  // Otherwise show actual payment status with color coding
+  // Otherwise show actual payment status with brighter colour coding
   const paymentStatus = project.paymentStatus || 'PENDING'
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shadow-sm ${
         paymentStatus === 'FULLY_PAID'
-          ? 'bg-green-100 text-green-800'
+          ? 'bg-emerald-500 text-white'
           : paymentStatus === 'PARTIAL'
-          ? 'bg-yellow-100 text-yellow-800'
-          : 'bg-red-100 text-red-800'
+          ? 'bg-amber-400 text-amber-900'
+          : 'bg-red-500 text-white'
       }`}
     >
       {String(paymentStatus).replace(/_/g, ' ')}
@@ -48,30 +48,28 @@ const getPaymentStatusBadge = (project: Project) => {
   )
 }
 
-// Helper function to get status badge color classes
+// Helper function to get status badge color classes (Confirmed & Under Installation use bright colours)
 const getStatusColorClasses = (status: ProjectStatus): string => {
   switch (status) {
     case ProjectStatus.LEAD:
     case ProjectStatus.SITE_SURVEY:
     case ProjectStatus.PROPOSAL:
-      // Orange
-      return 'bg-orange-100 text-orange-800 border-orange-300'
+      return 'bg-amber-100 text-amber-800 border border-amber-300'
     case ProjectStatus.CONFIRMED:
+      // Bright blue – active order, stands out
+      return 'bg-sky-400 text-white border border-sky-500 shadow-sm'
     case ProjectStatus.UNDER_INSTALLATION:
-      // Blue
-      return 'bg-indigo-100 text-indigo-800 border-indigo-300'
+      // Bright cyan – in progress, very visible
+      return 'bg-cyan-400 text-white border border-cyan-500 shadow-sm'
     case ProjectStatus.SUBMITTED_FOR_SUBSIDY:
-      // Dark Purple
-      return 'bg-purple-100 text-purple-800 border-purple-300'
+      return 'bg-violet-200 text-violet-800 border border-violet-300'
     case ProjectStatus.COMPLETED:
     case ProjectStatus.COMPLETED_SUBSIDY_CREDITED:
-      // Green
-      return 'bg-green-100 text-green-800 border-green-300'
+      return 'bg-emerald-500 text-white border border-emerald-600 shadow-sm'
     case ProjectStatus.LOST:
-      // Red
-      return 'bg-red-100 text-red-800 border-red-300'
+      return 'bg-red-500 text-white border border-red-600 shadow-sm'
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-300'
+      return 'bg-gray-100 text-gray-800 border border-gray-300'
   }
 }
 
@@ -298,13 +296,13 @@ const Projects = () => {
   if (isLoading) return <div>Loading...</div>
 
   return (
-    <div className="px-4 py-6 sm:px-0">
+    <div className="px-4 py-6 sm:px-0 min-h-screen bg-gray-50/80">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-4xl font-extrabold text-primary-800 mb-3">
+          <h1 className="text-4xl font-extrabold bg-gradient-to-r from-primary-700 to-primary-600 bg-clip-text text-transparent mb-2">
             Projects
           </h1>
-          <p className="text-gray-600">Manage and track all your solar projects</p>
+          <p className="text-gray-600 font-medium">Manage and track all your solar projects</p>
         </div>
         {(user?.role === 'ADMIN' || user?.role === 'SALES') && (
           <Link
@@ -316,13 +314,13 @@ const Projects = () => {
         )}
       </div>
 
-      <div className="bg-white shadow rounded-lg mb-4 p-4">
+      <div className="bg-white shadow-md rounded-xl border border-gray-100 mb-4 p-4 border-t-4 border-t-primary-500">
         {/* Row 1: Search Bar */}
         <div className="mb-4">
           <input
             type="text"
             placeholder="Search across all projects..."
-            className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+            className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
           />
@@ -379,7 +377,7 @@ const Projects = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
             <select
-              className="border border-gray-300 rounded-md px-3 py-2 w-full"
+              className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white"
               value={filters.sortBy}
               onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
             >
@@ -394,7 +392,7 @@ const Projects = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
             <select
-              className="border border-gray-300 rounded-md px-3 py-2 w-full"
+              className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white"
               value={filters.sortOrder}
               onChange={(e) => setFilters({ ...filters, sortOrder: e.target.value })}
               disabled={!filters.sortBy}
@@ -466,13 +464,13 @@ const Projects = () => {
         </div>
       )}
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
+      <div className="bg-white shadow-lg rounded-xl border border-gray-100 overflow-hidden">
         <ul className="divide-y divide-gray-200">
           {data?.projects?.map((project: Project) => (
             <li key={project.id}>
               <Link
                 to={`/projects/${project.id}`}
-                className="block hover:bg-gray-50 px-4 py-4 sm:px-6"
+                className="block hover:bg-sky-50/70 px-4 py-4 sm:px-6 transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1">

@@ -197,9 +197,9 @@ const CustomerMaster = () => {
   if (isLoading) return <div className="px-4 py-6">Loading...</div>
 
   return (
-    <div className="px-4 py-6 sm:px-0">
+    <div className="px-4 py-6 sm:px-0 min-h-screen bg-gray-50/80">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-4xl font-extrabold text-primary-800 mb-3">
+        <h1 className="text-4xl font-extrabold bg-gradient-to-r from-primary-700 to-primary-600 bg-clip-text text-transparent mb-2">
           Customer Master
         </h1>
         {canCreate && (
@@ -215,12 +215,12 @@ const CustomerMaster = () => {
         )}
       </div>
 
-      <div className="bg-white shadow rounded-lg mb-4 p-4">
+      <div className="bg-white shadow-md rounded-xl border border-gray-100 mb-4 p-4 border-t-4 border-t-primary-500">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <input
             type="text"
             placeholder="Search by name, ID, or consumer number..."
-            className="border border-gray-300 rounded-md px-3 py-2 w-full"
+            className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
           />
@@ -377,10 +377,10 @@ const CustomerMaster = () => {
         </div>
       )}
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
+      <div className="bg-white shadow-lg rounded-xl border border-gray-100 overflow-hidden">
         <ul className="divide-y divide-gray-200">
           {data?.customers?.map((customer: Customer) => (
-            <li key={customer.id} className="hover:bg-gray-50">
+            <li key={customer.id} className="hover:bg-sky-50/70 transition-colors">
               <div className="px-4 py-4 sm:px-6">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
@@ -388,11 +388,11 @@ const CustomerMaster = () => {
                       <p className="text-sm font-medium text-primary-600">
                         {getCustomerDisplayName(customer)}
                       </p>
-                      <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
+                      <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-600 text-white shadow-sm">
                         ID: {customer.customerId}
                       </span>
                       {(customer as any)._count && (customer as any)._count.projects > 0 && (
-                        <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">
+                        <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500 text-white shadow-sm">
                           {(customer as any)._count.projects} Project{(customer as any)._count.projects !== 1 ? 's' : ''}
                         </span>
                       )}
