@@ -326,8 +326,9 @@ const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: Revenu
                   top: 20,
                   right: 30,
                   left: 20,
-                  bottom: 60, // Extra space for rotated labels
+                  bottom: 60,
                 }}
+                barCategoryGap="8%"
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
@@ -336,11 +337,9 @@ const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: Revenu
                   angle={-45}
                   textAnchor="end"
                   height={80}
-                  label={{ value: 'Lead Source', position: 'insideBottom', offset: -5, style: { fontSize: '12px' } }}
                 />
                 <YAxis 
                   tick={{ fontSize: 12 }}
-                  label={{ value: 'Revenue (₹)', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }}
                   tickFormatter={(value) => {
                     if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`
                     if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`

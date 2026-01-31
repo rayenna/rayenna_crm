@@ -305,6 +305,7 @@ const SalesTeamTreemap = ({ availableFYs = [], dashboardFilter }: SalesTeamTreem
               <BarChart
                 data={treemapData}
                 margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                barCategoryGap="8%"
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
@@ -316,8 +317,8 @@ const SalesTeamTreemap = ({ availableFYs = [], dashboardFilter }: SalesTeamTreem
                   tick={{ fontSize: 12 }}
                 />
                 <YAxis
+                  tick={{ fontSize: 12 }}
                   tickFormatter={(value) => `₹${(value / 100000).toFixed(1)}L`}
-                  label={{ value: 'Total Order Value (₹)', angle: -90, position: 'insideLeft' }}
                 />
                 <Tooltip
                   content={({ active, payload }: any) => {
