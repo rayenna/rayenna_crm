@@ -76,6 +76,7 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
   const containerRef = useRef<HTMLDivElement>(null)
   const lastBucketRef = useRef<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const rafRef = useRef<number | null>(null)
 
   useEffect(() => {
     const getBucket = (width: number) => {
@@ -94,7 +95,6 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
         setOuterRadius(120)
         setChartHeight(350)
       }
-      // Do not remount chart (no setChartKey) – avoids flicker on mobile viewport resize
     }
     const updateRadius = () => {
       const width = window.innerWidth
@@ -104,38 +104,38 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
         applyBucket(bucket)
       }
     }
+    const DEBOUNCE_MS = 500
     const scheduleUpdate = () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(() => {
         debounceRef.current = null
         updateRadius()
-      }, 400)
+      }, DEBOUNCE_MS)
     }
-    // Initial update once
+    const handleResize = () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null
+        scheduleUpdate()
+      })
+    }
     const initialBucket = getBucket(window.innerWidth)
     lastBucketRef.current = initialBucket
     applyBucket(initialBucket)
 
-    window.addEventListener('resize', scheduleUpdate)
-    let resizeObserver: ResizeObserver | null = null
-    if (containerRef.current) {
-      resizeObserver = new ResizeObserver(scheduleUpdate)
-      resizeObserver.observe(containerRef.current)
-    }
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', scheduleUpdate)
-      // Do not listen to scroll – it fires constantly on mobile and causes flicker
+    window.addEventListener('resize', handleResize)
+    // visualViewport only on touch devices (mobile) – avoids extra resize storm on laptop
+    const isTouch = typeof window !== 'undefined' && 'ontouchstart' in window
+    if (isTouch && window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize)
     }
 
     return () => {
-      window.removeEventListener('resize', scheduleUpdate)
+      window.removeEventListener('resize', handleResize)
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
       if (debounceRef.current) clearTimeout(debounceRef.current)
-      if (resizeObserver && containerRef.current) {
-        try { resizeObserver.unobserve(containerRef.current) } catch (_) {}
-        resizeObserver.disconnect()
-      }
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', scheduleUpdate)
+      if (isTouch && window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize)
       }
     }
   }, [])

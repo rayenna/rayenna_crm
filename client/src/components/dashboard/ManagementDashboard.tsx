@@ -79,7 +79,7 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
         <div className="min-w-0 bg-gradient-to-br from-white via-indigo-50/50 to-white shadow-lg rounded-xl border-2 border-indigo-200/50 overflow-hidden backdrop-blur-sm">
           <div className="bg-gradient-to-r from-indigo-500 via-cyan-500 to-indigo-600 px-3 py-2 sm:px-4 sm:py-2.5">
             <h3 className="text-sm sm:text-base font-bold text-white drop-shadow-md truncate">
-              Projects by Payment Status
+              Payment Status
             </h3>
           </div>
           <div className="px-3 py-2 sm:px-4 sm:py-3 overflow-x-hidden">

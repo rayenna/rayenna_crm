@@ -72,36 +72,58 @@ const ProfitabilityWordCloud = ({ availableFYs = [], wordCloudData: wordCloudDat
   const cloudData = filterControlledByParent && wordCloudDataProp ? wordCloudDataProp : data?.wordCloudData
   const showLoading = !filterControlledByParent && isLoading
 
+  const lastBucketRef = useRef<string | null>(null)
+
   useEffect(() => {
+    const getBucket = (width: number) => {
+      if (width < 640) return 'sm'
+      if (width < 1024) return 'md'
+      return 'lg'
+    }
     const updateDimensions = () => {
+      const width = window.innerWidth
+      const bucket = getBucket(width)
+      if (lastBucketRef.current === bucket) return
+      lastBucketRef.current = bucket
+
       const container = canvasRef.current?.parentElement
       if (container) {
-        // Calculate width: account for padding (p-4 = 16px each side = 32px total, p-6 on larger = 48px)
-        const padding = window.innerWidth < 640 ? 32 : 48
+        const padding = width < 640 ? 32 : 48
         const maxWidth = container.clientWidth - padding
-        const width = Math.min(maxWidth, 600)
-        // Calculate height: responsive based on screen size, maintain aspect ratio
-        const height = window.innerWidth < 640 
-          ? Math.min(300, width * 0.75) 
-          : window.innerWidth < 1024 
-          ? Math.min(350, width * 0.7) 
-          : Math.min(400, width * 0.67)
-        setDimensions({ width, height })
+        const w = Math.min(maxWidth, 600)
+        const h = width < 640
+          ? Math.min(300, w * 0.75)
+          : width < 1024
+          ? Math.min(350, w * 0.7)
+          : Math.min(400, w * 0.67)
+        setDimensions({ width: w, height: h })
       } else {
-        // Fallback if container not found yet
-        const fallbackWidth = window.innerWidth < 640 ? 280 : window.innerWidth < 1024 ? 400 : 500
-        const fallbackHeight = window.innerWidth < 640 ? 300 : window.innerWidth < 1024 ? 350 : 400
+        const fallbackWidth = width < 640 ? 280 : width < 1024 ? 400 : 500
+        const fallbackHeight = width < 640 ? 300 : width < 1024 ? 350 : 400
         setDimensions({ width: fallbackWidth, height: fallbackHeight })
       }
     }
 
-    // Initial update
-    updateDimensions()
-    // Update on resize with debounce
+    const initBucket = getBucket(window.innerWidth)
+    lastBucketRef.current = initBucket
+    const container = canvasRef.current?.parentElement
+    if (container) {
+      const padding = window.innerWidth < 640 ? 32 : 48
+      const maxWidth = container.clientWidth - padding
+      const w = Math.min(maxWidth, 600)
+      const h = window.innerWidth < 640 ? Math.min(300, w * 0.75) : window.innerWidth < 1024 ? Math.min(350, w * 0.7) : Math.min(400, w * 0.67)
+      setDimensions({ width: w, height: h })
+    } else {
+      const w = window.innerWidth < 640 ? 280 : window.innerWidth < 1024 ? 400 : 500
+      const h = window.innerWidth < 640 ? 300 : window.innerWidth < 1024 ? 350 : 400
+      setDimensions({ width: w, height: h })
+    }
+
+    const DEBOUNCE_MS = 500
     let resizeTimeout: number
     const handleResize = () => {
       clearTimeout(resizeTimeout)
-      resizeTimeout = setTimeout(updateDimensions, 100) as unknown as number
+      resizeTimeout = setTimeout(updateDimensions, DEBOUNCE_MS) as unknown as number
     }
     window.addEventListener('resize', handleResize)
     return () => {
