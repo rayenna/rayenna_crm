@@ -87,24 +87,23 @@ const Help = () => {
     setError(null)
     setMarkdownContent('') // Clear previous content
 
-    const loadMarkdown = async () => {
+    const FETCH_TIMEOUT_MS = 25000 // 25s – accommodates iPad on slow networks
+    let willRetry = false
+    const loadMarkdown = async (retryCount = 0) => {
+      willRetry = false
       try {
-        // Add timeout to prevent hanging
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
-        
+        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+
         const response = await fetch(selectedSection.markdownPath, {
-          cache: 'no-cache',
+          cache: 'default', // Allow browser cache – avoids repeat fetches on slow connections (e.g. iPad)
           signal: controller.signal,
-          headers: {
-            'Cache-Control': 'no-cache'
-          }
         })
-        
+
         clearTimeout(timeoutId)
-        
+
         if (cancelled || !mountedRef.current) return
-        
+
         if (response.ok) {
           const content = await response.text()
           if (!cancelled && mountedRef.current) {
@@ -120,7 +119,14 @@ const Help = () => {
       } catch (err: any) {
         console.error('Error loading markdown:', err)
         if (!cancelled && mountedRef.current) {
-          if (err.name === 'AbortError') {
+          const isTimeout = err?.name === 'AbortError'
+          if (isTimeout && retryCount < 1) {
+            willRetry = true
+            // Retry once – helps when first attempt times out (e.g. cold connection on iPad)
+            setTimeout(() => loadMarkdown(retryCount + 1), 1500)
+            return
+          }
+          if (isTimeout) {
             setError('Request timed out. Please try again.')
           } else {
             setError('Failed to load help content. Please try refreshing the page.')
@@ -128,7 +134,7 @@ const Help = () => {
           setMarkdownContent(`# ${selectedSection.title}\n\nContent for ${selectedSection.title} is coming soon.`)
         }
       } finally {
-        if (!cancelled && mountedRef.current) {
+        if (!cancelled && mountedRef.current && !willRetry) {
           setLoading(false)
           loadingRef.current = false
         }
