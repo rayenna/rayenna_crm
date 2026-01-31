@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import * as Sentry from '@sentry/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App.tsx'
+import { scrubSentryEvent } from './utils/sentryScrub'
 import './index.css'
 
 // Sentry (optional – only when VITE_SENTRY_DSN is set)
@@ -13,6 +14,10 @@ if (sentryDsn) {
     environment: import.meta.env.MODE || 'development',
     integrations: [Sentry.browserTracingIntegration()],
     tracesSampleRate: 0.1,
+    beforeSend(event) {
+      scrubSentryEvent(event as unknown as Record<string, unknown>)
+      return event
+    },
   })
 }
 

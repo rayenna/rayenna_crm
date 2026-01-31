@@ -602,8 +602,8 @@ The build now copies `index.html` → `404.html`. Render serves `404.html` for p
 
 If you see **"Not Found"** when opening **Redirects/Rewrites** (Dashboard → Static Site → Redirects/Rewrites), that’s fine — the **404.html** workaround replaces it. Just redeploy the static site so the new build (with `404.html`) is deployed.
 
-**Optional — if Redirects/Rewrites *is* available:**  
-Left sidebar → **Redirects/Rewrites** (or **Settings** → **Redirects/Rewrites**). **Add Rule** → **Type:** Rewrite → **Source:** `/*` → **Destination:** `/index.html` → **Save.** Not required if you use 404.html.
+**Required for /projects, /dashboard, etc. to work:**  
+Left sidebar → **Redirects/Rewrites** (or **Settings** → **Redirects/Rewrites**). **Add Rule** → **Type:** Rewrite → **Source:** `/*` → **Destination:** `/index.html` → **Save.** Without this, direct URLs like `https://...onrender.com/projects` return 404.
 
 Then open your frontend URL, try logging in, and check DevTools → Network that the login request goes to the **backend** URL.
 

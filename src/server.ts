@@ -27,6 +27,7 @@ import supportTicketsRoutes from './routes/supportTickets';
 import salesTeamPerformanceRoutes from './routes/salesTeamPerformance';
 import remarksRoutes from './routes/remarks';
 import adminAuditRoutes from './routes/adminAudit';
+import { scrubSentryEvent } from './utils/sentryScrub';
 
 dotenv.config();
 
@@ -36,6 +37,10 @@ if (process.env.SENTRY_DSN) {
     dsn: process.env.SENTRY_DSN,
     environment: process.env.NODE_ENV || 'development',
     tracesSampleRate: 0.1,
+    beforeSend(event) {
+      scrubSentryEvent(event as unknown as Record<string, unknown>);
+      return event;
+    },
   });
 }
 

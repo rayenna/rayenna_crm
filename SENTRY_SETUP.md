@@ -29,3 +29,12 @@ VITE_SENTRY_DSN=https://…@…ingest.sentry.io/…   # from Sentry project: ray
 - **Frontend:** Uncaught JS errors and React component errors (via Error Boundary).
 
 Events appear in your Sentry dashboard under the two projects (rayenna-backend, rayenna-frontend).
+
+## Sensitive data scrubbing
+
+Both backend and frontend use a **beforeSend** scrubber so passwords, tokens, and credit card–like data are never sent to Sentry:
+
+- **Keys redacted:** `password`, `token`, `authorization`, `apiKey`, `creditCard`, `cvv`, `secret`, and similar (including in nested objects and breadcrumbs).
+- **Patterns redacted:** Credit card–like digit sequences and JWT-like strings in messages and strings.
+
+Scrubbing runs in app code only; no Render or Sentry dashboard config is required.
