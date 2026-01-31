@@ -11,10 +11,7 @@ if (sentryDsn) {
   Sentry.init({
     dsn: sentryDsn,
     environment: import.meta.env.MODE || 'development',
-    integrations: [
-      Sentry.browserTracingIntegration(),
-      Sentry.reactRouterV6BrowserTracingIntegration(),
-    ],
+    integrations: [Sentry.browserTracingIntegration()],
     tracesSampleRate: 0.1,
   })
 }
@@ -34,7 +31,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       fallback={({ error, resetError }) => (
         <div style={{ padding: 24, textAlign: 'center', fontFamily: 'sans-serif' }}>
           <h2>Something went wrong</h2>
-          <pre style={{ textAlign: 'left', overflow: 'auto', maxWidth: 600 }}>{error?.message}</pre>
+          <pre style={{ textAlign: 'left', overflow: 'auto', maxWidth: 600 }}>
+            {error instanceof Error ? error.message : String(error ?? 'Unknown error')}
+          </pre>
           <button type="button" onClick={resetError} style={{ marginTop: 16, padding: '8px 16px' }}>
             Try again
           </button>

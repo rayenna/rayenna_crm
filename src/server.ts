@@ -52,12 +52,6 @@ if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
 
 const app = express();
 
-// Sentry request handler must be first (so every request is in a scope)
-if (process.env.SENTRY_DSN) {
-  app.use(Sentry.Handlers.requestHandler());
-  app.use(Sentry.Handlers.tracingHandler());
-}
-
 // Middleware
 // CORS configuration - allow local development and production frontend
 const allowedOrigins = [
@@ -154,13 +148,11 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Sentry error handler (before other error middleware)
-if (process.env.SENTRY_DSN) {
-  app.use(Sentry.Handlers.errorHandler());
-}
-
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(err);
+  }
   console.error(err.stack);
   res.status(err.status || 500).json({
     error: err.message || 'Internal server error',
