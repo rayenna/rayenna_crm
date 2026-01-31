@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
 
@@ -328,7 +328,7 @@ const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: Revenu
                   left: 20,
                   bottom: 60,
                 }}
-                barCategoryGap="8%"
+                barCategoryGap="4%"
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
@@ -376,7 +376,6 @@ const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: Revenu
                     return null
                   }}
                 />
-                <Legend />
                 <Bar 
                   dataKey="revenue" 
                   name="Revenue (₹)" 
