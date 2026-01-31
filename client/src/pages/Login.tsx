@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import * as Sentry from '@sentry/react'
 import { useAuth } from '../contexts/AuthContext'
 import { apiBaseUrl } from '../utils/axios'
 import toast from 'react-hot-toast'
@@ -119,18 +118,6 @@ const Login = () => {
           <p className="text-xs text-gray-500 text-center leading-relaxed">
             By signing in, you acknowledge and agree to the Credits, Copyright, intellectual property and Terms of Usage of this product. Refer the About section to know more
           </p>
-        </div>
-        <div className="mt-3 text-center">
-          <button
-            type="button"
-            onClick={() => {
-              Sentry.captureException(new Error('Sentry frontend test'))
-              toast.success('Test event sent to Sentry. Check rayenna-frontend → Issues.')
-            }}
-            className="text-xs text-gray-400 hover:text-gray-600 underline hover:underline-offset-2 cursor-pointer"
-          >
-            Test Sentry (frontend)
-          </button>
         </div>
       </div>
     </div>
