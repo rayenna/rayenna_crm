@@ -21,8 +21,9 @@ export const logPasswordReset = async (data: PasswordResetAuditData) => {
       ...data,
     };
 
-    // Log to console (can be extended to database table later)
-    console.log('[PASSWORD_RESET_AUDIT]', JSON.stringify(logEntry, null, 2));
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[PASSWORD_RESET_AUDIT]', JSON.stringify(logEntry, null, 2));
+    }
 
     // Optional: Store in a dedicated audit table if needed in the future
     // For now, keeping it minimal as requested

@@ -720,10 +720,9 @@ router.post(
           `;
           const currentMax = maxSlNoResult[0]?.max ? Number(maxSlNoResult[0].max) : 0;
           nextSlNo = currentMax + 1;
-          console.log(`📝 Calculated next slNo: ${nextSlNo} (max was: ${currentMax})`);
+          if (process.env.NODE_ENV === 'development') console.log(`📝 Calculated next slNo: ${nextSlNo} (max was: ${currentMax})`);
         } catch (slNoError: any) {
-          // If we can't get max, start from 1
-          console.warn('⚠️  Could not get max slNo, starting from 1:', slNoError.message);
+          if (process.env.NODE_ENV === 'development') console.warn('⚠️  Could not get max slNo, starting from 1:', slNoError.message);
           nextSlNo = 1;
         }
 
@@ -818,11 +817,10 @@ router.post(
           await prisma.$executeRawUnsafe(
             `SELECT setval('${seqName}', ${project.slNo}, true)`
           );
-          console.log(`✅ Updated sequence ${seqName} to ${project.slNo}`);
+          if (process.env.NODE_ENV === 'development') console.log(`✅ Updated sequence ${seqName} to ${project.slNo}`);
         }
       } catch (seqError: any) {
-        // Non-critical - sequence update failed, but project was created successfully
-        console.warn('⚠️  Could not update sequence after project creation:', seqError.message);
+        if (process.env.NODE_ENV === 'development') console.warn('⚠️  Could not update sequence after project creation:', seqError.message);
       }
 
       // Create audit log
@@ -977,17 +975,17 @@ router.put(
           }
         }
         
-        // Debug: Log what's in req.body
-        console.log('[FINANCE UPDATE] Request body:', JSON.stringify(req.body, null, 2));
-        console.log('[FINANCE UPDATE] Project current values:', {
-          advanceReceived: project.advanceReceived,
-          payment1: project.payment1,
-          payment2: project.payment2,
-          payment3: project.payment3,
-          lastPayment: project.lastPayment,
-          projectCost: project.projectCost,
-        });
-        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[FINANCE UPDATE] Request body:', JSON.stringify(req.body, null, 2));
+          console.log('[FINANCE UPDATE] Project current values:', {
+            advanceReceived: project.advanceReceived,
+            payment1: project.payment1,
+            payment2: project.payment2,
+            payment3: project.payment3,
+            lastPayment: project.lastPayment,
+            projectCost: project.projectCost,
+          });
+        }
         // Process all payment fields - Finance role should always receive ALL payment fields
         // Process every field in allowedFields, using req.body values or defaulting
         for (const field of allowedFields) {
@@ -1032,7 +1030,7 @@ router.put(
             // Handle payment amount fields
             if (req.body.hasOwnProperty(field)) {
               const value = req.body[field];
-              console.log(`[FINANCE UPDATE] Processing amount field ${field}:`, value, typeof value);
+              if (process.env.NODE_ENV === 'development') console.log(`[FINANCE UPDATE] Processing amount field ${field}:`, value, typeof value);
               // Convert to number, default to 0 if empty/invalid
               if (value === null || value === undefined || value === '' || value === '0') {
                 updateData[field] = 0;
@@ -1040,16 +1038,14 @@ router.put(
                 const numValue = parseFloat(String(value));
                 updateData[field] = isNaN(numValue) ? 0 : numValue;
               }
-              console.log(`[FINANCE UPDATE] Set ${field} to:`, updateData[field]);
+              if (process.env.NODE_ENV === 'development') console.log(`[FINANCE UPDATE] Set ${field} to:`, updateData[field]);
             } else {
-              console.log(`[FINANCE UPDATE] Field ${field} NOT in req.body, preserving existing value`);
+              if (process.env.NODE_ENV === 'development') console.log(`[FINANCE UPDATE] Field ${field} NOT in req.body, preserving existing value`);
             }
             // If field not provided, don't include in update (preserve existing value)
           }
         }
-        
-        console.log('[FINANCE UPDATE] updateData after processing fields:', JSON.stringify(updateData, null, 2));
-        
+        if (process.env.NODE_ENV === 'development') console.log('[FINANCE UPDATE] updateData after processing fields:', JSON.stringify(updateData, null, 2));
         // Recalculate payments using updated values where provided, otherwise existing values
         const finalAdvanceReceived = updateData.advanceReceived !== undefined ? (updateData.advanceReceived ?? 0) : (project.advanceReceived ?? 0);
         const finalPayment1 = updateData.payment1 !== undefined ? (updateData.payment1 ?? 0) : (project.payment1 ?? 0);
@@ -1057,7 +1053,7 @@ router.put(
         const finalPayment3 = updateData.payment3 !== undefined ? (updateData.payment3 ?? 0) : (project.payment3 ?? 0);
         const finalLastPayment = updateData.lastPayment !== undefined ? (updateData.lastPayment ?? 0) : (project.lastPayment ?? 0);
         
-        console.log('[FINANCE UPDATE] Final payment values for calculation:', {
+        if (process.env.NODE_ENV === 'development') console.log('[FINANCE UPDATE] Final payment values for calculation:', {
           advanceReceived: finalAdvanceReceived,
           payment1: finalPayment1,
           payment2: finalPayment2,
@@ -1065,7 +1061,6 @@ router.put(
           lastPayment: finalLastPayment,
           projectCost: project.projectCost,
         });
-        
         const paymentCalculations = calculatePayments({
           advanceReceived: finalAdvanceReceived,
           payment1: finalPayment1,
@@ -1074,12 +1069,9 @@ router.put(
           lastPayment: finalLastPayment,
           projectCost: (project.projectCost ?? 0),
         });
-        
-        console.log('[FINANCE UPDATE] Payment calculations result:', paymentCalculations);
-        
+        if (process.env.NODE_ENV === 'development') console.log('[FINANCE UPDATE] Payment calculations result:', paymentCalculations);
         Object.assign(updateData, paymentCalculations);
-        
-        console.log('[FINANCE UPDATE] Final updateData before save:', JSON.stringify(updateData, null, 2));
+        if (process.env.NODE_ENV === 'development') console.log('[FINANCE UPDATE] Final updateData before save:', JSON.stringify(updateData, null, 2));
       } else if (req.user?.role === UserRole.OPERATIONS) {
         // Operations can only update execution fields
         const allowedFields = [

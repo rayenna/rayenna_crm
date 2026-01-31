@@ -156,10 +156,10 @@ router.get(
         }
       }
 
-      // Debug logging
-      console.log('[CUSTOMERS API] Query params:', { search, page, limit, salespersonId, myCustomers, userRole: req.user?.role, userId: req.user?.id });
-      console.log('[CUSTOMERS API] Where clause:', JSON.stringify(where, null, 2));
-
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[CUSTOMERS API] Query params:', { search, page, limit, salespersonId, myCustomers, userRole: req.user?.role, userId: req.user?.id });
+        console.log('[CUSTOMERS API] Where clause:', JSON.stringify(where, null, 2));
+      }
       const [customers, total] = await Promise.all([
         prisma.customer.findMany({
           where,
@@ -201,9 +201,7 @@ router.get(
         }),
         prisma.customer.count({ where }),
       ]);
-
-      console.log('[CUSTOMERS API] Found customers:', customers.length, 'Total:', total);
-
+      if (process.env.NODE_ENV === 'development') console.log('[CUSTOMERS API] Found customers:', customers.length, 'Total:', total);
       res.json({
         customers,
         total,
@@ -455,12 +453,10 @@ router.put(
 
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        console.log('[CUSTOMER UPDATE] Validation errors:', errors.array());
+        if (process.env.NODE_ENV === 'development') console.log('[CUSTOMER UPDATE] Validation errors:', errors.array());
         return res.status(400).json({ errors: errors.array() });
       }
-
-      console.log('[CUSTOMER UPDATE] Starting update for customer:', req.params.id, 'by user:', req.user?.id);
-
+      if (process.env.NODE_ENV === 'development') console.log('[CUSTOMER UPDATE] Starting update for customer:', req.params.id, 'by user:', req.user?.id);
       const customer = await prisma.customer.findUnique({
         where: { id: req.params.id },
         select: {
@@ -498,25 +494,24 @@ router.put(
           },
         });
         const hasUserProjects = userProjectCount > 0;
-        
-        console.log('[CUSTOMER UPDATE] Permission check:', {
-          userId: req.user.id,
-          customerId: customer.id,
-          createdById: customer.createdById,
-          salespersonId: customer.salespersonId,
-          isCreator,
-          isTaggedSalesperson,
-          userProjectCount,
-          hasUserProjects,
-          permissionGranted: isCreator || isTaggedSalesperson || hasUserProjects,
-        });
-        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[CUSTOMER UPDATE] Permission check:', {
+            userId: req.user.id,
+            customerId: customer.id,
+            createdById: customer.createdById,
+            salespersonId: customer.salespersonId,
+            isCreator,
+            isTaggedSalesperson,
+            userProjectCount,
+            hasUserProjects,
+            permissionGranted: isCreator || isTaggedSalesperson || hasUserProjects,
+          });
+        }
         if (!isCreator && !isTaggedSalesperson && !hasUserProjects) {
-          console.log('[CUSTOMER UPDATE] Permission denied - user does not have access');
+          if (process.env.NODE_ENV === 'development') console.log('[CUSTOMER UPDATE] Permission denied - user does not have access');
           return res.status(403).json({ error: 'Only the Sales person who created or is tagged to this customer, or Admin/Management can edit it' });
         }
-        
-        console.log('[CUSTOMER UPDATE] Permission granted');
+        if (process.env.NODE_ENV === 'development') console.log('[CUSTOMER UPDATE] Permission granted');
       } else {
         // Other roles cannot edit
         return res.status(403).json({ error: 'Only Sales users (who created or are tagged to the customer), Admin, or Management can edit customers' });
@@ -682,19 +677,18 @@ router.put(
           delete updateData[field];
         }
       });
-
-      console.log('[CUSTOMER UPDATE] About to update customer:', {
-        customerId: req.params.id,
-        updateDataKeys: Object.keys(updateData),
-        updateDataSize: JSON.stringify(updateData).length,
-      });
-
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[CUSTOMER UPDATE] About to update customer:', {
+          customerId: req.params.id,
+          updateDataKeys: Object.keys(updateData),
+          updateDataSize: JSON.stringify(updateData).length,
+        });
+      }
       const updatedCustomer = await prisma.customer.update({
         where: { id: req.params.id },
         data: updateData,
       });
-
-      console.log('[CUSTOMER UPDATE] Customer updated successfully:', updatedCustomer.id);
+      if (process.env.NODE_ENV === 'development') console.log('[CUSTOMER UPDATE] Customer updated successfully:', updatedCustomer.id);
       res.json(updatedCustomer);
     } catch (error: any) {
       console.error('[CUSTOMER UPDATE] Error updating customer:', error);

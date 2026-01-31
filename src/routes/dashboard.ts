@@ -143,8 +143,9 @@ function getRevenueWhere(baseWhere: any): any {
     revenueFilter.AND = [stageCondition];
   }
   
-  console.log('[REVENUE FILTER] Final filter:', JSON.stringify(revenueFilter, null, 2));
-
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[REVENUE FILTER] Final filter:', JSON.stringify(revenueFilter, null, 2));
+  }
   return revenueFilter;
 }
 
@@ -165,21 +166,16 @@ router.get('/sales', authenticate, async (req: Request, res) => {
     // Apply FY, quarter and month filters (dashboard tiles only)
     const where = applyDateFilters(baseWhere, fyFilters, monthFilters, quarterFilters);
 
-    // Debug: Check revenue filter
     const revenueWhere = getRevenueWhere(where);
-    console.log('[SALES DASHBOARD] Revenue filter:', JSON.stringify(revenueWhere, null, 2));
-    
-    // Debug: Count projects matching revenue filter
-    const revenueCount = await prisma.project.count({ where: revenueWhere });
-    console.log('[SALES DASHBOARD] Projects matching revenue filter:', revenueCount);
-    
-    // Debug: Sample projects
-    const sampleProjects = await prisma.project.findMany({
-      where: revenueWhere,
-      take: 3,
-      select: { id: true, projectStatus: true, projectStage: true, projectCost: true },
-    });
-    console.log('[SALES DASHBOARD] Sample projects:', sampleProjects);
+    if (process.env.NODE_ENV === 'development') {
+      const revenueCount = await prisma.project.count({ where: revenueWhere });
+      const sampleProjects = await prisma.project.findMany({
+        where: revenueWhere,
+        take: 3,
+        select: { id: true, projectStatus: true, projectStage: true, projectCost: true },
+      });
+      console.log('[SALES DASHBOARD] Revenue filter:', JSON.stringify(revenueWhere, null, 2), 'count:', revenueCount, 'sample:', sampleProjects);
+    }
 
     const [
       totalLeads,
@@ -210,12 +206,13 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       // Total revenue (only confirmed/completed projects, excluding leads/survey/proposal)
       (async () => {
         const revenueWhere = getRevenueWhere(where);
-        console.log('[SALES DASHBOARD] Revenue filter:', JSON.stringify(revenueWhere, null, 2));
         const result = await prisma.project.aggregate({
           where: revenueWhere,
           _sum: { projectCost: true },
         });
-        console.log('[SALES DASHBOARD] Revenue result:', result);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[SALES DASHBOARD] Revenue filter:', JSON.stringify(revenueWhere, null, 2), 'result:', result);
+        }
         return result;
       })(),
       // Total profit (grossProfit for same project set as revenue)

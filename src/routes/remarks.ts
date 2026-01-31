@@ -72,12 +72,13 @@ router.post(
   ],
   async (req: Request, res: Response) => {
     try {
-      console.log('[REMARKS API] POST request received:', {
-        projectId: req.params.projectId,
-        body: req.body,
-        userId: req.user?.id,
-      });
-
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[REMARKS API] POST request received:', {
+          projectId: req.params.projectId,
+          body: req.body,
+          userId: req.user?.id,
+        });
+      }
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         console.error('[REMARKS API] Validation errors:', errors.array());
@@ -101,9 +102,9 @@ router.post(
       if (!project) {
         return res.status(404).json({ error: 'Project not found' });
       }
-
-      console.log('[REMARKS API] Creating remark:', { projectId, userId, remarkLength: remark?.length });
-      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[REMARKS API] Creating remark:', { projectId, userId, remarkLength: remark?.length });
+      }
       const newRemark = await prisma.projectRemark.create({
         data: {
           projectId,
@@ -121,8 +122,7 @@ router.post(
           },
         },
       });
-
-      console.log('[REMARKS API] Remark created successfully:', newRemark.id);
+      if (process.env.NODE_ENV === 'development') console.log('[REMARKS API] Remark created successfully:', newRemark.id);
       res.status(201).json(newRemark);
     } catch (error: any) {
       const { projectId } = req.params;

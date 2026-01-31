@@ -6,15 +6,16 @@ import { body, validationResult } from 'express-validator';
 import { UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
+import { rateLimit } from '../middleware/rateLimit';
 import { logPasswordReset } from '../utils/passwordResetAudit';
 import { logAccess, logSecurityAudit } from '../utils/auditLogger';
 
 const router = express.Router();
 
-// Register (Admin only - handled in users route)
-// Login
+// Login – rate limit by IP to reduce brute force
 router.post(
   '/login',
+  rateLimit(15, 15 * 60 * 1000), // 15 attempts per 15 minutes per IP
   [
     body('email').isEmail().normalizeEmail(),
     body('password').notEmpty(),
@@ -291,9 +292,10 @@ router.get('/verify-reset-token/:token', async (req: Request, res: Response) => 
   }
 });
 
-// Reset password with token
+// Reset password with token – rate limit by IP
 router.post(
   '/reset-password',
+  rateLimit(5, 60 * 60 * 1000), // 5 attempts per hour per IP
   [
     body('token').notEmpty().withMessage('Reset token is required'),
     body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters'),

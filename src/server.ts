@@ -33,6 +33,12 @@ dotenv.config();
 if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET is not set");
 }
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL is not set");
+}
+if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
+  console.warn("FRONTEND_URL is not set in production – password reset emails may use the wrong link. Set FRONTEND_URL to your frontend base URL.");
+}
 
 const app = express();
 

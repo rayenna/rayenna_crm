@@ -27,13 +27,17 @@ if (useCloudinary) {
     // We rely on Cloudinary to resolve the latest version.
     force_version: false,
   });
-  console.log('✅ Cloudinary configured:', {
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY ? '***' + process.env.CLOUDINARY_API_KEY.slice(-4) : 'missing',
-    api_secret: process.env.CLOUDINARY_API_SECRET ? '***' + process.env.CLOUDINARY_API_SECRET.slice(-4) : 'missing',
-  });
+  if (process.env.NODE_ENV === 'development') {
+    console.log('✅ Cloudinary configured:', {
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY ? '***' + process.env.CLOUDINARY_API_KEY.slice(-4) : 'missing',
+      api_secret: process.env.CLOUDINARY_API_SECRET ? '***' + process.env.CLOUDINARY_API_SECRET.slice(-4) : 'missing',
+    });
+  }
 } else {
-  console.warn('⚠️ Cloudinary not configured - using local file storage. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables to enable Cloudinary.');
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('⚠️ Cloudinary not configured - using local file storage. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables to enable Cloudinary.');
+  }
 }
 
 // Ensure uploads directory exists (for local storage fallback)
@@ -176,21 +180,21 @@ router.post(
     let cloudinaryFormat: string | undefined;
 
     try {
-      // Debug logging for upload issues
-      console.log('📤 Upload request received:', {
-        hasFile: !!req.file,
-        contentType: req.headers['content-type'],
-        method: req.method,
-        bodyKeys: Object.keys(req.body || {}),
-        fileField: req.file ? {
-          fieldname: req.file.fieldname,
-          originalname: req.file.originalname,
-          mimetype: req.file.mimetype,
-          size: req.file.size,
-          hasBuffer: !!req.file.buffer,
-        } : null,
-      });
-
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📤 Upload request received:', {
+          hasFile: !!req.file,
+          contentType: req.headers['content-type'],
+          method: req.method,
+          bodyKeys: Object.keys(req.body || {}),
+          fileField: req.file ? {
+            fieldname: req.file.fieldname,
+            originalname: req.file.originalname,
+            mimetype: req.file.mimetype,
+            size: req.file.size,
+            hasBuffer: !!req.file.buffer,
+          } : null,
+        });
+      }
       if (!req.file) {
         console.error('❌ No file in request. Multer did not process file.');
         console.error('Request details:', {
@@ -277,13 +281,14 @@ router.post(
           cloudinaryPublicId = publicId;
           cloudinaryResourceType = resourceType;
           cloudinaryFormat = typeof format === 'string' ? format : undefined;
-
-          console.log('✅ File uploaded to Cloudinary:', {
-            fileName: req.file.originalname,
-            publicId,
-            resourceType,
-            format: cloudinaryFormat,
-          });
+          if (process.env.NODE_ENV === 'development') {
+            console.log('✅ File uploaded to Cloudinary:', {
+              fileName: req.file.originalname,
+              publicId,
+              resourceType,
+              format: cloudinaryFormat,
+            });
+          }
         } catch (uploadError: any) {
           console.error('❌ Cloudinary upload failed:', uploadError);
           return res.status(500).json({ 
@@ -336,7 +341,7 @@ router.post(
       if (useCloudinary && cloudinaryPublicId) {
         try {
           await cloudinary.uploader.destroy(cloudinaryPublicId);
-          console.log('✅ Cleaned up Cloudinary file after error:', cloudinaryPublicId);
+          if (process.env.NODE_ENV === 'development') console.log('✅ Cleaned up Cloudinary file after error:', cloudinaryPublicId);
         } catch (cleanupError) {
           console.error('❌ Error cleaning up Cloudinary file:', cleanupError);
         }
