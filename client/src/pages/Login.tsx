@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import * as Sentry from '@sentry/react'
 import { useAuth } from '../contexts/AuthContext'
 import { apiBaseUrl } from '../utils/axios'
 import toast from 'react-hot-toast'
@@ -123,9 +124,10 @@ const Login = () => {
           <button
             type="button"
             onClick={() => {
-              throw new Error('Sentry frontend test')
+              Sentry.captureException(new Error('Sentry frontend test'))
+              toast.success('Test event sent to Sentry. Check rayenna-frontend → Issues.')
             }}
-            className="text-xs text-gray-400 hover:text-gray-600 underline"
+            className="text-xs text-gray-400 hover:text-gray-600 underline hover:underline-offset-2 cursor-pointer"
           >
             Test Sentry (frontend)
           </button>
