@@ -119,7 +119,7 @@ const ProfitabilityWordCloud = ({ availableFYs = [], wordCloudData: wordCloudDat
       setDimensions({ width: w, height: h })
     }
 
-    const DEBOUNCE_MS = 500
+    const DEBOUNCE_MS = 600
     let resizeTimeout: number
     const handleResize = () => {
       clearTimeout(resizeTimeout)

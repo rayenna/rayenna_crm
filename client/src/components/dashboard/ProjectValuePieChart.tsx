@@ -23,6 +23,7 @@ const CHART_COLORS = ['#ef4444', '#3b82f6', '#10b981'] // Red, Blue, Green
 const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardType = 'management', filterControlledByParent }: ProjectValuePieChartProps) => {
   const [outerRadius, setOuterRadius] = useState(120)
   const [chartHeight, setChartHeight] = useState(350)
+  const [chartWidth, setChartWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 800))
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [showFYDropdown, setShowFYDropdown] = useState(false)
   const fyDropdownRef = useRef<HTMLDivElement>(null)
@@ -76,7 +77,6 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
   const containerRef = useRef<HTMLDivElement>(null)
   const lastBucketRef = useRef<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const rafRef = useRef<number | null>(null)
 
   useEffect(() => {
     const getBucket = (width: number) => {
@@ -103,28 +103,26 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
         lastBucketRef.current = bucket
         applyBucket(bucket)
       }
+      if (containerRef.current) {
+        setChartWidth(containerRef.current.offsetWidth)
+      }
     }
-    const DEBOUNCE_MS = 500
-    const scheduleUpdate = () => {
+    const DEBOUNCE_MS = 600
+    const handleResize = () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(() => {
         debounceRef.current = null
         updateRadius()
       }, DEBOUNCE_MS)
     }
-    const handleResize = () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-      rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = null
-        scheduleUpdate()
-      })
-    }
     const initialBucket = getBucket(window.innerWidth)
     lastBucketRef.current = initialBucket
     applyBucket(initialBucket)
+    const measureTid = setTimeout(() => {
+      if (containerRef.current) setChartWidth(containerRef.current.offsetWidth)
+    }, 0)
 
     window.addEventListener('resize', handleResize)
-    // visualViewport only on touch devices (mobile) – avoids extra resize storm on laptop
     const isTouch = typeof window !== 'undefined' && 'ontouchstart' in window
     if (isTouch && window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleResize)
@@ -132,7 +130,7 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
 
     return () => {
       window.removeEventListener('resize', handleResize)
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+      clearTimeout(measureTid)
       if (debounceRef.current) clearTimeout(debounceRef.current)
       if (isTouch && window.visualViewport) {
         window.visualViewport.removeEventListener('resize', handleResize)
@@ -252,8 +250,8 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
         )}
       </div>
       <div className="w-full overflow-x-auto flex-1 flex flex-col" ref={containerRef}>
-        <div className="min-w-[280px] w-full" style={{ height: `${chartHeight}px` }}>
-        <ResponsiveContainer width="100%" height={chartHeight}>
+        <div className="min-w-[280px]" style={{ width: chartWidth, height: chartHeight }}>
+        <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={displayData}
