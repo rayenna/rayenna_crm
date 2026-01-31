@@ -26,6 +26,7 @@ const Users = () => {
       return res.data as User[]
     },
     retry: 1,
+    staleTime: 60 * 1000, // 1 min – avoid refetch on every focus (reduces flicker)
   })
 
   const createMutation = useMutation({
@@ -116,8 +117,19 @@ const Users = () => {
   if (isLoading) return <div>Loading...</div>
 
   if (error) {
-    console.error('Users query error:', error)
-    return <div className="px-4 py-6 text-red-600">Error loading users: {error instanceof Error ? error.message : 'Unknown error'}</div>
+    const err = error as { response?: { status?: number }; message?: string }
+    const is404 = err.response?.status === 404
+    return (
+      <div className="px-4 py-6 max-w-lg">
+        <p className="text-red-600 font-medium">Error loading users</p>
+        <p className="text-gray-600 mt-1">{err.message || 'Unknown error'}</p>
+        {is404 && (
+          <p className="text-sm text-amber-700 mt-3 p-3 bg-amber-50 rounded">
+            The Users API returned 404. In production, set <code className="bg-amber-100 px-1">VITE_API_BASE_URL</code> to your backend URL (e.g. your Render API URL) so requests go to <code className="bg-amber-100 px-1">/api/users</code> on the backend.
+          </p>
+        )}
+      </div>
+    )
   }
 
   return (
