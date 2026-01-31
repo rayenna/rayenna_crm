@@ -107,7 +107,9 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
         setChartWidth(containerRef.current.offsetWidth)
       }
     }
-    const DEBOUNCE_MS = 600
+    // Chrome on Windows fires resize more often (zoom, address bar, devtools); longer debounce reduces flicker/hang
+    const isChrome = typeof navigator !== 'undefined' && /Chrome/.test(navigator.userAgent) && !/Edge/.test(navigator.userAgent)
+    const DEBOUNCE_MS = isChrome ? 1500 : 600
     const handleResize = () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(() => {
@@ -122,7 +124,7 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
       if (containerRef.current) setChartWidth(containerRef.current.offsetWidth)
     }, 0)
 
-    window.addEventListener('resize', handleResize)
+    window.addEventListener('resize', handleResize, { passive: true })
     const isTouch = typeof window !== 'undefined' && 'ontouchstart' in window
     if (isTouch && window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleResize)

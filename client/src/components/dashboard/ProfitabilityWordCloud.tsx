@@ -119,16 +119,21 @@ const ProfitabilityWordCloud = ({ availableFYs = [], wordCloudData: wordCloudDat
       setDimensions({ width: w, height: h })
     }
 
-    const DEBOUNCE_MS = 600
-    let resizeTimeout: number
+    // Chrome on Windows fires resize more often; longer debounce reduces flicker/hang
+    const isChrome = typeof navigator !== 'undefined' && /Chrome/.test(navigator.userAgent) && !/Edge/.test(navigator.userAgent)
+    const DEBOUNCE_MS = isChrome ? 1500 : 600
+    const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const handleResize = () => {
-      clearTimeout(resizeTimeout)
-      resizeTimeout = setTimeout(updateDimensions, DEBOUNCE_MS) as unknown as number
+      if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current)
+      resizeTimeoutRef.current = setTimeout(() => {
+        resizeTimeoutRef.current = null
+        updateDimensions()
+      }, DEBOUNCE_MS)
     }
-    window.addEventListener('resize', handleResize)
+    window.addEventListener('resize', handleResize, { passive: true })
     return () => {
       window.removeEventListener('resize', handleResize)
-      clearTimeout(resizeTimeout)
+      if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current)
     }
   }, [])
 
