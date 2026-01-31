@@ -41,6 +41,7 @@ const ProfitabilityWordCloud = ({ availableFYs = [], wordCloudData: wordCloudDat
   const [showMonthDropdown, setShowMonthDropdown] = useState(false)
   const fyDropdownRef = useRef<HTMLDivElement>(null)
   const monthDropdownRef = useRef<HTMLDivElement>(null)
+  const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -122,7 +123,6 @@ const ProfitabilityWordCloud = ({ availableFYs = [], wordCloudData: wordCloudDat
     // Chrome on Windows fires resize more often; longer debounce reduces flicker/hang
     const isChrome = typeof navigator !== 'undefined' && /Chrome/.test(navigator.userAgent) && !/Edge/.test(navigator.userAgent)
     const DEBOUNCE_MS = isChrome ? 1500 : 600
-    const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const handleResize = () => {
       if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current)
       resizeTimeoutRef.current = setTimeout(() => {
