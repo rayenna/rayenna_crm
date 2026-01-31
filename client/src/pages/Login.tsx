@@ -119,6 +119,17 @@ const Login = () => {
             By signing in, you acknowledge and agree to the Credits, Copyright, intellectual property and Terms of Usage of this product. Refer the About section to know more
           </p>
         </div>
+        <div className="mt-3 text-center">
+          <button
+            type="button"
+            onClick={() => {
+              throw new Error('Sentry frontend test')
+            }}
+            className="text-xs text-gray-400 hover:text-gray-600 underline"
+          >
+            Test Sentry (frontend)
+          </button>
+        </div>
       </div>
     </div>
   )

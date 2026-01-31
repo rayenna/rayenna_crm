@@ -153,6 +153,11 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Sentry test: hit GET /api/sentry-test to trigger an error and verify rayenna-backend in Sentry. Remove after verifying.
+app.get('/api/sentry-test', () => {
+  throw new Error('Sentry backend test');
+});
+
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (process.env.SENTRY_DSN) {
