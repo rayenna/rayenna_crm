@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
+import * as Sentry from '@sentry/node';
 import prisma from './prisma';
 
 // Import routes
@@ -29,6 +30,15 @@ import adminAuditRoutes from './routes/adminAudit';
 
 dotenv.config();
 
+// Sentry (optional – only when SENTRY_DSN is set)
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: 0.1,
+  });
+}
+
 // Validate required environment variables at startup
 if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET is not set");
@@ -41,6 +51,12 @@ if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
 }
 
 const app = express();
+
+// Sentry request handler must be first (so every request is in a scope)
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.requestHandler());
+  app.use(Sentry.Handlers.tracingHandler());
+}
 
 // Middleware
 // CORS configuration - allow local development and production frontend
@@ -137,6 +153,11 @@ app.get('/health', (req, res) => {
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Sentry error handler (before other error middleware)
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.errorHandler());
+}
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
