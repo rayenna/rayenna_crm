@@ -4,7 +4,6 @@ import { FaUsers, FaCheckCircle, FaClipboardList, FaExclamationTriangle } from '
 import ProjectValuePieChart from './ProjectValuePieChart'
 import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
 import ProfitabilityWordCloud from './ProfitabilityWordCloud'
-import SalesTeamTreemap from './SalesTeamTreemap'
 import RevenueByLeadSourceChart from './RevenueByLeadSourceChart'
 import MetricCard from './MetricCard'
 import KeyMetricsTile from './KeyMetricsTile'
@@ -83,28 +82,20 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Sales
         />
       </div>
 
-      {/* Row 1: Three main charts – same height, compact, symmetrical (a, b, c) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 items-stretch">
-        <div className="w-full min-h-[360px] flex flex-col">
+      {/* Row 1: Revenue by Lead Source and Project Value & Profit by FY – side by side on laptop */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch min-w-0">
+        <div className="w-full min-h-[360px] flex flex-col min-w-0">
           <RevenueByLeadSourceChart 
             availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
             dashboardFilter={dashboardFilter}
           />
         </div>
-        <div className="w-full min-h-[360px] flex flex-col">
-          <SalesTeamTreemap 
-            availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
-            dashboardFilter={dashboardFilter}
+        <div className="w-full min-h-[360px] flex flex-col min-w-0">
+          <ProjectValueProfitByFYChart 
+            data={data?.projectValueProfitByFY || []} 
+            dashboardType="sales"
+            filterControlledByParent
           />
-        </div>
-        <div className="w-full min-h-[360px] flex flex-col">
-          <div className="h-full flex-1 min-h-0 bg-white rounded-xl shadow-lg p-4 sm:p-5 border border-gray-100 flex flex-col">
-            <ProjectValueProfitByFYChart 
-              data={data?.projectValueProfitByFY || []} 
-              dashboardType="sales"
-              filterControlledByParent
-            />
-          </div>
         </div>
       </div>
 

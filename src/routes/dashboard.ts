@@ -1180,6 +1180,42 @@ router.get('/management', authenticate, async (req: Request, res) => {
       _sum: { projectCost: true },
     });
 
+    // Projects by payment status (for Management/Admin – compact tile, same logic as Finance)
+    const allProjectsMgmt = await prisma.project.findMany({
+      where: { ...where },
+      select: {
+        id: true,
+        paymentStatus: true,
+        projectCost: true,
+        projectStatus: true,
+        balanceAmount: true,
+      },
+    });
+    const projectsByEffectiveStatusMgmt: Record<string, { count: number; totalValue: number; outstanding: number }> = {};
+    allProjectsMgmt.forEach((project) => {
+      const hasNoOrderValue = !project.projectCost || project.projectCost === 0;
+      const isEarlyOrLostStage =
+        project.projectStatus === ProjectStatus.LEAD ||
+        project.projectStatus === ProjectStatus.SITE_SURVEY ||
+        project.projectStatus === ProjectStatus.PROPOSAL ||
+        project.projectStatus === ProjectStatus.LOST;
+      const effectiveStatus = (hasNoOrderValue || isEarlyOrLostStage) ? 'N/A' : (project.paymentStatus || 'PENDING');
+      if (!projectsByEffectiveStatusMgmt[effectiveStatus]) {
+        projectsByEffectiveStatusMgmt[effectiveStatus] = { count: 0, totalValue: 0, outstanding: 0 };
+      }
+      projectsByEffectiveStatusMgmt[effectiveStatus].count++;
+      projectsByEffectiveStatusMgmt[effectiveStatus].totalValue += project.projectCost || 0;
+      if (effectiveStatus === 'PENDING' || effectiveStatus === 'PARTIAL') {
+        projectsByEffectiveStatusMgmt[effectiveStatus].outstanding += project.balanceAmount || 0;
+      }
+    });
+    const projectsByPaymentStatus = Object.entries(projectsByEffectiveStatusMgmt).map(([status, data]) => ({
+      status,
+      count: data.count,
+      totalValue: data.totalValue,
+      outstanding: data.outstanding,
+    }));
+
     // Get customer/project profitability data for word cloud
     const profitabilityData = await prisma.project.findMany({
       where: {
@@ -1269,6 +1305,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
       projectValueByType: valueByTypeWithPercentage,
       projectValueProfitByFY,
       wordCloudData,
+      projectsByPaymentStatus,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

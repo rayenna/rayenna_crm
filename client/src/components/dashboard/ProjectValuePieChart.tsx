@@ -74,55 +74,68 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
   const chartData = filterControlledByParent ? (initialData || []) : (filteredData || initialData || [])
 
   const containerRef = useRef<HTMLDivElement>(null)
-  const [chartKey, setChartKey] = useState(0)
+  const lastBucketRef = useRef<string | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    const updateRadius = () => {
-      const width = window.innerWidth
-      if (width < 640) {
+    const getBucket = (width: number) => {
+      if (width < 640) return 'sm'
+      if (width < 1024) return 'md'
+      return 'lg'
+    }
+    const applyBucket = (bucket: string) => {
+      if (bucket === 'sm') {
         setOuterRadius(80)
         setChartHeight(280)
-      } else if (width < 1024) {
+      } else if (bucket === 'md') {
         setOuterRadius(100)
         setChartHeight(320)
       } else {
         setOuterRadius(120)
         setChartHeight(350)
       }
-      // Force chart re-render on resize/zoom to fix disappearing issue
-      setChartKey((prev) => prev + 1)
+      // Do not remount chart (no setChartKey) – avoids flicker on mobile viewport resize
     }
-    
-    // Initial update
-    updateRadius()
-    
-    // Handle window resize
-    window.addEventListener('resize', updateRadius)
-    
-    // Handle zoom changes using ResizeObserver on the container
+    const updateRadius = () => {
+      const width = window.innerWidth
+      const bucket = getBucket(width)
+      if (lastBucketRef.current !== bucket) {
+        lastBucketRef.current = bucket
+        applyBucket(bucket)
+      }
+    }
+    const scheduleUpdate = () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        debounceRef.current = null
+        updateRadius()
+      }, 400)
+    }
+    // Initial update once
+    const initialBucket = getBucket(window.innerWidth)
+    lastBucketRef.current = initialBucket
+    applyBucket(initialBucket)
+
+    window.addEventListener('resize', scheduleUpdate)
     let resizeObserver: ResizeObserver | null = null
     if (containerRef.current) {
-      resizeObserver = new ResizeObserver(() => {
-        // Debounce to avoid too many updates
-        setTimeout(updateRadius, 100)
-      })
+      resizeObserver = new ResizeObserver(scheduleUpdate)
       resizeObserver.observe(containerRef.current)
     }
-    
-    // Also listen for visual viewport changes (zoom)
     if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', updateRadius)
-      window.visualViewport.addEventListener('scroll', updateRadius)
+      window.visualViewport.addEventListener('resize', scheduleUpdate)
+      // Do not listen to scroll – it fires constantly on mobile and causes flicker
     }
-    
+
     return () => {
-      window.removeEventListener('resize', updateRadius)
-      if (resizeObserver) {
+      window.removeEventListener('resize', scheduleUpdate)
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      if (resizeObserver && containerRef.current) {
+        try { resizeObserver.unobserve(containerRef.current) } catch (_) {}
         resizeObserver.disconnect()
       }
       if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', updateRadius)
-        window.visualViewport.removeEventListener('scroll', updateRadius)
+        window.visualViewport.removeEventListener('resize', scheduleUpdate)
       }
     }
   }, [])
@@ -240,7 +253,7 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
       </div>
       <div className="w-full overflow-x-auto flex-1 flex flex-col" ref={containerRef}>
         <div className="min-w-[280px] w-full" style={{ height: `${chartHeight}px` }}>
-        <ResponsiveContainer key={chartKey} width="100%" height={chartHeight}>
+        <ResponsiveContainer width="100%" height={chartHeight}>
           <PieChart>
             <Pie
               data={displayData}

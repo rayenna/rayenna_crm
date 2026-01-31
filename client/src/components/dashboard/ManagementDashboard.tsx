@@ -49,8 +49,8 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
         />
       </div>
 
-      {/* Other tiles – same width as each other */}
-      <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Other tiles + Projects by Payment Status (compact) */}
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard
           title="Total Leads"
           value={data?.sales?.totalLeads || 0}
@@ -75,6 +75,37 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
           icon={<FaCheckCircle />}
           gradient="from-yellow-500 to-amber-500"
         />
+        {/* Projects by Payment Status – compact tile for Management/Admin */}
+        <div className="min-w-0 bg-gradient-to-br from-white via-indigo-50/50 to-white shadow-lg rounded-xl border-2 border-indigo-200/50 overflow-hidden backdrop-blur-sm">
+          <div className="bg-gradient-to-r from-indigo-500 via-cyan-500 to-indigo-600 px-3 py-2 sm:px-4 sm:py-2.5">
+            <h3 className="text-sm sm:text-base font-bold text-white drop-shadow-md truncate">
+              Projects by Payment Status
+            </h3>
+          </div>
+          <div className="px-3 py-2 sm:px-4 sm:py-3 overflow-x-hidden">
+            <div className="space-y-1.5 sm:space-y-2">
+              {data?.projectsByPaymentStatus?.map((item: any) => {
+                const statusLabel = item.status === 'N/A' ? 'N/A' : item.status.replace(/_/g, ' ');
+                const getStatusColor = (status: string) => {
+                  if (status === 'N/A') return 'bg-red-100 text-red-800';
+                  if (status === 'FULLY_PAID') return 'bg-green-100 text-green-800';
+                  if (status === 'PARTIAL') return 'bg-yellow-100 text-yellow-800';
+                  return 'bg-red-100 text-red-800';
+                };
+                return (
+                  <div key={item.status} className="flex justify-between items-center gap-2 py-1.5 px-2 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors min-w-0">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${getStatusColor(item.status)}`}>
+                      {statusLabel}
+                    </span>
+                    <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate text-right" title={`${item.count} (₹${(item.outstanding ?? 0).toLocaleString('en-IN')})`}>
+                      {item.count} <span className="text-primary-600">(₹{(item.outstanding ?? 0).toLocaleString('en-IN')})</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Row 1: Three main charts – same height, compact, symmetrical (a, b, c) */}
@@ -92,13 +123,11 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
           />
         </div>
         <div className="w-full min-h-[360px] flex flex-col">
-          <div className="h-full flex-1 min-h-0 bg-gradient-to-br from-white via-primary-50/30 to-white rounded-2xl shadow-2xl p-4 sm:p-5 border-2 border-primary-200/50 backdrop-blur-sm flex flex-col">
-            <ProjectValueProfitByFYChart 
-              data={data?.projectValueProfitByFY || []} 
-              dashboardType="management"
-              filterControlledByParent
-            />
-          </div>
+          <ProjectValueProfitByFYChart 
+            data={data?.projectValueProfitByFY || []} 
+            dashboardType="management"
+            filterControlledByParent
+          />
         </div>
       </div>
 

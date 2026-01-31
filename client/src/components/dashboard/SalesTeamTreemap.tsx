@@ -147,12 +147,12 @@ const SalesTeamTreemap = ({ availableFYs = [], dashboardFilter }: SalesTeamTreem
     <div className="h-full flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent">
+          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-indigo-600 to-cyan-600 bg-clip-text text-transparent">
             Total Order Value by Sales Team Member
           </h2>
         </div>

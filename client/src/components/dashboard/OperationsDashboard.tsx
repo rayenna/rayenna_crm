@@ -73,7 +73,7 @@ const OperationsDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
       )}
 
       {/* Project Value and Profit by Financial Year - Grouped Column Chart */}
-      <div className="w-full bg-gradient-to-br from-white via-primary-50/30 to-white rounded-2xl shadow-2xl p-6 border-2 border-primary-200/50 backdrop-blur-sm">
+      <div className="w-full">
         <ProjectValueProfitByFYChart 
           data={data?.projectValueProfitByFY || []} 
           dashboardType="operations"

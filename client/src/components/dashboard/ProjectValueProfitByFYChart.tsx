@@ -53,7 +53,7 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
 
   if (!filterControlledByParent && isLoading) {
     return (
-      <div className="bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-6 backdrop-blur-sm">
+      <div className="h-full flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
         <div className="flex items-center justify-center" style={{ height: '320px' }}>
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -66,7 +66,7 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
 
   if (!chartData || chartData.length === 0) {
     return (
-      <div className="bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-6 backdrop-blur-sm">
+      <div className="h-full flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
         <div className="flex items-center gap-3 mb-4">
           <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,7 +113,7 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
   }
 
   return (
-    <div className="bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-6 backdrop-blur-sm">
+    <div className="h-full flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500">
