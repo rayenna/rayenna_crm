@@ -3,7 +3,7 @@ import axiosInstance from '../../utils/axios'
 import { FaCog, FaFileInvoice, FaCheckCircle } from 'react-icons/fa'
 import ProjectValuePieChart from './ProjectValuePieChart'
 import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
-import RevenueByLeadSourceChart from './RevenueByLeadSourceChart'
+import ProjectsByStageChart from './ProjectsByStageChart'
 import RevenueBySalesTeamChart from './RevenueBySalesTeamChart'
 import MetricCard from './MetricCard'
 
@@ -86,13 +86,10 @@ const OperationsDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
         </div>
       )}
 
-      {/* Row 1: Revenue by Lead Source, Revenue by Sales Team Member – 2x2 layout */}
+      {/* Row 1: Projects by Stage / Execution Status, Revenue by Sales Team Member – 2x2 layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
-          <RevenueByLeadSourceChart
-            availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
-            dashboardFilter={dashboardFilter}
-          />
+          <ProjectsByStageChart data={data?.projectsByStatus || []} />
         </div>
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
           <RevenueBySalesTeamChart

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
+import { getSalesTeamColor } from './salesTeamColors'
 
 export interface RevenueBySalesTeamItem {
   salespersonId: string | null
@@ -24,17 +25,6 @@ interface RevenueBySalesTeamChartProps {
   /** When not using dashboardFilter (e.g. Management view), use this data from parent */
   data?: RevenueBySalesTeamItem[]
 }
-
-const COLORS = [
-  '#10b981',
-  '#3b82f6',
-  '#f59e0b',
-  '#ef4444',
-  '#8b5cf6',
-  '#ec4899',
-  '#06b6d4',
-  '#84cc16',
-]
 
 const RevenueBySalesTeamChart = ({ dashboardFilter, data: dataProp = [] }: RevenueBySalesTeamChartProps) => {
   const { user } = useAuth()
@@ -139,8 +129,8 @@ const RevenueBySalesTeamChart = ({ dashboardFilter, data: dataProp = [] }: Reven
                   }}
                 />
                 <Bar dataKey="revenue" name="Revenue (₹)" radius={[4, 4, 0, 0]}>
-                  {chartData.map((_: RevenueBySalesTeamItem, index: number) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {chartData.map((entry: RevenueBySalesTeamItem, index: number) => (
+                    <Cell key={`cell-${index}`} fill={getSalesTeamColor(entry.salespersonName, index)} />
                   ))}
                 </Bar>
               </BarChart>

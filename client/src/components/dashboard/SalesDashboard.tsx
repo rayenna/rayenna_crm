@@ -6,6 +6,7 @@ import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
 import ProfitabilityWordCloud from './ProfitabilityWordCloud'
 import RevenueByLeadSourceChart from './RevenueByLeadSourceChart'
 import PipelineByLeadSourceChart from './PipelineByLeadSourceChart'
+import ProjectsByStageChart from './ProjectsByStageChart'
 import PipelineByCustomerSegmentPieChart from './PipelineByCustomerSegmentPieChart'
 import MetricCard from './MetricCard'
 import KeyMetricsTile from './KeyMetricsTile'
@@ -91,6 +92,13 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Sales
           icon={<FaExclamationTriangle />}
           gradient="from-red-500 to-rose-500"
         />
+      </div>
+
+      {/* Projects by Stage / Execution Status – full width */}
+      <div className="w-full min-w-0">
+        <div className="w-full min-h-[360px] flex flex-col min-w-0">
+          <ProjectsByStageChart data={data?.projectsByStatus || []} />
+        </div>
       </div>
 
       {/* Row 1: Revenue by Lead Source, Pipeline by Lead Source */}

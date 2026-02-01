@@ -158,6 +158,40 @@ function getPipelineWhere(baseWhere: any): any {
   };
 }
 
+// Execution order and labels for Projects by Stage chart
+const PROJECT_STATUS_ORDER: ProjectStatus[] = [
+  ProjectStatus.LEAD,
+  ProjectStatus.SITE_SURVEY,
+  ProjectStatus.PROPOSAL,
+  ProjectStatus.CONFIRMED,
+  ProjectStatus.UNDER_INSTALLATION,
+  ProjectStatus.SUBMITTED_FOR_SUBSIDY,
+  ProjectStatus.COMPLETED,
+  ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
+  ProjectStatus.LOST,
+];
+
+const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
+  [ProjectStatus.LEAD]: 'Lead',
+  [ProjectStatus.SITE_SURVEY]: 'Site Survey',
+  [ProjectStatus.PROPOSAL]: 'Proposal',
+  [ProjectStatus.CONFIRMED]: 'Confirmed Order',
+  [ProjectStatus.UNDER_INSTALLATION]: 'Under Installation',
+  [ProjectStatus.SUBMITTED_FOR_SUBSIDY]: 'Submitted for Subsidy',
+  [ProjectStatus.COMPLETED]: 'Completed',
+  [ProjectStatus.COMPLETED_SUBSIDY_CREDITED]: 'Completed - Subsidy Credited',
+  [ProjectStatus.LOST]: 'Lost',
+};
+
+function buildProjectsByStatus(countByStatus: { status: ProjectStatus; _count: number }[]): { status: string; statusLabel: string; count: number }[] {
+  const map = new Map(countByStatus.map((r) => [r.status, r._count]));
+  return PROJECT_STATUS_ORDER.map((status) => ({
+    status,
+    statusLabel: PROJECT_STATUS_LABELS[status] || status,
+    count: map.get(status) || 0,
+  }));
+}
+
 // Sales Dashboard
 router.get('/sales', authenticate, async (req: Request, res) => {
   try {
@@ -192,7 +226,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       totalCapacity,
       totalRevenue,
       totalProfit,
-      projectsByStatus,
+      projectsByStatusRawFromPromise,
       revenueBySalesperson,
     ] = await Promise.all([
       // Total leads
@@ -452,11 +486,16 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       ProjectStatus.PROPOSAL,
     ];
 
-    // Reuse the existing projectsByStatus result to avoid extra queries
+    // Reuse the raw groupBy result to avoid extra queries
     const totalLeadsCount =
-      projectsByStatus
+      projectsByStatusRawFromPromise
         ?.filter((p) => leadLikeStatuses.includes(p.projectStatus as ProjectStatus))
         .reduce((sum, p) => sum + (p._count?.id || 0), 0) || 0;
+
+    // Build chart-ready projects by status (single place)
+    const projectsByStatus = buildProjectsByStatus(
+      (projectsByStatusRawFromPromise || []).map((r) => ({ status: r.projectStatus, _count: r._count.id }))
+    );
 
     // The detailed LeadStatus-based metrics (NEW / QUALIFIED / CONVERTED) and
     // expected values are not used on the frontend today, so we keep them as
@@ -631,6 +670,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       wordCloudData,
       pipelineByLeadSource,
       pipelineByType: pipelineByTypeWithPercentage,
+      projectsByStatus,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -796,6 +836,16 @@ router.get('/operations', authenticate, async (req: Request, res) => {
         totalProfit: profitByFY.find((item) => item.year === fy)?._sum.grossProfit || 0,
       }));
 
+    // Projects by Stage / Execution Status (for Operations and shared chart)
+    const projectsByStatusRaw = await prisma.project.groupBy({
+      by: ['projectStatus'],
+      where,
+      _count: { id: true },
+    });
+    const projectsByStatus = buildProjectsByStatus(
+      projectsByStatusRaw.map((r) => ({ status: r.projectStatus, _count: r._count.id }))
+    );
+
     res.json({
       pendingInstallation,
       submittedForSubsidy,
@@ -813,6 +863,7 @@ router.get('/operations', authenticate, async (req: Request, res) => {
       mnreBottlenecks,
       projectValueByType: valueByTypeWithPercentage,
       projectValueProfitByFY,
+      projectsByStatus,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -1342,6 +1393,16 @@ router.get('/management', authenticate, async (req: Request, res) => {
       _sum: { projectCost: true },
     });
 
+    // Projects by Stage / Execution Status (for Management/Admin chart)
+    const projectsByStatusRawMgmt = await prisma.project.groupBy({
+      by: ['projectStatus'],
+      where,
+      _count: { id: true },
+    });
+    const projectsByStatus = buildProjectsByStatus(
+      projectsByStatusRawMgmt.map((r) => ({ status: r.projectStatus, _count: r._count.id }))
+    );
+
     // Projects by payment status (for Management/Admin – compact tile, same logic as Finance)
     const allProjectsMgmt = await prisma.project.findMany({
       where: { ...where },
@@ -1471,6 +1532,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
       revenueBySalesperson,
       pipelineByLeadSource,
       pipelineByType: pipelineByTypeWithPercentage,
+      projectsByStatus,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

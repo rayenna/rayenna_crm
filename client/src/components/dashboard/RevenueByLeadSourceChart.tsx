@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { getLeadSourceColor } from './leadSourceColors'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
 
@@ -139,18 +140,6 @@ const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: Revenu
   const formatCurrency = (value: number) => {
     return `₹${value.toLocaleString('en-IN')}`
   }
-
-  // Color palette for stacked bars (using gradient colors)
-  const colors = [
-    '#3b82f6', // blue
-    '#10b981', // green
-    '#f59e0b', // amber
-    '#ef4444', // red
-    '#8b5cf6', // purple
-    '#ec4899', // pink
-    '#06b6d4', // cyan
-    '#84cc16', // lime
-  ]
 
   return (
     <div className="h-full flex flex-col min-h-[360px] bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
@@ -381,8 +370,8 @@ const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: Revenu
                   name="Revenue (₹)" 
                   radius={[4, 4, 0, 0]}
                 >
-                  {chartData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={getLeadSourceColor(entry.leadSourceLabel, index)} />
                   ))}
                 </Bar>
               </BarChart>

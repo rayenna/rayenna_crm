@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { getSalesTeamColor } from './salesTeamColors'
 
 interface SalesTeamData {
   salespersonId: string
@@ -36,20 +37,6 @@ const MONTHS = [
   { value: '01', label: 'January' },
   { value: '02', label: 'February' },
   { value: '03', label: 'March' },
-]
-
-// Color palette for treemap
-const COLORS = [
-  '#10b981', // Green
-  '#3b82f6', // Blue
-  '#ef4444', // Red
-  '#f59e0b', // Amber
-  '#8b5cf6', // Purple
-  '#ec4899', // Pink
-  '#06b6d4', // Cyan
-  '#84cc16', // Lime
-  '#f97316', // Orange
-  '#6366f1', // Indigo
 ]
 
 // Column chart doesn't need custom content component
@@ -135,12 +122,12 @@ const SalesTeamTreemap = ({ availableFYs = [], dashboardFilter }: SalesTeamTreem
     setSelectedMonths([])
   }
 
-  // Prepare data for treemap
+  // Prepare data for treemap (fill by salesperson name so colors match Revenue by Sales Team chart)
   const treemapData = data?.salesTeamData?.map((item: SalesTeamData, index: number) => ({
     name: item.salespersonName,
     value: item.totalOrderValue,
     projectCount: item.projectCount,
-    fill: COLORS[index % COLORS.length],
+    fill: getSalesTeamColor(item.salespersonName, index),
   })) || []
 
   return (
@@ -344,7 +331,7 @@ const SalesTeamTreemap = ({ availableFYs = [], dashboardFilter }: SalesTeamTreem
                 />
                 <Bar dataKey="value" name="Total Order Value" radius={[8, 8, 0, 0]}>
                   {treemapData.map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill || COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
                 </Bar>
               </BarChart>

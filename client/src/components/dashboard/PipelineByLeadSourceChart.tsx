@@ -1,6 +1,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
+import { getLeadSourceColor } from './leadSourceColors'
 
 export interface PipelineByLeadSourceItem {
   leadSource: string
@@ -12,17 +13,6 @@ export interface PipelineByLeadSourceItem {
 interface PipelineByLeadSourceChartProps {
   data?: PipelineByLeadSourceItem[]
 }
-
-const COLORS = [
-  '#3b82f6',
-  '#10b981',
-  '#f59e0b',
-  '#ef4444',
-  '#8b5cf6',
-  '#ec4899',
-  '#06b6d4',
-  '#84cc16',
-]
 
 const PipelineByLeadSourceChart = ({ data: chartData = [] }: PipelineByLeadSourceChartProps) => {
   const { user } = useAuth()
@@ -100,8 +90,8 @@ const PipelineByLeadSourceChart = ({ data: chartData = [] }: PipelineByLeadSourc
                   }}
                 />
                 <Bar dataKey="pipeline" name="Pipeline (₹)" radius={[4, 4, 0, 0]}>
-                  {chartData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={getLeadSourceColor(entry.leadSourceLabel, index)} />
                   ))}
                 </Bar>
               </BarChart>

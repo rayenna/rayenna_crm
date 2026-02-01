@@ -40,7 +40,7 @@ async function generateTicketNumber(): Promise<string> {
 /**
  * POST /api/support-tickets
  * Create a new support ticket for a project
- * Auth: SALES, OPERATIONS, ADMIN
+ * Auth: SALES, OPERATIONS, MANAGEMENT, ADMIN
  */
 router.post(
   '/',
@@ -52,11 +52,11 @@ router.post(
   ],
   async (req: Request, res: Response) => {
     try {
-      // Check permissions - SALES, OPERATIONS, ADMIN can create tickets
+      // Check permissions - SALES, OPERATIONS, MANAGEMENT, ADMIN can create tickets
       const userRole = req.user?.role;
-      const allowedRoles: UserRole[] = [UserRole.SALES, UserRole.OPERATIONS, UserRole.ADMIN];
+      const allowedRoles: UserRole[] = [UserRole.SALES, UserRole.OPERATIONS, UserRole.MANAGEMENT, UserRole.ADMIN];
       if (!userRole || !allowedRoles.includes(userRole as UserRole)) {
-        return res.status(403).json({ error: 'Only SALES, OPERATIONS, and ADMIN users can create support tickets' });
+        return res.status(403).json({ error: 'Only SALES, OPERATIONS, MANAGEMENT, and ADMIN users can create support tickets' });
       }
 
       const errors = validationResult(req);
@@ -222,7 +222,7 @@ router.get('/:ticketId', authenticate, async (req: Request, res: Response) => {
 /**
  * POST /api/support-tickets/:ticketId/activity
  * Add a follow-up activity to a support ticket
- * Auth: SALES, OPERATIONS, ADMIN
+ * Auth: SALES, OPERATIONS, MANAGEMENT, ADMIN
  */
 router.post(
   '/:ticketId/activity',
@@ -233,11 +233,11 @@ router.post(
   ],
   async (req: Request, res: Response) => {
     try {
-      // Check permissions - SALES, OPERATIONS, ADMIN can add activities
+      // Check permissions - SALES, OPERATIONS, MANAGEMENT, ADMIN can add activities
       const userRole = req.user?.role;
-      const allowedRoles: UserRole[] = [UserRole.SALES, UserRole.OPERATIONS, UserRole.ADMIN];
+      const allowedRoles: UserRole[] = [UserRole.SALES, UserRole.OPERATIONS, UserRole.MANAGEMENT, UserRole.ADMIN];
       if (!userRole || !allowedRoles.includes(userRole as UserRole)) {
-        return res.status(403).json({ error: 'Only SALES, OPERATIONS, and ADMIN users can add follow-ups' });
+        return res.status(403).json({ error: 'Only SALES, OPERATIONS, MANAGEMENT, and ADMIN users can add follow-ups' });
       }
 
       const errors = validationResult(req);
@@ -301,18 +301,18 @@ router.post(
 /**
  * PATCH /api/support-tickets/:ticketId/close
  * Close a support ticket (set status to CLOSED and closedAt timestamp)
- * Auth: SALES, OPERATIONS, ADMIN
+ * Auth: SALES, OPERATIONS, MANAGEMENT, ADMIN
  */
 router.patch(
   '/:ticketId/close',
   authenticate,
   async (req: Request, res: Response) => {
     try {
-      // Check permissions - SALES, OPERATIONS, ADMIN can close tickets
+      // Check permissions - SALES, OPERATIONS, MANAGEMENT, ADMIN can close tickets
       const userRole = req.user?.role;
-      const allowedRoles: UserRole[] = [UserRole.SALES, UserRole.OPERATIONS, UserRole.ADMIN];
+      const allowedRoles: UserRole[] = [UserRole.SALES, UserRole.OPERATIONS, UserRole.MANAGEMENT, UserRole.ADMIN];
       if (!userRole || !allowedRoles.includes(userRole as UserRole)) {
-        return res.status(403).json({ error: 'Only SALES, OPERATIONS, and ADMIN users can close tickets' });
+        return res.status(403).json({ error: 'Only SALES, OPERATIONS, MANAGEMENT, and ADMIN users can close tickets' });
       }
 
       const { ticketId } = req.params;

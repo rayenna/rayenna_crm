@@ -40,26 +40,19 @@ const SupportTicketsDashboard = () => {
   const allTickets = data?.tickets || []
   const stats = data?.statistics || { open: 0, inProgress: 0, closed: 0, overdue: 0, total: 0 }
 
-  // Filter tickets for the table
-  // Table shows only OPEN and IN_PROGRESS tickets (not CLOSED)
-  let filteredTickets = allTickets.filter(
-    (t) => t.status === SupportTicketStatus.OPEN || t.status === SupportTicketStatus.IN_PROGRESS
-  )
+  // Filter tickets for the table (all statuses: Open, In Progress, Closed)
+  let filteredTickets = [...allTickets]
 
-  // Apply status filter if selected (but only if it's OPEN or IN_PROGRESS)
-  if (selectedStatus && (selectedStatus === SupportTicketStatus.OPEN || selectedStatus === SupportTicketStatus.IN_PROGRESS)) {
+  // Apply status filter if selected (OPEN, IN_PROGRESS, or CLOSED)
+  if (selectedStatus) {
     filteredTickets = filteredTickets.filter((t) => t.status === selectedStatus)
   }
-  // If CLOSED is selected, show empty table (since table is for open tickets only)
-  if (selectedStatus === SupportTicketStatus.CLOSED) {
-    filteredTickets = []
-  }
 
-  // Apply overdue filter if enabled
+  // Apply overdue filter if enabled (only OPEN/IN_PROGRESS can be overdue)
   if (showOverdueOnly) {
     const now = new Date()
     filteredTickets = filteredTickets.filter((ticket) => {
-      // Check if ticket has any activity with follow-up date in the past
+      if (ticket.status === SupportTicketStatus.CLOSED) return false
       if (!ticket.activities || ticket.activities.length === 0) return false
       return ticket.activities.some((activity) => {
         if (!activity.followUpDate) return false
@@ -68,7 +61,7 @@ const SupportTicketsDashboard = () => {
     })
   }
 
-  const openTickets = filteredTickets
+  const tableTickets = filteredTickets
 
   // Prepare chart data
   const chartData = [
@@ -252,14 +245,14 @@ const SupportTicketsDashboard = () => {
           )}
         </div>
 
-        {/* Right Column - Open Tickets Table */}
+        {/* Right Column - All Support Tickets Table */}
         <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Open Support Tickets</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">All Support Tickets</h3>
           {isLoading ? (
             <div className="text-center py-8 text-gray-500">Loading tickets...</div>
-          ) : openTickets.length === 0 ? (
+          ) : tableTickets.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <p>No open tickets found</p>
+              <p>No support tickets found</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -287,7 +280,7 @@ const SupportTicketsDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {openTickets.map((ticket) => (
+                  {tableTickets.map((ticket) => (
                     <tr key={ticket.id} className="hover:bg-gray-50">
                       <td className="px-4 py-4 whitespace-nowrap">
                         <button
