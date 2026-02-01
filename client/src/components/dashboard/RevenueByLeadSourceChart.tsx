@@ -61,7 +61,7 @@ const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: Revenu
     : []
 
   // Role-based access: Only show for ADMIN, MANAGEMENT, SALES
-  const canView = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGEMENT || user?.role === UserRole.SALES
+  const canView = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGEMENT || user?.role === UserRole.SALES || user?.role === UserRole.OPERATIONS || user?.role === UserRole.FINANCE
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -153,15 +153,15 @@ const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: Revenu
   ]
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
+    <div className="h-full flex flex-col min-h-[360px] bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
         <div className="flex flex-col gap-3 mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
             Revenue by Lead Source
           </h2>
         </div>
@@ -301,24 +301,24 @@ const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: Revenu
         </div>
         )}
         </div>
-      {/* Chart or Loading/No Data */}
-      <div className="flex-1 min-h-0 w-full overflow-x-auto flex flex-col">
+      {/* Chart or Loading/No Data - fixed height so size does not change with empty/loading data */}
+      <div className="w-full overflow-x-auto flex flex-col" style={{ height: '320px' }}>
         {isLoading ? (
-          <div className="flex items-center justify-center" style={{ minHeight: '320px' }}>
+          <div className="flex items-center justify-center w-full h-full">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
               <p className="mt-4 text-sm text-gray-500">Loading chart data...</p>
             </div>
           </div>
         ) : !chartData || chartData.length === 0 ? (
-          <div className="flex items-center justify-center" style={{ minHeight: '320px' }}>
+          <div className="flex items-center justify-center w-full h-full">
             <div className="text-center px-4">
               <p className="mb-2 text-sm sm:text-base text-gray-500">No data for selected period</p>
               <p className="text-xs sm:text-sm text-gray-600">Revenue data will appear here when projects are confirmed and completed.</p>
             </div>
           </div>
         ) : (
-          <div className="min-w-[280px]" style={{ height: '320px' }}>
+          <div className="min-w-[280px] w-full h-full min-h-0">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
@@ -390,9 +390,6 @@ const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: Revenu
           </div>
         )}
       </div>
-      <p className="text-xs text-gray-500 text-center mt-4 italic">
-        Actual revenue generated from confirmed and completed projects
-      </p>
     </div>
   )
 }

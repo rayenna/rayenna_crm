@@ -149,6 +149,15 @@ function getRevenueWhere(baseWhere: any): any {
   return revenueFilter;
 }
 
+// Pipeline = all projects except LOST with projectCost (same as tiles)
+function getPipelineWhere(baseWhere: any): any {
+  return {
+    ...baseWhere,
+    projectCost: { not: null },
+    projectStatus: { not: ProjectStatus.LOST },
+  };
+}
+
 // Sales Dashboard
 router.get('/sales', authenticate, async (req: Request, res) => {
   try {
@@ -226,15 +235,13 @@ router.get('/sales', authenticate, async (req: Request, res) => {
         where,
         _count: { id: true },
       }),
-      // Revenue by salesperson (only confirmed/completed projects, excluding leads/survey/proposal)
-      role === UserRole.ADMIN || role === UserRole.MANAGEMENT
-        ? prisma.project.groupBy({
-            by: ['salespersonId'],
-            where: getRevenueWhere({ ...where, salespersonId: { not: null } }),
-            _sum: { projectCost: true },
-            _count: { id: true },
-          })
-        : [],
+      // Revenue by salesperson (for all roles; Sales sees only their own, Management/Admin see all)
+      prisma.project.groupBy({
+        by: ['salespersonId'],
+        where: getRevenueWhere({ ...where, salespersonId: { not: null } }),
+        _sum: { projectCost: true },
+        _count: { id: true },
+      }),
     ]);
 
     // Get salesperson names for revenue breakdown
@@ -297,24 +304,67 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
     }));
 
+    // Pipeline by lead source (for Pipeline by Lead Source chart)
+    const pipelineByLeadSourceRaw = await prisma.project.groupBy({
+      by: ['leadSource'],
+      where: { ...getPipelineWhere(where), leadSource: { not: null } },
+      _sum: { projectCost: true },
+      _count: { id: true },
+    });
+    const pipelineByLeadSource = pipelineByLeadSourceRaw.map((item) => {
+      let label = '';
+      switch (item.leadSource) {
+        case LeadSource.WEBSITE: label = 'Website'; break;
+        case LeadSource.REFERRAL: label = 'Referral'; break;
+        case LeadSource.GOOGLE: label = 'Google'; break;
+        case LeadSource.CHANNEL_PARTNER: label = 'Channel Partner'; break;
+        case LeadSource.DIGITAL_MARKETING: label = 'Digital Marketing'; break;
+        case LeadSource.SALES: label = 'Sales'; break;
+        case LeadSource.MANAGEMENT_CONNECT: label = 'Management Connect'; break;
+        case LeadSource.OTHER: label = 'Other'; break;
+        default: label = item.leadSource || 'Unknown';
+      }
+      return {
+        leadSource: item.leadSource,
+        leadSourceLabel: label,
+        pipeline: item._sum.projectCost || 0,
+        projectCount: item._count.id,
+      };
+    });
+    pipelineByLeadSource.sort((a, b) => b.pipeline - a.pipeline);
+
+    // Pipeline by customer segment (type) – for Pipeline by Customer Segment pie chart
+    const pipelineByTypeRaw = await prisma.project.groupBy({
+      by: ['type'],
+      where: getPipelineWhere(where),
+      _sum: { projectCost: true },
+      _count: { id: true },
+    });
+    const pipelineByType = pipelineByTypeRaw.map((item) => {
+      let label = '';
+      switch (item.type) {
+        case 'RESIDENTIAL_SUBSIDY': label = 'Residential - Subsidy'; break;
+        case 'RESIDENTIAL_NON_SUBSIDY': label = 'Residential - Non Subsidy'; break;
+        case 'COMMERCIAL_INDUSTRIAL': label = 'Commercial Industrial'; break;
+        default: label = item.type;
+      }
+      return { type: item.type, label, value: item._sum.projectCost || 0, count: item._count.id };
+    });
+    const totalPipelineType = pipelineByType.reduce((sum, item) => sum + item.value, 0);
+    const pipelineByTypeWithPercentage = pipelineByType.map((item) => ({
+      ...item,
+      percentage: totalPipelineType > 0 ? ((item.value / totalPipelineType) * 100).toFixed(1) : '0',
+    }));
+
     // Calculate project value, profit, capacity and pipeline by financial year.
-    // When exactly one FY is selected, include previous FY in the series (full-year only) so YoY can compare current vs previous year.
-    const fyForSeries = fyFilters.length === 1 ? [fyFilters[0], getPreviousFY(fyFilters[0])].filter(Boolean) : undefined;
-    const whereFYSeries = fyForSeries
-      ? { ...getRevenueWhere(baseWhere), year: { in: fyForSeries } }
-      : getRevenueWhere(where);
+    // Use date-filtered where so: selected FY(s) only; quarter/month apply when one FY is selected.
+    const whereFYSeries = getRevenueWhere(where);
+    // Pipeline = sum of order value for all project stages EXCEPT Lost
     const pipelineWhereBase = {
       projectCost: { not: null },
       projectStatus: { not: ProjectStatus.LOST },
-      OR: [
-        { projectStage: null },
-        { projectStage: ProjectStage.SURVEY },
-        { projectStage: ProjectStage.PROPOSAL },
-      ],
     };
-    const pipelineWhereFY = fyForSeries
-      ? { ...baseWhere, ...pipelineWhereBase, year: { in: fyForSeries } }
-      : { ...where, ...pipelineWhereBase };
+    const pipelineWhereFY = { ...where, ...pipelineWhereBase };
     const pipelineWhereForTiles = { ...where, ...pipelineWhereBase };
 
     const projectValueByFY = await prisma.project.groupBy({
@@ -349,7 +399,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       ...pipelineByFY.map((item) => item.year),
     ]);
 
-    const projectValueProfitByFY = Array.from(allFYs)
+    let projectValueProfitByFY = Array.from(allFYs)
       .sort()
       .map((fy) => ({
         fy,
@@ -358,6 +408,34 @@ router.get('/sales', authenticate, async (req: Request, res) => {
         totalCapacity: capacityByFY.find((item) => item.year === fy)?._sum.systemCapacity || 0,
         totalPipeline: pipelineByFY.find((item) => item.year === fy)?._sum.projectCost || 0,
       }));
+
+    // When exactly one FY is selected, include previous FY in projectValueProfitByFY for YoY (full-year comparison).
+    if (fyFilters.length === 1) {
+      const previousFY = getPreviousFY(fyFilters[0]);
+      if (previousFY && !projectValueProfitByFY.some((r) => r.fy === previousFY)) {
+        const baseWherePrev: any = {};
+        if (role === UserRole.SALES) baseWherePrev.salespersonId = userId;
+        const wherePrev = applyDateFilters(baseWherePrev, [previousFY], [], []);
+        const revenueWherePrev = getRevenueWhere(wherePrev);
+        const pipelineWherePrev = { ...wherePrev, ...pipelineWhereBase };
+        const [prevRev, prevProfit, prevCap, prevPipe] = await Promise.all([
+          prisma.project.aggregate({ where: revenueWherePrev, _sum: { projectCost: true } }),
+          prisma.project.aggregate({ where: { ...revenueWherePrev, grossProfit: { not: null } }, _sum: { grossProfit: true } }),
+          prisma.project.aggregate({ where: { ...revenueWherePrev, systemCapacity: { not: null } }, _sum: { systemCapacity: true } }),
+          prisma.project.aggregate({ where: pipelineWherePrev, _sum: { projectCost: true } }),
+        ]);
+        projectValueProfitByFY = [
+          ...projectValueProfitByFY,
+          {
+            fy: previousFY,
+            totalProjectValue: prevRev._sum.projectCost || 0,
+            totalProfit: prevProfit._sum.grossProfit || 0,
+            totalCapacity: prevCap._sum.systemCapacity || 0,
+            totalPipeline: prevPipe._sum.projectCost || 0,
+          },
+        ].sort((a, b) => String(a.fy).localeCompare(String(b.fy)));
+      }
+    }
 
     // Build leads where clause with salesperson and date filters
     // "Total Leads" on the Sales dashboard is derived from projects in the
@@ -436,18 +514,9 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       },
     });
 
-    // Total Pipeline - Sum of projectCost for projects in Lead (null), Site Survey, or Proposal stages (exclude LOST projects)
+    // Total Pipeline = sum of order value for all project stages EXCEPT Lost
     const totalPipeline = await prisma.project.aggregate({
-      where: {
-        ...where,
-        projectCost: { not: null },
-        projectStatus: { not: ProjectStatus.LOST }, // Exclude LOST projects
-        OR: [
-          { projectStage: null }, // Lead stage
-          { projectStage: ProjectStage.SURVEY }, // Site Survey
-          { projectStage: ProjectStage.PROPOSAL }, // Proposal
-        ],
-      },
+      where: { ...where, ...pipelineWhereBase },
       _sum: { projectCost: true },
     });
 
@@ -560,6 +629,8 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       projectValueByType: valueByTypeWithPercentage,
       projectValueProfitByFY,
       wordCloudData,
+      pipelineByLeadSource,
+      pipelineByType: pipelineByTypeWithPercentage,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -1109,24 +1180,91 @@ router.get('/management', authenticate, async (req: Request, res) => {
       percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
     }));
 
+    // Revenue by salesperson (for Management/Admin – Revenue by Sales Team Member chart)
+    const revenueBySalespersonMgmt = await prisma.project.groupBy({
+      by: ['salespersonId'],
+      where: getRevenueWhere({ ...where, salespersonId: { not: null } }),
+      _sum: { projectCost: true },
+      _count: { id: true },
+    });
+    let revenueBySalesperson: Array<{ salespersonId: string | null; salespersonName: string; revenue: number; projectCount: number }> = [];
+    if (revenueBySalespersonMgmt.length > 0) {
+      const salespersonIds = revenueBySalespersonMgmt
+        .map((r) => r.salespersonId)
+        .filter((id): id is string => id !== null);
+      const salespeopleMgmt = await prisma.user.findMany({
+        where: { id: { in: salespersonIds } },
+        select: { id: true, name: true },
+      });
+      revenueBySalesperson = revenueBySalespersonMgmt.map((r) => ({
+        salespersonId: r.salespersonId,
+        salespersonName: salespeopleMgmt.find((s) => s.id === r.salespersonId)?.name || 'Unknown',
+        revenue: r._sum.projectCost || 0,
+        projectCount: r._count.id,
+      }));
+    }
+
+    // Pipeline by lead source (for Pipeline by Lead Source chart)
+    const pipelineByLeadSourceRaw = await prisma.project.groupBy({
+      by: ['leadSource'],
+      where: { ...getPipelineWhere(where), leadSource: { not: null } },
+      _sum: { projectCost: true },
+      _count: { id: true },
+    });
+    const pipelineByLeadSource = pipelineByLeadSourceRaw.map((item) => {
+      let label = '';
+      switch (item.leadSource) {
+        case LeadSource.WEBSITE: label = 'Website'; break;
+        case LeadSource.REFERRAL: label = 'Referral'; break;
+        case LeadSource.GOOGLE: label = 'Google'; break;
+        case LeadSource.CHANNEL_PARTNER: label = 'Channel Partner'; break;
+        case LeadSource.DIGITAL_MARKETING: label = 'Digital Marketing'; break;
+        case LeadSource.SALES: label = 'Sales'; break;
+        case LeadSource.MANAGEMENT_CONNECT: label = 'Management Connect'; break;
+        case LeadSource.OTHER: label = 'Other'; break;
+        default: label = item.leadSource || 'Unknown';
+      }
+      return {
+        leadSource: item.leadSource,
+        leadSourceLabel: label,
+        pipeline: item._sum.projectCost || 0,
+        projectCount: item._count.id,
+      };
+    });
+    pipelineByLeadSource.sort((a, b) => b.pipeline - a.pipeline);
+
+    // Pipeline by customer segment (type) – for Pipeline by Customer Segment pie chart
+    const pipelineByTypeRaw = await prisma.project.groupBy({
+      by: ['type'],
+      where: getPipelineWhere(where),
+      _sum: { projectCost: true },
+      _count: { id: true },
+    });
+    const pipelineByType = pipelineByTypeRaw.map((item) => {
+      let label = '';
+      switch (item.type) {
+        case 'RESIDENTIAL_SUBSIDY': label = 'Residential - Subsidy'; break;
+        case 'RESIDENTIAL_NON_SUBSIDY': label = 'Residential - Non Subsidy'; break;
+        case 'COMMERCIAL_INDUSTRIAL': label = 'Commercial Industrial'; break;
+        default: label = item.type;
+      }
+      return { type: item.type, label, value: item._sum.projectCost || 0, count: item._count.id };
+    });
+    const totalPipelineType = pipelineByType.reduce((sum, item) => sum + item.value, 0);
+    const pipelineByTypeWithPercentage = pipelineByType.map((item) => ({
+      ...item,
+      percentage: totalPipelineType > 0 ? ((item.value / totalPipelineType) * 100).toFixed(1) : '0',
+    }));
+
     // Calculate project value, profit, capacity and pipeline by financial year.
-    // When exactly one FY is selected, include previous FY in the series (full-year only) so YoY can compare current vs previous year.
-    const fyForSeriesMgmt = fyFilters.length === 1 ? [fyFilters[0], getPreviousFY(fyFilters[0])].filter(Boolean) : undefined;
-    const whereFYSeriesMgmt = fyForSeriesMgmt
-      ? { ...getRevenueWhere(baseWhere), year: { in: fyForSeriesMgmt } }
-      : getRevenueWhere(where);
+    // Use date-filtered where so: selected FY(s) only; quarter/month apply when one FY is selected.
+    const whereFYSeriesMgmt = getRevenueWhere(where);
+    // Pipeline = sum of order value for all project stages EXCEPT Lost
     const pipelineWhereBaseMgmt = {
       projectCost: { not: null },
       projectStatus: { not: ProjectStatus.LOST },
-      OR: [
-        { projectStage: null },
-        { projectStage: ProjectStage.SURVEY },
-        { projectStage: ProjectStage.PROPOSAL },
-      ],
     };
-    const pipelineWhereFYMgmt = fyForSeriesMgmt
-      ? { ...baseWhere, ...pipelineWhereBaseMgmt, year: { in: fyForSeriesMgmt } }
-      : { ...where, ...pipelineWhereBaseMgmt };
+    const pipelineWhereFYMgmt = { ...where, ...pipelineWhereBaseMgmt };
     const pipelineWhereForTilesMgmt = { ...where, ...pipelineWhereBaseMgmt };
 
     const projectValueByFY = await prisma.project.groupBy({
@@ -1161,7 +1299,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
       ...pipelineByFY.map((item) => item.year),
     ]);
 
-    const projectValueProfitByFY = Array.from(allFYs)
+    let projectValueProfitByFY = Array.from(allFYs)
       .sort()
       .map((fy) => ({
         fy,
@@ -1171,7 +1309,34 @@ router.get('/management', authenticate, async (req: Request, res) => {
         totalPipeline: pipelineByFY.find((item) => item.year === fy)?._sum.projectCost || 0,
       }));
 
-    // Total Pipeline - Sum of projectCost for projects in Lead (null), Site Survey, or Proposal stages (exclude LOST projects) - use filtered selection only
+    // When exactly one FY is selected, include previous FY in projectValueProfitByFY for YoY (full-year comparison).
+    if (fyFilters.length === 1) {
+      const previousFY = getPreviousFY(fyFilters[0]);
+      if (previousFY && !projectValueProfitByFY.some((r) => r.fy === previousFY)) {
+        const baseWherePrevMgmt: any = {};
+        const wherePrev = applyDateFilters(baseWherePrevMgmt, [previousFY], [], []);
+        const revenueWherePrev = getRevenueWhere(wherePrev);
+        const pipelineWherePrevMgmt = { ...wherePrev, ...pipelineWhereBaseMgmt };
+        const [prevRev, prevProfit, prevCap, prevPipe] = await Promise.all([
+          prisma.project.aggregate({ where: revenueWherePrev, _sum: { projectCost: true } }),
+          prisma.project.aggregate({ where: { ...revenueWherePrev, grossProfit: { not: null } }, _sum: { grossProfit: true } }),
+          prisma.project.aggregate({ where: { ...revenueWherePrev, systemCapacity: { not: null } }, _sum: { systemCapacity: true } }),
+          prisma.project.aggregate({ where: pipelineWherePrevMgmt, _sum: { projectCost: true } }),
+        ]);
+        projectValueProfitByFY = [
+          ...projectValueProfitByFY,
+          {
+            fy: previousFY,
+            totalProjectValue: prevRev._sum.projectCost || 0,
+            totalProfit: prevProfit._sum.grossProfit || 0,
+            totalCapacity: prevCap._sum.systemCapacity || 0,
+            totalPipeline: prevPipe._sum.projectCost || 0,
+          },
+        ].sort((a, b) => String(a.fy).localeCompare(String(b.fy)));
+      }
+    }
+
+    // Total Pipeline = sum of order value for all project stages EXCEPT Lost
     const totalPipeline = await prisma.project.aggregate({
       where: pipelineWhereForTilesMgmt,
       _sum: { projectCost: true },
@@ -1303,6 +1468,9 @@ router.get('/management', authenticate, async (req: Request, res) => {
       projectValueProfitByFY,
       wordCloudData,
       projectsByPaymentStatus,
+      revenueBySalesperson,
+      pipelineByLeadSource,
+      pipelineByType: pipelineByTypeWithPercentage,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -1310,15 +1478,15 @@ router.get('/management', authenticate, async (req: Request, res) => {
 });
 
 // Revenue by Lead Source Analytics Endpoint
-// Accessible to ADMIN, MANAGEMENT, and SALES roles only
+// Accessible to ADMIN, MANAGEMENT, SALES, OPERATIONS, and FINANCE
 router.get('/revenue-by-lead-source', authenticate, async (req: Request, res: Response) => {
   try {
     const role = req.user?.role;
     const userId = req.user?.id;
 
-    // Role-based access control: Only ADMIN, MANAGEMENT, and SALES can access
-    if (role !== UserRole.ADMIN && role !== UserRole.MANAGEMENT && role !== UserRole.SALES) {
-      return res.status(403).json({ error: 'Access denied. This endpoint is only available to Admin, Management, and Sales roles.' });
+    const allowedRoles = [UserRole.ADMIN, UserRole.MANAGEMENT, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE];
+    if (!role || !allowedRoles.includes(role)) {
+      return res.status(403).json({ error: 'Access denied. This endpoint is only available to Admin, Management, Sales, Operations, and Finance roles.' });
     }
 
     // Parse query parameters for FY, Quarter and Month filters (dashboard tiles only)

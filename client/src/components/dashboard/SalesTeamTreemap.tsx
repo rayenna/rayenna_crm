@@ -144,16 +144,16 @@ const SalesTeamTreemap = ({ availableFYs = [], dashboardFilter }: SalesTeamTreem
   })) || []
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
+    <div className="h-full flex flex-col min-h-[360px] bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-indigo-600 to-cyan-600 bg-clip-text text-transparent">
-            Total Order Value by Sales Team Member
+          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            Pipeline by Sales Team Member
           </h2>
         </div>
 
@@ -289,19 +289,19 @@ const SalesTeamTreemap = ({ availableFYs = [], dashboardFilter }: SalesTeamTreem
         )}
       </div>
 
-      {/* Column Chart */}
-      <div className="flex-1 flex flex-col" style={{ minHeight: '320px' }}>
+      {/* Column Chart - fixed height so size does not change with empty/loading data */}
+      <div className="flex flex-col" style={{ height: '320px' }}>
         {isLoading ? (
-          <div className="flex items-center justify-center" style={{ height: '320px' }}>
+          <div className="flex items-center justify-center w-full h-full">
             <p className="text-gray-500">Loading...</p>
           </div>
         ) : !treemapData || treemapData.length === 0 ? (
-          <div className="flex items-center justify-center" style={{ height: '320px' }}>
-            <p className="text-gray-500">No sales team data available for the selected filters</p>
+          <div className="flex items-center justify-center w-full h-full">
+            <p className="text-gray-500 text-center px-4">No sales team data available for the selected filters</p>
           </div>
         ) : (
-          <div style={{ width: '100%', height: '320px' }}>
-            <ResponsiveContainer width="100%" height={320}>
+          <div className="w-full h-full min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={treemapData}
                 margin={{ top: 20, right: 30, left: 20, bottom: 60 }}

@@ -1,4 +1,4 @@
-import { FaBolt, FaChartLine, FaRupeeSign } from 'react-icons/fa'
+import { FaBolt, FaChartLine, FaPercent, FaRupeeSign } from 'react-icons/fa'
 
 export interface FYRow {
   fy: string
@@ -142,6 +142,24 @@ const KeyMetricsTile = ({
       ? computeYoY(profit, profitPrevious)
       : naYoY
 
+  // Pipeline Conversion = (Total Revenue / Total Pipeline) x 100 %. YoY = current vs previous year same period.
+  const pipelineConversion =
+    pipeline > 0 ? (revenue / pipeline) * 100 : null
+  const pipelineConversionPrevious =
+    pipelinePrevious != null && pipelinePrevious > 0 && revenuePrevious != null
+      ? (revenuePrevious / pipelinePrevious) * 100
+      : null
+  const pipelineConversionYoY = singleFYSelected
+    ? computeYoY(pipelineConversion ?? 0, pipelineConversionPrevious)
+    : naYoY
+  // When current or previous conversion is N/A, show N/A for YoY
+  const conversionYoY =
+    pipelineConversion == null
+      ? naYoY
+      : pipelineConversionPrevious == null && singleFYSelected
+      ? naYoY
+      : pipelineConversionYoY
+
   const formatCurrency = (n: number) =>
     `₹${Math.round(n).toLocaleString('en-IN')}`
   const formatCapacity = (n: number) => `${Math.round(n)} kW`
@@ -191,16 +209,28 @@ const KeyMetricsTile = ({
       gradient: 'from-rose-500 to-pink-600',
       bgLight: 'bg-rose-50',
     },
+    {
+      key: 'conversion',
+      label: 'Pipeline Conversion',
+      value:
+        pipelineConversion != null
+          ? `${pipelineConversion.toFixed(1)}%`
+          : '—',
+      yoY: conversionYoY,
+      icon: <FaPercent className="w-5 h-5 sm:w-6 sm:h-6" />,
+      gradient: 'from-indigo-500 to-blue-600',
+      bgLight: 'bg-indigo-50',
+    },
   ]
 
   return (
     <div className="w-full rounded-2xl border-2 border-primary-200/60 bg-gradient-to-br from-white via-primary-50/30 to-white shadow-xl overflow-hidden hover:shadow-2xl transition-shadow duration-300 min-h-0">
-      <div className="p-4 sm:p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[minmax(0,0.7fr)_1.1fr_1.1fr_1.1fr] gap-4 sm:gap-5 xl:gap-6">
+      <div className="p-4 sm:p-6 lg:px-4 lg:py-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_1.65fr_1.65fr_1.65fr_minmax(0,1fr)] gap-4 sm:gap-5 lg:gap-3">
           {metrics.map((m) => (
             <div
               key={m.key}
-              className={`relative flex flex-col rounded-xl ${m.bgLight} p-4 sm:p-6 border border-white/80 shadow-sm hover:shadow-md transition-shadow min-w-0`}
+              className={`relative flex flex-col rounded-xl ${m.bgLight} p-4 sm:p-6 lg:p-4 border border-white/80 shadow-sm hover:shadow-md transition-shadow min-w-0 overflow-hidden`}
             >
               {/* YoY badge – top right */}
               <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
@@ -214,7 +244,7 @@ const KeyMetricsTile = ({
               </div>
               {/* Main value – single line on xl, full value in title */}
               <div className="flex-1 min-w-0 mt-auto overflow-hidden">
-                <div className="text-xl sm:text-2xl lg:text-3xl xl:text-2xl xl:whitespace-nowrap xl:min-w-0 xl:overflow-hidden xl:text-ellipsis font-extrabold text-gray-900 leading-tight" title={m.value}>
+                <div className="text-xl sm:text-2xl lg:text-xl lg:whitespace-nowrap lg:min-w-0 lg:overflow-hidden lg:text-ellipsis font-extrabold text-gray-900 leading-tight" title={m.value}>
                   {m.value}
                 </div>
                 <div className="text-xs sm:text-sm font-semibold text-gray-600 mt-1 truncate" title={m.label}>

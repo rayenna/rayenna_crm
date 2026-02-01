@@ -52,12 +52,12 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="px-4 py-6 sm:px-0 max-w-full overflow-x-hidden">
-      <div className="mb-6 animate-slide-up">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-primary-800 mb-2 sm:mb-3">
+    <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
+      <div className="mb-6 animate-slide-up min-w-0">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-primary-800 mb-2 sm:mb-3 break-words">
           Dashboard
         </h1>
-        <p className="text-gray-600 font-medium text-base sm:text-lg">Monitor your business performance at a glance</p>
+        <p className="text-gray-600 font-medium text-base sm:text-lg break-words">Monitor your business performance at a glance</p>
       </div>
       <DashboardFilters
         availableFYs={availableFYs}
@@ -69,6 +69,21 @@ const Dashboard = () => {
         onMonthChange={setSelectedMonths}
       />
       {getDashboardComponent()}
+
+      {/* Footnote for Admin, Sales and Management views */}
+      {(user?.role === UserRole.ADMIN || user?.role === UserRole.SALES || user?.role === UserRole.MANAGEMENT) && (
+        <footer className="mt-8 pt-6 border-t border-gray-200 min-w-0 max-w-full">
+          <p className="text-[11px] sm:text-xs text-gray-500 leading-relaxed break-words">
+            <span className="font-semibold text-gray-600">Note:</span>
+            <br />
+            1. Revenue = Sum of Order Value of Projects in the Project Stages – a. Confirmed Order, b. Installation, c. Completed and; d. Completed – Subsidy Credited
+            <br />
+            2. Pipeline = Sum of Order Value of Projects in all Project Stages EXCEPT Lost
+            <br />
+            3. Pipeline Conversion (%) = (Total Revenue / Total Pipeline) × 100
+          </p>
+        </footer>
+      )}
     </div>
   )
 }

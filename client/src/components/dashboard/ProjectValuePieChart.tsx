@@ -22,8 +22,6 @@ const CHART_COLORS = ['#ef4444', '#3b82f6', '#10b981'] // Red, Blue, Green
 
 const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardType = 'management', filterControlledByParent }: ProjectValuePieChartProps) => {
   const [outerRadius, setOuterRadius] = useState(120)
-  const [chartHeight, setChartHeight] = useState(350)
-  const [chartWidth, setChartWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 800))
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [showFYDropdown, setShowFYDropdown] = useState(false)
   const fyDropdownRef = useRef<HTMLDivElement>(null)
@@ -87,13 +85,10 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
     const applyBucket = (bucket: string) => {
       if (bucket === 'sm') {
         setOuterRadius(80)
-        setChartHeight(280)
       } else if (bucket === 'md') {
         setOuterRadius(100)
-        setChartHeight(320)
       } else {
         setOuterRadius(120)
-        setChartHeight(350)
       }
     }
     const updateRadius = () => {
@@ -103,13 +98,8 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
         lastBucketRef.current = bucket
         applyBucket(bucket)
       }
-      if (containerRef.current) {
-        setChartWidth(containerRef.current.offsetWidth)
-      }
     }
-    // Chrome on Windows fires resize more often (zoom, address bar, devtools); longer debounce reduces flicker/hang
-    const isChrome = typeof navigator !== 'undefined' && /Chrome/.test(navigator.userAgent) && !/Edge/.test(navigator.userAgent)
-    const DEBOUNCE_MS = isChrome ? 1500 : 600
+    const DEBOUNCE_MS = 400
     const handleResize = () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(() => {
@@ -120,9 +110,6 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
     const initialBucket = getBucket(window.innerWidth)
     lastBucketRef.current = initialBucket
     applyBucket(initialBucket)
-    const measureTid = setTimeout(() => {
-      if (containerRef.current) setChartWidth(containerRef.current.offsetWidth)
-    }, 0)
 
     window.addEventListener('resize', handleResize, { passive: true })
     const isTouch = typeof window !== 'undefined' && 'ontouchstart' in window
@@ -132,7 +119,6 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
 
     return () => {
       window.removeEventListener('resize', handleResize)
-      clearTimeout(measureTid)
       if (debounceRef.current) clearTimeout(debounceRef.current)
       if (isTouch && window.visualViewport) {
         window.visualViewport.removeEventListener('resize', handleResize)
@@ -142,19 +128,19 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
 
   if (!chartData || chartData.length === 0) {
     return (
-      <div className="w-full bg-gradient-to-br from-white via-primary-50/30 to-white shadow-xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-6 flex flex-col backdrop-blur-sm h-[500px] sm:h-[550px] lg:h-[650px]">
+      <div className="w-full min-h-[360px] flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-primary-600 to-primary-700">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent">
-            Project Value by Customer Segment
+          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+            Revenue by Customer Segment
           </h2>
         </div>
-        <div className="flex items-center justify-center h-64 text-gray-500">
+        <div className="flex items-center justify-center text-gray-500" style={{ height: '320px' }}>
           <p>No project data available</p>
         </div>
       </div>
@@ -165,17 +151,17 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
   const displayData = chartData
 
   return (
-    <div className="w-full bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-6 flex flex-col backdrop-blur-sm h-[500px] sm:h-[550px] lg:h-[650px]">
+    <div className="w-full min-h-[360px] flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-primary-600 to-primary-700">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent">
-            Project Value by Customer Segment
+          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+            Revenue by Customer Segment
           </h2>
         </div>
         {!filterControlledByParent && finalAvailableFYs && finalAvailableFYs.length > 0 && (
@@ -251,14 +237,17 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
           </div>
         )}
       </div>
-      <div className="w-full overflow-x-auto flex-1 flex flex-col" ref={containerRef}>
-        <div className="min-w-[280px]" style={{ width: chartWidth, height: chartHeight }}>
-        <ResponsiveContainer width="100%" height="100%">
+      {/* Fixed height so chart size does not change with empty/filtered data */}
+      <div className="w-full overflow-x-auto flex flex-col items-center justify-center" style={{ height: '320px' }} ref={containerRef}>
+        <div className="min-w-[280px] flex justify-center items-center" style={{ width: outerRadius * 2, height: 320, minHeight: 320 }}>
+        <ResponsiveContainer width={outerRadius * 2} height={320}>
           <PieChart>
             <Pie
               data={displayData}
               cx="50%"
               cy="50%"
+              innerRadius={outerRadius * 0.55}
+              outerRadius={outerRadius}
               labelLine={false}
               label={(entry: any) => {
                 const total = displayData.reduce((sum: number, item: any) => sum + item.value, 0)
@@ -268,7 +257,6 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
                 }
                 return ''
               }}
-              outerRadius={outerRadius}
               fill="#8884d8"
               dataKey="value"
             >
@@ -308,56 +296,6 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
             />
           </PieChart>
         </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Summary Table */}
-      <div className="mt-4 sm:mt-6 overflow-x-auto -mx-4 sm:mx-0">
-        <div className="inline-block min-w-full align-middle">
-          <div className="overflow-hidden shadow-sm ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Segment
-                  </th>
-                  <th className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Count
-                  </th>
-                  <th className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Value
-                  </th>
-                  <th className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    %
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {displayData.map((item: any, index: number) => (
-                  <tr key={item.type} className="hover:bg-gray-50">
-                    <td className="px-3 sm:px-4 py-2 sm:py-3">
-                      <div className="flex items-center">
-                        <div
-                          className="w-3 h-3 sm:w-4 sm:h-4 rounded-full mr-2 flex-shrink-0"
-                          style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
-                        ></div>
-                        <span className="text-xs sm:text-sm font-medium text-gray-900 truncate">{item.label}</span>
-                      </div>
-                    </td>
-                    <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm text-gray-900">
-                      {item.count}
-                    </td>
-                    <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-semibold text-gray-900">
-                      ₹{item.value.toLocaleString('en-IN')}
-                    </td>
-                    <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-semibold text-primary-600">
-                      {item.percentage}%
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
       </div>
     </div>

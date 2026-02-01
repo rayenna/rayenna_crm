@@ -155,7 +155,7 @@ const DashboardFilters = ({
     'flex items-center min-h-[44px] px-3 py-3 sm:py-2.5 hover:bg-gradient-to-r hover:from-primary-50 hover:to-primary-100 cursor-pointer rounded-lg transition-all duration-200 hover:shadow-sm touch-manipulation'
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-start gap-3 sm:gap-4 md:gap-5 mb-6 w-full">
+    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-start gap-3 sm:gap-4 md:gap-5 mb-6 w-full min-w-0 max-w-full">
       {/* FY Filter */}
       <div className="relative w-full sm:w-auto sm:flex-1 sm:max-w-[200px] md:max-w-[220px] lg:max-w-[240px] flex flex-col" ref={fyDropdownRef}>
         <button
