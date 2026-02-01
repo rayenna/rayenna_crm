@@ -36,7 +36,7 @@ const COLORS = [
   '#84cc16',
 ]
 
-const RevenueBySalesTeamChart = ({ dashboardFilter, availableFYs = [], data: dataProp = [] }: RevenueBySalesTeamChartProps) => {
+const RevenueBySalesTeamChart = ({ dashboardFilter, data: dataProp = [] }: RevenueBySalesTeamChartProps) => {
   const { user } = useAuth()
   const canView = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGEMENT || user?.role === UserRole.SALES || user?.role === UserRole.OPERATIONS || user?.role === UserRole.FINANCE
 
@@ -139,7 +139,7 @@ const RevenueBySalesTeamChart = ({ dashboardFilter, availableFYs = [], data: dat
                   }}
                 />
                 <Bar dataKey="revenue" name="Revenue (₹)" radius={[4, 4, 0, 0]}>
-                  {chartData.map((_, index) => (
+                  {chartData.map((_: RevenueBySalesTeamItem, index: number) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Bar>
