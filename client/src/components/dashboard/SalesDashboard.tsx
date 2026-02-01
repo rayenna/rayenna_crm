@@ -128,6 +128,7 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Sales
             data={data?.projectValueProfitByFY || []} 
             dashboardType="sales"
             filterControlledByParent
+            selectedFYsFromDashboard={selectedFYs}
           />
         </div>
         <div className="w-full min-h-[360px] flex flex-col min-w-0">

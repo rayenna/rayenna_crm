@@ -14,9 +14,11 @@ interface ProjectValueProfitByFYChartProps {
   dashboardType?: 'management' | 'sales' | 'operations' | 'finance'
   /** When true, filter is the dashboard FY/Qtr/Month; use only data prop, no chart filter UI */
   filterControlledByParent?: boolean
+  /** When filterControlledByParent, only show these FYs in the chart (avoids showing previous FY added for YoY tiles) */
+  selectedFYsFromDashboard?: string[]
 }
 
-const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'management', filterControlledByParent }: ProjectValueProfitByFYChartProps) => {
+const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'management', filterControlledByParent, selectedFYsFromDashboard }: ProjectValueProfitByFYChartProps) => {
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [showFYDropdown, setShowFYDropdown] = useState(false)
   const fyDropdownRef = useRef<HTMLDivElement>(null)
@@ -92,10 +94,20 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
     .filter((fy): fy is string => typeof fy === 'string' && fy !== null && fy !== '')
     .sort()
 
-  // Filter data based on selected financial years
-  const filteredData = selectedFYs.length === 0
-    ? chartData 
-    : chartData.filter((item: FYData) => selectedFYs.includes(item.fy))
+  // When filter is controlled by parent (Admin/Management/Sales), show only dashboard-selected FYs
+  // so we don't show multiple columns (e.g. previous FY added for YoY tiles).
+  const parentFilteredData =
+    filterControlledByParent && selectedFYsFromDashboard && selectedFYsFromDashboard.length > 0
+      ? chartData.filter((item: FYData) => selectedFYsFromDashboard.includes(item.fy))
+      : chartData
+
+  // Filter data based on selected financial years (chart's own dropdown when not parent-controlled)
+  const filteredData =
+    filterControlledByParent
+      ? parentFilteredData
+      : selectedFYs.length === 0
+        ? chartData
+        : chartData.filter((item: FYData) => selectedFYs.includes(item.fy))
 
   const toggleFY = (fy: string) => {
     setSelectedFYs((prev) => 
