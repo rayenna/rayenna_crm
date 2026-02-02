@@ -71,16 +71,16 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
           gradient="from-indigo-500 to-cyan-500"
         />
         <MetricCard
-          title="Pending Installation"
-          value={data?.operations?.pendingInstallation || 0}
-          icon={<FaCog />}
-          gradient="from-indigo-500 to-indigo-600"
-        />
-        <MetricCard
           title="Open Deals"
           value={data?.pipeline?.atRisk || 0}
           icon={<FaExclamationTriangle />}
           gradient="from-red-500 to-rose-500"
+        />
+        <MetricCard
+          title="Pending Installation"
+          value={data?.operations?.pendingInstallation || 0}
+          icon={<FaCog />}
+          gradient="from-indigo-500 to-indigo-600"
         />
         <MetricCard
           title="Subsidy Credited"

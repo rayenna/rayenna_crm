@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   getTipForToday,
   shouldShowTip,
@@ -7,15 +8,17 @@ import {
 } from '../data/tipOfTheDay'
 
 const TipOfTheDay = () => {
+  const [searchParams] = useSearchParams()
   const [show, setShow] = useState(false)
   const [tip, setTip] = useState('')
 
   useEffect(() => {
-    if (shouldShowTip()) {
+    const forceShow = searchParams.get('showTip') === '1'
+    if (forceShow || shouldShowTip()) {
       setTip(getTipForToday())
       setShow(true)
     }
-  }, [])
+  }, [searchParams])
 
   const handleGotIt = () => {
     markTipShown()

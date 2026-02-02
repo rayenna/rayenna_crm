@@ -28,6 +28,7 @@ const Layout = () => {
   const helpMenuItems = [
     { name: 'Help (?)', path: '/help' },
     { name: 'About', path: '/about' },
+    { name: 'Tip of the Day', path: '/dashboard?showTip=1' },
   ]
   
   const isHelpActive = location.pathname.startsWith('/help') || location.pathname.startsWith('/about')
