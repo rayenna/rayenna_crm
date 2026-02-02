@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
+import TipOfTheDay from './TipOfTheDay'
 
 const Layout = () => {
   const { user, logout, hasRole } = useAuth()
@@ -268,6 +269,8 @@ const Layout = () => {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <Outlet />
       </main>
+
+      <TipOfTheDay />
     </div>
   )
 }

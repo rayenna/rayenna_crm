@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
-import { FaUsers, FaCog, FaClock, FaCheckCircle } from 'react-icons/fa'
+import { FaUsers, FaCog, FaClock, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa'
 import ProjectValuePieChart from './ProjectValuePieChart'
 import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
 import ProfitabilityWordCloud from './ProfitabilityWordCloud'
@@ -77,10 +77,10 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
           gradient="from-indigo-500 to-indigo-600"
         />
         <MetricCard
-          title="Pending Subsidy"
-          value={data?.operations?.pendingSubsidy || 0}
-          icon={<FaClock />}
-          gradient="from-yellow-500 to-amber-500"
+          title="Open Deals"
+          value={data?.pipeline?.atRisk || 0}
+          icon={<FaExclamationTriangle />}
+          gradient="from-red-500 to-rose-500"
         />
         <MetricCard
           title="Subsidy Credited"

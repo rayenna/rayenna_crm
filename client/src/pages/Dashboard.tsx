@@ -83,6 +83,8 @@ const Dashboard = () => {
             3. Pipeline Conversion (%) = (Total Revenue / Total Pipeline) × 100
             <br />
             4. Open Deals includes those that are in Lead, Site Survey and Proposal stages.
+            <br />
+            5. Pending Installation Deals includes Projects those that are in Confirmed and Under Installation Stages.
           </p>
         </footer>
       )}

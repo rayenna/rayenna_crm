@@ -1384,6 +1384,17 @@ router.get('/management', authenticate, async (req: Request, res) => {
       projectsByStatusRawMgmt.map((r) => ({ status: r.projectStatus, _count: r._count.id }))
     );
 
+    // Open Deals = Lead, Site Survey, Proposal (for Management/Admin tile)
+    const openDealsStatuses: ProjectStatus[] = [
+      ProjectStatus.LEAD,
+      ProjectStatus.SITE_SURVEY,
+      ProjectStatus.PROPOSAL,
+    ];
+    const openDealsCount =
+      projectsByStatusRawMgmt
+        ?.filter((p) => openDealsStatuses.includes(p.projectStatus as ProjectStatus))
+        .reduce((sum, p) => sum + (p._count?.id || 0), 0) || 0;
+
     // Projects by payment status (for Management/Admin – compact tile, same logic as Finance)
     const allProjectsMgmt = await prisma.project.findMany({
       where: { ...where },
@@ -1511,6 +1522,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
       wordCloudData,
       projectsByPaymentStatus,
       revenueBySalesperson,
+      pipeline: { atRisk: openDealsCount },
       pipelineByLeadSource,
       pipelineByType: pipelineByTypeWithPercentage,
       projectsByStatus,
