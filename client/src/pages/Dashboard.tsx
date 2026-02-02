@@ -81,6 +81,8 @@ const Dashboard = () => {
             2. Pipeline = Sum of Order Value of Projects in all Project Stages EXCEPT Lost
             <br />
             3. Pipeline Conversion (%) = (Total Revenue / Total Pipeline) × 100
+            <br />
+            4. Open Pipeline includes deals that are in Lead, Site Survey and Proposal stages.
           </p>
         </footer>
       )}

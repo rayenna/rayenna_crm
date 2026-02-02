@@ -535,19 +535,15 @@ router.get('/sales', authenticate, async (req: Request, res) => {
         projectStatus: ProjectStatus.CONFIRMED,
       },
     });
+    // Open Pipeline = deals in Lead, Site Survey, Proposal only
     const pipelineAtRisk = await prisma.project.count({
       where: {
         ...where,
-        // "At Risk" = active opportunities that are neither completed nor lost.
-        // This mirrors the business dashboard expectation more reliably than
-        // the unused statusIndicator field.
         projectStatus: {
           in: [
             ProjectStatus.LEAD,
             ProjectStatus.SITE_SURVEY,
             ProjectStatus.PROPOSAL,
-            ProjectStatus.UNDER_INSTALLATION,
-            ProjectStatus.SUBMITTED_FOR_SUBSIDY,
           ],
         },
       },

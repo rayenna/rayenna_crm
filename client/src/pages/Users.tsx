@@ -229,7 +229,7 @@ const Users = () => {
                   <button
                     onClick={() => handleResetPassword(user)}
                     disabled={resetPasswordMutation.isPending}
-                    className="text-indigo-600 hover:text-indigo-800 text-sm disabled:opacity-50 whitespace-nowrap"
+                    className="text-blue-600 hover:text-blue-800 text-sm disabled:opacity-50 whitespace-nowrap"
                   >
                     {resetPasswordMutation.isPending ? 'Generating...' : 'Reset Password'}
                   </button>
