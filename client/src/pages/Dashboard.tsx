@@ -82,7 +82,7 @@ const Dashboard = () => {
             <br />
             3. Pipeline Conversion (%) = (Total Revenue / Total Pipeline) × 100
             <br />
-            4. Open Pipeline includes deals that are in Lead, Site Survey and Proposal stages.
+            4. Open Deals includes those that are in Lead, Site Survey and Proposal stages.
           </p>
         </footer>
       )}

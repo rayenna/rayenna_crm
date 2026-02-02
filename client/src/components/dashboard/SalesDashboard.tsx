@@ -87,7 +87,7 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Sales
           gradient="from-yellow-500 to-amber-500"
         />
         <MetricCard
-          title="Open Pipeline"
+          title="Open Deals"
           value={data?.pipeline?.atRisk || 0}
           icon={<FaExclamationTriangle />}
           gradient="from-red-500 to-rose-500"
