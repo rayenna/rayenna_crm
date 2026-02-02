@@ -153,6 +153,15 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Sentry test endpoint – call with ?test=1 to trigger a test error (verify backend Sentry)
+app.get('/api/sentry-test', (req, res, next) => {
+  if (req.query.test === '1') {
+    next(new Error('Sentry backend test error – safe to ignore'));
+    return;
+  }
+  res.json({ message: 'Add ?test=1 to trigger a test error for Sentry verification' });
+});
+
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (process.env.SENTRY_DSN) {
