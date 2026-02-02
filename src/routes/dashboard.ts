@@ -471,25 +471,10 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       }
     }
 
-    // Build leads where clause with salesperson and date filters
-    // "Total Leads" on the Sales dashboard is derived from projects in the
-    // early pipeline stages, not from the separate Leads module. This keeps
-    // the tile meaningful even if the Leads module is not actively used.
-    //
-    // We define "leads" as all projects that are currently in:
-    // - LEAD
-    // - SITE_SURVEY
-    // - PROPOSAL
-    const leadLikeStatuses: ProjectStatus[] = [
-      ProjectStatus.LEAD,
-      ProjectStatus.SITE_SURVEY,
-      ProjectStatus.PROPOSAL,
-    ];
-
-    // Reuse the raw groupBy result to avoid extra queries
+    // Total Leads = deals in Lead stage only (Sales and Management)
     const totalLeadsCount =
       projectsByStatusRawFromPromise
-        ?.filter((p) => leadLikeStatuses.includes(p.projectStatus as ProjectStatus))
+        ?.filter((p) => p.projectStatus === ProjectStatus.LEAD)
         .reduce((sum, p) => sum + (p._count?.id || 0), 0) || 0;
 
     // Build chart-ready projects by status (single place)
