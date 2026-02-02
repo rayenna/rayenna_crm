@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
-import { FaUsers, FaCog, FaClock, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa'
+import { FaUsers, FaCog, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa'
 import ProjectValuePieChart from './ProjectValuePieChart'
 import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
 import ProfitabilityWordCloud from './ProfitabilityWordCloud'
