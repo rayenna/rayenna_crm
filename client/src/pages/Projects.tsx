@@ -632,7 +632,7 @@ const Projects = () => {
                             ? 'Residential - Non Subsidy'
                             : project.type === 'COMMERCIAL_INDUSTRIAL'
                               ? 'Commercial Industrial'
-                              : project.type.replace(/_/g, ' ')}
+                              : String(project.type).replace(/_/g, ' ')}
                       </span>
                       <span className={`ml-2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColorClasses(project.projectStatus)}`}>
                         <span className="text-[8px] leading-none">●</span>
