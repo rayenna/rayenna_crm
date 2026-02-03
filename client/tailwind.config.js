@@ -4,6 +4,12 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  // Safelist so classes from quick wins (form inputs, zebra striping) are always generated
+  safelist: [
+    '[&>li:nth-child(even)]:bg-gray-50/60',
+    'w-full', 'flex-1', 'border-2', 'border-gray-200', 'rounded-lg', 'px-3', 'py-2.5',
+    'focus:ring-2', 'focus:ring-primary-500', 'focus:ring-offset-2', 'focus:border-primary-500', 'transition-all',
+  ],
   theme: {
     extend: {
       colors: {

@@ -8,6 +8,8 @@ interface DashboardFiltersProps {
   onFYChange: (fys: string[]) => void
   onQuarterChange: (quarters: string[]) => void
   onMonthChange: (months: string[]) => void
+  /** Compact layout for embedding inside dense filter panels (e.g. Projects page). */
+  compact?: boolean
 }
 
 // Quarters: Q1 Apr–Jun, Q2 Jul–Sep, Q3 Oct–Dec, Q4 Jan–Mar
@@ -50,6 +52,7 @@ const DashboardFilters = ({
   onFYChange,
   onQuarterChange,
   onMonthChange,
+  compact = false,
 }: DashboardFiltersProps) => {
   const [showFYDropdown, setShowFYDropdown] = useState(false)
   const [showQuarterDropdown, setShowQuarterDropdown] = useState(false)
@@ -146,16 +149,22 @@ const DashboardFilters = ({
         )
       : MONTHS
 
-  // Shared button base: full width on mobile, equal flex on sm+; min touch target 44px; responsive padding
-  const btnBase =
-    'flex items-center justify-between min-w-0 px-4 py-3 min-h-[44px] text-sm border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 shadow-lg transition-all duration-300 font-medium'
+  // Shared button base (compact reduces height/padding for dense filter panels)
+  const btnBase = compact
+    ? 'flex items-center justify-between min-w-0 px-3 py-2 min-h-[40px] text-[13px] border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 shadow-md transition-all duration-200 font-medium'
+    : 'flex items-center justify-between min-w-0 px-4 py-3 min-h-[44px] text-sm border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 shadow-lg transition-all duration-300 font-medium'
   const dropdownPanel =
     'absolute z-20 mt-2 left-0 right-0 sm:right-auto sm:left-0 w-full sm:w-auto sm:min-w-[200px] max-w-[min(100vw,320px)] sm:max-w-none bg-white border-2 border-primary-200 rounded-xl shadow-2xl max-h-[70vh] sm:max-h-60 overflow-auto backdrop-blur-sm'
-  const optionLabel =
-    'flex items-center min-h-[44px] px-3 py-3 sm:py-2.5 hover:bg-gradient-to-r hover:from-primary-50 hover:to-primary-100 cursor-pointer rounded-lg transition-all duration-200 hover:shadow-sm touch-manipulation'
+  const optionLabel = compact
+    ? 'flex items-center min-h-[40px] px-3 py-2 hover:bg-gradient-to-r hover:from-primary-50 hover:to-primary-100 cursor-pointer rounded-lg transition-all duration-150 hover:shadow-sm touch-manipulation'
+    : 'flex items-center min-h-[44px] px-3 py-3 sm:py-2.5 hover:bg-gradient-to-r hover:from-primary-50 hover:to-primary-100 cursor-pointer rounded-lg transition-all duration-200 hover:shadow-sm touch-manipulation'
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-start gap-3 sm:gap-4 md:gap-5 mb-6 w-full min-w-0 max-w-full">
+    <div
+      className={`flex flex-col sm:flex-row sm:items-start sm:justify-start w-full min-w-0 max-w-full ${
+        compact ? 'gap-2 sm:gap-3 md:gap-4 mb-0' : 'gap-3 sm:gap-4 md:gap-5 mb-6'
+      }`}
+    >
       {/* FY Filter */}
       <div className="relative w-full sm:w-auto sm:flex-1 sm:max-w-[200px] md:max-w-[220px] lg:max-w-[240px] flex flex-col" ref={fyDropdownRef}>
         <button
@@ -179,7 +188,7 @@ const DashboardFilters = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
-        <div className="h-5 sm:h-5 mt-1">
+        <div className={`${compact ? 'h-2' : 'h-5 sm:h-5'} mt-1`}>
           {/* Spacer for consistent height with other filters */}
         </div>
         {showFYDropdown && (

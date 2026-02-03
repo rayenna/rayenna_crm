@@ -202,6 +202,8 @@ export interface Project {
   salesperson?: User
   documents?: Document[]
   auditLogs?: AuditLog[]
+  /** Present when list API includes document count (for showing attachment icon) */
+  _count?: { documents: number }
   createdAt: string
   updatedAt: string
 }

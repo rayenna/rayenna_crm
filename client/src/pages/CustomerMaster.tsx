@@ -215,59 +215,61 @@ const CustomerMaster = () => {
         )}
       </div>
 
-      <div className="bg-white shadow-md rounded-xl border border-gray-100 mb-4 p-4 border-t-4 border-t-primary-500">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <input
-            type="text"
-            placeholder="Search by name, ID, or consumer number..."
-            className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-          
-          {/* Filter for Sales users: All Customers / My Customers */}
-          {isSalesUser ? (
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Filter:</label>
-              <div className="flex gap-4">
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="customerFilter"
-                    value="all"
-                    checked={customerFilter === 'all'}
-                    onChange={(e) => setCustomerFilter(e.target.value as 'all' | 'my')}
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-gray-700">All Customers</span>
-                </label>
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="customerFilter"
-                    value="my"
-                    checked={customerFilter === 'my'}
-                    onChange={(e) => setCustomerFilter(e.target.value as 'all' | 'my')}
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-gray-700">My Customers</span>
-                </label>
+      <div className="bg-white shadow-md rounded-xl border border-gray-100 mb-4 p-3 sm:p-4 border-t-4 border-t-primary-500">
+        <div className="space-y-2 sm:space-y-3">
+          {/* Row 1: Search Bar (same look and feel as Projects) */}
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+            <input
+              type="text"
+              placeholder="Search by name, ID, or consumer number..."
+              className="w-full sm:flex-1 min-h-[40px] border-2 border-primary-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all bg-gradient-to-r from-white to-primary-50 shadow-md"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+            {/* Filter for Sales users: All Customers / My Customers */}
+            {isSalesUser ? (
+              <div className="flex items-center gap-4 min-h-[40px] w-full sm:w-auto">
+                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Filter:</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      name="customerFilter"
+                      value="all"
+                      checked={customerFilter === 'all'}
+                      onChange={(e) => setCustomerFilter(e.target.value as 'all' | 'my')}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-700">All Customers</span>
+                  </label>
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      name="customerFilter"
+                      value="my"
+                      checked={customerFilter === 'my'}
+                      onChange={(e) => setCustomerFilter(e.target.value as 'all' | 'my')}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-700">My Customers</span>
+                  </label>
+                </div>
               </div>
-            </div>
-          ) : (
-            /* Filter for other users: Sales Person dropdown */
-            <div>
-              <MultiSelect
-                options={salesUsers?.map((salesUser: any) => ({
-                  value: salesUser.id,
-                  label: `${salesUser.name} (${salesUser.email})`,
-                })) || []}
-                selectedValues={selectedSalespersonIds}
-                onChange={(values) => setSelectedSalespersonIds(values)}
-                placeholder="All Sales Persons"
-              />
-            </div>
-          )}
+            ) : (
+              /* Filter for other users: Sales Person dropdown */
+              <div className="w-full sm:w-auto min-h-[40px] flex items-center">
+                <MultiSelect
+                  options={salesUsers?.map((salesUser: any) => ({
+                    value: salesUser.id,
+                    label: `${salesUser.name} (${salesUser.email})`,
+                  })) || []}
+                  selectedValues={selectedSalespersonIds}
+                  onChange={(values) => setSelectedSalespersonIds(values)}
+                  placeholder="All Sales Persons"
+                />
+              </div>
+            )}
+          </div>
         </div>
         
         {/* Export buttons - Only visible to Admin users */}
@@ -378,14 +380,14 @@ const CustomerMaster = () => {
       )}
 
       <div className="bg-white shadow-lg rounded-xl border border-gray-100 overflow-hidden">
-        <ul className="divide-y divide-gray-200">
+        <ul className="divide-y divide-gray-200 [&>li:nth-child(even)]:bg-gray-50/60">
           {data?.customers?.map((customer: Customer) => (
             <li key={customer.id} className="hover:bg-sky-50/70 transition-colors">
               <div className="px-4 py-4 sm:px-6">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center">
-                      <p className="text-sm font-medium text-primary-600">
+                      <p className="text-sm text-primary-600 font-bold">
                         {getCustomerDisplayName(customer)}
                       </p>
                       <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-600 text-white shadow-sm">
@@ -423,10 +425,10 @@ const CustomerMaster = () => {
                         )
                       })()}
                       {customer.consumerNumber && (
-                        <span className="ml-4">Consumer: {customer.consumerNumber}</span>
+                        <span className="ml-4 text-purple-600 font-medium">Consumer: {customer.consumerNumber}</span>
                       )}
                       {customer.contactNumbers && (
-                        <span className="ml-4">
+                        <span className="ml-4 text-emerald-600 font-medium">
                           Contact: {(() => {
                             try {
                               const contacts = JSON.parse(customer.contactNumbers)
@@ -439,12 +441,31 @@ const CustomerMaster = () => {
                       )}
                       {customer.email && (
                         <span className="ml-4">
-                          Email: {(() => {
+                          {(() => {
                             try {
                               const emails = JSON.parse(customer.email)
-                              return Array.isArray(emails) ? emails.join(', ') : customer.email
+                              const emailList = Array.isArray(emails) ? emails : [customer.email]
+                              const emailStr = Array.isArray(emails) ? emails.join(', ') : customer.email
+                              const mailtoHref = `mailto:${emailList.filter((e: string) => e?.trim()).join(',')}`
+                              return (
+                                <a
+                                  href={mailtoHref}
+                                  className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                                  title="Open in email application"
+                                >
+                                  Email: {emailStr}
+                                </a>
+                              )
                             } catch {
-                              return customer.email
+                              return (
+                                <a
+                                  href={`mailto:${customer.email}`}
+                                  className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                                  title="Open in email application"
+                                >
+                                  Email: {customer.email}
+                                </a>
+                              )
                             }
                           })()}
                         </span>
@@ -807,8 +828,8 @@ const CustomerForm = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
+      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="p-6 sm:p-8">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-gray-900">
               {customer ? 'Edit Customer' : 'New Customer'}
@@ -821,7 +842,7 @@ const CustomerForm = ({
             </button>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {/* Name Fields */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
@@ -830,7 +851,7 @@ const CustomerForm = ({
                 </label>
                 <select
                   {...register('prefix')}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
                 >
                   <option value="">None</option>
                   <option value="Mr.">Mr.</option>
@@ -848,7 +869,7 @@ const CustomerForm = ({
                 </label>
                 <input
                   {...register('firstName', { required: 'First name is required' })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
                   placeholder="First Name"
                 />
                 {errors.firstName && (
@@ -861,7 +882,7 @@ const CustomerForm = ({
                 </label>
                 <input
                   {...register('middleName')}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
                   placeholder="Middle Name"
                 />
               </div>
@@ -871,7 +892,7 @@ const CustomerForm = ({
                 </label>
                 <input
                   {...register('lastName')}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
                   placeholder="Last Name"
                 />
               </div>
@@ -883,7 +904,7 @@ const CustomerForm = ({
               </label>
               <input
                 {...register('addressLine1')}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
                 placeholder="Street address, P.O. Box, etc."
               />
             </div>
@@ -894,7 +915,7 @@ const CustomerForm = ({
               </label>
               <input
                 {...register('addressLine2')}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
                 placeholder="Apartment, suite, unit, building, floor, etc."
               />
             </div>
@@ -914,7 +935,7 @@ const CustomerForm = ({
                       setValue('city', '')
                     }
                   }}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
                 >
                   <option value="">Select Country</option>
                   {countries.map((country) => (
@@ -938,7 +959,7 @@ const CustomerForm = ({
                       setValue('city', '')
                     }
                   }}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
                   disabled={!countryForStates}
                 >
                   <option value="">Select State</option>
@@ -958,7 +979,7 @@ const CustomerForm = ({
                   {...register('city')}
                   value={watch('city') || customerData?.city || ''}
                   onChange={(e) => setValue('city', e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
                   disabled={!stateForCities}
                 >
                   <option value="">Select City</option>
@@ -977,7 +998,7 @@ const CustomerForm = ({
               </label>
               <input
                 {...register('pinCode')}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
                 placeholder="Postal/ZIP code"
                 maxLength={10}
               />
@@ -1003,7 +1024,7 @@ const CustomerForm = ({
                     value={contact}
                     onChange={(e) => updateContactNumber(index, e.target.value)}
                     placeholder="Phone number"
-                    className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+                    className="flex-1 border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
                   />
                   {contactNumbers.length > 1 && (
                     <button
@@ -1031,7 +1052,7 @@ const CustomerForm = ({
               </label>
               <input
                 {...register('consumerNumber')}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
               />
             </div>
 
@@ -1046,7 +1067,7 @@ const CustomerForm = ({
                     value={email}
                     onChange={(e) => updateEmail(index, e.target.value)}
                     placeholder="example@email.com"
-                    className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+                    className="flex-1 border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
                   />
                   {emails.length > 1 && (
                     <button
@@ -1075,7 +1096,7 @@ const CustomerForm = ({
                 </label>
                 <input
                   {...register('idProofNumber')}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
                   placeholder="Enter ID proof number"
                 />
               </div>
@@ -1094,7 +1115,7 @@ const CustomerForm = ({
                       return true
                     }
                   })}
-                  className={`w-full border border-gray-300 rounded-md px-3 py-2 ${idProofNumber && idProofNumber.trim() !== '' && !watch('idProofType') ? 'border-red-300' : ''}`}
+                  className={`w-full border-2 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-offset-2 transition-all ${idProofNumber && idProofNumber.trim() !== '' && !watch('idProofType') ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-primary-500 focus:border-primary-500'}`}
                 >
                   <option value="">Select Type</option>
                   <option value="Aadhaar">Aadhaar</option>
@@ -1116,7 +1137,7 @@ const CustomerForm = ({
               </label>
               <input
                 {...register('companyName')}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
                 placeholder="Enter company name"
               />
             </div>
@@ -1127,7 +1148,7 @@ const CustomerForm = ({
               </label>
               <input
                 {...register('companyGst')}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
                 placeholder="Enter GST number"
               />
             </div>
@@ -1140,7 +1161,7 @@ const CustomerForm = ({
                 </label>
                 <select
                   {...register('salespersonId')}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
                 >
                   <option value="">No Salesperson Assigned</option>
                   {salespersons?.map((salesperson: any) => (

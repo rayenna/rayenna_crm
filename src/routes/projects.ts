@@ -55,6 +55,24 @@ router.get(
       const validValues = ['HAS_TICKETS', 'OPEN', 'IN_PROGRESS', 'CLOSED', 'NO_TICKETS'];
       return values.every(v => validValues.includes(v as string));
     }).withMessage('Invalid supportTicketStatus value'),
+    // Dashboard-style date filters (FY / Quarter / Month)
+    query('fy').optional().custom((value) => {
+      if (!value) return true;
+      const values = Array.isArray(value) ? value : [value];
+      return values.every(v => typeof v === 'string' && String(v).trim().length > 0);
+    }).withMessage('Invalid fy value'),
+    query('quarter').optional().custom((value) => {
+      if (!value) return true;
+      const values = Array.isArray(value) ? value : [value];
+      const valid = ['Q1', 'Q2', 'Q3', 'Q4'];
+      return values.every(v => valid.includes(String(v)));
+    }).withMessage('Invalid quarter value'),
+    query('month').optional().custom((value) => {
+      if (!value) return true;
+      const values = Array.isArray(value) ? value : [value];
+      const valid = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+      return values.every(v => valid.includes(String(v).padStart(2, '0')));
+    }).withMessage('Invalid month value'),
     query('year').optional().isString(),
     query('search').optional().isString(),
     query('page').optional().isInt({ min: 1 }),
@@ -77,6 +95,9 @@ router.get(
         salespersonId,
         supportTicketStatus,
         paymentStatus,
+        fy,
+        quarter,
+        month,
         year,
         search,
         page = '1',
@@ -97,6 +118,11 @@ router.get(
       const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : salespersonId ? [salespersonId] : [];
       const supportTicketStatusArray = Array.isArray(supportTicketStatus) ? supportTicketStatus : supportTicketStatus ? [supportTicketStatus] : [];
       const paymentStatusArray = Array.isArray(paymentStatus) ? paymentStatus : paymentStatus ? [paymentStatus] : [];
+      const fyArray = Array.isArray(fy) ? fy : fy ? [fy] : [];
+      const quarterArray = Array.isArray(quarter) ? quarter : quarter ? [quarter] : [];
+      const monthArray = Array.isArray(month) ? month : month ? [month] : [];
+      // FY filters: prefer ?fy=... (dashboard-style). Fallback to legacy ?year=...
+      const fyFilters: string[] = (fyArray.length > 0 ? fyArray : (year ? [year] : [])) as string[];
 
       // Role-based filtering - Sales users only see their own projects
       // This should be applied before other filters
@@ -140,7 +166,6 @@ router.get(
       if (salespersonIdArray.length > 0 && req.user?.role !== UserRole.SALES) {
         where.salespersonId = { in: salespersonIdArray as string[] };
       }
-      if (year) where.year = year;
 
       // Handle support ticket status filter
       if (supportTicketStatusArray.length > 0) {
@@ -305,6 +330,69 @@ router.get(
         where.AND.push(searchConditions);
       }
 
+      // Available FYs for the dropdown (based on current non-date filters + role scope)
+      const availableFYRows = await prisma.project.findMany({
+        where,
+        distinct: ['year'],
+        select: { year: true },
+      });
+      const availableFYs = Array.from(
+        new Set(
+          availableFYRows
+            .map((r) => r.year)
+            .filter((y): y is string => typeof y === 'string' && y.trim().length > 0)
+        )
+      ).sort((a, b) => String(a).localeCompare(String(b)));
+
+      // Apply dashboard-style FY / Quarter / Month filters
+      if (fyFilters.length > 0) {
+        where.year = { in: fyFilters };
+      }
+
+      // Quarter/month only apply when exactly one FY is selected (same as Dashboard)
+      const quarterFilters = quarterArray as string[];
+      const monthFilters = monthArray as string[];
+      if (fyFilters.length === 1 && (quarterFilters.length > 0 || monthFilters.length > 0)) {
+        const QUARTER_TO_MONTHS: Record<string, string[]> = {
+          Q1: ['04', '05', '06'],
+          Q2: ['07', '08', '09'],
+          Q3: ['10', '11', '12'],
+          Q4: ['01', '02', '03'],
+        };
+
+        // Derive effective month filters (quarter-only, month-only, or intersection)
+        let effectiveMonths: string[] = [];
+        if (quarterFilters.length > 0) {
+          const quarterMonths = new Set<string>();
+          quarterFilters.forEach((q) => (QUARTER_TO_MONTHS[q] ?? []).forEach((m) => quarterMonths.add(m)));
+          effectiveMonths = monthFilters.length > 0 ? monthFilters.filter((m) => quarterMonths.has(m)) : Array.from(quarterMonths);
+        } else {
+          effectiveMonths = monthFilters;
+        }
+
+        if (effectiveMonths.length > 0) {
+          const fyStr = String(fyFilters[0]);
+          const yearMatch = fyStr.match(/(\d{4})/);
+          if (yearMatch) {
+            const startYear = parseInt(yearMatch[1], 10);
+            const dateRanges: any[] = [];
+            effectiveMonths.forEach((m) => {
+              const monthNum = parseInt(m, 10);
+              if (!monthNum || monthNum < 1 || monthNum > 12) return;
+              const yearForMonth = monthNum >= 1 && monthNum <= 3 ? startYear + 1 : startYear;
+              const start = new Date(yearForMonth, monthNum - 1, 1);
+              const end = new Date(yearForMonth, monthNum, 1);
+              dateRanges.push({ confirmationDate: { gte: start, lt: end } });
+            });
+
+            if (dateRanges.length > 0) {
+              if (!where.AND) where.AND = [];
+              where.AND.push({ OR: dateRanges });
+            }
+          }
+        }
+      }
+
       // Build orderBy based on sortBy parameter
       let orderBy: any[] = [];
       if (sortBy) {
@@ -369,6 +457,9 @@ router.get(
             salesperson: {
               select: { id: true, name: true, email: true },
             },
+            _count: {
+              select: { documents: true },
+            },
           },
           orderBy,
           skip,
@@ -379,6 +470,7 @@ router.get(
 
       res.json({
         projects,
+        availableFYs,
         pagination: {
           page: parseInt(page as string),
           limit: take,

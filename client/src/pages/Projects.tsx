@@ -8,6 +8,10 @@ import { format } from 'date-fns'
 import MultiSelect from '../components/MultiSelect'
 import { useDebounce } from '../hooks/useDebounce'
 import toast from 'react-hot-toast'
+import { getSegmentColor } from '../components/dashboard/segmentColors'
+import { getSalesTeamColor } from '../components/dashboard/salesTeamColors'
+import DashboardFilters from '../components/dashboard/DashboardFilters'
+import { FiPaperclip } from 'react-icons/fi'
 
 // Helper function to get payment status badge with color coding
 const getPaymentStatusBadge = (project: Project) => {
@@ -80,6 +84,12 @@ const Projects = () => {
   const debouncedSearch = useDebounce(searchInput, 500) // 500ms debounce
   const [showExportConfirm, setShowExportConfirm] = useState(false)
   const [pendingExportType, setPendingExportType] = useState<'excel' | 'csv' | null>(null)
+  const [showMoreFilters, setShowMoreFilters] = useState(false)
+
+  // Dashboard-style date filters (FY / Quarter / Month)
+  const [selectedFYs, setSelectedFYs] = useState<string[]>([])
+  const [selectedQuarters, setSelectedQuarters] = useState<string[]>([])
+  const [selectedMonths, setSelectedMonths] = useState<string[]>([])
   
   // Prepare options for multi-selects - matching exactly the Project Status dropdown in Sales & Commercial section
   // Operations users can only see: CONFIRMED, UNDER_INSTALLATION, COMPLETED, COMPLETED_SUBSIDY_CREDITED
@@ -153,7 +163,71 @@ const Projects = () => {
   // Reset page when other filters change
   useEffect(() => {
     setPage(1)
-  }, [filters.status, filters.type, filters.projectServiceType, filters.salespersonId, filters.supportTicketStatus, filters.paymentStatus, filters.sortBy])
+  }, [
+    filters.status,
+    filters.type,
+    filters.projectServiceType,
+    filters.salespersonId,
+    filters.supportTicketStatus,
+    filters.paymentStatus,
+    filters.sortBy,
+    selectedFYs,
+    selectedQuarters,
+    selectedMonths,
+  ])
+
+  const clearAllFilters = () => {
+    // Reset search input (drives debounced search → filters.search)
+    setSearchInput('')
+
+    // Reset dashboard-style date filters
+    setSelectedFYs([])
+    setSelectedQuarters([])
+    setSelectedMonths([])
+
+    // Reset all other filters; keep default status set (active statuses except LOST)
+    setFilters((prev) => ({
+      ...prev,
+      status: [...defaultStatusValues],
+      type: [],
+      projectServiceType: [],
+      salespersonId: [],
+      supportTicketStatus: [],
+      paymentStatus: [],
+      search: '',
+      sortBy: '',
+      sortOrder: 'desc',
+    }))
+
+    setPage(1)
+  }
+
+  const moreFiltersActiveCount = useMemo(() => {
+    const normalize = (arr: string[]) => [...arr].sort().join('|')
+    const statusIsDefault =
+      filters.status.length === defaultStatusValues.length &&
+      normalize(filters.status) === normalize(defaultStatusValues)
+
+    return (
+      (statusIsDefault ? 0 : 1) +
+      (filters.type.length > 0 ? 1 : 0) +
+      (filters.projectServiceType.length > 0 ? 1 : 0) +
+      (filters.supportTicketStatus.length > 0 ? 1 : 0) +
+      (filters.paymentStatus.length > 0 ? 1 : 0) +
+      (user?.role !== UserRole.SALES && filters.salespersonId.length > 0 ? 1 : 0) +
+      (filters.sortBy ? 1 : 0)
+    )
+  }, [
+    filters.status,
+    filters.type,
+    filters.projectServiceType,
+    filters.supportTicketStatus,
+    filters.paymentStatus,
+    filters.salespersonId,
+    filters.sortBy,
+    defaultStatusValues,
+    user?.role,
+  ])
 
   // Fetch sales users for the filter dropdown (only for non-SALES users)
   const { data: salesUsers } = useQuery({
@@ -166,7 +240,7 @@ const Projects = () => {
   })
 
   const { data, isLoading } = useQuery({
-    queryKey: ['projects', filters, page],
+    queryKey: ['projects', filters, page, selectedFYs, selectedQuarters, selectedMonths],
     queryFn: async () => {
       const params = new URLSearchParams()
       // Append array values - each value gets its own parameter (status[]=value1&status[]=value2)
@@ -176,6 +250,9 @@ const Projects = () => {
       filters.salespersonId.forEach((value) => params.append('salespersonId', value))
       filters.supportTicketStatus.forEach((value) => params.append('supportTicketStatus', value))
       filters.paymentStatus.forEach((value) => params.append('paymentStatus', value))
+      selectedFYs.forEach((fy) => params.append('fy', fy))
+      selectedQuarters.forEach((q) => params.append('quarter', q))
+      selectedMonths.forEach((m) => params.append('month', m))
       if (filters.search) params.append('search', filters.search)
       if (filters.sortBy) {
         params.append('sortBy', filters.sortBy)
@@ -259,6 +336,9 @@ const Projects = () => {
         params.append('sortBy', filters.sortBy)
         params.append('sortOrder', filters.sortOrder)
       }
+      selectedFYs.forEach((fy) => params.append('fy', fy))
+      selectedQuarters.forEach((q) => params.append('quarter', q))
+      selectedMonths.forEach((m) => params.append('month', m))
       
       const endpoint = pendingExportType === 'excel' 
         ? `/api/projects/export/excel` 
@@ -314,47 +394,105 @@ const Projects = () => {
         )}
       </div>
 
-      <div className="bg-white shadow-md rounded-xl border border-gray-100 mb-4 p-4 border-t-4 border-t-primary-500">
+      <div className="bg-white shadow-md rounded-xl border border-gray-100 mb-4 p-3 sm:p-4 border-t-4 border-t-primary-500">
+        <div className="space-y-2 sm:space-y-3">
         {/* Row 1: Search Bar */}
-        <div className="mb-4">
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
           <input
             type="text"
             placeholder="Search across all projects..."
-            className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white"
+            className="w-full sm:flex-1 min-h-[40px] border-2 border-primary-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all bg-gradient-to-r from-white to-primary-50 shadow-md"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
           />
+          <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="min-h-[40px] px-3 py-2 rounded-xl border-2 border-primary-300 bg-white hover:bg-primary-50 text-primary-700 font-semibold shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.99]"
+              title="Clear search and all filters"
+            >
+              Clear All
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowMoreFilters((v) => !v)}
+              className="min-h-[40px] px-3 py-2 rounded-xl border-2 border-primary-300 bg-gradient-to-r from-white to-primary-50 hover:from-primary-50 hover:to-primary-100 text-gray-700 font-semibold shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.99] flex items-center justify-center gap-2"
+              aria-expanded={showMoreFilters}
+              aria-controls="projects-more-filters"
+              title="Show or hide more filters"
+            >
+              <span className="truncate">
+                {showMoreFilters ? 'Hide Filters' : 'More Filters'}
+                {!showMoreFilters && moreFiltersActiveCount > 0 ? ` (${moreFiltersActiveCount})` : ''}
+              </span>
+              <svg
+                className={`h-4 w-4 text-gray-500 transition-transform ${showMoreFilters ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
         </div>
 
+        {/* Row 1b: FY / Quarter / Month Filters (same as Dashboard) */}
+        <div className="pt-1">
+          <DashboardFilters
+            availableFYs={data?.availableFYs ?? []}
+            selectedFYs={selectedFYs}
+            selectedQuarters={selectedQuarters}
+            selectedMonths={selectedMonths}
+            onFYChange={setSelectedFYs}
+            onQuarterChange={setSelectedQuarters}
+            onMonthChange={setSelectedMonths}
+            compact
+          />
+        </div>
+
+        <div
+          id="projects-more-filters"
+          className={`${showMoreFilters ? 'overflow-visible' : 'overflow-hidden'} transition-all duration-300 ease-in-out ${
+            showMoreFilters ? 'max-h-[1200px] opacity-100' : 'max-h-0 opacity-0'
+          }`}
+        >
+          <div className={`${showMoreFilters ? 'pointer-events-auto' : 'pointer-events-none'} pt-2 space-y-2 sm:space-y-3`}>
         {/* Row 2: Primary Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
           <MultiSelect
             options={statusOptions}
             selectedValues={filters.status}
             onChange={handleStatusChange}
             placeholder="All Statuses"
+            compact
           />
           <MultiSelect
             options={typeOptions}
             selectedValues={filters.type}
             onChange={(values) => setFilters({ ...filters, type: values })}
             placeholder="All Segments"
+            compact
           />
           <MultiSelect
             options={projectServiceTypeOptions}
             selectedValues={filters.projectServiceType}
             onChange={(values) => setFilters({ ...filters, projectServiceType: values })}
             placeholder="All Project Types"
+            compact
           />
         </div>
 
         {/* Row 3: Secondary Filters */}
-        <div className={`grid grid-cols-1 sm:grid-cols-2 ${user?.role !== UserRole.SALES ? (paymentStatusOptions.length > 0 ? 'lg:grid-cols-3' : 'lg:grid-cols-2') : (paymentStatusOptions.length > 0 ? 'lg:grid-cols-2' : 'lg:grid-cols-1')} gap-4 mb-4`}>
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${user?.role !== UserRole.SALES ? (paymentStatusOptions.length > 0 ? 'lg:grid-cols-3' : 'lg:grid-cols-2') : (paymentStatusOptions.length > 0 ? 'lg:grid-cols-2' : 'lg:grid-cols-1')} gap-2 sm:gap-3`}>
           <MultiSelect
             options={supportTicketStatusOptions}
             selectedValues={filters.supportTicketStatus}
             onChange={(values) => setFilters({ ...filters, supportTicketStatus: values })}
             placeholder="All Ticket Statuses"
+            compact
           />
           {paymentStatusOptions.length > 0 && (
             <MultiSelect
@@ -362,6 +500,7 @@ const Projects = () => {
               selectedValues={filters.paymentStatus}
               onChange={(values) => setFilters({ ...filters, paymentStatus: values })}
               placeholder="All Payment Statuses"
+              compact
             />
           )}
           {user?.role !== UserRole.SALES && (
@@ -370,21 +509,22 @@ const Projects = () => {
               selectedValues={filters.salespersonId}
               onChange={(values) => setFilters({ ...filters, salespersonId: values })}
               placeholder="All Sales Users"
+              compact
             />
           )}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
             <select
-              className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white"
+              className="w-full min-h-[40px] border-2 border-primary-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 bg-gradient-to-r from-white to-primary-50 shadow-md text-gray-700 font-medium text-[13px]"
               value={filters.sortBy}
               onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
             >
               <option value="">Default (Confirmation Date)</option>
               <option value="systemCapacity">System Capacity</option>
               <option value="projectCost">Order Value</option>
-              <option value="confirmationDate">Date of Confirmation</option>
+              <option value="confirmationDate">Confirmation Date</option>
               <option value="profitability">Profitability</option>
               <option value="customerName">Customer Name</option>
             </select>
@@ -392,7 +532,7 @@ const Projects = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
             <select
-              className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white"
+              className="w-full min-h-[40px] border-2 border-primary-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 bg-gradient-to-r from-white to-primary-50 shadow-md text-gray-700 font-medium text-[13px] disabled:opacity-60 disabled:cursor-not-allowed"
               value={filters.sortOrder}
               onChange={(e) => setFilters({ ...filters, sortOrder: e.target.value })}
               disabled={!filters.sortBy}
@@ -405,7 +545,7 @@ const Projects = () => {
 
         {/* Export buttons - Only visible to Admin users */}
         {hasRole([UserRole.ADMIN]) && (
-          <div className="mt-4 flex gap-2">
+          <div className="flex gap-2">
             <button
               onClick={() => handleExportClick('excel')}
               className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 text-sm font-medium flex items-center gap-2"
@@ -426,6 +566,9 @@ const Projects = () => {
             </button>
           </div>
         )}
+          </div>
+        </div>
+        </div>
       </div>
 
       {/* Export Confirmation Modal */}
@@ -465,9 +608,9 @@ const Projects = () => {
       )}
 
       <div className="bg-white shadow-lg rounded-xl border border-gray-100 overflow-hidden">
-        <ul className="divide-y divide-gray-200">
+        <ul className="divide-y divide-gray-200 [&>li:nth-child(even)]:bg-gray-50/60">
           {data?.projects?.map((project: Project) => (
-            <li key={project.id}>
+            <li key={project.id} className="transition-colors">
               <Link
                 to={`/projects/${project.id}`}
                 className="block hover:bg-sky-50/70 px-4 py-4 sm:px-6 transition-colors"
@@ -475,25 +618,59 @@ const Projects = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center">
-                      <p className="text-sm font-medium text-primary-600">
-                        #{project.slNo} - {project.customer?.customerName || 'Unknown Customer'}
+                      <p className="text-sm font-medium">
+                        <span className="text-black">#{project.slNo}</span>
+                        <span className="text-primary-600 font-bold"> - {project.customer?.customerName || 'Unknown Customer'}</span>
                       </p>
-                      <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">
-                        {project.type.replace(/_/g, ' ')}
+                      <span
+                        className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
+                        style={{ backgroundColor: getSegmentColor(project.type, 0) }}
+                      >
+                        {project.type === 'RESIDENTIAL_SUBSIDY'
+                          ? 'Residential Subsidy'
+                          : project.type === 'RESIDENTIAL_NON_SUBSIDY'
+                            ? 'Residential - Non Subsidy'
+                            : project.type === 'COMMERCIAL_INDUSTRIAL'
+                              ? 'Commercial Industrial'
+                              : project.type.replace(/_/g, ' ')}
                       </span>
-                      <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColorClasses(project.projectStatus)}`}>
+                      <span className={`ml-2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColorClasses(project.projectStatus)}`}>
+                        <span className="text-[8px] leading-none">●</span>
                         {project.projectStatus.replace(/_/g, ' ')}
                       </span>
                     </div>
-                    <div className="mt-2 flex items-center text-sm text-gray-500">
-                      <span>
-                        {project.systemCapacity ? `${project.systemCapacity} kW` : 'N/A'} •{' '}
+                    <div className="mt-2 flex items-center text-sm">
+                      <span className="text-orange-800 font-medium">
+                        {project.systemCapacity ? `${project.systemCapacity} kW` : 'N/A'}
+                      </span>
+                      <span className="text-gray-500 mx-1"> • </span>
+                      <span className="text-green-800 font-bold">
                         {project.projectCost
                           ? `₹${project.projectCost.toLocaleString('en-IN')}`
                           : 'N/A'}
                       </span>
                       {project.salesperson && (
-                        <span className="ml-4">Sales: {project.salesperson.name}</span>
+                        <span className="ml-4 inline-flex items-center gap-1.5 font-medium" style={{ color: getSalesTeamColor(project.salesperson.name, 0) }}>
+                          Sales: {project.salesperson.name}
+                          {project._count && project._count.documents > 0 && (
+                            <span
+                              className="inline-flex items-center justify-center text-primary-600 opacity-90 hover:opacity-100"
+                              title={`${project._count.documents} document(s) uploaded`}
+                              aria-label="Has attachments"
+                            >
+                              <FiPaperclip className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      {!project.salesperson && project._count && project._count.documents > 0 && (
+                        <span
+                          className="ml-4 inline-flex items-center justify-center text-primary-600 opacity-90"
+                          title={`${project._count.documents} document(s) uploaded`}
+                          aria-label="Has attachments"
+                        >
+                          <FiPaperclip className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
+                        </span>
                       )}
                     </div>
                   </div>
