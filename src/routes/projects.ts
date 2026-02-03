@@ -75,6 +75,7 @@ router.get(
     }).withMessage('Invalid month value'),
     query('year').optional().isString(),
     query('search').optional().isString(),
+    query('hasDocuments').optional().isIn(['true', 'false']),
     query('page').optional().isInt({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 100 }),
     query('sortBy').optional().isIn(['systemCapacity', 'projectCost', 'confirmationDate', 'profitability', 'customerName']),
@@ -100,6 +101,7 @@ router.get(
         month,
         year,
         search,
+        hasDocuments,
         page = '1',
         limit = '25',
         sortBy,
@@ -328,6 +330,17 @@ router.get(
 
         // Add search condition to AND array (preserving existing AND conditions including ticket filter)
         where.AND.push(searchConditions);
+      }
+
+      // Filter: only projects with at least one document (artifact) attached
+      const hasDocumentsActive = hasDocuments === 'true' || (Array.isArray(hasDocuments) && hasDocuments.includes('true'));
+      if (hasDocumentsActive) {
+        const hasDocumentsCondition = { documents: { some: {} } };
+        if (where.AND && Array.isArray(where.AND)) {
+          where.AND.push(hasDocumentsCondition);
+        } else {
+          where.documents = { some: {} };
+        }
       }
 
       // Available FYs for the dropdown (based on current non-date filters + role scope)

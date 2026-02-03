@@ -130,6 +130,7 @@ const Projects = () => {
     salespersonId: [] as string[],
     supportTicketStatus: [] as string[],
     paymentStatus: [] as string[],
+    hasDocuments: false,
     search: '',
     sortBy: '',
     sortOrder: 'desc',
@@ -170,6 +171,7 @@ const Projects = () => {
     filters.salespersonId,
     filters.supportTicketStatus,
     filters.paymentStatus,
+    filters.hasDocuments,
     filters.sortBy,
     selectedFYs,
     selectedQuarters,
@@ -215,6 +217,7 @@ const Projects = () => {
       (filters.supportTicketStatus.length > 0 ? 1 : 0) +
       (filters.paymentStatus.length > 0 ? 1 : 0) +
       (user?.role !== UserRole.SALES && filters.salespersonId.length > 0 ? 1 : 0) +
+      (filters.hasDocuments ? 1 : 0) +
       (filters.sortBy ? 1 : 0)
     )
   }, [
@@ -224,6 +227,7 @@ const Projects = () => {
     filters.supportTicketStatus,
     filters.paymentStatus,
     filters.salespersonId,
+    filters.hasDocuments,
     filters.sortBy,
     defaultStatusValues,
     user?.role,
@@ -254,6 +258,7 @@ const Projects = () => {
       selectedQuarters.forEach((q) => params.append('quarter', q))
       selectedMonths.forEach((m) => params.append('month', m))
       if (filters.search) params.append('search', filters.search)
+      if (filters.hasDocuments) params.append('hasDocuments', 'true')
       if (filters.sortBy) {
         params.append('sortBy', filters.sortBy)
         params.append('sortOrder', filters.sortOrder)
@@ -332,6 +337,7 @@ const Projects = () => {
       filters.salespersonId.forEach((value) => params.append('salespersonId', value))
       filters.paymentStatus.forEach((value) => params.append('paymentStatus', value))
       if (filters.search) params.append('search', filters.search)
+      if (filters.hasDocuments) params.append('hasDocuments', 'true')
       if (filters.sortBy) {
         params.append('sortBy', filters.sortBy)
         params.append('sortOrder', filters.sortOrder)
@@ -513,6 +519,21 @@ const Projects = () => {
             />
           )}
         </div>
+
+        {/* Has documents filter */}
+        <div className="flex items-center gap-2">
+          <label className="inline-flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filters.hasDocuments}
+              onChange={(e) => setFilters(prev => ({ ...prev, hasDocuments: e.target.checked }))}
+              className="w-4 h-4 rounded border-2 border-primary-300 text-primary-600 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+            />
+            <span className="text-sm font-medium text-gray-700">Has documents</span>
+          </label>
+          <span className="text-xs text-gray-500">(only projects with at least one attachment)</span>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
