@@ -50,10 +50,12 @@ const MultiSelect = ({ options, selectedValues, onChange, placeholder = 'Select.
     onChange([])
   }
 
-  const displayText = selectedValues.length === 0 
-    ? placeholder 
+  const displayText = selectedValues.length === 0
+    ? placeholder
     : selectedValues.length === 1
     ? options.find(opt => opt.value === selectedValues[0])?.label || selectedValues[0]
+    : showSelectedLabels
+    ? selectedValues.map(v => options.find(opt => opt.value === v)?.label || v).join(', ')
     : `${selectedValues.length} selected`
 
   // Match DashboardFilters look & feel (rounded-xl, border-2, subtle gradient, shadow)
