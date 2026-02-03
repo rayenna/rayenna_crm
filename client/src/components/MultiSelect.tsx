@@ -17,7 +17,7 @@ interface MultiSelectProps {
   showSelectedLabels?: boolean
 }
 
-const MultiSelect = ({ options, selectedValues, onChange, placeholder = 'Select...', className = '', compact = false, showSelectedLabels = false }: MultiSelectProps) => {
+const MultiSelect = ({ options, selectedValues, onChange, placeholder = 'Select...', className = '', compact = false, showSelectedLabels: showLabels = false }: MultiSelectProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -54,7 +54,7 @@ const MultiSelect = ({ options, selectedValues, onChange, placeholder = 'Select.
     ? placeholder
     : selectedValues.length === 1
     ? options.find(opt => opt.value === selectedValues[0])?.label || selectedValues[0]
-    : showSelectedLabels
+    : showLabels
     ? selectedValues.map(v => options.find(opt => opt.value === v)?.label || v).join(', ')
     : `${selectedValues.length} selected`
 
