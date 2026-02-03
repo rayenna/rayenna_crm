@@ -13,9 +13,11 @@ interface MultiSelectProps {
   className?: string
   /** Smaller padding/height for dense filter panels (e.g. Projects). */
   compact?: boolean
+  /** When true, show all selected labels on one line (e.g. "Name1, Name2") instead of "N selected". */
+  showSelectedLabels?: boolean
 }
 
-const MultiSelect = ({ options, selectedValues, onChange, placeholder = 'Select...', className = '', compact = false }: MultiSelectProps) => {
+const MultiSelect = ({ options, selectedValues, onChange, placeholder = 'Select...', className = '', compact = false, showSelectedLabels = false }: MultiSelectProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -71,7 +73,7 @@ const MultiSelect = ({ options, selectedValues, onChange, placeholder = 'Select.
         onClick={() => setIsOpen(!isOpen)}
         className={`${btnBase} border-primary-300 bg-gradient-to-r from-white to-primary-50 hover:from-primary-50 hover:to-primary-100 hover:border-primary-500 hover:shadow-xl active:scale-[0.99] text-gray-700`}
       >
-        <span className={`${selectedValues.length === 0 ? 'text-gray-500' : 'text-gray-700'} truncate mr-2`}>{displayText}</span>
+        <span className={`${selectedValues.length === 0 ? 'text-gray-500' : 'text-gray-700'} whitespace-nowrap mr-2 min-w-0 overflow-hidden text-ellipsis`} title={displayText}>{displayText}</span>
         <div className="flex items-center gap-2 flex-shrink-0">
           {selectedValues.length > 0 && (
             <button

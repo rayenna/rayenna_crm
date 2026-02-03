@@ -218,7 +218,7 @@ const CustomerMaster = () => {
       <div className="bg-white shadow-md rounded-xl border border-gray-100 mb-4 p-3 sm:p-4 border-t-4 border-t-primary-500">
         <div className="space-y-2 sm:space-y-3">
           {/* Row 1: Search Bar (same look and feel as Projects) */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:gap-4">
             <input
               type="text"
               placeholder="Search by name, ID, or consumer number..."
@@ -228,7 +228,7 @@ const CustomerMaster = () => {
             />
             {/* Filter for Sales users: All Customers / My Customers */}
             {isSalesUser ? (
-              <div className="flex items-center gap-4 min-h-[40px] w-full sm:w-auto">
+              <div className="flex items-center gap-4 min-h-[40px] w-full sm:w-auto sm:ml-auto">
                 <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Filter:</label>
                 <div className="flex gap-4">
                   <label className="flex items-center cursor-pointer">
@@ -256,16 +256,18 @@ const CustomerMaster = () => {
                 </div>
               </div>
             ) : (
-              /* Filter for other users: Sales Person dropdown */
-              <div className="w-full sm:w-auto min-h-[40px] flex items-center">
+              /* Filter for other users: Sales Person dropdown - right-aligned on desktop, full width on mobile; wide enough for full name on one line */
+              <div className="w-full sm:w-auto sm:min-w-[260px] sm:ml-auto min-h-[40px] flex items-center sm:justify-end">
                 <MultiSelect
+                  className="w-full sm:min-w-[260px]"
                   options={salesUsers?.map((salesUser: any) => ({
                     value: salesUser.id,
-                    label: `${salesUser.name} (${salesUser.email})`,
+                    label: salesUser.name,
                   })) || []}
                   selectedValues={selectedSalespersonIds}
                   onChange={(values) => setSelectedSalespersonIds(values)}
                   placeholder="All Sales Persons"
+                  showSelectedLabels
                 />
               </div>
             )}
@@ -387,12 +389,12 @@ const CustomerMaster = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-600 text-white shadow-sm mr-2">
+                        ID: {customer.customerId}
+                      </span>
                       <p className="text-sm text-primary-600 font-bold">
                         {getCustomerDisplayName(customer)}
                       </p>
-                      <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-600 text-white shadow-sm">
-                        ID: {customer.customerId}
-                      </span>
                       {(customer as any)._count && (customer as any)._count.projects > 0 && (
                         <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500 text-white shadow-sm">
                           {(customer as any)._count.projects} Project{(customer as any)._count.projects !== 1 ? 's' : ''}
@@ -536,27 +538,29 @@ const CustomerMaster = () => {
         </ul>
       </div>
 
-      {data?.totalPages && data.totalPages > 1 && (
+      {data != null && (
         <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-sm text-gray-500">
-            Showing page {data.page} of {data.totalPages} ({data.total} total)
+            Showing page {data.page} of {data.totalPages || 1} ({data.total} total)
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => setPage(p => Math.min(data.totalPages, p + 1))}
-              disabled={page >= data.totalPages}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
-          </div>
+          {data.totalPages != null && data.totalPages > 1 && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setPage(p => Math.min(data.totalPages, p + 1))}
+                disabled={page >= data.totalPages}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1166,7 +1170,7 @@ const CustomerForm = ({
                   <option value="">No Salesperson Assigned</option>
                   {salespersons?.map((salesperson: any) => (
                     <option key={salesperson.id} value={salesperson.id}>
-                      {salesperson.name} ({salesperson.email})
+                      {salesperson.name}
                     </option>
                   ))}
                 </select>
