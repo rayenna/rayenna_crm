@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import axiosInstance from '../utils/axios'
+import { setAuthErrorCallback } from '../utils/authErrorHandler'
 import { User, UserRole } from '../types'
 
 interface AuthContextType {
@@ -26,29 +27,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  const clearAuth = useCallback(() => {
+    setToken(null)
+    setUser(null)
+    localStorage.removeItem('token')
+    delete axiosInstance.defaults.headers.common['Authorization']
+  }, [])
+
   useEffect(() => {
+    setAuthErrorCallback(() => clearAuth())
+    return () => setAuthErrorCallback(null)
+  }, [clearAuth])
+
+  useEffect(() => {
+    let cancelled = false
     const storedToken = localStorage.getItem('token')
     if (storedToken) {
       setToken(storedToken)
       axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`
-      fetchUser()
+      ;(async () => {
+        try {
+          const response = await axiosInstance.get('/api/auth/me')
+          if (!cancelled) setUser(response.data)
+        } catch {
+          if (!cancelled) clearAuth()
+        } finally {
+          if (!cancelled) setIsLoading(false)
+        }
+      })()
     } else {
       setIsLoading(false)
     }
-  }, [])
-
-  const fetchUser = async () => {
-    try {
-      const response = await axiosInstance.get('/api/auth/me')
-      setUser(response.data)
-    } catch (error) {
-      localStorage.removeItem('token')
-      setToken(null)
-      delete axiosInstance.defaults.headers.common['Authorization']
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    return () => { cancelled = true }
+  }, [clearAuth])
 
   const login = async (email: string, password: string) => {
     const response = await axiosInstance.post('/api/auth/login', { email, password })
@@ -59,12 +70,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
   }
 
-  const logout = () => {
-    setToken(null)
-    setUser(null)
-    localStorage.removeItem('token')
-    delete axiosInstance.defaults.headers.common['Authorization']
-  }
+  const logout = useCallback(() => {
+    clearAuth()
+  }, [clearAuth])
 
   const hasRole = (roles: UserRole[]): boolean => {
     return user ? roles.includes(user.role) : false

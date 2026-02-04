@@ -37,15 +37,15 @@ function App() {
           >
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
-            <Route path="customers" element={<CustomerMaster />} />
-            <Route path="projects" element={<Projects />} />
-            <Route path="projects/new" element={<ProjectForm />} />
-            <Route path="projects/:id" element={<ProjectDetail />} />
-            <Route path="projects/:id/edit" element={<ProjectForm />} />
-            <Route path="users" element={<Users />} />
-            <Route path="audit-security" element={<AuditSecurity />} />
-            <Route path="tally-export" element={<TallyExport />} />
-            <Route path="support-tickets" element={<SupportTicketsDashboard />} />
+            <Route path="customers" element={<ErrorBoundary><CustomerMaster /></ErrorBoundary>} />
+            <Route path="projects" element={<ErrorBoundary><Projects /></ErrorBoundary>} />
+            <Route path="projects/new" element={<ErrorBoundary><ProjectForm /></ErrorBoundary>} />
+            <Route path="projects/:id" element={<ErrorBoundary><ProjectDetail /></ErrorBoundary>} />
+            <Route path="projects/:id/edit" element={<ErrorBoundary><ProjectForm /></ErrorBoundary>} />
+            <Route path="users" element={<ErrorBoundary><Users /></ErrorBoundary>} />
+            <Route path="audit-security" element={<ErrorBoundary><AuditSecurity /></ErrorBoundary>} />
+            <Route path="tally-export" element={<ErrorBoundary><TallyExport /></ErrorBoundary>} />
+            <Route path="support-tickets" element={<ErrorBoundary><SupportTicketsDashboard /></ErrorBoundary>} />
             <Route path="change-password" element={<ChangePassword />} />
             <Route 
               path="help" 
@@ -63,7 +63,7 @@ function App() {
                 </ErrorBoundary>
               } 
             />
-            <Route path="about" element={<About />} />
+            <Route path="about" element={<ErrorBoundary><About /></ErrorBoundary>} />
           </Route>
         </Routes>
       </AuthProvider>

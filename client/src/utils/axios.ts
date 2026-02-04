@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { notifyAuthError } from './authErrorHandler';
 
 // Get API base URL from environment variable
 // Falls back to empty string (relative URLs) for local development with Vite proxy
@@ -20,6 +21,17 @@ const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true, // Include credentials (cookies, JWT) in cross-origin requests
 });
+
+// Response interceptor: on 401, clear auth so user is redirected to login (token expired)
+axiosInstance.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err?.response?.status === 401) {
+      notifyAuthError();
+    }
+    return Promise.reject(err);
+  }
+);
 
 // Request interceptor: Set Content-Type only for non-FormData requests
 axiosInstance.interceptors.request.use((config) => {

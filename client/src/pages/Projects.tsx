@@ -175,6 +175,8 @@ const Projects = () => {
 
   // Skip first persist so we don't overwrite sessionStorage with initial state before restore runs
   const isFirstMount = useRef(true)
+  // Skip first reset-page so we don't overwrite restored page on mount
+  const isFirstPageReset = useRef(true)
 
   // Initialize default status filter (all active statuses except LOST) when ready
   useEffect(() => {
@@ -221,8 +223,12 @@ const Projects = () => {
     setPage(1) // Reset to first page when search changes
   }, [debouncedSearch])
 
-  // Reset page when other filters change
+  // Reset page when other filters change (skip first run to avoid overwriting restored page)
   useEffect(() => {
+    if (isFirstPageReset.current) {
+      isFirstPageReset.current = false
+      return
+    }
     setPage(1)
   }, [
     filters.status,
