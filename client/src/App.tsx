@@ -46,7 +46,7 @@ function App() {
             <Route path="audit-security" element={<ErrorBoundary><AuditSecurity /></ErrorBoundary>} />
             <Route path="tally-export" element={<ErrorBoundary><TallyExport /></ErrorBoundary>} />
             <Route path="support-tickets" element={<ErrorBoundary><SupportTicketsDashboard /></ErrorBoundary>} />
-            <Route path="change-password" element={<ChangePassword />} />
+            <Route path="change-password" element={<ErrorBoundary><ChangePassword /></ErrorBoundary>} />
             <Route 
               path="help" 
               element={
