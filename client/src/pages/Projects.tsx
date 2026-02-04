@@ -546,6 +546,7 @@ const Projects = () => {
             selectedValues={filters.status}
             onChange={handleStatusChange}
             placeholder="All Statuses"
+            multiSelectedLabel={user?.role === UserRole.OPERATIONS ? 'Confirmed Pipeline' : 'Active Pipeline'}
             compact
           />
           <MultiSelect

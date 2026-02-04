@@ -15,9 +15,11 @@ interface MultiSelectProps {
   compact?: boolean
   /** When true, show all selected labels on one line (e.g. "Name1, Name2") instead of "N selected". */
   showSelectedLabels?: boolean
+  /** When provided and multiple values selected, use this label instead of "N selected". */
+  multiSelectedLabel?: string
 }
 
-const MultiSelect = ({ options, selectedValues, onChange, placeholder = 'Select...', className = '', compact = false, showSelectedLabels: showLabels = false }: MultiSelectProps) => {
+const MultiSelect = ({ options, selectedValues, onChange, placeholder = 'Select...', className = '', compact = false, showSelectedLabels: showLabels = false, multiSelectedLabel }: MultiSelectProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -56,7 +58,7 @@ const MultiSelect = ({ options, selectedValues, onChange, placeholder = 'Select.
     ? options.find(opt => opt.value === selectedValues[0])?.label || selectedValues[0]
     : showLabels
     ? selectedValues.map(v => options.find(opt => opt.value === v)?.label || v).join(', ')
-    : `${selectedValues.length} selected`
+    : multiSelectedLabel ?? `${selectedValues.length} selected`
 
   // Match DashboardFilters look & feel (rounded-xl, border-2, subtle gradient, shadow)
   const btnBase = compact

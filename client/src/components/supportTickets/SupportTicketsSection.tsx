@@ -98,17 +98,22 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
 
   return (
     <>
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Support / Service Tickets</h2>
+      <div className="bg-gradient-to-br from-orange-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-orange-400 shadow-sm">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Support / Service Tickets</h2>
+          </div>
           {canManageTickets && (
             <button
               onClick={() => !isProjectLost && setShowCreateModal(true)}
               disabled={isProjectLost}
-              className={`px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-colors ${
                 isProjectLost
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-primary-600 text-white hover:bg-primary-700'
+                  : 'bg-gradient-to-r from-orange-600 to-primary-600 text-white hover:from-orange-700 hover:to-primary-700 shadow-md'
               }`}
               title={isProjectLost ? 'Cannot create tickets for projects in Lost stage' : 'Create Ticket'}
             >
@@ -165,9 +170,9 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-100">
                 {tickets.map((ticket) => (
-                  <tr key={ticket.id} className="hover:bg-gray-50">
+                  <tr key={ticket.id} className="bg-white hover:bg-orange-50/50 transition-colors">
                     <td className="px-4 py-4 whitespace-nowrap">
                       <span className="text-sm font-medium text-gray-900">{ticket.ticketNumber}</span>
                     </td>
