@@ -53,11 +53,11 @@ const Dashboard = () => {
 
   return (
     <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
-      <div className="mb-6 animate-slide-up min-w-0">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-primary-800 mb-2 sm:mb-3 break-words">
+      <div className="mb-6 animate-slide-up min-w-0 border-l-4 border-l-primary-600 pl-4">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-3 break-words">
           Dashboard
         </h1>
-        <p className="text-gray-600 font-medium text-base sm:text-lg break-words">Monitor your business performance at a glance</p>
+        <p className="text-primary-600/80 font-medium text-base sm:text-lg break-words">Monitor your business performance at a glance</p>
       </div>
       <DashboardFilters
         availableFYs={availableFYs}
@@ -72,7 +72,7 @@ const Dashboard = () => {
 
       {/* Footnote for Admin, Sales and Management views */}
       {(user?.role === UserRole.ADMIN || user?.role === UserRole.SALES || user?.role === UserRole.MANAGEMENT) && (
-        <footer className="mt-8 pt-6 border-t border-gray-200 min-w-0 max-w-full">
+        <footer className="mt-8 pt-6 border-t border-primary-100 min-w-0 max-w-full bg-gradient-to-br from-primary-50/30 to-transparent rounded-xl p-4">
           <p className="text-[11px] sm:text-xs text-gray-500 leading-relaxed break-words">
             <span className="font-semibold text-gray-600">Note:</span>
             <br />

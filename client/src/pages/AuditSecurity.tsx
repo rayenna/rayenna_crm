@@ -231,30 +231,32 @@ export default function AuditSecurity () {
 
   return (
     <div className="px-4 py-6 sm:px-0 space-y-6">
-      <h1 className="text-4xl font-extrabold text-primary-800">Audit & Security</h1>
-      <p className="text-gray-600 font-medium">Accountability, traceability, and security visibility. Admin only.</p>
+      <div className="border-l-4 border-l-violet-500 pl-4">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Audit & Security</h1>
+        <p className="text-sm text-violet-600/80 mt-0.5">Accountability, traceability, and security visibility. Admin only.</p>
+      </div>
 
       {/* Security tiles */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <div className="bg-gradient-to-br from-white to-red-50/30 rounded-xl border-l-4 border-l-red-400 border border-red-100/60 p-4 shadow-sm">
           <div className="text-sm font-medium text-gray-500">Failed logins (last {SUMMARY_DAYS}d)</div>
           <div className="mt-1 text-2xl font-bold text-red-600">
             {summaryLoading ? '…' : (summary?.failedLogins ?? 0)}
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <div className="bg-gradient-to-br from-white to-emerald-50/30 rounded-xl border-l-4 border-l-emerald-400 border border-emerald-100/60 p-4 shadow-sm">
           <div className="text-sm font-medium text-gray-500">Successful logins (last {SUMMARY_DAYS}d)</div>
           <div className="mt-1 text-2xl font-bold text-green-600">
             {summaryLoading ? '…' : (summary?.loginSuccessCount ?? 0)}
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <div className="bg-gradient-to-br from-white to-primary-50/30 rounded-xl border-l-4 border-l-primary-500 border border-primary-100/60 p-4 shadow-sm">
           <div className="text-sm font-medium text-gray-500">Audit events (last {SUMMARY_DAYS}d)</div>
           <div className="mt-1 text-2xl font-bold text-primary-700">
             {summaryLoading ? '…' : (summary?.auditByAction?.reduce((s, x) => s + x.count, 0) ?? 0)}
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <div className="bg-gradient-to-br from-white to-primary-50/30 rounded-xl border-l-4 border-l-primary-500 border border-primary-100/60 p-4 shadow-sm">
           <div className="text-sm font-medium text-gray-500">Access events (last {SUMMARY_DAYS}d)</div>
           <div className="mt-1 text-2xl font-bold text-primary-700">
             {summaryLoading ? '…' : (summary?.accessByAction?.reduce((s, x) => s + x.count, 0) ?? 0)}
@@ -263,7 +265,7 @@ export default function AuditSecurity () {
       </div>
 
       {/* Charts */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+      <div className="bg-gradient-to-br from-white to-violet-50/20 rounded-xl border border-violet-100/60 p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Security insights</h2>
           <div className="flex items-center gap-2">
@@ -347,8 +349,11 @@ export default function AuditSecurity () {
       </div>
 
       {/* Export audit logs — date-range export, CSV / PDF / Signed audit export */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">Export audit logs</h2>
+      <div className="bg-white rounded-xl p-6 shadow-sm border-l-4 border-l-amber-400 border border-amber-100">
+        <div className="flex items-center gap-2 mb-2">
+          <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Export audit logs</h3>
+        </div>
         <p className="text-sm text-gray-500 mb-4">
           Date-range export uses the date range and filters set in the Activity timeline below. Set optional date range and filters there, then choose format.
         </p>
@@ -384,8 +389,11 @@ export default function AuditSecurity () {
       </div>
 
       {/* Failed login trend / recent failures */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent failed logins</h2>
+      <div className="bg-white rounded-xl p-6 shadow-sm border-l-4 border-l-red-400 border border-red-100">
+        <div className="flex items-center gap-2 mb-4">
+          <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Recent failed logins</h3>
+        </div>
         {failedLoginsData?.logs?.length ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -415,7 +423,7 @@ export default function AuditSecurity () {
       </div>
 
       {/* Activity timeline (security audit logs) */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+      <div className="bg-gradient-to-br from-white to-violet-50/20 rounded-xl border-l-4 border-l-violet-400 border border-violet-100/60 p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Activity timeline</h2>
         <div className="mb-4 flex flex-wrap gap-2 items-center">
           <label className="sr-only" htmlFor="audit-action-type">Action type</label>

@@ -70,6 +70,41 @@ const ProjectDetail = () => {
   if (error) return <div className="p-6 text-center text-red-600">Error loading project: {(error as any).response?.data?.error || (error as any).message}</div>
   if (!project) return <div className="p-6 text-center">Project not found</div>
 
+  // Stage pill classes (match Projects list for consistency)
+  const getStagePillClasses = (status: string): string => {
+    switch (status) {
+      case ProjectStatus.LEAD:
+      case ProjectStatus.SITE_SURVEY:
+      case ProjectStatus.PROPOSAL:
+        return 'bg-amber-100 text-amber-800 border border-amber-300'
+      case ProjectStatus.CONFIRMED:
+      case ProjectStatus.UNDER_INSTALLATION:
+        return 'bg-primary-100 text-primary-800 border border-primary-300'
+      case ProjectStatus.SUBMITTED_FOR_SUBSIDY:
+        return 'bg-violet-100 text-violet-800 border border-violet-300'
+      case ProjectStatus.COMPLETED:
+      case ProjectStatus.COMPLETED_SUBSIDY_CREDITED:
+        return 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+      case ProjectStatus.LOST:
+        return 'bg-red-100 text-red-800 border border-red-300'
+      default:
+        return 'bg-gray-100 text-gray-800 border border-gray-300'
+    }
+  }
+  // Segment pill classes (match Projects list)
+  const getSegmentPillClasses = (type: string): string => {
+    switch (type) {
+      case 'RESIDENTIAL_SUBSIDY':
+        return 'bg-red-100 text-red-800 border border-red-300'
+      case 'RESIDENTIAL_NON_SUBSIDY':
+        return 'bg-sky-100 text-sky-800 border border-sky-300'
+      case 'COMMERCIAL_INDUSTRIAL':
+        return 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+      default:
+        return 'bg-gray-100 text-gray-800 border border-gray-300'
+    }
+  }
+
   return (
     <>
       {showProposal && id && (
@@ -109,17 +144,51 @@ const ProjectDetail = () => {
           </div>
         </div>
       )}
-    <div className="px-4 py-6 sm:px-0">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-        <div>
-          <h1 className="text-4xl font-extrabold text-primary-800">
-            Project #{project.slNo} - {project.customer?.customerName || 'Unknown Customer'}
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Created: {format(new Date(project.createdAt), 'MMM dd, yyyy')}
-          </p>
+    <div className="px-4 py-6 sm:px-0 min-h-screen bg-gray-50/80">
+      {/* Header: Project name, customer, stage + status pills, key financials */}
+      <div className="bg-gradient-to-br from-white to-amber-50/40 rounded-xl border-l-4 border-l-amber-500 border border-amber-100/60 shadow-sm p-6 mb-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+              Project #{project.slNo}
+            </h1>
+            <p className="text-base sm:text-lg font-semibold text-gray-900 mt-0.5">
+              {project.customer?.customerName || 'Unknown Customer'}
+            </p>
+            <div className="flex flex-wrap items-center gap-2 mt-3">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${getStagePillClasses(project.projectStatus)}`}>
+                {project.projectStatus.replace(/_/g, ' ')}
+              </span>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${getSegmentPillClasses(project.type)}`}>
+                {project.type.replace(/_/g, ' ')}
+              </span>
+            </div>
+          </div>
+          {/* Key financials - compact highlights */}
+          <div className="flex flex-wrap gap-6 sm:gap-8">
+            {project.projectCost != null && project.projectCost > 0 && (
+              <div className="text-right">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Order Value</p>
+                <p className="text-sm font-bold text-green-800">₹{project.projectCost.toLocaleString('en-IN')}</p>
+              </div>
+            )}
+            {project.totalProjectCost != null && project.totalProjectCost > 0 && (
+              <div className="text-right">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Total Cost</p>
+                <p className="text-sm font-semibold text-gray-900">₹{project.totalProjectCost.toLocaleString('en-IN')}</p>
+              </div>
+            )}
+            {project.grossProfit != null && project.grossProfit !== undefined && (
+              <div className="text-right">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Gross Profit</p>
+                <p className={`text-sm font-semibold ${project.grossProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  ₹{project.grossProfit.toLocaleString('en-IN')}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 mt-6 pt-4 border-t border-gray-100">
           {/* Proposal button - Only for SALES and OPERATIONS users, for projects in Lead, Site Survey, or Proposal stages */}
           {(hasRole([UserRole.SALES]) || 
             hasRole([UserRole.OPERATIONS])) && 
@@ -128,7 +197,7 @@ const ProjectDetail = () => {
              project.projectStatus === ProjectStatus.PROPOSAL) && (
             <button
               onClick={() => setShowProposal(true)}
-              className="bg-yellow-500 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-yellow-600 font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base"
+              className="px-4 py-2 bg-amber-100 text-amber-800 border border-amber-200 rounded-lg hover:bg-amber-200 font-medium text-sm transition-colors flex items-center gap-2"
             >
               <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -139,7 +208,7 @@ const ProjectDetail = () => {
           {canEdit && (
             <Link
               to={`/projects/${id}/edit`}
-              className="bg-primary-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-primary-700 font-medium shadow-md hover:shadow-lg transition-all text-sm sm:text-base text-center"
+              className="bg-gradient-to-r from-amber-600 to-primary-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:from-amber-700 hover:to-primary-700 font-medium shadow-md hover:shadow-lg transition-all text-sm sm:text-base text-center"
             >
               Edit
             </Link>
@@ -158,33 +227,35 @@ const ProjectDetail = () => {
           )}
           <Link
             to="/projects"
-            className="bg-secondary-200 text-secondary-700 px-3 py-2 sm:px-4 rounded-lg hover:bg-secondary-300 font-medium transition-colors text-sm sm:text-base text-center"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Back
           </Link>
         </div>
       </div>
 
-      {/* Project Lifecycle Card - Removed: Project Stage field is no longer used */}
-
+      {/* Content: Info cards (Customer Module style – bg-gray-50/60, section icon + title) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Customer Details */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Customer Details</h2>
+        <div className="bg-gradient-to-br from-teal-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-teal-400">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Customer Details</h3>
+          </div>
           {project.customer ? (
             <dl className="space-y-3">
               <div>
-                <dt className="text-sm text-gray-500">Customer ID</dt>
-                <dd className="text-sm font-medium">{project.customer.customerId}</dd>
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">Customer ID</dt>
+                <dd className="text-sm font-medium text-gray-900 mt-0.5">{project.customer.customerId}</dd>
               </div>
               <div>
-                <dt className="text-sm text-gray-500">Customer Name</dt>
-                <dd className="text-sm font-medium">{project.customer.customerName}</dd>
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">Customer Name</dt>
+                <dd className="text-base sm:text-lg font-semibold text-gray-900 mt-0.5">{project.customer.customerName}</dd>
               </div>
               {(project.customer.addressLine1 || project.customer.city) && (
                 <div>
-                  <dt className="text-sm text-gray-500">Address</dt>
-                  <dd className="text-sm font-medium">
+                  <dt className="text-xs text-gray-500 uppercase tracking-wide">Address</dt>
+                  <dd className="text-sm font-medium text-gray-900 mt-0.5">
                     {[
                       project.customer.addressLine1,
                       project.customer.addressLine2,
@@ -197,8 +268,8 @@ const ProjectDetail = () => {
               )}
               {project.customer.contactNumbers && (
                 <div>
-                  <dt className="text-sm text-gray-500">Contact Numbers</dt>
-                  <dd className="text-sm font-medium">
+                  <dt className="text-xs text-gray-500 uppercase tracking-wide">Contact Numbers</dt>
+                  <dd className="text-sm font-medium text-gray-900 mt-0.5">
                     {(() => {
                       try {
                         const parsed = JSON.parse(project.customer.contactNumbers || '');
@@ -212,14 +283,14 @@ const ProjectDetail = () => {
               )}
               {project.customer.consumerNumber && (
                 <div>
-                  <dt className="text-sm text-gray-500">Consumer Number</dt>
-                  <dd className="text-sm font-medium">{project.customer.consumerNumber}</dd>
+                  <dt className="text-xs text-gray-500 uppercase tracking-wide">Consumer Number</dt>
+                  <dd className="text-sm font-medium text-gray-900 mt-0.5">{project.customer.consumerNumber}</dd>
                 </div>
               )}
               {project.leadSource && (
                 <div>
-                  <dt className="text-sm text-gray-500">Lead Source</dt>
-                  <dd className="text-sm font-medium">
+                  <dt className="text-xs text-gray-500 uppercase tracking-wide">Lead Source</dt>
+                  <dd className="text-sm font-medium text-gray-900 mt-0.5">
                     {project.leadSource === 'WEBSITE' && 'Website'}
                     {project.leadSource === 'REFERRAL' && 'Referral'}
                     {project.leadSource === 'GOOGLE' && 'Google'}
@@ -245,16 +316,19 @@ const ProjectDetail = () => {
         </div>
 
         {/* Project Details */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Project Details</h2>
+        <div className="bg-gradient-to-br from-amber-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-amber-400">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Project Details</h3>
+          </div>
           <dl className="space-y-3">
             <div>
-              <dt className="text-sm text-gray-500">Segment</dt>
-              <dd className="text-sm font-medium">{project.type.replace(/_/g, ' ')}</dd>
+              <dt className="text-xs text-gray-500 uppercase tracking-wide">Segment</dt>
+              <dd className="text-sm font-medium text-gray-900 mt-0.5">{project.type.replace(/_/g, ' ')}</dd>
             </div>
             <div>
-              <dt className="text-sm text-gray-500">Project Type</dt>
-              <dd className="text-sm font-medium">
+              <dt className="text-xs text-gray-500 uppercase tracking-wide">Project Type</dt>
+              <dd className="text-sm font-medium text-gray-900 mt-0.5">
                 {(() => {
                   const typeMap: Record<string, string> = {
                     'EPC_PROJECT': 'EPC Project',
@@ -271,42 +345,45 @@ const ProjectDetail = () => {
             </div>
             {project.salesperson && (
               <div>
-                <dt className="text-sm text-gray-500">Salesperson</dt>
-                <dd className="text-sm font-medium">{project.salesperson.name}</dd>
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">Salesperson</dt>
+                <dd className="text-sm font-medium text-gray-900 mt-0.5">{project.salesperson.name}</dd>
               </div>
             )}
           </dl>
         </div>
 
         {/* Sales & Commercial */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Sales & Commercial</h2>
+        <div className="bg-gradient-to-br from-emerald-50/50 to-white rounded-xl border-l-4 border-l-emerald-400 border border-emerald-100/60 shadow-sm p-6">
+          <h2 className="text-sm font-semibold text-emerald-800 uppercase tracking-wide mb-4 flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            Sales & Commercial
+          </h2>
           <dl className="space-y-3">
             {project.systemCapacity && (
               <div>
-                <dt className="text-sm text-gray-500">System Capacity</dt>
-                <dd className="text-sm font-medium">{project.systemCapacity} kW</dd>
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">System Capacity</dt>
+                <dd className="text-sm font-bold text-orange-800 mt-0.5">{project.systemCapacity} kW</dd>
               </div>
             )}
             {project.projectCost && (
               <div>
-                <dt className="text-sm text-gray-500">Order Value</dt>
-                <dd className="text-sm font-medium">
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">Order Value</dt>
+                <dd className="text-sm font-bold text-green-800 mt-0.5">
                   ₹{project.projectCost.toLocaleString('en-IN')}
                 </dd>
               </div>
             )}
             {project.confirmationDate && (
               <div>
-                <dt className="text-sm text-gray-500">Confirmation Date</dt>
-                <dd className="text-sm font-medium">
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">Confirmation Date</dt>
+                <dd className="text-sm font-medium text-gray-900 mt-0.5">
                   {format(new Date(project.confirmationDate), 'MMM dd, yyyy')}
                 </dd>
               </div>
             )}
             <div>
-              <dt className="text-sm text-gray-500">Gross Profit</dt>
-              <dd className={`text-sm font-medium ${
+              <dt className="text-xs text-gray-500 uppercase tracking-wide">Gross Profit</dt>
+              <dd className={`text-sm font-medium mt-0.5 ${
                 project.grossProfit !== null && project.grossProfit !== undefined
                   ? (project.grossProfit >= 0 ? 'text-yellow-600' : 'text-red-600')
                   : 'text-gray-400'
@@ -317,7 +394,7 @@ const ProjectDetail = () => {
               </dd>
             </div>
             <div>
-              <dt className="text-sm text-gray-500">Profitability</dt>
+              <dt className="text-xs text-gray-500 uppercase tracking-wide">Profitability</dt>
               <dd className={`text-sm font-medium ${
                 project.profitability !== null && project.profitability !== undefined
                   ? (project.profitability > 10 
@@ -334,8 +411,8 @@ const ProjectDetail = () => {
             </div>
             {project.finalProfit && (
               <div>
-                <dt className="text-sm text-gray-500">Final Profit</dt>
-                <dd className="text-sm font-medium text-yellow-600">
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">Final Profit</dt>
+                <dd className="text-sm font-medium text-yellow-600 mt-0.5">
                   ₹{project.finalProfit.toLocaleString('en-IN')}
                 </dd>
               </div>
@@ -344,11 +421,14 @@ const ProjectDetail = () => {
         </div>
 
         {/* Project Lifecycle */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Project Lifecycle</h2>
+        <div className="bg-gradient-to-br from-violet-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-violet-400">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Project Lifecycle</h3>
+          </div>
           <dl className="space-y-3">
             <div>
-              <dt className="text-sm text-gray-500">Project Stage</dt>
+              <dt className="text-xs text-gray-500 uppercase tracking-wide">Project Stage</dt>
               <dd className="text-sm font-medium">
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
                   {(() => {
@@ -368,7 +448,7 @@ const ProjectDetail = () => {
             </div>
             {project.mnrePortalRegistrationDate && (
               <div>
-                <dt className="text-sm text-gray-500">MNRE Portal Registration</dt>
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">MNRE Portal Registration</dt>
                 <dd className="text-sm font-medium">
                   {format(new Date(project.mnrePortalRegistrationDate), 'MMM dd, yyyy')}
                 </dd>
@@ -376,15 +456,15 @@ const ProjectDetail = () => {
             )}
             {project.feasibilityDate && (
               <div>
-                <dt className="text-sm text-gray-500">Feasibility Date (DISCOM)</dt>
-                <dd className="text-sm font-medium">
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">Feasibility Date (DISCOM)</dt>
+                <dd className="text-sm font-medium text-gray-900 mt-0.5">
                   {format(new Date(project.feasibilityDate), 'MMM dd, yyyy')}
                 </dd>
               </div>
             )}
             {project.registrationDate && (
               <div>
-                <dt className="text-sm text-gray-500">Registration Date (DISCOM)</dt>
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">Registration Date (DISCOM)</dt>
                 <dd className="text-sm font-medium">
                   {format(new Date(project.registrationDate), 'MMM dd, yyyy')}
                 </dd>
@@ -392,7 +472,7 @@ const ProjectDetail = () => {
             )}
             {project.installationCompletionDate && (
               <div>
-                <dt className="text-sm text-gray-500">Installation Completion</dt>
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">Installation Completion</dt>
                 <dd className="text-sm font-medium">
                   {format(new Date(project.installationCompletionDate), 'MMM dd, yyyy')}
                 </dd>
@@ -400,7 +480,7 @@ const ProjectDetail = () => {
             )}
             {project.completionReportSubmissionDate && (
               <div>
-                <dt className="text-sm text-gray-500">Completion Report Submission</dt>
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">Completion Report Submission</dt>
                 <dd className="text-sm font-medium">
                   {format(new Date(project.completionReportSubmissionDate), 'MMM dd, yyyy')}
                 </dd>
@@ -408,7 +488,7 @@ const ProjectDetail = () => {
             )}
             {project.mnreInstallationDetails && (
               <div>
-                <dt className="text-sm text-gray-500">MNRE Installation Details</dt>
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">MNRE Installation Details</dt>
                 <dd className="text-sm font-medium whitespace-pre-line">
                   {project.mnreInstallationDetails}
                 </dd>
@@ -416,7 +496,7 @@ const ProjectDetail = () => {
             )}
             {project.subsidyRequestDate && (
               <div>
-                <dt className="text-sm text-gray-500">Net Meter Installation Date</dt>
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">Net Meter Installation Date</dt>
                 <dd className="text-sm font-medium">
                   {format(new Date(project.subsidyRequestDate), 'MMM dd, yyyy')}
                 </dd>
@@ -432,7 +512,7 @@ const ProjectDetail = () => {
             )}
             {project.totalProjectCost && (
               <div>
-                <dt className="text-sm text-gray-500">Total Project Cost</dt>
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">Total Project Cost</dt>
                 <dd className="text-sm font-medium">
                   ₹{project.totalProjectCost.toLocaleString('en-IN')}
                 </dd>
@@ -440,13 +520,13 @@ const ProjectDetail = () => {
             )}
             {project.panelBrand && (
               <div>
-                <dt className="text-sm text-gray-500">Panel Brand</dt>
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">Panel Brand</dt>
                 <dd className="text-sm font-medium">{project.panelBrand}</dd>
               </div>
             )}
             {project.inverterBrand && (
               <div>
-                <dt className="text-sm text-gray-500">Inverter Brand</dt>
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">Inverter Brand</dt>
                 <dd className="text-sm font-medium">{project.inverterBrand}</dd>
               </div>
             )}
@@ -461,7 +541,7 @@ const ProjectDetail = () => {
               <>
                 {project.lostDate && (
                   <div>
-                    <dt className="text-sm text-gray-500">Lost Date</dt>
+                    <dt className="text-xs text-gray-500 uppercase tracking-wide">Lost Date</dt>
                     <dd className="text-sm font-medium text-red-600">
                       {format(new Date(project.lostDate), 'MMM dd, yyyy')}
                     </dd>
@@ -469,7 +549,7 @@ const ProjectDetail = () => {
                 )}
                 {project.lostReason && (
                   <div>
-                    <dt className="text-sm text-gray-500">Reason for Loss</dt>
+                    <dt className="text-xs text-gray-500 uppercase tracking-wide">Reason for Loss</dt>
                     <dd className="text-sm font-medium">
                       {(() => {
                         const reasonMap: Record<string, string> = {
@@ -485,7 +565,7 @@ const ProjectDetail = () => {
                 )}
                 {project.lostReason === 'LOST_TO_COMPETITION' && project.lostToCompetitionReason && (
                   <div>
-                    <dt className="text-sm text-gray-500">Why lost to competition</dt>
+                    <dt className="text-xs text-gray-500 uppercase tracking-wide">Why lost to competition</dt>
                     <dd className="text-sm font-medium">
                       {(() => {
                         const compReasonMap: Record<string, string> = {
@@ -500,7 +580,7 @@ const ProjectDetail = () => {
                 )}
                 {project.lostOtherReason && (
                   <div>
-                    <dt className="text-sm text-gray-500">Other Reason Details</dt>
+                    <dt className="text-xs text-gray-500 uppercase tracking-wide">Other Reason Details</dt>
                     <dd className="text-sm font-medium">{project.lostOtherReason}</dd>
                   </div>
                 )}
@@ -517,11 +597,14 @@ const ProjectDetail = () => {
         </div>
 
         {/* Payment Tracking */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Payment Tracking</h2>
+        <div className="bg-gray-50/60 rounded-xl p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Payment Tracking</h3>
+          </div>
           <dl className="space-y-3">
             <div>
-              <dt className="text-sm text-gray-500">Payment Status</dt>
+              <dt className="text-xs text-gray-500 uppercase tracking-wide">Payment Status</dt>
               <dd className="text-sm font-medium">
                 {(() => {
                   // Check if project has no order value (null, undefined, 0, or falsy)
@@ -566,13 +649,13 @@ const ProjectDetail = () => {
             {project.projectCost && (
               <>
                 <div>
-                  <dt className="text-sm text-gray-500">Total Amount Received</dt>
+                  <dt className="text-xs text-gray-500 uppercase tracking-wide">Total Amount Received</dt>
                   <dd className="text-sm font-medium text-yellow-600">
                     ₹{project.totalAmountReceived.toLocaleString('en-IN')}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-gray-500">Balance Amount</dt>
+                  <dt className="text-xs text-gray-500 uppercase tracking-wide">Balance Amount</dt>
                   <dd className="text-sm font-medium text-red-600">
                     ₹{project.balanceAmount.toLocaleString('en-IN')}
                   </dd>
@@ -581,7 +664,7 @@ const ProjectDetail = () => {
             )}
             {project.advanceReceived && (
               <div>
-                <dt className="text-sm text-gray-500">Advance Received</dt>
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">Advance Received</dt>
                 <dd className="text-sm font-medium">
                   ₹{project.advanceReceived.toLocaleString('en-IN')}
                   {project.advanceReceivedDate &&
@@ -601,9 +684,12 @@ const ProjectDetail = () => {
         <SupportTicketsSection projectId={project.id} projectStatus={project.projectStatus} />
       </div>
 
-      {/* Key Artifacts - View Only */}
-      <div className="mt-6 bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-4">Key Artifacts</h2>
+      {/* Key Artifacts - View Only (Customer Module style) */}
+      <div className="mt-6 bg-gray-50/60 rounded-xl p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Key Artifacts</h3>
+        </div>
         <p className="text-sm text-gray-500 mb-4">
           To upload new artifacts, please click the <strong>Edit</strong> button above.
         </p>
@@ -613,14 +699,14 @@ const ProjectDetail = () => {
           <div>
             <h3 className="text-md font-semibold mb-4">Uploaded Documents</h3>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-700 w-16">Sl No.</th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-700">File Name</th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-700">Description</th>
-                    <th className="px-3 py-2 text-center font-semibold text-gray-700">View/Download</th>
-                    <th className="px-3 py-2 text-center font-semibold text-gray-700">Delete</th>
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Sl No.</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File Name</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">View/Download</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Delete</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">

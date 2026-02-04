@@ -158,12 +158,12 @@ const SupportTicketsDashboard = () => {
   const hasActiveFilters = selectedStatus !== null || showOverdueOnly
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4 py-6 sm:px-0">
       {/* Page Header */}
       <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-4xl font-extrabold text-primary-800">Support Tickets Dashboard</h1>
-          <p className="mt-2 text-sm text-gray-600">
+        <div className="border-l-4 border-l-orange-500 pl-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Support Tickets Dashboard</h1>
+          <p className="mt-0.5 text-sm text-orange-600/80">
             Monitor and manage all support tickets across projects
           </p>
         </div>
@@ -233,7 +233,7 @@ const SupportTicketsDashboard = () => {
         {/* Left Column - Donut Chart */}
         <div>
           {isLoading ? (
-            <div className="bg-white shadow rounded-lg p-6 flex items-center justify-center h-[450px]">
+            <div className="bg-gradient-to-br from-white to-orange-50/20 shadow rounded-xl border border-orange-100/60 p-6 flex items-center justify-center h-[450px]">
               <div className="text-gray-500">Loading chart...</div>
             </div>
           ) : (
@@ -257,7 +257,7 @@ const SupportTicketsDashboard = () => {
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead className="bg-gradient-to-r from-orange-50/80 to-white">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Ticket Number
@@ -281,7 +281,7 @@ const SupportTicketsDashboard = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {tableTickets.map((ticket) => (
-                    <tr key={ticket.id} className="hover:bg-gray-50">
+                    <tr key={ticket.id} className="hover:bg-orange-50/50 transition-colors">
                       <td className="px-4 py-4 whitespace-nowrap">
                         <button
                           onClick={() => handleTicketClick(ticket)}

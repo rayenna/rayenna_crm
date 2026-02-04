@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axiosInstance from '../utils/axios'
@@ -10,6 +10,12 @@ import { countries, getStatesByCountry, getCitiesByState } from '../utils/locati
 import { useDebounce } from '../hooks/useDebounce'
 import MultiSelect from '../components/MultiSelect'
 import MapSelector from '../components/MapSelector'
+
+/** Helper used by both CustomerMaster list and CustomerForm header */
+function getCustomerDisplayName(customer: Customer) {
+  const parts = [customer.prefix, customer.firstName, customer.middleName, customer.lastName].filter(Boolean)
+  return parts.length > 0 ? parts.join(' ') : customer.customerName || 'Unknown'
+}
 
 const CustomerMaster = () => {
   const { user, hasRole } = useAuth()
@@ -23,6 +29,19 @@ const CustomerMaster = () => {
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
   const [showExportConfirm, setShowExportConfirm] = useState(false)
   const [pendingExportType, setPendingExportType] = useState<'excel' | 'csv' | null>(null)
+  const [openActionsId, setOpenActionsId] = useState<string | null>(null)
+  const actionsMenuRef = useRef<HTMLDivElement>(null)
+
+  // Close actions menu on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(e.target as Node)) {
+        setOpenActionsId(null)
+      }
+    }
+    if (openActionsId) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [openActionsId])
   
   // Filter state: For Sales users - 'all' or 'my', For others - salespersonId array
   const [customerFilter, setCustomerFilter] = useState<'all' | 'my'>('my') // Default to 'my' for Sales users
@@ -88,11 +107,6 @@ const CustomerMaster = () => {
       toast.error(error.response?.data?.error || 'Failed to delete customer')
     },
   })
-
-  const getCustomerDisplayName = (customer: Customer) => {
-    const parts = [customer.prefix, customer.firstName, customer.middleName, customer.lastName].filter(Boolean)
-    return parts.length > 0 ? parts.join(' ') : customer.customerName || 'Unknown'
-  }
 
   const getCustomerGoogleMapsUrl = (customer: Customer) => {
     const lat = customer.latitude
@@ -194,35 +208,53 @@ const CustomerMaster = () => {
     setPendingExportType(null)
   }
 
-  if (isLoading) return <div className="px-4 py-6">Loading...</div>
+  if (isLoading) {
+    return (
+      <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
+        <div className="animate-pulse space-y-4">
+          <div className="h-10 bg-gradient-to-r from-teal-200 to-gray-200 rounded-lg w-64" />
+          <div className="h-12 bg-gradient-to-r from-teal-100/50 to-gray-100 rounded-xl w-full max-w-2xl" />
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-24 bg-gradient-to-r from-teal-50/60 to-white rounded-xl border-l-4 border-l-teal-200" />
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="px-4 py-6 sm:px-0 min-h-screen bg-gray-50/80">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-4xl font-extrabold bg-gradient-to-r from-primary-700 to-primary-600 bg-clip-text text-transparent mb-2">
-          Customer Master
-        </h1>
+    <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <div className="border-l-4 border-teal-500 pl-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            Customer Master
+          </h1>
+          <p className="text-sm text-teal-600/80 mt-0.5">Manage your customer database</p>
+        </div>
         {canCreate && (
           <button
             onClick={() => {
               setEditingCustomer(null)
               setShowForm(true)
             }}
-            className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium shadow-md hover:shadow-lg transition-all"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-teal-600 to-primary-600 text-white px-4 py-2.5 rounded-xl hover:from-teal-700 hover:to-primary-700 font-medium shadow-md hover:shadow-lg transition-all"
           >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
             New Customer
           </button>
         )}
       </div>
 
-      <div className="bg-white shadow-md rounded-xl border border-gray-100 mb-4 p-3 sm:p-4 border-t-4 border-t-primary-500">
+      <div className="bg-gradient-to-br from-white to-teal-50/30 rounded-xl shadow-sm border border-teal-100/60 mb-6 p-4 sm:p-5">
         <div className="space-y-2 sm:space-y-3">
           {/* Row 1: Search Bar (same look and feel as Projects) */}
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:gap-4">
             <input
               type="text"
               placeholder="Search by name, ID, or consumer number..."
-              className="w-full sm:flex-1 min-h-[40px] border-2 border-primary-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all bg-gradient-to-r from-white to-primary-50 shadow-md"
+              className="w-full sm:flex-1 min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
             />
@@ -381,161 +413,154 @@ const CustomerMaster = () => {
         </div>
       )}
 
-      <div className="bg-white shadow-lg rounded-xl border border-gray-100 overflow-hidden">
-        <ul className="divide-y divide-gray-200 [&>li:nth-child(even)]:bg-gray-50/60">
-          {data?.customers?.map((customer: Customer) => (
-            <li key={customer.id} className="hover:bg-sky-50/70 transition-colors">
-              <div className="px-4 py-4 sm:px-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-600 text-white shadow-sm mr-2">
-                        ID: {customer.customerId}
+      {/* Customer list - card-like rows, clean hierarchy, 3-dot actions */}
+      <div className="space-y-3">
+        {data?.customers?.map((customer: Customer) => (
+          <div
+            key={customer.id}
+            className="bg-white rounded-xl border-l-4 border-l-teal-400 border border-gray-100 shadow-sm hover:shadow-md hover:border-teal-200/80 hover:border-l-teal-500 transition-all duration-200"
+          >
+            <div className="px-4 py-4 sm:px-6 sm:py-5">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                {/* Left: Primary info - Who & status */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-gradient-to-r from-teal-600 to-teal-700 text-white shadow-sm">
+                      ID: {customer.customerId}
+                    </span>
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
+                      {getCustomerDisplayName(customer)}
+                    </h3>
+                    {(customer as any)._count && (customer as any)._count.projects > 0 && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                        {(customer as any)._count.projects} Project{(customer as any)._count.projects !== 1 ? 's' : ''}
                       </span>
-                      <p className="text-sm text-primary-600 font-bold">
-                        {getCustomerDisplayName(customer)}
-                      </p>
-                      {(customer as any)._count && (customer as any)._count.projects > 0 && (
-                        <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500 text-white shadow-sm">
-                          {(customer as any)._count.projects} Project{(customer as any)._count.projects !== 1 ? 's' : ''}
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-2 text-sm text-gray-500">
-                      {(() => {
-                        const hasAnyAddress =
-                          customer.addressLine1 || customer.addressLine2 || customer.city || customer.state || customer.country || customer.pinCode
-                        const mapsUrl = getCustomerGoogleMapsUrl(customer)
-                        if (!hasAnyAddress && !mapsUrl) return null
-
-                        const addressText = [
-                          customer.addressLine1,
-                          customer.addressLine2,
-                          customer.city,
-                          customer.state,
-                          customer.country,
-                          customer.pinCode,
-                        ]
-                          .filter(Boolean)
-                          .join(', ')
-
-                        return (
-                          <span className="inline-flex items-center gap-2">
-                            {addressText && <span>{addressText}</span>}
-                            {mapsUrl && <GoogleMapsIconButton href={mapsUrl} />}
-                          </span>
-                        )
-                      })()}
-                      {customer.consumerNumber && (
-                        <span className="ml-4 text-purple-600 font-medium">Consumer: {customer.consumerNumber}</span>
-                      )}
-                      {customer.contactNumbers && (
-                        <span className="ml-4 text-emerald-600 font-medium">
-                          Contact: {(() => {
-                            try {
-                              const contacts = JSON.parse(customer.contactNumbers)
-                              return Array.isArray(contacts) ? contacts.join(', ') : customer.contactNumbers
-                            } catch {
-                              return customer.contactNumbers
-                            }
-                          })()}
-                        </span>
-                      )}
-                      {customer.email && (
-                        <span className="ml-4">
-                          {(() => {
-                            try {
-                              const emails = JSON.parse(customer.email)
-                              const emailList = Array.isArray(emails) ? emails : [customer.email]
-                              const emailStr = Array.isArray(emails) ? emails.join(', ') : customer.email
-                              const mailtoHref = `mailto:${emailList.filter((e: string) => e?.trim()).join(',')}`
-                              return (
-                                <a
-                                  href={mailtoHref}
-                                  className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
-                                  title="Open in email application"
-                                >
-                                  Email: {emailStr}
-                                </a>
-                              )
-                            } catch {
-                              return (
-                                <a
-                                  href={`mailto:${customer.email}`}
-                                  className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
-                                  title="Open in email application"
-                                >
-                                  Email: {customer.email}
-                                </a>
-                              )
-                            }
-                          })()}
-                        </span>
-                      )}
-                    </div>
+                    )}
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="text-right">
-                      <p className="text-xs text-gray-500">
-                        Created: {format(new Date(customer.createdAt), 'MMM dd, yyyy')}
-                      </p>
-                    </div>
+                  {/* Secondary info - muted, easy to scan */}
+                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
                     {(() => {
-                      // Admin and Management can always edit
-                      if (hasRole([UserRole.ADMIN, UserRole.MANAGEMENT])) {
-                        return (
-                          <button
-                            onClick={() => {
-                              setEditingCustomer(customer)
-                              setShowForm(true)
-                            }}
-                            className="text-primary-600 hover:text-primary-800 text-sm font-medium"
-                          >
-                            Edit
-                          </button>
-                        )
-                      }
-                      
-                      // Sales can edit ONLY when viewing "My Customers" (not "All Customers")
-                      if (hasRole([UserRole.SALES])) {
-                        // Hide edit button when viewing "All Customers"
-                        if (customerFilter === 'all') {
-                          return null
-                        }
-                        
-                        // In "My Customers" view, backend already filters to show only customers
-                        // where user created the customer, is tagged as salesperson, OR created projects for them
-                        // So we show Edit button for ALL customers in this view
-                        // (Backend will still verify permissions on edit)
-                        return (
-                          <button
-                            onClick={() => {
-                              setEditingCustomer(customer)
-                              setShowForm(true)
-                            }}
-                            className="text-primary-600 hover:text-primary-800 text-sm font-medium"
-                          >
-                            Edit
-                          </button>
-                        )
-                      }
-                      
-                      return null
+                      const hasAnyAddress =
+                        customer.addressLine1 || customer.addressLine2 || customer.city || customer.state || customer.country || customer.pinCode
+                      const mapsUrl = getCustomerGoogleMapsUrl(customer)
+                      if (!hasAnyAddress && !mapsUrl) return null
+                      const addressText = [
+                        customer.addressLine1,
+                        customer.addressLine2,
+                        customer.city,
+                        customer.state,
+                        customer.country,
+                        customer.pinCode,
+                      ]
+                        .filter(Boolean)
+                        .join(', ')
+                      return (
+                        <span className="inline-flex items-center gap-1.5">
+                          {addressText && <span className="truncate max-w-[200px] sm:max-w-none">{addressText}</span>}
+                          {mapsUrl && <GoogleMapsIconButton href={mapsUrl} />}
+                        </span>
+                      )
                     })()}
-                    {hasRole([UserRole.ADMIN]) && (
-                      <button
-                        onClick={() => handleDelete(customer)}
-                        className="text-red-600 hover:text-red-800 text-sm font-medium"
-                      >
-                        Delete
-                      </button>
+                    {customer.consumerNumber && (
+                      <span className="text-purple-600/90">Consumer: {customer.consumerNumber}</span>
+                    )}
+                    {customer.contactNumbers && (
+                      <span className="text-emerald-600/90">
+                        {(() => {
+                          try {
+                            const contacts = JSON.parse(customer.contactNumbers)
+                            return Array.isArray(contacts) ? contacts.join(', ') : customer.contactNumbers
+                          } catch {
+                            return customer.contactNumbers
+                          }
+                        })()}
+                      </span>
+                    )}
+                    {customer.email && (
+                      <span>
+                        {(() => {
+                          try {
+                            const emails = JSON.parse(customer.email)
+                            const emailList = Array.isArray(emails) ? emails : [customer.email]
+                            const emailStr = Array.isArray(emails) ? emails.join(', ') : customer.email
+                            const mailtoHref = `mailto:${emailList.filter((e: string) => e?.trim()).join(',')}`
+                            return (
+                              <a
+                                href={mailtoHref}
+                                className="text-blue-600/90 hover:text-blue-700 hover:underline"
+                                title="Open in email application"
+                              >
+                                {emailStr}
+                              </a>
+                            )
+                          } catch {
+                            return (
+                              <a
+                                href={`mailto:${customer.email}`}
+                                className="text-blue-600/90 hover:text-blue-700 hover:underline"
+                                title="Open in email application"
+                              >
+                                {customer.email}
+                              </a>
+                            )
+                          }
+                        })()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {/* Right: Meta + actions */}
+                <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0 min-w-0">
+                  <p className="text-xs text-gray-400 sm:mr-2 truncate">
+                    Created {format(new Date(customer.createdAt), 'MMM dd, yyyy')}
+                  </p>
+                  <div className="relative flex-shrink-0" ref={openActionsId === customer.id ? actionsMenuRef : undefined}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenActionsId(openActionsId === customer.id ? null : customer.id)}
+                      className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                      aria-label="Actions"
+                      aria-expanded={openActionsId === customer.id}
+                    >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                      </svg>
+                    </button>
+                    {openActionsId === customer.id && (
+                      <div className="absolute right-0 top-full mt-1 py-1 min-w-[10rem] bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                        {((hasRole([UserRole.ADMIN, UserRole.MANAGEMENT])) || (hasRole([UserRole.SALES]) && customerFilter === 'my')) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingCustomer(customer)
+                              setShowForm(true)
+                              setOpenActionsId(null)
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                          >
+                            Edit
+                          </button>
+                        )}
+                        {hasRole([UserRole.ADMIN]) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleDelete(customer)
+                              setOpenActionsId(null)
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
-            </li>
-          ))}
-        </ul>
+            </div>
+          </div>
+        ))}
       </div>
 
       {data != null && (
@@ -548,14 +573,14 @@ const CustomerMaster = () => {
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 border border-teal-200 rounded-lg text-sm font-medium text-teal-800 bg-teal-50/80 hover:bg-teal-100/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Previous
               </button>
               <button
                 onClick={() => setPage(p => Math.min(data.totalPages, p + 1))}
                 disabled={page >= data.totalPages}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 border border-teal-200 rounded-lg text-sm font-medium text-teal-800 bg-teal-50/80 hover:bg-teal-100/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Next
               </button>
@@ -830,33 +855,46 @@ const CustomerForm = ({
     setEmails(updated)
   }
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="p-6 sm:p-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-900">
-              {customer ? 'Edit Customer' : 'New Customer'}
-            </h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              ✕
-            </button>
-          </div>
+  // Shared input styles for consistency
+  const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all'
+  const labelCls = 'block text-sm text-gray-500 mb-1.5'
+  const selectCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all'
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            {/* Name Fields */}
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header - strong when editing */}
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-start gap-4 z-10">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
+              {customer ? getCustomerDisplayName(customerData || customer) : 'New Customer'}
+            </h2>
+            {customer && (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-gradient-to-r from-teal-600 to-teal-700 text-white mt-2 shadow-sm">
+                ID: {customerData?.customerId || customer.customerId}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            aria-label="Close"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-8">
+          {/* Card 1: Basic Info */}
+          <div className="bg-gradient-to-br from-teal-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-teal-400">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Basic Info</h3>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Prefix
-                </label>
-                <select
-                  {...register('prefix')}
-                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
-                >
+                <label className={labelCls}>Prefix</label>
+                <select {...register('prefix')} className={selectCls}>
                   <option value="">None</option>
                   <option value="Mr.">Mr.</option>
                   <option value="Ms.">Ms.</option>
@@ -868,258 +906,150 @@ const CustomerForm = ({
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  First Name *
-                </label>
-                <input
-                  {...register('firstName', { required: 'First name is required' })}
-                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
-                  placeholder="First Name"
-                />
-                {errors.firstName && (
-                  <p className="text-red-500 text-xs mt-1">{errors.firstName.message as string}</p>
-                )}
+                <label className={labelCls}>First Name <span className="text-red-500">*</span></label>
+                <input {...register('firstName', { required: 'First name is required' })} className={inputCls} placeholder="First Name" />
+                {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName.message as string}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Middle Name
-                </label>
-                <input
-                  {...register('middleName')}
-                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
-                  placeholder="Middle Name"
-                />
+                <label className={labelCls}>Middle Name</label>
+                <input {...register('middleName')} className={inputCls} placeholder="Middle Name" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Last Name
-                </label>
-                <input
-                  {...register('lastName')}
-                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
-                  placeholder="Last Name"
-                />
+                <label className={labelCls}>Last Name</label>
+                <input {...register('lastName')} className={inputCls} placeholder="Last Name" />
               </div>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Address Line 1
-              </label>
-              <input
-                {...register('addressLine1')}
-                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
-                placeholder="Street address, P.O. Box, etc."
-              />
+          {/* Card 2: Address */}
+          <div className="bg-gradient-to-br from-sky-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-sky-400">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Address</h3>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Address Line 2
-              </label>
-              <input
-                {...register('addressLine2')}
-                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
-                placeholder="Apartment, suite, unit, building, floor, etc."
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Country
-                </label>
-                <select
-                  {...register('country')}
-                  value={selectedCountry || customerData?.country || ''}
-                  onChange={(e) => {
-                    setValue('country', e.target.value)
-                    if (e.target.value !== customerData?.country) {
-                      setValue('state', '')
-                      setValue('city', '')
-                    }
-                  }}
-                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
-                >
-                  <option value="">Select Country</option>
-                  {countries.map((country) => (
-                    <option key={country.code} value={country.code}>
-                      {country.name}
-                    </option>
-                  ))}
-                </select>
+                <label className={labelCls}>Address Line 1</label>
+                <input {...register('addressLine1')} className={inputCls} placeholder="Street address, P.O. Box, etc." />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  State
-                </label>
-                <select
-                  {...register('state')}
-                  value={selectedState || customerData?.state || ''}
-                  onChange={(e) => {
-                    setValue('state', e.target.value)
-                    if (e.target.value !== customerData?.state) {
-                      setValue('city', '')
-                    }
-                  }}
-                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
-                  disabled={!countryForStates}
-                >
-                  <option value="">Select State</option>
-                  {availableStates.map((state) => (
-                    <option key={state.code} value={state.code}>
-                      {state.name}
-                    </option>
-                  ))}
-                </select>
+                <label className={labelCls}>Address Line 2</label>
+                <input {...register('addressLine2')} className={inputCls} placeholder="Apartment, suite, unit, building, floor, etc." />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  City
-                </label>
-                <select
-                  {...register('city')}
-                  value={watch('city') || customerData?.city || ''}
-                  onChange={(e) => setValue('city', e.target.value)}
-                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
-                  disabled={!stateForCities}
-                >
-                  <option value="">Select City</option>
-                  {availableCities.map((city, index) => (
-                    <option key={`${city.name}-${index}`} value={city.name}>
-                      {city.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className={labelCls}>Country</label>
+                  <select
+                    {...register('country')}
+                    value={selectedCountry || customerData?.country || ''}
+                    onChange={(e) => {
+                      setValue('country', e.target.value)
+                      if (e.target.value !== customerData?.country) { setValue('state', ''); setValue('city', '') }
+                    }}
+                    className={selectCls}
+                  >
+                    <option value="">Select Country</option>
+                    {countries.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>State</label>
+                  <select
+                    {...register('state')}
+                    value={selectedState || customerData?.state || ''}
+                    onChange={(e) => {
+                      setValue('state', e.target.value)
+                      if (e.target.value !== customerData?.state) setValue('city', '')
+                    }}
+                    className={selectCls}
+                    disabled={!countryForStates}
+                  >
+                    <option value="">Select State</option>
+                    {availableStates.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>City</label>
+                  <select
+                    {...register('city')}
+                    value={watch('city') || customerData?.city || ''}
+                    onChange={(e) => setValue('city', e.target.value)}
+                    className={selectCls}
+                    disabled={!stateForCities}
+                  >
+                    <option value="">Select City</option>
+                    {availableCities.map((city, i) => <option key={`${city.name}-${i}`} value={city.name}>{city.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="max-w-[200px]">
+                <label className={labelCls}>Pin Code</label>
+                <input {...register('pinCode')} className={inputCls} placeholder="Postal/ZIP code" maxLength={10} />
               </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Pin Code
-              </label>
-              <input
-                {...register('pinCode')}
-                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
-                placeholder="Postal/ZIP code"
-                maxLength={10}
-              />
-            </div>
-
             <MapSelector
               latitude={latitude}
               longitude={longitude}
-              onLocationChange={(lat, lng) => {
-                setLatitude(lat)
-                setLongitude(lng)
-              }}
+              onLocationChange={(lat, lng) => { setLatitude(lat); setLongitude(lng) }}
             />
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Contact Numbers
-              </label>
-              {contactNumbers.map((contact, index) => (
-                <div key={index} className="flex items-center space-x-2 mb-2">
-                  <input
-                    type="text"
-                    value={contact}
-                    onChange={(e) => updateContactNumber(index, e.target.value)}
-                    placeholder="Phone number"
-                    className="flex-1 border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
-                  />
-                  {contactNumbers.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeContactNumber(index)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addContactNumber}
-                className="text-primary-600 hover:text-primary-800 text-sm font-medium"
-              >
-                + Add Contact Number
-              </button>
+          {/* Card 3: Contact */}
+          <div className="bg-gradient-to-br from-emerald-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-emerald-400">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Contact</h3>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                DISCOM Consumer Number
-              </label>
-              <input
-                {...register('consumerNumber')}
-                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
-              />
+            <div className="space-y-4">
+              <div>
+                <label className={labelCls}>Contact Numbers</label>
+                {contactNumbers.map((contact, index) => (
+                  <div key={index} className="flex items-center gap-2 mb-2">
+                    <input type="text" value={contact} onChange={(e) => updateContactNumber(index, e.target.value)} placeholder="Phone number" className={`flex-1 ${inputCls}`} />
+                    {contactNumbers.length > 1 && (
+                      <button type="button" onClick={() => removeContactNumber(index)} className="text-sm text-gray-500 hover:text-red-600 transition-colors">Remove</button>
+                    )}
+                  </div>
+                ))}
+                <button type="button" onClick={addContactNumber} className="text-sm font-medium text-primary-600 hover:text-primary-700">+ Add Contact Number</button>
+              </div>
+              <div>
+                <label className={labelCls}>E-mail IDs</label>
+                {emails.map((email, index) => (
+                  <div key={index} className="flex items-center gap-2 mb-2">
+                    <input type="email" value={email} onChange={(e) => updateEmail(index, e.target.value)} placeholder="example@email.com" className={`flex-1 ${inputCls}`} />
+                    {emails.length > 1 && (
+                      <button type="button" onClick={() => removeEmail(index)} className="text-sm text-gray-500 hover:text-red-600 transition-colors">Remove</button>
+                    )}
+                  </div>
+                ))}
+                <button type="button" onClick={addEmail} className="text-sm font-medium text-primary-600 hover:text-primary-700">+ Add E-mail ID</button>
+              </div>
+              <div>
+                <label className={labelCls}>DISCOM Consumer Number</label>
+                <input {...register('consumerNumber')} className={inputCls} />
+              </div>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                E-mail IDs
-              </label>
-              {emails.map((email, index) => (
-                <div key={index} className="flex items-center space-x-2 mb-2">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => updateEmail(index, e.target.value)}
-                    placeholder="example@email.com"
-                    className="flex-1 border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
-                  />
-                  {emails.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeEmail(index)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addEmail}
-                className="text-primary-600 hover:text-primary-800 text-sm font-medium"
-              >
-                + Add E-mail ID
-              </button>
+          {/* Card 4: Identity & Company */}
+          <div className="bg-gradient-to-br from-violet-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-violet-400">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Identity & Company</h3>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Id Proof#
-                </label>
-                <input
-                  {...register('idProofNumber')}
-                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
-                  placeholder="Enter ID proof number"
-                />
+                <label className={labelCls}>Id Proof#</label>
+                <input {...register('idProofNumber')} className={inputCls} placeholder="Enter ID proof number" />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Type of Id Proof
-                  {idProofNumber && idProofNumber.trim() !== '' && <span className="text-red-500 ml-1">*</span>}
-                </label>
+                <label className={labelCls}>Type of Id Proof {idProofNumber?.trim() && <span className="text-red-500">*</span>}</label>
                 <select
                   {...register('idProofType', {
-                    validate: (value) => {
-                      if (idProofNumber && idProofNumber.trim() !== '' && (!value || value.trim() === '')) {
-                        return 'Type of Id Proof is required when Id Proof# is provided'
-                      }
-                      return true
-                    }
+                    validate: (v) => idProofNumber?.trim() && (!v || !v.trim()) ? 'Type of Id Proof is required when Id Proof# is provided' : true
                   })}
-                  className={`w-full border-2 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-offset-2 transition-all ${idProofNumber && idProofNumber.trim() !== '' && !watch('idProofType') ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-primary-500 focus:border-primary-500'}`}
+                  className={`${selectCls} ${idProofNumber?.trim() && !watch('idProofType') ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : ''}`}
                 >
                   <option value="">Select Type</option>
                   <option value="Aadhaar">Aadhaar</option>
@@ -1129,75 +1059,49 @@ const CustomerForm = ({
                   <option value="Passport">Passport</option>
                   <option value="Others">Others</option>
                 </select>
-                {errors.idProofType && (
-                  <p className="text-red-500 text-xs mt-1">{errors.idProofType.message as string}</p>
-                )}
+                {errors.idProofType && <p className="text-red-500 text-xs mt-1">{errors.idProofType.message as string}</p>}
               </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Company Name
-              </label>
-              <input
-                {...register('companyName')}
-                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
-                placeholder="Enter company name"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Company GST#
-              </label>
-              <input
-                {...register('companyGst')}
-                className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
-                placeholder="Enter GST number"
-              />
-            </div>
-
-            {/* Salesperson field - Only visible to Management and Admin */}
-            {(hasRole([UserRole.MANAGEMENT]) || hasRole([UserRole.ADMIN])) && customerData && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Salesperson
-                </label>
-                <select
-                  {...register('salespersonId')}
-                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all"
-                >
-                  <option value="">No Salesperson Assigned</option>
-                  {salespersons?.map((salesperson: any) => (
-                    <option key={salesperson.id} value={salesperson.id}>
-                      {salesperson.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Only Management and Admin can change the salesperson for a customer
-                </p>
+                <label className={labelCls}>Company Name</label>
+                <input {...register('companyName')} className={inputCls} placeholder="Enter company name" />
               </div>
-            )}
-
-            <div className="flex justify-end space-x-3 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={mutation.isPending}
-                className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
-              >
-                {mutation.isPending ? 'Saving...' : customer ? 'Update' : 'Create'}
-              </button>
+              <div>
+                <label className={labelCls}>Company GST#</label>
+                <input {...register('companyGst')} className={inputCls} placeholder="Enter GST number" />
+              </div>
             </div>
-          </form>
-        </div>
+          </div>
+
+          {/* Card 5: Assignment (Management/Admin only) */}
+          {(hasRole([UserRole.MANAGEMENT]) || hasRole([UserRole.ADMIN])) && customerData && (
+            <div className="bg-gradient-to-br from-amber-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-amber-400">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Assignment</h3>
+              </div>
+              <div>
+                <label className={labelCls}>Salesperson</label>
+                <select {...register('salespersonId')} className={selectCls}>
+                  <option value="">No Salesperson Assigned</option>
+                  {salespersons?.map((sp: any) => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
+                </select>
+                <p className="text-xs text-gray-500 mt-1.5">Only Management and Admin can change the salesperson for a customer</p>
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
+            <button type="button" onClick={onClose} className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+              Cancel
+            </button>
+            <button type="submit" disabled={mutation.isPending} className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-teal-600 to-primary-600 rounded-lg hover:from-teal-700 hover:to-primary-700 disabled:opacity-50 transition-colors shadow-md">
+              {mutation.isPending ? 'Saving...' : customer ? 'Update' : 'Create'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )

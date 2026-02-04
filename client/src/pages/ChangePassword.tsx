@@ -61,11 +61,14 @@ const ChangePassword = () => {
   return (
     <div className="px-4 py-6 sm:px-0">
       <div className="max-w-md mx-auto">
-        <h1 className="text-4xl font-extrabold text-primary-800 mb-3">
-          Change Password
-        </h1>
+        <div className="border-l-4 border-l-amber-500 pl-4 mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            Change Password
+          </h1>
+          <p className="text-sm text-amber-600/80 mt-0.5">Update your account password</p>
+        </div>
 
-        <div className="bg-white shadow rounded-lg p-6 mt-6">
+        <div className="bg-gradient-to-br from-white to-amber-50/30 rounded-xl border-l-4 border-l-amber-400 border border-amber-100/60 shadow-sm p-6 mt-6">
           <div className="mb-4">
             <p className="text-sm text-gray-600">
               Change password for: <span className="font-semibold">{user?.name}</span> ({user?.email})
@@ -201,7 +204,7 @@ const ChangePassword = () => {
               <button
                 type="submit"
                 disabled={mutation.isPending}
-                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-amber-600 to-primary-600 text-white rounded-lg hover:from-amber-700 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-md"
               >
                 {mutation.isPending ? 'Changing...' : 'Change Password'}
               </button>

@@ -1,17 +1,18 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../utils/axios'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Project, ProjectStatus, ProjectType, ProjectServiceType, UserRole } from '../types'
 import { format } from 'date-fns'
 import MultiSelect from '../components/MultiSelect'
 import { useDebounce } from '../hooks/useDebounce'
 import toast from 'react-hot-toast'
-import { getSegmentColor } from '../components/dashboard/segmentColors'
 import { getSalesTeamColor } from '../components/dashboard/salesTeamColors'
 import DashboardFilters from '../components/dashboard/DashboardFilters'
 import { FiPaperclip } from 'react-icons/fi'
+
+const PROJECTS_FILTERS_STORAGE_KEY = 'rayenna_projects_filters'
 
 // Helper function to get payment status badge with color coding
 const getPaymentStatusBadge = (project: Project) => {
@@ -29,22 +30,22 @@ const getPaymentStatusBadge = (project: Project) => {
   // Show N/A if no order value OR if in early/lost stage
   if (hasNoOrderValue || isEarlyOrLostStage) {
     return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
         N/A
       </span>
     )
   }
   
-  // Otherwise show actual payment status with brighter colour coding
+  // Otherwise show actual payment status with restrained enterprise tones
   const paymentStatus = project.paymentStatus || 'PENDING'
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shadow-sm ${
+      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${
         paymentStatus === 'FULLY_PAID'
-          ? 'bg-emerald-500 text-white'
+          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
           : paymentStatus === 'PARTIAL'
-          ? 'bg-amber-400 text-amber-900'
-          : 'bg-red-500 text-white'
+          ? 'bg-amber-50 text-amber-800 border border-amber-200'
+          : 'bg-red-50 text-red-700 border border-red-200'
       }`}
     >
       {String(paymentStatus).replace(/_/g, ' ')}
@@ -52,26 +53,37 @@ const getPaymentStatusBadge = (project: Project) => {
   )
 }
 
-// Helper function to get status badge color classes (Confirmed & Under Installation use bright colours)
-const getStatusColorClasses = (status: ProjectStatus): string => {
+// Stage pill: clear color coding for quick scanning
+const getStagePillClasses = (status: ProjectStatus): string => {
   switch (status) {
     case ProjectStatus.LEAD:
     case ProjectStatus.SITE_SURVEY:
     case ProjectStatus.PROPOSAL:
       return 'bg-amber-100 text-amber-800 border border-amber-300'
     case ProjectStatus.CONFIRMED:
-      // Bright blue – active order, stands out
-      return 'bg-sky-400 text-white border border-sky-500 shadow-sm'
     case ProjectStatus.UNDER_INSTALLATION:
-      // Bright cyan – in progress, very visible
-      return 'bg-cyan-400 text-white border border-cyan-500 shadow-sm'
+      return 'bg-primary-100 text-primary-800 border border-primary-300'
     case ProjectStatus.SUBMITTED_FOR_SUBSIDY:
-      return 'bg-violet-200 text-violet-800 border border-violet-300'
+      return 'bg-violet-100 text-violet-800 border border-violet-300'
     case ProjectStatus.COMPLETED:
     case ProjectStatus.COMPLETED_SUBSIDY_CREDITED:
-      return 'bg-emerald-500 text-white border border-emerald-600 shadow-sm'
+      return 'bg-emerald-100 text-emerald-800 border border-emerald-300'
     case ProjectStatus.LOST:
-      return 'bg-red-500 text-white border border-red-600 shadow-sm'
+      return 'bg-red-100 text-red-800 border border-red-300'
+    default:
+      return 'bg-gray-100 text-gray-800 border border-gray-300'
+  }
+}
+
+// Segment pill: distinct color per segment for quick recognition
+const getSegmentPillClasses = (type: string): string => {
+  switch (type) {
+    case 'RESIDENTIAL_SUBSIDY':
+      return 'bg-red-100 text-red-800 border border-red-300'
+    case 'RESIDENTIAL_NON_SUBSIDY':
+      return 'bg-sky-100 text-sky-800 border border-sky-300'
+    case 'COMMERCIAL_INDUSTRIAL':
+      return 'bg-emerald-100 text-emerald-800 border border-emerald-300'
     default:
       return 'bg-gray-100 text-gray-800 border border-gray-300'
   }
@@ -79,6 +91,7 @@ const getStatusColorClasses = (status: ProjectStatus): string => {
 
 const Projects = () => {
   const { user, hasRole } = useAuth()
+  const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [searchInput, setSearchInput] = useState('')
   const debouncedSearch = useDebounce(searchInput, 500) // 500ms debounce
@@ -136,6 +149,33 @@ const Projects = () => {
     sortOrder: 'desc',
   })
 
+  // Restore filters from sessionStorage when returning to Projects (useLayoutEffect so it runs before persist)
+  useLayoutEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(PROJECTS_FILTERS_STORAGE_KEY)
+      if (!raw) return
+      const saved = JSON.parse(raw) as {
+        filters?: typeof filters
+        page?: number
+        searchInput?: string
+        selectedFYs?: string[]
+        selectedQuarters?: string[]
+        selectedMonths?: string[]
+      }
+      if (saved.filters) setFilters(saved.filters)
+      if (saved.page != null && saved.page >= 1) setPage(saved.page)
+      if (saved.searchInput != null) setSearchInput(saved.searchInput)
+      if (saved.selectedFYs) setSelectedFYs(saved.selectedFYs)
+      if (saved.selectedQuarters) setSelectedQuarters(saved.selectedQuarters)
+      if (saved.selectedMonths) setSelectedMonths(saved.selectedMonths)
+    } catch {
+      // ignore invalid or missing stored data
+    }
+  }, [])
+
+  // Skip first persist so we don't overwrite sessionStorage with initial state before restore runs
+  const isFirstMount = useRef(true)
+
   // Initialize default status filter (all active statuses except LOST) when ready
   useEffect(() => {
     // Set default status filter when defaultStatusValues is ready and filter is empty
@@ -150,6 +190,26 @@ const Projects = () => {
     }
   }, [defaultStatusValues, filters.status.length])
   
+  // Persist filters to sessionStorage so they survive navigation (view/edit → back)
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false
+      return
+    }
+    try {
+      sessionStorage.setItem(PROJECTS_FILTERS_STORAGE_KEY, JSON.stringify({
+        filters,
+        page,
+        searchInput,
+        selectedFYs,
+        selectedQuarters,
+        selectedMonths,
+      }))
+    } catch {
+      // ignore quota or other storage errors
+    }
+  }, [filters, page, searchInput, selectedFYs, selectedQuarters, selectedMonths])
+
   // Track when user manually changes status filter
   const handleStatusChange = (values: string[]) => {
     setFilters(prev => ({ ...prev, status: values }))
@@ -179,6 +239,11 @@ const Projects = () => {
   ])
 
   const clearAllFilters = () => {
+    try {
+      sessionStorage.removeItem(PROJECTS_FILTERS_STORAGE_KEY)
+    } catch {
+      // ignore
+    }
     // Reset search input (drives debounced search → filters.search)
     setSearchInput('')
 
@@ -196,6 +261,7 @@ const Projects = () => {
       salespersonId: [],
       supportTicketStatus: [],
       paymentStatus: [],
+      hasDocuments: false,
       search: '',
       sortBy: '',
       sortOrder: 'desc',
@@ -379,35 +445,42 @@ const Projects = () => {
     setPendingExportType(null)
   }
 
-  if (isLoading) return <div>Loading...</div>
+  if (isLoading) {
+    return (
+      <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
+        <div className="h-8 w-48 bg-gradient-to-r from-amber-200 to-gray-200 rounded animate-pulse mb-4" />
+        <div className="h-64 bg-gradient-to-r from-amber-100/50 to-gray-100 rounded-xl animate-pulse" />
+      </div>
+    )
+  }
 
   return (
-    <div className="px-4 py-6 sm:px-0 min-h-screen bg-gray-50/80">
+    <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
       <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-4xl font-extrabold bg-gradient-to-r from-primary-700 to-primary-600 bg-clip-text text-transparent mb-2">
+        <div className="border-l-4 border-l-amber-500 pl-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
             Projects
           </h1>
-          <p className="text-gray-600 font-medium">Manage and track all your solar projects</p>
+          <p className="text-sm text-amber-600/80 mt-0.5">Manage and track all your solar projects</p>
         </div>
         {(user?.role === 'ADMIN' || user?.role === 'SALES') && (
           <Link
             to="/projects/new"
-            className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-6 py-3 rounded-xl hover:from-primary-700 hover:to-primary-800 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-600 to-primary-600 text-white rounded-xl hover:from-amber-700 hover:to-primary-700 font-medium text-sm shadow-md hover:shadow-lg transition-all"
           >
             + New Project
           </Link>
         )}
       </div>
 
-      <div className="bg-white shadow-md rounded-xl border border-gray-100 mb-4 p-3 sm:p-4 border-t-4 border-t-primary-500">
+      <div className="bg-gradient-to-br from-white to-amber-50/30 rounded-xl border border-amber-100/60 shadow-sm mb-4 p-4 sm:p-5">
         <div className="space-y-2 sm:space-y-3">
         {/* Row 1: Search Bar */}
         <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
           <input
             type="text"
             placeholder="Search across all projects..."
-            className="w-full sm:flex-1 min-h-[40px] border-2 border-primary-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 transition-all bg-gradient-to-r from-white to-primary-50 shadow-md"
+            className="w-full sm:flex-1 min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
           />
@@ -415,7 +488,7 @@ const Projects = () => {
             <button
               type="button"
               onClick={clearAllFilters}
-              className="min-h-[40px] px-3 py-2 rounded-xl border-2 border-primary-300 bg-white hover:bg-primary-50 text-primary-700 font-semibold shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.99]"
+              className="min-h-[40px] px-3 py-2 rounded-lg border border-amber-200 bg-white hover:bg-amber-50/80 text-gray-700 font-medium transition-colors"
               title="Clear search and all filters"
             >
               Clear All
@@ -423,7 +496,7 @@ const Projects = () => {
             <button
               type="button"
               onClick={() => setShowMoreFilters((v) => !v)}
-              className="min-h-[40px] px-3 py-2 rounded-xl border-2 border-primary-300 bg-gradient-to-r from-white to-primary-50 hover:from-primary-50 hover:to-primary-100 text-gray-700 font-semibold shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.99] flex items-center justify-center gap-2"
+              className="min-h-[40px] px-3 py-2 rounded-lg border border-amber-200 bg-white hover:bg-amber-50/80 text-gray-700 font-medium transition-colors flex items-center justify-center gap-2"
               aria-expanded={showMoreFilters}
               aria-controls="projects-more-filters"
               title="Show or hide more filters"
@@ -527,18 +600,18 @@ const Projects = () => {
               type="checkbox"
               checked={filters.hasDocuments}
               onChange={(e) => setFilters(prev => ({ ...prev, hasDocuments: e.target.checked }))}
-              className="w-4 h-4 rounded border-2 border-primary-300 text-primary-600 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+              className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/20"
             />
-            <span className="text-sm font-medium text-gray-700">Has documents</span>
+            <span className="text-sm text-gray-600">Has documents</span>
           </label>
           <span className="text-xs text-gray-500">(only projects with at least one attachment)</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+            <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1.5">Sort By</label>
             <select
-              className="w-full min-h-[40px] border-2 border-primary-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 bg-gradient-to-r from-white to-primary-50 shadow-md text-gray-700 font-medium text-[13px]"
+              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-gray-900 text-sm"
               value={filters.sortBy}
               onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
             >
@@ -628,86 +701,84 @@ const Projects = () => {
         </div>
       )}
 
-      <div className="bg-white shadow-lg rounded-xl border border-gray-100 overflow-hidden">
-        <ul className="divide-y divide-gray-200 [&>li:nth-child(even)]:bg-gray-50/60">
-          {data?.projects?.map((project: Project) => (
-            <li key={project.id} className="transition-colors">
-              <Link
-                to={`/projects/${project.id}`}
-                className="block hover:bg-sky-50/70 px-4 py-4 sm:px-6 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center">
-                      <p className="text-sm font-medium">
-                        <span className="text-black">#{project.slNo}</span>
-                        <span className="text-primary-600 font-bold"> - {project.customer?.customerName || 'Unknown Customer'}</span>
-                      </p>
-                      <span
-                        className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
-                        style={{ backgroundColor: getSegmentColor(project.type, 0) }}
-                      >
-                        {project.type === 'RESIDENTIAL_SUBSIDY'
-                          ? 'Residential Subsidy'
-                          : project.type === 'RESIDENTIAL_NON_SUBSIDY'
-                            ? 'Residential - Non Subsidy'
-                            : project.type === 'COMMERCIAL_INDUSTRIAL'
-                              ? 'Commercial Industrial'
-                              : String(project.type).replace(/_/g, ' ')}
-                      </span>
-                      <span className={`ml-2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColorClasses(project.projectStatus)}`}>
-                        <span className="text-[8px] leading-none">●</span>
-                        {project.projectStatus.replace(/_/g, ' ')}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex items-center text-sm">
-                      <span className="text-orange-800 font-medium">
-                        {project.systemCapacity ? `${project.systemCapacity} kW` : 'N/A'}
-                      </span>
-                      <span className="text-gray-500 mx-1"> • </span>
-                      <span className="text-green-800 font-bold">
-                        {project.projectCost
-                          ? `₹${project.projectCost.toLocaleString('en-IN')}`
-                          : 'N/A'}
-                      </span>
-                      {project.salesperson && (
-                        <span className="ml-4 inline-flex items-center gap-1.5 font-medium" style={{ color: getSalesTeamColor(project.salesperson.name, 0) }}>
-                          Sales: {project.salesperson.name}
-                          {project._count && project._count.documents > 0 && (
-                            <span
-                              className="inline-flex items-center justify-center text-primary-600 opacity-90 hover:opacity-100"
-                              title={`${project._count.documents} document(s) uploaded`}
-                              aria-label="Has attachments"
-                            >
-                              <FiPaperclip className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
-                            </span>
-                          )}
-                        </span>
-                      )}
-                      {!project.salesperson && project._count && project._count.documents > 0 && (
-                        <span
-                          className="ml-4 inline-flex items-center justify-center text-primary-600 opacity-90"
-                          title={`${project._count.documents} document(s) uploaded`}
-                          aria-label="Has attachments"
-                        >
-                          <FiPaperclip className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500">
-                      {format(new Date(project.createdAt), 'MMM dd, yyyy')}
+      {/* Projects table - scannable, status-driven, enterprise tone */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead>
+              <tr className="border-b border-gray-200 bg-white">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l-4 border-l-amber-400">Project</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Segment</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stage</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Order Value</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Created</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {data?.projects?.map((project: Project) => (
+                <tr
+                  key={project.id}
+                  onClick={() => navigate(`/projects/${project.id}`)}
+                  className="group transition-colors cursor-pointer bg-white hover:bg-amber-50/50"
+                >
+                  <td className="px-4 py-3 min-w-0">
+                    <p className="text-base sm:text-lg font-semibold text-gray-900 truncate">
+                      #{project.slNo} · {project.customer?.customerName || 'Unknown Customer'}
                     </p>
-                    <div className="mt-1">
-                      {getPaymentStatusBadge(project)}
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
+                    <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[200px] sm:max-w-none">
+                      {project.salesperson && (
+                        <span style={{ color: getSalesTeamColor(project.salesperson.name, 0) }}>
+                          {project.salesperson.name}
+                        </span>
+                      )}
+                      {project._count && project._count.documents > 0 && (
+                        <span className="inline-flex items-center ml-1.5 text-primary-600" title={`${project._count.documents} document(s)`}>
+                          <FiPaperclip className="w-3.5 h-3.5" strokeWidth={2} />
+                        </span>
+                      )}
+                    </p>
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${getSegmentPillClasses(project.type)}`}>
+                      {project.type === 'RESIDENTIAL_SUBSIDY'
+                        ? 'Residential Subsidy'
+                        : project.type === 'RESIDENTIAL_NON_SUBSIDY'
+                          ? 'Residential - Non Subsidy'
+                          : project.type === 'COMMERCIAL_INDUSTRIAL'
+                            ? 'Commercial Industrial'
+                            : String(project.type).replace(/_/g, ' ')}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${getStagePillClasses(project.projectStatus)}`}>
+                      {project.projectStatus.replace(/_/g, ' ')}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <span className="text-sm font-bold text-orange-800 tabular-nums">
+                      {project.systemCapacity ? `${project.systemCapacity} kW` : '—'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <span className="text-sm font-bold text-green-800 tabular-nums">
+                      {project.projectCost ? `₹${project.projectCost.toLocaleString('en-IN')}` : '—'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {getPaymentStatusBadge(project)}
+                  </td>
+                  <td className="px-4 py-3 text-right hidden sm:table-cell">
+                    <span className="text-xs text-gray-500">
+                      {format(new Date(project.createdAt), 'MMM dd, yyyy')}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {data?.pagination && (
@@ -720,14 +791,14 @@ const Projects = () => {
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 border border-amber-200 rounded-lg text-sm font-medium text-amber-800 bg-amber-50/80 hover:bg-amber-100/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Previous
               </button>
               <button
                 onClick={() => setPage(p => Math.min(data.pagination.pages, p + 1))}
                 disabled={page >= data.pagination.pages}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 border border-amber-200 rounded-lg text-sm font-medium text-amber-800 bg-amber-50/80 hover:bg-amber-100/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Next
               </button>

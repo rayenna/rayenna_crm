@@ -62,8 +62,8 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
         />
       </div>
 
-      {/* Other tiles + Projects by Payment Status (compact) */}
-      <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 xl:grid-cols-5">
+      {/* Other tiles + Projects by Payment Status (compact) – 5 in one row on laptop, stacked on mobile */}
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-5 min-w-0">
         <MetricCard
           title="Total Leads"
           value={data?.sales?.totalLeads || 0}
@@ -89,7 +89,7 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
           gradient="from-yellow-500 to-amber-500"
         />
         {/* Projects by Payment Status – compact tile for Management/Admin */}
-        <div className="min-w-0 bg-gradient-to-br from-white via-indigo-50/50 to-white shadow-lg rounded-xl border-2 border-indigo-200/50 overflow-hidden backdrop-blur-sm">
+        <div className="min-w-0 flex flex-col bg-gradient-to-br from-white via-indigo-50/50 to-white shadow-lg rounded-xl border-2 border-indigo-200/50 overflow-hidden backdrop-blur-sm">
           <div className="bg-gradient-to-r from-indigo-500 via-cyan-500 to-indigo-600 px-3 py-2 sm:px-4 sm:py-2.5">
             <h3 className="text-sm sm:text-base font-bold text-white drop-shadow-md truncate">
               Payment Status

@@ -135,19 +135,22 @@ const Users = () => {
   return (
     <div className="px-4 py-6 sm:px-0">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-        <h1 className="text-4xl font-extrabold text-primary-800 mb-3">
-          Users
-        </h1>
+        <div className="border-l-4 border-l-violet-500 pl-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            Users
+          </h1>
+          <p className="text-sm text-violet-600/80 mt-0.5">Manage user accounts and roles</p>
+        </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
+          className="bg-gradient-to-r from-violet-600 to-primary-600 text-white px-4 py-2.5 rounded-xl hover:from-violet-700 hover:to-primary-700 font-medium shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
         >
           {showForm ? 'Cancel' : 'New User'}
         </button>
       </div>
 
       {showForm && (
-        <div className="bg-white shadow rounded-lg p-4 sm:p-6 mb-6">
+        <div className="bg-gradient-to-br from-white to-violet-50/30 rounded-xl border-l-4 border-l-violet-400 shadow-sm border border-violet-100/60 p-4 sm:p-6 mb-6">
           <h2 className="text-base sm:text-lg font-semibold mb-4">Create New User</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -196,10 +199,10 @@ const Users = () => {
               </select>
             </div>
             <div className="md:col-span-2">
-              <button
+                <button
                 type="submit"
                 disabled={createMutation.isPending}
-                className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50 font-medium shadow-md hover:shadow-lg transition-all"
+                className="bg-gradient-to-r from-violet-600 to-primary-600 text-white px-4 py-2 rounded-lg hover:from-violet-700 hover:to-primary-700 disabled:opacity-50 font-medium shadow-md hover:shadow-lg transition-all"
               >
                 {createMutation.isPending ? 'Creating...' : 'Create User'}
               </button>
@@ -208,42 +211,58 @@ const Users = () => {
         </div>
       )}
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {!users || users.length === 0 ? (
           <div className="px-4 py-8 text-center text-gray-500">
             No users found. {users === undefined ? 'Loading...' : 'Click "New User" to create one.'}
           </div>
         ) : (
-          <ul className="divide-y divide-gray-200">
-            {users.map((user) => (
-            <li key={user.id} className="px-4 py-4 sm:px-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
-                  <p className="text-sm text-gray-500 truncate">{user.email}</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 whitespace-nowrap">
-                    {user.role}
-                  </span>
-                  <button
-                    onClick={() => handleResetPassword(user)}
-                    disabled={resetPasswordMutation.isPending}
-                    className="text-blue-600 hover:text-blue-800 text-sm disabled:opacity-50 whitespace-nowrap"
-                  >
-                    {resetPasswordMutation.isPending ? 'Generating...' : 'Reset Password'}
-                  </button>
-                  <button
-                    onClick={() => handleDelete(user)}
-                    className="text-red-600 hover:text-red-800 text-sm whitespace-nowrap"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </li>
-            ))}
-          </ul>
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="border-b border-gray-200 bg-white">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l-4 border-l-violet-400">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {users.map((user) => (
+                  <tr key={user.id} className="bg-white hover:bg-violet-50/50 transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 whitespace-nowrap">
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4">
+                        <button
+                          onClick={() => handleResetPassword(user)}
+                          disabled={resetPasswordMutation.isPending}
+                          className="text-blue-600 hover:text-blue-800 text-sm disabled:opacity-50 whitespace-nowrap"
+                        >
+                          {resetPasswordMutation.isPending ? 'Generating...' : 'Reset Password'}
+                        </button>
+                        <button
+                          onClick={() => handleDelete(user)}
+                          className="text-red-600 hover:text-red-800 text-sm whitespace-nowrap"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

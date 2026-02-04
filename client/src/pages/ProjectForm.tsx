@@ -87,31 +87,26 @@ const FileUploadSection = ({ projectId, existingCount = 0, maxFiles = 10 }: { pr
   }
 
   return (
-    <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-      <h3 className="text-md font-semibold mb-4">Upload File</h3>
+    <div className="p-4 bg-gradient-to-br from-violet-50/30 to-white rounded-xl border border-violet-100/60">
+      <p className="text-xs text-gray-500 mb-4">
+        You can upload up to {maxFiles} files per project. Currently uploaded: {existingCount}.
+      </p>
       <div className="space-y-4">
-        <p className="text-xs text-gray-600">
-          You can upload up to {maxFiles} files per project. Currently uploaded: {existingCount}.
-        </p>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            File
-          </label>
+          <label className="block text-sm text-gray-500 mb-1.5">File</label>
           <input
             type="file"
             onChange={handleFileChange}
             disabled={existingCount >= maxFiles}
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Category *
-          </label>
+          <label className="block text-sm text-gray-500 mb-1.5">Category *</label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           >
             <option value="">Select category</option>
             <option value="photos_videos">Photos / Videos</option>
@@ -120,21 +115,19 @@ const FileUploadSection = ({ projectId, existingCount = 0, maxFiles = 10 }: { pr
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Description (Optional)
-          </label>
+          <label className="block text-sm text-gray-500 mb-1.5">Description (Optional)</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
-            className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             placeholder="Add a brief description..."
           />
         </div>
         <button
           onClick={handleUpload}
           disabled={!selectedFile || !category || uploading || existingCount >= maxFiles}
-          className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+          className="px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {uploading ? 'Uploading...' : 'Upload File'}
         </button>
@@ -432,8 +425,9 @@ const ProjectForm = () => {
     // Get all form values including empty fields
     const allValues = getValues();
     
-    // Define confirmed and later stages once for reuse
-    const confirmedAndLaterStages = [
+    // Define proposal and later stages (Order Value, System Capacity required from Proposal onwards)
+    const proposalAndLaterStages = [
+      ProjectStatus.PROPOSAL,
       ProjectStatus.CONFIRMED,
       ProjectStatus.UNDER_INSTALLATION,
       ProjectStatus.SUBMITTED_FOR_SUBSIDY,
@@ -486,6 +480,12 @@ const ProjectForm = () => {
         toast.error('Segment (Project Type) is required');
         return;
       }
+    }
+
+    // Lead Source is mandatory
+    if (!data.leadSource || data.leadSource.trim() === '') {
+      toast.error('Please select a lead source');
+      return;
     }
 
     // Ensure projectServiceType has a default value if not provided
@@ -555,11 +555,21 @@ const ProjectForm = () => {
       // Keep data.projectCost as the order value; backend will set lostRevenue = projectCost, projectCost = 0
     }
     
-    // Validate Order Value is required for CONFIRMED stage and onwards (and LOST handled above)
-    if (confirmedAndLaterStages.includes(data.projectStatus) && data.projectStatus !== ProjectStatus.LOST) {
+    // Validate Order Value is required for PROPOSAL stage and onwards (LOST handled separately above)
+    if (proposalAndLaterStages.includes(data.projectStatus)) {
       const projectCostValue = allValues.projectCost !== undefined ? allValues.projectCost : data.projectCost;
       if (!projectCostValue || projectCostValue === '' || projectCostValue === null || parseFloat(String(projectCostValue)) <= 0) {
-        toast.error('Order Value is required and must be greater than 0 for Confirmed Order stage and onwards');
+        toast.error('Order Value is required and must be greater than 0 from Proposal stage onwards');
+        return;
+      }
+    }
+
+    // Validate System Capacity is required for PROPOSAL stage and onwards (including LOST)
+    const statusesRequiringCapacity = [...proposalAndLaterStages, ProjectStatus.LOST];
+    if (statusesRequiringCapacity.includes(data.projectStatus)) {
+      const capacityValue = allValues.systemCapacity !== undefined ? allValues.systemCapacity : data.systemCapacity;
+      if (capacityValue === undefined || capacityValue === null || capacityValue === '' || parseFloat(String(capacityValue)) <= 0) {
+        toast.error('System Capacity is required and must be greater than 0 from Proposal stage onwards');
         return;
       }
     }
@@ -712,8 +722,8 @@ const ProjectForm = () => {
     if (data.systemCapacity === '' || data.systemCapacity === undefined) {
       data.systemCapacity = null;
     }
-    // Only convert projectCost to null if not in CONFIRMED or later stages (LOST sends order value; backend zeros it)
-    if (!confirmedAndLaterStages.includes(data.projectStatus) && data.projectStatus !== ProjectStatus.LOST) {
+    // Only convert projectCost to null if not in PROPOSAL or later stages (LOST sends order value; backend zeros it)
+    if (!proposalAndLaterStages.includes(data.projectStatus) && data.projectStatus !== ProjectStatus.LOST) {
       if (data.projectCost === '' || data.projectCost === undefined) {
         data.projectCost = null;
       }
@@ -751,11 +761,21 @@ const ProjectForm = () => {
      (hasRole([UserRole.SALES]) && project?.salespersonId === user?.id) ||
      hasRole([UserRole.OPERATIONS]))
 
+  // Customer Module–style shared classes (consistency with New/Edit Customer)
+  const labelCls = 'block text-sm text-gray-500 mb-1.5'
+  const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all'
+  const selectCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all'
+
   return (
-    <div className="px-4 py-6 sm:px-0">
-      <h1 className="text-4xl font-extrabold text-primary-800 mb-6">
-        {isEdit ? 'Edit Project' : 'New Project'}
-      </h1>
+    <div className="px-4 py-6 sm:px-0 min-h-screen bg-gray-50/80">
+      <div className="mb-6 border-l-4 border-l-amber-500 pl-4">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          {isEdit ? 'Edit Project' : 'New Project'}
+        </h1>
+        <p className="text-sm text-amber-600/80 mt-0.5">
+          {isEdit ? 'Update project details below.' : 'Create a new project and link it to a customer.'}
+        </p>
+      </div>
 
       <form onSubmit={handleSubmit(onSubmit, (errors) => {
         console.error('[PROJECT FORM] Form validation errors:', errors);
@@ -769,15 +789,18 @@ const ProjectForm = () => {
         if (errorMessages.length > 0) {
           toast.error(`Please fix the following errors:\n${errorMessages.join('\n')}`, { duration: 6000 });
         }
-      })} className="space-y-6">
-        {/* Customer Selection - Hidden for Finance users in edit mode */}
+      })} className="space-y-8">
+        {/* Customer & Project Details - Customer Module style card */}
         {canEditOtherSections && (
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-semibold mb-4">Customer & Project Details</h2>
+        <div className="bg-gradient-to-br from-teal-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-teal-400">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Customer & Project Details</h3>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="relative">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Customer * {isEdit && <span className="text-xs text-gray-500 font-normal">(Cannot be changed - create a new project to change customer)</span>}
+              <label className={labelCls}>
+                Customer * {isEdit && <span className="text-xs text-gray-500 font-normal">(Cannot be changed)</span>}
               </label>
               {customersLoading ? (
                 <div className="mt-1 text-sm text-gray-500">Loading customers...</div>
@@ -791,7 +814,7 @@ const ProjectForm = () => {
               ) : (
                 <>
                   <div className="flex gap-2">
-                    <div className="flex-1 relative" ref={customerDropdownRef}>
+                    <div className="flex-1 min-w-0 relative" ref={customerDropdownRef}>
                       <input
                         type="text"
                         placeholder="Search customer by name, ID, or consumer number..."
@@ -809,9 +832,7 @@ const ProjectForm = () => {
                         }}
                         disabled={isEdit}
                         readOnly={isEdit}
-                        className={`w-full border border-gray-300 rounded-md px-3 py-2 pr-10 ${
-                          isEdit ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''
-                        }`}
+                        className={`${inputCls} pr-10 ${isEdit ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
                       />
                       {customerSearch && !isEdit && (
                         <button
@@ -880,9 +901,7 @@ const ProjectForm = () => {
                             }
                           }}
                           disabled={isEdit}
-                          className={`w-48 border border-gray-300 rounded-md px-3 py-2 ${
-                            isEdit ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''
-                          }`}
+                          className={`flex-1 min-w-0 w-full ${selectCls} ${isEdit ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
                         >
                           <option value="">Or select from list</option>
                           {filteredCustomers && filteredCustomers.length > 0 ? (
@@ -911,7 +930,7 @@ const ProjectForm = () => {
                 </>
               )}
               {selectedCustomerId && filteredCustomers && (
-                <div className="mt-2 p-3 bg-gray-50 rounded-md text-sm text-gray-600">
+                <div className="mt-2 p-3 bg-white/60 rounded-lg border border-gray-100 text-sm text-gray-600">
                   {(() => {
                     const customer = filteredCustomers.find((c: any) => c.id === selectedCustomerId);
                     if (customer) {
@@ -919,7 +938,7 @@ const ProjectForm = () => {
                         <div>
                           <p className="font-medium text-gray-900 mb-2">Selected Customer Details:</p>
                           <p><strong>Customer ID:</strong> {customer.customerId}</p>
-                          <p><strong>Name:</strong> {customer.customerName}</p>
+                          <p><strong className="text-gray-500 font-normal">Name:</strong> <span className="text-base sm:text-lg font-semibold text-gray-900">{customer.customerName}</span></p>
                           {customer.address && (
                             <p><strong>Address:</strong> {customer.address}</p>
                           )}
@@ -968,10 +987,10 @@ const ProjectForm = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Project Type *</label>
+              <label className={labelCls}>Project Type *</label>
               <select
                 {...register('projectServiceType', { required: true })}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                className={selectCls}
                 defaultValue={ProjectServiceType.EPC_PROJECT}
               >
                 <option value={ProjectServiceType.EPC_PROJECT}>EPC Project</option>
@@ -991,16 +1010,17 @@ const ProjectForm = () => {
         {/* Sales & Commercial - Visible for Sales/Admin users or when editing (except Lost projects and Finance-only mode)
             Also allows Operations and Sales (for their projects) to edit Lost stage fields */}
         {((canEditSales || isEdit || canEditLostFields) && (canEditOtherSections || canEditLostFields)) && (
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-semibold mb-4">Sales & Commercial</h2>
+          <div className="bg-gradient-to-br from-emerald-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-emerald-400">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Sales & Commercial</h3>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Lead Source
-                </label>
+                <label className={labelCls}>Lead Source *</label>
                 <select
-                  {...register('leadSource')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  {...register('leadSource', { required: 'Please select a lead source' })}
+                  className={selectCls}
                 >
                   <option value="">Select Lead Source</option>
                   <option value={LeadSource.WEBSITE}>Website</option>
@@ -1018,7 +1038,7 @@ const ProjectForm = () => {
                 watch('leadSource') === LeadSource.REFERRAL || 
                 watch('leadSource') === LeadSource.OTHER) && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className={labelCls}>
                     {watch('leadSource') === LeadSource.CHANNEL_PARTNER && 'Channel Partner Name'}
                     {watch('leadSource') === LeadSource.REFERRAL && 'Referral Name'}
                     {watch('leadSource') === LeadSource.OTHER && 'Other Details'}
@@ -1026,7 +1046,7 @@ const ProjectForm = () => {
                   <input
                     type="text"
                     {...register('leadSourceDetails')}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                    className={inputCls}
                     placeholder={
                       watch('leadSource') === LeadSource.CHANNEL_PARTNER ? 'Enter channel partner name' :
                       watch('leadSource') === LeadSource.REFERRAL ? 'Enter referral name' :
@@ -1036,20 +1056,46 @@ const ProjectForm = () => {
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className={labelCls}>
                   System Capacity (kW)
+                  {(projectStatus === ProjectStatus.PROPOSAL ||
+                    projectStatus === ProjectStatus.CONFIRMED ||
+                    projectStatus === ProjectStatus.UNDER_INSTALLATION ||
+                    projectStatus === ProjectStatus.SUBMITTED_FOR_SUBSIDY ||
+                    projectStatus === ProjectStatus.COMPLETED ||
+                    projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED ||
+                    projectStatus === ProjectStatus.LOST) && ' *'}
                 </label>
                 <input
                   type="number"
                   step="0.01"
-                  {...register('systemCapacity')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  {...register('systemCapacity', {
+                    required: (projectStatus === ProjectStatus.PROPOSAL ||
+                      projectStatus === ProjectStatus.CONFIRMED ||
+                      projectStatus === ProjectStatus.UNDER_INSTALLATION ||
+                      projectStatus === ProjectStatus.SUBMITTED_FOR_SUBSIDY ||
+                      projectStatus === ProjectStatus.COMPLETED ||
+                      projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED ||
+                      projectStatus === ProjectStatus.LOST)
+                      ? 'System Capacity is required from Proposal stage onwards'
+                      : false,
+                    validate: (value) => {
+                      const statuses = [ProjectStatus.PROPOSAL, ProjectStatus.CONFIRMED, ProjectStatus.UNDER_INSTALLATION,
+                        ProjectStatus.SUBMITTED_FOR_SUBSIDY, ProjectStatus.COMPLETED, ProjectStatus.COMPLETED_SUBSIDY_CREDITED, ProjectStatus.LOST];
+                      if (statuses.includes(projectStatus) && (value === '' || value == null || parseFloat(String(value)) <= 0)) {
+                        return 'System Capacity must be greater than 0 from Proposal stage onwards';
+                      }
+                      return true;
+                    }
+                  })}
+                  className={inputCls}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className={labelCls}>
                   Order Value (₹)
-                  {(projectStatus === ProjectStatus.CONFIRMED ||
+                  {(projectStatus === ProjectStatus.PROPOSAL ||
+                    projectStatus === ProjectStatus.CONFIRMED ||
                     projectStatus === ProjectStatus.UNDER_INSTALLATION ||
                     projectStatus === ProjectStatus.SUBMITTED_FOR_SUBSIDY ||
                     projectStatus === ProjectStatus.COMPLETED ||
@@ -1060,16 +1106,18 @@ const ProjectForm = () => {
                   type="number"
                   step="0.01"
                   {...register('projectCost', {
-                    required: (projectStatus === ProjectStatus.CONFIRMED ||
+                    required: (projectStatus === ProjectStatus.PROPOSAL ||
+                      projectStatus === ProjectStatus.CONFIRMED ||
                       projectStatus === ProjectStatus.UNDER_INSTALLATION ||
                       projectStatus === ProjectStatus.SUBMITTED_FOR_SUBSIDY ||
                       projectStatus === ProjectStatus.COMPLETED ||
                       projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED ||
                       projectStatus === ProjectStatus.LOST)
-                      ? (projectStatus === ProjectStatus.LOST ? 'Order Value is required for Lost projects (stored as lost revenue)' : 'Order Value is required for Confirmed Order stage and onwards')
+                      ? (projectStatus === ProjectStatus.LOST ? 'Order Value is required for Lost projects (stored as lost revenue)' : 'Order Value is required from Proposal stage onwards')
                       : false,
                     validate: (value) => {
-                      if (projectStatus === ProjectStatus.CONFIRMED ||
+                      if (projectStatus === ProjectStatus.PROPOSAL ||
+                          projectStatus === ProjectStatus.CONFIRMED ||
                           projectStatus === ProjectStatus.UNDER_INSTALLATION ||
                           projectStatus === ProjectStatus.SUBMITTED_FOR_SUBSIDY ||
                           projectStatus === ProjectStatus.COMPLETED ||
@@ -1078,7 +1126,7 @@ const ProjectForm = () => {
                         if (!value || value === '' || parseFloat(value) <= 0) {
                           return projectStatus === ProjectStatus.LOST
                             ? 'Order Value must be greater than 0 for Lost projects (stored as lost revenue)'
-                            : 'Order Value must be greater than 0 for Confirmed Order stage and onwards';
+                            : 'Order Value must be greater than 0 from Proposal stage onwards';
                         }
                       }
                       return true;
@@ -1092,13 +1140,11 @@ const ProjectForm = () => {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Confirmation Date (order lost date when status is Lost) *
-                </label>
+                <label className={labelCls}>Confirmation Date (order lost date when status is Lost) *</label>
                 <input
                   type="date"
                   {...register('confirmationDate', { required: true })}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className={inputCls}
                   disabled={isLost}
                   style={isLost ? { backgroundColor: '#f3f4f6', cursor: 'not-allowed' } : {}}
                   max={projectStatus === ProjectStatus.LOST ? new Date().toISOString().split('T')[0] : undefined}
@@ -1119,10 +1165,10 @@ const ProjectForm = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Project Status</label>
+                <label className={labelCls}>Project Status</label>
                 <select
                   {...register('projectStatus')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className={selectCls}
                   disabled={isProjectLost}
                 >
                   <option value="LEAD">Lead</option>
@@ -1271,8 +1317,11 @@ const ProjectForm = () => {
 
         {/* Payment Tracking */}
         {canEditPayments && (
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-semibold mb-4">Payment Tracking</h2>
+          <div className="bg-gradient-to-br from-sky-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-sky-400">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Payment Tracking</h3>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
@@ -1369,8 +1418,11 @@ const ProjectForm = () => {
 
         {/* Project Lifecycle - Hidden for Finance users in edit mode */}
         {canEditExecution && canEditOtherSections && (
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-semibold mb-4">Project Lifecycle</h2>
+          <div className="bg-gradient-to-br from-violet-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-violet-400">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Project Lifecycle</h3>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
@@ -1501,8 +1553,11 @@ const ProjectForm = () => {
 
         {/* File Upload Section - Hidden for Finance users */}
         {isEdit && id && hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS]) && canEditOtherSections && (
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-semibold mb-4">File Uploads</h2>
+          <div className="bg-gradient-to-br from-violet-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-violet-400">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">File Uploads</h3>
+            </div>
             <FileUploadSection 
               projectId={id} 
               existingCount={project?.documents?.length || 0}
@@ -1511,18 +1566,18 @@ const ProjectForm = () => {
           </div>
         )}
 
-        <div className="flex justify-end gap-4">
+        <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
           <button
             type="button"
             onClick={() => navigate('/projects')}
-            className="px-4 py-2 border border-secondary-300 rounded-lg text-secondary-700 hover:bg-secondary-50 font-medium transition-colors"
+            className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={mutation.isPending || isLost}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 font-medium shadow-md hover:shadow-lg transition-all"
+            className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-amber-600 to-primary-600 rounded-lg hover:from-amber-700 hover:to-primary-700 disabled:opacity-50 transition-colors shadow-md"
           >
             {mutation.isPending ? 'Saving...' : isEdit ? (isLost ? 'Cannot Edit Lost Project' : 'Update') : 'Create'}
           </button>

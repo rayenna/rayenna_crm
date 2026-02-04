@@ -88,7 +88,7 @@ const Layout = () => {
   }, [helpDropdownOpen])
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50/80">
       <nav className="bg-gradient-to-r from-primary-600 via-primary-500 to-yellow-500 shadow-2xl border-b-4 border-primary-400 relative">
         {/* Animated background pattern */}
         <div className="absolute inset-0 opacity-10">

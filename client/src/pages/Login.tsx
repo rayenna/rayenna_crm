@@ -40,7 +40,7 @@ const Login = () => {
         backgroundRepeat: 'no-repeat',
       }}
     >
-      <div className="max-w-md w-full space-y-8 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 border-2 border-white/20">
+      <div className="max-w-md w-full space-y-8 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 border-2 border-white/20 border-l-4 border-l-primary-500">
         {apiNotConfigured && (
           <div className="mb-4 p-3 rounded-lg bg-amber-100 border border-amber-400 text-amber-900 text-sm">
             <strong>API not configured.</strong> Set <code className="bg-amber-200/60 px-1 rounded">VITE_API_BASE_URL</code> in Render (Static Site → Environment), then <strong>redeploy</strong>. Login will not work until then.
@@ -54,7 +54,7 @@ const Login = () => {
               className="h-32 w-auto mx-auto mb-4 drop-shadow-lg"
             />
           </div>
-          <h2 className="text-4xl font-extrabold bg-gradient-to-r from-primary-600 via-primary-500 to-yellow-500 bg-clip-text text-transparent mb-2">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
             Rayenna CRM
           </h2>
           <p className="mt-2 text-sm font-medium text-gray-600">

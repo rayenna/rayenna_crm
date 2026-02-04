@@ -9,11 +9,11 @@ interface HelpSidebarProps {
 
 const HelpSidebar = ({ sections, selectedSection, onSectionSelect }: HelpSidebarProps) => {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col h-full max-h-[calc(100vh-8rem)] sticky top-6">
+    <div className="bg-gradient-to-br from-white to-sky-50/30 rounded-xl shadow-sm border border-sky-100/60 flex flex-col h-full max-h-[calc(100vh-8rem)] sticky top-6">
       {/* Header */}
-      <div className="px-4 lg:px-6 pt-4 lg:pt-6 pb-4 border-b border-gray-200">
+      <div className="px-4 lg:px-6 pt-4 lg:pt-6 pb-4 border-b border-sky-100/80">
         <h2 className="text-lg font-bold text-gray-900">Help Topics</h2>
-        <p className="text-xs text-gray-500 mt-1">Press ? for help</p>
+        <p className="text-xs text-sky-600/80 mt-1">Press ? for help</p>
       </div>
 
       {/* Scrollable Navigation */}
@@ -40,7 +40,7 @@ const HelpSidebar = ({ sections, selectedSection, onSectionSelect }: HelpSidebar
       <div className="px-3 lg:px-4 pt-4 pb-4 lg:pb-6 border-t border-gray-200">
         <Link
           to="/about"
-          className="block px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-all duration-200"
+          className="block px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-sky-50/50 hover:text-sky-700 transition-all duration-200"
         >
           About
         </Link>

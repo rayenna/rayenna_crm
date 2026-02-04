@@ -61,6 +61,8 @@ const DashboardFilters = ({
   const quarterDropdownRef = useRef<HTMLDivElement>(null)
   const monthDropdownRef = useRef<HTMLDivElement>(null)
 
+  const prevFYCountRef = useRef<number | null>(null)
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -79,12 +81,16 @@ const DashboardFilters = ({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Clear quarter and month if FY selection changes to not exactly one FY (default view: greyed out)
+  // Clear quarter and month only when user actively changes FY from exactly one to not one.
+  // Do NOT clear on initial mount or when restoring filters (e.g. navigating back to Projects).
   useEffect(() => {
-    if (selectedFYs.length !== 1) {
+    const currentCount = selectedFYs.length
+    const prevCount = prevFYCountRef.current
+    if (prevCount === 1 && currentCount !== 1) {
       onQuarterChange([])
       onMonthChange([])
     }
+    prevFYCountRef.current = currentCount
   }, [selectedFYs, onQuarterChange, onMonthChange])
 
   // When quarter selection changes, keep only months that belong to selected quarter(s)

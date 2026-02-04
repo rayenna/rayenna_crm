@@ -91,15 +91,22 @@ const TallyExport = () => {
   return (
     <div className="px-4 py-6 sm:px-0">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-extrabold text-primary-800 mb-3">
-          Tally Data Export
-        </h1>
+        <div className="border-l-4 border-l-emerald-500 pl-4 mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            Tally Data Export
+          </h1>
+          <p className="text-sm text-emerald-600/80 mt-0.5">Export projects, invoices, and payments for Tally integration</p>
+        </div>
 
-        <div className="bg-white shadow rounded-lg p-6 space-y-6">
+        <div className="bg-white rounded-xl border-l-4 border-l-emerald-400 border border-emerald-100 shadow-sm p-6 space-y-6">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Export Data</h3>
+          </div>
           {/* Info Banner */}
-          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-indigo-900 mb-2">Export Instructions</h3>
-            <ul className="text-sm text-indigo-800 space-y-1 list-disc list-inside">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-emerald-900 mb-2">Export Instructions</h3>
+            <ul className="text-sm text-emerald-800 space-y-1 list-disc list-inside">
               <li><strong>Excel:</strong> Import directly into Tally using Excel import feature</li>
               <li><strong>CSV:</strong> Compatible with Tally CSV import format</li>
               <li><strong>Tally XML:</strong> Native Tally format - Import via Tally Gateway of Tally</li>
@@ -115,10 +122,10 @@ const TallyExport = () => {
               <button
                 type="button"
                 onClick={() => setExportType('projects')}
-                className={`px-4 py-3 rounded-lg border-2 transition-colors ${
+                className={`px-4 py-3 rounded-xl border-2 transition-colors ${
                   exportType === 'projects'
-                    ? 'border-primary-600 bg-primary-50 text-primary-700 font-semibold'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-primary-300'
+                    ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-semibold'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-emerald-300'
                 }`}
               >
                 Projects
@@ -126,10 +133,10 @@ const TallyExport = () => {
               <button
                 type="button"
                 onClick={() => setExportType('invoices')}
-                className={`px-4 py-3 rounded-lg border-2 transition-colors ${
+                className={`px-4 py-3 rounded-xl border-2 transition-colors ${
                   exportType === 'invoices'
-                    ? 'border-primary-600 bg-primary-50 text-primary-700 font-semibold'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-primary-300'
+                    ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-semibold'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-emerald-300'
                 }`}
               >
                 Invoices
@@ -137,10 +144,10 @@ const TallyExport = () => {
               <button
                 type="button"
                 onClick={() => setExportType('payments')}
-                className={`px-4 py-3 rounded-lg border-2 transition-colors ${
+                className={`px-4 py-3 rounded-xl border-2 transition-colors ${
                   exportType === 'payments'
-                    ? 'border-primary-600 bg-primary-50 text-primary-700 font-semibold'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-primary-300'
+                    ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-semibold'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-emerald-300'
                 }`}
               >
                 Payments
@@ -168,10 +175,10 @@ const TallyExport = () => {
               <button
                 type="button"
                 onClick={() => setFormat('csv')}
-                className={`px-4 py-3 rounded-lg border-2 transition-colors ${
+                className={`px-4 py-3 rounded-xl border-2 transition-colors ${
                   format === 'csv'
-                    ? 'border-primary-600 bg-primary-50 text-primary-700 font-semibold'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-primary-300'
+                    ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-semibold'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-emerald-300'
                 }`}
               >
                 CSV (.csv)
@@ -233,7 +240,7 @@ const TallyExport = () => {
               className={`w-full sm:w-auto px-6 py-3 rounded-lg font-semibold transition-colors ${
                 loading || showExportConfirm
                   ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
-                  : 'bg-primary-600 text-white hover:bg-primary-700'
+                  : 'bg-gradient-to-r from-emerald-600 to-primary-600 text-white hover:from-emerald-700 hover:to-primary-700 shadow-md'
               }`}
             >
               {loading ? 'Exporting...' : `Export ${exportType.charAt(0).toUpperCase() + exportType.slice(1)} as ${format.toUpperCase().replace('-', '/')}`}
@@ -281,8 +288,11 @@ const TallyExport = () => {
         )}
 
         {/* Help Section */}
-        <div className="mt-6 bg-gray-50 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">How to Import into Tally</h3>
+        <div className="mt-6 bg-white rounded-xl p-6 shadow-sm border-l-4 border-l-sky-400 border border-sky-100">
+          <div className="flex items-center gap-2 mb-4">
+            <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">How to Import into Tally</h3>
+          </div>
           <div className="space-y-4 text-sm text-gray-700">
             <div>
               <h4 className="font-semibold mb-2">For Excel/CSV Format:</h4>
