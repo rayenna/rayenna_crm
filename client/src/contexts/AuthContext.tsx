@@ -62,12 +62,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [clearAuth])
 
   const login = async (email: string, password: string) => {
-    const response = await axiosInstance.post('/api/auth/login', { email, password })
-    const { token: newToken, user: newUser } = response.data
-    setToken(newToken)
-    setUser(newUser)
-    localStorage.setItem('token', newToken)
-    axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
+    try {
+      const response = await axiosInstance.post('/api/auth/login', { email, password })
+      const { token: newToken, user: newUser } = response.data
+      setToken(newToken)
+      setUser(newUser)
+      localStorage.setItem('token', newToken)
+      axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
+    } catch (error) {
+      throw error
+    }
   }
 
   const logout = useCallback(() => {
