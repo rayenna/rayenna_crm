@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './contexts/AuthContext'
@@ -20,6 +21,17 @@ import Help from './pages/Help'
 import Layout from './components/Layout'
 
 function App() {
+  useEffect(() => {
+    const preventCopy = (e: ClipboardEvent) => e.preventDefault()
+    const preventContextMenu = (e: MouseEvent) => e.preventDefault()
+    document.addEventListener('copy', preventCopy)
+    document.addEventListener('contextmenu', preventContextMenu)
+    return () => {
+      document.removeEventListener('copy', preventCopy)
+      document.removeEventListener('contextmenu', preventContextMenu)
+    }
+  }, [])
+
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>

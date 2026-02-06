@@ -23,6 +23,16 @@ body {
   animation: gradientShift 15s ease infinite;
   background-attachment: fixed;
   color: #1e293b;
+  user-select: none;
+}
+
+body * {
+  user-select: none;
+}
+
+input,
+textarea {
+  user-select: text;
 }
 
 @keyframes gradientShift {
