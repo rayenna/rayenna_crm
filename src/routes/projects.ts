@@ -78,7 +78,7 @@ router.get(
     query('hasDocuments').optional().isIn(['true', 'false']),
     query('page').optional().isInt({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 100 }),
-    query('sortBy').optional().isIn(['systemCapacity', 'projectCost', 'confirmationDate', 'profitability', 'customerName']),
+    query('sortBy').optional().isIn(['systemCapacity', 'projectCost', 'confirmationDate', 'creationDate', 'profitability', 'customerName']),
     query('sortOrder').optional().isIn(['asc', 'desc']),
   ],
   async (req: Request, res: Response) => {
@@ -419,6 +419,9 @@ router.get(
             break;
           case 'confirmationDate':
             orderBy = [{ confirmationDate: order }, { createdAt: 'desc' }];
+            break;
+          case 'creationDate':
+            orderBy = [{ createdAt: order }];
             break;
           case 'profitability':
             orderBy = [{ profitability: order }, { createdAt: 'desc' }];
@@ -2547,6 +2550,9 @@ router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req:
           break;
         case 'confirmationDate':
           orderBy = [{ confirmationDate: order }, { createdAt: 'desc' }];
+          break;
+        case 'creationDate':
+          orderBy = [{ createdAt: order }];
           break;
         case 'profitability':
           orderBy = [{ profitability: order }, { createdAt: 'desc' }];

@@ -289,8 +289,7 @@ const Projects = () => {
       (filters.supportTicketStatus.length > 0 ? 1 : 0) +
       (filters.paymentStatus.length > 0 ? 1 : 0) +
       (user?.role !== UserRole.SALES && filters.salespersonId.length > 0 ? 1 : 0) +
-      (filters.hasDocuments ? 1 : 0) +
-      (filters.sortBy ? 1 : 0)
+      (filters.hasDocuments ? 1 : 0)
     )
   }, [
     filters.status,
@@ -300,7 +299,6 @@ const Projects = () => {
     filters.paymentStatus,
     filters.salespersonId,
     filters.hasDocuments,
-    filters.sortBy,
     defaultStatusValues,
     user?.role,
   ])
@@ -481,194 +479,211 @@ const Projects = () => {
 
       <div className="bg-gradient-to-br from-white to-amber-50/30 rounded-xl border border-amber-100/60 shadow-sm mb-4 p-4 sm:p-5">
         <div className="space-y-2 sm:space-y-3">
-        {/* Row 1: Search Bar */}
-        <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-          <input
-            type="text"
-            placeholder="Search across all projects..."
-            className="w-full sm:flex-1 min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-          <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={clearAllFilters}
-              className="min-h-[40px] px-3 py-2 rounded-lg border border-amber-200 bg-white hover:bg-amber-50/80 text-gray-700 font-medium transition-colors"
-              title="Clear search and all filters"
-            >
-              Clear All
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowMoreFilters((v) => !v)}
-              className="min-h-[40px] px-3 py-2 rounded-lg border border-amber-200 bg-white hover:bg-amber-50/80 text-gray-700 font-medium transition-colors flex items-center justify-center gap-2"
-              aria-expanded={showMoreFilters}
-              aria-controls="projects-more-filters"
-              title="Show or hide more filters"
-            >
-              <span className="truncate">
-                {showMoreFilters ? 'Hide Filters' : 'More Filters'}
-                {!showMoreFilters && moreFiltersActiveCount > 0 ? ` (${moreFiltersActiveCount})` : ''}
-              </span>
-              <svg
-                className={`h-4 w-4 text-gray-500 transition-transform ${showMoreFilters ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Row 1b: FY / Quarter / Month Filters (same as Dashboard) */}
-        <div className="pt-1">
-          <DashboardFilters
-            availableFYs={data?.availableFYs ?? []}
-            selectedFYs={selectedFYs}
-            selectedQuarters={selectedQuarters}
-            selectedMonths={selectedMonths}
-            onFYChange={setSelectedFYs}
-            onQuarterChange={setSelectedQuarters}
-            onMonthChange={setSelectedMonths}
-            compact
-          />
-        </div>
-
-        <div
-          id="projects-more-filters"
-          className={`${showMoreFilters ? 'overflow-visible' : 'overflow-hidden'} transition-all duration-300 ease-in-out ${
-            showMoreFilters ? 'max-h-[1200px] opacity-100' : 'max-h-0 opacity-0'
-          }`}
-        >
-          <div className={`${showMoreFilters ? 'pointer-events-auto' : 'pointer-events-none'} pt-2 space-y-2 sm:space-y-3`}>
-        {/* Row 2: Primary Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
-          <MultiSelect
-            options={statusOptions}
-            selectedValues={filters.status}
-            onChange={handleStatusChange}
-            placeholder="All Statuses"
-            multiSelectedLabel={user?.role === UserRole.OPERATIONS ? 'Confirmed Pipeline' : 'Active Pipeline'}
-            compact
-          />
-          <MultiSelect
-            options={typeOptions}
-            selectedValues={filters.type}
-            onChange={(values) => setFilters({ ...filters, type: values })}
-            placeholder="All Segments"
-            compact
-          />
-          <MultiSelect
-            options={projectServiceTypeOptions}
-            selectedValues={filters.projectServiceType}
-            onChange={(values) => setFilters({ ...filters, projectServiceType: values })}
-            placeholder="All Project Types"
-            compact
-          />
-        </div>
-
-        {/* Row 3: Secondary Filters */}
-        <div className={`grid grid-cols-1 sm:grid-cols-2 ${user?.role !== UserRole.SALES ? (paymentStatusOptions.length > 0 ? 'lg:grid-cols-3' : 'lg:grid-cols-2') : (paymentStatusOptions.length > 0 ? 'lg:grid-cols-2' : 'lg:grid-cols-1')} gap-2 sm:gap-3`}>
-          <MultiSelect
-            options={supportTicketStatusOptions}
-            selectedValues={filters.supportTicketStatus}
-            onChange={(values) => setFilters({ ...filters, supportTicketStatus: values })}
-            placeholder="All Ticket Statuses"
-            compact
-          />
-          {paymentStatusOptions.length > 0 && (
-            <MultiSelect
-              options={paymentStatusOptions}
-              selectedValues={filters.paymentStatus}
-              onChange={(values) => setFilters({ ...filters, paymentStatus: values })}
-              placeholder="All Payment Statuses"
-              compact
-            />
-          )}
-          {user?.role !== UserRole.SALES && (
-            <MultiSelect
-              options={salesUserOptions}
-              selectedValues={filters.salespersonId}
-              onChange={(values) => setFilters({ ...filters, salespersonId: values })}
-              placeholder="All Sales Users"
-              compact
-            />
-          )}
-        </div>
-
-        {/* Has documents filter */}
-        <div className="flex items-center gap-2">
-          <label className="inline-flex items-center gap-2 cursor-pointer">
+          {/* Row 1: Search Bar + Show/Hide Filters toggle (and Clear All on larger screens) */}
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
             <input
-              type="checkbox"
-              checked={filters.hasDocuments}
-              onChange={(e) => setFilters(prev => ({ ...prev, hasDocuments: e.target.checked }))}
-              className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/20"
+              type="text"
+              placeholder="Search across all projects..."
+              className="w-full sm:flex-1 min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
             />
-            <span className="text-sm text-gray-600">Has documents</span>
-          </label>
-          <span className="text-xs text-gray-500">(only projects with at least one attachment)</span>
-        </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => setShowMoreFilters((v) => !v)}
+                className="flex-1 min-h-[40px] px-3 py-2 rounded-lg border border-amber-200 bg-white hover:bg-amber-50/80 text-gray-700 font-medium transition-colors flex items-center justify-center gap-2"
+                aria-expanded={showMoreFilters}
+                aria-controls="projects-more-filters"
+                title="Show or hide additional filters"
+              >
+                <span className="truncate">
+                  {showMoreFilters ? 'Hide Filters' : 'Show Filters'}
+                  {!showMoreFilters && moreFiltersActiveCount > 0 ? ` (${moreFiltersActiveCount})` : ''}
+                </span>
+                <svg
+                  className={`h-4 w-4 text-gray-500 transition-transform ${showMoreFilters ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {/* Clear All next to toggle - visible on all screen sizes so it can reset Sort/filters even when filters are hidden */}
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="flex-1 sm:flex-none inline-flex justify-center items-center min-h-[40px] px-4 py-2 rounded-lg border border-amber-200 bg-white hover:bg-amber-50/80 text-gray-700 font-medium text-sm transition-colors"
+                title="Clear search and all filters"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3">
-          <div>
-            <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1.5">Sort By</label>
-            <select
-              className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-gray-900 text-sm"
-              value={filters.sortBy}
-              onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
-            >
-              <option value="">Default (Confirmation Date)</option>
-              <option value="systemCapacity">System Capacity</option>
-              <option value="projectCost">Order Value</option>
-              <option value="confirmationDate">Confirmation Date</option>
-              <option value="profitability">Profitability</option>
-              <option value="customerName">Customer Name</option>
-            </select>
+          {/* Row 2: Sort controls - always visible */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1.5">Sort By</label>
+              <select
+                className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-gray-900 text-sm"
+                value={filters.sortBy}
+                onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
+              >
+                <option value="">Default (Confirmation Date)</option>
+                <option value="systemCapacity">System Capacity</option>
+                <option value="projectCost">Order Value</option>
+                <option value="confirmationDate">Confirmation Date</option>
+                <option value="creationDate">Creation Date</option>
+                <option value="profitability">Profitability</option>
+                <option value="customerName">Customer Name</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
+              <select
+                className="w-full min-h-[40px] border-2 border-primary-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 bg-gradient-to-r from-white to-primary-50 shadow-md text-gray-700 font-medium text-[13px] disabled:opacity-60 disabled:cursor-not-allowed"
+                value={filters.sortOrder}
+                onChange={(e) => setFilters({ ...filters, sortOrder: e.target.value })}
+                disabled={!filters.sortBy}
+              >
+                <option value="desc">Descending</option>
+                <option value="asc">Ascending</option>
+              </select>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
-            <select
-              className="w-full min-h-[40px] border-2 border-primary-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 bg-gradient-to-r from-white to-primary-50 shadow-md text-gray-700 font-medium text-[13px] disabled:opacity-60 disabled:cursor-not-allowed"
-              value={filters.sortOrder}
-              onChange={(e) => setFilters({ ...filters, sortOrder: e.target.value })}
-              disabled={!filters.sortBy}
-            >
-              <option value="desc">Descending</option>
-              <option value="asc">Ascending</option>
-            </select>
-          </div>
-        </div>
 
-        {/* Export buttons - Only visible to Admin users */}
-        {hasRole([UserRole.ADMIN]) && (
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleExportClick('excel')}
-              className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 text-sm font-medium flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Export to Excel
-            </button>
-            <button
-              onClick={() => handleExportClick('csv')}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-sm font-medium flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Export to CSV
-            </button>
+          {/* Additional filters - hidden by default, shown when "Show Filters" is active */}
+          <div
+            id="projects-more-filters"
+            className={`${showMoreFilters ? 'overflow-visible' : 'overflow-hidden'} transition-all duration-300 ease-in-out ${
+              showMoreFilters ? 'max-h-[1200px] opacity-100' : 'max-h-0 opacity-0'
+            }`}
+          >
+            <div className={`${showMoreFilters ? 'pointer-events-auto' : 'pointer-events-none'} pt-2 space-y-2 sm:space-y-3`}>
+              {/* FY / Quarter / Month Filters (same as Dashboard) */}
+              <div className="pt-1">
+                <DashboardFilters
+                  availableFYs={data?.availableFYs ?? []}
+                  selectedFYs={selectedFYs}
+                  selectedQuarters={selectedQuarters}
+                  selectedMonths={selectedMonths}
+                  onFYChange={setSelectedFYs}
+                  onQuarterChange={setSelectedQuarters}
+                  onMonthChange={setSelectedMonths}
+                  compact
+                />
+              </div>
+
+              {/* Primary Filters */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+                <MultiSelect
+                  options={statusOptions}
+                  selectedValues={filters.status}
+                  onChange={handleStatusChange}
+                  placeholder="All Statuses"
+                  multiSelectedLabel={user?.role === UserRole.OPERATIONS ? 'Confirmed Pipeline' : 'Active Pipeline'}
+                  compact
+                />
+                <MultiSelect
+                  options={typeOptions}
+                  selectedValues={filters.type}
+                  onChange={(values) => setFilters({ ...filters, type: values })}
+                  placeholder="All Segments"
+                  compact
+                />
+                <MultiSelect
+                  options={projectServiceTypeOptions}
+                  selectedValues={filters.projectServiceType}
+                  onChange={(values) => setFilters({ ...filters, projectServiceType: values })}
+                  placeholder="All Project Types"
+                  compact
+                />
+              </div>
+
+              {/* Secondary Filters */}
+              <div className={`grid grid-cols-1 sm:grid-cols-2 ${user?.role !== UserRole.SALES ? (paymentStatusOptions.length > 0 ? 'lg:grid-cols-3' : 'lg:grid-cols-2') : (paymentStatusOptions.length > 0 ? 'lg:grid-cols-2' : 'lg:grid-cols-1')} gap-2 sm:gap-3`}>
+                <MultiSelect
+                  options={supportTicketStatusOptions}
+                  selectedValues={filters.supportTicketStatus}
+                  onChange={(values) => setFilters({ ...filters, supportTicketStatus: values })}
+                  placeholder="All Ticket Statuses"
+                  compact
+                />
+                {paymentStatusOptions.length > 0 && (
+                  <MultiSelect
+                    options={paymentStatusOptions}
+                    selectedValues={filters.paymentStatus}
+                    onChange={(values) => setFilters({ ...filters, paymentStatus: values })}
+                    placeholder="All Payment Statuses"
+                    compact
+                  />
+                )}
+                {user?.role !== UserRole.SALES && (
+                  <MultiSelect
+                    options={salesUserOptions}
+                    selectedValues={filters.salespersonId}
+                    onChange={(values) => setFilters({ ...filters, salespersonId: values })}
+                    placeholder="All Sales Users"
+                    compact
+                  />
+                )}
+              </div>
+
+              {/* Has artifacts filter */}
+              <div className="flex items-center gap-2">
+                <label className="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={filters.hasDocuments}
+                    onChange={(e) => setFilters(prev => ({ ...prev, hasDocuments: e.target.checked }))}
+                    className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/20"
+                  />
+                  <span className="text-sm text-gray-600">Has Artifacts</span>
+                </label>
+                <span className="text-xs text-gray-500">(only projects with at least one attachment)</span>
+              </div>
+
+              {/* Export buttons - Only visible to Admin users */}
+              {hasRole([UserRole.ADMIN]) && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleExportClick('excel')}
+                    className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 text-sm font-medium flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Export to Excel
+                  </button>
+                  <button
+                    onClick={() => handleExportClick('csv')}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-sm font-medium flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Export to CSV
+                  </button>
+                </div>
+              )}
+
+              {/* Clear all (search + filters) - bottom placement on mobile for easy access */}
+              <div className="flex justify-end pt-1 sm:hidden">
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="min-h-[40px] px-4 py-2 rounded-lg border border-amber-200 bg-white hover:bg-amber-50/80 text-gray-700 font-medium text-sm transition-colors w-full"
+                  title="Clear search and all filters"
+                >
+                  Clear All
+                </button>
+              </div>
+
+            </div>
           </div>
-        )}
-          </div>
-        </div>
         </div>
       </div>
 
