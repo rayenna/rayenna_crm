@@ -728,14 +728,36 @@ const Projects = () => {
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead>
-              <tr className="border-b border-gray-200 bg-white">
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l-4 border-l-amber-400">Project</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Segment</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stage</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Order Value</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Created</th>
+              {/* Subtotals row - aligned above Capacity and Order Value columns */}
+              <tr className="border-b border-gray-100 bg-amber-50/30">
+                <th className="px-4 py-2" scope="col" />
+                <th className="px-4 py-2 hidden lg:table-cell" scope="col" />
+                <th className="px-4 py-2" scope="col" />
+                <th className="px-4 py-2 text-right align-bottom min-w-0" scope="col">
+                  <div className="inline-block px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-gradient-to-br from-orange-100 to-amber-200 border-2 border-orange-400 text-xs font-bold text-orange-900 tabular-nums whitespace-nowrap shadow-md shadow-orange-300/40 ring-1 ring-orange-300/50">
+                    {(data?.totals?.capacitySum ?? 0) / 1000 > 0
+                      ? `${((data?.totals?.capacitySum ?? 0) / 1000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} MW`
+                      : '—'}
+                  </div>
+                </th>
+                <th className="px-4 py-2 text-right align-bottom min-w-0" scope="col">
+                  <div className="inline-block px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-gradient-to-br from-emerald-100 to-green-200 border-2 border-emerald-500 text-xs font-bold text-emerald-900 tabular-nums whitespace-nowrap shadow-md shadow-emerald-400/40 ring-1 ring-emerald-400/50">
+                    {(data?.totals?.costSum ?? 0) > 0
+                      ? `₹${((data?.totals?.costSum ?? 0) / 1_000_000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} M`
+                      : '—'}
+                  </div>
+                </th>
+                <th className="px-4 py-2" scope="col" />
+                <th className="px-4 py-2 hidden sm:table-cell" scope="col" />
+              </tr>
+              <tr className="border-b border-gray-200 bg-gradient-to-r from-amber-50 to-amber-100/80">
+                <th className="px-4 py-3 text-left text-sm font-bold text-gray-700 uppercase tracking-wider border-l-4 border-l-amber-400">Project</th>
+                <th className="px-4 py-3 text-left text-sm font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">Segment</th>
+                <th className="px-4 py-3 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Stage</th>
+                <th className="px-4 py-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wider">Capacity</th>
+                <th className="px-4 py-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wider">Order Value</th>
+                <th className="px-4 py-3 text-center text-sm font-bold text-gray-700 uppercase tracking-wider">Payment</th>
+                <th className="px-4 py-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wider hidden sm:table-cell">Created</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">

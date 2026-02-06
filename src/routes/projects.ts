@@ -440,7 +440,7 @@ router.get(
         ];
       }
 
-      const [projects, total] = await Promise.all([
+      const [projects, total, totals] = await Promise.all([
         prisma.project.findMany({
           where,
           select: {
@@ -482,11 +482,19 @@ router.get(
           take,
         }),
         prisma.project.count({ where }),
+        prisma.project.aggregate({
+          where,
+          _sum: { systemCapacity: true, projectCost: true },
+        }),
       ]);
 
       res.json({
         projects,
         availableFYs,
+        totals: {
+          capacitySum: totals._sum.systemCapacity ?? 0,
+          costSum: totals._sum.projectCost ?? 0,
+        },
         pagination: {
           page: parseInt(page as string),
           limit: take,
