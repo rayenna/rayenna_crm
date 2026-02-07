@@ -31,7 +31,8 @@ body * {
 }
 
 input,
-textarea {
+textarea,
+[contenteditable="true"] {
   user-select: text;
 }
 

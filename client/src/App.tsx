@@ -22,13 +22,37 @@ import Layout from './components/Layout'
 
 function App() {
   useEffect(() => {
-    const preventCopy = (e: ClipboardEvent) => e.preventDefault()
-    const preventContextMenu = (e: MouseEvent) => e.preventDefault()
-    document.addEventListener('copy', preventCopy)
-    document.addEventListener('contextmenu', preventContextMenu)
+    const isEditable = (el: EventTarget | null): boolean => {
+      if (!el || !(el instanceof HTMLElement)) return false
+      const node = el as HTMLElement
+      const tag = node.tagName?.toLowerCase()
+      if (tag === 'input' || tag === 'textarea') return true
+      if (node.isContentEditable) return true
+      return false
+    }
+
+    const handleCopy = (e: ClipboardEvent) => {
+      if (!isEditable(document.activeElement)) e.preventDefault()
+    }
+    const handleCut = (e: ClipboardEvent) => {
+      if (!isEditable(document.activeElement)) e.preventDefault()
+    }
+    const handlePaste = (e: ClipboardEvent) => {
+      if (!isEditable(document.activeElement)) e.preventDefault()
+    }
+    const handleContextMenu = (e: MouseEvent) => {
+      if (!isEditable(e.target as HTMLElement)) e.preventDefault()
+    }
+
+    document.addEventListener('copy', handleCopy)
+    document.addEventListener('cut', handleCut)
+    document.addEventListener('paste', handlePaste)
+    document.addEventListener('contextmenu', handleContextMenu)
     return () => {
-      document.removeEventListener('copy', preventCopy)
-      document.removeEventListener('contextmenu', preventContextMenu)
+      document.removeEventListener('copy', handleCopy)
+      document.removeEventListener('cut', handleCut)
+      document.removeEventListener('paste', handlePaste)
+      document.removeEventListener('contextmenu', handleContextMenu)
     }
   }, [])
 
