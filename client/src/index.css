@@ -21,9 +21,16 @@ body {
   background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 25%, #fef3c7 50%, #fef9c3 75%, #eff6ff 100%);
   background-size: 400% 400%;
   animation: gradientShift 15s ease infinite;
-  background-attachment: fixed;
+  background-attachment: scroll; /* scroll instead of fixed – fixes Chrome flickering/hanging on Windows */
   color: #1e293b;
   user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body {
+    animation: none;
+    background-position: 0% 50%;
+  }
 }
 
 body * {
