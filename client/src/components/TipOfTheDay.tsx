@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom'
 import {
   getTipForToday,
   shouldShowTip,
@@ -9,6 +9,8 @@ import {
 
 const TipOfTheDay = () => {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [show, setShow] = useState(false)
   const [tip, setTip] = useState('')
 
@@ -20,14 +22,24 @@ const TipOfTheDay = () => {
     }
   }, [searchParams])
 
+  const clearShowTipFromUrl = () => {
+    if (searchParams.get('showTip') !== '1') return
+    const params = new URLSearchParams(location.search)
+    params.delete('showTip')
+    const newSearch = params.toString()
+    navigate({ pathname: location.pathname, search: newSearch ? `?${newSearch}` : '' }, { replace: true })
+  }
+
   const handleGotIt = () => {
     markTipShown()
     setShow(false)
+    clearShowTipFromUrl()
   }
 
   const handleDontShowAgain = () => {
     markDontShowAgain()
     setShow(false)
+    clearShowTipFromUrl()
   }
 
   if (!show) return null

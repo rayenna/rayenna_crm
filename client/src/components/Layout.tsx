@@ -28,8 +28,16 @@ const Layout = () => {
   const helpMenuItems = [
     { name: 'Help (?)', path: '/help' },
     { name: 'About', path: '/about' },
-    { name: 'Tip of the Day', path: '/dashboard?showTip=1' },
+    { name: 'Tip of the Day', path: '/dashboard?showTip=1', openTip: true },
   ]
+
+  const openTipOfTheDay = () => {
+    const params = new URLSearchParams(location.search)
+    params.set('showTip', '1')
+    navigate({ pathname: location.pathname, search: params.toString() })
+    setHelpDropdownOpen(false)
+    setMobileMenuOpen(false)
+  }
   
   const isHelpActive = location.pathname.startsWith('/help') || location.pathname.startsWith('/about')
 
@@ -144,25 +152,35 @@ const Layout = () => {
                   {/* Dropdown Menu */}
                   {helpDropdownOpen && (
                     <div className="absolute top-full left-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[100]">
-                      {helpMenuItems.map((item) => (
-                        <Link
-                          key={item.path}
-                          to={item.path}
-                          state={{ from: { pathname: location.pathname } }}
-                          onClick={() => {
-                            // Store current route for context-sensitive help
-                            sessionStorage.setItem('helpReferrer', location.pathname)
-                            setHelpDropdownOpen(false)
-                          }}
-                          className={`block px-4 py-2 text-sm font-medium transition-colors ${
-                            location.pathname.startsWith(item.path)
-                              ? 'bg-primary-50 text-primary-700'
-                              : 'text-gray-700 hover:bg-gray-50 hover:text-primary-600'
-                          }`}
-                        >
-                          {item.name}
-                        </Link>
-                      ))}
+                      {helpMenuItems.map((item) =>
+                        item.openTip ? (
+                          <button
+                            key={item.path}
+                            type="button"
+                            onClick={openTipOfTheDay}
+                            className="block w-full text-left px-4 py-2 text-sm font-medium transition-colors text-gray-700 hover:bg-gray-50 hover:text-primary-600"
+                          >
+                            {item.name}
+                          </button>
+                        ) : (
+                          <Link
+                            key={item.path}
+                            to={item.path}
+                            state={{ from: { pathname: location.pathname } }}
+                            onClick={() => {
+                              sessionStorage.setItem('helpReferrer', location.pathname)
+                              setHelpDropdownOpen(false)
+                            }}
+                            className={`block px-4 py-2 text-sm font-medium transition-colors ${
+                              location.pathname.startsWith(item.path)
+                                ? 'bg-primary-50 text-primary-700'
+                                : 'text-gray-700 hover:bg-gray-50 hover:text-primary-600'
+                            }`}
+                          >
+                            {item.name}
+                          </Link>
+                        )
+                      )}
                     </div>
                   )}
                 </div>
@@ -224,20 +242,31 @@ const Layout = () => {
                   </Link>
                 ))}
                 {/* Help Menu Items for Mobile */}
-                {helpMenuItems.map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
-                      location.pathname.startsWith(item.path)
-                        ? 'bg-white/25 text-white shadow-2xl font-bold backdrop-blur-md border-2 border-white/30'
-                        : 'text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm'
-                    }`}
-                  >
-                    {item.name}
-                  </Link>
-                ))}
+                {helpMenuItems.map((item) =>
+                  item.openTip ? (
+                    <button
+                      key={item.path}
+                      type="button"
+                      onClick={openTipOfTheDay}
+                      className="block w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm"
+                    >
+                      {item.name}
+                    </button>
+                  ) : (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                        location.pathname.startsWith(item.path)
+                          ? 'bg-white/25 text-white shadow-2xl font-bold backdrop-blur-md border-2 border-white/30'
+                          : 'text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm'
+                      }`}
+                    >
+                      {item.name}
+                    </Link>
+                  )
+                )}
                 {/* Mobile user info and actions */}
                 <div className="mt-4 pt-4 border-t border-white/20 px-4 space-y-2">
                   <div className="text-sm text-white/90 font-medium mb-2">{user?.name}</div>
