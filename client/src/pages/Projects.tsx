@@ -611,7 +611,7 @@ const Projects = () => {
                 )}
               </div>
 
-              {/* Row 2: Primary Filters - Pipeline, Segments, Project Types */}
+              {/* Filters: 2 cols on mobile landscape (sm), 3 cols on laptop (lg) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                 <MultiSelect
                   options={statusOptions}
@@ -635,10 +635,6 @@ const Projects = () => {
                   placeholder="Project Types"
                   compact
                 />
-              </div>
-
-              {/* Row 3: Ticket Status, Payment Status, Lead Sources */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                 <MultiSelect
                   options={supportTicketStatusOptions}
                   selectedValues={filters.supportTicketStatus}
