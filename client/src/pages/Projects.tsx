@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../utils/axios'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Project, ProjectStatus, ProjectType, ProjectServiceType, UserRole } from '../types'
+import { Project, ProjectStatus, ProjectType, ProjectServiceType, UserRole, LeadSource } from '../types'
 import { format } from 'date-fns'
 import MultiSelect from '../components/MultiSelect'
 import { useDebounce } from '../hooks/useDebounce'
@@ -141,6 +141,7 @@ const Projects = () => {
     type: [] as string[],
     projectServiceType: [] as string[],
     salespersonId: [] as string[],
+    leadSource: [] as string[],
     supportTicketStatus: [] as string[],
     paymentStatus: [] as string[],
     hasDocuments: false,
@@ -162,7 +163,7 @@ const Projects = () => {
         selectedQuarters?: string[]
         selectedMonths?: string[]
       }
-      if (saved.filters) setFilters(saved.filters)
+      if (saved.filters) setFilters(prev => ({ ...prev, ...saved.filters, leadSource: (saved.filters as any)?.leadSource ?? [] }))
       if (saved.page != null && saved.page >= 1) setPage(saved.page)
       if (saved.searchInput != null) setSearchInput(saved.searchInput)
       if (saved.selectedFYs) setSelectedFYs(saved.selectedFYs)
@@ -235,6 +236,7 @@ const Projects = () => {
     filters.type,
     filters.projectServiceType,
     filters.salespersonId,
+    filters.leadSource,
     filters.supportTicketStatus,
     filters.paymentStatus,
     filters.hasDocuments,
@@ -265,6 +267,7 @@ const Projects = () => {
       type: [],
       projectServiceType: [],
       salespersonId: [],
+      leadSource: [],
       supportTicketStatus: [],
       paymentStatus: [],
       hasDocuments: false,
@@ -289,6 +292,7 @@ const Projects = () => {
       (filters.supportTicketStatus.length > 0 ? 1 : 0) +
       (filters.paymentStatus.length > 0 ? 1 : 0) +
       (user?.role !== UserRole.SALES && filters.salespersonId.length > 0 ? 1 : 0) +
+      (filters.leadSource.length > 0 ? 1 : 0) +
       (filters.hasDocuments ? 1 : 0)
     )
   }, [
@@ -298,6 +302,7 @@ const Projects = () => {
     filters.supportTicketStatus,
     filters.paymentStatus,
     filters.salespersonId,
+    filters.leadSource,
     filters.hasDocuments,
     defaultStatusValues,
     user?.role,
@@ -322,6 +327,7 @@ const Projects = () => {
       filters.type.forEach((value) => params.append('type', value))
       filters.projectServiceType.forEach((value) => params.append('projectServiceType', value))
       filters.salespersonId.forEach((value) => params.append('salespersonId', value))
+      filters.leadSource.forEach((value) => params.append('leadSource', value))
       filters.supportTicketStatus.forEach((value) => params.append('supportTicketStatus', value))
       filters.paymentStatus.forEach((value) => params.append('paymentStatus', value))
       selectedFYs.forEach((fy) => params.append('fy', fy))
@@ -366,6 +372,18 @@ const Projects = () => {
     label: salesUser.name,
   })) || []
 
+  // Lead Source filter options - labels match ProjectDetail display
+  const leadSourceOptions = [
+    { value: LeadSource.WEBSITE, label: 'Website' },
+    { value: LeadSource.REFERRAL, label: 'Referral' },
+    { value: LeadSource.GOOGLE, label: 'Google' },
+    { value: LeadSource.CHANNEL_PARTNER, label: 'Channel Partner' },
+    { value: LeadSource.DIGITAL_MARKETING, label: 'Digital Marketing' },
+    { value: LeadSource.SALES, label: 'Sales' },
+    { value: LeadSource.MANAGEMENT_CONNECT, label: 'Management Connect' },
+    { value: LeadSource.OTHER, label: 'Other' },
+  ]
+
   // Support Ticket Status filter options
   const supportTicketStatusOptions = [
     { value: 'HAS_TICKETS', label: 'Has Tickets (Any Status)' },
@@ -377,7 +395,7 @@ const Projects = () => {
 
   // Payment Status filter options - only show for Finance, Sales, Management, Admin
   const paymentStatusOptions = useMemo(() => {
-    const canSeePaymentFilter = hasRole([UserRole.FINANCE, UserRole.MANAGEMENT, UserRole.ADMIN]) || 
+    const canSeePaymentFilter = hasRole([UserRole.FINANCE, UserRole.MANAGEMENT, UserRole.ADMIN, UserRole.OPERATIONS]) || 
                                  (hasRole([UserRole.SALES]) && user?.id) // Sales can filter their own projects
     if (!canSeePaymentFilter) return []
     
@@ -405,6 +423,7 @@ const Projects = () => {
       filters.type.forEach((value) => params.append('type', value))
       filters.projectServiceType.forEach((value) => params.append('projectServiceType', value))
       filters.salespersonId.forEach((value) => params.append('salespersonId', value))
+      filters.leadSource.forEach((value) => params.append('leadSource', value))
       filters.paymentStatus.forEach((value) => params.append('paymentStatus', value))
       if (filters.search) params.append('search', filters.search)
       if (filters.hasDocuments) params.append('hasDocuments', 'true')
@@ -564,27 +583,41 @@ const Projects = () => {
             }`}
           >
             <div className={`${showMoreFilters ? 'pointer-events-auto' : 'pointer-events-none'} pt-2 space-y-2 sm:space-y-3`}>
-              {/* FY / Quarter / Month Filters (same as Dashboard) */}
-              <div className="pt-1">
-                <DashboardFilters
-                  availableFYs={data?.availableFYs ?? []}
-                  selectedFYs={selectedFYs}
-                  selectedQuarters={selectedQuarters}
-                  selectedMonths={selectedMonths}
-                  onFYChange={setSelectedFYs}
-                  onQuarterChange={setSelectedQuarters}
-                  onMonthChange={setSelectedMonths}
-                  compact
-                />
+              <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1.5">Filter By</label>
+              {/* Row 1: FY, Quarter, Month (2/3 width), Sales User (1/3 width = same as Project Types) */}
+              <div className="pt-1 flex flex-col lg:flex-row lg:items-start gap-2 sm:gap-3">
+                <div className="w-full lg:w-2/3">
+                  <DashboardFilters
+                    availableFYs={data?.availableFYs ?? []}
+                    selectedFYs={selectedFYs}
+                    selectedQuarters={selectedQuarters}
+                    selectedMonths={selectedMonths}
+                    onFYChange={setSelectedFYs}
+                    onQuarterChange={setSelectedQuarters}
+                    onMonthChange={setSelectedMonths}
+                    compact
+                  />
+                </div>
+                {user?.role !== UserRole.SALES && (
+                  <div className="w-full lg:w-1/3">
+                    <MultiSelect
+                      options={salesUserOptions}
+                      selectedValues={filters.salespersonId}
+                      onChange={(values) => setFilters({ ...filters, salespersonId: values })}
+                      placeholder="Sales Users"
+                      compact
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* Primary Filters */}
+              {/* Row 2: Primary Filters - Pipeline, Segments, Project Types */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                 <MultiSelect
                   options={statusOptions}
                   selectedValues={filters.status}
                   onChange={handleStatusChange}
-                  placeholder="All Statuses"
+                  placeholder="Pipeline"
                   multiSelectedLabel={user?.role === UserRole.OPERATIONS ? 'Confirmed Pipeline' : 'Active Pipeline'}
                   compact
                 />
@@ -592,25 +625,25 @@ const Projects = () => {
                   options={typeOptions}
                   selectedValues={filters.type}
                   onChange={(values) => setFilters({ ...filters, type: values })}
-                  placeholder="All Segments"
+                  placeholder="Segments"
                   compact
                 />
                 <MultiSelect
                   options={projectServiceTypeOptions}
                   selectedValues={filters.projectServiceType}
                   onChange={(values) => setFilters({ ...filters, projectServiceType: values })}
-                  placeholder="All Project Types"
+                  placeholder="Project Types"
                   compact
                 />
               </div>
 
-              {/* Secondary Filters */}
-              <div className={`grid grid-cols-1 sm:grid-cols-2 ${user?.role !== UserRole.SALES ? (paymentStatusOptions.length > 0 ? 'lg:grid-cols-3' : 'lg:grid-cols-2') : (paymentStatusOptions.length > 0 ? 'lg:grid-cols-2' : 'lg:grid-cols-1')} gap-2 sm:gap-3`}>
+              {/* Row 3: Ticket Status, Payment Status, Lead Sources */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                 <MultiSelect
                   options={supportTicketStatusOptions}
                   selectedValues={filters.supportTicketStatus}
                   onChange={(values) => setFilters({ ...filters, supportTicketStatus: values })}
-                  placeholder="All Ticket Statuses"
+                  placeholder="Ticket Statuses"
                   compact
                 />
                 {paymentStatusOptions.length > 0 && (
@@ -618,23 +651,21 @@ const Projects = () => {
                     options={paymentStatusOptions}
                     selectedValues={filters.paymentStatus}
                     onChange={(values) => setFilters({ ...filters, paymentStatus: values })}
-                    placeholder="All Payment Statuses"
+                    placeholder="Payment Statuses"
                     compact
                   />
                 )}
-                {user?.role !== UserRole.SALES && (
-                  <MultiSelect
-                    options={salesUserOptions}
-                    selectedValues={filters.salespersonId}
-                    onChange={(values) => setFilters({ ...filters, salespersonId: values })}
-                    placeholder="All Sales Users"
-                    compact
-                  />
-                )}
+                <MultiSelect
+                  options={leadSourceOptions}
+                  selectedValues={filters.leadSource}
+                  onChange={(values) => setFilters({ ...filters, leadSource: values })}
+                  placeholder="Lead Sources"
+                  compact
+                />
               </div>
 
-              {/* Has artifacts filter */}
-              <div className="flex items-center gap-2">
+              {/* Has Artifacts checkbox */}
+              <div className="flex flex-wrap items-center gap-2">
                 <label className="inline-flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -749,16 +780,18 @@ const Projects = () => {
                   </div>
                 </th>
                 <th className="px-4 py-2" scope="col" />
+                <th className="px-4 py-2 hidden md:table-cell" scope="col" />
                 <th className="px-4 py-2 hidden sm:table-cell" scope="col" />
               </tr>
               <tr className="border-b border-gray-200 bg-gradient-to-r from-amber-50 to-amber-100/80">
                 <th className="px-4 py-3 text-left text-sm font-bold text-gray-700 uppercase tracking-wider border-l-4 border-l-amber-400">Project</th>
                 <th className="px-4 py-3 text-left text-sm font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">Segment</th>
                 <th className="px-4 py-3 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Stage</th>
-                <th className="px-4 py-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wider">Capacity</th>
+                <th className="pl-2 pr-4 py-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wider">Capacity</th>
                 <th className="px-4 py-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wider">Order Value</th>
                 <th className="px-4 py-3 text-center text-sm font-bold text-gray-700 uppercase tracking-wider">Payment</th>
-                <th className="px-4 py-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wider hidden sm:table-cell">Created</th>
+                <th className="pl-6 pr-4 py-3 text-left text-sm font-bold text-gray-700 uppercase tracking-wider hidden md:table-cell">Lead Source</th>
+                <th className="px-4 py-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wider hidden sm:table-cell">Confirmation Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -801,7 +834,7 @@ const Projects = () => {
                       {project.projectStatus.replace(/_/g, ' ')}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="pl-2 pr-4 py-3 text-right">
                     <span className="text-sm font-bold text-orange-800 tabular-nums">
                       {project.systemCapacity ? `${project.systemCapacity} kW` : '—'}
                     </span>
@@ -814,9 +847,36 @@ const Projects = () => {
                   <td className="px-4 py-3 text-center">
                     {getPaymentStatusBadge(project)}
                   </td>
+                  <td className="pl-6 pr-4 py-3 text-left hidden md:table-cell">
+                    {project.leadSource === 'WEBSITE' && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-300">Website</span>
+                    )}
+                    {project.leadSource === 'REFERRAL' && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-300">Referral</span>
+                    )}
+                    {project.leadSource === 'GOOGLE' && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">Google</span>
+                    )}
+                    {project.leadSource === 'CHANNEL_PARTNER' && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-red-100 text-red-800 border border-red-300">Channel Partner</span>
+                    )}
+                    {project.leadSource === 'DIGITAL_MARKETING' && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-violet-100 text-violet-800 border border-violet-300">Digital Mktg</span>
+                    )}
+                    {project.leadSource === 'SALES' && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-pink-100 text-pink-800 border border-pink-300">Sales</span>
+                    )}
+                    {project.leadSource === 'MANAGEMENT_CONNECT' && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-300">Mgmt Connect</span>
+                    )}
+                    {project.leadSource === 'OTHER' && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-lime-100 text-lime-800 border border-lime-300">Other</span>
+                    )}
+                    {!project.leadSource && <span className="text-xs text-gray-400">—</span>}
+                  </td>
                   <td className="px-4 py-3 text-right hidden sm:table-cell">
                     <span className="text-xs text-gray-500">
-                      {format(new Date(project.createdAt), 'MMM dd, yyyy')}
+                      {project.confirmationDate ? format(new Date(project.confirmationDate), 'MMM dd, yyyy') : '—'}
                     </span>
                   </td>
                 </tr>

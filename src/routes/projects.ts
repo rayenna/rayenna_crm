@@ -73,6 +73,11 @@ router.get(
       const valid = ['01','02','03','04','05','06','07','08','09','10','11','12'];
       return values.every(v => valid.includes(String(v).padStart(2, '0')));
     }).withMessage('Invalid month value'),
+    query('leadSource').optional().custom((value) => {
+      if (!value) return true;
+      const values = Array.isArray(value) ? value : [value];
+      return values.every(v => Object.values(LeadSource).includes(v as LeadSource));
+    }).withMessage('Invalid leadSource value'),
     query('year').optional().isString(),
     query('search').optional().isString(),
     query('hasDocuments').optional().isIn(['true', 'false']),
@@ -94,6 +99,7 @@ router.get(
         type,
         projectServiceType,
         salespersonId,
+        leadSource,
         supportTicketStatus,
         paymentStatus,
         fy,
@@ -118,6 +124,7 @@ router.get(
       const typeArray = Array.isArray(type) ? type : type ? [type] : [];
       const projectServiceTypeArray = Array.isArray(projectServiceType) ? projectServiceType : projectServiceType ? [projectServiceType] : [];
       const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : salespersonId ? [salespersonId] : [];
+      const leadSourceArray = Array.isArray(leadSource) ? leadSource : leadSource ? [leadSource] : [];
       const supportTicketStatusArray = Array.isArray(supportTicketStatus) ? supportTicketStatus : supportTicketStatus ? [supportTicketStatus] : [];
       const paymentStatusArray = Array.isArray(paymentStatus) ? paymentStatus : paymentStatus ? [paymentStatus] : [];
       const fyArray = Array.isArray(fy) ? fy : fy ? [fy] : [];
@@ -164,6 +171,7 @@ router.get(
       }
       if (typeArray.length > 0) where.type = { in: typeArray as string[] };
       if (projectServiceTypeArray.length > 0) where.projectServiceType = { in: projectServiceTypeArray as string[] };
+      if (leadSourceArray.length > 0) where.leadSource = { in: leadSourceArray as string[] };
       // Only apply salespersonId filter for non-Sales users (Sales users already filtered above)
       if (salespersonIdArray.length > 0 && req.user?.role !== UserRole.SALES) {
         where.salespersonId = { in: salespersonIdArray as string[] };
@@ -457,6 +465,7 @@ router.get(
             confirmationDate: true,
             createdAt: true,
             paymentStatus: true,
+            leadSource: true,
             customer: {
               select: {
                 id: true,
@@ -2492,6 +2501,7 @@ router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req:
       type,
       projectServiceType,
       salespersonId,
+      leadSource,
       year,
       search,
       sortBy,
@@ -2505,6 +2515,7 @@ router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req:
     const typeArray = Array.isArray(type) ? type : type ? [type] : [];
     const projectServiceTypeArray = Array.isArray(projectServiceType) ? projectServiceType : projectServiceType ? [projectServiceType] : [];
     const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : salespersonId ? [salespersonId] : [];
+    const leadSourceArray = Array.isArray(leadSource) ? leadSource : leadSource ? [leadSource] : [];
 
     // Role-based filtering - Sales users only see their own projects
     if (req.user?.role === UserRole.SALES) {
@@ -2518,6 +2529,7 @@ router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req:
     if (salespersonIdArray.length > 0 && req.user?.role !== UserRole.SALES) {
       where.salespersonId = { in: salespersonIdArray as string[] };
     }
+    if (leadSourceArray.length > 0) where.leadSource = { in: leadSourceArray as string[] };
     if (year) where.year = year;
 
     // Handle search - combine with existing conditions using AND
@@ -2645,6 +2657,7 @@ router.get('/export/csv', authenticate, authorize(UserRole.ADMIN), async (req: R
       type,
       projectServiceType,
       salespersonId,
+      leadSource,
       year,
       search,
       sortBy,
@@ -2658,6 +2671,7 @@ router.get('/export/csv', authenticate, authorize(UserRole.ADMIN), async (req: R
     const typeArray = Array.isArray(type) ? type : type ? [type] : [];
     const projectServiceTypeArray = Array.isArray(projectServiceType) ? projectServiceType : projectServiceType ? [projectServiceType] : [];
     const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : salespersonId ? [salespersonId] : [];
+    const leadSourceArray = Array.isArray(leadSource) ? leadSource : leadSource ? [leadSource] : [];
 
     // Role-based filtering - Sales users only see their own projects
     if (req.user?.role === UserRole.SALES) {
@@ -2671,6 +2685,7 @@ router.get('/export/csv', authenticate, authorize(UserRole.ADMIN), async (req: R
     if (salespersonIdArray.length > 0 && req.user?.role !== UserRole.SALES) {
       where.salespersonId = { in: salespersonIdArray as string[] };
     }
+    if (leadSourceArray.length > 0) where.leadSource = { in: leadSourceArray as string[] };
     if (year) where.year = year;
 
     // Handle search - combine with existing conditions using AND

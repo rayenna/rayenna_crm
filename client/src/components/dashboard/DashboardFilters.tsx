@@ -164,15 +164,20 @@ const DashboardFilters = ({
   const optionLabel = compact
     ? 'flex items-center min-h-[40px] px-3 py-2 hover:bg-gradient-to-r hover:from-primary-50 hover:to-primary-100 cursor-pointer rounded-lg transition-all duration-150 hover:shadow-sm touch-manipulation'
     : 'flex items-center min-h-[44px] px-3 py-3 sm:py-2.5 hover:bg-gradient-to-r hover:from-primary-50 hover:to-primary-100 cursor-pointer rounded-lg transition-all duration-200 hover:shadow-sm touch-manipulation'
+  
+  // Dropdown wrapper: when compact, allow full expansion; otherwise constrain max-width
+  const dropdownWrapper = compact
+    ? 'relative w-full sm:w-auto sm:flex-1 flex flex-col'
+    : 'relative w-full sm:w-auto sm:flex-1 sm:max-w-[200px] md:max-w-[220px] lg:max-w-[240px] flex flex-col'
 
   return (
     <div
-      className={`flex flex-col sm:flex-row sm:items-start sm:justify-start w-full min-w-0 max-w-full ${
-        compact ? 'gap-2 sm:gap-3 md:gap-4 mb-0' : 'gap-3 sm:gap-4 md:gap-5 mb-6'
+      className={`flex flex-col sm:flex-row sm:items-start sm:justify-start min-w-0 ${
+        compact ? 'w-full gap-2 sm:gap-3 mb-0' : 'w-full max-w-full gap-3 sm:gap-4 md:gap-5 mb-6'
       }`}
     >
       {/* FY Filter */}
-      <div className="relative w-full sm:w-auto sm:flex-1 sm:max-w-[200px] md:max-w-[220px] lg:max-w-[240px] flex flex-col" ref={fyDropdownRef}>
+      <div className={dropdownWrapper} ref={fyDropdownRef}>
         <button
           type="button"
           onClick={() => setShowFYDropdown(!showFYDropdown)}
@@ -180,7 +185,7 @@ const DashboardFilters = ({
         >
           <span className="text-gray-700 truncate mr-2">
             {selectedFYs.length === 0
-              ? 'All Financial Years'
+              ? 'Financial Years'
               : selectedFYs.length === 1
               ? selectedFYs[0]
               : `${selectedFYs.length} FYs selected`}
@@ -231,7 +236,7 @@ const DashboardFilters = ({
       </div>
 
       {/* Quarter Filter - between FY and Month */}
-      <div className="relative w-full sm:w-auto sm:flex-1 sm:max-w-[200px] md:max-w-[220px] lg:max-w-[240px] flex flex-col" ref={quarterDropdownRef}>
+      <div className={dropdownWrapper} ref={quarterDropdownRef}>
         <button
           type="button"
           onClick={() => !isQuarterFilterDisabled && setShowQuarterDropdown(!showQuarterDropdown)}
@@ -244,7 +249,7 @@ const DashboardFilters = ({
         >
           <span className="truncate mr-2">
             {selectedQuarters.length === 0
-              ? 'All Quarters'
+              ? 'Quarters'
               : selectedQuarters.length === 1
               ? selectedQuarters[0]
               : `${selectedQuarters.length} quarters selected`}
@@ -260,8 +265,8 @@ const DashboardFilters = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
-        <div className="h-5 sm:h-5 mt-1">
-          {isQuarterFilterDisabled && (
+        <div className={`${compact ? 'h-2' : 'h-5 sm:h-5'} mt-1`}>
+          {!compact && isQuarterFilterDisabled && (
             <p className="text-xs text-gray-500">Select exactly one FY to filter by quarter</p>
           )}
         </div>
@@ -293,7 +298,7 @@ const DashboardFilters = ({
       </div>
 
       {/* Month Filter */}
-      <div className="relative w-full sm:w-auto sm:flex-1 sm:max-w-[200px] md:max-w-[220px] lg:max-w-[240px] flex flex-col" ref={monthDropdownRef}>
+      <div className={dropdownWrapper} ref={monthDropdownRef}>
         <button
           type="button"
           onClick={() => !isMonthFilterDisabled && setShowMonthDropdown(!showMonthDropdown)}
@@ -306,7 +311,7 @@ const DashboardFilters = ({
         >
           <span className="truncate mr-2">
             {selectedMonths.length === 0
-              ? 'All Months'
+              ? 'Months'
               : selectedMonths.length === 1
               ? MONTHS.find((m) => m.value === selectedMonths[0])?.label || selectedMonths[0]
               : `${selectedMonths.length} months selected`}
@@ -322,11 +327,11 @@ const DashboardFilters = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
-        <div className="h-5 sm:h-5 mt-1">
-          {isMonthFilterDisabled && (
+        <div className={`${compact ? 'h-2' : 'h-5 sm:h-5'} mt-1`}>
+          {!compact && isMonthFilterDisabled && (
             <p className="text-xs text-gray-500">Select exactly one FY to filter by month</p>
           )}
-          {!isMonthFilterDisabled && selectedQuarters.length > 0 && (
+          {!compact && !isMonthFilterDisabled && selectedQuarters.length > 0 && (
             <p className="text-xs text-gray-500">Months shown are for selected quarter(s) only</p>
           )}
         </div>
