@@ -14,20 +14,35 @@ import { FiPaperclip } from 'react-icons/fi'
 
 const PROJECTS_FILTERS_STORAGE_KEY = 'rayenna_projects_filters'
 
-// Helper function to get payment status badge with color coding
-const getPaymentStatusBadge = (project: Project) => {
-  // Check if project has no order value (null, undefined, 0, or falsy)
+// Payment status badge with tooltip - hover (desktop) and tap-to-toggle (mobile)
+const PaymentStatusBadge = ({ project }: { project: Project }) => {
+  const [showTooltip, setShowTooltip] = useState(false)
+  const badgeRef = useRef<HTMLSpanElement>(null)
+
   const projectCost = project?.projectCost
   const hasNoOrderValue = !projectCost || projectCost === 0 || projectCost === null || projectCost === undefined || Number(projectCost) <= 0
-  
-  // Check if project is in early stages or lost
-  const isEarlyOrLostStage = 
+
+  const isEarlyOrLostStage =
     project.projectStatus === ProjectStatus.LEAD ||
     project.projectStatus === ProjectStatus.SITE_SURVEY ||
     project.projectStatus === ProjectStatus.PROPOSAL ||
     project.projectStatus === ProjectStatus.LOST
-  
-  // Show N/A if no order value OR if in early/lost stage
+
+  const paymentStatus = project.paymentStatus || 'PENDING'
+  const balanceAmount = project.balanceAmount ?? 0
+  const hasBalanceTooltip = (paymentStatus === 'PENDING' || paymentStatus === 'PARTIAL') && balanceAmount > 0
+
+  useEffect(() => {
+    if (!hasBalanceTooltip) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (badgeRef.current && !badgeRef.current.contains(e.target as Node)) {
+        setShowTooltip(false)
+      }
+    }
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [hasBalanceTooltip])
+
   if (hasNoOrderValue || isEarlyOrLostStage) {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
@@ -35,20 +50,42 @@ const getPaymentStatusBadge = (project: Project) => {
       </span>
     )
   }
-  
-  // Otherwise show actual payment status with restrained enterprise tones
-  const paymentStatus = project.paymentStatus || 'PENDING'
+
+  const balanceFormatted = balanceAmount.toLocaleString('en-IN')
+
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${
-        paymentStatus === 'FULLY_PAID'
-          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-          : paymentStatus === 'PARTIAL'
-          ? 'bg-amber-50 text-amber-800 border border-amber-200'
-          : 'bg-red-50 text-red-700 border border-red-200'
-      }`}
+      ref={badgeRef}
+      className="relative inline-flex"
+      onMouseEnter={() => hasBalanceTooltip && setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+      onClick={(e) => {
+        if (hasBalanceTooltip) {
+          e.stopPropagation()
+          setShowTooltip((prev) => !prev)
+        }
+      }}
     >
-      {String(paymentStatus).replace(/_/g, ' ')}
+      <span
+        className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${
+          paymentStatus === 'FULLY_PAID'
+            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+            : paymentStatus === 'PARTIAL'
+            ? 'bg-amber-50 text-amber-800 border border-amber-200'
+            : 'bg-red-50 text-red-700 border border-red-200'
+        } ${hasBalanceTooltip ? 'cursor-help' : ''}`}
+      >
+        {String(paymentStatus).replace(/_/g, ' ')}
+      </span>
+      {hasBalanceTooltip && showTooltip && (
+        <span
+          className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 rounded-lg bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 text-white text-xs font-semibold whitespace-nowrap shadow-xl shadow-slate-900/40 ring-2 ring-blue-400/60 z-[100] pointer-events-none"
+          role="tooltip"
+        >
+          <span className="text-blue-300 font-medium mr-1.5">Balance:</span>
+          <span className="text-emerald-400 font-bold drop-shadow-sm">₹{balanceFormatted}</span>
+        </span>
+      )}
     </span>
   )
 }
@@ -775,7 +812,13 @@ const Projects = () => {
                       : '—'}
                   </div>
                 </th>
-                <th className="px-4 py-2" scope="col" />
+                <th className="px-4 py-2 text-center align-bottom min-w-0" scope="col">
+                  <div className="inline-block px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-gradient-to-br from-blue-100 to-sky-200 border-2 border-blue-500 text-xs font-bold text-blue-900 tabular-nums whitespace-nowrap shadow-md shadow-blue-400/40 ring-1 ring-blue-400/50">
+                    {(data?.totals?.balanceSum ?? 0) > 0
+                      ? `₹${((data?.totals?.balanceSum ?? 0) / 1_000_000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} M`
+                      : '—'}
+                  </div>
+                </th>
                 <th className="px-4 py-2 hidden md:table-cell" scope="col" />
                 <th className="px-4 py-2 hidden sm:table-cell" scope="col" />
               </tr>
@@ -841,7 +884,7 @@ const Projects = () => {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {getPaymentStatusBadge(project)}
+                    <PaymentStatusBadge project={project} />
                   </td>
                   <td className="pl-6 pr-4 py-3 text-left hidden md:table-cell">
                     {project.leadSource === 'WEBSITE' && (
@@ -907,6 +950,25 @@ const Projects = () => {
           )}
         </div>
       )}
+
+      {/* Legend footnote */}
+      <div className="mt-6 pt-4 border-t border-primary-100">
+        <p className="text-[11px] sm:text-xs font-semibold text-gray-600 mb-2">Legend</p>
+        <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-[11px] sm:text-xs text-gray-500 leading-relaxed">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block w-3 h-3 rounded bg-gradient-to-br from-orange-100 to-amber-200 border border-orange-400 shadow-sm shrink-0" />
+            Capacity Subtotal
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block w-3 h-3 rounded bg-gradient-to-br from-emerald-100 to-green-200 border border-emerald-500 shadow-sm shrink-0" />
+            Order Value Subtotal
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block w-3 h-3 rounded bg-gradient-to-br from-blue-100 to-sky-200 border border-blue-500 shadow-sm shrink-0" />
+            Balance Amount Subtotal
+          </span>
+        </div>
+      </div>
     </div>
   )
 }

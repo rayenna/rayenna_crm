@@ -448,7 +448,13 @@ router.get(
         ];
       }
 
-      const [projects, total, totals] = await Promise.all([
+      const whereExcludePaymentNA = {
+        ...where,
+        projectCost: { gt: 0 },
+        projectStatus: { notIn: [ProjectStatus.LEAD, ProjectStatus.SITE_SURVEY, ProjectStatus.PROPOSAL, ProjectStatus.LOST] },
+      };
+
+      const [projects, total, totals, balanceTotals] = await Promise.all([
         prisma.project.findMany({
           where,
           select: {
@@ -465,6 +471,7 @@ router.get(
             confirmationDate: true,
             createdAt: true,
             paymentStatus: true,
+            balanceAmount: true,
             leadSource: true,
             customer: {
               select: {
@@ -495,6 +502,10 @@ router.get(
           where,
           _sum: { systemCapacity: true, projectCost: true },
         }),
+        prisma.project.aggregate({
+          where: whereExcludePaymentNA,
+          _sum: { balanceAmount: true },
+        }),
       ]);
 
       res.json({
@@ -503,6 +514,7 @@ router.get(
         totals: {
           capacitySum: totals._sum.systemCapacity ?? 0,
           costSum: totals._sum.projectCost ?? 0,
+          balanceSum: balanceTotals._sum.balanceAmount ?? 0,
         },
         pagination: {
           page: parseInt(page as string),
