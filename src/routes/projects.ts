@@ -641,6 +641,37 @@ router.get('/:id', authenticate, async (req: Request, res) => {
       }
     }
 
+    // Recalculate payment fields (totalAmountReceived, balanceAmount, paymentStatus) from payment inputs
+    if (project.projectCost != null && project.projectCost > 0) {
+      const paymentCalculations = calculatePayments({
+        advanceReceived: project.advanceReceived,
+        payment1: project.payment1,
+        payment2: project.payment2,
+        payment3: project.payment3,
+        lastPayment: project.lastPayment,
+        projectCost: project.projectCost,
+      });
+      const expectedTotal = paymentCalculations.totalAmountReceived;
+      const expectedBalance = paymentCalculations.balanceAmount;
+      const expectedStatus = paymentCalculations.paymentStatus;
+      const currentTotal = project.totalAmountReceived ?? 0;
+      const currentBalance = project.balanceAmount ?? 0;
+
+      if (
+        Math.abs(currentTotal - expectedTotal) > 0.01 ||
+        Math.abs(currentBalance - expectedBalance) > 0.01 ||
+        project.paymentStatus !== expectedStatus
+      ) {
+        updateData.totalAmountReceived = expectedTotal;
+        updateData.balanceAmount = expectedBalance;
+        updateData.paymentStatus = expectedStatus;
+        project.totalAmountReceived = expectedTotal;
+        project.balanceAmount = expectedBalance;
+        project.paymentStatus = expectedStatus;
+        needsUpdate = true;
+      }
+    }
+
     // Update the database if recalculations were needed
     if (needsUpdate) {
       await prisma.project.update({

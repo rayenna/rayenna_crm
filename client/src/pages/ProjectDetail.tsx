@@ -652,22 +652,31 @@ const ProjectDetail = () => {
                 })()}
               </dd>
             </div>
-            {project.projectCost && (
-              <>
-                <div>
-                  <dt className="text-xs text-gray-500 uppercase tracking-wide">Total Amount Received</dt>
-                  <dd className="text-sm font-medium text-yellow-600">
-                    ₹{project.totalAmountReceived.toLocaleString('en-IN')}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-gray-500 uppercase tracking-wide">Balance Amount</dt>
-                  <dd className="text-sm font-medium text-red-600">
-                    ₹{project.balanceAmount.toLocaleString('en-IN')}
-                  </dd>
-                </div>
-              </>
-            )}
+            {project.projectCost && (() => {
+              const totalReceived =
+                (Number(project.advanceReceived) || 0) +
+                (Number(project.payment1) || 0) +
+                (Number(project.payment2) || 0) +
+                (Number(project.payment3) || 0) +
+                (Number(project.lastPayment) || 0);
+              const balance = Math.max(0, Number(project.projectCost) - totalReceived);
+              return (
+                <>
+                  <div>
+                    <dt className="text-xs text-gray-500 uppercase tracking-wide">Total Amount Received</dt>
+                    <dd className="text-sm font-medium text-yellow-600">
+                      ₹{totalReceived.toLocaleString('en-IN')}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-500 uppercase tracking-wide">Balance Amount</dt>
+                    <dd className="text-sm font-medium text-red-600">
+                      ₹{balance.toLocaleString('en-IN')}
+                    </dd>
+                  </div>
+                </>
+              );
+            })()}
             {project.advanceReceived && (
               <div>
                 <dt className="text-xs text-gray-500 uppercase tracking-wide">Advance Received</dt>
