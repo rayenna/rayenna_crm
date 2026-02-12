@@ -57,6 +57,14 @@ if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
 
 const app = express();
 
+// Health check FIRST — before any middleware, for Render deploy health checks (5s timeout)
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Middleware
 // CORS configuration - allow local development and production frontend
 const allowedOrigins = [
@@ -143,15 +151,6 @@ app.use('/api/support-tickets', supportTicketsRoutes);
 app.use('/api/sales-team-performance', salesTeamPerformanceRoutes);
 app.use('/api/remarks', remarksRoutes);
 app.use('/api/admin/audit', adminAuditRoutes);
-
-// Health check (for Render and monitoring)
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
