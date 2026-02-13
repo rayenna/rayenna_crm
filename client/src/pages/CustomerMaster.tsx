@@ -225,7 +225,7 @@ const CustomerMaster = () => {
   }
 
   return (
-    <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
+    <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden mobile-paint-fix">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div className="border-l-4 border-teal-500 pl-4">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">

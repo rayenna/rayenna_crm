@@ -45,7 +45,7 @@ const FinanceDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Fin
   const tileParams = { selectedFYs, selectedQuarters, selectedMonths }
 
   return (
-    <div className="space-y-6 animate-fade-in min-w-0 max-w-full">
+    <div className="space-y-6 animate-fade-in min-w-0 max-w-full mobile-paint-fix">
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
         <MetricCard
           title="Total Revenue"

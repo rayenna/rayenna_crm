@@ -52,7 +52,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
+    <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden mobile-paint-fix">
       <div className="mb-6 animate-slide-up min-w-0 border-l-4 border-l-primary-600 pl-4">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-3 break-words">
           Dashboard

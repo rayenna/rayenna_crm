@@ -45,7 +45,7 @@ const OperationsDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
   const tileParams = { selectedFYs, selectedQuarters, selectedMonths }
 
   return (
-    <div className="space-y-6 animate-fade-in min-w-0 max-w-full">
+    <div className="space-y-6 animate-fade-in min-w-0 max-w-full mobile-paint-fix">
       {/* Quick Access – tiles linking to filtered Projects */}
       <h2 className="text-sm font-medium text-gray-500 tracking-wide mb-2">Quick Access</h2>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">

@@ -60,6 +60,24 @@ textarea,
   min-height: 100vh;
 }
 
+/* Mobile (iOS & Android): fix blank sections when scrolling (paint/repaint bug) */
+@media (max-width: 768px) {
+  html {
+    -webkit-overflow-scrolling: touch;
+    overflow-scrolling: touch;
+  }
+  /* Force GPU layer on sections – prevents blank-on-scroll on Safari & Chrome */
+  .mobile-paint-fix > * {
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+  /* Disable backdrop-blur – causes compositing/paint issues on mobile */
+  .backdrop-blur-sm {
+    backdrop-filter: none;
+  }
+}
+
 /* Custom scrollbar styling */
 ::-webkit-scrollbar {
   width: 10px;
