@@ -17,6 +17,33 @@ const PROJECTS_FILTERS_STORAGE_KEY = 'rayenna_projects_filters'
 /** Valid paymentStatus URL params (matches paymentStatusOptions values) */
 const VALID_PAYMENT_STATUS_VALUES = ['FULLY_PAID', 'PARTIAL', 'PENDING', 'NA'] as const
 
+/** Read initial filters from URL (for tile links). Runs synchronously on mount so first request uses correct filters. */
+function getInitialFiltersFromUrl(): {
+  status: string[]
+  paymentStatus: string[]
+  selectedFYs: string[]
+  selectedQuarters: string[]
+  selectedMonths: string[]
+} | null {
+  const p = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
+  const status = p.getAll('status')
+  const paymentStatus = p.getAll('paymentStatus')
+  const fy = p.getAll('fy')
+  const quarter = p.getAll('quarter')
+  const month = p.getAll('month')
+  const hasAny = status.length > 0 || paymentStatus.length > 0 || fy.length > 0 || quarter.length > 0 || month.length > 0
+  if (!hasAny) return null
+  const validStatus = status.filter((s) => Object.values(ProjectStatus).includes(s as ProjectStatus))
+  const validPayment = paymentStatus.filter((v) => (VALID_PAYMENT_STATUS_VALUES as readonly string[]).includes(v))
+  return {
+    status: validStatus,
+    paymentStatus: validPayment,
+    selectedFYs: fy,
+    selectedQuarters: quarter,
+    selectedMonths: month,
+  }
+}
+
 // Payment status badge with tooltip - hover (desktop) and tap-to-toggle (mobile)
 const PaymentStatusBadge = ({ project }: { project: Project }) => {
   const [showTooltip, setShowTooltip] = useState(false)
@@ -133,17 +160,18 @@ const Projects = () => {
   const { user, hasRole } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const urlInit = getInitialFiltersFromUrl()
   const [page, setPage] = useState(1)
   const [searchInput, setSearchInput] = useState('')
   const debouncedSearch = useDebounce(searchInput, 500) // 500ms debounce
   const [showExportConfirm, setShowExportConfirm] = useState(false)
   const [pendingExportType, setPendingExportType] = useState<'excel' | 'csv' | null>(null)
-  const [showMoreFilters, setShowMoreFilters] = useState(false)
+  const [showMoreFilters, setShowMoreFilters] = useState(!!urlInit)
 
   // Dashboard-style date filters (FY / Quarter / Month)
-  const [selectedFYs, setSelectedFYs] = useState<string[]>([])
-  const [selectedQuarters, setSelectedQuarters] = useState<string[]>([])
-  const [selectedMonths, setSelectedMonths] = useState<string[]>([])
+  const [selectedFYs, setSelectedFYs] = useState<string[]>(() => urlInit?.selectedFYs ?? [])
+  const [selectedQuarters, setSelectedQuarters] = useState<string[]>(() => urlInit?.selectedQuarters ?? [])
+  const [selectedMonths, setSelectedMonths] = useState<string[]>(() => urlInit?.selectedMonths ?? [])
   
   // Prepare options for multi-selects - matching exactly the Project Status dropdown in Sales & Commercial section
   // Operations users can only see: CONFIRMED, UNDER_INSTALLATION, COMPLETED, COMPLETED_SUBSIDY_CREDITED
@@ -177,22 +205,23 @@ const Projects = () => {
       .map(option => option.value)
   }, [statusOptions])
 
-  const [filters, setFilters] = useState({
-    status: [] as string[],
+  const [filters, setFilters] = useState(() => ({
+    status: (urlInit?.status ?? []) as string[],
     type: [] as string[],
     projectServiceType: [] as string[],
     salespersonId: [] as string[],
     leadSource: [] as string[],
     supportTicketStatus: [] as string[],
-    paymentStatus: [] as string[],
+    paymentStatus: (urlInit?.paymentStatus ?? []) as string[],
     hasDocuments: false,
     search: '',
     sortBy: '',
     sortOrder: 'desc',
-  })
+  }))
 
   // Defer projects query until URL/sessionStorage hydration completes (avoids double fetch on dashboard→projects)
-  const [filtersReady, setFiltersReady] = useState(false)
+  const [filtersReady, setFiltersReady] = useState(!!urlInit)
+  const appliedFromUrlRef = useRef(!!urlInit)
 
   // Apply URL params (from Dashboard tile click) or restore from sessionStorage
   useLayoutEffect(() => {
@@ -204,9 +233,14 @@ const Projects = () => {
     const hasStatusParams = statusFromUrl.length > 0
     const hasPaymentParams = paymentStatusFromUrl.length > 0
     const hasDateParams = fyFromUrl.length > 0 || quarterFromUrl.length > 0 || monthFromUrl.length > 0
-    const validStatus = hasStatusParams ? statusFromUrl.filter((v) => statusOptions.some((opt) => opt.value === v)) : []
+    // Wait for statusOptions when we have status in URL (needed to validate status values)
+    const canResolveStatus = !hasStatusParams || statusOptions.length > 0
+    const validStatus = hasStatusParams && canResolveStatus
+      ? statusFromUrl.filter((v) => statusOptions.some((opt) => opt.value === v))
+      : []
     const validPayment = hasPaymentParams ? paymentStatusFromUrl.filter((v) => (VALID_PAYMENT_STATUS_VALUES as readonly string[]).includes(v)) : []
-    if (validStatus.length > 0 || validPayment.length > 0 || hasDateParams) {
+    if (canResolveStatus && (validStatus.length > 0 || validPayment.length > 0 || hasDateParams)) {
+      appliedFromUrlRef.current = true
       setFilters((prev) => ({
         ...prev,
         ...(validStatus.length > 0 && { status: validStatus }),
@@ -252,11 +286,11 @@ const Projects = () => {
   const isFirstPageReset = useRef(true)
 
   // Initialize default status filter (all active statuses except LOST) when ready
+  // Skip when we applied status from URL (prevents overwriting tile-filtered status)
   useEffect(() => {
-    // Set default status filter when defaultStatusValues is ready and filter is empty
+    if (appliedFromUrlRef.current) return
     if (defaultStatusValues.length > 0 && filters.status.length === 0) {
       setFilters(prev => {
-        // Only update if still empty (prevent race conditions)
         if (prev.status.length === 0) {
           return { ...prev, status: [...defaultStatusValues] }
         }
@@ -390,22 +424,54 @@ const Projects = () => {
     enabled: user?.role !== UserRole.SALES, // Only fetch if user is not SALES
   })
 
+  // When URL has tile params (status/paymentStatus/fy/quarter/month), use them as source of truth for the request.
+  // This guarantees subtotals match the filtered set when navigating from a dashboard tile.
+  const urlHasFilterParams =
+    searchParams.getAll('status').length > 0 ||
+    searchParams.getAll('paymentStatus').length > 0 ||
+    searchParams.has('fy') ||
+    searchParams.has('quarter') ||
+    searchParams.has('month')
+
   const { data, isLoading } = useQuery({
-    queryKey: ['projects', filters, page, selectedFYs, selectedQuarters, selectedMonths],
+    queryKey: [
+      'projects',
+      urlHasFilterParams ? searchParams.toString() : null,
+      filters,
+      page,
+      selectedFYs,
+      selectedQuarters,
+      selectedMonths,
+    ],
     enabled: filtersReady,
     queryFn: async () => {
       const params = new URLSearchParams()
-      // Append array values - each value gets its own parameter (status[]=value1&status[]=value2)
-      filters.status.forEach((value) => params.append('status', value))
-      filters.type.forEach((value) => params.append('type', value))
-      filters.projectServiceType.forEach((value) => params.append('projectServiceType', value))
-      filters.salespersonId.forEach((value) => params.append('salespersonId', value))
-      filters.leadSource.forEach((value) => params.append('leadSource', value))
-      filters.supportTicketStatus.forEach((value) => params.append('supportTicketStatus', value))
-      filters.paymentStatus.forEach((value) => params.append('paymentStatus', value))
-      selectedFYs.forEach((fy) => params.append('fy', fy))
-      selectedQuarters.forEach((q) => params.append('quarter', q))
-      selectedMonths.forEach((m) => params.append('month', m))
+      if (urlHasFilterParams) {
+        // Source of truth: URL (tile link) – ensures subtotals match filtered projects
+        searchParams.forEach((value, key) => {
+          if (['status', 'paymentStatus', 'fy', 'quarter', 'month'].includes(key)) {
+            params.append(key, value)
+          }
+        })
+        // Merge in filters not in URL (type, salespersonId, etc.)
+        filters.type.forEach((v) => params.append('type', v))
+        filters.projectServiceType.forEach((v) => params.append('projectServiceType', v))
+        filters.salespersonId.forEach((v) => params.append('salespersonId', v))
+        filters.leadSource.forEach((v) => params.append('leadSource', v))
+        filters.supportTicketStatus.forEach((v) => params.append('supportTicketStatus', v))
+      } else {
+        // Source of truth: React state
+        filters.status.forEach((v) => params.append('status', v))
+        filters.type.forEach((v) => params.append('type', v))
+        filters.projectServiceType.forEach((v) => params.append('projectServiceType', v))
+        filters.salespersonId.forEach((v) => params.append('salespersonId', v))
+        filters.leadSource.forEach((v) => params.append('leadSource', v))
+        filters.supportTicketStatus.forEach((v) => params.append('supportTicketStatus', v))
+        filters.paymentStatus.forEach((v) => params.append('paymentStatus', v))
+        selectedFYs.forEach((fy) => params.append('fy', fy))
+        selectedQuarters.forEach((q) => params.append('quarter', q))
+        selectedMonths.forEach((m) => params.append('month', m))
+      }
       if (filters.search) params.append('search', filters.search)
       if (filters.hasDocuments) params.append('hasDocuments', 'true')
       if (filters.sortBy) {

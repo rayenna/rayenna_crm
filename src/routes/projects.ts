@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
-import { ProjectStatus, ProjectType, ProjectServiceType, ProjectStage, UserRole, LeadSource, SupportTicketStatus, SystemType, LostReason } from '@prisma/client';
+import { ProjectStatus, ProjectType, ProjectServiceType, ProjectStage, UserRole, LeadSource, SupportTicketStatus, SystemType, LostReason, PaymentStatus } from '@prisma/client';
 
 // Valid values for lostToCompetitionReason (required when lostReason is LOST_TO_COMPETITION)
 const LOST_TO_COMPETITION_REASON_VALUES = ['LOST_DUE_TO_PRICE', 'LOST_DUE_TO_FEATURES', 'LOST_DUE_TO_RELATIONSHIP_OTHER'] as const;
@@ -448,10 +448,15 @@ router.get(
         ];
       }
 
-      const whereExcludePaymentNA = {
-        ...where,
-        projectCost: { gt: 0 },
-        projectStatus: { notIn: [ProjectStatus.LEAD, ProjectStatus.SITE_SURVEY, ProjectStatus.PROPOSAL, ProjectStatus.LOST] },
+      // Balance subtotal: ONLY sum balanceAmount for projects with paymentStatus PARTIAL or PENDING.
+      // Exclude "N/A" projects: no order value OR early/lost stages (UI shows N/A; DB may still have PENDING).
+      const whereBalanceOnly = {
+        AND: [
+          where,
+          { paymentStatus: { in: [PaymentStatus.PARTIAL, PaymentStatus.PENDING] } },
+          { projectCost: { gt: 0 } },
+          { projectStatus: { notIn: [ProjectStatus.LEAD, ProjectStatus.SITE_SURVEY, ProjectStatus.PROPOSAL, ProjectStatus.LOST] } },
+        ],
       };
 
       const [projects, total, totals, balanceTotals] = await Promise.all([
@@ -503,7 +508,7 @@ router.get(
           _sum: { systemCapacity: true, projectCost: true },
         }),
         prisma.project.aggregate({
-          where: whereExcludePaymentNA,
+          where: whereBalanceOnly,
           _sum: { balanceAmount: true },
         }),
       ]);
