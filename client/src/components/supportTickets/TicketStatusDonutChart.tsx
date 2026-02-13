@@ -33,7 +33,7 @@ const TicketStatusDonutChart = ({ data, onSliceClick, selectedStatus }: TicketSt
     <div className="w-full bg-white shadow rounded-lg p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Ticket Status Breakdown</h3>
       <div className="w-full" style={{ height: '350px' }}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" debounce={250} minWidth={0}>
           <PieChart>
             <Pie
               data={data}

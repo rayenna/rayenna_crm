@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../utils/axios'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Project, ProjectStatus, ProjectType, ProjectServiceType, UserRole, LeadSource } from '../types'
 import { format } from 'date-fns'
@@ -13,6 +13,9 @@ import DashboardFilters from '../components/dashboard/DashboardFilters'
 import { FiPaperclip } from 'react-icons/fi'
 
 const PROJECTS_FILTERS_STORAGE_KEY = 'rayenna_projects_filters'
+
+/** Valid paymentStatus URL params (matches paymentStatusOptions values) */
+const VALID_PAYMENT_STATUS_VALUES = ['FULLY_PAID', 'PARTIAL', 'PENDING', 'NA'] as const
 
 // Payment status badge with tooltip - hover (desktop) and tap-to-toggle (mobile)
 const PaymentStatusBadge = ({ project }: { project: Project }) => {
@@ -129,6 +132,7 @@ const getSegmentPillClasses = (type: string): string => {
 const Projects = () => {
   const { user, hasRole } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [page, setPage] = useState(1)
   const [searchInput, setSearchInput] = useState('')
   const debouncedSearch = useDebounce(searchInput, 500) // 500ms debounce
@@ -187,11 +191,41 @@ const Projects = () => {
     sortOrder: 'desc',
   })
 
-  // Restore filters from sessionStorage when returning to Projects (useLayoutEffect so it runs before persist)
+  // Defer projects query until URL/sessionStorage hydration completes (avoids double fetch on dashboard→projects)
+  const [filtersReady, setFiltersReady] = useState(false)
+
+  // Apply URL params (from Dashboard tile click) or restore from sessionStorage
   useLayoutEffect(() => {
+    const statusFromUrl = searchParams.getAll('status')
+    const paymentStatusFromUrl = searchParams.getAll('paymentStatus')
+    const fyFromUrl = searchParams.getAll('fy')
+    const quarterFromUrl = searchParams.getAll('quarter')
+    const monthFromUrl = searchParams.getAll('month')
+    const hasStatusParams = statusFromUrl.length > 0
+    const hasPaymentParams = paymentStatusFromUrl.length > 0
+    const hasDateParams = fyFromUrl.length > 0 || quarterFromUrl.length > 0 || monthFromUrl.length > 0
+    const validStatus = hasStatusParams ? statusFromUrl.filter((v) => statusOptions.some((opt) => opt.value === v)) : []
+    const validPayment = hasPaymentParams ? paymentStatusFromUrl.filter((v) => (VALID_PAYMENT_STATUS_VALUES as readonly string[]).includes(v)) : []
+    if (validStatus.length > 0 || validPayment.length > 0 || hasDateParams) {
+      setFilters((prev) => ({
+        ...prev,
+        ...(validStatus.length > 0 && { status: validStatus }),
+        ...(validPayment.length > 0 && { paymentStatus: validPayment }),
+      }))
+      if (fyFromUrl.length > 0) setSelectedFYs(fyFromUrl)
+      if (quarterFromUrl.length > 0) setSelectedQuarters(quarterFromUrl)
+      if (monthFromUrl.length > 0) setSelectedMonths(monthFromUrl)
+      setShowMoreFilters(true)
+      setPage(1)
+      setFiltersReady(true)
+      return
+    }
     try {
       const raw = sessionStorage.getItem(PROJECTS_FILTERS_STORAGE_KEY)
-      if (!raw) return
+      if (!raw) {
+        setFiltersReady(true)
+        return
+      }
       const saved = JSON.parse(raw) as {
         filters?: typeof filters
         page?: number
@@ -200,7 +234,7 @@ const Projects = () => {
         selectedQuarters?: string[]
         selectedMonths?: string[]
       }
-      if (saved.filters) setFilters(prev => ({ ...prev, ...saved.filters, leadSource: (saved.filters as any)?.leadSource ?? [] }))
+      if (saved.filters) setFilters((prev) => ({ ...prev, ...saved.filters, leadSource: (saved.filters as any)?.leadSource ?? [] }))
       if (saved.page != null && saved.page >= 1) setPage(saved.page)
       if (saved.searchInput != null) setSearchInput(saved.searchInput)
       if (saved.selectedFYs) setSelectedFYs(saved.selectedFYs)
@@ -209,7 +243,8 @@ const Projects = () => {
     } catch {
       // ignore invalid or missing stored data
     }
-  }, [])
+    setFiltersReady(true)
+  }, [searchParams, statusOptions])
 
   // Skip first persist so we don't overwrite sessionStorage with initial state before restore runs
   const isFirstMount = useRef(true)
@@ -357,6 +392,7 @@ const Projects = () => {
 
   const { data, isLoading } = useQuery({
     queryKey: ['projects', filters, page, selectedFYs, selectedQuarters, selectedMonths],
+    enabled: filtersReady,
     queryFn: async () => {
       const params = new URLSearchParams()
       // Append array values - each value gets its own parameter (status[]=value1&status[]=value2)
@@ -505,7 +541,7 @@ const Projects = () => {
     setPendingExportType(null)
   }
 
-  if (isLoading) {
+  if (!filtersReady || isLoading) {
     return (
       <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
         <div className="h-8 w-48 bg-gradient-to-r from-amber-200 to-gray-200 rounded animate-pulse mb-4" />

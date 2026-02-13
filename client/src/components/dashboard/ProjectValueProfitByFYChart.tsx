@@ -204,7 +204,7 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
       </div>
       <div className="w-full overflow-x-auto">
         <div className="min-w-[280px]" style={{ height: '320px' }}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" debounce={250} minWidth={0}>
           <BarChart
             data={filteredData}
             margin={{

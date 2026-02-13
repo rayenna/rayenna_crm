@@ -672,6 +672,7 @@ router.get('/operations', authenticate, async (req: Request, res) => {
       pendingInstallation,
       submittedForSubsidy,
       subsidyCredited,
+      completedInstallation,
       pendingSubsidy,
       ksebBottlenecks,
       mnreBottlenecks,
@@ -690,6 +691,13 @@ router.get('/operations', authenticate, async (req: Request, res) => {
       // Subsidy credited
       prisma.project.count({
         where: { ...where, projectStatus: ProjectStatus.COMPLETED_SUBSIDY_CREDITED },
+      }),
+      // Completed installation (COMPLETED + COMPLETED_SUBSIDY_CREDITED)
+      prisma.project.count({
+        where: {
+          ...where,
+          projectStatus: { in: [ProjectStatus.COMPLETED, ProjectStatus.COMPLETED_SUBSIDY_CREDITED] },
+        },
       }),
       // Pending subsidy (submitted but not credited)
       prisma.project.findMany({
@@ -831,6 +839,7 @@ router.get('/operations', authenticate, async (req: Request, res) => {
       pendingInstallation,
       submittedForSubsidy,
       subsidyCredited,
+      completedInstallation,
       pendingSubsidy: pendingSubsidy.map((p) => ({
         ...p,
         customerName: p.customer?.customerName || 'Unknown',

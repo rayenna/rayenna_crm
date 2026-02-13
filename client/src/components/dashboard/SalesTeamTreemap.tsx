@@ -288,7 +288,7 @@ const SalesTeamTreemap = ({ availableFYs = [], dashboardFilter }: SalesTeamTreem
           </div>
         ) : (
           <div className="w-full h-full min-h-0">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" debounce={250} minWidth={0}>
               <BarChart
                 data={treemapData}
                 margin={{ top: 20, right: 30, left: 20, bottom: 60 }}

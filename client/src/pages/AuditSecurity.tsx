@@ -290,7 +290,7 @@ export default function AuditSecurity () {
                 <p className="text-sm text-gray-500">Loading…</p>
               ) : loginTrendChartData.length ? (
                 <div className="min-w-[640px] h-full">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" debounce={250} minWidth={0}>
                     <LineChart data={loginTrendChartData} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="label" tickMargin={8} />
@@ -318,7 +318,7 @@ export default function AuditSecurity () {
                 {actionDistributionLoading ? (
                   <p className="text-sm text-gray-500">Loading…</p>
                 ) : actionDistributionChartData.length ? (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" debounce={250} minWidth={0}>
                     <BarChart data={actionDistributionChartData} margin={{ top: 8, right: 12, left: 0, bottom: 48 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis

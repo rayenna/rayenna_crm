@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import axiosInstance from '../../utils/axios'
+import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { FaUsers, FaCog, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa'
+import { ProjectStatus } from '../../types'
 import ProjectValuePieChart from './ProjectValuePieChart'
 import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
 import ProfitabilityWordCloud from './ProfitabilityWordCloud'
@@ -46,6 +49,7 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
 
   const projectValueProfitByFY = data?.projectValueProfitByFY ?? []
   const dashboardFilter = { selectedFYs, selectedQuarters, selectedMonths }
+  const tileParams = { selectedFYs, selectedQuarters, selectedMonths }
 
   return (
     <div className="space-y-6 animate-fade-in min-w-0 max-w-full">
@@ -62,31 +66,36 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
         />
       </div>
 
-      {/* Other tiles + Projects by Payment Status (compact) – 5 in one row on laptop, stacked on mobile */}
+      {/* Quick Access – tiles linking to filtered Projects */}
+      <h2 className="text-sm font-medium text-gray-500 tracking-wide mb-2">Quick Access</h2>
       <div className="grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-5 min-w-0">
         <MetricCard
           title="Total Leads"
           value={data?.sales?.totalLeads || 0}
           icon={<FaUsers />}
           gradient="from-indigo-500 to-cyan-500"
+          to={buildProjectsUrl({ status: [ProjectStatus.LEAD] }, tileParams)}
         />
         <MetricCard
           title="Open Deals"
           value={data?.pipeline?.atRisk || 0}
           icon={<FaExclamationTriangle />}
           gradient="from-red-500 to-rose-500"
+          to={buildProjectsUrl({ status: [ProjectStatus.LEAD, ProjectStatus.SITE_SURVEY, ProjectStatus.PROPOSAL] }, tileParams)}
         />
         <MetricCard
           title="Pending Installation"
           value={data?.operations?.pendingInstallation || 0}
           icon={<FaCog />}
           gradient="from-indigo-500 to-indigo-600"
+          to={buildProjectsUrl({ status: [ProjectStatus.UNDER_INSTALLATION, ProjectStatus.CONFIRMED] }, tileParams)}
         />
         <MetricCard
           title="Subsidy Credited"
           value={data?.operations?.subsidyCredited || 0}
           icon={<FaCheckCircle />}
           gradient="from-yellow-500 to-amber-500"
+          to={buildProjectsUrl({ status: [ProjectStatus.COMPLETED_SUBSIDY_CREDITED] }, tileParams)}
         />
         {/* Projects by Payment Status – compact tile for Management/Admin */}
         <div className="min-w-0 flex flex-col bg-gradient-to-br from-white via-indigo-50/50 to-white shadow-lg rounded-xl border-2 border-indigo-200/50 overflow-hidden backdrop-blur-sm">
@@ -99,6 +108,7 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
             <div className="space-y-1.5 sm:space-y-2">
               {data?.projectsByPaymentStatus?.map((item: any) => {
                 const statusLabel = item.status === 'N/A' ? 'N/A' : item.status.replace(/_/g, ' ');
+                const paymentParam = item.status === 'N/A' ? 'NA' : item.status;
                 const getStatusColor = (status: string) => {
                   if (status === 'N/A') return 'bg-red-100 text-red-800';
                   if (status === 'FULLY_PAID') return 'bg-green-100 text-green-800';
@@ -106,14 +116,18 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
                   return 'bg-red-100 text-red-800';
                 };
                 return (
-                  <div key={item.status} className="flex justify-between items-center gap-2 py-1.5 px-2 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors min-w-0">
+                  <Link
+                    key={item.status}
+                    to={buildProjectsUrl({ paymentStatus: [paymentParam] }, tileParams)}
+                    className="flex justify-between items-center gap-2 py-1.5 px-2 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors min-w-0 cursor-pointer no-underline text-inherit"
+                  >
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${getStatusColor(item.status)}`}>
                       {statusLabel}
                     </span>
                     <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate text-right" title={`${item.count} (₹${(item.outstanding ?? 0).toLocaleString('en-IN')})`}>
                       {item.count} <span className="text-primary-600">(₹{(item.outstanding ?? 0).toLocaleString('en-IN')})</span>
                     </span>
-                  </div>
+                  </Link>
                 );
               })}
             </div>

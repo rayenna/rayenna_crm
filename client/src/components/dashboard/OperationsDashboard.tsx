@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
+import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { FaCog, FaFileInvoice, FaCheckCircle } from 'react-icons/fa'
+import { ProjectStatus } from '../../types'
 import ProjectValuePieChart from './ProjectValuePieChart'
 import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
 import ProjectsByStageChart from './ProjectsByStageChart'
@@ -40,27 +42,33 @@ const OperationsDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
 
   const projectValueProfitByFY = data?.projectValueProfitByFY ?? []
   const dashboardFilter = { selectedFYs, selectedQuarters, selectedMonths }
+  const tileParams = { selectedFYs, selectedQuarters, selectedMonths }
 
   return (
     <div className="space-y-6 animate-fade-in min-w-0 max-w-full">
+      {/* Quick Access – tiles linking to filtered Projects */}
+      <h2 className="text-sm font-medium text-gray-500 tracking-wide mb-2">Quick Access</h2>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
         <MetricCard
           title="Pending Installation"
           value={data?.pendingInstallation || 0}
           icon={<FaCog />}
           gradient="from-indigo-500 to-indigo-600"
+          to={buildProjectsUrl({ status: [ProjectStatus.UNDER_INSTALLATION, ProjectStatus.CONFIRMED] }, tileParams)}
         />
         <MetricCard
-          title="Submitted for Subsidy"
-          value={data?.submittedForSubsidy || 0}
+          title="Completed Installation"
+          value={data?.completedInstallation ?? 0}
           icon={<FaFileInvoice />}
           gradient="from-yellow-500 to-amber-500"
+          to={buildProjectsUrl({ status: [ProjectStatus.COMPLETED_SUBSIDY_CREDITED, ProjectStatus.COMPLETED] }, tileParams)}
         />
         <MetricCard
           title="Subsidy Credited"
           value={data?.subsidyCredited || 0}
           icon={<FaCheckCircle />}
           gradient="from-yellow-500 to-amber-500"
+          to={buildProjectsUrl({ status: [ProjectStatus.COMPLETED_SUBSIDY_CREDITED] }, tileParams)}
         />
       </div>
 

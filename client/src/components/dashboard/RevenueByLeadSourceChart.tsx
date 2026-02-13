@@ -308,7 +308,7 @@ const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: Revenu
           </div>
         ) : (
           <div className="min-w-[280px] w-full h-full min-h-0">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" debounce={250} minWidth={0}>
               <BarChart
                 data={chartData}
                 margin={{

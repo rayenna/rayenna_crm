@@ -43,6 +43,13 @@ export const TIPS: string[] = [
   'Use FY and Quarter filters on your dashboard to compare your performance across periods.',
   'Site Survey and Proposal stage counts help you see how many deals are in active negotiation.',
   'Lost projects are excluded from Pipeline – mark lost deals promptly to keep metrics accurate.',
+  // New features – Subtotals, Payment tooltip, Quick Access, Filters
+  'Select multiple projects on the Projects page to see subtotals for Order Value, Amount Received, and Outstanding at the bottom.',
+  'Hover over Pending or Partial in the Payment Status column to see the outstanding balance amount.',
+  'Click any Quick Access tile on your dashboard to open Projects with matching filters already applied.',
+  'Set FY, Quarter, and Month on the dashboard – tile counts and Quick Access links respect these filters.',
+  'Project page filters (Status, FY, Quarter, Month, Payment Status) are remembered as you navigate.',
+  'Operations: Completed Installation tile shows both Completed and Subsidy Credited projects.',
 ]
 
 /**

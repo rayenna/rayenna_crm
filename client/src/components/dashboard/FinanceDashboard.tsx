@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import axiosInstance from '../../utils/axios'
+import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { FaRupeeSign, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa'
 import ProjectValuePieChart from './ProjectValuePieChart'
 import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
@@ -40,6 +42,7 @@ const FinanceDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Fin
 
   const projectValueProfitByFY = data?.projectValueProfitByFY ?? []
   const dashboardFilter = { selectedFYs, selectedQuarters, selectedMonths }
+  const tileParams = { selectedFYs, selectedQuarters, selectedMonths }
 
   return (
     <div className="space-y-6 animate-fade-in min-w-0 max-w-full">
@@ -64,6 +67,8 @@ const FinanceDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Fin
         />
       </div>
 
+      {/* Quick Access – tiles linking to filtered Projects */}
+      <h2 className="text-sm font-medium text-gray-500 tracking-wide mb-2">Quick Access</h2>
       <div className="bg-gradient-to-br from-white via-indigo-50/50 to-white shadow-2xl rounded-2xl border-2 border-indigo-200/50 overflow-hidden backdrop-blur-sm min-w-0">
         <div className="bg-gradient-to-r from-indigo-500 via-cyan-500 to-indigo-600 px-4 py-3 sm:px-6 sm:py-4 shadow-lg">
           <h3 className="text-base sm:text-lg font-bold text-white drop-shadow-md truncate">
@@ -73,28 +78,27 @@ const FinanceDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Fin
         <div className="px-4 py-3 sm:px-6 sm:py-4">
           <div className="space-y-3">
             {data?.projectsByPaymentStatus?.map((item: any) => {
-              // Format status label
-              const statusLabel = item.status === 'N/A' 
-                ? 'N/A' 
-                : item.status.replace(/_/g, ' ');
-              
-              // Get color based on status
+              const statusLabel = item.status === 'N/A' ? 'N/A' : item.status.replace(/_/g, ' ');
+              const paymentParam = item.status === 'N/A' ? 'NA' : item.status;
               const getStatusColor = (status: string) => {
                 if (status === 'N/A') return 'bg-red-100 text-red-800';
                 if (status === 'FULLY_PAID') return 'bg-green-100 text-green-800';
                 if (status === 'PARTIAL') return 'bg-yellow-100 text-yellow-800';
-                return 'bg-red-100 text-red-800'; // PENDING
+                return 'bg-red-100 text-red-800';
               };
-              
               return (
-                <div key={item.status} className="flex justify-between items-center gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors min-w-0">
+                <Link
+                  key={item.status}
+                  to={buildProjectsUrl({ paymentStatus: [paymentParam] }, tileParams)}
+                  className="flex justify-between items-center gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors min-w-0 cursor-pointer no-underline text-inherit"
+                >
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${getStatusColor(item.status)}`}>
                     {statusLabel}
                   </span>
                   <span className="text-xs sm:text-sm font-bold text-gray-900 truncate text-right" title={`${item.count} (₹${item.outstanding?.toLocaleString('en-IN') || 0})`}>
                     {item.count} <span className="text-primary-600">(₹{item.outstanding?.toLocaleString('en-IN') || 0})</span>
                   </span>
-                </div>
+                </Link>
               );
             })}
           </div>

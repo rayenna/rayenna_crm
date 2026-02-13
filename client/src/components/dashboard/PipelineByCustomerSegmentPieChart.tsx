@@ -67,7 +67,7 @@ const PipelineByCustomerSegmentPieChart = ({ data: chartData = [] }: PipelineByC
       <div className="w-full overflow-x-auto overflow-y-hidden flex justify-center" style={{ height: '320px' }}>
         <div className="flex flex-col items-center justify-center min-w-[320px] w-max mx-auto py-2" style={{ minHeight: 316 }}>
           <div className="flex-shrink-0" style={{ width: DONUT_SIZE, height: DONUT_SIZE }}>
-            <ResponsiveContainer width={DONUT_SIZE} height={DONUT_SIZE}>
+            <ResponsiveContainer width={DONUT_SIZE} height={DONUT_SIZE} debounce={250} minWidth={0}>
               <PieChart>
                 <Pie
                   data={chartData}

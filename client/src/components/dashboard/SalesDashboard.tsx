@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
+import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { FaUsers, FaCheckCircle, FaClipboardList, FaExclamationTriangle } from 'react-icons/fa'
+import { ProjectStatus } from '../../types'
 import ProjectValuePieChart from './ProjectValuePieChart'
 import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
 import ProfitabilityWordCloud from './ProfitabilityWordCloud'
@@ -44,6 +46,7 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Sales
 
   const projectValueProfitByFY = data?.projectValueProfitByFY ?? []
   const dashboardFilter = { selectedFYs, selectedQuarters, selectedMonths }
+  const tileParams = { selectedFYs, selectedQuarters, selectedMonths }
 
   return (
     <div className="space-y-6 animate-fade-in min-w-0 max-w-full">
@@ -60,37 +63,43 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Sales
         />
       </div>
 
-      {/* Other tiles – same width as each other */}
+      {/* Quick Access – tiles linking to filtered Projects */}
+      <h2 className="text-sm font-medium text-gray-500 tracking-wide mb-2">Quick Access</h2>
       <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <MetricCard
           title="Total Leads"
           value={data?.leads?.total || 0}
           icon={<FaUsers />}
           gradient="from-indigo-500 to-cyan-500"
+          to={buildProjectsUrl({ status: [ProjectStatus.LEAD] }, tileParams)}
         />
         <MetricCard
           title="Approved Projects"
           value={data?.pipeline?.approved || 0}
           icon={<FaCheckCircle />}
           gradient="from-purple-500 to-pink-500"
+          to={buildProjectsUrl({ status: [ProjectStatus.CONFIRMED] }, tileParams)}
         />
         <MetricCard
           title="Survey Stage"
           value={data?.pipeline?.survey || 0}
           icon={<FaClipboardList />}
           gradient="from-indigo-500 to-indigo-600"
+          to={buildProjectsUrl({ status: [ProjectStatus.SITE_SURVEY] }, tileParams)}
         />
         <MetricCard
           title="Proposal Stage"
           value={data?.pipeline?.proposal || 0}
           icon={<FaClipboardList />}
           gradient="from-yellow-500 to-amber-500"
+          to={buildProjectsUrl({ status: [ProjectStatus.PROPOSAL] }, tileParams)}
         />
         <MetricCard
           title="Open Deals"
           value={data?.pipeline?.atRisk || 0}
           icon={<FaExclamationTriangle />}
           gradient="from-red-500 to-rose-500"
+          to={buildProjectsUrl({ status: [ProjectStatus.LEAD, ProjectStatus.SITE_SURVEY, ProjectStatus.PROPOSAL] }, tileParams)}
         />
       </div>
 
