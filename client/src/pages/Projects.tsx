@@ -383,6 +383,12 @@ const Projects = () => {
     }))
 
     setPage(1)
+
+    // When arriving from a dashboard tile, URL has filter params and is the source of truth.
+    // Clear the URL so the query uses the reset state instead of stale URL params.
+    if (urlHasFilterParams) {
+      navigate({ pathname: '/projects', search: '' }, { replace: true })
+    }
   }
 
   const moreFiltersActiveCount = useMemo(() => {
