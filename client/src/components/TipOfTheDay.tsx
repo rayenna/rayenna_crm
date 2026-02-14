@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom'
 import {
+  TIPS,
   getTipForToday,
   shouldShowTip,
   markTipShown,
@@ -42,6 +43,12 @@ const TipOfTheDay = () => {
     clearShowTipFromUrl()
   }
 
+  const handleNextTip = () => {
+    const idx = TIPS.indexOf(tip)
+    const nextIdx = idx >= 0 ? (idx + 1) % TIPS.length : 0
+    setTip(TIPS[nextIdx])
+  }
+
   if (!show) return null
 
   return (
@@ -58,19 +65,27 @@ const TipOfTheDay = () => {
             {tip}
           </p>
         </div>
-        <div className="px-4 py-3 bg-primary-50/50 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+        <div className="px-4 py-3 bg-primary-50/50 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end sm:items-center">
           <button
             onClick={handleDontShowAgain}
-            className="text-xs sm:text-sm text-primary-600 hover:text-primary-800"
+            className="text-xs sm:text-sm text-primary-600 hover:text-primary-800 sm:mr-auto"
           >
             Don&apos;t show again
           </button>
-          <button
-            onClick={handleGotIt}
-            className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
-          >
-            Got it
-          </button>
+          <div className="flex gap-2 sm:justify-end">
+            <button
+              onClick={handleNextTip}
+              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Next Tip
+            </button>
+            <button
+              onClick={handleGotIt}
+              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Got it
+            </button>
+          </div>
         </div>
       </div>
     </div>
