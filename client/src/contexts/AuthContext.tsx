@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import axiosInstance from '../utils/axios'
 import { setAuthErrorCallback } from '../utils/authErrorHandler'
 import { User, UserRole } from '../types'
@@ -27,6 +28,7 @@ export const useAuth = () => {
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const queryClient = useQueryClient()
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -43,7 +45,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null)
     sessionStorage.clear() // Clear all session data (token, filters, etc.) on logout
     delete axiosInstance.defaults.headers.common['Authorization']
-  }, [])
+    // Clear React Query cache so next user sees fresh data (no stale tiles/dashboard from previous user)
+    queryClient.clear()
+  }, [queryClient])
 
   // Reset inactivity timer on user activity
   const resetIdleTimer = useCallback(() => {
