@@ -76,7 +76,7 @@ KPI (Key Performance Indicator) tiles are visual cards that display important me
 
 **Second Row (3 KPIs)**:
 
-6. **Survey Stage**
+6. **Site Survey Stage**
    - **Icon**: Clipboard list icon
    - **Color**: Indigo to Blue gradient
    - **Description**: Projects in site survey stage
@@ -335,7 +335,7 @@ Each user role sees a customized dashboard tailored to their responsibilities an
 - Users with Sales role
 
 **What They See**:
-- **KPIs**: Total Leads, Total Capacity, Total Revenue, Total Pipeline, Approved Projects, Survey Stage, Proposal Stage, At Risk
+- **KPIs**: Total Leads, Total Capacity, Total Revenue, Total Pipeline, Approved Projects, Site Survey Stage, Proposal Stage, At Risk
 - **Charts**: Project Value and Profit by FY, Project Value by Segment (Pie Chart), Customer Profitability Word Cloud
 - **Data Scope**: Only their own projects and leads
 - **Filters**: Financial Year and Month filters

@@ -57,6 +57,12 @@ const MetricCard = ({ title, value, icon, gradient, trend, to }: MetricCardProps
             <span className="block" title={String(value)}>{value}</span>
           </div>
           <div className="text-xs sm:text-sm font-semibold text-gray-600 group-hover:text-primary-600 transition-colors duration-200" title={title}>{title}</div>
+          {to && (
+            <div className="flex items-center gap-1.5 text-xs font-medium text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pt-0.5">
+              <span>View projects</span>
+              <span aria-hidden>→</span>
+            </div>
+          )}
         </div>
       </div>
     </>

@@ -11,6 +11,7 @@ import PipelineByLeadSourceChart from './PipelineByLeadSourceChart'
 import ProjectsByStageChart from './ProjectsByStageChart'
 import PipelineByCustomerSegmentPieChart from './PipelineByCustomerSegmentPieChart'
 import MetricCard from './MetricCard'
+import QuickAccessSection from './QuickAccessSection'
 import KeyMetricsTile from './KeyMetricsTile'
 
 interface SalesDashboardProps {
@@ -64,24 +65,24 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Sales
       </div>
 
       {/* Quick Access – tiles linking to filtered Projects */}
-      <h2 className="text-sm font-medium text-gray-500 tracking-wide mb-2">Quick Access</h2>
+      <QuickAccessSection>
       <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <MetricCard
-          title="Total Leads"
+          title="My Leads"
           value={data?.leads?.total || 0}
           icon={<FaUsers />}
           gradient="from-indigo-500 to-cyan-500"
           to={buildProjectsUrl({ status: [ProjectStatus.LEAD] }, tileParams)}
         />
         <MetricCard
-          title="Approved Projects"
+          title="My Confirmed Orders"
           value={data?.pipeline?.approved || 0}
           icon={<FaCheckCircle />}
           gradient="from-purple-500 to-pink-500"
           to={buildProjectsUrl({ status: [ProjectStatus.CONFIRMED] }, tileParams)}
         />
         <MetricCard
-          title="Survey Stage"
+          title="Site Survey Stage"
           value={data?.pipeline?.survey || 0}
           icon={<FaClipboardList />}
           gradient="from-indigo-500 to-indigo-600"
@@ -95,13 +96,14 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Sales
           to={buildProjectsUrl({ status: [ProjectStatus.PROPOSAL] }, tileParams)}
         />
         <MetricCard
-          title="Open Deals"
+          title="My Open Deals"
           value={data?.pipeline?.atRisk || 0}
           icon={<FaExclamationTriangle />}
           gradient="from-red-500 to-rose-500"
           to={buildProjectsUrl({ status: [ProjectStatus.LEAD, ProjectStatus.SITE_SURVEY, ProjectStatus.PROPOSAL] }, tileParams)}
         />
       </div>
+      </QuickAccessSection>
 
       {/* Projects by Stage / Execution Status – full width */}
       <div className="w-full min-w-0">

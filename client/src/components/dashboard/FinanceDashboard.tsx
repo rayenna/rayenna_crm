@@ -8,6 +8,7 @@ import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
 import RevenueByLeadSourceChart from './RevenueByLeadSourceChart'
 import RevenueBySalesTeamChart from './RevenueBySalesTeamChart'
 import MetricCard from './MetricCard'
+import QuickAccessSection from './QuickAccessSection'
 
 interface FinanceDashboardProps {
   selectedFYs: string[]
@@ -68,8 +69,8 @@ const FinanceDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Fin
       </div>
 
       {/* Quick Access – tiles linking to filtered Projects */}
-      <h2 className="text-sm font-medium text-gray-500 tracking-wide mb-2">Quick Access</h2>
-      <div className="bg-gradient-to-br from-white via-indigo-50/50 to-white shadow-2xl rounded-2xl border-2 border-indigo-200/50 overflow-hidden backdrop-blur-sm min-w-0">
+      <QuickAccessSection>
+      <div className="bg-gradient-to-br from-white via-indigo-50/50 to-white shadow-xl rounded-xl border-2 border-indigo-200/50 overflow-hidden backdrop-blur-sm min-w-0">
         <div className="bg-gradient-to-r from-indigo-500 via-cyan-500 to-indigo-600 px-4 py-3 sm:px-6 sm:py-4 shadow-lg">
           <h3 className="text-base sm:text-lg font-bold text-white drop-shadow-md truncate">
             Projects by Payment Status
@@ -104,6 +105,7 @@ const FinanceDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Fin
           </div>
         </div>
       </div>
+      </QuickAccessSection>
 
       {/* Row 1: Revenue by Lead Source, Revenue by Sales Team Member – 2x2 layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">

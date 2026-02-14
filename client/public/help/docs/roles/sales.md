@@ -20,7 +20,7 @@ Your dashboard is your command center. It shows key metrics about your sales per
 - **Approved Projects**: Number of projects that have been confirmed by customers
 
 **Second Row Metrics**:
-- **Survey Stage**: Projects currently in site survey phase
+- **Site Survey Stage**: Projects currently in site survey phase
 - **Proposal Stage**: Projects where proposals have been sent
 - **At Risk**: Projects that may be at risk of being lost
 

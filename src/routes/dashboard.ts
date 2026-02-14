@@ -72,6 +72,7 @@ function applyDateFilters(
         const startYear = parseInt(yearMatch[1]);
         const dateFilters: any[] = [];
 
+        // Use confirmationDate only – must match Projects API for tile counts to match Projects page
         effectiveMonthFilters.forEach((month) => {
           const monthNum = parseInt(month);
           let year = startYear;
@@ -81,10 +82,7 @@ function applyDateFilters(
           const startDate = new Date(year, monthNum - 1, 1);
           const endDate = new Date(year, monthNum, 0, 23, 59, 59, 999);
           dateFilters.push({
-            OR: [
-              { confirmationDate: { gte: startDate, lte: endDate } },
-              { createdAt: { gte: startDate, lte: endDate } },
-            ],
+            confirmationDate: { gte: startDate, lte: endDate },
           });
         });
 
@@ -835,6 +833,45 @@ router.get('/operations', authenticate, async (req: Request, res) => {
       projectsByStatusRaw.map((r) => ({ status: r.projectStatus, _count: r._count.id }))
     );
 
+    // Projects by payment status (for Quick Access tile – Operations scope)
+    const allProjectsForPayment = await prisma.project.findMany({
+      where: { ...where },
+      select: {
+        id: true,
+        paymentStatus: true,
+        projectCost: true,
+        projectStatus: true,
+        balanceAmount: true,
+      },
+    });
+    const projectsByEffectiveStatusOps: Record<string, { count: number; totalValue: number; outstanding: number }> = {};
+    allProjectsForPayment.forEach((project) => {
+      const hasNoOrderValue = !project.projectCost || project.projectCost === 0;
+      const isEarlyOrLostStage =
+        project.projectStatus === ProjectStatus.LEAD ||
+        project.projectStatus === ProjectStatus.SITE_SURVEY ||
+        project.projectStatus === ProjectStatus.PROPOSAL ||
+        project.projectStatus === ProjectStatus.LOST;
+      const effectiveStatus =
+        hasNoOrderValue || isEarlyOrLostStage ? 'N/A' : (project.paymentStatus || 'PENDING');
+      if (!projectsByEffectiveStatusOps[effectiveStatus]) {
+        projectsByEffectiveStatusOps[effectiveStatus] = { count: 0, totalValue: 0, outstanding: 0 };
+      }
+      projectsByEffectiveStatusOps[effectiveStatus].count++;
+      projectsByEffectiveStatusOps[effectiveStatus].totalValue += project.projectCost || 0;
+      if (effectiveStatus === 'PENDING' || effectiveStatus === 'PARTIAL') {
+        projectsByEffectiveStatusOps[effectiveStatus].outstanding += project.balanceAmount || 0;
+      }
+    });
+    const projectsByPaymentStatus = Object.entries(projectsByEffectiveStatusOps).map(
+      ([status, data]) => ({
+        status,
+        count: data.count,
+        totalValue: data.totalValue,
+        outstanding: data.outstanding,
+      })
+    );
+
     res.json({
       pendingInstallation,
       submittedForSubsidy,
@@ -854,6 +891,7 @@ router.get('/operations', authenticate, async (req: Request, res) => {
       projectValueByType: valueByTypeWithPercentage,
       projectValueProfitByFY,
       projectsByStatus,
+      projectsByPaymentStatus,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

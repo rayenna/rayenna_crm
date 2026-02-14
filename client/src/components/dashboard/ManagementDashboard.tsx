@@ -14,6 +14,7 @@ import ProjectsByStageChart from './ProjectsByStageChart'
 import RevenueBySalesTeamChart from './RevenueBySalesTeamChart'
 import PipelineByCustomerSegmentPieChart from './PipelineByCustomerSegmentPieChart'
 import MetricCard from './MetricCard'
+import QuickAccessSection from './QuickAccessSection'
 import KeyMetricsTile from './KeyMetricsTile'
 
 interface ManagementDashboardProps {
@@ -67,7 +68,7 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
       </div>
 
       {/* Quick Access – tiles linking to filtered Projects */}
-      <h2 className="text-sm font-medium text-gray-500 tracking-wide mb-2">Quick Access</h2>
+      <QuickAccessSection>
       <div className="grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-5 min-w-0">
         <MetricCard
           title="Total Leads"
@@ -134,6 +135,7 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
           </div>
         </div>
       </div>
+      </QuickAccessSection>
 
       {/* Projects by Stage / Execution Status – full width */}
       <div className="w-full min-w-0">
