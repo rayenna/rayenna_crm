@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import TipOfTheDay from './TipOfTheDay'
+import { getHelpSectionForRoute, helpSections } from '../help/sections'
 
 const Layout = () => {
   const { user, logout, hasRole } = useAuth()
@@ -41,6 +42,19 @@ const Layout = () => {
   
   const isHelpActive = location.pathname.startsWith('/help') || location.pathname.startsWith('/about')
 
+  /** Context-sensitive Help path: open the section that matches the current page */
+  const getHelpPath = () => {
+    const sectionId = getHelpSectionForRoute(location.pathname)
+    const section = helpSections.find((s) => s.id === sectionId)
+    return section ? `/help/${section.routeKey}` : '/help'
+  }
+
+  const openHelp = () => {
+    sessionStorage.setItem('helpReferrer', location.pathname)
+    navigate(getHelpPath())
+    setHelpDropdownOpen(false)
+  }
+
   // Keyboard shortcuts: ? to open Help, Esc to close Help
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -53,15 +67,12 @@ const Layout = () => {
         target.closest('[contenteditable="true"]') !== null
 
       // ? key to open Help (only if not typing in an input)
-      // Note: ? is typically Shift+/, so we need to allow shiftKey
-      // Check for both '?' key and Shift+'/' combination
       const isQuestionMark = event.key === '?' || (event.key === '/' && event.shiftKey)
       if (isQuestionMark && !isInputFocused && !event.ctrlKey && !event.metaKey && !event.altKey) {
-        // Don't open if already on help page
         if (!location.pathname.startsWith('/help')) {
           event.preventDefault()
           sessionStorage.setItem('helpReferrer', location.pathname)
-          navigate('/help')
+          navigate(getHelpPath())
         }
       }
 
@@ -162,15 +173,22 @@ const Layout = () => {
                           >
                             {item.name}
                           </button>
+                        ) : item.path.startsWith('/help') ? (
+                          <button
+                            key={item.path}
+                            type="button"
+                            onClick={openHelp}
+                            className={`block w-full text-left px-4 py-2 text-sm font-medium transition-colors ${
+                              isHelpActive ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50 hover:text-primary-600'
+                            }`}
+                          >
+                            {item.name}
+                          </button>
                         ) : (
                           <Link
                             key={item.path}
                             to={item.path}
-                            state={{ from: { pathname: location.pathname } }}
-                            onClick={() => {
-                              sessionStorage.setItem('helpReferrer', location.pathname)
-                              setHelpDropdownOpen(false)
-                            }}
+                            onClick={() => setHelpDropdownOpen(false)}
                             className={`block px-4 py-2 text-sm font-medium transition-colors ${
                               location.pathname.startsWith(item.path)
                                 ? 'bg-primary-50 text-primary-700'
@@ -249,6 +267,20 @@ const Layout = () => {
                       type="button"
                       onClick={openTipOfTheDay}
                       className="block w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm"
+                    >
+                      {item.name}
+                    </button>
+                  ) : item.path.startsWith('/help') ? (
+                    <button
+                      key={item.path}
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false)
+                        openHelp()
+                      }}
+                      className={`block w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                        isHelpActive ? 'bg-white/25 text-white shadow-2xl font-bold backdrop-blur-md border-2 border-white/30' : 'text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm'
+                      }`}
                     >
                       {item.name}
                     </button>

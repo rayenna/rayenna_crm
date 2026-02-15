@@ -245,8 +245,8 @@ Filters allow you to customize the dashboard view by selecting specific time per
 
 **Filter Behavior**:
 - **No Selection**: Shows all data (all FYs)
-- **Single Selection**: Shows data for selected FY
-- **Multiple Selection**: Shows data for all selected FYs
+- **Single Selection**: Shows data for selected FY; Quarter and Month filters become available
+- **Multiple Selection**: Shows data for all selected FYs; Quarter and Month are disabled
 - **Clear Filter**: Click "Clear Filter" button to reset
 
 **FY Filter Features**:
@@ -255,12 +255,31 @@ Filters allow you to customize the dashboard view by selecting specific time per
 - Visual indication of selected FYs
 - Clear filter button when active
 
+### Quarter Filter
+
+**What is Quarter Filter**:
+- Filters data by quarter within a Financial Year (Q1 Apr–Jun, Q2 Jul–Sep, Q3 Oct–Dec, Q4 Jan–Mar)
+- Only available when exactly one FY is selected
+- Appears between the Financial Year and Month dropdowns
+
+**Using Quarter Filter**:
+1. **First**: Select exactly one Financial Year
+2. **Then**: Click **Quarters** dropdown
+3. Select one or more quarters by checking boxes
+4. Dashboard updates automatically
+
+**Quarter Filter Behavior**:
+- **Disabled**: When no FY selected or multiple FYs selected
+- **Enabled**: When exactly one FY is selected
+- **Clear Filter**: Use the clear button next to the Quarter dropdown to reset
+
 ### Month Filter
 
 **What is Month Filter**:
 - Filters data by specific months within a Financial Year
 - Only available when exactly one FY is selected
 - Months ordered from April to March (FY order)
+- If you have quarters selected, only months in those quarters are shown
 
 **Using Month Filter**:
 1. **First**: Select exactly one Financial Year
@@ -272,7 +291,7 @@ Filters allow you to customize the dashboard view by selecting specific time per
 **Month Filter Behavior**:
 - **Disabled**: When no FY selected or multiple FYs selected
 - **Enabled**: When exactly one FY is selected
-- **No Selection**: Shows all months in selected FY
+- **No Selection**: Shows all months in selected FY (or in selected quarters)
 - **Multiple Selection**: Shows data for selected months
 - **Clear Filter**: Click "Clear Filter" button to reset
 
@@ -287,9 +306,10 @@ Filters allow you to customize the dashboard view by selecting specific time per
 
 **How Filters Work Together**:
 - **FY Filter**: Primary filter, affects all data
-- **Month Filter**: Secondary filter, requires single FY
-- **Combined**: Both filters work together when applicable
-- **Independent**: Charts may have their own filters
+- **Quarter Filter**: Requires exactly one FY; narrows to Q1–Q4 within that FY
+- **Month Filter**: Requires exactly one FY; can be used with or without Quarter
+- **Combined**: FY, Quarter, and Month work together when applicable
+- **Independent**: Some charts may have their own filter controls
 
 **Filter Application**:
 - Filters apply to KPI tiles (metric cards)
@@ -298,7 +318,8 @@ Filters allow you to customize the dashboard view by selecting specific time per
 - Filters update data in real-time
 
 **Clearing Filters**:
-- **Clear FY Filter**: Clears both FY and Month filters
+- **Clear FY Filter**: Clears FY, Quarter, and Month filters
+- **Clear Quarter Filter**: Clears only Quarter selection
 - **Clear Month Filter**: Clears only Month filter
 - **Reset All**: Deselect all filters to see all data
 - **Visual Feedback**: Filters show when active
@@ -338,7 +359,7 @@ Each user role sees a customized dashboard tailored to their responsibilities an
 - **KPIs**: Total Leads, Total Capacity, Total Revenue, Total Pipeline, Approved Projects, Site Survey Stage, Proposal Stage, At Risk
 - **Charts**: Project Value and Profit by FY, Project Value by Segment (Pie Chart), Customer Profitability Word Cloud
 - **Data Scope**: Only their own projects and leads
-- **Filters**: Financial Year and Month filters
+- **Filters**: Financial Year, Quarter, and Month filters
 
 **Key Features**:
 - Focus on sales performance
@@ -356,7 +377,7 @@ Each user role sees a customized dashboard tailored to their responsibilities an
 - **Charts**: Project Value and Profit by FY, Project Value by Segment (Pie Chart)
 - **Additional**: Pending Subsidy list with customer names and days pending
 - **Data Scope**: All projects (company-wide)
-- **Filters**: Financial Year and Month filters
+- **Filters**: Financial Year, Quarter, and Month filters
 
 **Key Features**:
 - Focus on execution and operations
@@ -374,7 +395,7 @@ Each user role sees a customized dashboard tailored to their responsibilities an
 - **Charts**: Project Value and Profit by FY
 - **Additional**: Projects by Payment Status breakdown
 - **Data Scope**: All projects (company-wide)
-- **Filters**: Financial Year and Month filters
+- **Filters**: Financial Year, Quarter, and Month filters
 
 **Key Features**:
 - Focus on financial metrics
@@ -392,7 +413,7 @@ Each user role sees a customized dashboard tailored to their responsibilities an
 - **KPIs**: Total Leads, Total Capacity, Total Revenue, Total Pipeline, Total Profit, Pending Installation, Pending Subsidy, Subsidy Credited
 - **Charts**: Project Value and Profit by FY, Project Value by Segment (Pie Chart), Customer Profitability Word Cloud, Sales Team Performance Treemap
 - **Data Scope**: All projects and all users (company-wide)
-- **Filters**: Financial Year and Month filters
+- **Filters**: Financial Year, Quarter, and Month filters
 
 **Key Features**:
 - Comprehensive overview
@@ -718,7 +739,7 @@ The Dashboard provides:
 
 **Key Features**:
 - KPI tiles for key metrics
-- Financial Year and Month filters
+- Financial Year, Quarter, and Month filters
 - Role-based dashboard views
 - Interactive charts and visualizations
 - Real-time data updates

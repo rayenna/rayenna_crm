@@ -40,7 +40,7 @@ export const helpSections: HelpSection[] = [
     title: 'Security',
     routeKey: 'security',
     markdownPath: '/help-docs/security/index.md',
-    routePatterns: ['/change-password']
+    routePatterns: ['/change-password', '/audit-security', '/users']
   },
   {
     id: 'faq',
@@ -50,15 +50,16 @@ export const helpSections: HelpSection[] = [
   }
 ]
 
-// Route to help section mapping
+// Route to help section mapping (Dashboard opens Analytics for context-sensitive help)
 export const routeToHelpMapping: Record<string, string> = {
-  '/dashboard': 'getting-started',
+  '/dashboard': 'analytics',
   '/customers': 'modules',
   '/projects': 'modules',
   '/support-tickets': 'modules',
   '/tally-export': 'modules',
-  '/users': 'modules',
+  '/users': 'security',
   '/change-password': 'security',
+  '/audit-security': 'security',
 }
 
 /**
@@ -96,4 +97,25 @@ export const getHelpSectionForRoute = (currentPath: string): string | null => {
 
   // Fallback to getting started
   return 'getting-started'
+}
+
+/** Human-readable label for a route, used in the context banner when opening Help from that page */
+const routeToContextLabel: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/customers': 'Customers',
+  '/projects': 'Projects',
+  '/support-tickets': 'Support Tickets',
+  '/tally-export': 'Tally Export',
+  '/users': 'Users',
+  '/change-password': 'Change Password',
+  '/audit-security': 'Audit & Security',
+}
+
+/**
+ * Get a short label for the given path for use in the Help context banner
+ */
+export function getHelpContextLabel(currentPath: string): string | null {
+  if (routeToContextLabel[currentPath]) return routeToContextLabel[currentPath]
+  if (currentPath.startsWith('/projects/')) return 'Project details'
+  return null
 }

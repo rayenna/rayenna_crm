@@ -1,42 +1,59 @@
-import { useEffect, useMemo, Suspense } from 'react'
+import { useEffect, useMemo, useRef, useState, Suspense } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
-import { helpSections, HelpSection, getHelpSectionForRoute } from '../help/sections'
+import { helpSections, HelpSection, getHelpSectionForRoute, getHelpContextLabel } from '../help/sections'
 import { getHelpContent } from '../help/contentLoader'
+import { searchHelpContent } from '../help/searchHelp'
 import HelpSidebar from '../components/help/HelpSidebar'
 import ErrorBoundary from '../components/ErrorBoundary'
+
+/** Normalize markdown string for safe rendering; avoids formatting/crash on hard refresh. */
+function normalizeHelpMarkdown(raw: string | undefined): string {
+  if (raw == null) return ''
+  return String(raw)
+    .replace(/\r\n?/g, '\n')
+    .replace(/\0/g, '')
+    .trim()
+}
 
 const Help = () => {
   const { section } = useParams<{ section?: string }>()
   const navigate = useNavigate()
+  const helpContextPathRef = useRef<string | null>(null)
 
   // Determine current section - simplified and safe for hard refresh
   const selectedSection = useMemo(() => {
     try {
-      // If explicit section in URL, use it
+      // If explicit section in URL, use it. Still read referrer for context banner (e.g. opened via ? or Help menu from another page).
       if (section) {
+        try {
+          const referrerPath = sessionStorage.getItem('helpReferrer')
+          if (referrerPath) {
+            helpContextPathRef.current = referrerPath
+            sessionStorage.removeItem('helpReferrer')
+          }
+        } catch (_) {}
         const found = helpSections.find(s => s.routeKey === section)
         if (found) return found
       }
-      
-      // On hard refresh without section param, default to getting-started
-      // Only do context-sensitive detection if we have a referrer stored
+
+      // On open without section: use referrer for context-sensitive section + banner
       try {
         const referrerPath = sessionStorage.getItem('helpReferrer')
         if (referrerPath) {
           const contextSectionId = getHelpSectionForRoute(referrerPath)
           const found = helpSections.find(s => s.id === contextSectionId)
           if (found) {
+            helpContextPathRef.current = referrerPath
             sessionStorage.removeItem('helpReferrer')
             return found
           }
         }
       } catch (e) {
-        // Ignore sessionStorage errors
         console.warn('Error accessing sessionStorage:', e)
       }
-      
-      // Fallback to getting started
+
+      helpContextPathRef.current = null
       return helpSections.find(s => s.id === 'getting-started') || helpSections[0] || null
     } catch (error) {
       console.error('Error determining section:', error)
@@ -67,13 +84,39 @@ const Help = () => {
   }, [navigate])
 
   // Content is loaded at build time via Vite – no fetch
-  const markdownContent = selectedSection
+  const rawContent = selectedSection
     ? getHelpContent(selectedSection.id) || `# ${selectedSection.title}\n\nContent for ${selectedSection.title} is coming soon.`
     : ''
+  const markdownContent = useMemo(() => normalizeHelpMarkdown(rawContent), [rawContent])
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const allContent = useMemo(
+    () =>
+      helpSections.map((s) => ({
+        id: s.id,
+        title: s.title,
+        routeKey: s.routeKey,
+        content: getHelpContent(s.id) || '',
+      })),
+    []
+  )
+  const searchResults = useMemo(
+    () => searchHelpContent(searchQuery, allContent),
+    [searchQuery, allContent]
+  )
 
   const handleSectionSelect = (section: HelpSection) => {
+    helpContextPathRef.current = null
     navigate(`/help/${section.routeKey}`)
   }
+
+  const handleSearchResultClick = (routeKey: string) => {
+    const sec = helpSections.find((s) => s.routeKey === routeKey)
+    if (sec) handleSectionSelect(sec)
+    setSearchQuery('')
+  }
+
+  const contextLabel = helpContextPathRef.current ? getHelpContextLabel(helpContextPathRef.current) : null
 
   // Ensure we have a valid section before rendering
   if (!selectedSection) {
@@ -92,7 +135,46 @@ const Help = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left Sidebar */}
-          <div className="lg:col-span-1 min-h-[400px]">
+          <div className="lg:col-span-1 min-h-[400px] space-y-4">
+            {/* Search */}
+            <div className="rounded-xl border border-sky-100/80 bg-white shadow-sm overflow-hidden">
+              <label htmlFor="help-search" className="sr-only">
+                Search help
+              </label>
+              <input
+                id="help-search"
+                type="search"
+                placeholder="Search help…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-2.5 text-sm border-0 focus:ring-2 focus:ring-primary-500 focus:ring-inset placeholder-gray-400"
+                aria-describedby={searchQuery.length > 0 ? 'help-search-results' : undefined}
+              />
+              {searchQuery.trim().length > 0 && (
+                <div
+                  id="help-search-results"
+                  className="border-t border-sky-100 max-h-64 overflow-y-auto"
+                  role="list"
+                >
+                  {searchResults.length === 0 ? (
+                    <p className="px-4 py-3 text-sm text-gray-500">No matches</p>
+                  ) : (
+                    searchResults.map((r) => (
+                      <button
+                        key={r.routeKey}
+                        type="button"
+                        onClick={() => handleSearchResultClick(r.routeKey)}
+                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-sky-50/80 border-b border-sky-50 last:border-b-0 transition-colors"
+                        role="listitem"
+                      >
+                        <span className="font-medium text-primary-700 block">{r.sectionTitle}</span>
+                        <span className="text-gray-600 line-clamp-2">{r.snippet}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
             {selectedSection && (
               <HelpSidebar
                 sections={helpSections}
@@ -105,6 +187,17 @@ const Help = () => {
           {/* Right Content Area */}
           <div className="lg:col-span-3">
             <div className="bg-gradient-to-br from-white to-sky-50/30 rounded-xl shadow-sm border-l-4 border-l-sky-400 border border-sky-100/60 p-6 lg:p-8">
+              {contextLabel && (
+                <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50/80 px-4 py-2.5 text-sm text-sky-800">
+                  <span className="font-medium">Help for:</span>{' '}
+                  <span className="font-semibold">{contextLabel}</span>
+                  {selectedSection && (
+                    <span className="ml-1 text-sky-600">
+                      {' '}— you're in the <strong>{selectedSection.title}</strong> section
+                    </span>
+                  )}
+                </div>
+              )}
               {markdownContent ? (
                 <ErrorBoundary
                   fallback={
@@ -126,6 +219,7 @@ const Help = () => {
                           }
                         >
                           <ReactMarkdown
+                            key={selectedSection?.id ?? 'help'}
                             components={{
                       h1: ({ node, ...props }) => (
                         <h1 className="text-3xl font-bold text-gray-900 mb-4 mt-6 first:mt-0" {...props} />
