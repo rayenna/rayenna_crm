@@ -1,7 +1,7 @@
 # Frontend only (Option B). Backend stays as existing Web Service.
 # See DEPLOYMENT_GUIDE "Option B: Render Static Site" for manual steps and redirects.
 services:
-  - type: pss
+  - type: web
     name: rayenna-crm-frontend
     runtime: static
     plan: free

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import axiosInstance from '../../utils/axios'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
-import { FaUsers, FaCog, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa'
+import { FaUsers, FaCog, FaFileInvoice, FaCheckCircle, FaExclamationTriangle, FaClipboardList } from 'react-icons/fa'
 import { ProjectStatus } from '../../types'
 import ProjectValuePieChart from './ProjectValuePieChart'
 import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
@@ -67,9 +67,10 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
         />
       </div>
 
-      {/* Quick Access – tiles linking to filtered Projects */}
+      {/* Quick Access – tiles linking to filtered Projects (2 rows × 4 cols, same tile size as Operations) */}
       <QuickAccessSection>
-      <div className="grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-5 min-w-0">
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-4 min-w-0">
+        {/* Row 1 */}
         <MetricCard
           title="Total Leads"
           value={data?.sales?.totalLeads || 0}
@@ -78,12 +79,27 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
           to={buildProjectsUrl({ status: [ProjectStatus.LEAD] }, tileParams)}
         />
         <MetricCard
+          title="Site Survey Stage"
+          value={(data?.projectsByStatus?.find((p: any) => p.status === ProjectStatus.SITE_SURVEY)?.count) ?? 0}
+          icon={<FaClipboardList />}
+          gradient="from-indigo-500 to-indigo-600"
+          to={buildProjectsUrl({ status: [ProjectStatus.SITE_SURVEY] }, tileParams)}
+        />
+        <MetricCard
+          title="Proposal Stage"
+          value={(data?.projectsByStatus?.find((p: any) => p.status === ProjectStatus.PROPOSAL)?.count) ?? 0}
+          icon={<FaClipboardList />}
+          gradient="from-yellow-500 to-amber-500"
+          to={buildProjectsUrl({ status: [ProjectStatus.PROPOSAL] }, tileParams)}
+        />
+        <MetricCard
           title="Open Deals"
           value={data?.pipeline?.atRisk || 0}
           icon={<FaExclamationTriangle />}
           gradient="from-red-500 to-rose-500"
           to={buildProjectsUrl({ status: [ProjectStatus.LEAD, ProjectStatus.SITE_SURVEY, ProjectStatus.PROPOSAL] }, tileParams)}
         />
+        {/* Row 2 */}
         <MetricCard
           title="Pending Installation"
           value={data?.operations?.pendingInstallation || 0}
@@ -92,13 +108,20 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
           to={buildProjectsUrl({ status: [ProjectStatus.UNDER_INSTALLATION, ProjectStatus.CONFIRMED] }, tileParams)}
         />
         <MetricCard
+          title="Completed Installation"
+          value={((data?.projectsByStatus?.find((p: any) => p.status === ProjectStatus.COMPLETED)?.count) ?? 0) + ((data?.projectsByStatus?.find((p: any) => p.status === ProjectStatus.COMPLETED_SUBSIDY_CREDITED)?.count) ?? 0)}
+          icon={<FaFileInvoice />}
+          gradient="from-yellow-500 to-amber-500"
+          to={buildProjectsUrl({ status: [ProjectStatus.COMPLETED_SUBSIDY_CREDITED, ProjectStatus.COMPLETED] }, tileParams)}
+        />
+        <MetricCard
           title="Subsidy Credited"
           value={data?.operations?.subsidyCredited || 0}
           icon={<FaCheckCircle />}
           gradient="from-yellow-500 to-amber-500"
           to={buildProjectsUrl({ status: [ProjectStatus.COMPLETED_SUBSIDY_CREDITED] }, tileParams)}
         />
-        {/* Projects by Payment Status – compact tile for Management/Admin */}
+        {/* Payment Status tile */}
         <div className="min-w-0 flex flex-col bg-gradient-to-br from-white via-indigo-50/50 to-white shadow-lg rounded-xl border-2 border-indigo-200/50 overflow-hidden backdrop-blur-sm">
           <div className="bg-gradient-to-r from-indigo-500 via-cyan-500 to-indigo-600 px-3 py-2 sm:px-4 sm:py-2.5">
             <h3 className="text-sm sm:text-base font-bold text-white drop-shadow-md truncate">

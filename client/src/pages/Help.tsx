@@ -1,18 +1,14 @@
-import { useState, useEffect, useRef, useMemo, Suspense } from 'react'
+import { useEffect, useMemo, Suspense } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import { helpSections, HelpSection, getHelpSectionForRoute } from '../help/sections'
+import { getHelpContent } from '../help/contentLoader'
 import HelpSidebar from '../components/help/HelpSidebar'
 import ErrorBoundary from '../components/ErrorBoundary'
 
 const Help = () => {
   const { section } = useParams<{ section?: string }>()
   const navigate = useNavigate()
-  const [markdownContent, setMarkdownContent] = useState<string>('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const mountedRef = useRef(true)
-  const loadingRef = useRef(false)
 
   // Determine current section - simplified and safe for hard refresh
   const selectedSection = useMemo(() => {
@@ -48,7 +44,7 @@ const Help = () => {
     }
   }, [section])
 
-  // Sync URL to section so hard refresh preserves current help section (fix: losing formatting on hard refresh)
+  // Sync URL to section so hard refresh preserves current help section
   useEffect(() => {
     if (!section && selectedSection) {
       navigate(`/help/${selectedSection.routeKey}`, { replace: true })
@@ -70,127 +66,13 @@ const Help = () => {
     }
   }, [navigate])
 
-  // Load markdown content - simplified and safe
-  useEffect(() => {
-    if (!selectedSection) {
-      setLoading(false)
-      setMarkdownContent('')
-      return
-    }
-
-    // Prevent multiple simultaneous loads
-    if (loadingRef.current) return
-    loadingRef.current = true
-
-    let cancelled = false
-    setLoading(true)
-    setError(null)
-    setMarkdownContent('') // Clear previous content
-
-    const FETCH_TIMEOUT_MS = 25000 // 25s – accommodates iPad on slow networks
-    let willRetry = false
-    const loadMarkdown = async (retryCount = 0) => {
-      willRetry = false
-      try {
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
-
-        const response = await fetch(selectedSection.markdownPath, {
-          cache: 'default', // Allow browser cache – avoids repeat fetches on slow connections (e.g. iPad)
-          signal: controller.signal,
-        })
-
-        clearTimeout(timeoutId)
-
-        if (cancelled || !mountedRef.current) return
-
-        if (response.ok) {
-          const content = await response.text()
-          if (!cancelled && mountedRef.current) {
-            setMarkdownContent(content || `# ${selectedSection.title}\n\nContent for ${selectedSection.title} is coming soon.`)
-            setError(null)
-          }
-        } else {
-          if (!cancelled && mountedRef.current) {
-            setMarkdownContent(`# ${selectedSection.title}\n\nContent for ${selectedSection.title} is coming soon.`)
-            setError(null)
-          }
-        }
-      } catch (err: any) {
-        console.error('Error loading markdown:', err)
-        if (!cancelled && mountedRef.current) {
-          const isTimeout = err?.name === 'AbortError'
-          if (isTimeout && retryCount < 1) {
-            willRetry = true
-            // Retry once – helps when first attempt times out (e.g. cold connection on iPad)
-            setTimeout(() => loadMarkdown(retryCount + 1), 1500)
-            return
-          }
-          if (isTimeout) {
-            setError('Request timed out. Please try again.')
-          } else {
-            setError('Failed to load help content. Please try refreshing the page.')
-          }
-          setMarkdownContent(`# ${selectedSection.title}\n\nContent for ${selectedSection.title} is coming soon.`)
-        }
-      } finally {
-        if (!cancelled && mountedRef.current && !willRetry) {
-          setLoading(false)
-          loadingRef.current = false
-        }
-      }
-    }
-
-    // Small delay to prevent race conditions on hard refresh
-    const timeoutId = setTimeout(() => {
-      loadMarkdown()
-    }, 50)
-    
-    return () => {
-      cancelled = true
-      loadingRef.current = false
-      clearTimeout(timeoutId)
-    }
-  }, [selectedSection?.id]) // Only depend on section ID to prevent unnecessary reloads
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false
-    }
-  }, [])
+  // Content is loaded at build time via Vite – no fetch
+  const markdownContent = selectedSection
+    ? getHelpContent(selectedSection.id) || `# ${selectedSection.title}\n\nContent for ${selectedSection.title} is coming soon.`
+    : ''
 
   const handleSectionSelect = (section: HelpSection) => {
     navigate(`/help/${section.routeKey}`)
-  }
-
-  // Render loading state
-  if (loading && !markdownContent) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading help content...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Render error state
-  if (error && !markdownContent) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <p className="text-red-600 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
-          >
-            Reload Page
-          </button>
-        </div>
-      </div>
-    )
   }
 
   // Ensure we have a valid section before rendering
@@ -223,12 +105,7 @@ const Help = () => {
           {/* Right Content Area */}
           <div className="lg:col-span-3">
             <div className="bg-gradient-to-br from-white to-sky-50/30 rounded-xl shadow-sm border-l-4 border-l-sky-400 border border-sky-100/60 p-6 lg:p-8">
-              {loading && !markdownContent ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                  <span className="ml-3 text-gray-600">Loading content...</span>
-                </div>
-              ) : markdownContent ? (
+              {markdownContent ? (
                 <ErrorBoundary
                   fallback={
                     <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
@@ -238,11 +115,6 @@ const Help = () => {
                   }
                 >
                   <div className="max-w-none">
-                    {error && (
-                      <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-800 text-sm">
-                        {error}
-                      </div>
-                    )}
                     <Suspense fallback={<div className="text-center py-4">Loading...</div>}>
                       {markdownContent && markdownContent.trim() ? (
                         <ErrorBoundary
@@ -390,9 +262,8 @@ const Help = () => {
                   </div>
                 </ErrorBoundary>
               ) : (
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                  <span className="ml-3 text-gray-600">Loading content...</span>
+                <div className="text-center py-8 text-gray-500">
+                  No content available
                 </div>
               )}
             </div>

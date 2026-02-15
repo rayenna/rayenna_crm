@@ -12,41 +12,41 @@ export const helpSections: HelpSection[] = [
     id: 'getting-started',
     title: 'Getting Started',
     routeKey: 'getting-started',
-    markdownPath: '/help/getting-started/index.md',
+    markdownPath: '/help-docs/getting-started/index.md',
     routePatterns: ['/dashboard']
   },
   {
     id: 'roles',
     title: 'Roles',
     routeKey: 'roles',
-    markdownPath: '/help/roles/index.md'
+    markdownPath: '/help-docs/roles/index.md'
   },
   {
     id: 'modules',
     title: 'Modules',
     routeKey: 'modules',
-    markdownPath: '/help/modules/index.md',
+    markdownPath: '/help-docs/modules/index.md',
     routePatterns: ['/customers', '/projects', '/users', '/tally-export']
   },
   {
     id: 'analytics',
     title: 'Analytics',
     routeKey: 'analytics',
-    markdownPath: '/help/analytics/index.md',
+    markdownPath: '/help-docs/analytics/index.md',
     routePatterns: ['/dashboard']
   },
   {
     id: 'security',
     title: 'Security',
     routeKey: 'security',
-    markdownPath: '/help/security/index.md',
+    markdownPath: '/help-docs/security/index.md',
     routePatterns: ['/change-password']
   },
   {
     id: 'faq',
     title: 'FAQ',
     routeKey: 'faq',
-    markdownPath: '/help/faq/index.md'
+    markdownPath: '/help-docs/faq/index.md'
   }
 ]
 
