@@ -430,8 +430,9 @@ const Projects = () => {
     enabled: user?.role !== UserRole.SALES, // Only fetch if user is not SALES
   })
 
-  // When URL has tile params (status/paymentStatus/fy/quarter/month), use them as source of truth for the request.
-  // This guarantees subtotals match the filtered set when navigating from a dashboard tile.
+  // URL has tile params when arriving from a dashboard tile – used for initial hydration only.
+  // API request always uses React state (filters, selectedFYs, etc.) as source of truth so that
+  // when the user changes the Project Stage filter or other filters, the change is reflected.
   const urlHasFilterParams =
     searchParams.getAll('status').length > 0 ||
     searchParams.getAll('paymentStatus').length > 0 ||
@@ -442,7 +443,6 @@ const Projects = () => {
   const { data, isLoading } = useQuery({
     queryKey: [
       'projects',
-      urlHasFilterParams ? searchParams.toString() : null,
       filters,
       page,
       selectedFYs,
@@ -452,32 +452,18 @@ const Projects = () => {
     enabled: filtersReady,
     queryFn: async () => {
       const params = new URLSearchParams()
-      if (urlHasFilterParams) {
-        // Source of truth: URL (tile link) – ensures subtotals match filtered projects
-        searchParams.forEach((value, key) => {
-          if (['status', 'paymentStatus', 'fy', 'quarter', 'month'].includes(key)) {
-            params.append(key, value)
-          }
-        })
-        // Merge in filters not in URL (type, salespersonId, etc.)
-        filters.type.forEach((v) => params.append('type', v))
-        filters.projectServiceType.forEach((v) => params.append('projectServiceType', v))
-        filters.salespersonId.forEach((v) => params.append('salespersonId', v))
-        filters.leadSource.forEach((v) => params.append('leadSource', v))
-        filters.supportTicketStatus.forEach((v) => params.append('supportTicketStatus', v))
-      } else {
-        // Source of truth: React state
-        filters.status.forEach((v) => params.append('status', v))
-        filters.type.forEach((v) => params.append('type', v))
-        filters.projectServiceType.forEach((v) => params.append('projectServiceType', v))
-        filters.salespersonId.forEach((v) => params.append('salespersonId', v))
-        filters.leadSource.forEach((v) => params.append('leadSource', v))
-        filters.supportTicketStatus.forEach((v) => params.append('supportTicketStatus', v))
-        filters.paymentStatus.forEach((v) => params.append('paymentStatus', v))
-        selectedFYs.forEach((fy) => params.append('fy', fy))
-        selectedQuarters.forEach((q) => params.append('quarter', q))
-        selectedMonths.forEach((m) => params.append('month', m))
-      }
+      // Always use React state as source of truth – URL only hydrates initial state.
+      // This ensures Project Stage filter (and all filters) work when page was opened via a tile.
+      filters.status.forEach((v) => params.append('status', v))
+      filters.type.forEach((v) => params.append('type', v))
+      filters.projectServiceType.forEach((v) => params.append('projectServiceType', v))
+      filters.salespersonId.forEach((v) => params.append('salespersonId', v))
+      filters.leadSource.forEach((v) => params.append('leadSource', v))
+      filters.supportTicketStatus.forEach((v) => params.append('supportTicketStatus', v))
+      filters.paymentStatus.forEach((v) => params.append('paymentStatus', v))
+      selectedFYs.forEach((fy) => params.append('fy', fy))
+      selectedQuarters.forEach((q) => params.append('quarter', q))
+      selectedMonths.forEach((m) => params.append('month', m))
       if (filters.search) params.append('search', filters.search)
       if (filters.hasDocuments) params.append('hasDocuments', 'true')
       if (filters.sortBy) {
