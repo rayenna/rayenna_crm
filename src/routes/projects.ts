@@ -541,14 +541,12 @@ router.get(
         },
       });
     } catch (error: any) {
-      console.error('Error fetching projects:', error);
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        meta: error.meta,
-      });
-      console.error('User role:', req.user?.role);
-      console.error('Where clause:', JSON.stringify(where, null, 2));
+      console.error('Error fetching projects:', error?.message ?? error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error details:', { message: error.message, code: error.code, meta: error.meta });
+        console.error('User role:', req.user?.role);
+        console.error('Where clause:', JSON.stringify(where, null, 2));
+      }
       res.status(500).json({ error: error.message || 'Internal server error' });
     }
   }

@@ -215,7 +215,9 @@ router.get('/sales', authenticate, async (req: Request, res) => {
         take: 3,
         select: { id: true, projectStatus: true, projectStage: true, projectCost: true },
       });
-      console.log('[SALES DASHBOARD] Revenue filter:', JSON.stringify(revenueWhere, null, 2), 'count:', revenueCount, 'sample:', sampleProjects);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[SALES DASHBOARD] Revenue filter:', JSON.stringify(revenueWhere, null, 2), 'count:', revenueCount, 'sample:', sampleProjects);
+      }
     }
 
     const [
