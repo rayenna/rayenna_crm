@@ -81,6 +81,7 @@ router.get(
     query('year').optional().isString(),
     query('search').optional().isString(),
     query('hasDocuments').optional().isIn(['true', 'false']),
+    query('availingLoan').optional().isIn(['true']),
     query('page').optional().isInt({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 100 }),
     query('sortBy').optional().isIn(['systemCapacity', 'projectCost', 'confirmationDate', 'creationDate', 'profitability', 'customerName']),
@@ -108,6 +109,7 @@ router.get(
         year,
         search,
         hasDocuments,
+        availingLoan,
         page = '1',
         limit = '25',
         sortBy,
@@ -348,6 +350,16 @@ router.get(
           where.AND.push(hasDocumentsCondition);
         } else {
           where.documents = { some: {} };
+        }
+      }
+
+      // Filter: only projects where Availing Loan/Financing is Yes
+      if (availingLoan === 'true') {
+        const availingLoanCondition = { availingLoan: true };
+        if (where.AND && Array.isArray(where.AND)) {
+          where.AND.push(availingLoanCondition);
+        } else {
+          where.availingLoan = true;
         }
       }
 
@@ -770,6 +782,10 @@ router.post(
         subsidyRequestDate,
         subsidyCreditedDate,
         mnreInstallationDetails,
+        // Financing / loan fields
+        availingLoan,
+        financingBank,
+        financingBankOther,
       } = req.body;
 
       // Verify customer exists and get salespersonId
@@ -833,6 +849,47 @@ router.post(
           }
         }
         // Store order value as lostRevenue; projectCost will be set to 0 in create data
+      }
+
+      // Prepare financing / loan fields (Sales & Admin only)
+      let availingLoanValue: boolean | null = null;
+      let financingBankValue: string | null = null;
+      let financingBankOtherValue: string | null = null;
+
+      if (req.user?.role === UserRole.ADMIN || req.user?.role === UserRole.SALES) {
+        const rawAvailing = availingLoan;
+        const truthyValues = ['true', 'YES', 'yes', '1', 'on', true, 1];
+        const falsyValues = ['false', 'NO', 'no', '0', false, 0];
+
+        if (truthyValues.includes(rawAvailing)) {
+          availingLoanValue = true;
+        } else if (falsyValues.includes(rawAvailing) || rawAvailing === undefined) {
+          availingLoanValue = false;
+        }
+
+        if (availingLoanValue) {
+          const bank = (financingBank ?? '').toString().trim();
+          if (!bank) {
+            return res.status(400).json({ error: 'Financing Bank is required when Availing Loan/Financing is Yes' });
+          }
+          financingBankValue = bank;
+
+          if (bank === 'OTHER') {
+            const other = (financingBankOther ?? '').toString().trim();
+            if (!other) {
+              return res.status(400).json({ error: 'Other Bank Name is required when Financing Bank is Other' });
+            }
+            if (!/^[a-zA-Z0-9\s\-&()./]+$/.test(other)) {
+              return res.status(400).json({ error: 'Other Bank Name should be alphanumeric (you can use spaces and basic punctuation)' });
+            }
+            financingBankOtherValue = other;
+          } else {
+            financingBankOtherValue = null;
+          }
+        } else if (availingLoanValue === false) {
+          financingBankValue = null;
+          financingBankOtherValue = null;
+        }
       }
 
       // Auto-select Panel Type based on Segment if not provided
@@ -915,6 +972,9 @@ router.post(
           ...(projectStatus === ProjectStatus.LOST && projectCostNum != null ? { lostRevenue: projectCostNum } : {}),
           confirmationDate: confirmationDate ? new Date(confirmationDate) : null,
           loanDetails: loanDetails ? (typeof loanDetails === 'object' ? JSON.stringify(loanDetails) : loanDetails) : null,
+          availingLoan: availingLoanValue,
+          financingBank: financingBankValue,
+          financingBankOther: financingBankOtherValue,
           incentiveEligible: incentiveEligible || false,
           leadSource: leadSource || null,
           leadSourceDetails: leadSourceDetails || null,
@@ -1367,6 +1427,9 @@ router.put(
           'projectCost',
           'confirmationDate',
           'loanDetails',
+          'availingLoan',
+          'financingBank',
+          'financingBankOther',
           'incentiveEligible',
           'remarks',
           'internalNotes',

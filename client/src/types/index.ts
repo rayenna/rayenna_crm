@@ -143,6 +143,10 @@ export interface Project {
   projectCost?: number
   confirmationDate?: string
   loanDetails?: string
+  // Financing / loan fields
+  availingLoan?: boolean
+  financingBank?: string
+  financingBankOther?: string
   incentiveEligible: boolean
   expectedProfit?: number
   grossProfit?: number

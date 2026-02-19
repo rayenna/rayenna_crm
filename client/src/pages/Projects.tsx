@@ -214,6 +214,7 @@ const Projects = () => {
     supportTicketStatus: [] as string[],
     paymentStatus: (urlInit?.paymentStatus ?? []) as string[],
     hasDocuments: false,
+    availingLoan: false,
     search: '',
     sortBy: '',
     sortOrder: 'desc',
@@ -346,6 +347,7 @@ const Projects = () => {
     filters.supportTicketStatus,
     filters.paymentStatus,
     filters.hasDocuments,
+    filters.availingLoan,
     filters.sortBy,
     selectedFYs,
     selectedQuarters,
@@ -377,6 +379,7 @@ const Projects = () => {
       supportTicketStatus: [],
       paymentStatus: [],
       hasDocuments: false,
+      availingLoan: false,
       search: '',
       sortBy: '',
       sortOrder: 'desc',
@@ -405,7 +408,8 @@ const Projects = () => {
       (filters.paymentStatus.length > 0 ? 1 : 0) +
       (user?.role !== UserRole.SALES && filters.salespersonId.length > 0 ? 1 : 0) +
       (filters.leadSource.length > 0 ? 1 : 0) +
-      (filters.hasDocuments ? 1 : 0)
+      (filters.hasDocuments ? 1 : 0) +
+      (filters.availingLoan ? 1 : 0)
     )
   }, [
     filters.status,
@@ -416,6 +420,7 @@ const Projects = () => {
     filters.salespersonId,
     filters.leadSource,
     filters.hasDocuments,
+    filters.availingLoan,
     defaultStatusValues,
     user?.role,
   ])
@@ -466,6 +471,7 @@ const Projects = () => {
       selectedMonths.forEach((m) => params.append('month', m))
       if (filters.search) params.append('search', filters.search)
       if (filters.hasDocuments) params.append('hasDocuments', 'true')
+      if (filters.availingLoan) params.append('availingLoan', 'true')
       if (filters.sortBy) {
         params.append('sortBy', filters.sortBy)
         params.append('sortOrder', filters.sortOrder)
@@ -558,6 +564,7 @@ const Projects = () => {
       filters.paymentStatus.forEach((value) => params.append('paymentStatus', value))
       if (filters.search) params.append('search', filters.search)
       if (filters.hasDocuments) params.append('hasDocuments', 'true')
+      if (filters.availingLoan) params.append('availingLoan', 'true')
       if (filters.sortBy) {
         params.append('sortBy', filters.sortBy)
         params.append('sortOrder', filters.sortOrder)
@@ -803,6 +810,20 @@ const Projects = () => {
                   <span className="text-sm text-gray-600">Has Artifacts</span>
                 </label>
                 <span className="text-xs text-gray-500">(only projects with at least one attachment)</span>
+              </div>
+
+              {/* Availing Loan checkbox */}
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={filters.availingLoan}
+                    onChange={(e) => setFilters(prev => ({ ...prev, availingLoan: e.target.checked }))}
+                    className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/20"
+                  />
+                  <span className="text-sm text-gray-600">Availing Loan</span>
+                </label>
+                <span className="text-xs text-gray-500">(only projects where Availing Loan/Financing is Yes)</span>
               </div>
 
               {/* Export buttons - Only visible to Admin users */}

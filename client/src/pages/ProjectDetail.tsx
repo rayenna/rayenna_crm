@@ -400,6 +400,57 @@ const ProjectDetail = () => {
               </dd>
             </div>
             <div>
+              <dt className="text-xs text-gray-500 uppercase tracking-wide">Availing Loan/Financing?</dt>
+              <dd className="text-sm font-medium text-gray-900 mt-0.5">
+                {project.availingLoan === true
+                  ? 'Yes'
+                  : project.availingLoan === false
+                    ? 'No'
+                    : 'Not captured'}
+              </dd>
+            </div>
+            {project.availingLoan && (
+              <>
+                {(project.financingBank || project.financingBankOther) && (
+                  <div>
+                    <dt className="text-xs text-gray-500 uppercase tracking-wide">Financing Bank</dt>
+                    <dd className="text-sm font-medium text-gray-900 mt-0.5">
+                      {(() => {
+                        const bankMap: Record<string, string> = {
+                          SBI: 'State Bank of India (SBI)',
+                          HDFC_BANK: 'HDFC Bank',
+                          ICICI_BANK: 'ICICI Bank',
+                          AXIS_BANK: 'Axis Bank',
+                          KOTAK_MAHINDRA_BANK: 'Kotak Mahindra Bank',
+                          INDUSIND_BANK: 'IndusInd Bank',
+                          YES_BANK: 'YES Bank',
+                          IDFC_FIRST_BANK: 'IDFC FIRST Bank',
+                          PUNJAB_NATIONAL_BANK: 'Punjab National Bank (PNB)',
+                          BANK_OF_BARODA: 'Bank of Baroda',
+                          CANARA_BANK: 'Canara Bank',
+                          UNION_BANK_OF_INDIA: 'Union Bank of India',
+                          FEDERAL_BANK: 'Federal Bank',
+                          SOUTH_INDIAN_BANK: 'South Indian Bank',
+                          CATHOLIC_SYRIAN_BANK: 'Catholic Syrian Bank',
+                          DHANLAXMI_BANK: 'Dhanlaxmi Bank',
+                          KERALA_GRAMIN_BANK: 'Kerala Gramin Bank',
+                          KERALA_BANK: 'Kerala Bank',
+                          KARNATAKA_BANK: 'Karnataka Bank',
+                          RBL_BANK: 'RBL Bank',
+                          TAMILNADU_MERCANTILE_BANK: 'Tamilnadu Mercantile Bank',
+                          CITY_UNION_BANK: 'City Union Bank',
+                        }
+                        if (project.financingBank === 'OTHER') {
+                          return project.financingBankOther || 'Other'
+                        }
+                        return bankMap[project.financingBank || ''] || project.financingBank || '—'
+                      })()}
+                    </dd>
+                  </div>
+                )}
+              </>
+            )}
+            <div>
               <dt className="text-xs text-gray-500 uppercase tracking-wide">Profitability</dt>
               <dd className={`text-sm font-medium ${
                 project.profitability !== null && project.profitability !== undefined

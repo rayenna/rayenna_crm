@@ -272,6 +272,10 @@ model Project {
   marginEstimate    Float? // Margin estimate
   confirmationDate  DateTime?
   loanDetails       String? // JSON: { hasLoan: boolean, remarks: string }
+  // Financing / Loan details (Sales & Admin editable, visible to all)
+  availingLoan        Boolean?
+  financingBank       String?
+  financingBankOther  String?
   incentiveEligible Boolean     @default(false)
   expectedProfit    Float? // Auto-calculated
   grossProfit       Float? // Auto-calculated: Order Value - Total Project Cost

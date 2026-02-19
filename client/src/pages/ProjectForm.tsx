@@ -208,6 +208,8 @@ const ProjectForm = () => {
   const selectedCustomerId = watch('customerId')
   const confirmationDate = watch('confirmationDate')
   const projectStatus = watch('projectStatus')
+  const availingLoan = watch('availingLoan')
+  const financingBank = watch('financingBank')
   const projectType = watch('type')
   const [customerSearch, setCustomerSearch] = useState('')
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
@@ -399,7 +401,12 @@ const ProjectForm = () => {
     },
     onSuccess: () => {
       toast.success(isEdit ? 'Project updated successfully' : 'Project created successfully')
+      // Refresh projects list
       queryClient.invalidateQueries({ queryKey: ['projects'] })
+      // Clear any cached detail view so next open always fetches fresh data
+      if (isEdit && id) {
+        queryClient.removeQueries({ queryKey: ['project', id] })
+      }
       navigate('/projects')
     },
     onError: (error: any) => {
@@ -694,6 +701,7 @@ const ProjectForm = () => {
       const allowedFields = [
         'customerId', 'type', 'projectServiceType', 'salespersonId', 'year',
         'systemCapacity', 'projectCost', 'confirmationDate', 'loanDetails',
+        'availingLoan', 'financingBank', 'financingBankOther',
         'incentiveEligible', 'leadSource', 'leadSourceDetails',
         'roofType', 'systemType', 'projectStatus', 'lostDate', 'lostReason', 'lostToCompetitionReason', 'lostOtherReason',
         'leadId', 'assignedOpsId', 'panelBrand', 'inverterBrand',
@@ -751,6 +759,7 @@ const ProjectForm = () => {
   const canEditPayments = hasRole([UserRole.ADMIN, UserRole.FINANCE])
   const canEditExecution = hasRole([UserRole.ADMIN, UserRole.OPERATIONS])
   const canEditSales = hasRole([UserRole.ADMIN, UserRole.SALES])
+  const canEditFinancing = canEditSales
   
   // Finance users can only edit payment tracking section
   // Projects in Lost status cannot be edited (except Admin can delete)
@@ -765,6 +774,7 @@ const ProjectForm = () => {
   const labelCls = 'block text-sm text-gray-500 mb-1.5'
   const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all'
   const selectCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all'
+  const canEditSalesCommercial = canEditSales && canEditOtherSections
 
   return (
     <div className="px-4 py-6 sm:px-0 min-h-screen bg-gray-50/80">
@@ -1020,7 +1030,8 @@ const ProjectForm = () => {
                 <label className={labelCls}>Lead Source *</label>
                 <select
                   {...register('leadSource', { required: 'Please select a lead source' })}
-                  className={selectCls}
+                  disabled={!canEditSalesCommercial}
+                  className={`${selectCls} ${!canEditSalesCommercial ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
                 >
                   <option value="">Select Lead Source</option>
                   <option value={LeadSource.WEBSITE}>Website</option>
@@ -1046,7 +1057,8 @@ const ProjectForm = () => {
                   <input
                     type="text"
                     {...register('leadSourceDetails')}
-                    className={inputCls}
+                    disabled={!canEditSalesCommercial}
+                    className={`${inputCls} ${!canEditSalesCommercial ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
                     placeholder={
                       watch('leadSource') === LeadSource.CHANNEL_PARTNER ? 'Enter channel partner name' :
                       watch('leadSource') === LeadSource.REFERRAL ? 'Enter referral name' :
@@ -1088,7 +1100,8 @@ const ProjectForm = () => {
                       return true;
                     }
                   })}
-                  className={inputCls}
+                  disabled={!canEditSalesCommercial}
+                  className={`${inputCls} ${!canEditSalesCommercial ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
                 />
               </div>
               <div>
@@ -1133,7 +1146,8 @@ const ProjectForm = () => {
                     }
                   })}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  readOnly={isLost}
+                  readOnly={isLost || !canEditSalesCommercial}
+                  disabled={!canEditSalesCommercial}
                 />
                 {projectStatus === ProjectStatus.LOST && (
                   <p className="mt-1 text-xs text-gray-500">Order value (stored as lost revenue for analysis). Project cost will be saved as 0.</p>
@@ -1144,9 +1158,9 @@ const ProjectForm = () => {
                 <input
                   type="date"
                   {...register('confirmationDate', { required: true })}
-                  className={inputCls}
-                  disabled={isLost}
-                  style={isLost ? { backgroundColor: '#f3f4f6', cursor: 'not-allowed' } : {}}
+                  className={`${inputCls} ${(isLost || !canEditSalesCommercial) ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
+                  disabled={isLost || !canEditSalesCommercial}
+                  style={(isLost || !canEditSalesCommercial) ? { backgroundColor: '#f3f4f6', cursor: 'not-allowed' } : {}}
                   max={projectStatus === ProjectStatus.LOST ? new Date().toISOString().split('T')[0] : undefined}
                 />
                 {projectStatus === ProjectStatus.LOST && (
@@ -1168,8 +1182,8 @@ const ProjectForm = () => {
                 <label className={labelCls}>Project Status</label>
                 <select
                   {...register('projectStatus')}
-                  className={selectCls}
-                  disabled={isProjectLost}
+                  className={`${selectCls} ${(isProjectLost || !canEditSalesCommercial) ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
+                  disabled={isProjectLost || !canEditSalesCommercial}
                 >
                   <option value="LEAD">Lead</option>
                   <option value="SITE_SURVEY">Site Survey</option>
@@ -1310,6 +1324,96 @@ const ProjectForm = () => {
                     <span className="text-sm text-gray-700">Hybrid</span>
                   </label>
                 </div>
+              {/* Financing / Loan details */}
+              <div className="md:col-span-2 border-t border-emerald-100 pt-3 mt-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Availing Loan/Financing?
+                </label>
+                <div className="flex items-center gap-4">
+                  <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      {...register('availingLoan')}
+                      disabled={!canEditFinancing}
+                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span>Yes (leave unchecked for No)</span>
+                  </label>
+                </div>
+                {availingLoan && (
+                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelCls}>
+                        Financing Bank *
+                      </label>
+                      <select
+                        {...register('financingBank', {
+                          validate: (value) => {
+                            if (!availingLoan) return true
+                            if (!value || value.trim() === '') {
+                              return 'Please select a financing bank'
+                            }
+                            return true
+                          },
+                        })}
+                        disabled={!canEditFinancing}
+                        className={selectCls}
+                      >
+                        <option value="">Select Bank</option>
+                        <option value="SBI">State Bank of India (SBI)</option>
+                        <option value="HDFC_BANK">HDFC Bank</option>
+                        <option value="ICICI_BANK">ICICI Bank</option>
+                        <option value="AXIS_BANK">Axis Bank</option>
+                        <option value="KOTAK_MAHINDRA_BANK">Kotak Mahindra Bank</option>
+                        <option value="INDUSIND_BANK">IndusInd Bank</option>
+                        <option value="YES_BANK">YES Bank</option>
+                        <option value="IDFC_FIRST_BANK">IDFC FIRST Bank</option>
+                        <option value="PUNJAB_NATIONAL_BANK">Punjab National Bank (PNB)</option>
+                        <option value="BANK_OF_BARODA">Bank of Baroda</option>
+                        <option value="CANARA_BANK">Canara Bank</option>
+                        <option value="UNION_BANK_OF_INDIA">Union Bank of India</option>
+                        <option value="FEDERAL_BANK">Federal Bank</option>
+                        <option value="SOUTH_INDIAN_BANK">South Indian Bank</option>
+                        <option value="CATHOLIC_SYRIAN_BANK">Catholic Syrian Bank</option>
+                        <option value="DHANLAXMI_BANK">Dhanlaxmi Bank</option>
+                        <option value="KERALA_GRAMIN_BANK">Kerala Gramin Bank</option>
+                        <option value="KERALA_BANK">Kerala Bank</option>
+                        <option value="KARNATAKA_BANK">Karnataka Bank</option>
+                        <option value="RBL_BANK">RBL Bank</option>
+                        <option value="TAMILNADU_MERCANTILE_BANK">Tamilnadu Mercantile Bank</option>
+                        <option value="CITY_UNION_BANK">City Union Bank</option>
+                        <option value="OTHER">Other</option>
+                      </select>
+                    </div>
+                    {financingBank === 'OTHER' && (
+                      <div>
+                        <label className={labelCls}>
+                          Other Bank Name *
+                        </label>
+                        <input
+                          type="text"
+                          {...register('financingBankOther', {
+                            validate: (value) => {
+                              if (availingLoan && financingBank === 'OTHER') {
+                                if (!value || value.trim() === '') {
+                                  return 'Please enter the bank name'
+                                }
+                                if (!/^[a-zA-Z0-9\s\-&()./]+$/.test(value)) {
+                                  return 'Bank name should be alphanumeric (you can use spaces and basic punctuation)'
+                                }
+                              }
+                              return true
+                            },
+                          })}
+                          disabled={!canEditFinancing}
+                          className={inputCls}
+                          placeholder="Enter bank name"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               </div>
             </div>
           </div>
