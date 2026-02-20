@@ -39,6 +39,7 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
     onSuccess: () => {
       toast.success('Ticket closed successfully')
       queryClient.invalidateQueries({ queryKey: ['support-tickets', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Failed to close ticket')
@@ -52,6 +53,7 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
     onSuccess: () => {
       toast.success('Ticket deleted successfully')
       queryClient.invalidateQueries({ queryKey: ['support-tickets', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Failed to delete ticket')

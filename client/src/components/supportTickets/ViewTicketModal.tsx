@@ -59,6 +59,7 @@ const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) =
       toast.success('Ticket closed successfully')
       queryClient.invalidateQueries({ queryKey: ['support-ticket', ticket.id] })
       queryClient.invalidateQueries({ queryKey: ['support-tickets', ticket.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
       onRefresh()
     },
     onError: (error: any) => {
@@ -73,6 +74,7 @@ const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) =
     onSuccess: () => {
       toast.success('Ticket deleted successfully')
       queryClient.invalidateQueries({ queryKey: ['support-tickets', ticket.projectId] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
       onClose() // Close modal after deletion
     },
     onError: (error: any) => {
