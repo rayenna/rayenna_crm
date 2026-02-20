@@ -426,16 +426,22 @@ router.get(
         }
       }
 
-      // Build orderBy based on sortBy parameter
+      // Build orderBy based on sortBy parameter (blank/null = zero: asc → nulls first, desc → nulls last)
       let orderBy: any[] = [];
       if (sortBy) {
         const order = sortOrder === 'asc' ? 'asc' : 'desc';
         switch (sortBy) {
           case 'systemCapacity':
-            orderBy = [{ systemCapacity: order }, { createdAt: 'desc' }];
+            orderBy = [
+              { systemCapacity: order === 'asc' ? { sort: 'asc', nulls: 'first' } : { sort: 'desc', nulls: 'last' } },
+              { createdAt: 'desc' },
+            ];
             break;
           case 'projectCost':
-            orderBy = [{ projectCost: order }, { createdAt: 'desc' }];
+            orderBy = [
+              { projectCost: order === 'asc' ? { sort: 'asc', nulls: 'first' } : { sort: 'desc', nulls: 'last' } },
+              { createdAt: 'desc' },
+            ];
             break;
           case 'confirmationDate':
             orderBy = [{ confirmationDate: order }, { createdAt: 'desc' }];
@@ -2666,16 +2672,22 @@ router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req:
       }
     }
 
-    // Build orderBy based on sortBy parameter
+    // Build orderBy based on sortBy parameter (blank/null = zero: asc → nulls first, desc → nulls last)
     let orderBy: any[] = [];
     if (sortBy) {
       const order = sortOrder === 'asc' ? 'asc' : 'desc';
       switch (sortBy) {
         case 'systemCapacity':
-          orderBy = [{ systemCapacity: order }, { createdAt: 'desc' }];
+          orderBy = [
+            { systemCapacity: order === 'asc' ? { sort: 'asc', nulls: 'first' } : { sort: 'desc', nulls: 'last' } },
+            { createdAt: 'desc' },
+          ];
           break;
         case 'projectCost':
-          orderBy = [{ projectCost: order }, { createdAt: 'desc' }];
+          orderBy = [
+            { projectCost: order === 'asc' ? { sort: 'asc', nulls: 'first' } : { sort: 'desc', nulls: 'last' } },
+            { createdAt: 'desc' },
+          ];
           break;
         case 'confirmationDate':
           orderBy = [{ confirmationDate: order }, { createdAt: 'desc' }];
@@ -2822,16 +2834,22 @@ router.get('/export/csv', authenticate, authorize(UserRole.ADMIN), async (req: R
       }
     }
 
-    // Build orderBy based on sortBy parameter
+    // Build orderBy based on sortBy parameter (blank/null = zero: asc → nulls first, desc → nulls last)
     let orderBy: any[] = [];
     if (sortBy) {
       const order = sortOrder === 'asc' ? 'asc' : 'desc';
       switch (sortBy) {
         case 'systemCapacity':
-          orderBy = [{ systemCapacity: order }, { createdAt: 'desc' }];
+          orderBy = [
+            { systemCapacity: order === 'asc' ? { sort: 'asc', nulls: 'first' } : { sort: 'desc', nulls: 'last' } },
+            { createdAt: 'desc' },
+          ];
           break;
         case 'projectCost':
-          orderBy = [{ projectCost: order }, { createdAt: 'desc' }];
+          orderBy = [
+            { projectCost: order === 'asc' ? { sort: 'asc', nulls: 'first' } : { sort: 'desc', nulls: 'last' } },
+            { createdAt: 'desc' },
+          ];
           break;
         case 'confirmationDate':
           orderBy = [{ confirmationDate: order }, { createdAt: 'desc' }];

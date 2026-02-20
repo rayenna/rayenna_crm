@@ -156,7 +156,7 @@ function getPipelineWhere(baseWhere: any): any {
   };
 }
 
-// Execution order and labels for Projects by Stage chart
+// Execution order and labels for Projects by Stage chart (Lost excluded from chart in all views)
 const PROJECT_STATUS_ORDER: ProjectStatus[] = [
   ProjectStatus.LEAD,
   ProjectStatus.SITE_SURVEY,
@@ -166,7 +166,6 @@ const PROJECT_STATUS_ORDER: ProjectStatus[] = [
   ProjectStatus.SUBMITTED_FOR_SUBSIDY,
   ProjectStatus.COMPLETED,
   ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
-  ProjectStatus.LOST,
 ];
 
 const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
