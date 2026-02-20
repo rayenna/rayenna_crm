@@ -236,6 +236,7 @@ At any stage, a project may be marked **Lost** if the customer does not proceed.
 5. Complete **Sales & Commercial Information**:
    - **Lead Source**: Website, Referral, Google, Channel Partner, Digital Marketing, Sales, Management Connect, or Other (additional details required for some options)
    - **System Capacity (kW)**, **Order Value (₹)**, **Confirmation Date** (required), **Project Status**
+   - **Availing Loan/Financing?**: Check if the customer is availing loan/financing. If **Yes**, select **Financing Bank** (required) from the dropdown (e.g. SBI, HDFC Bank, Other). If you select **Other**, enter **Other Bank Name** (required, alphanumeric).
    - **Roof Type** and **System Type** (technical details)
 6. If status is **Lost**, enter **Lost Date** and **Reason for Loss** (required).
 7. Click **Create**. The project is saved, assigned a Project Number, and you are redirected to the Projects list.
@@ -253,7 +254,7 @@ At any stage, a project may be marked **Lost** if the customer does not proceed.
 - **Segment** and **Project Type**
 - **Confirmation Date**
 
-If **Lead Source** is Referral, Channel Partner, or Other, the corresponding detail field is required. If status is **Lost**, **Lost Date** and **Reason for Loss** are required.
+If **Lead Source** is Referral, Channel Partner, or Other, the corresponding detail field is required. If **Availing Loan/Financing** is Yes, **Financing Bank** is required; if the bank is **Other**, **Other Bank Name** is required. If status is **Lost**, **Lost Date** and **Reason for Loss** are required.
 
 ## Project Status Stages
 
@@ -276,7 +277,8 @@ If **Lead Source** is Referral, Channel Partner, or Other, the corresponding det
 
 ### Sales & Commercial
 
-- **Sales** and **Admin** maintain **Lead Source**, **Order Value**, **Confirmation Date**, **System Capacity**, **Roof Type**, and **System Type**.
+- **Sales** and **Admin** can **edit** the Sales & Commercial section: **Lead Source**, **Order Value**, **Confirmation Date**, **System Capacity**, **Availing Loan/Financing** (checkbox, financing bank, other bank name when Other), **Roof Type**, and **System Type**.
+- **Finance**, **Operations**, and **Management** can **view** Sales & Commercial but cannot edit it.
 - Use **Remarks** for internal notes and decisions. Remarks are versioned and visible to users with project access.
 
 ### Support Tickets and Documents
@@ -291,7 +293,7 @@ If **Lead Source** is Referral, Channel Partner, or Other, the corresponding det
 You can jump to a filtered Projects view from your dashboard:
 
 1. On your dashboard, find the **Quick Access** section (tiles showing counts like Total Leads, Open Deals, Payment Status).
-2. Click any tile. The Projects page opens with filters already applied (e.g. status, payment status, FY, Quarter, Month).
+2. Click any tile. The Projects page opens with filters already applied (e.g. status, payment status, availing loan, FY, Quarter, Month).
 3. Use **Clear All** on the Projects page to remove all filters and see the full list.
 
 The tile counts and filters match the dashboard filters (FY, Quarter, Month) you have set.
@@ -304,6 +306,7 @@ The tile counts and filters match the dashboard filters (FY, Quarter, Month) you
    - **FY, Quarter, Month**: Same dashboard-style date filters. Tile counts and Quick Access links use these.
    - **Status**: Lead, Site Survey, Proposal, Confirmed, Installation, Completed, etc.
    - **Payment Status**: Pending, Partial, Fully Paid, N/A (Finance, Sales, Management, Admin, Operations)
+   - **Availing Loan**: Check to show only projects where Availing Loan/Financing is Yes
    - **Segment**: Residential Subsidy, Residential Non-Subsidy, Commercial Industrial
    - **Service Type**: EPC Project, Panel Cleaning, Maintenance, etc.
    - **Support Ticket Status**: Has Tickets, Open, In Progress, Closed, No Tickets
@@ -340,6 +343,7 @@ Each project displays:
 - **Order Value**, **Payment Status**, **Balance**
 - **Confirmation Date**, **Financial Year**
 - **Project Status**, **Lead Source**
+- **Availing Loan/Financing** (Yes/No) and **Financing Bank** when applicable
 - **System Capacity**, **Roof Type**, **System Type**
 - **Support tickets** (count and status) and **documents** (in Key Artifacts)
 
@@ -360,9 +364,10 @@ A quick reference for project-related access:
 
 ![Permission Matrix](/help/docs/overview/access_matrix.jpg)
 
-- **Sales**: Create projects (own customers), edit Sales & Commercial, update status through Confirmed, add remarks, create tickets, upload documents. Cannot edit Lifecycle or Payments.
-- **Operations**: View all projects, edit Project Lifecycle, update status from Installation onward, add remarks, create tickets, upload documents. Cannot edit Sales & Commercial or Payments.
-- **Finance**: View all projects, edit Payment Tracking only. Cannot edit other sections or change status.
+- **Sales**: Create projects (own customers), edit Sales & Commercial (including Availing Loan/Financing), update status through Confirmed, add remarks, create tickets, upload documents. Cannot edit Lifecycle or Payments.
+- **Operations**: View all projects, edit Project Lifecycle, update status from Installation onward, add remarks, create tickets, upload documents. Can view Sales & Commercial but cannot edit it or Payments.
+- **Finance**: View all projects, edit Payment Tracking only. Can view Sales & Commercial but cannot edit it or other sections.
+- **Management**: View all projects and all sections; cannot edit Sales & Commercial, Lifecycle, or Payments.
 - **Admin**: Full access; can delete Lost projects.
 
 ## Getting Help

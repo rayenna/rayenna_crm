@@ -21,6 +21,7 @@ const VALID_PAYMENT_STATUS_VALUES = ['FULLY_PAID', 'PARTIAL', 'PENDING', 'NA'] a
 function getInitialFiltersFromUrl(): {
   status: string[]
   paymentStatus: string[]
+  availingLoan: boolean
   selectedFYs: string[]
   selectedQuarters: string[]
   selectedMonths: string[]
@@ -28,16 +29,18 @@ function getInitialFiltersFromUrl(): {
   const p = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
   const status = p.getAll('status')
   const paymentStatus = p.getAll('paymentStatus')
+  const availingLoan = p.get('availingLoan') === 'true'
   const fy = p.getAll('fy')
   const quarter = p.getAll('quarter')
   const month = p.getAll('month')
-  const hasAny = status.length > 0 || paymentStatus.length > 0 || fy.length > 0 || quarter.length > 0 || month.length > 0
+  const hasAny = status.length > 0 || paymentStatus.length > 0 || availingLoan || fy.length > 0 || quarter.length > 0 || month.length > 0
   if (!hasAny) return null
   const validStatus = status.filter((s) => Object.values(ProjectStatus).includes(s as ProjectStatus))
   const validPayment = paymentStatus.filter((v) => (VALID_PAYMENT_STATUS_VALUES as readonly string[]).includes(v))
   return {
     status: validStatus,
     paymentStatus: validPayment,
+    availingLoan,
     selectedFYs: fy,
     selectedQuarters: quarter,
     selectedMonths: month,
@@ -214,7 +217,7 @@ const Projects = () => {
     supportTicketStatus: [] as string[],
     paymentStatus: (urlInit?.paymentStatus ?? []) as string[],
     hasDocuments: false,
-    availingLoan: false,
+    availingLoan: urlInit?.availingLoan ?? false,
     search: '',
     sortBy: '',
     sortOrder: 'desc',
@@ -228,6 +231,7 @@ const Projects = () => {
   useLayoutEffect(() => {
     const statusFromUrl = searchParams.getAll('status')
     const paymentStatusFromUrl = searchParams.getAll('paymentStatus')
+    const availingLoanFromUrl = searchParams.get('availingLoan') === 'true'
     const fyFromUrl = searchParams.getAll('fy')
     const quarterFromUrl = searchParams.getAll('quarter')
     const monthFromUrl = searchParams.getAll('month')
@@ -240,12 +244,13 @@ const Projects = () => {
       ? statusFromUrl.filter((v) => statusOptions.some((opt) => opt.value === v))
       : []
     const validPayment = hasPaymentParams ? paymentStatusFromUrl.filter((v) => (VALID_PAYMENT_STATUS_VALUES as readonly string[]).includes(v)) : []
-    if (canResolveStatus && (validStatus.length > 0 || validPayment.length > 0 || hasDateParams)) {
+    if (canResolveStatus && (validStatus.length > 0 || validPayment.length > 0 || availingLoanFromUrl || hasDateParams)) {
       appliedFromUrlRef.current = true
       setFilters((prev) => ({
         ...prev,
         ...(validStatus.length > 0 && { status: validStatus }),
         ...(validPayment.length > 0 && { paymentStatus: validPayment }),
+        ...(availingLoanFromUrl && { availingLoan: true }),
       }))
       if (fyFromUrl.length > 0) setSelectedFYs(fyFromUrl)
       if (quarterFromUrl.length > 0) setSelectedQuarters(quarterFromUrl)

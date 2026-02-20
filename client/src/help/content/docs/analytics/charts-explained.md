@@ -295,6 +295,37 @@ This word cloud visualization shows your most profitable customers. Customer nam
 - **Insight**: Customer relationship improving
 - **Action**: Continue nurturing this relationship
 
+## Projects Availing Loans by Bank
+
+### What This Chart Shows
+
+This column chart shows how many projects have **Availing Loan** selected and are linked to each financing bank. Only projects where the Availing Loan checkbox is ticked and a bank is selected are counted. The chart helps you see which banks your customers use most for financing.
+
+### Understanding the Chart
+
+**Chart Type**: Column Chart (Bar Chart)
+
+**What You See**:
+- **X-Axis (Horizontal)**: Bank names (e.g. State Bank of India, HDFC Bank, Other)
+- **Y-Axis (Vertical)**: Number of projects (count)
+- **Bars**: One bar per bank; taller bar = more projects availing loan from that bank
+
+**Availability**: Shown on Sales, Finance, and Management/Admin dashboards. Not shown to Operations.
+
+**Filters**: The chart respects the Dashboard filters (FY, Quarter, Month). Sales users see only their own projects.
+
+### How to Read This Chart
+
+- **Compare banks**: See which banks have the most projects.
+- **Other**: The “Other” column is always shown on the right; it includes projects where a bank was entered as “Other” (custom name).
+- **Empty chart**: If no projects have Availing Loan and a bank selected for the selected period, the chart shows “No data for selected period”.
+
+### Interpreting Insights
+
+- **Bank concentration**: One or two tall bars may indicate most customers use the same banks.
+- **Diversification**: Many similar-height bars suggests spread across multiple banks.
+- **Planning**: Use the data for tie-ups or discussions with specific banks.
+
 ## Sales Team Performance Charts
 
 ### What This Chart Shows
@@ -573,6 +604,7 @@ Analytics charts provide:
 - Project Value & Profit by Financial Year: Track revenue and profitability trends
 - Project Value by Customer Segment: Understand market mix and distribution
 - Customer Profitability Word Cloud: Identify most valuable customers
+- Projects Availing Loans by Bank: See project count by financing bank (Sales, Finance, Management/Admin)
 - Sales Team Performance: Compare team member performance
 
 **Remember**:

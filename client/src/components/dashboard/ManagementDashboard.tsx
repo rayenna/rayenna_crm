@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import axiosInstance from '../../utils/axios'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
-import { FaUsers, FaCog, FaFileInvoice, FaCheckCircle, FaExclamationTriangle, FaClipboardList } from 'react-icons/fa'
+import { FaUsers, FaCog, FaFileInvoice, FaCheckCircle, FaExclamationTriangle, FaClipboardList, FaUniversity } from 'react-icons/fa'
 import { ProjectStatus } from '../../types'
 import ProjectValuePieChart from './ProjectValuePieChart'
 import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
@@ -11,6 +11,7 @@ import SalesTeamTreemap from './SalesTeamTreemap'
 import RevenueByLeadSourceChart from './RevenueByLeadSourceChart'
 import PipelineByLeadSourceChart from './PipelineByLeadSourceChart'
 import ProjectsByStageChart from './ProjectsByStageChart'
+import AvailingLoanByBankChart from './AvailingLoanByBankChart'
 import RevenueBySalesTeamChart from './RevenueBySalesTeamChart'
 import PipelineByCustomerSegmentPieChart from './PipelineByCustomerSegmentPieChart'
 import MetricCard from './MetricCard'
@@ -67,10 +68,10 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
         />
       </div>
 
-      {/* Quick Access – tiles linking to filtered Projects (2 rows × 4 cols, same tile size as Operations) */}
+      {/* Quick Access – two rows of five tiles each (Admin/Management) */}
       <QuickAccessSection>
-      <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-4 min-w-0">
-        {/* Row 1 */}
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 min-w-0">
+        {/* Row 1 – five tiles */}
         <MetricCard
           title="Total Leads"
           value={data?.sales?.totalLeads || 0}
@@ -99,7 +100,14 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
           gradient="from-red-500 to-rose-500"
           to={buildProjectsUrl({ status: [ProjectStatus.LEAD, ProjectStatus.SITE_SURVEY, ProjectStatus.PROPOSAL] }, tileParams)}
         />
-        {/* Row 2 */}
+        <MetricCard
+          title="Confirmed Orders"
+          value={(data?.projectsByStatus?.find((p: any) => p.status === ProjectStatus.CONFIRMED)?.count) ?? 0}
+          icon={<FaCheckCircle />}
+          gradient="from-purple-500 to-pink-500"
+          to={buildProjectsUrl({ status: [ProjectStatus.CONFIRMED] }, tileParams)}
+        />
+        {/* Row 2 – five tiles */}
         <MetricCard
           title="Pending Installation"
           value={data?.operations?.pendingInstallation || 0}
@@ -120,6 +128,13 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
           icon={<FaCheckCircle />}
           gradient="from-yellow-500 to-amber-500"
           to={buildProjectsUrl({ status: [ProjectStatus.COMPLETED_SUBSIDY_CREDITED] }, tileParams)}
+        />
+        <MetricCard
+          title="Availing Loan"
+          value={data?.availingLoanCount ?? 0}
+          icon={<FaUniversity />}
+          gradient="from-emerald-500 to-teal-600"
+          to={buildProjectsUrl({ availingLoan: true }, tileParams)}
         />
         {/* Payment Status tile */}
         <div className="min-w-0 flex flex-col bg-gradient-to-br from-white via-indigo-50/50 to-white shadow-lg rounded-xl border-2 border-indigo-200/50 overflow-hidden backdrop-blur-sm">
@@ -160,14 +175,22 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
       </div>
       </QuickAccessSection>
 
-      {/* Projects by Stage / Execution Status – full width */}
-      <div className="w-full min-w-0">
+      {/* Row 1: Projects by Stage / Execution Status, Revenue & Profit by Financial Year – side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
           <ProjectsByStageChart data={data?.projectsByStatus || []} />
         </div>
+        <div className="w-full min-h-[360px] flex flex-col min-w-0">
+          <ProjectValueProfitByFYChart 
+            data={data?.projectValueProfitByFY || []} 
+            dashboardType="management"
+            filterControlledByParent
+            selectedFYsFromDashboard={selectedFYs}
+          />
+        </div>
       </div>
 
-      {/* Row 1: Revenue by Lead Source, Pipeline by Lead Source */}
+      {/* Row 2: Revenue by Lead Source, Pipeline by Lead Source */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
           <RevenueByLeadSourceChart 
@@ -180,7 +203,7 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
         </div>
       </div>
 
-      {/* Row 2: Revenue by Sales Team member, Pipeline by Sales Team member */}
+      {/* Row 3: Revenue by Sales Team member, Pipeline by Sales Team member */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
           <RevenueBySalesTeamChart data={data?.revenueBySalesperson || []} />
@@ -193,7 +216,7 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
         </div>
       </div>
 
-      {/* Row 3: Revenue by Customer Segment, Pipeline by Customer Segment */}
+      {/* Row 4: Revenue by Customer Segment, Pipeline by Customer Segment */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
           <ProjectValuePieChart 
@@ -208,22 +231,17 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
         </div>
       </div>
 
-      {/* Row 4: Revenue & Profit by Financial Year, Customer Profitability Word Cloud */}
+      {/* Row 5: Customer Profitability Word Cloud, Availing Loan by Bank */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
-        <div className="w-full min-h-[360px] flex flex-col min-w-0">
-          <ProjectValueProfitByFYChart 
-            data={data?.projectValueProfitByFY || []} 
-            dashboardType="management"
-            filterControlledByParent
-            selectedFYsFromDashboard={selectedFYs}
-          />
-        </div>
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
           <ProfitabilityWordCloud 
             wordCloudData={data?.wordCloudData}
             availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
             filterControlledByParent
           />
+        </div>
+        <div className="w-full min-h-[360px] flex flex-col min-w-0">
+          <AvailingLoanByBankChart data={data?.availingLoanByBank || []} />
         </div>
       </div>
     </div>

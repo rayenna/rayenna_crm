@@ -190,6 +190,51 @@ function buildProjectsByStatus(countByStatus: { status: ProjectStatus; _count: n
   }));
 }
 
+// Bank key to display label (for Availing Loan by Bank chart; must match client form options)
+const BANK_LABELS: Record<string, string> = {
+  SBI: 'State Bank of India (SBI)',
+  HDFC_BANK: 'HDFC Bank',
+  ICICI_BANK: 'ICICI Bank',
+  AXIS_BANK: 'Axis Bank',
+  KOTAK_MAHINDRA_BANK: 'Kotak Mahindra Bank',
+  INDUSIND_BANK: 'IndusInd Bank',
+  YES_BANK: 'YES Bank',
+  IDFC_FIRST_BANK: 'IDFC FIRST Bank',
+  PUNJAB_NATIONAL_BANK: 'Punjab National Bank (PNB)',
+  BANK_OF_BARODA: 'Bank of Baroda',
+  CANARA_BANK: 'Canara Bank',
+  UNION_BANK_OF_INDIA: 'Union Bank of India',
+  FEDERAL_BANK: 'Federal Bank',
+  SOUTH_INDIAN_BANK: 'South Indian Bank',
+  CATHOLIC_SYRIAN_BANK: 'Catholic Syrian Bank',
+  DHANLAXMI_BANK: 'Dhanlaxmi Bank',
+  KERALA_GRAMIN_BANK: 'Kerala Gramin Bank',
+  KERALA_BANK: 'Kerala Bank',
+  KARNATAKA_BANK: 'Karnataka Bank',
+  RBL_BANK: 'RBL Bank',
+  TAMILNADU_MERCANTILE_BANK: 'Tamilnadu Mercantile Bank',
+  CITY_UNION_BANK: 'City Union Bank',
+  OTHER: 'Other',
+};
+
+function buildAvailingLoanByBank(
+  groupByResult: { financingBank: string | null; _count: { id: number } }[]
+): { bankKey: string; bankLabel: string; count: number }[] {
+  return groupByResult
+    .filter((r) => r.financingBank != null && r.financingBank.trim() !== '')
+    .map((r) => ({
+      bankKey: r.financingBank!,
+      bankLabel: BANK_LABELS[r.financingBank!] || r.financingBank!,
+      count: r._count?.id ?? 0,
+    }))
+    .sort((a, b) => {
+      // Keep "Other" always at the right (end of array)
+      if (a.bankKey === 'OTHER') return 1
+      if (b.bankKey === 'OTHER') return -1
+      return b.count - a.count
+    })
+}
+
 // Sales Dashboard
 router.get('/sales', authenticate, async (req: Request, res) => {
   try {
@@ -578,6 +623,14 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       };
     });
 
+    // Availing Loan by Bank (for column chart – projects with availingLoan true and bank selected)
+    const availingLoanByBankRaw = await prisma.project.groupBy({
+      by: ['financingBank'],
+      where: { ...where, availingLoan: true, financingBank: { not: null } },
+      _count: { id: true },
+    });
+    const availingLoanByBank = buildAvailingLoanByBank(availingLoanByBankRaw);
+
     // When one FY and quarter/month selected: same period in previous year for YoY
     let previousYearSamePeriod: { totalCapacity: number; totalPipeline: number; totalRevenue: number; totalProfit: number } | null = null;
     if (fyFilters.length === 1 && (quarterFilters.length > 0 || monthFilters.length > 0)) {
@@ -652,6 +705,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       pipelineByLeadSource,
       pipelineByType: pipelineByTypeWithPercentage,
       projectsByStatus,
+      availingLoanByBank,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -1033,6 +1087,58 @@ router.get('/finance', authenticate, async (req: Request, res) => {
       outstanding: data.outstanding,
     }));
 
+    // Availing Loan count: active pipeline (all stages except Lost) with availingLoan = true (for Quick Access tile)
+    const [availingLoanCount, projectsByStatusRawFinance, pendingInstallation, subsidyCredited] = await Promise.all([
+      prisma.project.count({
+        where: { ...where, projectStatus: { not: ProjectStatus.LOST }, availingLoan: true },
+      }),
+      prisma.project.groupBy({
+        by: ['projectStatus'],
+        where,
+        _count: { id: true },
+      }),
+      prisma.project.count({
+        where: {
+          ...where,
+          projectStatus: { in: [ProjectStatus.CONFIRMED, ProjectStatus.UNDER_INSTALLATION] },
+        },
+      }),
+      prisma.project.count({
+        where: { ...where, projectStatus: ProjectStatus.COMPLETED_SUBSIDY_CREDITED },
+      }),
+    ]);
+    const projectsByStatus = buildProjectsByStatus(
+      projectsByStatusRawFinance.map((r) => ({ status: r.projectStatus, _count: r._count.id }))
+    );
+    const operations = { pendingInstallation, subsidyCredited };
+
+    // Availing Loan by Bank (for column chart)
+    const availingLoanByBankRawFinance = await prisma.project.groupBy({
+      by: ['financingBank'],
+      where: { ...where, availingLoan: true, financingBank: { not: null } },
+      _count: { id: true },
+    });
+    const availingLoanByBank = buildAvailingLoanByBank(availingLoanByBankRawFinance);
+
+    // Customer profitability word cloud (same as Management, for Finance dashboard row 3)
+    const profitabilityDataFinance = await prisma.project.findMany({
+      where: { ...where, profitability: { not: null } },
+      select: {
+        id: true,
+        profitability: true,
+        customer: {
+          select: { firstName: true, customerName: true },
+        },
+      },
+      orderBy: { profitability: 'desc' },
+      take: 50,
+    });
+    const wordCloudData = profitabilityDataFinance.map((p) => {
+      const firstName = p.customer?.firstName?.trim();
+      const text = firstName || p.customer?.customerName?.trim() || 'Unknown';
+      return { text: text || 'Unknown', value: p.profitability || 0 };
+    });
+
     // Get salesperson names for profit breakdown
     let profitBreakdown: Array<{
       salespersonId: string | null;
@@ -1125,6 +1231,11 @@ router.get('/finance', authenticate, async (req: Request, res) => {
       totalAmountReceived: totalAmountReceived._sum.totalAmountReceived || 0,
       totalOutstanding: totalOutstanding, // Use the calculated totalOutstanding (only PENDING and PARTIAL)
       projectsByPaymentStatus, // Use the calculated effective payment status
+      availingLoanCount,
+      availingLoanByBank,
+      projectsByStatus,
+      operations,
+      wordCloudData,
       profitByProject,
       profitBySalesperson: profitBreakdown,
       projectValueByType: valueByTypeWithPercentage,
@@ -1480,6 +1591,11 @@ router.get('/management', authenticate, async (req: Request, res) => {
       outstanding: data.outstanding,
     }));
 
+    // Availing Loan count: active pipeline (all stages except Lost) with availingLoan = true (for Quick Access tile)
+    const availingLoanCount = await prisma.project.count({
+      where: { ...where, projectStatus: { not: ProjectStatus.LOST }, availingLoan: true },
+    });
+
     // Get customer/project profitability data for word cloud
     const profitabilityData = await prisma.project.findMany({
       where: {
@@ -1514,6 +1630,14 @@ router.get('/management', authenticate, async (req: Request, res) => {
         value: profitability,
       };
     });
+
+    // Availing Loan by Bank (for column chart)
+    const availingLoanByBankRawMgmt = await prisma.project.groupBy({
+      by: ['financingBank'],
+      where: { ...where, availingLoan: true, financingBank: { not: null } },
+      _count: { id: true },
+    });
+    const availingLoanByBank = buildAvailingLoanByBank(availingLoanByBankRawMgmt);
 
     // When one FY and quarter/month selected: same period in previous year for YoY
     let previousYearSamePeriod: { totalCapacity: number; totalPipeline: number; totalRevenue: number; totalProfit: number } | null = null;
@@ -1570,6 +1694,8 @@ router.get('/management', authenticate, async (req: Request, res) => {
       projectValueProfitByFY,
       wordCloudData,
       projectsByPaymentStatus,
+      availingLoanCount,
+      availingLoanByBank,
       revenueBySalesperson,
       pipeline: { atRisk: openDealsCount },
       pipelineByLeadSource,

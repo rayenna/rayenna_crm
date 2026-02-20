@@ -64,6 +64,10 @@ The Projects module is the core of Rayenna CRM, managing the complete lifecycle 
 - **Year (FY)**: Automatically calculated from Confirmation Date (Financial Year format: 2024-25)
 - **Project Status**: Current status of the project (see Status Stages section)
 
+**Availing Loan / Financing**:
+- **Availing Loan/Financing?**: Check **Yes** if the customer is availing loan or financing for the project; leave unchecked for No.
+- If **Yes**, **Financing Bank** (required): Select from dropdown (e.g. State Bank of India, HDFC Bank, ICICI Bank, Other). If you select **Other**, **Other Bank Name** (required): Enter the bank name (alphanumeric, spaces and basic punctuation allowed).
+
 **Technical Details**:
 - **Roof Type**: Concrete-Flat, Concrete-Sloped, Tile, Thatched, Asbestos, Metal, Others
 - **System Type**: Off-Grid, On-Grid, Hybrid
@@ -104,6 +108,8 @@ The Projects module is the core of Rayenna CRM, managing the complete lifecycle 
 - Channel Partner Name (if Lead Source is Channel Partner)
 - Other Details (if Lead Source is Other)
 - Other Reason Details (if Lost Reason is Other)
+- Financing Bank (if Availing Loan/Financing is Yes)
+- Other Bank Name (if Financing Bank is Other)
 
 ### Project Creation Best Practices
 
@@ -421,8 +427,9 @@ The Projects module enables seamless collaboration between Sales and Operations 
 - Enter initial project information
 - Set lead source and commercial details
 
-**Sales & Commercial Section** (Sales and Admin can edit):
+**Sales & Commercial Section** (Sales and Admin can edit; Finance, Operations, and Management can view only):
 - **Lead Source**: Track where the lead came from
+- **Availing Loan/Financing**: Whether customer is availing loan; if Yes, **Financing Bank** (and **Other Bank Name** when Other) is required
 - **System Capacity**: Enter solar system capacity
 - **Order Value**: Set project contract value
 - **Confirmation Date**: Record when customer confirmed
@@ -794,6 +801,11 @@ Projects can have multiple support tickets and documents linked to them. These r
 - Select one or more salespersons
 - Shows projects for selected salespersons
 - Leave empty to see all projects
+
+**Availing Loan Filter**:
+- Checkbox: **Availing Loan**
+- When checked, shows only projects where Availing Loan/Financing is Yes (and a bank is selected)
+- Useful to see all projects tied to financing/loan
 
 **Support Ticket Status Filter**:
 - Filter projects by support ticket status

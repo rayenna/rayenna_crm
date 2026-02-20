@@ -9,6 +9,7 @@ import ProfitabilityWordCloud from './ProfitabilityWordCloud'
 import RevenueByLeadSourceChart from './RevenueByLeadSourceChart'
 import PipelineByLeadSourceChart from './PipelineByLeadSourceChart'
 import ProjectsByStageChart from './ProjectsByStageChart'
+import AvailingLoanByBankChart from './AvailingLoanByBankChart'
 import PipelineByCustomerSegmentPieChart from './PipelineByCustomerSegmentPieChart'
 import MetricCard from './MetricCard'
 import QuickAccessSection from './QuickAccessSection'
@@ -75,13 +76,6 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Sales
           to={buildProjectsUrl({ status: [ProjectStatus.LEAD] }, tileParams)}
         />
         <MetricCard
-          title="My Confirmed Orders"
-          value={data?.pipeline?.approved || 0}
-          icon={<FaCheckCircle />}
-          gradient="from-purple-500 to-pink-500"
-          to={buildProjectsUrl({ status: [ProjectStatus.CONFIRMED] }, tileParams)}
-        />
-        <MetricCard
           title="Site Survey Stage"
           value={data?.pipeline?.survey || 0}
           icon={<FaClipboardList />}
@@ -102,17 +96,32 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Sales
           gradient="from-red-500 to-rose-500"
           to={buildProjectsUrl({ status: [ProjectStatus.LEAD, ProjectStatus.SITE_SURVEY, ProjectStatus.PROPOSAL] }, tileParams)}
         />
+        <MetricCard
+          title="My Confirmed Orders"
+          value={data?.pipeline?.approved || 0}
+          icon={<FaCheckCircle />}
+          gradient="from-purple-500 to-pink-500"
+          to={buildProjectsUrl({ status: [ProjectStatus.CONFIRMED] }, tileParams)}
+        />
       </div>
       </QuickAccessSection>
 
-      {/* Projects by Stage / Execution Status – full width */}
-      <div className="w-full min-w-0">
+      {/* Row 1: Projects by Stage / Execution Status, Revenue & Profit by Financial Year – side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
           <ProjectsByStageChart data={data?.projectsByStatus || []} />
         </div>
+        <div className="w-full min-h-[360px] flex flex-col min-w-0">
+          <ProjectValueProfitByFYChart 
+            data={data?.projectValueProfitByFY || []} 
+            dashboardType="sales"
+            filterControlledByParent
+            selectedFYsFromDashboard={selectedFYs}
+          />
+        </div>
       </div>
 
-      {/* Row 1: Revenue by Lead Source, Pipeline by Lead Source */}
+      {/* Row 2: Revenue by Lead Source, Pipeline by Lead Source */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
           <RevenueByLeadSourceChart 
@@ -125,7 +134,7 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Sales
         </div>
       </div>
 
-      {/* Row 2: Revenue by Customer Segment, Pipeline by Customer Segment */}
+      {/* Row 3: Revenue by Customer Segment, Pipeline by Customer Segment */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
           <ProjectValuePieChart 
@@ -140,22 +149,17 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Sales
         </div>
       </div>
 
-      {/* Row 3: Revenue & Profit by Financial Year, Customer Profitability Word Cloud */}
+      {/* Row 4: Customer Profitability Word Cloud, Availing Loan by Bank */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
-        <div className="w-full min-h-[360px] flex flex-col min-w-0">
-          <ProjectValueProfitByFYChart 
-            data={data?.projectValueProfitByFY || []} 
-            dashboardType="sales"
-            filterControlledByParent
-            selectedFYsFromDashboard={selectedFYs}
-          />
-        </div>
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
           <ProfitabilityWordCloud 
             wordCloudData={data?.wordCloudData}
             availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
             filterControlledByParent
           />
+        </div>
+        <div className="w-full min-h-[360px] flex flex-col min-w-0">
+          <AvailingLoanByBankChart data={data?.availingLoanByBank || []} />
         </div>
       </div>
     </div>
