@@ -496,6 +496,7 @@ router.get(
             paymentStatus: true,
             balanceAmount: true,
             leadSource: true,
+            availingLoan: true,
             customer: {
               select: {
                 id: true,
@@ -514,6 +515,10 @@ router.get(
             },
             _count: {
               select: { documents: true },
+            },
+            supportTickets: {
+              where: { status: { in: [SupportTicketStatus.OPEN, SupportTicketStatus.IN_PROGRESS] } },
+              select: { id: true },
             },
           },
           orderBy,

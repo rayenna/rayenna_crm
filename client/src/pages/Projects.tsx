@@ -11,6 +11,7 @@ import toast from 'react-hot-toast'
 import { getSalesTeamColor } from '../components/dashboard/salesTeamColors'
 import DashboardFilters from '../components/dashboard/DashboardFilters'
 import { FiPaperclip } from 'react-icons/fi'
+import { FaUniversity, FaTicketAlt } from 'react-icons/fa'
 
 const PROJECTS_FILTERS_STORAGE_KEY = 'rayenna_projects_filters'
 
@@ -970,11 +971,23 @@ const Projects = () => {
                           {project.salesperson.name}
                         </span>
                       )}
-                      {project._count && project._count.documents > 0 && (
-                        <span className="inline-flex items-center ml-1.5 text-primary-600" title={`${project._count.documents} document(s)`}>
-                          <FiPaperclip className="w-3.5 h-3.5" strokeWidth={2} />
-                        </span>
-                      )}
+                      <span className="inline-flex items-center gap-1.5 ml-1.5">
+                        {project._count && project._count.documents > 0 && (
+                          <span className="text-primary-600" title={`${project._count.documents} document(s)`}>
+                            <FiPaperclip className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
+                          </span>
+                        )}
+                        {project.availingLoan === true && (
+                          <span className="text-emerald-700" title="Availing Loan / Financing">
+                            <FaUniversity className="w-3.5 h-3.5 shrink-0" />
+                          </span>
+                        )}
+                        {project.supportTickets && project.supportTickets.length > 0 && (
+                          <span className="text-amber-600" title="Open or In Progress ticket(s)">
+                            <FaTicketAlt className="w-3.5 h-3.5 shrink-0" />
+                          </span>
+                        )}
+                      </span>
                     </p>
                   </td>
                   <td className="px-4 py-3 hidden lg:table-cell">
@@ -1071,21 +1084,39 @@ const Projects = () => {
         </div>
       )}
 
-      {/* Legend footnote */}
+      {/* Legend: 3 icons + 3 subtotals — single row on laptop, wrap neatly on smaller */}
       <div className="mt-6 pt-4 border-t border-primary-100">
         <p className="text-[11px] sm:text-xs font-semibold text-gray-600 mb-2">Legend</p>
-        <div className="flex flex-wrap gap-x-6 gap-y-1.5 text-[11px] sm:text-xs text-gray-500 leading-relaxed">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="inline-block w-3 h-3 rounded bg-gradient-to-br from-orange-100 to-amber-200 border border-orange-400 shadow-sm shrink-0" />
-            Capacity Subtotal
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2 sm:gap-y-1.5 text-[11px] sm:text-xs text-gray-500 leading-relaxed items-center">
+          <span className="inline-flex items-center gap-1.5 shrink-0">
+            <span className="text-primary-600">
+              <FiPaperclip className="w-3.5 h-3.5" strokeWidth={2} />
+            </span>
+            Has attachment(s)
           </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="inline-block w-3 h-3 rounded bg-gradient-to-br from-emerald-100 to-green-200 border border-emerald-500 shadow-sm shrink-0" />
-            Order Value Subtotal
+          <span className="inline-flex items-center gap-1.5 shrink-0">
+            <span className="text-emerald-700">
+              <FaUniversity className="w-3.5 h-3.5" />
+            </span>
+            Availing Loan
           </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="inline-block w-3 h-3 rounded bg-gradient-to-br from-blue-100 to-sky-200 border border-blue-500 shadow-sm shrink-0" />
-            Balance Amount Subtotal
+          <span className="inline-flex items-center gap-1.5 shrink-0">
+            <span className="text-amber-600">
+              <FaTicketAlt className="w-3.5 h-3.5" />
+            </span>
+            Open/In progress ticket(s)
+          </span>
+          <span className="inline-flex items-center gap-1.5 shrink-0">
+            <span className="inline-block w-3 h-3 rounded bg-gradient-to-br from-orange-100 to-amber-200 border border-orange-400 shadow-sm" />
+            Capacity subtotal
+          </span>
+          <span className="inline-flex items-center gap-1.5 shrink-0">
+            <span className="inline-block w-3 h-3 rounded bg-gradient-to-br from-emerald-100 to-green-200 border border-emerald-500 shadow-sm" />
+            Order value subtotal
+          </span>
+          <span className="inline-flex items-center gap-1.5 shrink-0">
+            <span className="inline-block w-3 h-3 rounded bg-gradient-to-br from-blue-100 to-sky-200 border border-blue-500 shadow-sm" />
+            Balance subtotal
           </span>
         </div>
       </div>

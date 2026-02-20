@@ -208,6 +208,8 @@ export interface Project {
   auditLogs?: AuditLog[]
   /** Present when list API includes document count (for showing attachment icon) */
   _count?: { documents: number }
+  /** Present when list API includes open/in-progress tickets (for showing ticket icon) */
+  supportTickets?: { id: string }[]
   createdAt: string
   updatedAt: string
 }
