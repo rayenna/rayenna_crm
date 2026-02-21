@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, Suspense } from 'react'
+import React, { useEffect, useMemo, useRef, useState, Suspense } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import { helpSections, HelpSection, getHelpSectionForRoute, getHelpContextLabel } from '../help/sections'
@@ -140,11 +140,11 @@ const Help = () => {
         icon={<FaBook className="w-5 h-5 text-white" />}
         className="max-w-7xl mx-auto"
       >
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-x-6 gap-y-8 lg:gap-y-6">
           {/* Left Sidebar */}
-          <div className="lg:col-span-1 min-h-[400px] space-y-4">
+          <div className="lg:col-span-1 min-h-0 space-y-4">
             {/* Search */}
-            <div className="rounded-xl border border-primary-100 bg-white shadow-sm overflow-hidden">
+            <div className="rounded-xl border border-primary-100 bg-white shadow-sm overflow-hidden flex-shrink-0">
               <label htmlFor="help-search" className="sr-only">
                 Search help
               </label>
@@ -191,8 +191,8 @@ const Help = () => {
             )}
           </div>
 
-          {/* Right Content Area */}
-          <div className="lg:col-span-3">
+          {/* Right Content Area – clear separation from sidebar on portrait */}
+          <div className="lg:col-span-3 pt-6 lg:pt-0 border-t border-primary-100 lg:border-t-0">
             <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 p-6 lg:p-8">
               {contextLabel && (
                 <div className="mb-4 rounded-lg border border-primary-200 bg-primary-50/80 px-4 py-2.5 text-sm text-primary-800">
@@ -228,31 +228,31 @@ const Help = () => {
                           <ReactMarkdown
                             key={selectedSection?.id ?? 'help'}
                             components={{
-                      h1: ({ node, ...props }) => (
+                      h1: ({ ...props }) => (
                         <h1 className="text-3xl font-bold text-gray-900 mb-4 mt-6 first:mt-0" {...props} />
                       ),
-                      h2: ({ node, ...props }) => (
+                      h2: ({ ...props }) => (
                         <h2 className="text-2xl font-semibold text-gray-800 mb-3 mt-6" {...props} />
                       ),
-                      h3: ({ node, ...props }) => (
+                      h3: ({ ...props }) => (
                         <h3 className="text-xl font-semibold text-gray-700 mb-2 mt-4" {...props} />
                       ),
-                      h4: ({ node, ...props }) => (
+                      h4: ({ ...props }) => (
                         <h4 className="text-lg font-medium text-gray-700 mb-2 mt-3" {...props} />
                       ),
-                      p: ({ node, ...props }) => (
+                      p: ({ ...props }) => (
                         <p className="text-gray-700 mb-4 leading-relaxed" {...props} />
                       ),
-                      ul: ({ node, ...props }) => (
+                      ul: ({ ...props }) => (
                         <ul className="list-disc list-inside mb-4 space-y-2 text-gray-700" {...props} />
                       ),
-                      ol: ({ node, ...props }) => (
+                      ol: ({ ...props }) => (
                         <ol className="list-decimal list-inside mb-4 space-y-2 text-gray-700" {...props} />
                       ),
-                      li: ({ node, ...props }) => (
+                      li: ({ ...props }) => (
                         <li className="ml-4" {...props} />
                       ),
-                      code: ({ node, inline, ...props }: any) => {
+                      code: ({ inline, ...props }: React.ComponentProps<'code'> & { inline?: boolean }) => {
                         if (inline) {
                           return (
                             <code className="bg-gray-100 text-primary-600 px-1.5 py-0.5 rounded text-sm font-mono" {...props} />
@@ -262,10 +262,10 @@ const Help = () => {
                           <code className="block bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono mb-4" {...props} />
                         )
                       },
-                      pre: ({ node, ...props }) => (
+                      pre: ({ ...props }) => (
                         <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4" {...props} />
                       ),
-                      a: ({ node, ...props }: any) => {
+                      a: (props: React.ComponentProps<'a'>) => {
                         const href = props.href
                         // Intercept help links and navigate within the Help component
                         if (href && href.startsWith('/help/')) {
@@ -307,24 +307,24 @@ const Help = () => {
                           <a className="text-primary-600 hover:text-primary-700 underline" {...props} />
                         )
                       },
-                      blockquote: ({ node, ...props }) => (
+                      blockquote: ({ ...props }) => (
                         <blockquote className="border-l-4 border-primary-500 pl-4 italic text-gray-600 my-4" {...props} />
                       ),
-                      table: ({ node, ...props }) => (
+                      table: ({ ...props }) => (
                         <div className="overflow-x-auto mb-4">
                           <table className="min-w-full divide-y divide-gray-200 border border-gray-300" {...props} />
                         </div>
                       ),
-                      thead: ({ node, ...props }) => (
+                      thead: ({ ...props }) => (
                         <thead className="bg-gray-50" {...props} />
                       ),
-                      th: ({ node, ...props }) => (
+                      th: ({ ...props }) => (
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border-b border-gray-300" {...props} />
                       ),
-                      td: ({ node, ...props }) => (
+                      td: ({ ...props }) => (
                         <td className="px-4 py-3 text-sm text-gray-700 border-b border-gray-200" {...props} />
                       ),
-                      img: ({ node, ...props }: any) => {
+                      img: (props: React.ComponentProps<'img'>) => {
                         let src = props.src || ''
                         // If it's a relative path, resolve it
                         if (src && !src.startsWith('http') && !src.startsWith('//') && !src.startsWith('/')) {

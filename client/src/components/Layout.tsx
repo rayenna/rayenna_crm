@@ -140,8 +140,8 @@ const Layout = () => {
                   className="h-12 xl:h-[3.6rem] w-auto"
                 />
               </Link>
-              {/* Desktop Navigation - lg and above only; iPad portrait uses hamburger */}
-              <div className="hidden lg:ml-4 lg:flex lg:space-x-2 xl:space-x-3 2xl:space-x-4 items-center flex-wrap lg:gap-1.5 xl:gap-0">
+              {/* Desktop Navigation - lg and above; also visible in mobile landscape (left-side nav + Help) */}
+              <div className="hidden lg:ml-4 lg:flex lg:space-x-2 xl:space-x-3 2xl:space-x-4 items-center flex-wrap lg:gap-1.5 xl:gap-0 landscape-nav-visible">
                 {filteredNav.map((item) => (
                   <Link
                     key={item.path}
