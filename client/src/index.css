@@ -86,17 +86,33 @@ textarea,
   }
 }
 
+/* New Customer modal: thinner header and single scroll on short/landscape so form is easier to fill */
+@media (max-height: 500px), (orientation: landscape) and (max-height: 600px) {
+  .customer-form-modal-header {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  .customer-form-modal-header h2 {
+    font-size: 1rem;
+    line-height: 1.25;
+  }
+  .customer-form-modal-header p {
+    margin-top: 0;
+    font-size: 0.75rem;
+  }
+  .customer-form-modal-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 /* Mobile portrait: avoid clipping donut charts when page scrolls (no overflow hidden on dashboard) */
 @media (max-width: 768px) {
   .dashboard-mobile-no-clip {
     overflow: visible !important;
   }
   /* Chart row: no scroll container so Recharts/tooltips don’t get clipped */
-  .dashboard-chart-row-mobile {
-    overflow: visible !important;
-    height: auto !important;
-    min-height: 320px;
-  }
   .mobile-paint-fix > * {
     transform: translateZ(0);
     -webkit-backface-visibility: hidden;

@@ -34,6 +34,7 @@ const MONTHS = [
 
 const ProfitabilityWordCloud = ({ availableFYs = [], wordCloudData: wordCloudDataProp, filterControlledByParent }: ProfitabilityWordCloudProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [view, setView] = useState<'cloud' | 'top10'>('cloud')
   const [dimensions, setDimensions] = useState({ width: 600, height: 400 })
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [selectedMonths, setSelectedMonths] = useState<string[]>([])
@@ -234,20 +235,49 @@ const ProfitabilityWordCloud = ({ availableFYs = [], wordCloudData: wordCloudDat
 
   return (
     <div className="w-full min-h-[360px] flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
-          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-          </svg>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+            </svg>
+          </div>
+          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            Customer Projects Profitability
+          </h2>
         </div>
-        <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-          Customer Profitability Word Cloud
-        </h2>
+        <div className="flex rounded-lg border border-primary-200/60 bg-primary-50/30 p-0.5">
+          <button
+            type="button"
+            onClick={() => setView('cloud')}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              view === 'cloud' ? 'bg-white text-primary-700 shadow-sm' : 'text-gray-600 hover:text-primary-600'
+            }`}
+          >
+            Word Cloud
+          </button>
+          <button
+            type="button"
+            onClick={() => setView('top10')}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              view === 'top10' ? 'bg-white text-primary-700 shadow-sm' : 'text-gray-600 hover:text-primary-600'
+            }`}
+          >
+            Top 10
+          </button>
+        </div>
       </div>
 
+      {/* Fixed height so chart/table size does not change with empty/loading data */}
+      <div className="flex flex-col relative" style={{ height: '320px' }}>
+        {/* Word Cloud view – opacity + pointer-events so chart does not re-initialize on toggle */}
+        <div
+          className="absolute inset-0 flex flex-col"
+          style={{ opacity: view === 'cloud' ? 1 : 0, pointerEvents: view === 'cloud' ? 'auto' : 'none' }}
+        >
       {/* Filters - only when not controlled by dashboard (FY, Qtr, Month at top) */}
       {!filterControlledByParent && (
-      <div className="mb-4">
+      <div className="mb-4 flex-shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
           {/* FY Filter Dropdown */}
           <div className="relative flex-1" ref={fyDropdownRef}>
@@ -403,6 +433,75 @@ const ProfitabilityWordCloud = ({ availableFYs = [], wordCloudData: wordCloudDat
             </div>
           </>
         )}
+      </div>
+        </div>
+
+        {/* Top 10 view – same data, opacity + pointer-events so layout is stable */}
+        <div
+          className="absolute inset-0 flex flex-col overflow-hidden"
+          style={{ opacity: view === 'top10' ? 1 : 0, pointerEvents: view === 'top10' ? 'auto' : 'none' }}
+        >
+          {showLoading ? (
+            <div className="flex items-center justify-center w-full h-full">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+                <p className="mt-4 text-sm text-gray-500">Loading...</p>
+              </div>
+            </div>
+          ) : !cloudData || cloudData.length === 0 ? (
+            <div className="flex items-center justify-center w-full h-full">
+              <p className="text-sm text-gray-500 text-center px-4">No profitability data available for selected filters.</p>
+            </div>
+          ) : (
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden rounded-xl border border-primary-200/50 shadow-inner" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <table className="w-full text-sm border-collapse">
+                <thead className="sticky top-0 z-10 bg-gradient-to-r from-primary-100/90 to-purple-100/80 border-b-2 border-primary-200/70 shadow-sm">
+                  <tr>
+                    <th className="text-center py-3 px-3 w-14 font-bold text-primary-800 text-xs uppercase tracking-wider">#</th>
+                    <th className="text-left py-3 px-3 font-bold text-primary-800 text-xs uppercase tracking-wider">Project</th>
+                    <th className="text-right py-3 px-3 w-20 font-bold text-primary-800 text-xs uppercase tracking-wider">Margin</th>
+                    <th className="py-3 pl-2 pr-3 w-28 font-bold text-primary-800 text-xs uppercase tracking-wider"> </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white/80 divide-y divide-primary-100/70">
+                  {[...cloudData]
+                    .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+                    .slice(0, 10)
+                    .map((row, idx) => {
+                      const maxVal = Math.max(...cloudData.map((d: WordCloudData) => d.value ?? 0), 1)
+                      const pct = (row.value ?? 0) / maxVal
+                      return (
+                        <tr key={`${row.text}-${idx}`} className="hover:bg-primary-50/40 transition-colors">
+                          <td className="py-2.5 px-3 text-center">
+                            <span className={`inline-flex items-center justify-center w-7 h-7 rounded-lg text-sm font-bold ${
+                              idx === 0 ? 'bg-amber-100 text-amber-800' :
+                              idx === 1 ? 'bg-gray-200 text-gray-700' :
+                              idx === 2 ? 'bg-amber-200/80 text-amber-900' :
+                              'bg-primary-100 text-primary-700'
+                            }`}>
+                              {idx + 1}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 font-medium text-gray-800 truncate max-w-[180px]" title={row.text}>{row.text}</td>
+                          <td className="py-2.5 px-3 text-right font-semibold text-primary-700 tabular-nums">
+                            {typeof row.value === 'number' ? row.value.toFixed(1) : '—'}%
+                          </td>
+                          <td className="py-2.5 pl-2 pr-3 align-middle">
+                            <div className="h-2.5 rounded-full bg-primary-100 overflow-hidden min-w-[4rem]">
+                              <div
+                                className="h-full rounded-full bg-gradient-to-r from-primary-500 via-primary-400 to-purple-500 transition-all duration-300"
+                                style={{ width: `${Math.round(pct * 100)}%` }}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

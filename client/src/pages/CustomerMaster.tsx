@@ -856,23 +856,24 @@ const CustomerForm = ({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto overflow-hidden flex flex-col">
-        {/* Header - same look as New Project (PageCard gradient strip) */}
-        <div className="flex-shrink-0 px-6 py-5 sm:px-8 sm:py-6 bg-gradient-to-r from-primary-600 via-primary-500 to-yellow-500 border-b border-primary-100">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="p-2.5 rounded-xl bg-white/25 border border-white/40 shadow-lg shadow-black/10 backdrop-blur-md flex-shrink-0">
-                <FaUserFriends className="w-5 h-5 text-white" />
+      {/* Single scroll area so header scrolls up on mobile landscape and leaves more room for form */}
+      <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto customer-form-modal-scroll">
+        {/* Header – compact on short/landscape viewports via .customer-form-modal-header */}
+        <div className="customer-form-modal-header px-4 py-4 sm:px-6 sm:py-5 bg-gradient-to-r from-primary-600 via-primary-500 to-yellow-500 border-b border-primary-100">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="p-2 sm:p-2.5 rounded-xl bg-white/25 border border-white/40 shadow-lg shadow-black/10 backdrop-blur-md flex-shrink-0">
+                <FaUserFriends className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow truncate">
+                <h2 className="text-lg sm:text-xl font-extrabold text-white drop-shadow truncate">
                   {customer ? getCustomerDisplayName(customerData || customer) : 'New Customer'}
                 </h2>
-                <p className="mt-0.5 text-white/90 text-sm sm:text-base">
+                <p className="mt-0.5 text-white/90 text-xs sm:text-sm">
                   {customer ? 'Edit customer details' : 'Create a new customer and add their details'}
                 </p>
                 {customer && (
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-white/25 border border-white/40 text-white mt-2 shadow-sm">
+                  <span className="inline-flex items-center px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-xs font-semibold bg-white/25 border border-white/40 text-white mt-1.5 sm:mt-2 shadow-sm">
                     ID: {customerData?.customerId || customer.customerId}
                   </span>
                 )}
@@ -880,7 +881,7 @@ const CustomerForm = ({
             </div>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl text-white/90 hover:text-white hover:bg-white/20 transition-colors flex-shrink-0"
+              className="p-1.5 sm:p-2 rounded-xl text-white/90 hover:text-white hover:bg-white/20 transition-colors flex-shrink-0"
               aria-label="Close"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -888,7 +889,7 @@ const CustomerForm = ({
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-8 overflow-y-auto flex-1">
+        <form onSubmit={handleSubmit(onSubmit)} className="p-4 sm:p-6 space-y-6 sm:space-y-8">
           {/* Card 1: Basic Info */}
           <div className="bg-gradient-to-br from-teal-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-teal-400">
             <div className="flex items-center gap-2">

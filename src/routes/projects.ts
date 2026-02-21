@@ -453,7 +453,10 @@ router.get(
             orderBy = [{ createdAt: order }];
             break;
           case 'profitability':
-            orderBy = [{ profitability: order }, { createdAt: 'desc' }];
+            orderBy = [
+              { profitability: order === 'asc' ? { sort: 'asc', nulls: 'first' } : { sort: 'desc', nulls: 'last' } },
+              { createdAt: 'desc' },
+            ];
             break;
           case 'customerName':
             orderBy = [{ customer: { customerName: order } }, { createdAt: 'desc' }];
@@ -2704,7 +2707,10 @@ router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req:
           orderBy = [{ createdAt: order }];
           break;
         case 'profitability':
-          orderBy = [{ profitability: order }, { createdAt: 'desc' }];
+          orderBy = [
+            { profitability: order === 'asc' ? { sort: 'asc', nulls: 'first' } : { sort: 'desc', nulls: 'last' } },
+            { createdAt: 'desc' },
+          ];
           break;
         case 'customerName':
           orderBy = [{ customer: { customerName: order } }, { createdAt: 'desc' }];
@@ -2863,7 +2869,10 @@ router.get('/export/csv', authenticate, authorize(UserRole.ADMIN), async (req: R
           orderBy = [{ confirmationDate: order }, { createdAt: 'desc' }];
           break;
         case 'profitability':
-          orderBy = [{ profitability: order }, { createdAt: 'desc' }];
+          orderBy = [
+            { profitability: order === 'asc' ? { sort: 'asc', nulls: 'first' } : { sort: 'desc', nulls: 'last' } },
+            { createdAt: 'desc' },
+          ];
           break;
         case 'customerName':
           orderBy = [{ customer: { customerName: order } }, { createdAt: 'desc' }];

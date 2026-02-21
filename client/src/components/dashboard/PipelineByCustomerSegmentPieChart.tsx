@@ -29,7 +29,7 @@ const PipelineByCustomerSegmentPieChart = ({ data: chartData = [] }: PipelineByC
 
   if (!chartData || chartData.length === 0) {
     return (
-      <div className="mobile-paint-anchor w-full min-h-[360px] flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
+      <div className="w-full min-h-[360px] flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
         <div className="flex items-center gap-3 mb-4">
           <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -49,7 +49,7 @@ const PipelineByCustomerSegmentPieChart = ({ data: chartData = [] }: PipelineByC
   }
 
   return (
-    <div className="mobile-paint-anchor w-full min-h-[360px] flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
+    <div className="w-full min-h-[360px] flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500">
@@ -64,10 +64,10 @@ const PipelineByCustomerSegmentPieChart = ({ data: chartData = [] }: PipelineByC
         </div>
       </div>
       {/* On mobile portrait use visible so chart isn’t clipped when page scrolls; from sm up allow horizontal scroll */}
-      <div className="w-full overflow-visible sm:overflow-x-auto sm:overflow-y-visible flex justify-center isolate dashboard-chart-row-mobile sm:!h-[320px] h-[320px]">
-        <div className="flex flex-col items-center justify-center min-w-[320px] w-max mx-auto py-2" style={{ minHeight: 316 }}>
-          <div className="flex-shrink-0" style={{ width: DONUT_SIZE, height: DONUT_SIZE }}>
-            <ResponsiveContainer width={DONUT_SIZE} height={DONUT_SIZE} debounce={250} minWidth={0}>
+      <div className="w-full flex justify-center" style={{ height: '320px' }}>
+        <div className="flex flex-col items-center justify-center">
+          <div style={{ width: DONUT_SIZE, height: DONUT_SIZE }}>
+            <ResponsiveContainer width="100%" height="100%" debounce={250} minWidth={0}>
               <PieChart>
                 <Pie
                   data={chartData}
