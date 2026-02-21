@@ -212,7 +212,7 @@ const CustomerMaster = () => {
 
   if (isLoading) {
     return (
-      <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
+      <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
         <div className="animate-pulse space-y-4">
           <div className="h-10 bg-gradient-to-r from-teal-200 to-gray-200 rounded-lg w-64" />
           <div className="h-12 bg-gradient-to-r from-teal-100/50 to-gray-100 rounded-xl w-full max-w-2xl" />
@@ -227,7 +227,7 @@ const CustomerMaster = () => {
   }
 
   return (
-    <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden mobile-paint-fix">
+    <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden mobile-paint-fix">
       <PageCard
         title="Customer Master"
         subtitle="Manage your customer database"

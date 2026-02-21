@@ -19,7 +19,7 @@ interface PageCardProps {
 const PageCard = ({ title, subtitle, icon, headerAction, children, className = '' }: PageCardProps) => {
   return (
     <div
-      className={`bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm ${className}`}
+      className={`bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-x-hidden backdrop-blur-sm ${className}`}
     >
       <div className="px-6 py-5 sm:px-8 sm:py-6 border-b border-primary-100 bg-gradient-to-r from-primary-600 via-primary-500 to-yellow-500">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -46,7 +46,7 @@ const PageCard = ({ title, subtitle, icon, headerAction, children, className = '
         </div>
       </div>
 
-      <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
+      <div className="px-2 sm:px-6 md:px-8 py-6 sm:py-8 overflow-visible">
         {children}
       </div>
     </div>

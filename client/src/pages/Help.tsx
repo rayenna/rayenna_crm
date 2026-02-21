@@ -133,7 +133,7 @@ const Help = () => {
   }
 
   return (
-    <div className="px-4 py-6 sm:px-0">
+    <div className="px-0 py-6 sm:px-0">
       <PageCard
         title="Help"
         subtitle="Documentation and guidance for using the CRM"

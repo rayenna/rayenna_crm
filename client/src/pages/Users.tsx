@@ -122,7 +122,7 @@ const Users = () => {
     const err = error as { response?: { status?: number }; message?: string }
     const is404 = err.response?.status === 404
     return (
-      <div className="px-4 py-6 max-w-lg">
+      <div className="px-0 py-6 max-w-lg">
         <p className="text-red-600 font-medium">Error loading users</p>
         <p className="text-gray-600 mt-1">{err.message || 'Unknown error'}</p>
         {is404 && (
@@ -135,7 +135,7 @@ const Users = () => {
   }
 
   return (
-    <div className="px-4 py-6 sm:px-0">
+    <div className="px-0 py-6 sm:px-0">
       <PageCard
         title="Users"
         subtitle="Manage user accounts and roles"

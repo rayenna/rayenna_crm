@@ -60,19 +60,26 @@ textarea,
   min-height: 100vh;
 }
 
-/* Mobile (iOS & Android): fix blank sections when scrolling (paint/repaint bug) */
-@media (max-width: 768px) {
+/* Mobile & tablet (iOS & Android, including iPad): fix blank sections when scrolling (paint/repaint bug) */
+@media (max-width: 1024px) {
   html {
     -webkit-overflow-scrolling: touch;
     overflow-scrolling: touch;
   }
-  /* Force GPU layer on sections – prevents blank-on-scroll on Safari & Chrome */
+  /* Force GPU layer on sections – prevents blank-on-scroll on Safari & Chrome (phone + tablet) */
   .mobile-paint-fix > * {
     transform: translateZ(0);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
   }
-  /* Disable backdrop-blur – causes compositing/paint issues on mobile */
+  /* Inner sections (e.g. Projects table, filter card) – same fix so they don’t disappear when scrolling */
+  .mobile-paint-anchor {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+  /* Disable backdrop-blur – causes compositing/paint issues on mobile/tablet */
   .backdrop-blur-sm {
     backdrop-filter: none;
   }

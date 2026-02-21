@@ -159,7 +159,7 @@ const SupportTicketsDashboard = () => {
   const hasActiveFilters = selectedStatus !== null || showOverdueOnly
 
   return (
-    <div className="px-4 py-6 sm:px-0">
+    <div className="px-0 py-6 sm:px-0">
       <PageCard
         title="Support Tickets Dashboard"
         subtitle="Monitor and manage all support tickets across projects"

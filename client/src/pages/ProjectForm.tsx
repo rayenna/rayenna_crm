@@ -765,7 +765,7 @@ const ProjectForm = () => {
   const canEditSalesCommercial = canEditSales && canEditOtherSections
 
   return (
-    <div className="px-4 py-6 sm:px-0 min-h-screen bg-gray-50/80">
+    <div className="px-0 py-6 sm:px-0 min-h-screen bg-gray-50/80">
       <PageCard
         title={isEdit ? 'Edit Project' : 'New Project'}
         subtitle={isEdit ? 'Update project details below.' : 'Create a new project and link it to a customer.'}
@@ -808,8 +808,9 @@ const ProjectForm = () => {
                 </div>
               ) : (
                 <>
-                  <div className="flex gap-2">
-                    <div className="flex-1 min-w-0 relative" ref={customerDropdownRef}>
+                  {/* Stack search + select vertically on mobile/iPad portrait so both are full width and easy to use */}
+                  <div className="flex flex-col lg:flex-row gap-2">
+                    <div className="w-full min-w-0 relative" ref={customerDropdownRef}>
                       <input
                         type="text"
                         placeholder="Search customer by name, ID, or consumer number..."
@@ -843,7 +844,7 @@ const ProjectForm = () => {
                         </button>
                       )}
                       {!isEdit && showCustomerDropdown && filteredCustomers.length > 0 && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                        <div className="absolute z-10 left-0 right-0 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-[70vh] sm:max-h-60 overflow-auto">
                           {filteredCustomers.map((customer: any) => (
                             <div
                               key={customer.id}
@@ -853,7 +854,7 @@ const ProjectForm = () => {
                                 setCustomerSearch(`${customer.customerId} - ${customer.customerName}`)
                                 setShowCustomerDropdown(false)
                               }}
-                              className="px-4 py-2 hover:bg-primary-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                              className="px-4 py-3 sm:py-2 hover:bg-primary-50 cursor-pointer border-b border-gray-100 last:border-b-0 touch-manipulation"
                             >
                               <div className="font-medium text-sm text-gray-900">
                                 {customer.customerId} - {customer.customerName}
@@ -869,48 +870,51 @@ const ProjectForm = () => {
                         </div>
                       )}
                       {!isEdit && showCustomerDropdown && customerSearch && filteredCustomers.length === 0 && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-4 text-sm text-gray-500">
+                        <div className="absolute z-10 left-0 right-0 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-4 text-sm text-gray-500">
                           No customers found matching "{customerSearch}"
                         </div>
                       )}
                     </div>
-                    <Controller
-                      name="customerId"
-                      control={control}
-                      rules={{ required: !isEdit ? 'Please select a customer' : false }}
-                      render={({ field }) => (
-                        <select
-                          {...field}
-                          onChange={(e) => {
-                            field.onChange(e); // Update form state
-                            if (!isEdit) {
-                              const selectedId = e.target.value
-                              if (selectedId) {
-                                const customer = filteredCustomers?.find((c: any) => c.id === selectedId)
-                                if (customer) {
-                                  setCustomerSearch(`${customer.customerId} - ${customer.customerName}`)
+                    <div className="w-full min-w-0">
+                      <span className="sr-only">Or select customer from list</span>
+                      <Controller
+                        name="customerId"
+                        control={control}
+                        rules={{ required: !isEdit ? 'Please select a customer' : false }}
+                        render={({ field }) => (
+                          <select
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e); // Update form state
+                              if (!isEdit) {
+                                const selectedId = e.target.value
+                                if (selectedId) {
+                                  const customer = filteredCustomers?.find((c: any) => c.id === selectedId)
+                                  if (customer) {
+                                    setCustomerSearch(`${customer.customerId} - ${customer.customerName}`)
+                                  }
+                                } else {
+                                  setCustomerSearch('')
                                 }
-                              } else {
-                                setCustomerSearch('')
                               }
-                            }
-                          }}
-                          disabled={isEdit}
-                          className={`flex-1 min-w-0 w-full ${selectCls} ${isEdit ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
-                        >
-                          <option value="">Or select from list</option>
-                          {filteredCustomers && filteredCustomers.length > 0 ? (
-                            filteredCustomers.map((customer: any) => (
-                              <option key={customer.id} value={customer.id}>
-                                {customer.customerId} - {customer.customerName}
-                              </option>
-                            ))
-                          ) : (
-                            <option value="" disabled>No customers found</option>
-                          )}
-                        </select>
+                            }}
+                            disabled={isEdit}
+                            className={`w-full min-w-0 ${selectCls} ${isEdit ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
+                          >
+                            <option value="">Or select from list</option>
+                            {filteredCustomers && filteredCustomers.length > 0 ? (
+                              filteredCustomers.map((customer: any) => (
+                                <option key={customer.id} value={customer.id}>
+                                  {customer.customerId} - {customer.customerName}
+                                </option>
+                              ))
+                            ) : (
+                              <option value="" disabled>No customers found</option>
+                            )}
+                          </select>
                       )}
                     />
+                    </div>
                   </div>
                   {customers?.customers && customers.customers.length === 0 && (
                     <p className="mt-2 text-xs text-yellow-600">

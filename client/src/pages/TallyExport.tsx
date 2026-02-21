@@ -18,7 +18,7 @@ const TallyExport = () => {
   // Check if user has access
   if (!hasRole([UserRole.ADMIN, UserRole.FINANCE])) {
     return (
-      <div className="px-4 py-6 sm:px-0">
+      <div className="px-0 py-6 sm:px-0">
         <PageCard title="Tally Data Export" subtitle="Export projects, invoices, and payments for Tally integration" icon={<FaFileExport className="w-5 h-5 text-white" />} className="max-w-4xl mx-auto">
           <div className="bg-red-50 border border-red-200 rounded-xl p-4">
             <p className="text-red-800">You don't have permission to access this page.</p>
@@ -93,7 +93,7 @@ const TallyExport = () => {
   }
 
   return (
-    <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
+    <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
       <PageCard
         title="Tally Data Export"
         subtitle="Export projects, invoices, and payments for Tally integration"

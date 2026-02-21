@@ -9,7 +9,7 @@ const AboutInfoIcon = () => (
 
 const About = () => {
   return (
-    <div className="px-4 py-6 sm:px-0">
+    <div className="px-0 py-6 sm:px-0">
       <PageCard
         title="About"
         subtitle="Credits, copyright, intellectual property, and confidentiality notice"

@@ -615,7 +615,7 @@ const Projects = () => {
 
   if (!filtersReady || isLoading) {
     return (
-      <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
+      <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
         <div className="h-8 w-48 bg-gradient-to-r from-amber-200 to-gray-200 rounded animate-pulse mb-4" />
         <div className="h-64 bg-gradient-to-r from-amber-100/50 to-gray-100 rounded-xl animate-pulse" />
       </div>
@@ -623,7 +623,7 @@ const Projects = () => {
   }
 
   return (
-    <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden mobile-paint-fix">
+    <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden mobile-paint-fix">
       <PageCard
         title="Projects"
         subtitle="Manage and track all your solar projects"
@@ -907,8 +907,8 @@ const Projects = () => {
         </div>
       )}
 
-      {/* Projects table - scannable, status-driven, enterprise tone */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      {/* Projects table - scannable, status-driven, enterprise tone; mobile-paint-anchor prevents sections disappearing on scroll (iOS/Android) */}
+      <div className="mobile-paint-anchor bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead>

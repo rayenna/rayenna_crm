@@ -113,23 +113,23 @@ const Layout = () => {
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent_50%)]"></div>
         </div>
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 relative z-10">
-          <div className="flex justify-between items-center h-20 gap-2 lg:gap-4">
-            <div className="flex items-center">
-              <Link to="/dashboard" className="flex-shrink-0 flex items-center mr-2 lg:mr-3 xl:mr-4 hover:opacity-80 transition-opacity">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-5 lg:px-6 xl:px-8 relative z-10">
+          <div className="flex justify-between items-center h-20 gap-2 md:gap-3 lg:gap-4">
+            <div className="flex items-center min-w-0">
+              <Link to="/dashboard" className="flex-shrink-0 flex items-center mr-2 md:mr-3 lg:mr-3 xl:mr-4 hover:opacity-80 transition-opacity">
                 <img 
                   src="/rayenna_logo.jpg" 
                   alt="Rayenna Energy Logo" 
-                  className="h-12 xl:h-[3.6rem] w-auto"
+                  className="h-12 md:h-11 lg:h-12 xl:h-[3.6rem] w-auto"
                 />
               </Link>
-              {/* Desktop Navigation - Show on large screens only (lg and above) */}
-              <div className="hidden lg:ml-4 lg:flex lg:space-x-2 xl:space-x-3 2xl:space-x-4 items-center flex-wrap lg:gap-1.5 xl:gap-0">
+              {/* Desktop Navigation - Show from tablet up (md 768px) for sharper iPad experience */}
+              <div className="hidden md:ml-2 md:flex md:space-x-1 lg:space-x-2 xl:space-x-3 2xl:space-x-4 items-center flex-wrap md:gap-1 lg:gap-1.5 xl:gap-0">
                 {filteredNav.map((item) => (
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`inline-flex items-center px-3 xl:px-3 2xl:px-4 py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs xl:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
+                    className={`inline-flex items-center px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-4 py-1.5 md:py-2 lg:py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
                       location.pathname.startsWith(item.path)
                         ? 'bg-white/25 text-white shadow-xl xl:shadow-2xl font-bold backdrop-blur-md border-2 border-white/30'
                         : 'text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm'
@@ -148,14 +148,14 @@ const Layout = () => {
                 >
                   <button
                     onClick={() => setHelpDropdownOpen(!helpDropdownOpen)}
-                    className={`inline-flex items-center px-3 xl:px-3 2xl:px-4 py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs xl:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
+                    className={`inline-flex items-center px-2 md:px-2.5 lg:px-3 xl:px-3 2xl:px-4 py-1.5 md:py-2 lg:py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs font-semibold transition-all duration-300 whitespace-nowrap ${
                       isHelpActive
                         ? 'bg-white/25 text-white shadow-xl xl:shadow-2xl font-bold backdrop-blur-md border-2 border-white/30'
                         : 'text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm'
                     }`}
                   >
                     Help
-                    <svg className={`ml-1 h-3 w-3 xl:h-4 xl:w-4 transition-transform ${helpDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className={`ml-0.5 h-3 w-3 md:h-3.5 md:w-3.5 xl:h-4 xl:w-4 transition-transform ${helpDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
@@ -204,29 +204,27 @@ const Layout = () => {
                 </div>
               </div>
             </div>
-            <div className="flex items-center space-x-1.5 sm:space-x-2 lg:space-x-2.5 xl:space-x-3 flex-shrink-0">
-              {/* User info - show on medium screens and above, but hide when hamburger is visible */}
-              <span className="hidden md:inline lg:hidden text-sm text-white/90 font-medium truncate max-w-[100px]">{user?.name}</span>
-              <span className="hidden lg:inline text-xs xl:text-sm text-white/90 font-medium truncate max-w-[120px] xl:max-w-none">{user?.name}</span>
-              <span className="hidden lg:inline text-xs text-primary-700 bg-gradient-to-r from-white to-primary-50 px-2 xl:px-3 py-1.5 xl:py-2 rounded-full font-bold shadow-lg border-2 border-white/50">
+            <div className="flex items-center space-x-1.5 sm:space-x-2 md:space-x-2 lg:space-x-2.5 xl:space-x-3 flex-shrink-0">
+              <span className="hidden md:inline text-xs lg:text-sm text-white/90 font-medium truncate max-w-[90px] lg:max-w-[120px] xl:max-w-none">{user?.name}</span>
+              <span className="hidden md:inline text-xs text-primary-700 bg-gradient-to-r from-white to-primary-50 px-1.5 md:px-2 lg:px-2 xl:px-3 py-1 md:py-1.5 xl:py-2 rounded-full font-bold shadow-lg border-2 border-white/50 whitespace-nowrap">
                 {user?.role}
               </span>
               <Link
                 to="/change-password"
-                className="hidden lg:inline text-xs xl:text-sm text-white font-semibold hover:text-white hover:bg-white/20 px-2 xl:px-3 py-1.5 xl:py-2 rounded-lg xl:rounded-xl transition-all duration-300 shadow-md hover:shadow-lg border-2 border-white/20 hover:border-white/40 whitespace-nowrap"
+                className="hidden md:inline text-xs text-white font-semibold hover:text-white hover:bg-white/20 px-1.5 md:px-2 lg:px-2 xl:px-3 py-1 md:py-1.5 xl:py-2 rounded-lg xl:rounded-xl transition-all duration-300 shadow-md hover:shadow-lg border-2 border-white/20 hover:border-white/40 whitespace-nowrap"
               >
                 Change Password
               </Link>
               <button
                 onClick={logout}
-                className="hidden lg:inline text-xs xl:text-sm text-white font-semibold hover:text-white hover:bg-white/20 px-2 xl:px-3 py-1.5 xl:py-2 rounded-lg xl:rounded-xl transition-all duration-300 shadow-md hover:shadow-lg border-2 border-white/20 hover:border-white/40 whitespace-nowrap"
+                className="hidden md:inline text-xs text-white font-semibold hover:text-white hover:bg-white/20 px-1.5 md:px-2 lg:px-2 xl:px-3 py-1 md:py-1.5 xl:py-2 rounded-lg xl:rounded-xl transition-all duration-300 shadow-md hover:shadow-lg border-2 border-white/20 hover:border-white/40 whitespace-nowrap"
               >
                 Logout
               </button>
-              {/* Hamburger menu button - Show on screens below lg (includes mobile landscape) */}
+              {/* Hamburger menu - only below tablet (md) so iPad gets full nav */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden ml-2 inline-flex items-center justify-center p-2 rounded-xl text-white hover:bg-white/20 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/50 transition-all duration-300 border-2 border-white/20"
+                className="md:hidden ml-2 inline-flex items-center justify-center p-2 rounded-xl text-white hover:bg-white/20 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/50 transition-all duration-300 border-2 border-white/20"
                 aria-label="Toggle menu"
               >
                 {mobileMenuOpen ? (
@@ -241,9 +239,9 @@ const Layout = () => {
               </button>
             </div>
           </div>
-          {/* Mobile Navigation Menu - Show on screens below lg (includes mobile landscape) */}
+          {/* Mobile Navigation Menu - Show only below tablet (md) so iPad gets desktop nav */}
           {mobileMenuOpen && (
-            <div className="lg:hidden pb-4 pt-2">
+            <div className="md:hidden pb-4 pt-2">
               <div className="space-y-2">
                 {filteredNav.map((item) => (
                   <Link
@@ -328,7 +326,7 @@ const Layout = () => {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto py-6 px-2 sm:px-4 md:px-6 lg:px-8">
         <Outlet />
       </main>
 

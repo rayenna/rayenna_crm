@@ -54,7 +54,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden mobile-paint-fix">
+    <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden mobile-paint-fix">
       <PageCard
         title="Dashboard"
         subtitle="Monitor your business performance at a glance"

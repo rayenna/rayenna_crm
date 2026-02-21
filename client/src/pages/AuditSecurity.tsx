@@ -225,14 +225,14 @@ export default function AuditSecurity () {
 
   if (!hasRole([UserRole.ADMIN])) {
     return (
-      <div className="px-4 py-6 sm:px-0">
+      <div className="px-0 py-6 sm:px-0">
         <p className="text-red-600 font-medium">Access denied. This page is for Administrators only.</p>
       </div>
     )
   }
 
   return (
-    <div className="px-4 py-6 sm:px-0">
+    <div className="px-0 py-6 sm:px-0">
       <PageCard
         title="Audit & Security"
         subtitle="Accountability, traceability, and security visibility. Admin only."

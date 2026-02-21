@@ -147,7 +147,7 @@ const ProjectDetail = () => {
           </div>
         </div>
       )}
-    <div className="px-4 py-6 sm:px-0 min-h-screen bg-gray-50/80">
+    <div className="px-0 py-6 sm:px-0 min-h-screen bg-gray-50/80">
       <PageCard
         title={`Project #${project.slNo}`}
         subtitle={project.customer?.customerName || 'Unknown Customer'}
