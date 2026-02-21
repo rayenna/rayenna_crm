@@ -76,8 +76,17 @@ textarea,
   }
 }
 
-/* Mobile portrait only: GPU layer fix for sections that disappear when scrolling (minimize layers to reduce lag) */
+/* Mobile portrait: avoid clipping donut charts when page scrolls (no overflow hidden on dashboard) */
 @media (max-width: 768px) {
+  .dashboard-mobile-no-clip {
+    overflow: visible !important;
+  }
+  /* Chart row: no scroll container so Recharts/tooltips don’t get clipped */
+  .dashboard-chart-row-mobile {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 320px;
+  }
   .mobile-paint-fix > * {
     transform: translateZ(0);
     -webkit-backface-visibility: hidden;
@@ -88,6 +97,14 @@ textarea,
     -webkit-transform: translateZ(0);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
+  }
+}
+
+/* Mobile menu: scrollable in landscape so Help and bottom actions are reachable */
+@media (max-width: 1023px) {
+  .mobile-menu-scroll {
+    -webkit-overflow-scrolling: touch;
+    overflow-scrolling: touch;
   }
 }
 

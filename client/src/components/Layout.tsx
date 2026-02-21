@@ -258,9 +258,9 @@ const Layout = () => {
               </button>
             </div>
           </div>
-          {/* Mobile/Tablet menu - below lg (iPad portrait uses hamburger) */}
+          {/* Mobile/Tablet menu - below lg; scrollable so Help is reachable in landscape */}
           {mobileMenuOpen && (
-            <div className="lg:hidden pb-4 pt-2">
+            <div className="lg:hidden pb-4 pt-2 max-h-[min(85vh,400px)] overflow-y-auto overflow-x-hidden overscroll-contain mobile-menu-scroll">
               <div className="space-y-2">
                 {filteredNav.map((item) => (
                   <Link

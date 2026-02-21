@@ -186,8 +186,8 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
           </div>
         )}
       </div>
-      {/* Horizontal scroll so donut + legend are always viewable; isolate so chart is not clipped when page scrolls on mobile */}
-      <div className="w-full overflow-x-auto overflow-y-visible flex justify-center isolate" style={{ height: '320px' }}>
+      {/* On mobile portrait use visible so chart isn’t clipped when page scrolls; from sm up allow horizontal scroll */}
+      <div className="w-full overflow-visible sm:overflow-x-auto sm:overflow-y-visible flex justify-center isolate dashboard-chart-row-mobile sm:!h-[320px] h-[320px]">
         <div className="flex flex-col items-center justify-center min-w-[320px] w-max mx-auto py-2" style={{ minHeight: 316 }}>
           <div className="flex-shrink-0 relative z-0" style={{ width: DONUT_SIZE, height: DONUT_SIZE }}>
             <ResponsiveContainer width={DONUT_SIZE} height={DONUT_SIZE} debounce={250} minWidth={0}>
