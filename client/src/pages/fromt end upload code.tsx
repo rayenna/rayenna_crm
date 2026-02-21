@@ -173,10 +173,9 @@ const ProjectForm = () => {
     queryFn: async () => {
       try {
         const res = await axiosInstance.get('/api/customers?limit=10000') // Fetch all customers (up to 10000)
-        console.log('Customers loaded:', res.data?.customers?.length || 0, 'customers')
         return res.data
       } catch (error: any) {
-        console.error('Error fetching customers:', error)
+        if (import.meta.env.DEV) console.error('Error fetching customers:', error)
         throw error
       }
     },
@@ -289,29 +288,6 @@ const ProjectForm = () => {
         const matches = isCreator || isTagged || hasUserProjects
         return matches
       })
-      console.log('Sales user filtering customers:', {
-        userRole: user.role,
-        userId: user.id,
-        totalCustomers: customers.customers.length,
-        filteredCustomers: availableCustomers.length,
-        sampleCustomers: customers.customers.slice(0, 5).map((c: any) => ({
-          id: c.id,
-          name: c.customerName,
-          createdById: c.createdById,
-          salespersonId: c.salespersonId,
-          hasProjects: c.projects?.length > 0,
-          projectCreatedBy: c.projects?.[0]?.createdById,
-          matches: c.createdById === user.id || c.salespersonId === user.id || (c.projects?.[0]?.createdById === user.id)
-        })),
-        filteredSample: availableCustomers.slice(0, 3).map((c: any) => ({
-          id: c.id,
-          name: c.customerName,
-          createdById: c.createdById,
-          salespersonId: c.salespersonId
-        }))
-      })
-    } else {
-      console.log('Not filtering - user role:', user?.role, 'userId:', user?.id)
     }
     
     // Apply search filter
@@ -422,7 +398,6 @@ const ProjectForm = () => {
   })
 
   const onSubmit = (data: any) => {
-    console.log('[PROJECT FORM] onSubmit called with data:', data);
     // Get all form values including empty fields
     const allValues = getValues();
     
@@ -694,22 +669,6 @@ const ProjectForm = () => {
       }
     }
     
-    console.log('Submitting data:', data); // Debug log
-    // Debug: Log full data object
-    console.log('Submitting data (full):', JSON.stringify(data, null, 2));
-    console.log('Payment fields:', {
-      advanceReceived: data.advanceReceived,
-      advanceReceivedDate: data.advanceReceivedDate,
-      payment1: data.payment1,
-      payment1Date: data.payment1Date,
-      payment2: data.payment2,
-      payment2Date: data.payment2Date,
-      payment3: data.payment3,
-      payment3Date: data.payment3Date,
-      lastPayment: data.lastPayment,
-      lastPaymentDate: data.lastPaymentDate,
-    });
-    
     mutation.mutate(data)
   }
 
@@ -733,12 +692,8 @@ const ProjectForm = () => {
       </h1>
 
       <form onSubmit={handleSubmit(onSubmit, (errors) => {
-        console.error('[PROJECT FORM] Form validation errors:', errors);
-        console.error('[PROJECT FORM] Current form values:', getValues());
-        console.error('[PROJECT FORM] customerId value:', getValues('customerId'));
         const errorMessages = Object.entries(errors).map(([field, error]: [string, any]) => {
           const message = error?.message || error?.type || 'Invalid value';
-          console.error(`[PROJECT FORM] Error for ${field}:`, message, error);
           return `${field}: ${message}`;
         });
         if (errorMessages.length > 0) {

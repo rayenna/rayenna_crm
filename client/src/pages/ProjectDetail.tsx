@@ -10,6 +10,8 @@ import SupportTicketsSection from '../components/supportTickets/SupportTicketsSe
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import ProposalPreview from '../components/proposal/ProposalPreview'
+import PageCard from '../components/PageCard'
+import { FaProjectDiagram } from 'react-icons/fa'
 
 const ProjectDetail = () => {
   const { id } = useParams()
@@ -57,8 +59,9 @@ const ProjectDetail = () => {
       if (data.deleted?.supportTickets?.count > 0) {
         toast.success(`Project and ${data.deleted.supportTickets.count} support ticket(s) deleted`)
       }
-      // Invalidate projects list and navigate back
+      // Invalidate projects list and dashboard so tiles/charts stay in sync
       queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       navigate('/projects')
     },
     onError: (error: any) => {
@@ -145,17 +148,17 @@ const ProjectDetail = () => {
         </div>
       )}
     <div className="px-4 py-6 sm:px-0 min-h-screen bg-gray-50/80">
-      {/* Header: Project name, customer, stage + status pills, key financials */}
-      <div className="bg-gradient-to-br from-white to-amber-50/40 rounded-xl border-l-4 border-l-amber-500 border border-amber-100/60 shadow-sm p-6 mb-6">
+      <PageCard
+        title={`Project #${project.slNo}`}
+        subtitle={project.customer?.customerName || 'Unknown Customer'}
+        icon={<FaProjectDiagram className="w-5 h-5 text-white" />}
+        className="max-w-full"
+      >
+      {/* Header card: stage, status, key financials - same card style as other sections */}
+      <div className="bg-gradient-to-br from-primary-50/50 to-gray-50/60 rounded-xl p-6 mb-6 border-l-4 border-l-primary-500 border border-primary-100/60 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              Project #{project.slNo}
-            </h1>
-            <p className="text-base sm:text-lg font-semibold text-gray-900 mt-0.5">
-              {project.customer?.customerName || 'Unknown Customer'}
-            </p>
-            <p className="flex items-center gap-1.5 text-xs text-gray-500 mt-1">
+            <p className="flex items-center gap-1.5 text-xs text-gray-500">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
@@ -203,7 +206,7 @@ const ProjectDetail = () => {
              project.projectStatus === ProjectStatus.PROPOSAL) && (
             <button
               onClick={() => setShowProposal(true)}
-              className="px-4 py-2 bg-amber-100 text-amber-800 border border-amber-200 rounded-lg hover:bg-amber-200 font-medium text-sm transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-primary-100 text-primary-800 border border-primary-200 rounded-lg hover:bg-primary-200 font-medium text-sm transition-colors flex items-center gap-2"
             >
               <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -214,7 +217,7 @@ const ProjectDetail = () => {
           {canEdit && (
             <Link
               to={`/projects/${id}/edit`}
-              className="bg-gradient-to-r from-amber-600 to-primary-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:from-amber-700 hover:to-primary-700 font-medium shadow-md hover:shadow-lg transition-all text-sm sm:text-base text-center"
+              className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-3 py-2 sm:px-4 rounded-lg hover:from-primary-700 hover:to-primary-800 font-medium shadow-md transition-all text-sm sm:text-base text-center"
             >
               Edit
             </Link>
@@ -242,8 +245,8 @@ const ProjectDetail = () => {
 
       {/* Content: Info cards (Customer Module style – bg-gray-50/60, section icon + title) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Customer Details */}
-        <div className="bg-gradient-to-br from-teal-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-teal-400">
+        {/* Customer Details - same card style as Project Lifecycle, Payment Tracking */}
+        <div className="bg-gradient-to-br from-teal-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-teal-400 shadow-sm border border-teal-100/60">
           <div className="flex items-center gap-2">
             <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Customer Details</h3>
@@ -321,10 +324,10 @@ const ProjectDetail = () => {
           )}
         </div>
 
-        {/* Project Details */}
-        <div className="bg-gradient-to-br from-amber-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-amber-400">
+        {/* Project Details - same card style as Sales & Commercial, Project Lifecycle */}
+        <div className="bg-gradient-to-br from-sky-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-sky-400 shadow-sm border border-sky-100/60">
           <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Project Details</h3>
           </div>
           <dl className="space-y-3">
@@ -835,6 +838,7 @@ const ProjectDetail = () => {
           <p className="text-sm text-gray-500">No artifacts uploaded yet. Click <strong>Edit</strong> to upload documents.</p>
         )}
       </div>
+      </PageCard>
     </div>
     </>
   )

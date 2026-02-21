@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import axiosInstance from '../utils/axios'
 import { UserRole } from '../types'
+import PageCard from '../components/PageCard'
+import { FaFileExport } from 'react-icons/fa'
 
 const TallyExport = () => {
   const { hasRole } = useAuth()
@@ -17,9 +19,11 @@ const TallyExport = () => {
   if (!hasRole([UserRole.ADMIN, UserRole.FINANCE])) {
     return (
       <div className="px-4 py-6 sm:px-0">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">You don't have permission to access this page.</p>
-        </div>
+        <PageCard title="Tally Data Export" subtitle="Export projects, invoices, and payments for Tally integration" icon={<FaFileExport className="w-5 h-5 text-white" />} className="max-w-4xl mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <p className="text-red-800">You don't have permission to access this page.</p>
+          </div>
+        </PageCard>
       </div>
     )
   }
@@ -89,24 +93,22 @@ const TallyExport = () => {
   }
 
   return (
-    <div className="px-4 py-6 sm:px-0">
-      <div className="max-w-4xl mx-auto">
-        <div className="border-l-4 border-l-emerald-500 pl-4 mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Tally Data Export
-          </h1>
-          <p className="text-sm text-emerald-600/80 mt-0.5">Export projects, invoices, and payments for Tally integration</p>
-        </div>
-
-        <div className="bg-white rounded-xl border-l-4 border-l-emerald-400 border border-emerald-100 shadow-sm p-6 space-y-6">
+    <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
+      <PageCard
+        title="Tally Data Export"
+        subtitle="Export projects, invoices, and payments for Tally integration"
+        icon={<FaFileExport className="w-5 h-5 text-white" />}
+        className="max-w-full"
+      >
+        <div className="bg-white/80 rounded-2xl border border-primary-100 shadow-lg p-6 space-y-6">
           <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Export Data</h3>
           </div>
           {/* Info Banner */}
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-emerald-900 mb-2">Export Instructions</h3>
-            <ul className="text-sm text-emerald-800 space-y-1 list-disc list-inside">
+          <div className="bg-primary-50 border border-primary-200 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-primary-900 mb-2">Export Instructions</h3>
+            <ul className="text-sm text-primary-800 space-y-1 list-disc list-inside">
               <li><strong>Excel:</strong> Import directly into Tally using Excel import feature</li>
               <li><strong>CSV:</strong> Compatible with Tally CSV import format</li>
               <li><strong>Tally XML:</strong> Native Tally format - Import via Tally Gateway of Tally</li>
@@ -124,8 +126,8 @@ const TallyExport = () => {
                 onClick={() => setExportType('projects')}
                 className={`px-4 py-3 rounded-xl border-2 transition-colors ${
                   exportType === 'projects'
-                    ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-semibold'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-emerald-300'
+                    ? 'border-primary-600 bg-primary-50 text-primary-800 font-semibold'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-primary-300'
                 }`}
               >
                 Projects
@@ -135,8 +137,8 @@ const TallyExport = () => {
                 onClick={() => setExportType('invoices')}
                 className={`px-4 py-3 rounded-xl border-2 transition-colors ${
                   exportType === 'invoices'
-                    ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-semibold'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-emerald-300'
+                    ? 'border-primary-600 bg-primary-50 text-primary-800 font-semibold'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-primary-300'
                 }`}
               >
                 Invoices
@@ -146,8 +148,8 @@ const TallyExport = () => {
                 onClick={() => setExportType('payments')}
                 className={`px-4 py-3 rounded-xl border-2 transition-colors ${
                   exportType === 'payments'
-                    ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-semibold'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-emerald-300'
+                    ? 'border-primary-600 bg-primary-50 text-primary-800 font-semibold'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-primary-300'
                 }`}
               >
                 Payments
@@ -177,8 +179,8 @@ const TallyExport = () => {
                 onClick={() => setFormat('csv')}
                 className={`px-4 py-3 rounded-xl border-2 transition-colors ${
                   format === 'csv'
-                    ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-semibold'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-emerald-300'
+                  ? 'border-primary-600 bg-primary-50 text-primary-800 font-semibold'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-primary-300'
                 }`}
               >
                 CSV (.csv)
@@ -288,9 +290,9 @@ const TallyExport = () => {
         )}
 
         {/* Help Section */}
-        <div className="mt-6 bg-white rounded-xl p-6 shadow-sm border-l-4 border-l-sky-400 border border-sky-100">
+        <div className="mt-6 bg-white/80 rounded-2xl p-6 shadow-lg border border-primary-100">
           <div className="flex items-center gap-2 mb-4">
-            <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">How to Import into Tally</h3>
           </div>
           <div className="space-y-4 text-sm text-gray-700">
@@ -318,12 +320,12 @@ const TallyExport = () => {
         </div>
 
         {/* Warning Message */}
-        <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="mt-6 bg-red-50 border border-red-200 rounded-xl p-4">
           <p className="text-sm text-red-800 leading-relaxed">
             <strong>WARNING:</strong> Access to this page is monitored and downloading of data from this page is only with management approvals. All Data / Info in this CRM System is the exclusive property of Rayenna Energy Private Limited.
           </p>
         </div>
-      </div>
+      </PageCard>
     </div>
   )
 }

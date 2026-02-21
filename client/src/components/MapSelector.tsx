@@ -38,16 +38,12 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
 
       // Check if it's a short link - these don't contain coordinates directly
       if (isShortLink(trimmedLink)) {
-        console.log('Detected short link - coordinates cannot be extracted automatically')
         // Try to follow redirect if possible (limited by CORS)
         try {
           const response = await fetch(trimmedLink, { method: 'HEAD', redirect: 'follow' })
           const finalUrl = response.url || trimmedLink
-          console.log('Short link redirects to:', finalUrl)
-          // Recursively try to parse the final URL
           return await parseMapLink(finalUrl)
-        } catch (error) {
-          console.log('Cannot follow short link redirect due to CORS restrictions')
+        } catch {
           return { lat: null, lng: null }
         }
       }
@@ -59,7 +55,6 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
         const lat = parseFloat(qMatch[1])
         const lng = parseFloat(qMatch[2])
         if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-          console.log('Parsed coordinates from ?q= format:', { lat, lng })
           return { lat, lng }
         }
       }
@@ -70,7 +65,6 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
         const lat = parseFloat(atMatch[1])
         const lng = parseFloat(atMatch[2])
         if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-          console.log('Parsed coordinates from @ format:', { lat, lng })
           return { lat, lng }
         }
       }
@@ -81,7 +75,6 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
         const lat = parseFloat(llMatch[1])
         const lng = parseFloat(llMatch[2])
         if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-          console.log('Parsed coordinates from ?ll= format:', { lat, lng })
           return { lat, lng }
         }
       }
@@ -92,7 +85,6 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
         const lat = parseFloat(embedMatch[1])
         const lng = parseFloat(embedMatch[2])
         if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-          console.log('Parsed coordinates from /@ format:', { lat, lng })
           return { lat, lng }
         }
       }
@@ -103,14 +95,11 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
         const lat = parseFloat(coordPattern[1])
         const lng = parseFloat(coordPattern[2])
         if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-          console.log('Parsed coordinates from pattern match:', { lat, lng })
           return { lat, lng }
         }
       }
-
-      console.log('Could not parse coordinates from link:', trimmedLink)
     } catch (error) {
-      console.error('Error parsing map link:', error, link)
+      if (import.meta.env.DEV) console.error('Error parsing map link:', error, link)
     }
     return { lat: null, lng: null }
   }
@@ -175,35 +164,17 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
   }
 
   const handleMapLinkChange = async (value: string) => {
-    console.log('handleMapLinkChange called with:', value)
-    
     if (value && value.trim()) {
       const trimmedValue = value.trim()
       setMapLink(trimmedValue) // Update link display immediately
-      
-      // Check if it's a short link
-      if (isShortLink(trimmedValue)) {
-        console.log('⚠️ Short link detected - please use the full Google Maps URL or enter coordinates manually')
-        // Don't try to parse short links - just show the link
-        return
-      }
-      
-      console.log('Parsing map link:', trimmedValue)
+      if (isShortLink(trimmedValue)) return
       const coords = await parseMapLink(trimmedValue)
-      console.log('Parsed coordinates:', coords)
-      
       if (coords.lat !== null && coords.lng !== null) {
-        // Update all state
         setLatInput(coords.lat.toString())
         setLngInput(coords.lng.toString())
         onLocationChange(coords.lat, coords.lng)
-        // Update map URL
         const url = `https://maps.google.com/maps?q=${coords.lat},${coords.lng}&hl=en&z=15&output=embed`
         setMapUrl(url)
-        console.log('✅ Successfully extracted and set coordinates:', { lat: coords.lat, lng: coords.lng })
-      } else {
-        console.log('⚠️ Could not extract valid coordinates from link:', trimmedValue)
-        // Link is still stored, but coordinates aren't extracted
       }
     } else {
       // Clear coordinates if link is empty
@@ -240,7 +211,7 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
           setMapLink(generateMapLink(lat, lng))
         },
         (error) => {
-          console.error('Error getting location:', error)
+          if (import.meta.env.DEV) console.error('Error getting location:', error)
           alert('Unable to retrieve your location. Please enter coordinates manually.')
         }
       )
@@ -410,10 +381,8 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
                   handleMapLinkChange(e.target.value)
                 }}
                 onPaste={(e) => {
-                  // Handle paste event - wait for paste to complete
                   setTimeout(() => {
                     const pastedValue = (e.target as HTMLInputElement).value
-                    console.log('Pasted value:', pastedValue)
                     handleMapLinkChange(pastedValue)
                   }, 10)
                 }}

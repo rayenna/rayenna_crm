@@ -6,6 +6,8 @@ import { getHelpContent } from '../help/contentLoader'
 import { searchHelpContent } from '../help/searchHelp'
 import HelpSidebar from '../components/help/HelpSidebar'
 import ErrorBoundary from '../components/ErrorBoundary'
+import PageCard from '../components/PageCard'
+import { FaBook } from 'react-icons/fa'
 
 /** Normalize markdown string for safe rendering; avoids formatting/crash on hard refresh. */
 function normalizeHelpMarkdown(raw: string | undefined): string {
@@ -131,13 +133,18 @@ const Help = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50/50 to-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="px-4 py-6 sm:px-0">
+      <PageCard
+        title="Help"
+        subtitle="Documentation and guidance for using the CRM"
+        icon={<FaBook className="w-5 h-5 text-white" />}
+        className="max-w-7xl mx-auto"
+      >
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left Sidebar */}
           <div className="lg:col-span-1 min-h-[400px] space-y-4">
             {/* Search */}
-            <div className="rounded-xl border border-sky-100/80 bg-white shadow-sm overflow-hidden">
+            <div className="rounded-xl border border-primary-100 bg-white shadow-sm overflow-hidden">
               <label htmlFor="help-search" className="sr-only">
                 Search help
               </label>
@@ -153,7 +160,7 @@ const Help = () => {
               {searchQuery.trim().length > 0 && (
                 <div
                   id="help-search-results"
-                  className="border-t border-sky-100 max-h-64 overflow-y-auto"
+                  className="border-t border-primary-100 max-h-64 overflow-y-auto"
                   role="list"
                 >
                   {searchResults.length === 0 ? (
@@ -164,7 +171,7 @@ const Help = () => {
                         key={r.routeKey}
                         type="button"
                         onClick={() => handleSearchResultClick(r.routeKey)}
-                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-sky-50/80 border-b border-sky-50 last:border-b-0 transition-colors"
+                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-primary-50/80 border-b border-primary-50 last:border-b-0 transition-colors"
                         role="listitem"
                       >
                         <span className="font-medium text-primary-700 block">{r.sectionTitle}</span>
@@ -186,13 +193,13 @@ const Help = () => {
 
           {/* Right Content Area */}
           <div className="lg:col-span-3">
-            <div className="bg-gradient-to-br from-white to-sky-50/30 rounded-xl shadow-sm border-l-4 border-l-sky-400 border border-sky-100/60 p-6 lg:p-8">
+            <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 p-6 lg:p-8">
               {contextLabel && (
-                <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50/80 px-4 py-2.5 text-sm text-sky-800">
+                <div className="mb-4 rounded-lg border border-primary-200 bg-primary-50/80 px-4 py-2.5 text-sm text-primary-800">
                   <span className="font-medium">Help for:</span>{' '}
                   <span className="font-semibold">{contextLabel}</span>
                   {selectedSection && (
-                    <span className="ml-1 text-sky-600">
+                    <span className="ml-1 text-primary-600">
                       {' '}— you're in the <strong>{selectedSection.title}</strong> section
                     </span>
                   )}
@@ -363,7 +370,7 @@ const Help = () => {
             </div>
           </div>
         </div>
-      </div>
+      </PageCard>
     </div>
   )
 }

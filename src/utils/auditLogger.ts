@@ -2,13 +2,16 @@
  * Admin Audit & Security — async fire-and-forget logging.
  * Never awaited in request path; failures are swallowed (no console, no throw).
  */
+import type { Request } from 'express';
 import prisma from '../prisma';
 
-function getClientMeta(req?: { ip?: string; get?: (k: string) => string; headers?: Record<string, string | string[] | undefined> }): { ip?: string; userAgent?: string } {
+function getClientMeta(req?: Request): { ip?: string; userAgent?: string } {
   if (!req) return {};
-  const ip = (req as any).ip ?? req.get?.('x-forwarded-for')?.split(',')[0]?.trim() ?? req.get?.('x-real-ip') ?? undefined;
-  const ua = req.get?.('user-agent') ?? (req.headers?.['user-agent'] as string);
-  return { ip, userAgent: ua ? String(ua).slice(0, 500) : undefined };
+  const forwarded = req.get('x-forwarded-for');
+  const ip = (req as Request & { ip?: string }).ip ?? (typeof forwarded === 'string' ? forwarded.split(',')[0]?.trim() : undefined) ?? req.get('x-real-ip') ?? undefined;
+  const ua = req.get('user-agent');
+  const uaStr = ua != null ? String(ua).slice(0, 500) : undefined;
+  return { ip, userAgent: uaStr };
 }
 
 function run(fn: () => Promise<void>): void {
@@ -27,7 +30,7 @@ export interface AccessLogPayload {
   role?: string | null;
   actionType: 'login_success' | 'login_failure' | 'auth_failure';
   success?: boolean;
-  req?: { ip?: string; get?: (k: string) => string; headers?: Record<string, string | string[] | undefined> };
+  req?: Request;
 }
 
 export function logAccess(payload: AccessLogPayload): void {
@@ -54,7 +57,7 @@ export interface SecurityAuditPayload {
   entityType?: string | null;
   entityId?: string | null;
   summary?: string | null;
-  req?: { ip?: string; get?: (k: string) => string; headers?: Record<string, string | string[] | undefined> };
+  req?: Request;
 }
 
 export function logSecurityAudit(payload: SecurityAuditPayload): void {

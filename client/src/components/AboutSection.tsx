@@ -2,6 +2,7 @@
 type Block =
   | { type: 'title'; text: string }
   | { type: 'subtitle'; text: string }
+  | { type: 'label'; text: string }
   | { type: 'bullets'; items: string[] }
   | { type: 'paragraph'; text: string }
 
@@ -14,8 +15,8 @@ const RAW_LINES: string[] = [
   'Product Category: Custom Enterprise CRM Platform',
   '',
   'Concept, Architecture, Design & Development:',
-  'SHABEER MOHAMED KOZHAKKANIYIL',
-  'Director, Rayenna Energy Private Limited',
+  '',
+  'SHABEER MOHAMED KOZHAKKANIYIL – Director, Rayenna Energy Private Limited',
   '',
   'Role:',
   '# Sole Architect & Developer',
@@ -96,9 +97,13 @@ function parseBlocks(lines: string[]): Block[] {
 
     // Titles/subtitles (stand-alone line + blank line next)
     if (isSectionTitle(line, next)) {
-      // First non-empty line becomes main title, subsequent stand-alone become subtitle
-      const kind: Block['type'] = blocks.length === 0 ? 'title' : 'subtitle'
-      blocks.push({ type: kind, text: line.trim() } as Block)
+      // Lines ending with ":" render as un-bold label; first line = title, others = subtitle
+      if (line.trim().endsWith(':')) {
+        blocks.push({ type: 'label', text: line.trim() })
+      } else {
+        const kind: Block['type'] = blocks.length === 0 ? 'title' : 'subtitle'
+        blocks.push({ type: kind, text: line.trim() } as Block)
+      }
       i += 1
       continue
     }
@@ -120,7 +125,230 @@ function parseBlocks(lines: string[]): Block[] {
 
 const blocks = parseBlocks(RAW_LINES)
 
-const AboutSection = () => {
+// From "Authorship & Inventorship Declaration" till end: only these headings stay bold
+const CONTENT_SECTION_HEADINGS = new Set([
+  'Authorship & Inventorship Declaration',
+  'Ownership & Assignment Clarification',
+  'Restrictions',
+  'Confidentiality Notice',
+])
+// Stand-alone lines that are body text, not headings – render as normal weight
+const NORMAL_WEIGHT_SUBTITLES = new Set([
+  'is protected under applicable copyright, intellectual property, and software protection laws.',
+])
+const authorshipBlockIndex = blocks.findIndex(
+  (b) => b.type === 'subtitle' && b.text === 'Authorship & Inventorship Declaration'
+)
+const devBgBlockIndex = blocks.findIndex(
+  (b) => b.type === 'subtitle' && b.text === 'Development Background'
+)
+const blocksBeforeDevBg = devBgBlockIndex >= 0 ? blocks.slice(0, devBgBlockIndex) : blocks
+const mainTitleBlock = blocksBeforeDevBg[0]?.type === 'title' ? blocksBeforeDevBg[0] : null
+const titleCreditsBlocksRaw = mainTitleBlock ? blocksBeforeDevBg.slice(1) : blocksBeforeDevBg
+// Skip duplicate "Title Credits" subtitle inside the card (card heading already shows it)
+const titleCreditsBlocks = titleCreditsBlocksRaw.filter(
+  (b) => !(b.type === 'subtitle' && b.text === 'Title Credits')
+)
+const blocksFromDevBg = devBgBlockIndex >= 0 ? blocks.slice(devBgBlockIndex) : []
+
+// Section headings for the content cards (in display order)
+const CONTENT_SECTION_ORDER = [
+  'Development Background',
+  'Intellectual Property & Copyright Notice',
+  'Authorship & Inventorship Declaration',
+  'Ownership & Assignment Clarification',
+  'Restrictions',
+  'Confidentiality Notice',
+]
+const contentSectionSet = new Set(CONTENT_SECTION_ORDER)
+
+// Split blocksFromDevBg into groups by section heading
+function splitIntoSections(blks: Block[]): { heading: string; blocks: Block[]; startIdx: number }[] {
+  const sections: { heading: string; blocks: Block[]; startIdx: number }[] = []
+  let current: { heading: string; blocks: Block[]; startIdx: number } | null = null
+
+  for (let i = 0; i < blks.length; i++) {
+    const b = blks[i]!
+    if (b.type === 'subtitle' && contentSectionSet.has(b.text)) {
+      if (current) sections.push(current)
+      current = { heading: b.text, blocks: [], startIdx: devBgBlockIndex + i }
+    }
+    if (current) current.blocks.push(b)
+  }
+  if (current) sections.push(current)
+  return sections
+}
+
+const contentSections = splitIntoSections(blocksFromDevBg)
+
+// Gradient pairs for section card headings (cycle through)
+const SECTION_HEADING_GRADIENTS = [
+  'from-primary-600 to-amber-500',
+  'from-indigo-600 to-cyan-600',
+  'from-purple-600 to-pink-600',
+  'from-primary-600 to-cyan-600',
+  'from-amber-600 to-orange-500',
+  'from-violet-600 to-fuchsia-500',
+]
+
+function renderBlock(b: Block, idx: number) {
+  if (b.type === 'title') {
+    return (
+      <div key={idx} className="space-y-2">
+        <h3 className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-primary-700 to-primary-600 bg-clip-text text-transparent">
+          {b.text}
+        </h3>
+        <div className="h-1 w-24 rounded-full bg-gradient-to-r from-primary-600 to-yellow-500" />
+      </div>
+    )
+  }
+  if (b.type === 'subtitle') {
+    const inContentSection = authorshipBlockIndex >= 0 && idx >= authorshipBlockIndex
+    const isNormalWeight = NORMAL_WEIGHT_SUBTITLES.has(b.text)
+    const isBold = !isNormalWeight && (!inContentSection || CONTENT_SECTION_HEADINGS.has(b.text))
+    return (
+      <h4 key={idx} className={`text-base sm:text-lg ${isBold ? 'font-bold' : 'font-normal'} text-gray-900`}>
+        {b.text}
+      </h4>
+    )
+  }
+  if (b.type === 'label') {
+    return (
+      <p key={idx} className="text-sm sm:text-base text-gray-700 font-normal">
+        {b.text}
+      </p>
+    )
+  }
+  if (b.type === 'bullets') {
+    return (
+      <ul key={idx} className="space-y-2">
+        {b.items.map((it, j) => (
+          <li key={j} className="flex gap-3">
+            <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-primary-600 to-yellow-500 text-white text-xs shadow">
+              ✓
+            </span>
+            <span 
+              className="text-sm sm:text-base text-gray-700 leading-relaxed break-words whitespace-normal max-w-full"
+              style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+            >
+              {it}
+            </span>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+  return (
+    <p 
+      key={idx} 
+      className="text-sm sm:text-base text-gray-700 leading-relaxed break-words whitespace-normal max-w-full"
+      style={{ wordBreak: 'break-word', overflowWrap: 'break-word', hyphens: 'auto' }}
+    >
+      {b.text}
+    </p>
+  )
+}
+
+interface AboutSectionProps {
+  /** When true, skip the outer card/header (for use inside PageCard) */
+  embedded?: boolean
+}
+
+const AboutSection = ({ embedded }: AboutSectionProps) => {
+  const content = (
+        <div className={embedded ? '' : 'px-4 sm:px-6 md:px-8 py-6 sm:py-8'}>
+          {/* Main heading: full width end-to-end */}
+          {mainTitleBlock && (
+            <div className="w-full max-w-full mb-6 sm:mb-8">
+              <div className="space-y-2">
+                <h3 className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-primary-700 to-primary-600 bg-clip-text text-transparent text-center sm:text-left">
+                  {mainTitleBlock.text}
+                </h3>
+                <div className="h-1 w-24 rounded-full bg-gradient-to-r from-primary-600 to-yellow-500 mx-auto sm:mx-0" />
+              </div>
+            </div>
+          )}
+
+          {/* All cards stacked with consistent gap-6 */}
+          <div className="flex flex-col gap-6 w-full max-w-full">
+            {/* Quick Summary */}
+            <div className="p-5 rounded-2xl border border-primary-100 bg-white/70 shadow-lg w-full">
+              <h4 className="text-base sm:text-lg font-bold bg-gradient-to-r from-indigo-600 to-cyan-600 bg-clip-text text-transparent mb-3">
+                Quick Summary
+              </h4>
+              <div className="space-y-2 text-sm sm:text-base text-gray-700">
+                <p>
+                  This CRM platform is a custom-built internal system for Rayenna Energy Private Limited, with original workflows, architecture, and UI/UX.
+                </p>
+                <p>
+                  The software and its components are protected by applicable intellectual property and software protection laws.
+                </p>
+                <p className="font-semibold text-gray-800">
+                  Unauthorized use, distribution, or disclosure is prohibited.
+                </p>
+              </div>
+            </div>
+
+            {/* Title Credits */}
+            <div className="p-5 rounded-2xl border border-primary-100 bg-white/70 shadow-lg w-full">
+              <h4 className="text-base sm:text-lg font-bold bg-gradient-to-r from-primary-600 to-amber-500 bg-clip-text text-transparent mb-4">
+                Title Credits
+              </h4>
+              <div className="space-y-4 text-sm sm:text-base text-gray-700">
+                {titleCreditsBlocks.map((b, i) => renderBlock(b, (mainTitleBlock ? 2 : 1) + i))}
+              </div>
+            </div>
+
+            {/* Rayenna Identity */}
+            <div className="p-5 rounded-2xl border border-primary-100 bg-gradient-to-br from-white to-primary-50/40 shadow-lg w-full">
+              <h4 className="text-base sm:text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-3">
+                Rayenna Identity
+              </h4>
+              <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
+                Rayenna Energy is a solar EPC focused on quality execution, compliant subsidy handling, and reliable operations. This platform supports end-to-end delivery across Sales, Operations, and Finance.
+              </p>
+            </div>
+
+            {/* Content section cards: Development Background through Confidentiality Notice */}
+            {contentSections.map((section, sectionIdx) => {
+                const gradient = SECTION_HEADING_GRADIENTS[sectionIdx % SECTION_HEADING_GRADIENTS.length]
+                const contentBlocks = section.blocks.slice(1) // Skip heading (used as card title)
+                return (
+                  <div
+                    key={section.heading}
+                    className="p-5 rounded-2xl border border-primary-100 bg-white/70 shadow-lg w-full"
+                  >
+                    <h4 className={`text-base sm:text-lg font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent mb-4`}>
+                      {section.heading}
+                    </h4>
+                    <div className="space-y-4 text-sm sm:text-base text-gray-700">
+                      {contentBlocks.map((b, i) => renderBlock(b, section.startIdx + 1 + i))}
+                    </div>
+                  </div>
+                )
+              })}
+          </div>
+
+          <div className="mt-8 pt-8 border-t border-primary-100">
+            <div className="flex flex-col items-center">
+              <img
+                src="/rayenna_logo.jpg"
+                alt="Rayenna Energy Logo"
+                className="w-full max-w-[224px] sm:max-w-[288px] h-auto drop-shadow-2xl"
+              />
+              <p className="mt-3 text-xs sm:text-sm text-gray-500 text-center">
+                ©2026 – Present. Rayenna Energy Private Limited<br />
+                www.rayenna.energy | sales@rayenna.energy
+              </p>
+            </div>
+          </div>
+        </div>
+  )
+
+  if (embedded) {
+    return <section aria-label="About">{content}</section>
+  }
+
   return (
     <section aria-label="About" className="mt-10">
       <div className="bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm">
@@ -139,101 +367,8 @@ const AboutSection = () => {
             Credits, copyright, intellectual property, and confidentiality notice
           </p>
         </div>
-
         <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-5 min-w-0 max-w-full overflow-hidden">
-              {blocks.map((b, idx) => {
-                if (b.type === 'title') {
-                  return (
-                    <div key={idx} className="space-y-2">
-                      <h3 className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-primary-700 to-primary-600 bg-clip-text text-transparent">
-                        {b.text}
-                      </h3>
-                      <div className="h-1 w-24 rounded-full bg-gradient-to-r from-primary-600 to-yellow-500" />
-                    </div>
-                  )
-                }
-                if (b.type === 'subtitle') {
-                  return (
-                    <h4 key={idx} className="text-base sm:text-lg font-bold text-gray-900">
-                      {b.text}
-                    </h4>
-                  )
-                }
-                if (b.type === 'bullets') {
-                  return (
-                    <ul key={idx} className="space-y-2">
-                      {b.items.map((it, j) => (
-                        <li key={j} className="flex gap-3">
-                          <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-primary-600 to-yellow-500 text-white text-xs shadow">
-                            ✓
-                          </span>
-                          <span 
-                            className="text-sm sm:text-base text-gray-700 leading-relaxed break-words whitespace-normal max-w-full"
-                            style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
-                          >
-                            {it}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )
-                }
-                return (
-                  <p 
-                    key={idx} 
-                    className="text-sm sm:text-base text-gray-700 leading-relaxed break-words whitespace-normal max-w-full"
-                    style={{ wordBreak: 'break-word', overflowWrap: 'break-word', hyphens: 'auto' }}
-                  >
-                    {b.text}
-                  </p>
-                )
-              })}
-            </div>
-
-            <div className="space-y-5">
-              <div className="p-5 rounded-2xl border border-primary-100 bg-white/70 shadow-lg">
-                <h4 className="text-base sm:text-lg font-bold bg-gradient-to-r from-indigo-600 to-cyan-600 bg-clip-text text-transparent mb-3">
-                  Quick Summary
-                </h4>
-                <div className="space-y-2 text-sm sm:text-base text-gray-700">
-                  <p>
-                    This CRM platform is a custom-built internal system for Rayenna Energy Private Limited, with original workflows, architecture, and UI/UX.
-                  </p>
-                  <p>
-                    The software and its components are protected by applicable intellectual property and software protection laws.
-                  </p>
-                  <p className="font-semibold text-gray-800">
-                    Unauthorized use, distribution, or disclosure is prohibited.
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-5 rounded-2xl border border-primary-100 bg-gradient-to-br from-white to-primary-50/40 shadow-lg">
-                <h4 className="text-base sm:text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-3">
-                  Rayenna Identity
-                </h4>
-                <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
-                  Rayenna Energy is a solar EPC focused on quality execution, compliant subsidy handling, and reliable operations. This platform supports end-to-end delivery across Sales, Operations, and Finance.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 pt-8 border-t border-primary-100">
-            <div className="flex flex-col items-center">
-              <img
-                src="/rayenna_logo.jpg"
-                alt="Rayenna Energy Logo"
-                className="w-full max-w-[224px] sm:max-w-[288px] h-auto drop-shadow-2xl"
-              />
-              <p className="mt-3 text-xs sm:text-sm text-gray-500 text-center">
-                ©2026 – Present. Rayenna Energy Private Limited<br />
-                www.rayenna.energy | sales@rayenna.energy
-              </p>
-            </div>
-          </div>
+          {content}
         </div>
       </div>
     </section>

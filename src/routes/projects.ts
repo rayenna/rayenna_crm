@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import type { ParsedQs } from 'qs';
 import { body, query, validationResult } from 'express-validator';
 import { ProjectStatus, ProjectType, ProjectServiceType, ProjectStage, UserRole, LeadSource, SupportTicketStatus, SystemType, LostReason, PaymentStatus } from '@prisma/client';
 
@@ -183,8 +184,9 @@ router.get(
       if (supportTicketStatusArray.length > 0) {
         const ticketFilterConditions: any[] = [];
 
-        supportTicketStatusArray.forEach((filterValue: string) => {
-          switch (filterValue) {
+        supportTicketStatusArray.forEach((filterValue: string | ParsedQs) => {
+          const s = String(filterValue);
+          switch (s) {
             case 'HAS_TICKETS':
               // Projects with any tickets
               ticketFilterConditions.push({
@@ -262,8 +264,9 @@ router.get(
       if (paymentStatusArray.length > 0) {
         const paymentStatusConditions: any[] = [];
         
-        paymentStatusArray.forEach((filterValue: string) => {
-          if (filterValue === 'NA') {
+        paymentStatusArray.forEach((filterValue: string | ParsedQs) => {
+          const s = String(filterValue);
+          if (s === 'NA') {
             // N/A: Projects without order value OR in early/lost stages
             paymentStatusConditions.push({
               OR: [
@@ -279,7 +282,7 @@ router.get(
             // But exclude projects that should show N/A
             paymentStatusConditions.push({
               AND: [
-                { paymentStatus: filterValue },
+                { paymentStatus: s },
                 // Must have order value
                 { projectCost: { not: null } },
                 { projectCost: { not: 0 } },

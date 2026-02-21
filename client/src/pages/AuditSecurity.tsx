@@ -16,6 +16,8 @@ import {
   BarChart,
   Bar,
 } from 'recharts'
+import PageCard from '../components/PageCard'
+import { FaShieldAlt } from 'react-icons/fa'
 
 const PAGE_SIZE = 20
 const SUMMARY_DAYS = 7
@@ -230,12 +232,14 @@ export default function AuditSecurity () {
   }
 
   return (
-    <div className="px-4 py-6 sm:px-0 space-y-6">
-      <div className="border-l-4 border-l-violet-500 pl-4">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Audit & Security</h1>
-        <p className="text-sm text-violet-600/80 mt-0.5">Accountability, traceability, and security visibility. Admin only.</p>
-      </div>
-
+    <div className="px-4 py-6 sm:px-0">
+      <PageCard
+        title="Audit & Security"
+        subtitle="Accountability, traceability, and security visibility. Admin only."
+        icon={<FaShieldAlt className="w-5 h-5 text-white" />}
+        className="max-w-full"
+      >
+      <div className="space-y-6">
       {/* Security tiles */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="bg-gradient-to-br from-white to-red-50/30 rounded-xl border-l-4 border-l-red-400 border border-red-100/60 p-4 shadow-sm">
@@ -549,6 +553,8 @@ export default function AuditSecurity () {
           </div>
         )}
       </div>
+      </div>
+      </PageCard>
     </div>
   )
 }

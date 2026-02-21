@@ -178,6 +178,7 @@ router.post(
     let cloudinaryPublicId: string | undefined;
     let cloudinaryResourceType: string | undefined;
     let cloudinaryFormat: string | undefined;
+    let file: Express.Multer.File | undefined;
 
     try {
       if (process.env.NODE_ENV === 'development') {
@@ -205,6 +206,8 @@ router.post(
         return res.status(400).json({ error: 'No file uploaded. Please ensure a file is selected and try again.' });
       }
 
+      file = req.file;
+      const uploadFile = file;
       const { projectId } = req.params;
       const { category, description } = req.body;
 
@@ -241,13 +244,13 @@ router.post(
       
       if (useCloudinary) {
         // Upload buffer to Cloudinary using upload_stream (more reliable method)
-        if (!req.file.buffer) {
+        if (!uploadFile.buffer) {
           return res.status(400).json({ error: 'File buffer not available for Cloudinary upload' });
         }
 
         try {
           // PDFs and all non-images must be uploaded as `raw`. Only images use `image`, videos use `video`.
-          const mime = req.file.mimetype || 'application/octet-stream';
+          const mime = file.mimetype || 'application/octet-stream';
           const uploadResourceType: 'image' | 'raw' | 'video' = mime.startsWith('image/')
             ? 'image'
             : mime.startsWith('video/')
@@ -267,7 +270,7 @@ router.post(
                 else resolve(result);
               }
             );
-            uploadStream.end(req.file.buffer);
+            uploadStream.end(uploadFile.buffer);
           });
 
           const publicId = uploadResult.public_id;
@@ -277,13 +280,13 @@ router.post(
 
           // Store versioned path when available so raw deliveries can include /v{version}/
           filePath = version != null ? `v${version}/${publicId}` : publicId;
-          fileSize = uploadResult.bytes || req.file.size || 0;
+          fileSize = uploadResult.bytes || uploadFile.size || 0;
           cloudinaryPublicId = publicId;
           cloudinaryResourceType = resourceType;
           cloudinaryFormat = typeof format === 'string' ? format : undefined;
           if (process.env.NODE_ENV === 'development') {
             console.log('✅ File uploaded to Cloudinary:', {
-              fileName: req.file.originalname,
+              fileName: uploadFile.originalname,
               publicId,
               resourceType,
               format: cloudinaryFormat,
@@ -298,19 +301,19 @@ router.post(
         }
       } else {
         // Local storage - store relative path
-        if (!req.file.path) {
+        if (!uploadFile.path) {
           return res.status(400).json({ error: 'File path not available for local storage' });
         }
-        filePath = path.relative(uploadsDir, req.file.path).replace(/\\/g, '/');
-        fileSize = req.file.size;
+        filePath = path.relative(uploadsDir, uploadFile.path).replace(/\\/g, '/');
+        fileSize = uploadFile.size;
       }
       
       const document = await prisma.document.create({
         data: {
           projectId,
-          fileName: req.file.originalname,
+          fileName: uploadFile.originalname,
           filePath,
-          fileType: req.file.mimetype,
+          fileType: uploadFile.mimetype,
           fileSize,
           category,
           description,
@@ -331,7 +334,7 @@ router.post(
         userId: req.user!.id,
         action: 'document_uploaded',
         field: 'documents',
-        newValue: req.file.originalname,
+        newValue: uploadFile.originalname,
         remarks: `Document uploaded: ${category || 'other'}`,
       });
 
@@ -345,10 +348,10 @@ router.post(
         } catch (cleanupError) {
           console.error('❌ Error cleaning up Cloudinary file:', cleanupError);
         }
-      } else if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+      } else if (file?.path && fs.existsSync(file.path)) {
         // Local storage cleanup
         try {
-          fs.unlinkSync(req.file.path);
+          fs.unlinkSync(file.path);
         } catch (cleanupError) {
           console.error('❌ Error cleaning up local file:', cleanupError);
         }

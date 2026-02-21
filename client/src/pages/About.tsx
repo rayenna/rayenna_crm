@@ -1,18 +1,23 @@
 import AboutSection from '../components/AboutSection'
+import PageCard from '../components/PageCard'
+
+const AboutInfoIcon = () => (
+  <svg className="w-5 h-5 text-white drop-shadow-sm" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+    <path fillRule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" clipRule="evenodd" />
+  </svg>
+)
 
 const About = () => {
   return (
     <div className="px-4 py-6 sm:px-0">
-      <div className="mb-6 animate-slide-up border-l-4 border-l-slate-500 pl-4">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-          About
-        </h1>
-        <p className="text-sm text-slate-600/80 mt-0.5">
-          Credits, copyright, intellectual property, and confidentiality notice
-        </p>
-      </div>
-
-      <AboutSection />
+      <PageCard
+        title="About"
+        subtitle="Credits, copyright, intellectual property, and confidentiality notice"
+        icon={<AboutInfoIcon />}
+        className="max-w-full"
+      >
+        <AboutSection embedded />
+      </PageCard>
     </div>
   )
 }

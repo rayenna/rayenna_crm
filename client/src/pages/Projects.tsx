@@ -11,7 +11,8 @@ import toast from 'react-hot-toast'
 import { getSalesTeamColor } from '../components/dashboard/salesTeamColors'
 import DashboardFilters from '../components/dashboard/DashboardFilters'
 import { FiPaperclip } from 'react-icons/fi'
-import { FaUniversity, FaTicketAlt } from 'react-icons/fa'
+import { FaUniversity, FaTicketAlt, FaBriefcase } from 'react-icons/fa'
+import PageCard from '../components/PageCard'
 
 const PROJECTS_FILTERS_STORAGE_KEY = 'rayenna_projects_filters'
 
@@ -623,24 +624,21 @@ const Projects = () => {
 
   return (
     <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden mobile-paint-fix">
-      <div className="flex justify-between items-center mb-6">
-        <div className="border-l-4 border-l-amber-500 pl-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Projects
-          </h1>
-          <p className="text-sm text-amber-600/80 mt-0.5">Manage and track all your solar projects</p>
-        </div>
-        {(user?.role === 'ADMIN' || user?.role === 'SALES') && (
+      <PageCard
+        title="Projects"
+        subtitle="Manage and track all your solar projects"
+        icon={<FaBriefcase className="w-5 h-5 text-white" />}
+        headerAction={(user?.role === 'ADMIN' || user?.role === 'SALES') ? (
           <Link
             to="/projects/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-600 to-primary-600 text-white rounded-xl hover:from-amber-700 hover:to-primary-700 font-medium text-sm shadow-md hover:shadow-lg transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/20 border border-white/40 text-white rounded-xl hover:bg-white/30 font-medium text-sm shadow-md transition-all"
           >
             + New Project
           </Link>
-        )}
-      </div>
-
-      <div className="bg-gradient-to-br from-white to-amber-50/30 rounded-xl border border-amber-100/60 shadow-sm mb-4 p-4 sm:p-5">
+        ) : undefined}
+        className="max-w-full"
+      >
+      <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl border border-primary-100 mb-4 p-4 sm:p-5 shadow-sm">
         <div className="space-y-2 sm:space-y-3">
           {/* Row 1: Search Bar + Show/Hide Filters toggle (and Clear All on larger screens) */}
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
@@ -656,7 +654,7 @@ const Projects = () => {
               <button
                 type="button"
                 onClick={() => setShowMoreFilters((v) => !v)}
-                className="flex-1 min-h-[40px] px-3 py-2 rounded-lg border border-amber-200 bg-white hover:bg-amber-50/80 text-gray-700 font-medium transition-colors flex items-center justify-center gap-2"
+                className="flex-1 min-h-[40px] px-3 py-2 rounded-lg border border-primary-200 bg-white hover:bg-primary-50/80 text-gray-700 font-medium transition-colors flex items-center justify-center gap-2"
                 aria-expanded={showMoreFilters}
                 aria-controls="projects-more-filters"
                 title="Show or hide additional filters"
@@ -679,7 +677,7 @@ const Projects = () => {
               <button
                 type="button"
                 onClick={clearAllFilters}
-                className="flex-1 sm:flex-none inline-flex justify-center items-center min-h-[40px] px-4 py-2 rounded-lg border border-amber-200 bg-white hover:bg-amber-50/80 text-gray-700 font-medium text-sm transition-colors"
+                className="flex-1 sm:flex-none inline-flex justify-center items-center min-h-[40px] px-4 py-2 rounded-lg border border-primary-200 bg-white hover:bg-primary-50/80 text-gray-700 font-medium text-sm transition-colors"
                 title="Clear search and all filters"
               >
                 Clear All
@@ -861,7 +859,7 @@ const Projects = () => {
                 <button
                   type="button"
                   onClick={clearAllFilters}
-                  className="min-h-[40px] px-4 py-2 rounded-lg border border-amber-200 bg-white hover:bg-amber-50/80 text-gray-700 font-medium text-sm transition-colors w-full"
+                  className="min-h-[40px] px-4 py-2 rounded-lg border border-primary-200 bg-white hover:bg-primary-50/80 text-gray-700 font-medium text-sm transition-colors w-full"
                   title="Clear search and all filters"
                 >
                   Clear All
@@ -915,7 +913,7 @@ const Projects = () => {
           <table className="min-w-full">
             <thead>
               {/* Subtotals row - aligned above Capacity and Order Value columns */}
-              <tr className="border-b border-gray-100 bg-amber-50/30">
+              <tr className="border-b border-gray-100 bg-primary-50/30">
                 <th className="px-4 py-2" scope="col" />
                 <th className="px-4 py-2 hidden lg:table-cell" scope="col" />
                 <th className="px-4 py-2" scope="col" />
@@ -959,7 +957,7 @@ const Projects = () => {
                 <tr
                   key={project.id}
                   onClick={() => navigate(`/projects/${project.id}`)}
-                  className="group transition-colors cursor-pointer bg-white hover:bg-amber-50/50"
+                  className="group transition-colors cursor-pointer bg-white hover:bg-primary-50/50"
                 >
                   <td className="px-4 py-3 min-w-0">
                     <p className="text-base sm:text-lg font-semibold text-gray-900 truncate">
@@ -1068,14 +1066,14 @@ const Projects = () => {
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-4 py-2 border border-amber-200 rounded-lg text-sm font-medium text-amber-800 bg-amber-50/80 hover:bg-amber-100/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 border border-primary-200 rounded-lg text-sm font-medium text-primary-800 bg-primary-50/80 hover:bg-primary-100/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Previous
               </button>
               <button
                 onClick={() => setPage(p => Math.min(data.pagination.pages, p + 1))}
                 disabled={page >= data.pagination.pages}
-                className="px-4 py-2 border border-amber-200 rounded-lg text-sm font-medium text-amber-800 bg-amber-50/80 hover:bg-amber-100/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 border border-primary-200 rounded-lg text-sm font-medium text-primary-800 bg-primary-50/80 hover:bg-primary-100/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Next
               </button>
@@ -1120,6 +1118,7 @@ const Projects = () => {
           </span>
         </div>
       </div>
+      </PageCard>
     </div>
   )
 }

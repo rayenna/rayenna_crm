@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { User, UserRole } from '../types'
 import toast from 'react-hot-toast'
 import { useState } from 'react'
+import PageCard from '../components/PageCard'
+import { FaUsers } from 'react-icons/fa'
 
 const Users = () => {
   const { hasRole } = useAuth()
@@ -134,23 +136,22 @@ const Users = () => {
 
   return (
     <div className="px-4 py-6 sm:px-0">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-        <div className="border-l-4 border-l-violet-500 pl-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Users
-          </h1>
-          <p className="text-sm text-violet-600/80 mt-0.5">Manage user accounts and roles</p>
-        </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-gradient-to-r from-violet-600 to-primary-600 text-white px-4 py-2.5 rounded-xl hover:from-violet-700 hover:to-primary-700 font-medium shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
-        >
-          {showForm ? 'Cancel' : 'New User'}
-        </button>
-      </div>
-
+      <PageCard
+        title="Users"
+        subtitle="Manage user accounts and roles"
+        icon={<FaUsers className="w-5 h-5 text-white" />}
+        headerAction={
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="inline-flex items-center gap-2 bg-white/20 border border-white/40 text-white px-4 py-2.5 rounded-xl hover:bg-white/30 font-medium shadow-md transition-all"
+          >
+            {showForm ? 'Cancel' : 'New User'}
+          </button>
+        }
+        className="max-w-full"
+      >
       {showForm && (
-        <div className="bg-gradient-to-br from-white to-violet-50/30 rounded-xl border-l-4 border-l-violet-400 shadow-sm border border-violet-100/60 p-4 sm:p-6 mb-6">
+        <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl border border-primary-100 shadow-sm p-4 sm:p-6 mb-6">
           <h2 className="text-base sm:text-lg font-semibold mb-4">Create New User</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -202,7 +203,7 @@ const Users = () => {
                 <button
                 type="submit"
                 disabled={createMutation.isPending}
-                className="bg-gradient-to-r from-violet-600 to-primary-600 text-white px-4 py-2 rounded-lg hover:from-violet-700 hover:to-primary-700 disabled:opacity-50 font-medium shadow-md hover:shadow-lg transition-all"
+                className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-4 py-2 rounded-lg hover:from-primary-700 hover:to-primary-800 disabled:opacity-50 font-medium shadow-md transition-all"
               >
                 {createMutation.isPending ? 'Creating...' : 'Create User'}
               </button>
@@ -211,7 +212,7 @@ const Users = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-primary-100 shadow-sm overflow-hidden">
         {!users || users.length === 0 ? (
           <div className="px-4 py-8 text-center text-gray-500">
             No users found. {users === undefined ? 'Loading...' : 'Click "New User" to create one.'}
@@ -221,7 +222,7 @@ const Users = () => {
             <table className="min-w-full">
               <thead>
                 <tr className="border-b border-gray-200 bg-white">
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l-4 border-l-violet-400">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l-4 border-l-primary-400">Name</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -229,7 +230,7 @@ const Users = () => {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {users.map((user) => (
-                  <tr key={user.id} className="bg-white hover:bg-violet-50/50 transition-colors">
+                  <tr key={user.id} className="bg-white hover:bg-primary-50/50 transition-colors">
                     <td className="px-4 py-3">
                       <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
                     </td>
@@ -265,6 +266,7 @@ const Users = () => {
           </div>
         )}
       </div>
+      </PageCard>
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && userToDelete && (

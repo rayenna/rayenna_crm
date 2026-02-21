@@ -10,6 +10,8 @@ import { countries, getStatesByCountry, getCitiesByState } from '../utils/locati
 import { useDebounce } from '../hooks/useDebounce'
 import MultiSelect from '../components/MultiSelect'
 import MapSelector from '../components/MapSelector'
+import PageCard from '../components/PageCard'
+import { FaUserFriends } from 'react-icons/fa'
 
 /** Helper used by both CustomerMaster list and CustomerForm header */
 function getCustomerDisplayName(customer: Customer) {
@@ -226,28 +228,25 @@ const CustomerMaster = () => {
 
   return (
     <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden mobile-paint-fix">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-        <div className="border-l-4 border-teal-500 pl-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Customer Master
-          </h1>
-          <p className="text-sm text-teal-600/80 mt-0.5">Manage your customer database</p>
-        </div>
-        {canCreate && (
+      <PageCard
+        title="Customer Master"
+        subtitle="Manage your customer database"
+        icon={<FaUserFriends className="w-5 h-5 text-white" />}
+        headerAction={canCreate ? (
           <button
             onClick={() => {
               setEditingCustomer(null)
               setShowForm(true)
             }}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-teal-600 to-primary-600 text-white px-4 py-2.5 rounded-xl hover:from-teal-700 hover:to-primary-700 font-medium shadow-md hover:shadow-lg transition-all"
+            className="inline-flex items-center gap-2 bg-white/20 border border-white/40 text-white px-4 py-2.5 rounded-xl hover:bg-white/30 font-medium shadow-md transition-all"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
             New Customer
           </button>
-        )}
-      </div>
-
-      <div className="bg-gradient-to-br from-white to-teal-50/30 rounded-xl shadow-sm border border-teal-100/60 mb-6 p-4 sm:p-5">
+        ) : undefined}
+        className="max-w-full"
+      >
+      <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 mb-6 p-4 sm:p-5">
         <div className="space-y-2 sm:space-y-3">
           {/* Row 1: Search Bar (same look and feel as Projects) */}
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:gap-4">
@@ -332,101 +331,19 @@ const CustomerMaster = () => {
         )}
       </div>
 
-      {showForm && (
-        <CustomerForm
-          customer={editingCustomer}
-          onClose={() => {
-            setShowForm(false)
-            setEditingCustomer(null)
-          }}
-          onSuccess={() => {
-            setShowForm(false)
-            setEditingCustomer(null)
-            queryClient.invalidateQueries({ queryKey: ['customers'] })
-          }}
-        />
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && customerToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-red-600 mb-4">WARNING</h3>
-              <p className="text-gray-700 mb-6">
-                CUSTOMER Details once deleted cannot be recovered
-              </p>
-              <p className="text-gray-600 mb-6 font-medium">
-                Are you sure to Proceed?
-              </p>
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={cancelDelete}
-                  className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium"
-                >
-                  YES
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Export Confirmation Modal */}
-      {showExportConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-red-600 mb-4">WARNING</h3>
-              <div className="border-t border-b border-gray-300 my-4 py-4">
-                <p className="text-gray-700 mb-4 leading-relaxed">
-                  The Data that is present in the CRM System is the exclusive property of Rayenna Energy Private Limited. Unauthorised Export of any data is prohibited and will be subject to disciplinary measures including and not limited to termination and legal procedures.
-                </p>
-                <p className="text-gray-700 mb-4 leading-relaxed font-medium">
-                  By exporting this data, you are confirming that you are authorised to access this data/info and have written approvals from the management.
-                </p>
-              </div>
-              <p className="text-gray-600 mb-6 font-medium">
-                Do you want to continue?
-              </p>
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={cancelExport}
-                  className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
-                >
-                  CANCEL
-                </button>
-                <button
-                  onClick={confirmExport}
-                  className="px-6 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-medium"
-                >
-                  YES
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Customer list - card-like rows, clean hierarchy, 3-dot actions */}
       <div className="space-y-3">
         {data?.customers?.map((customer: Customer) => (
           <div
             key={customer.id}
-            className="bg-white rounded-xl border-l-4 border-l-teal-400 border border-gray-100 shadow-sm hover:shadow-md hover:border-teal-200/80 hover:border-l-teal-500 transition-all duration-200"
+            className="bg-white rounded-xl border-l-4 border-l-primary-400 border border-primary-100/60 shadow-sm hover:shadow-md hover:border-primary-200/80 hover:border-l-primary-500 transition-all duration-200"
           >
             <div className="px-4 py-4 sm:px-6 sm:py-5">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 {/* Left: Primary info - Who & status */}
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-gradient-to-r from-teal-600 to-teal-700 text-white shadow-sm">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-sm">
                       ID: {customer.customerId}
                     </span>
                     <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
@@ -574,19 +491,99 @@ const CustomerMaster = () => {
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-4 py-2 border border-teal-200 rounded-lg text-sm font-medium text-teal-800 bg-teal-50/80 hover:bg-teal-100/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 border border-primary-200 rounded-lg text-sm font-medium text-primary-800 bg-primary-50/80 hover:bg-primary-100/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Previous
               </button>
               <button
                 onClick={() => setPage(p => Math.min(data.totalPages, p + 1))}
                 disabled={page >= data.totalPages}
-                className="px-4 py-2 border border-teal-200 rounded-lg text-sm font-medium text-teal-800 bg-teal-50/80 hover:bg-teal-100/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 border border-primary-200 rounded-lg text-sm font-medium text-primary-800 bg-primary-50/80 hover:bg-primary-100/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Next
               </button>
             </div>
           )}
+        </div>
+      )}
+      </PageCard>
+
+      {/* Modals rendered outside PageCard to avoid overflow/stacking issues */}
+      {showForm && (
+        <CustomerForm
+          customer={editingCustomer}
+          onClose={() => {
+            setShowForm(false)
+            setEditingCustomer(null)
+          }}
+          onSuccess={() => {
+            setShowForm(false)
+            setEditingCustomer(null)
+            queryClient.invalidateQueries({ queryKey: ['customers'] })
+          }}
+        />
+      )}
+      {showDeleteConfirm && customerToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-red-600 mb-4">WARNING</h3>
+              <p className="text-gray-700 mb-6">
+                CUSTOMER Details once deleted cannot be recovered
+              </p>
+              <p className="text-gray-600 mb-6 font-medium">
+                Are you sure to Proceed?
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={cancelDelete}
+                  className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium"
+                >
+                  YES
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showExportConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-red-600 mb-4">WARNING</h3>
+              <div className="border-t border-b border-gray-300 my-4 py-4">
+                <p className="text-gray-700 mb-4 leading-relaxed">
+                  The Data that is present in the CRM System is the exclusive property of Rayenna Energy Private Limited. Unauthorised Export of any data is prohibited and will be subject to disciplinary measures including and not limited to termination and legal procedures.
+                </p>
+                <p className="text-gray-700 mb-4 leading-relaxed font-medium">
+                  By exporting this data, you are confirming that you are authorised to access this data/info and have written approvals from the management.
+                </p>
+              </div>
+              <p className="text-gray-600 mb-6 font-medium">
+                Do you want to continue?
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={cancelExport}
+                  className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={confirmExport}
+                  className="px-6 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-medium"
+                >
+                  YES
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -813,11 +810,7 @@ const CustomerForm = ({
       longitude: longitude,
     }
     
-    console.log('Submitting customer data with coordinates:', {
-      latitude,
-      longitude,
-      submitData
-    })
+    if (import.meta.env.DEV) console.log('Submitting customer')
     
     // Remove salespersonId if user doesn't have permission to change it (Sales users)
     // Only Management and Admin can change salespersonId
@@ -863,29 +856,39 @@ const CustomerForm = ({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header - strong when editing */}
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-start gap-4 z-10">
-          <div className="min-w-0 flex-1">
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
-              {customer ? getCustomerDisplayName(customerData || customer) : 'New Customer'}
-            </h2>
-            {customer && (
-              <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-gradient-to-r from-teal-600 to-teal-700 text-white mt-2 shadow-sm">
-                ID: {customerData?.customerId || customer.customerId}
-              </span>
-            )}
+      <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto overflow-hidden flex flex-col">
+        {/* Header - same look as New Project (PageCard gradient strip) */}
+        <div className="flex-shrink-0 px-6 py-5 sm:px-8 sm:py-6 bg-gradient-to-r from-primary-600 via-primary-500 to-yellow-500 border-b border-primary-100">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-2.5 rounded-xl bg-white/25 border border-white/40 shadow-lg shadow-black/10 backdrop-blur-md flex-shrink-0">
+                <FaUserFriends className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow truncate">
+                  {customer ? getCustomerDisplayName(customerData || customer) : 'New Customer'}
+                </h2>
+                <p className="mt-0.5 text-white/90 text-sm sm:text-base">
+                  {customer ? 'Edit customer details' : 'Create a new customer and add their details'}
+                </p>
+                {customer && (
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-white/25 border border-white/40 text-white mt-2 shadow-sm">
+                    ID: {customerData?.customerId || customer.customerId}
+                  </span>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl text-white/90 hover:text-white hover:bg-white/20 transition-colors flex-shrink-0"
+              aria-label="Close"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-            aria-label="Close"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-8">
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-8 overflow-y-auto flex-1">
           {/* Card 1: Basic Info */}
           <div className="bg-gradient-to-br from-teal-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-teal-400">
             <div className="flex items-center gap-2">

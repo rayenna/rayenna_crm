@@ -11,8 +11,8 @@
     "typeRoots": ["./node_modules/@types", "./src/@types"],
     "lib": ["ES2020"],
     "skipLibCheck": true,
-    "strict": false,
-    "noImplicitAny": false
+    "strict": true,
+    "noImplicitAny": true
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist", "client"]

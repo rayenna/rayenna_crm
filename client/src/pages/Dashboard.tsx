@@ -8,6 +8,8 @@ import ManagementDashboard from '../components/dashboard/ManagementDashboard'
 import DashboardFilters from '../components/dashboard/DashboardFilters'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../utils/axios'
+import PageCard from '../components/PageCard'
+import { FaChartLine } from 'react-icons/fa'
 
 const Dashboard = () => {
   const { user } = useAuth()
@@ -53,12 +55,11 @@ const Dashboard = () => {
 
   return (
     <div className="px-4 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden mobile-paint-fix">
-      <div className="mb-6 animate-slide-up min-w-0 border-l-4 border-l-primary-600 pl-4">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-3 break-words">
-          Dashboard
-        </h1>
-        <p className="text-primary-600/80 font-medium text-base sm:text-lg break-words">Monitor your business performance at a glance</p>
-      </div>
+      <PageCard
+        title="Dashboard"
+        subtitle="Monitor your business performance at a glance"
+        icon={<FaChartLine className="w-5 h-5 text-white" />}
+      >
       <DashboardFilters
         availableFYs={availableFYs}
         selectedFYs={selectedFYs}
@@ -88,6 +89,7 @@ const Dashboard = () => {
           </p>
         </footer>
       )}
+      </PageCard>
     </div>
   )
 }

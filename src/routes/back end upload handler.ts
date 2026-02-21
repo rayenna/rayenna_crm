@@ -108,7 +108,7 @@ function getCloudinarySignedUrlFromStoredValue(
 
   const expiresAt = Math.floor(Date.now() / 1000) + 300; // 5 minutes from now
 
-  return cloudinary.utils.private_download_url(publicId, format, {
+  return cloudinary.utils.private_download_url(publicId, format ?? 'raw', {
     resource_type: resourceType,
     attachment: isDownload,
     expires_at: expiresAt,
@@ -291,13 +291,17 @@ router.post(
       
       if (useCloudinary) {
         // Upload buffer to Cloudinary using upload_stream (more reliable method)
+        if (!req.file) {
+          return res.status(400).json({ error: 'No file uploaded' });
+        }
         if (!req.file.buffer) {
           return res.status(400).json({ error: 'File buffer not available for Cloudinary upload' });
         }
 
+        const file = req.file;
         try {
           // PDFs and all non-images must be uploaded as `raw`. Only images use `image`, videos use `video`.
-          const mime = req.file.mimetype || 'application/octet-stream';
+          const mime = file.mimetype || 'application/octet-stream';
           const uploadResourceType: 'image' | 'raw' | 'video' = mime.startsWith('image/')
             ? 'image'
             : mime.startsWith('video/')
@@ -317,7 +321,7 @@ router.post(
                 else resolve(result);
               }
             );
-            uploadStream.end(req.file.buffer);
+            uploadStream.end(file.buffer);
           });
 
           const publicId = uploadResult.public_id;
@@ -327,13 +331,13 @@ router.post(
 
           // Store versioned path when available so raw deliveries can include /v{version}/
           filePath = version != null ? `v${version}/${publicId}` : publicId;
-          fileSize = uploadResult.bytes || req.file.size || 0;
+          fileSize = uploadResult.bytes || file.size || 0;
           cloudinaryPublicId = publicId;
           cloudinaryResourceType = resourceType;
           cloudinaryFormat = typeof format === 'string' ? format : undefined;
           if (process.env.NODE_ENV === 'development') {
             console.log('✅ File uploaded to Cloudinary:', {
-              fileName: req.file.originalname,
+              fileName: file.originalname,
               publicId,
               resourceType,
               format: cloudinaryFormat,

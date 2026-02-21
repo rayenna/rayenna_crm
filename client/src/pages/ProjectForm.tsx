@@ -7,6 +7,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { Project, ProjectType, ProjectServiceType, UserRole, ProjectStatus, LostReason, LostToCompetitionReason, LeadSource } from '../types'
 import toast from 'react-hot-toast'
 import RemarksSection from '../components/remarks/RemarksSection'
+import PageCard from '../components/PageCard'
+import { FaEdit } from 'react-icons/fa'
 
 // File Upload Component
 const FileUploadSection = ({ projectId, existingCount = 0, maxFiles = 10 }: { projectId: string; existingCount?: number; maxFiles?: number }) => {
@@ -403,6 +405,8 @@ const ProjectForm = () => {
       toast.success(isEdit ? 'Project updated successfully' : 'Project created successfully')
       // Refresh projects list
       queryClient.invalidateQueries({ queryKey: ['projects'] })
+      // Invalidate dashboard so Quick Access tiles (e.g. Availing Loan) and charts stay in sync
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       // Clear any cached detail view so next open always fetches fresh data
       if (isEdit && id) {
         queryClient.removeQueries({ queryKey: ['project', id] })
@@ -428,7 +432,7 @@ const ProjectForm = () => {
   })
 
   const onSubmit = (data: any) => {
-    console.log('[PROJECT FORM] onSubmit called with data:', data);
+    if (import.meta.env.DEV) console.log('[PROJECT FORM] onSubmit called');
     // Get all form values including empty fields
     const allValues = getValues();
     
@@ -737,22 +741,6 @@ const ProjectForm = () => {
       }
     }
     
-    console.log('Submitting data:', data); // Debug log
-    // Debug: Log full data object
-    console.log('Submitting data (full):', JSON.stringify(data, null, 2));
-    console.log('Payment fields:', {
-      advanceReceived: data.advanceReceived,
-      advanceReceivedDate: data.advanceReceivedDate,
-      payment1: data.payment1,
-      payment1Date: data.payment1Date,
-      payment2: data.payment2,
-      payment2Date: data.payment2Date,
-      payment3: data.payment3,
-      payment3Date: data.payment3Date,
-      lastPayment: data.lastPayment,
-      lastPaymentDate: data.lastPaymentDate,
-    });
-    
     mutation.mutate(data)
   }
 
@@ -778,15 +766,12 @@ const ProjectForm = () => {
 
   return (
     <div className="px-4 py-6 sm:px-0 min-h-screen bg-gray-50/80">
-      <div className="mb-6 border-l-4 border-l-amber-500 pl-4">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-          {isEdit ? 'Edit Project' : 'New Project'}
-        </h1>
-        <p className="text-sm text-amber-600/80 mt-0.5">
-          {isEdit ? 'Update project details below.' : 'Create a new project and link it to a customer.'}
-        </p>
-      </div>
-
+      <PageCard
+        title={isEdit ? 'Edit Project' : 'New Project'}
+        subtitle={isEdit ? 'Update project details below.' : 'Create a new project and link it to a customer.'}
+        icon={<FaEdit className="w-5 h-5 text-white" />}
+        className="max-w-full"
+      >
       <form onSubmit={handleSubmit(onSubmit, (errors) => {
         console.error('[PROJECT FORM] Form validation errors:', errors);
         console.error('[PROJECT FORM] Current form values:', getValues());
@@ -800,9 +785,9 @@ const ProjectForm = () => {
           toast.error(`Please fix the following errors:\n${errorMessages.join('\n')}`, { duration: 6000 });
         }
       })} className="space-y-8">
-        {/* Customer & Project Details - Customer Module style card */}
+        {/* Customer & Project Details - Same style as Basic Info / other section cards */}
         {canEditOtherSections && (
-        <div className="bg-gradient-to-br from-teal-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-teal-400">
+        <div className="bg-gradient-to-br from-teal-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-teal-400 shadow-sm border border-teal-100/60">
           <div className="flex items-center gap-2">
             <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Customer & Project Details</h3>
@@ -1687,6 +1672,7 @@ const ProjectForm = () => {
           </button>
         </div>
       </form>
+      </PageCard>
     </div>
   )
 }

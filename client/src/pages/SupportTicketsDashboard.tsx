@@ -7,6 +7,7 @@ import MetricCard from '../components/dashboard/MetricCard'
 import TicketStatusDonutChart from '../components/supportTickets/TicketStatusDonutChart'
 import TicketDetailDrawer from '../components/supportTickets/TicketDetailDrawer'
 import { FaTicketAlt, FaSpinner, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa'
+import PageCard from '../components/PageCard'
 
 const SupportTicketsDashboard = () => {
   const queryClient = useQueryClient()
@@ -158,28 +159,25 @@ const SupportTicketsDashboard = () => {
   const hasActiveFilters = selectedStatus !== null || showOverdueOnly
 
   return (
-    <div className="space-y-6 px-4 py-6 sm:px-0">
-      {/* Page Header */}
-      <div className="flex items-start justify-between">
-        <div className="border-l-4 border-l-orange-500 pl-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Support Tickets Dashboard</h1>
-          <p className="mt-0.5 text-sm text-orange-600/80">
-            Monitor and manage all support tickets across projects
-          </p>
-        </div>
-        {hasActiveFilters && (
+    <div className="px-4 py-6 sm:px-0">
+      <PageCard
+        title="Support Tickets Dashboard"
+        subtitle="Monitor and manage all support tickets across projects"
+        icon={<FaTicketAlt className="w-5 h-5 text-white" />}
+        headerAction={hasActiveFilters ? (
           <button
             onClick={handleClearFilters}
-            className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
+            className="inline-flex items-center gap-2 bg-white/20 border border-white/40 text-white px-4 py-2 rounded-xl hover:bg-white/30 font-medium transition-colors shadow-md"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
             Clear Filters
           </button>
-        )}
-      </div>
-
+        ) : undefined}
+        className="max-w-full"
+      >
+      <div className="space-y-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <button
@@ -322,6 +320,8 @@ const SupportTicketsDashboard = () => {
           )}
         </div>
       </div>
+      </div>
+      </PageCard>
 
       {/* Ticket Detail Drawer */}
       <TicketDetailDrawer

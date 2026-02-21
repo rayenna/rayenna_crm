@@ -5,6 +5,8 @@ import axiosInstance from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
+import PageCard from '../components/PageCard'
+import { FaLock } from 'react-icons/fa'
 
 interface ChangePasswordForm {
   currentPassword: string
@@ -60,15 +62,13 @@ const ChangePassword = () => {
 
   return (
     <div className="px-4 py-6 sm:px-0">
-      <div className="max-w-md mx-auto">
-        <div className="border-l-4 border-l-amber-500 pl-4 mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Change Password
-          </h1>
-          <p className="text-sm text-amber-600/80 mt-0.5">Update your account password</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-white to-amber-50/30 rounded-xl border-l-4 border-l-amber-400 border border-amber-100/60 shadow-sm p-6 mt-6">
+      <PageCard
+        title="Change Password"
+        subtitle="Update your account password"
+        icon={<FaLock className="w-5 h-5 text-white" />}
+        className="max-w-md mx-auto"
+      >
+        <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl border border-primary-100 shadow-sm p-6">
           <div className="mb-4">
             <p className="text-sm text-gray-600">
               Change password for: <span className="font-semibold">{user?.name}</span> ({user?.email})
@@ -204,14 +204,14 @@ const ChangePassword = () => {
               <button
                 type="submit"
                 disabled={mutation.isPending}
-                className="flex-1 px-4 py-2 bg-gradient-to-r from-amber-600 to-primary-600 text-white rounded-lg hover:from-amber-700 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-md"
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-md"
               >
                 {mutation.isPending ? 'Changing...' : 'Change Password'}
               </button>
             </div>
           </form>
         </div>
-      </div>
+      </PageCard>
     </div>
   )
 }

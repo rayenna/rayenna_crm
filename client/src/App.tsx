@@ -1,24 +1,26 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './contexts/AuthContext'
 import PrivateRoute from './components/PrivateRoute'
 import ErrorBoundary from './components/ErrorBoundary'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import CustomerMaster from './pages/CustomerMaster'
-import Projects from './pages/Projects'
-import ProjectDetail from './pages/ProjectDetail'
-import ProjectForm from './pages/ProjectForm'
-import Users from './pages/Users'
-import AuditSecurity from './pages/AuditSecurity'
-import TallyExport from './pages/TallyExport'
-import About from './pages/About'
-import ChangePassword from './pages/ChangePassword'
-import ResetPassword from './pages/ResetPassword'
-import SupportTicketsDashboard from './pages/SupportTicketsDashboard'
-import Help from './pages/Help'
+import PageLoader from './components/PageLoader'
 import Layout from './components/Layout'
+
+const Login = lazy(() => import('./pages/Login'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const CustomerMaster = lazy(() => import('./pages/CustomerMaster'))
+const Projects = lazy(() => import('./pages/Projects'))
+const ProjectDetail = lazy(() => import('./pages/ProjectDetail'))
+const ProjectForm = lazy(() => import('./pages/ProjectForm'))
+const Users = lazy(() => import('./pages/Users'))
+const AuditSecurity = lazy(() => import('./pages/AuditSecurity'))
+const TallyExport = lazy(() => import('./pages/TallyExport'))
+const About = lazy(() => import('./pages/About'))
+const ChangePassword = lazy(() => import('./pages/ChangePassword'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword'))
+const SupportTicketsDashboard = lazy(() => import('./pages/SupportTicketsDashboard'))
+const Help = lazy(() => import('./pages/Help'))
 
 function App() {
   useEffect(() => {
@@ -61,8 +63,22 @@ function App() {
       <AuthProvider>
         <Toaster position="top-right" />
         <Routes>
-          <Route path="/login" element={<ErrorBoundary><Login /></ErrorBoundary>} />
-          <Route path="/reset-password" element={<ErrorBoundary><ResetPassword /></ErrorBoundary>} />
+          <Route
+            path="/login"
+            element={
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoader />}><Login /></Suspense>
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoader />}><ResetPassword /></Suspense>
+              </ErrorBoundary>
+            }
+          />
           <Route
             path="/"
             element={
@@ -72,34 +88,118 @@ function App() {
             }
           >
             <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
-            <Route path="customers" element={<ErrorBoundary><CustomerMaster /></ErrorBoundary>} />
-            <Route path="projects" element={<ErrorBoundary><Projects /></ErrorBoundary>} />
-            <Route path="projects/new" element={<ErrorBoundary><ProjectForm /></ErrorBoundary>} />
-            <Route path="projects/:id" element={<ErrorBoundary><ProjectDetail /></ErrorBoundary>} />
-            <Route path="projects/:id/edit" element={<ErrorBoundary><ProjectForm /></ErrorBoundary>} />
-            <Route path="users" element={<ErrorBoundary><Users /></ErrorBoundary>} />
-            <Route path="audit-security" element={<ErrorBoundary><AuditSecurity /></ErrorBoundary>} />
-            <Route path="tally-export" element={<ErrorBoundary><TallyExport /></ErrorBoundary>} />
-            <Route path="support-tickets" element={<ErrorBoundary><SupportTicketsDashboard /></ErrorBoundary>} />
-            <Route path="change-password" element={<ErrorBoundary><ChangePassword /></ErrorBoundary>} />
-            <Route 
-              path="help" 
+            <Route
+              path="dashboard"
               element={
                 <ErrorBoundary>
-                  <Help />
+                  <Suspense fallback={<PageLoader />}><Dashboard /></Suspense>
                 </ErrorBoundary>
-              } 
+              }
             />
-            <Route 
-              path="help/:section" 
+            <Route
+              path="customers"
               element={
                 <ErrorBoundary>
-                  <Help />
+                  <Suspense fallback={<PageLoader />}><CustomerMaster /></Suspense>
                 </ErrorBoundary>
-              } 
+              }
             />
-            <Route path="about" element={<ErrorBoundary><About /></ErrorBoundary>} />
+            <Route
+              path="projects"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><Projects /></Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="projects/new"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><ProjectForm /></Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="projects/:id"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><ProjectDetail /></Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="projects/:id/edit"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><ProjectForm /></Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="users"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><Users /></Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="audit-security"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><AuditSecurity /></Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="tally-export"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><TallyExport /></Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="support-tickets"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><SupportTicketsDashboard /></Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="change-password"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><ChangePassword /></Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="help"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><Help /></Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="help/:section"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><Help /></Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="about"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><About /></Suspense>
+                </ErrorBoundary>
+              }
+            />
           </Route>
         </Routes>
       </AuthProvider>
