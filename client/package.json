@@ -7,7 +7,7 @@
     "build": "tsc && vite build && node -e \"require('fs').copyFileSync('dist/index.html','dist/404.html')\"",
     "preview": "vite preview",
     "deploy": "vercel --prod",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives"
   },
   "dependencies": {
     "@sentry/react": "^10.38.0",

@@ -80,7 +80,7 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
       }
 
       // Format 4: Embed URL format or place/@lat,lng
-      const embedMatch = trimmedLink.match(/[\/@]([+-]?\d+\.?\d+),([+-]?\d+\.?\d+)/)
+      const embedMatch = trimmedLink.match(/[/@]([+-]?\d+\.?\d+),([+-]?\d+\.?\d+)/)
       if (embedMatch && embedMatch[1] && embedMatch[2]) {
         const lat = parseFloat(embedMatch[1])
         const lng = parseFloat(embedMatch[2])

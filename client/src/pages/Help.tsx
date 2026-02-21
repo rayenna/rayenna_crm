@@ -34,7 +34,7 @@ const Help = () => {
             helpContextPathRef.current = referrerPath
             sessionStorage.removeItem('helpReferrer')
           }
-        } catch (_) {}
+        } catch (_) { /* ignore storage errors */ }
         const found = helpSections.find(s => s.routeKey === section)
         if (found) return found
       }

@@ -15,10 +15,6 @@ const HelpTooltip = ({ helpKey, position = 'top', className = '' }: HelpTooltipP
 
   const tooltip = getHelpTooltip(helpKey)
 
-  if (!tooltip) {
-    return null
-  }
-
   useEffect(() => {
     if (isVisible && triggerRef.current && tooltipRef.current) {
       const triggerRect = triggerRef.current.getBoundingClientRect()
@@ -84,6 +80,10 @@ const HelpTooltip = ({ helpKey, position = 'top', className = '' }: HelpTooltipP
       }
     }
   }, [isVisible])
+
+  if (!tooltip) {
+    return null
+  }
 
   return (
     <span className={`inline-flex items-center ${className}`}>
