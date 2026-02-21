@@ -29,7 +29,7 @@ const PipelineByCustomerSegmentPieChart = ({ data: chartData = [] }: PipelineByC
 
   if (!chartData || chartData.length === 0) {
     return (
-      <div className="w-full min-h-[360px] flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
+      <div className="mobile-paint-anchor w-full min-h-[360px] flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
         <div className="flex items-center gap-3 mb-4">
           <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -49,7 +49,7 @@ const PipelineByCustomerSegmentPieChart = ({ data: chartData = [] }: PipelineByC
   }
 
   return (
-    <div className="w-full min-h-[360px] flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
+    <div className="mobile-paint-anchor w-full min-h-[360px] flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500">
@@ -63,7 +63,7 @@ const PipelineByCustomerSegmentPieChart = ({ data: chartData = [] }: PipelineByC
           </h2>
         </div>
       </div>
-      {/* Horizontal scroll so donut + legend are always viewable; fixed size for stability */}
+      {/* Horizontal scroll so donut + legend always viewable */}
       <div className="w-full overflow-x-auto overflow-y-visible flex justify-center isolate" style={{ height: '320px' }}>
         <div className="flex flex-col items-center justify-center min-w-[320px] w-max mx-auto py-2" style={{ minHeight: 316 }}>
           <div className="flex-shrink-0" style={{ width: DONUT_SIZE, height: DONUT_SIZE }}>

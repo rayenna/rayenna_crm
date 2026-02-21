@@ -60,28 +60,34 @@ textarea,
   min-height: 100vh;
 }
 
-/* Mobile & tablet (iOS & Android, including iPad): fix blank sections when scrolling (paint/repaint bug) */
+/* Touch scrolling and no backdrop-blur on mobile/tablet */
 @media (max-width: 1024px) {
   html {
     -webkit-overflow-scrolling: touch;
     overflow-scrolling: touch;
   }
-  /* Force GPU layer on sections – prevents blank-on-scroll on Safari & Chrome (phone + tablet) */
+  /* Dashboard: don’t clip donut charts when scrolling */
+  .page-card-no-clip-mobile {
+    overflow: visible !important;
+  }
+  /* Disable backdrop-blur – reduces compositing cost on mobile/tablet */
+  .backdrop-blur-sm {
+    backdrop-filter: none;
+  }
+}
+
+/* Mobile portrait only: GPU layer fix for sections that disappear when scrolling (minimize layers to reduce lag) */
+@media (max-width: 768px) {
   .mobile-paint-fix > * {
     transform: translateZ(0);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
   }
-  /* Inner sections (e.g. Projects table, filter card) – same fix so they don’t disappear when scrolling */
   .mobile-paint-anchor {
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
-  }
-  /* Disable backdrop-blur – causes compositing/paint issues on mobile/tablet */
-  .backdrop-blur-sm {
-    backdrop-filter: none;
   }
 }
 

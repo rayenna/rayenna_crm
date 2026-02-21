@@ -59,6 +59,7 @@ const Dashboard = () => {
         title="Dashboard"
         subtitle="Monitor your business performance at a glance"
         icon={<FaChartLine className="w-5 h-5 text-white" />}
+        className="max-w-full page-card-no-clip-mobile"
       >
       <DashboardFilters
         availableFYs={availableFYs}

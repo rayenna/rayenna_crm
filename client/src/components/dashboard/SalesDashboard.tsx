@@ -51,7 +51,7 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Sales
   const tileParams = { selectedFYs, selectedQuarters, selectedMonths }
 
   return (
-    <div className="space-y-6 animate-fade-in min-w-0 max-w-full mobile-paint-fix">
+    <div className="space-y-6 animate-fade-in min-w-0 max-w-full">
       {/* Year on Year – full width row */}
       <div className="w-full">
         <KeyMetricsTile

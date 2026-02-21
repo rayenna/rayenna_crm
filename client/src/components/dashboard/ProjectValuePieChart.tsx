@@ -100,7 +100,7 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
   const displayData = chartData
 
   return (
-    <div className="w-full min-h-[360px] flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
+    <div className="mobile-paint-anchor w-full min-h-[360px] flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500">
@@ -186,7 +186,7 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
           </div>
         )}
       </div>
-      {/* Horizontal scroll so donut + legend are always viewable; fixed size for stability; isolate so chart is not clipped when page scrolls on mobile */}
+      {/* Horizontal scroll so donut + legend are always viewable; isolate so chart is not clipped when page scrolls on mobile */}
       <div className="w-full overflow-x-auto overflow-y-visible flex justify-center isolate" style={{ height: '320px' }}>
         <div className="flex flex-col items-center justify-center min-w-[320px] w-max mx-auto py-2" style={{ minHeight: 316 }}>
           <div className="flex-shrink-0 relative z-0" style={{ width: DONUT_SIZE, height: DONUT_SIZE }}>
