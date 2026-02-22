@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, memo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import WordCloud from 'wordcloud'
@@ -32,7 +32,7 @@ const MONTHS = [
   { value: '03', label: 'March' },
 ]
 
-const ProfitabilityWordCloud = ({ availableFYs = [], wordCloudData: wordCloudDataProp, filterControlledByParent }: ProfitabilityWordCloudProps) => {
+const ProfitabilityWordCloud = memo(({ availableFYs = [], wordCloudData: wordCloudDataProp, filterControlledByParent }: ProfitabilityWordCloudProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [view, setView] = useState<'cloud' | 'top10'>('cloud')
   const [dimensions, setDimensions] = useState({ width: 600, height: 400 })
@@ -505,6 +505,8 @@ const ProfitabilityWordCloud = ({ availableFYs = [], wordCloudData: wordCloudDat
       </div>
     </div>
   )
-}
+})
+
+ProfitabilityWordCloud.displayName = 'ProfitabilityWordCloud'
 
 export default ProfitabilityWordCloud

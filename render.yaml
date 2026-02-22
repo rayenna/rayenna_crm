@@ -1,5 +1,6 @@
-# Frontend only (Option B). Backend stays as existing Web Service.
-# See DEPLOYMENT_GUIDE "Option B: Render Static Site" for manual steps and redirects.
+# Render Blueprint: frontend static site only.
+# Backend: create a separate Web Service (see DEPLOYMENT_GUIDE.md).
+# Set VITE_API_BASE_URL in Render dashboard to your backend URL after backend is deployed.
 services:
   - type: web
     name: rayenna-crm-frontend

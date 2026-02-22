@@ -204,9 +204,20 @@ See `QUICKSTART.md` for detailed setup instructions.
    ```
 
 8. **Access the application**
-   - Frontend: http://localhost:5173
+   - Frontend: http://localhost:5173 (or the port Vite prints if 5173 is in use, e.g. 5174)
    - Backend API: http://localhost:3000
    - Prisma Studio: Run `npm run prisma:studio`
+
+### Troubleshooting: "Cannot reach API" / Login fails (local dev)
+
+- **ERR_CONNECTION_REFUSED** or **Cannot reach API** means the frontend cannot talk to the backend.
+- **Fix:** Run **both** servers. From the **project root** (not inside `client`):
+  ```bash
+  npm run dev
+  ```
+  This starts the backend on **port 3000** and the Vite dev server (e.g. **5173** or **5174**). Vite proxies `/api` to the backend.
+- If you only ran `cd client && npm run dev`, the backend is not running — start it in another terminal: `npm run dev:server`, or use `npm run dev` from the root.
+- Do **not** set `VITE_API_BASE_URL` for local dev when using the Vite proxy (no `client/.env` needed).
 
 ## Database Schema
 

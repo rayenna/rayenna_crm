@@ -23,7 +23,10 @@ const Login = () => {
       toast.success('Login successful')
       navigate('/dashboard')
     } catch (error: any) {
-      const msg = error.response?.data?.error ?? (error.response ? 'Login failed' : 'Cannot reach API. Check API base below — set VITE_API_BASE_URL, redeploy static site, ensure backend is Live.')
+      const fallback = typeof window !== 'undefined' && window.location.hostname.includes('localhost')
+        ? 'Cannot reach API. Start backend and frontend: run "npm run dev" from the project root (backend on :3000, frontend on :5173).'
+        : 'Cannot reach API. Set VITE_API_BASE_URL, redeploy static site, ensure backend is live.'
+      const msg = error.response?.data?.error ?? (error.response ? 'Login failed' : fallback)
       toast.error(msg)
     } finally {
       setIsLoading(false)

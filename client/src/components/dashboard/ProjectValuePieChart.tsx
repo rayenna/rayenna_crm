@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, memo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { getSegmentColor } from './segmentColors'
 import { useQuery } from '@tanstack/react-query'
@@ -24,7 +24,7 @@ const DONUT_SIZE = 200 // diameter
 const OUTER_R = DONUT_SIZE / 2
 const INNER_R = OUTER_R * 0.55
 
-const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardType = 'management', filterControlledByParent }: ProjectValuePieChartProps) => {
+const ProjectValuePieChart = memo(({ data: initialData, availableFYs = [], dashboardType = 'management', filterControlledByParent }: ProjectValuePieChartProps) => {
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [showFYDropdown, setShowFYDropdown] = useState(false)
   const fyDropdownRef = useRef<HTMLDivElement>(null)
@@ -243,6 +243,8 @@ const ProjectValuePieChart = ({ data: initialData, availableFYs = [], dashboardT
       </div>
     </div>
   )
-}
+})
+
+ProjectValuePieChart.displayName = 'ProjectValuePieChart'
 
 export default ProjectValuePieChart

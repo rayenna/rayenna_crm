@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
@@ -20,7 +21,7 @@ const DONUT_SIZE = 200
 const OUTER_R = DONUT_SIZE / 2
 const INNER_R = OUTER_R * 0.55
 
-const PipelineByCustomerSegmentPieChart = ({ data: chartData = [] }: PipelineByCustomerSegmentPieChartProps) => {
+const PipelineByCustomerSegmentPieChart = memo(({ data: chartData = [] }: PipelineByCustomerSegmentPieChartProps) => {
   const { user } = useAuth()
 
   const canView = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGEMENT || user?.role === UserRole.SALES
@@ -120,6 +121,8 @@ const PipelineByCustomerSegmentPieChart = ({ data: chartData = [] }: PipelineByC
       </div>
     </div>
   )
-}
+})
+
+PipelineByCustomerSegmentPieChart.displayName = 'PipelineByCustomerSegmentPieChart'
 
 export default PipelineByCustomerSegmentPieChart

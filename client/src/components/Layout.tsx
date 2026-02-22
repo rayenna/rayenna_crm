@@ -125,12 +125,8 @@ const Layout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50/80">
-      <nav className="bg-gradient-to-r from-primary-600 via-primary-500 to-yellow-500 shadow-2xl border-b-4 border-primary-400 relative">
-        {/* Animated background pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent_50%)]"></div>
-        </div>
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 relative z-10">
+      <nav className="bg-gradient-to-r from-primary-600 via-primary-500 to-yellow-500 shadow-lg border-b-4 border-primary-400">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
           <div className="flex justify-between items-center h-20 gap-2 lg:gap-4">
             <div className="flex items-center">
               <Link to="/dashboard" className="flex-shrink-0 flex items-center mr-2 lg:mr-3 xl:mr-4 hover:opacity-80 transition-opacity">
@@ -146,10 +142,10 @@ const Layout = () => {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`inline-flex items-center px-3 xl:px-3 2xl:px-4 py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs xl:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
+                    className={`inline-flex items-center px-3 xl:px-3 2xl:px-4 py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
                       location.pathname.startsWith(item.path)
-                        ? 'bg-white/25 text-white shadow-xl xl:shadow-2xl font-bold backdrop-blur-md border-2 border-white/30'
-                        : 'text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm'
+                        ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40'
+                        : 'text-white/95 hover:bg-white/20 hover:text-white'
                     }`}
                   >
                     {item.name}
@@ -165,10 +161,10 @@ const Layout = () => {
                 >
                   <button
                     onClick={() => setHelpDropdownOpen(!helpDropdownOpen)}
-                    className={`inline-flex items-center px-3 xl:px-3 2xl:px-4 py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs xl:text-sm font-semibold transition-all duration-300 whitespace-nowrap ${
+                    className={`inline-flex items-center px-3 xl:px-3 2xl:px-4 py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
                       isHelpActive
-                        ? 'bg-white/25 text-white shadow-xl xl:shadow-2xl font-bold backdrop-blur-md border-2 border-white/30'
-                        : 'text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm'
+                        ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40'
+                        : 'text-white/95 hover:bg-white/20 hover:text-white'
                     }`}
                   >
                     Help
@@ -230,20 +226,20 @@ const Layout = () => {
               </span>
               <Link
                 to="/change-password"
-                className="hidden lg:inline text-xs xl:text-sm text-white font-semibold hover:text-white hover:bg-white/20 px-2 xl:px-3 py-1.5 xl:py-2 rounded-lg xl:rounded-xl transition-all duration-300 shadow-md hover:shadow-lg border-2 border-white/20 hover:border-white/40 whitespace-nowrap"
+                className="hidden lg:inline text-xs xl:text-sm text-white font-semibold hover:text-white hover:bg-white/20 px-2 xl:px-3 py-1.5 xl:py-2 rounded-lg xl:rounded-xl transition-colors duration-200 shadow-sm border-2 border-white/20 hover:border-white/40 whitespace-nowrap"
               >
                 Change Password
               </Link>
               <button
                 onClick={logout}
-                className="hidden lg:inline text-xs xl:text-sm text-white font-semibold hover:text-white hover:bg-white/20 px-2 xl:px-3 py-1.5 xl:py-2 rounded-lg xl:rounded-xl transition-all duration-300 shadow-md hover:shadow-lg border-2 border-white/20 hover:border-white/40 whitespace-nowrap"
+                className="hidden lg:inline text-xs xl:text-sm text-white font-semibold hover:text-white hover:bg-white/20 px-2 xl:px-3 py-1.5 xl:py-2 rounded-lg xl:rounded-xl transition-colors duration-200 shadow-sm border-2 border-white/20 hover:border-white/40 whitespace-nowrap"
               >
                 Logout
               </button>
               {/* Hamburger menu - below lg (includes iPad portrait) */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden ml-2 inline-flex items-center justify-center p-2 rounded-xl text-white hover:bg-white/20 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/50 transition-all duration-300 border-2 border-white/20"
+                className="lg:hidden ml-2 inline-flex items-center justify-center p-2 rounded-xl text-white hover:bg-white/20 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors duration-200 border-2 border-white/20"
                 aria-label="Toggle menu"
               >
                 {mobileMenuOpen ? (
@@ -267,10 +263,10 @@ const Layout = () => {
                     key={item.path}
                     to={item.path}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                    className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 ${
                       location.pathname.startsWith(item.path)
-                        ? 'bg-white/25 text-white shadow-2xl font-bold backdrop-blur-md border-2 border-white/30'
-                        : 'text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm'
+                        ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40'
+                        : 'text-white/95 hover:bg-white/20 hover:text-white'
                     }`}
                   >
                     {item.name}
@@ -283,7 +279,7 @@ const Layout = () => {
                       key={item.path}
                       type="button"
                       onClick={openTipOfTheDay}
-                      className="block w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm"
+                      className="block w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 text-white/95 hover:bg-white/20 hover:text-white"
                     >
                       {item.name}
                     </button>
@@ -295,8 +291,8 @@ const Layout = () => {
                         setMobileMenuOpen(false)
                         openHelp()
                       }}
-                      className={`block w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
-                        isHelpActive ? 'bg-white/25 text-white shadow-2xl font-bold backdrop-blur-md border-2 border-white/30' : 'text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm'
+                      className={`block w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 ${
+                        isHelpActive ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40' : 'text-white/95 hover:bg-white/20 hover:text-white'
                       }`}
                     >
                       {item.name}
@@ -306,10 +302,10 @@ const Layout = () => {
                       key={item.path}
                       to={item.path}
                       onClick={() => setMobileMenuOpen(false)}
-                      className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                      className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 ${
                         location.pathname.startsWith(item.path)
-                          ? 'bg-white/25 text-white shadow-2xl font-bold backdrop-blur-md border-2 border-white/30'
-                          : 'text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm'
+                          ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40'
+                          : 'text-white/95 hover:bg-white/20 hover:text-white'
                       }`}
                     >
                       {item.name}
@@ -325,7 +321,7 @@ const Layout = () => {
                   <Link
                     to="/change-password"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-4 py-3 rounded-xl text-sm font-semibold text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm"
+                    className="block px-4 py-3 rounded-xl text-sm font-semibold text-white/95 hover:bg-white/20 hover:text-white transition-colors duration-200"
                   >
                     Change Password
                   </Link>
@@ -334,7 +330,7 @@ const Layout = () => {
                       setMobileMenuOpen(false)
                       logout()
                     }}
-                    className="block w-full text-left px-4 py-3 rounded-xl text-sm font-semibold text-white/95 hover:bg-white/15 hover:text-white hover:shadow-lg hover:backdrop-blur-sm"
+                    className="block w-full text-left px-4 py-3 rounded-xl text-sm font-semibold text-white/95 hover:bg-white/20 hover:text-white transition-colors duration-200"
                   >
                     Logout
                   </button>

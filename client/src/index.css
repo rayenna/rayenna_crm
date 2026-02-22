@@ -33,6 +33,14 @@ body {
   }
 }
 
+/* Disable body gradient animation on mobile/tablet – reduces repaints and improves responsiveness */
+@media (max-width: 1024px) {
+  body {
+    animation: none;
+    background-position: 50% 50%;
+  }
+}
+
 body * {
   user-select: none;
 }
