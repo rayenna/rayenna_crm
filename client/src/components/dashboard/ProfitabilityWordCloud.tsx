@@ -201,7 +201,7 @@ const ProfitabilityWordCloud = memo(({ availableFYs = [], wordCloudData: wordClo
         drawOutOfBound: false,
       })
     } catch (error) {
-      console.error('Error generating word cloud:', error)
+      if (import.meta.env.DEV) console.error('Error generating word cloud:', error)
     }
   }, [cloudData, dimensions])
 

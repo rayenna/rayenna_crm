@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { apiBaseUrl } from '../utils/axios'
+import { apiBaseUrl, isTimeoutOrNetworkError } from '../utils/axios'
 import toast from 'react-hot-toast'
 
 const isProd = typeof window !== 'undefined' && !window.location.hostname.includes('localhost')
@@ -22,11 +22,14 @@ const Login = () => {
       await login(email, password)
       toast.success('Login successful')
       navigate('/dashboard')
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string }; status?: number } }
       const fallback = typeof window !== 'undefined' && window.location.hostname.includes('localhost')
         ? 'Cannot reach API. Start backend and frontend: run "npm run dev" from the project root (backend on :3000, frontend on :5173).'
-        : 'Cannot reach API. Set VITE_API_BASE_URL, redeploy static site, ensure backend is live.'
-      const msg = error.response?.data?.error ?? (error.response ? 'Login failed' : fallback)
+        : isTimeoutOrNetworkError(error)
+          ? 'The server may be waking up (Render free tier sleeps after 15 min). Please try again in a moment.'
+          : 'Cannot reach API. Set VITE_API_BASE_URL, redeploy static site, ensure backend is live.'
+      const msg = err?.response?.data?.error ?? (err?.response ? 'Login failed' : fallback)
       toast.error(msg)
     } finally {
       setIsLoading(false)

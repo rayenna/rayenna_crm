@@ -168,10 +168,9 @@ const ProjectForm = () => {
     queryFn: async () => {
       try {
         const res = await axiosInstance.get('/api/customers?limit=10000') // Fetch all customers (up to 10000)
-        console.log('Customers loaded:', res.data?.customers?.length || 0, 'customers')
         return res.data
-      } catch (error: any) {
-        console.error('Error fetching customers:', error)
+      } catch (error: unknown) {
+        if (import.meta.env.DEV) console.error('Error fetching customers:', error)
         throw error
       }
     },
@@ -284,29 +283,6 @@ const ProjectForm = () => {
         const matches = isCreator || isTagged || hasUserProjects
         return matches
       })
-      console.log('Sales user filtering customers:', {
-        userRole: user.role,
-        userId: user.id,
-        totalCustomers: customers.customers.length,
-        filteredCustomers: availableCustomers.length,
-        sampleCustomers: customers.customers.slice(0, 5).map((c: any) => ({
-          id: c.id,
-          name: c.customerName,
-          createdById: c.createdById,
-          salespersonId: c.salespersonId,
-          hasProjects: c.projects?.length > 0,
-          projectCreatedBy: c.projects?.[0]?.createdById,
-          matches: c.createdById === user.id || c.salespersonId === user.id || (c.projects?.[0]?.createdById === user.id)
-        })),
-        filteredSample: availableCustomers.slice(0, 3).map((c: any) => ({
-          id: c.id,
-          name: c.customerName,
-          createdById: c.createdById,
-          salespersonId: c.salespersonId
-        }))
-      })
-    } else {
-      console.log('Not filtering - user role:', user?.role, 'userId:', user?.id)
     }
     
     // Apply search filter
@@ -413,19 +389,22 @@ const ProjectForm = () => {
       }
       navigate('/projects')
     },
-    onError: (error: any) => {
-      console.error('Project mutation error:', error);
-      console.error('Error response:', error.response?.data);
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { errors?: Array<{ param?: string; msg?: string; message?: string }>; error?: string }; status?: number }; message?: string }
+      if (import.meta.env.DEV) {
+        console.error('Project mutation error:', error)
+        console.error('Error response:', err?.response?.data)
+      }
       
       // Handle validation errors (express-validator returns errors array)
-      if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
-        const errorMessages = error.response.data.errors.map((err: any) => 
-          `${err.param || 'Field'}: ${err.msg || err.message || 'Invalid value'}`
+      if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        const errorMessages = err.response.data.errors.map((e: { param?: string; msg?: string; message?: string }) => 
+          `${e.param || 'Field'}: ${e.msg || e.message || 'Invalid value'}`
         ).join('\n');
         toast.error(errorMessages, { duration: 6000 });
       } else {
         // Handle single error message
-        const errorMessage = error.response?.data?.error || error.message || 'Operation failed';
+        const errorMessage = err.response?.data?.error || err.message || 'Operation failed';
         toast.error(errorMessage, { duration: 5000 });
       }
     },
@@ -773,12 +752,15 @@ const ProjectForm = () => {
         className="max-w-full"
       >
       <form onSubmit={handleSubmit(onSubmit, (errors) => {
-        console.error('[PROJECT FORM] Form validation errors:', errors);
-        console.error('[PROJECT FORM] Current form values:', getValues());
-        console.error('[PROJECT FORM] customerId value:', getValues('customerId'));
-        const errorMessages = Object.entries(errors).map(([field, error]: [string, any]) => {
-          const message = error?.message || error?.type || 'Invalid value';
-          console.error(`[PROJECT FORM] Error for ${field}:`, message, error);
+        if (import.meta.env.DEV) {
+          console.error('[PROJECT FORM] Form validation errors:', errors)
+          console.error('[PROJECT FORM] Current form values:', getValues())
+          console.error('[PROJECT FORM] customerId value:', getValues('customerId'))
+        }
+        const errorMessages = Object.entries(errors).map(([field, error]: [string, unknown]) => {
+          const e = error as { message?: string; type?: string }
+          const message = e?.message || e?.type || 'Invalid value';
+          if (import.meta.env.DEV) console.error(`[PROJECT FORM] Error for ${field}:`, message, error);
           return `${field}: ${message}`;
         });
         if (errorMessages.length > 0) {

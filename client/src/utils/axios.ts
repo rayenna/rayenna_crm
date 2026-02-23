@@ -5,8 +5,17 @@ import { notifyAuthError } from './authErrorHandler';
 // Falls back to empty string (relative URLs) for local development with Vite proxy
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
+/** Timeout for API requests (ms). 60s allows backend to wake from Render free-tier hibernation (~15–50s). */
+export const API_TIMEOUT_MS = 60_000;
+
 /** Exported for Login-page check when API is not configured (production). */
 export const apiBaseUrl = API_BASE_URL;
+
+/** Check if error is due to timeout or backend unreachable (e.g. cold start). */
+export function isTimeoutOrNetworkError(error: unknown): boolean {
+  const err = error as { code?: string; message?: string }
+  return err?.code === 'ECONNABORTED' || err?.code === 'ERR_NETWORK' || err?.message === 'Network Error'
+}
 
 // Warn if API base is missing in production (causes login/API calls to fail)
 if (!API_BASE_URL && typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
@@ -16,9 +25,10 @@ if (!API_BASE_URL && typeof window !== 'undefined' && !window.location.hostname.
   );
 }
 
-// Create axios instance with base URL
+// Create axios instance with base URL and timeout for cold-start tolerance
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
+  timeout: API_TIMEOUT_MS,
   withCredentials: true, // Include credentials (cookies, JWT) in cross-origin requests
 });
 

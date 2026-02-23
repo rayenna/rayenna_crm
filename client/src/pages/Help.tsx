@@ -52,13 +52,13 @@ const Help = () => {
           }
         }
       } catch (e) {
-        console.warn('Error accessing sessionStorage:', e)
+        if (import.meta.env.DEV) console.warn('Error accessing sessionStorage:', e)
       }
 
       helpContextPathRef.current = null
       return helpSections.find(s => s.id === 'getting-started') || helpSections[0] || null
     } catch (error) {
-      console.error('Error determining section:', error)
+      if (import.meta.env.DEV) console.error('Error determining section:', error)
       return helpSections[0] || null
     }
   }, [section])
@@ -342,17 +342,17 @@ const Help = () => {
                               style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
                               loading="lazy"
                               onError={(e) => {
-                                console.error('Image failed to load:', src)
+                                if (import.meta.env.DEV) console.error('Image failed to load:', src)
                                 e.currentTarget.style.display = 'none'
                               }}
                             />
                           </div>
                         )
                       },
-                            }}
-                          >
-                            {markdownContent}
-                          </ReactMarkdown>
+                    }}
+                  >
+                  {markdownContent}
+                </ReactMarkdown>
                         </ErrorBoundary>
                       ) : (
                         <div className="text-center py-8 text-gray-500">

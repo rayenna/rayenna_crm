@@ -196,9 +196,10 @@ const CustomerMaster = () => {
       window.URL.revokeObjectURL(url)
       
       toast.success(`Customers exported to ${pendingExportType.toUpperCase()} successfully`)
-    } catch (error: any) {
-      console.error('Export error:', error)
-      toast.error(error.response?.data?.error || `Failed to export customers to ${pendingExportType.toUpperCase()}`)
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } } }
+      if (import.meta.env.DEV) console.error('Export error:', error)
+      toast.error(err?.response?.data?.error || `Failed to export customers to ${pendingExportType?.toUpperCase() ?? 'file'}`)
     } finally {
       setShowExportConfirm(false)
       setPendingExportType(null)

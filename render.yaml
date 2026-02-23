@@ -4,6 +4,9 @@
 #
 # Build stability: NODE_OPTIONS increases Node heap for Vite/tsc (avoids OOM hang on free tier).
 # 404 copy is done via scripts/copy-404.cjs (no inline require in ESM package).
+#
+# Note: Slowness after 15+ min idle is from the *backend* waking (free tier hibernation).
+# The frontend is static and loads fast; the app shows a friendly message on timeout/network errors.
 services:
   - type: web
     name: rayenna-crm-frontend
@@ -14,7 +17,7 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_BASE_URL
-        value: https://rayenna-crm-backend.onrender.com
+        value: https://rayenna-crm.onrender.com
       # Reduce OOM risk during build (Vite + tsc can be memory-heavy on free tier)
       - key: NODE_OPTIONS
         value: "--max-old-space-size=2048"
