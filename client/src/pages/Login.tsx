@@ -27,7 +27,7 @@ const Login = () => {
       const fallback = typeof window !== 'undefined' && window.location.hostname.includes('localhost')
         ? 'Cannot reach API. Start backend and frontend: run "npm run dev" from the project root (backend on :3000, frontend on :5173).'
         : isTimeoutOrNetworkError(error)
-          ? 'The server may be waking up (Render free tier sleeps after 15 min). Please try again in a moment.'
+          ? 'The API server may be waking up (it can sleep after inactivity). Please try again in a moment.'
           : 'Cannot reach API. Set VITE_API_BASE_URL, redeploy static site, ensure backend is live.'
       const msg = err?.response?.data?.error ?? (err?.response ? 'Login failed' : fallback)
       toast.error(msg)
@@ -49,7 +49,7 @@ const Login = () => {
       <div className="max-w-md w-full space-y-8 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 border-2 border-white/20 border-l-4 border-l-primary-500">
         {apiNotConfigured && (
           <div className="mb-4 p-3 rounded-lg bg-amber-100 border border-amber-400 text-amber-900 text-sm">
-            <strong>API not configured.</strong> Set <code className="bg-amber-200/60 px-1 rounded">VITE_API_BASE_URL</code> in Render (Static Site → Environment), then <strong>redeploy</strong>. Login will not work until then.
+            <strong>API not configured.</strong> Set <code className="bg-amber-200/60 px-1 rounded">VITE_API_BASE_URL</code> in your deployment (Render: Static Site → Environment; Vercel: Settings → Environment Variables) to your backend URL (e.g. <code className="bg-amber-200/60 px-1 rounded">https://rayenna-crm.onrender.com</code>), then <strong>redeploy</strong>. Login will not work until then.
           </div>
         )}
         <div className="text-center">

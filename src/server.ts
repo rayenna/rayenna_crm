@@ -70,8 +70,9 @@ app.get('/api/health', (req, res) => {
 const allowedOrigins = [
   'http://localhost:5173', // Local Vite dev server
   'http://localhost:3000', // Local backend (if needed)
-  'https://rayenna-crm-kappa.vercel.app', // Production Vercel frontend
-  'https://rayenna-crm-frontend.onrender.com', // Production Render frontend (Option B)
+  'https://rayenna-crm-kappa.vercel.app', // Vercel (legacy)
+  'https://rayennacrm.vercel.app', // Vercel production frontend
+  'https://rayenna-crm-frontend.onrender.com', // Render static frontend
   process.env.FRONTEND_URL, // Production frontend from env (if different)
 ].filter(Boolean) as string[];
 
@@ -83,6 +84,13 @@ function isOriginAllowed(origin: string | undefined): boolean {
   if (allowedOrigins.map(normalizeOrigin).includes(n)) return true;
   if (process.env.NODE_ENV === 'development') return true;
   if (origin.includes('render.com') || origin.includes('localhost')) return true;
+  // Allow any Vercel deployment (*.vercel.app) for parallel frontend
+  try {
+    const u = new URL(origin);
+    if (u.hostname.endsWith('.vercel.app')) return true;
+  } catch {
+    // ignore invalid origin
+  }
   return false;
 }
 
