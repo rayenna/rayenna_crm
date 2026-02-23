@@ -1,22 +1,25 @@
 {
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
   "rewrites": [
     {
-      "source": "/((?!assets/|api/)(?!.*\\.(js|css|ico|jpg|jpeg|png|gif|svg|woff2?|ttf|eot|webp)).*)",
-      "destination": "/"
+      "source": "/:path*",
+      "destination": "/index.html"
     }
   ],
   "headers": [
     {
-      "source": "/assets/(.*)",
+      "source": "/assets/:path*",
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
+          "value": "public, max-age=31536000, immutable"
         }
       ]
     },
     {
-      "source": "/((?!assets/|api/)(?!.*\\.(js|css|ico|jpg|jpeg|png|gif|svg|woff2?|ttf|eot|webp)).*)",
+      "source": "/:path*",
       "headers": [
         {
           "key": "Cache-Control",
