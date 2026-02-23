@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import axiosInstance from '../utils/axios'
 import { setAuthErrorCallback } from '../utils/authErrorHandler'
 import { User, UserRole } from '../types'
+import { ErrorModal } from '@/components/common/ErrorModal'
 
 // Inactivity timeout configuration
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
@@ -177,47 +178,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AuthContext.Provider value={{ user, token, login, logout, isLoading, hasRole }}>
       {children}
-      
-      {/* Inactivity Warning Modal */}
-      {showIdleWarning && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
-            <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                Session Timeout Warning
-              </h3>
-            </div>
-            <div className="p-6">
-              <p className="text-gray-700 mb-4">
-                You've been inactive for a while. For security reasons, you'll be automatically logged out in:
-              </p>
-              <div className="flex justify-center mb-6">
-                <div className="bg-red-50 border-2 border-red-200 rounded-full w-24 h-24 flex items-center justify-center">
-                  <span className="text-4xl font-bold text-red-600">{idleCountdown}</span>
-                </div>
-              </div>
-              <p className="text-sm text-gray-500 text-center mb-6">seconds remaining</p>
-              <div className="flex gap-3">
-                <button
-                  onClick={handleStayLoggedIn}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg font-semibold hover:from-primary-700 hover:to-primary-800 transition-all shadow-md hover:shadow-lg"
-                >
-                  Stay Logged In
-                </button>
-                <button
-                  onClick={logout}
-                  className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-all"
-                >
-                  Logout Now
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
+      {/* Inactivity Warning: unified ErrorModal with seconds counter */}
+      <ErrorModal
+        open={showIdleWarning}
+        onClose={() => {}}
+        type="warning"
+        countdown={idleCountdown}
+        message="You've been inactive for a while. For security reasons, you'll be automatically logged out when the counter reaches zero. Click Stay Logged In to continue your session."
+        actions={[
+          { label: 'Logout Now', variant: 'ghost', onClick: logout },
+          { label: 'Stay Logged In', variant: 'primary', onClick: handleStayLoggedIn },
+        ]}
+      />
     </AuthContext.Provider>
   )
 }

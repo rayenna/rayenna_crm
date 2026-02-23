@@ -17,6 +17,24 @@ export function isTimeoutOrNetworkError(error: unknown): boolean {
   return err?.code === 'ECONNABORTED' || err?.code === 'ERR_NETWORK' || err?.message === 'Network Error'
 }
 
+/** User-friendly message for API errors (dashboard, lists, etc.). Handles timeout, network, 401, and generic. */
+export function getFriendlyApiErrorMessage(error: unknown): string {
+  if (isTimeoutOrNetworkError(error)) {
+    return 'The server may be waking up (e.g. after idle). Please try again in a moment.'
+  }
+  const err = error as { response?: { status?: number; data?: { error?: string } }; message?: string }
+  if (err?.response?.status === 401) {
+    return 'Your session may have expired. Please log in again.'
+  }
+  if (err?.response?.data?.error && typeof err.response.data.error === 'string') {
+    return err.response.data.error
+  }
+  if (err?.message && typeof err.message === 'string' && err.message !== 'Network Error') {
+    return err.message
+  }
+  return 'The server may be busy or your connection was interrupted. Please try again.'
+}
+
 // Warn if API base is missing in production (causes login/API calls to fail)
 if (!API_BASE_URL && typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
   console.warn(

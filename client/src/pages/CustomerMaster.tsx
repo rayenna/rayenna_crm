@@ -12,6 +12,7 @@ import MultiSelect from '../components/MultiSelect'
 import MapSelector from '../components/MapSelector'
 import PageCard from '../components/PageCard'
 import { FaUserFriends } from 'react-icons/fa'
+import { ErrorModal } from '@/components/common/ErrorModal'
 
 /** Helper used by both CustomerMaster list and CustomerForm header */
 function getCustomerDisplayName(customer: Customer) {
@@ -524,69 +525,30 @@ const CustomerMaster = () => {
           }}
         />
       )}
-      {showDeleteConfirm && customerToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-red-600 mb-4">WARNING</h3>
-              <p className="text-gray-700 mb-6">
-                CUSTOMER Details once deleted cannot be recovered
-              </p>
-              <p className="text-gray-600 mb-6 font-medium">
-                Are you sure to Proceed?
-              </p>
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={cancelDelete}
-                  className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium"
-                >
-                  YES
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {showExportConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-red-600 mb-4">WARNING</h3>
-              <div className="border-t border-b border-gray-300 my-4 py-4">
-                <p className="text-gray-700 mb-4 leading-relaxed">
-                  The Data that is present in the CRM System is the exclusive property of Rayenna Energy Private Limited. Unauthorised Export of any data is prohibited and will be subject to disciplinary measures including and not limited to termination and legal procedures.
-                </p>
-                <p className="text-gray-700 mb-4 leading-relaxed font-medium">
-                  By exporting this data, you are confirming that you are authorised to access this data/info and have written approvals from the management.
-                </p>
-              </div>
-              <p className="text-gray-600 mb-6 font-medium">
-                Do you want to continue?
-              </p>
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={cancelExport}
-                  className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
-                >
-                  CANCEL
-                </button>
-                <button
-                  onClick={confirmExport}
-                  className="px-6 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-medium"
-                >
-                  YES
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ErrorModal
+        open={showDeleteConfirm && !!customerToDelete}
+        onClose={cancelDelete}
+        type="warning"
+        message="CUSTOMER Details once deleted cannot be recovered.\n\nAre you sure to Proceed?"
+        actions={[
+          { label: 'Cancel', variant: 'ghost', onClick: cancelDelete },
+          { label: 'YES', variant: 'primary', onClick: confirmDelete },
+        ]}
+      />
+      <ErrorModal
+        open={showExportConfirm}
+        onClose={cancelExport}
+        type="warning"
+        message={`The Data that is present in the CRM System is the exclusive property of Rayenna Energy Private Limited. Unauthorised Export of any data is prohibited and will be subject to disciplinary measures including and not limited to termination and legal procedures.
+
+By exporting this data, you are confirming that you are authorised to access this data/info and have written approvals from the management.
+
+Do you want to continue?`}
+        actions={[
+          { label: 'CANCEL', variant: 'ghost', onClick: cancelExport },
+          { label: 'YES', variant: 'primary', onClick: confirmExport },
+        ]}
+      />
     </div>
   )
 }
@@ -625,6 +587,7 @@ const CustomerForm = ({
   const customerData = fullCustomerData || customer
 
   const { register, handleSubmit, formState: { errors }, watch, setValue, reset } = useForm({
+    shouldFocusError: false, // keep focus on validation modal instead of first error field
     defaultValues: {
       prefix: customerData?.prefix || '',
       firstName: customerData?.firstName || '',
@@ -704,6 +667,8 @@ const CustomerForm = ({
       return [customerData.email]
     }
   })() : [''])
+
+  const [validationErrors, setValidationErrors] = useState<string[] | null>(null)
 
   // Location coordinates state
   const [latitude, setLatitude] = useState<number | null>(customerData?.latitude || null)
@@ -791,13 +756,27 @@ const CustomerForm = ({
     },
   })
 
+  const fieldLabel: Record<string, string> = {
+    firstName: 'First Name',
+    addressLine1: 'Address Line 1',
+    country: 'Country',
+    state: 'State',
+    salespersonId: 'Sales Person',
+  }
+
   const onSubmit = (data: any) => {
-    // Validate: If Id Proof# is provided, Type of Id Proof is mandatory
+    const errs: string[] = []
+    if (!contactNumbers.some(cn => (cn || '').trim() !== '')) {
+      errs.push('At least one contact number is required.')
+    }
     if (data.idProofNumber && data.idProofNumber.trim() !== '' && (!data.idProofType || data.idProofType.trim() === '')) {
-      toast.error('Type of Id Proof is required when Id Proof# is provided')
+      errs.push('Type of Id Proof is required when Id Proof# is provided.')
+    }
+    if (errs.length > 0) {
+      setValidationErrors(errs)
       return
     }
-    
+
     const submitData: any = {
       ...data,
       // Explicitly include these fields to ensure they're sent
@@ -850,15 +829,38 @@ const CustomerForm = ({
     setEmails(updated)
   }
 
+  // Focus first input when form opens (New Customer or Edit) so cursor is where the user expects
+  const formContainerRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      const firstInput = formContainerRef.current?.querySelector<HTMLInputElement | HTMLSelectElement>(
+        'input:not([type="hidden"]), select'
+      )
+      firstInput?.focus()
+    })
+    return () => cancelAnimationFrame(id)
+  }, [])
+
   // Shared input styles for consistency
   const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all'
   const labelCls = 'block text-sm text-gray-500 mb-1.5'
   const selectCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all'
 
+  // Safe-area padding for notched devices (iPhone, iPad); min padding 1rem
+  const overlayStyle: React.CSSProperties = {
+    paddingTop: 'max(1rem, env(safe-area-inset-top))',
+    paddingRight: 'max(1rem, env(safe-area-inset-right))',
+    paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
+    paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+  }
+
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      {/* Single scroll area so header scrolls up on mobile landscape and leaves more room for form */}
-      <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto customer-form-modal-scroll">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 box-border" style={overlayStyle}>
+      {/* Single scroll area – max-height with dvh for mobile/iPad portrait and landscape */}
+      <div
+        className="bg-white rounded-2xl shadow-xl max-w-3xl w-full overflow-y-auto customer-form-modal-scroll"
+        style={{ maxHeight: 'min(90vh, 90dvh)' }}
+      >
         {/* Header – compact on short/landscape viewports via .customer-form-modal-header */}
         <div className="customer-form-modal-header px-4 py-4 sm:px-6 sm:py-5 bg-gradient-to-r from-primary-600 via-primary-500 to-yellow-500 border-b border-primary-100">
           <div className="flex items-center justify-between gap-3">
@@ -890,7 +892,18 @@ const CustomerForm = ({
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="p-4 sm:p-6 space-y-6 sm:space-y-8">
+        <div className="relative" ref={formContainerRef}>
+        <form
+          onSubmit={handleSubmit(onSubmit, (formErrors) => {
+            const messages = Object.entries(formErrors).map(([field, err]) => {
+              const msg = (err as { message?: string })?.message
+              const label = fieldLabel[field] || field
+              return msg ? `${label}: ${msg}` : `${label} is required`
+            })
+            setValidationErrors(messages)
+          })}
+          className="p-4 sm:p-6 space-y-6 sm:space-y-8"
+        >
           {/* Card 1: Basic Info */}
           <div className="bg-gradient-to-br from-teal-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-teal-400">
             <div className="flex items-center gap-2">
@@ -935,8 +948,9 @@ const CustomerForm = ({
             </div>
             <div className="space-y-4">
               <div>
-                <label className={labelCls}>Address Line 1</label>
-                <input {...register('addressLine1')} className={inputCls} placeholder="Street address, P.O. Box, etc." />
+                <label className={labelCls}>Address Line 1 <span className="text-red-500">*</span></label>
+                <input {...register('addressLine1', { required: 'Address Line 1 is required' })} className={inputCls} placeholder="Street address, P.O. Box, etc." />
+                {errors.addressLine1 && <p className="text-red-500 text-xs mt-1">{errors.addressLine1.message as string}</p>}
               </div>
               <div>
                 <label className={labelCls}>Address Line 2</label>
@@ -944,9 +958,9 @@ const CustomerForm = ({
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className={labelCls}>Country</label>
+                  <label className={labelCls}>Country <span className="text-red-500">*</span></label>
                   <select
-                    {...register('country')}
+                    {...register('country', { required: 'Country is required' })}
                     value={selectedCountry || customerData?.country || ''}
                     onChange={(e) => {
                       setValue('country', e.target.value)
@@ -957,11 +971,12 @@ const CustomerForm = ({
                     <option value="">Select Country</option>
                     {countries.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
                   </select>
+                  {errors.country && <p className="text-red-500 text-xs mt-1">{errors.country.message as string}</p>}
                 </div>
                 <div>
-                  <label className={labelCls}>State</label>
+                  <label className={labelCls}>State <span className="text-red-500">*</span></label>
                   <select
-                    {...register('state')}
+                    {...register('state', { required: 'State is required' })}
                     value={selectedState || customerData?.state || ''}
                     onChange={(e) => {
                       setValue('state', e.target.value)
@@ -973,6 +988,7 @@ const CustomerForm = ({
                     <option value="">Select State</option>
                     {availableStates.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
                   </select>
+                  {errors.state && <p className="text-red-500 text-xs mt-1">{errors.state.message as string}</p>}
                 </div>
                 <div>
                   <label className={labelCls}>City</label>
@@ -1008,7 +1024,7 @@ const CustomerForm = ({
             </div>
             <div className="space-y-4">
               <div>
-                <label className={labelCls}>Contact Numbers</label>
+                <label className={labelCls}>Contact Numbers <span className="text-red-500">*</span></label>
                 {contactNumbers.map((contact, index) => (
                   <div key={index} className="flex items-center gap-2 mb-2">
                     <input type="text" value={contact} onChange={(e) => updateContactNumber(index, e.target.value)} placeholder="Phone number" className={`flex-1 ${inputCls}`} />
@@ -1110,16 +1126,35 @@ const CustomerForm = ({
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-            <button type="button" onClick={onClose} className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              Cancel
-            </button>
-            <button type="submit" disabled={mutation.isPending} className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-teal-600 to-primary-600 rounded-lg hover:from-teal-700 hover:to-primary-700 disabled:opacity-50 transition-colors shadow-md">
-              {mutation.isPending ? 'Saving...' : customer ? 'Update' : 'Create'}
-            </button>
+          {/* Actions – validation modal anchored here (near Create/Update button); touch-friendly on mobile/iPad */}
+          <div className="relative">
+            <div className="flex flex-wrap justify-end gap-3 pt-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={onClose}
+                className="min-h-[44px] px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={mutation.isPending}
+                className="min-h-[44px] px-5 py-3 text-sm font-medium text-white bg-gradient-to-r from-teal-600 to-primary-600 rounded-lg hover:from-teal-700 hover:to-primary-700 disabled:opacity-50 transition-colors shadow-md touch-manipulation"
+              >
+                {mutation.isPending ? 'Saving...' : customer ? 'Update' : 'Create'}
+              </button>
+            </div>
+            <ErrorModal
+              open={!!validationErrors?.length}
+              onClose={() => setValidationErrors(null)}
+              type="warning"
+              anchor="parent"
+              message={validationErrors?.length ? 'Please fix the following:\n\n' + validationErrors.map((m) => '• ' + m).join('\n') : ''}
+              actions={[{ label: 'Dismiss', variant: 'ghost', onClick: () => setValidationErrors(null) }]}
+            />
           </div>
         </form>
+        </div>
       </div>
     </div>
   )

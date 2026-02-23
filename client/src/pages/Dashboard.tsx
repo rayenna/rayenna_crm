@@ -7,7 +7,7 @@ import FinanceDashboard from '../components/dashboard/FinanceDashboard'
 import ManagementDashboard from '../components/dashboard/ManagementDashboard'
 import DashboardFilters from '../components/dashboard/DashboardFilters'
 import { useQuery } from '@tanstack/react-query'
-import axiosInstance from '../utils/axios'
+import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import PageCard from '../components/PageCard'
 import { FaChartLine } from 'react-icons/fa'
 
@@ -18,7 +18,7 @@ const Dashboard = () => {
   const [selectedMonths, setSelectedMonths] = useState<string[]>([])
 
   // Fetch available FYs from dashboard data based on user role
-  const { data: dashboardData } = useQuery({
+  const { data: dashboardData, error: fyError, isError: isFyError, refetch: refetchFYs } = useQuery({
     queryKey: ['dashboard', 'fys', user?.role],
     queryFn: async () => {
       // For sales users, fetch from sales endpoint to get only their FYs
@@ -70,7 +70,20 @@ const Dashboard = () => {
         onQuarterChange={setSelectedQuarters}
         onMonthChange={setSelectedMonths}
       />
-      {getDashboardComponent()}
+      {isFyError && (
+        <div className="w-full min-w-0 max-w-xl rounded-xl border border-amber-200 bg-amber-50 p-4 sm:p-5 md:p-6 text-amber-800 text-sm sm:text-base break-words">
+          <p className="font-medium">Unable to load dashboard filters.</p>
+          <p className="mt-2 text-amber-700 leading-snug">{getFriendlyApiErrorMessage(fyError)}</p>
+          <button
+            type="button"
+            onClick={() => refetchFYs()}
+            className="mt-4 min-h-[44px] px-4 py-3 sm:py-2.5 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 active:opacity-90 touch-manipulation"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+      {!isFyError && getDashboardComponent()}
 
       {/* Footnote for Admin, Sales and Management views */}
       {(user?.role === UserRole.ADMIN || user?.role === UserRole.SALES || user?.role === UserRole.MANAGEMENT) && (

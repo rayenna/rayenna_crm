@@ -13,6 +13,7 @@ import DashboardFilters from '../components/dashboard/DashboardFilters'
 import { FiPaperclip } from 'react-icons/fi'
 import { FaUniversity, FaTicketAlt, FaBriefcase } from 'react-icons/fa'
 import PageCard from '../components/PageCard'
+import { ErrorModal } from '@/components/common/ErrorModal'
 
 const PROJECTS_FILTERS_STORAGE_KEY = 'rayenna_projects_filters'
 
@@ -599,9 +600,10 @@ const Projects = () => {
       window.URL.revokeObjectURL(url)
       
       toast.success(`Projects exported to ${pendingExportType.toUpperCase()} successfully`)
-    } catch (error: any) {
-      console.error('Export error:', error)
-      toast.error(error.response?.data?.error || `Failed to export projects to ${pendingExportType.toUpperCase()}`)
+    } catch (error: unknown) {
+      if (import.meta.env.DEV) console.error('Export error:', error)
+      const err = error as { response?: { data?: { error?: string } } }
+      toast.error(err?.response?.data?.error || `Failed to export projects to ${pendingExportType?.toUpperCase() ?? 'file'}`)
     } finally {
       setShowExportConfirm(false)
       setPendingExportType(null)
@@ -871,41 +873,21 @@ const Projects = () => {
         </div>
       </div>
 
-      {/* Export Confirmation Modal */}
-      {showExportConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-red-600 mb-4">WARNING</h3>
-              <div className="border-t border-b border-gray-300 my-4 py-4">
-                <p className="text-gray-700 mb-4 leading-relaxed">
-                  The Data that is present in the CRM System is the exclusive property of Rayenna Energy Private Limited. Unauthorised Export of any data is prohibited and will be subject to disciplinary measures including and not limited to termination and legal procedures.
-                </p>
-                <p className="text-gray-700 mb-4 leading-relaxed font-medium">
-                  By exporting this data, you are confirming that you are authorised to access this data/info and have written approvals from the management.
-                </p>
-              </div>
-              <p className="text-gray-600 mb-6 font-medium">
-                Do you want to continue?
-              </p>
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={cancelExport}
-                  className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
-                >
-                  CANCEL
-                </button>
-                <button
-                  onClick={confirmExport}
-                  className="px-6 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-medium"
-                >
-                  YES
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Export Confirmation: unified ErrorModal */}
+      <ErrorModal
+        open={showExportConfirm}
+        onClose={cancelExport}
+        type="warning"
+        message={`The Data that is present in the CRM System is the exclusive property of Rayenna Energy Private Limited. Unauthorised Export of any data is prohibited and will be subject to disciplinary measures including and not limited to termination and legal procedures.
+
+By exporting this data, you are confirming that you are authorised to access this data/info and have written approvals from the management.
+
+Do you want to continue?`}
+        actions={[
+          { label: 'CANCEL', variant: 'ghost', onClick: cancelExport },
+          { label: 'YES', variant: 'primary', onClick: confirmExport },
+        ]}
+      />
 
       {/* Projects table - scannable, status-driven, enterprise tone; mobile-paint-anchor prevents sections disappearing on scroll (iOS/Android) */}
       <div className="mobile-paint-anchor bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">

@@ -379,20 +379,20 @@ const ProjectForm = () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       navigate('/projects')
     },
-    onError: (error: any) => {
-      console.error('Project mutation error:', error);
-      console.error('Error response:', error.response?.data);
-      
-      // Handle validation errors (express-validator returns errors array)
-      if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
-        const errorMessages = error.response.data.errors.map((err: any) => 
-          `${err.param || 'Field'}: ${err.msg || err.message || 'Invalid value'}`
-        ).join('\n');
-        toast.error(errorMessages, { duration: 6000 });
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { errors?: Array<{ param?: string; msg?: string; message?: string }>; error?: string }; status?: number }; message?: string }
+      if (import.meta.env.DEV) {
+        console.error('Project mutation error:', error)
+        console.error('Error response:', err?.response?.data)
+      }
+      if (err?.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        const errorMessages = err.response.data.errors.map((e: { param?: string; msg?: string; message?: string }) =>
+          `${e.param || 'Field'}: ${e.msg || e.message || 'Invalid value'}`
+        ).join('\n')
+        toast.error(errorMessages, { duration: 6000 })
       } else {
-        // Handle single error message
-        const errorMessage = error.response?.data?.error || error.message || 'Operation failed';
-        toast.error(errorMessage, { duration: 5000 });
+        const errorMessage = err?.response?.data?.error || err?.message || 'Operation failed'
+        toast.error(errorMessage, { duration: 5000 })
       }
     },
   })

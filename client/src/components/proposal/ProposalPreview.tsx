@@ -56,9 +56,10 @@ const ProposalPreview = ({ projectId, onClose }: ProposalPreviewProps) => {
       const res = await axiosInstance.post(`/api/projects/${projectId}/generate-proposal`)
       setProposal(res.data)
       toast.success('Proposal generated successfully!')
-    } catch (error: any) {
-      console.error('Error generating proposal:', error)
-      toast.error(error.response?.data?.error || 'Failed to generate proposal')
+    } catch (error: unknown) {
+      if (import.meta.env.DEV) console.error('Error generating proposal:', error)
+      const e = error as { response?: { data?: { error?: string } } }
+      toast.error(e?.response?.data?.error || 'Failed to generate proposal')
     } finally {
       setLoading(false)
     }
@@ -86,9 +87,10 @@ const ProposalPreview = ({ projectId, onClose }: ProposalPreviewProps) => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] })
       
       toast.success('PDF downloaded and saved to Key Artifacts!')
-    } catch (error: any) {
-      console.error('Error downloading PDF:', error)
-      toast.error(error.response?.data?.error || 'Failed to download PDF')
+    } catch (error: unknown) {
+      if (import.meta.env.DEV) console.error('Error downloading PDF:', error)
+      const e = error as { response?: { data?: { error?: string } } }
+      toast.error(e?.response?.data?.error || 'Failed to download PDF')
     } finally {
       setPdfLoading(false)
     }

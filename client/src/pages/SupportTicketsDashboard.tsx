@@ -109,8 +109,8 @@ const SupportTicketsDashboard = () => {
       const res = await axiosInstance.get(`/api/support-tickets/${ticket.id}`)
       setSelectedTicket(res.data)
       setIsDrawerOpen(true)
-    } catch (error: any) {
-      console.error('Error fetching ticket details:', error)
+    } catch (error: unknown) {
+      if (import.meta.env.DEV) console.error('Error fetching ticket details:', error)
     }
   }
 

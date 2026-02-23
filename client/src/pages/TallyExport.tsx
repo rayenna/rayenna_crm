@@ -4,6 +4,7 @@ import axiosInstance from '../utils/axios'
 import { UserRole } from '../types'
 import PageCard from '../components/PageCard'
 import { FaFileExport } from 'react-icons/fa'
+import { ErrorModal } from '@/components/common/ErrorModal'
 
 const TallyExport = () => {
   const { hasRole } = useAuth()
@@ -80,9 +81,10 @@ const TallyExport = () => {
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(downloadUrl)
-    } catch (err: any) {
-      console.error('Export error:', err)
-      setError(err.response?.data?.error || 'Failed to export data. Please try again.')
+    } catch (err: unknown) {
+      if (import.meta.env.DEV) console.error('Export error:', err)
+      const e = err as { response?: { data?: { error?: string } } }
+      setError(e?.response?.data?.error || 'Failed to export data. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -227,12 +229,14 @@ const TallyExport = () => {
             </div>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-800 text-sm">{error}</p>
-            </div>
-          )}
+          {/* Error: shown in unified ErrorModal */}
+          <ErrorModal
+            open={!!error}
+            onClose={() => setError('')}
+            type="error"
+            message={error}
+            actions={[{ label: 'Dismiss', variant: 'ghost', onClick: () => setError('') }]}
+          />
 
           {/* Export Button */}
           <div>
@@ -250,44 +254,23 @@ const TallyExport = () => {
           </div>
         </div>
 
-        {/* Export Confirmation Modal */}
-        {showExportConfirm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-              <div className="p-6">
-                <h3 className="text-xl font-bold text-red-600 mb-4">WARNING</h3>
-                <div className="border-t border-b border-gray-300 my-4 py-4">
-                  <p className="text-gray-700 mb-4 leading-relaxed">
-                    The Data that is present in the CRM System is the exclusive property of Rayenna Energy Private Limited.
-                  </p>
-                  <p className="text-gray-700 mb-4 leading-relaxed">
-                    Unauthorised Export of any data is prohibited and will be subject to disciplinary measures including and not limited to termination and legal procedures.
-                  </p>
-                  <p className="text-gray-700 mb-4 leading-relaxed font-medium">
-                    By exporting this data, you are confirming that you are authorised to access this data/info and have written approvals from the management.
-                  </p>
-                </div>
-                <p className="text-gray-600 mb-6 font-medium">
-                  Do you want to continue?
-                </p>
-                <div className="flex gap-3 justify-end">
-                  <button
-                    onClick={cancelExport}
-                    className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
-                  >
-                    CANCEL
-                  </button>
-                  <button
-                    onClick={confirmExport}
-                    className="px-6 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 font-medium"
-                  >
-                    YES
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Export Confirmation: unified ErrorModal */}
+        <ErrorModal
+          open={showExportConfirm}
+          onClose={cancelExport}
+          type="warning"
+          message={`The Data that is present in the CRM System is the exclusive property of Rayenna Energy Private Limited.
+
+Unauthorised Export of any data is prohibited and will be subject to disciplinary measures including and not limited to termination and legal procedures.
+
+By exporting this data, you are confirming that you are authorised to access this data/info and have written approvals from the management.
+
+Do you want to continue?`}
+          actions={[
+            { label: 'CANCEL', variant: 'ghost', onClick: cancelExport },
+            { label: 'YES', variant: 'primary', onClick: confirmExport },
+          ]}
+        />
 
         {/* Help Section */}
         <div className="mt-6 bg-white/80 rounded-2xl p-6 shadow-lg border border-primary-100">

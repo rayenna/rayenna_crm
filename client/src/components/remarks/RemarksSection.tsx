@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { ProjectRemark } from '../../types'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
+import { ErrorModal } from '@/components/common/ErrorModal'
 
 interface RemarksSectionProps {
   projectId: string
@@ -17,6 +18,7 @@ const RemarksSection = ({ projectId, isEditMode = false }: RemarksSectionProps) 
   const [newRemark, setNewRemark] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
+  const [remarkToDelete, setRemarkToDelete] = useState<string | null>(null)
 
   // Fetch remarks
   const { data: remarks, isLoading } = useQuery({
@@ -38,14 +40,14 @@ const RemarksSection = ({ projectId, isEditMode = false }: RemarksSectionProps) 
       setNewRemark('')
       queryClient.invalidateQueries({ queryKey: ['remarks', projectId] })
     },
-    onError: (error: any) => {
-      console.error('Error adding remark:', error)
-      const errorMessage = error.response?.data?.error || error.message || 'Failed to add remark'
-      console.error('Error details:', {
-        message: errorMessage,
-        status: error.response?.status,
-        data: error.response?.data,
-      })
+    onError: (error: unknown) => {
+      if (import.meta.env.DEV) {
+        const err = error as { response?: { data?: { error?: string }; status?: number }; message?: string }
+        console.error('Error adding remark:', error)
+        console.error('Error details:', { message: err?.response?.data?.error || err?.message, status: err?.response?.status })
+      }
+      const err = error as { response?: { data?: { error?: string } }; message?: string }
+      const errorMessage = err?.response?.data?.error || err?.message || 'Failed to add remark'
       toast.error(errorMessage)
     },
   })
@@ -112,8 +114,13 @@ const RemarksSection = ({ projectId, isEditMode = false }: RemarksSectionProps) 
   }
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this remark?')) {
-      deleteMutation.mutate(id)
+    setRemarkToDelete(id)
+  }
+
+  const runDeleteRemark = () => {
+    if (remarkToDelete) {
+      deleteMutation.mutate(remarkToDelete)
+      setRemarkToDelete(null)
     }
   }
 
@@ -262,6 +269,17 @@ const RemarksSection = ({ projectId, isEditMode = false }: RemarksSectionProps) 
           </div>
         )}
       </div>
+
+      <ErrorModal
+        open={!!remarkToDelete}
+        onClose={() => setRemarkToDelete(null)}
+        type="warning"
+        message="Are you sure you want to delete this remark?"
+        actions={[
+          { label: 'Cancel', variant: 'ghost', onClick: () => setRemarkToDelete(null) },
+          { label: 'Confirm', variant: 'primary', onClick: runDeleteRemark },
+        ]}
+      />
     </div>
   )
 }

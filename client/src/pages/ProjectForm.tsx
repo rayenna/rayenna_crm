@@ -9,23 +9,38 @@ import toast from 'react-hot-toast'
 import RemarksSection from '../components/remarks/RemarksSection'
 import PageCard from '../components/PageCard'
 import { FaEdit } from 'react-icons/fa'
+import { ErrorModal } from '@/components/common/ErrorModal'
 
 // File Upload Component
-const FileUploadSection = ({ projectId, existingCount = 0, maxFiles = 10 }: { projectId: string; existingCount?: number; maxFiles?: number }) => {
+const FileUploadSection = ({
+  projectId,
+  existingCount = 0,
+  maxFiles = 10,
+  onShowError,
+}: {
+  projectId: string
+  existingCount?: number
+  maxFiles?: number
+  onShowError?: (messages: string[]) => void
+}) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [category, setCategory] = useState<string>('')
   const [description, setDescription] = useState<string>('')
   const [uploading, setUploading] = useState(false)
   const queryClient = useQueryClient()
 
+  const showError = (msg: string) => {
+    if (onShowError) onShowError([msg])
+    else toast.error(msg)
+  }
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (existingCount >= maxFiles) {
-      toast.error(`Maximum of ${maxFiles} files per project reached.`)
+      showError(`Maximum of ${maxFiles} files per project reached.`)
       return
     }
     const file = e.target.files?.[0]
     if (file) {
-      // Validate file type
       const validTypes = [
         'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
         'application/pdf',
@@ -35,12 +50,11 @@ const FileUploadSection = ({ projectId, existingCount = 0, maxFiles = 10 }: { pr
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
       ]
       if (!validTypes.includes(file.type)) {
-        toast.error('Invalid file type. Please upload images, PDFs, or Office documents.')
+        showError('Invalid file type. Please upload images, PDFs, or Office documents.')
         return
       }
-      // Validate file size (10MB limit)
       if (file.size > 10 * 1024 * 1024) {
-        toast.error('File size exceeds 10MB limit.')
+        showError('File size exceeds 10MB limit.')
         return
       }
       setSelectedFile(file)
@@ -49,7 +63,6 @@ const FileUploadSection = ({ projectId, existingCount = 0, maxFiles = 10 }: { pr
 
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      // Axios interceptor automatically handles FormData - removes Content-Type so browser sets it with boundary
       const res = await axiosInstance.post(
         `/api/documents/project/${projectId}`,
         formData
@@ -63,19 +76,20 @@ const FileUploadSection = ({ projectId, existingCount = 0, maxFiles = 10 }: { pr
       setDescription('')
       queryClient.invalidateQueries({ queryKey: ['project', projectId] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to upload file')
+    onError: (error: unknown) => {
+      const msg = (error as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to upload file'
+      showError(msg)
       setUploading(false)
     },
   })
 
   const handleUpload = () => {
     if (existingCount >= maxFiles) {
-      toast.error(`Maximum of ${maxFiles} files per project reached.`)
+      showError(`Maximum of ${maxFiles} files per project reached.`)
       return
     }
     if (!selectedFile || !category) {
-      toast.error('Please select a file and category')
+      showError('Please select a file and category')
       return
     }
     setUploading(true)
@@ -205,7 +219,9 @@ const ProjectForm = () => {
     }
   };
 
-  const { register, handleSubmit, setValue, getValues, watch, control } = useForm()
+  const { register, handleSubmit, setValue, getValues, watch, control } = useForm({
+    shouldFocusError: false, // keep focus on validation ErrorModal instead of first error field
+  })
   const selectedCustomerId = watch('customerId')
   const confirmationDate = watch('confirmationDate')
   const projectStatus = watch('projectStatus')
@@ -214,7 +230,14 @@ const ProjectForm = () => {
   const projectType = watch('type')
   const [customerSearch, setCustomerSearch] = useState('')
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<string[] | null>(null)
+  const [validationErrorSource, setValidationErrorSource] = useState<'file' | 'form' | null>(null)
   const customerDropdownRef = useRef<HTMLDivElement>(null)
+
+  const clearValidationErrors = () => {
+    setValidationErrors(null)
+    setValidationErrorSource(null)
+  }
   
   // Check if project is already in Lost status (prevents editing)
   // For new projects, project will be undefined, so isLost will be false
@@ -599,14 +622,11 @@ const ProjectForm = () => {
       }
     });
     
-    // If there are date validation errors, show them and prevent submission
+    // If there are date validation errors, show them in modal and prevent submission
     if (dateErrors.length > 0) {
-      const errorMessage = dateErrors.length === 1 
-        ? dateErrors[0]
-        : `Multiple invalid dates found:\n${dateErrors.map((e, i) => `${i + 1}. ${e}`).join('\n')}`;
-      
-      toast.error(errorMessage, { duration: 6000 });
-      return; // Prevent form submission
+      setValidationErrors(dateErrors);
+      setValidationErrorSource('form');
+      return;
     }
     
     // Payment field pairs - amount and date must both be provided or both be empty
@@ -647,14 +667,11 @@ const ProjectForm = () => {
       }
     });
     
-    // If there are payment validation errors, show them and prevent submission
+    // If there are payment validation errors, show them in modal and prevent submission
     if (paymentErrors.length > 0) {
-      const errorMessage = paymentErrors.length === 1 
-        ? paymentErrors[0]
-        : `Payment validation errors:\n${paymentErrors.map((e, i) => `${i + 1}. ${e}`).join('\n')}`;
-      
-      toast.error(errorMessage, { duration: 6000 });
-      return; // Prevent form submission
+      setValidationErrors(paymentErrors);
+      setValidationErrorSource('form');
+      return;
     }
 
     // Format arrays/objects
@@ -761,12 +778,15 @@ const ProjectForm = () => {
           const e = error as { message?: string; type?: string }
           const message = e?.message || e?.type || 'Invalid value';
           if (import.meta.env.DEV) console.error(`[PROJECT FORM] Error for ${field}:`, message, error);
-          return `${field}: ${message}`;
+          const friendlyName = field === 'customerId' ? 'Customer' : field === 'leadSource' ? 'Lead source' : field === 'confirmationDate' ? 'Confirmation date' : field === 'year' ? 'Financial year' : field === 'financingBank' ? 'Financing bank' : field === 'financingBankOther' ? 'Other bank name' : field;
+          return `${friendlyName}: ${message}`;
         });
         if (errorMessages.length > 0) {
-          toast.error(`Please fix the following errors:\n${errorMessages.join('\n')}`, { duration: 6000 });
+          setValidationErrors(errorMessages);
+          setValidationErrorSource('form');
         }
       })} className="space-y-8">
+        <div className="relative">
         {/* Customer & Project Details - Same style as Basic Info / other section cards */}
         {canEditOtherSections && (
         <div className="bg-gradient-to-br from-teal-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-teal-400 shadow-sm border border-teal-100/60">
@@ -1390,104 +1410,135 @@ const ProjectForm = () => {
           </div>
         )}
 
+        </div>
+
         {/* Payment Tracking */}
-        {canEditPayments && (
-          <div className="bg-gradient-to-br from-sky-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-sky-400">
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Payment Tracking</h3>
+        {canEditPayments ? (
+          <div className="relative">
+            <div className="bg-gradient-to-br from-sky-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-sky-400">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Payment Tracking</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Advance Received (₹)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    {...register('advanceReceived')}
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Advance Received Date
+                  </label>
+                  <input
+                    type="date"
+                    {...register('advanceReceivedDate')}
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Payment 1 (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    {...register('payment1')}
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Payment 1 Date</label>
+                  <input
+                    type="date"
+                    {...register('payment1Date')}
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Payment 2 (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    {...register('payment2')}
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Payment 2 Date</label>
+                  <input
+                    type="date"
+                    {...register('payment2Date')}
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Payment 3 (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    {...register('payment3')}
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Payment 3 Date</label>
+                  <input
+                    type="date"
+                    {...register('payment3Date')}
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Last Payment (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    {...register('lastPayment')}
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Last Payment Date</label>
+                  <input
+                    type="date"
+                    {...register('lastPaymentDate')}
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Advance Received (₹)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('advanceReceived')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Advance Received Date
-                </label>
-                <input
-                  type="date"
-                  {...register('advanceReceivedDate')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Payment 1 (₹)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('payment1')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Payment 1 Date</label>
-                <input
-                  type="date"
-                  {...register('payment1Date')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Payment 2 (₹)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('payment2')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Payment 2 Date</label>
-                <input
-                  type="date"
-                  {...register('payment2Date')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Payment 3 (₹)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('payment3')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Payment 3 Date</label>
-                <input
-                  type="date"
-                  {...register('payment3Date')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Last Payment (₹)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('lastPayment')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Last Payment Date</label>
-                <input
-                  type="date"
-                  {...register('lastPaymentDate')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                />
-              </div>
-            </div>
+            <ErrorModal
+              open={!!validationErrors?.length && validationErrorSource !== 'file'}
+              onClose={clearValidationErrors}
+              type="warning"
+              anchor="parent"
+              message={
+                validationErrors?.length && validationErrorSource !== 'file'
+                  ? 'Please fix the following:\n\n' + validationErrors.map((m) => '• ' + m).join('\n')
+                  : ''
+              }
+              actions={[{ label: 'Dismiss', variant: 'ghost', onClick: clearValidationErrors }]}
+            />
+          </div>
+        ) : (
+          <div className="relative">
+            <ErrorModal
+              open={!!validationErrors?.length && validationErrorSource !== 'file'}
+              onClose={clearValidationErrors}
+              type="warning"
+              anchor="parent"
+              message={
+                validationErrors?.length && validationErrorSource !== 'file'
+                  ? 'Please fix the following:\n\n' + validationErrors.map((m) => '• ' + m).join('\n')
+                  : ''
+              }
+              actions={[{ label: 'Dismiss', variant: 'ghost', onClick: clearValidationErrors }]}
+            />
           </div>
         )}
 
@@ -1628,15 +1679,33 @@ const ProjectForm = () => {
 
         {/* File Upload Section - Hidden for Finance users */}
         {isEdit && id && hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS]) && canEditOtherSections && (
-          <div className="bg-gradient-to-br from-violet-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-violet-400">
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">File Uploads</h3>
+          <div className="relative">
+            <div className="bg-gradient-to-br from-violet-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-violet-400">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">File Uploads</h3>
+              </div>
+              <FileUploadSection
+                projectId={id}
+                existingCount={project?.documents?.length || 0}
+                maxFiles={10}
+                onShowError={(messages) => {
+                  setValidationErrors(messages)
+                  setValidationErrorSource('file')
+                }}
+              />
             </div>
-            <FileUploadSection 
-              projectId={id} 
-              existingCount={project?.documents?.length || 0}
-              maxFiles={10}
+            <ErrorModal
+              open={!!validationErrors?.length && validationErrorSource === 'file'}
+              onClose={clearValidationErrors}
+              type="warning"
+              anchor="parent"
+              message={
+                validationErrors?.length && validationErrorSource === 'file'
+                  ? 'Please fix the following:\n\n' + validationErrors.map((m) => '• ' + m).join('\n')
+                  : ''
+              }
+              actions={[{ label: 'Dismiss', variant: 'ghost', onClick: clearValidationErrors }]}
             />
           </div>
         )}
@@ -1658,6 +1727,7 @@ const ProjectForm = () => {
           </button>
         </div>
       </form>
+
       </PageCard>
     </div>
   )

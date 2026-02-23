@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { SupportTicket, SupportTicketStatus, UserRole } from '../../types'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
+import { ErrorModal } from '@/components/common/ErrorModal'
 
 interface ViewTicketModalProps {
   ticket: SupportTicket
@@ -18,6 +19,7 @@ const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) =
   const [showAddActivity, setShowAddActivity] = useState(false)
   const [activityNote, setActivityNote] = useState('')
   const [followUpDate, setFollowUpDate] = useState('')
+  const [confirmAction, setConfirmAction] = useState<'close' | 'delete' | null>(null)
 
   const canManageTickets = hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS])
   const isAdmin = hasRole([UserRole.ADMIN])
@@ -122,15 +124,20 @@ const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) =
   }
 
   const handleCloseTicket = () => {
-    if (window.confirm(`Are you sure you want to close ticket ${ticket.ticketNumber}?`)) {
-      closeTicketMutation.mutate()
-    }
+    setConfirmAction('close')
   }
 
   const handleDeleteTicket = () => {
-    if (window.confirm(`Are you sure you want to permanently delete ticket ${ticket.ticketNumber}? This action cannot be undone and will delete all associated activities.`)) {
+    setConfirmAction('delete')
+  }
+
+  const runConfirmAction = () => {
+    if (confirmAction === 'close') {
+      closeTicketMutation.mutate()
+    } else if (confirmAction === 'delete') {
       deleteTicketMutation.mutate()
     }
+    setConfirmAction(null)
   }
 
   const displayTicket = fullTicket || ticket
@@ -314,6 +321,23 @@ const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) =
           )}
         </div>
       </div>
+
+      <ErrorModal
+        open={!!confirmAction}
+        onClose={() => setConfirmAction(null)}
+        type="warning"
+        message={
+          confirmAction === 'close'
+            ? `Are you sure you want to close ticket ${ticket.ticketNumber}?`
+            : confirmAction === 'delete'
+              ? `Are you sure you want to permanently delete ticket ${ticket.ticketNumber}? This action cannot be undone and will delete all associated activities.`
+              : ''
+        }
+        actions={[
+          { label: 'Cancel', variant: 'ghost', onClick: () => setConfirmAction(null) },
+          { label: 'Confirm', variant: 'primary', onClick: runConfirmAction },
+        ]}
+      />
     </div>
   )
 }

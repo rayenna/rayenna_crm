@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import axiosInstance from '../../utils/axios'
+import { getFriendlyApiErrorMessage } from '../../utils/axios'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { FaRupeeSign, FaCheckCircle, FaExclamationCircle, FaUniversity, FaCog, FaFileInvoice } from 'react-icons/fa'
 import { ProjectStatus } from '../../types'
@@ -21,7 +22,7 @@ interface FinanceDashboardProps {
 
 const FinanceDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: FinanceDashboardProps) => {
   // Single filtered query for tiles and all charts (same FY, Qtr, Month as dashboard filter)
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['dashboard', 'finance', selectedFYs, selectedQuarters, selectedMonths],
     queryFn: async () => {
       const params = new URLSearchParams()
@@ -32,6 +33,22 @@ const FinanceDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Fin
       return res.data
     },
   })
+
+  if (isError) {
+    return (
+      <div className="w-full min-w-0 max-w-xl rounded-xl border border-amber-200 bg-amber-50 p-4 sm:p-5 md:p-6 text-amber-800 text-sm sm:text-base break-words">
+        <p className="font-medium">Unable to load dashboard</p>
+        <p className="mt-2 text-amber-700 leading-snug">{getFriendlyApiErrorMessage(error)}</p>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          className="mt-4 min-h-[44px] px-4 py-3 sm:py-2.5 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 active:opacity-90 touch-manipulation"
+        >
+          Try again
+        </button>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (

@@ -35,20 +35,48 @@ const queryClient = new QueryClient({
   },
 })
 
+// User-friendly messages for known technical errors (avoid exposing implementation details)
+function getFriendlyErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error ?? 'Unknown error')
+  if (message.includes('useAuth must be used within AuthProvider')) {
+    return 'The app didn’t load correctly. Please refresh the page. If the problem continues, try logging in again or contact your administrator.'
+  }
+  if (message.includes('AuthProvider') || message.includes('context')) {
+    return 'Something went wrong loading this page. Please refresh and try again.'
+  }
+  return message
+}
+
+const isDev = import.meta.env.DEV
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Sentry.ErrorBoundary
-      fallback={({ error, resetError }) => (
-        <div style={{ padding: 24, textAlign: 'center', fontFamily: 'sans-serif' }}>
-          <h2>Something went wrong</h2>
-          <pre style={{ textAlign: 'left', overflow: 'auto', maxWidth: 600 }}>
-            {error instanceof Error ? error.message : String(error ?? 'Unknown error')}
-          </pre>
-          <button type="button" onClick={resetError} style={{ marginTop: 16, padding: '8px 16px' }}>
-            Try again
-          </button>
-        </div>
-      )}
+      fallback={({ error, resetError }) => {
+        const friendlyMessage = getFriendlyErrorMessage(error)
+        const rawMessage = error instanceof Error ? error.message : String(error ?? 'Unknown error')
+        const showTechnical = isDev && rawMessage !== friendlyMessage
+        return (
+          <div style={{ padding: 24, textAlign: 'center', fontFamily: 'sans-serif', maxWidth: 480, margin: '40px auto' }}>
+            <h2 style={{ fontSize: '1.25rem', marginBottom: 12 }}>Something went wrong</h2>
+            <p style={{ color: '#374151', lineHeight: 1.5, marginBottom: 16 }}>
+              {friendlyMessage}
+            </p>
+            {showTechnical && (
+              <pre style={{ textAlign: 'left', overflow: 'auto', maxWidth: '100%', fontSize: 12, color: '#6b7280', marginBottom: 16, padding: 12, background: '#f3f4f6', borderRadius: 8 }}>
+                {rawMessage}
+              </pre>
+            )}
+            <button
+              type="button"
+              onClick={resetError}
+              style={{ marginTop: 8, padding: '10px 20px', cursor: 'pointer', background: '#2563eb', color: 'white', border: 'none', borderRadius: 8, fontWeight: 600 }}
+            >
+              Try again
+            </button>
+          </div>
+        )
+      }}
     >
       <QueryClientProvider client={queryClient}>
         <App />

@@ -3,9 +3,10 @@ import axiosInstance from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
 import { User, UserRole } from '../types'
 import toast from 'react-hot-toast'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import PageCard from '../components/PageCard'
 import { FaUsers } from 'react-icons/fa'
+import { ErrorModal } from '@/components/common/ErrorModal'
 
 const Users = () => {
   const { hasRole } = useAuth()
@@ -20,6 +21,14 @@ const Users = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
   const [resetPasswordModal, setResetPasswordModal] = useState<{ user: User | null; resetLink: string | null }>({ user: null, resetLink: null })
+  const createFormFirstInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (showForm) {
+      const id = requestAnimationFrame(() => createFormFirstInputRef.current?.focus())
+      return () => cancelAnimationFrame(id)
+    }
+  }, [showForm])
 
   const { data: users, isLoading, error } = useQuery({
     queryKey: ['users'],
@@ -157,6 +166,7 @@ const Users = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700">Email *</label>
               <input
+                ref={createFormFirstInputRef}
                 type="email"
                 required
                 value={formData.email}
@@ -268,70 +278,33 @@ const Users = () => {
       </div>
       </PageCard>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && userToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-4 sm:p-6">
-              <h3 className="text-lg sm:text-xl font-bold text-red-600 mb-4">WARNING</h3>
-              <p className="text-sm sm:text-base text-gray-700 mb-6">
-                User Details once deleted cannot be recovered
-              </p>
-              <p className="text-sm sm:text-base text-gray-600 mb-6 font-medium">
-                Are you sure to Proceed?
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
-                <button
-                  onClick={cancelDelete}
-                  className="w-full sm:w-auto px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  className="w-full sm:w-auto px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium"
-                >
-                  YES
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete Confirmation: unified ErrorModal */}
+      <ErrorModal
+        open={showDeleteConfirm && !!userToDelete}
+        onClose={cancelDelete}
+        type="warning"
+        message="User Details once deleted cannot be recovered. Are you sure to Proceed?"
+        actions={[
+          { label: 'Cancel', variant: 'ghost', onClick: cancelDelete },
+          { label: 'YES', variant: 'primary', onClick: confirmDelete },
+        ]}
+      />
 
-      {/* Reset Password Modal */}
-      {resetPasswordModal.user && resetPasswordModal.resetLink && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-4 sm:p-6">
-              <h3 className="text-lg sm:text-xl font-bold text-indigo-600 mb-4">Password Reset Link Generated</h3>
-              <p className="text-sm sm:text-base text-gray-700 mb-4">
-                Reset link for <strong>{resetPasswordModal.user.name}</strong> ({resetPasswordModal.user.email}):
-              </p>
-              <div className="bg-gray-50 border border-gray-300 rounded-md p-3 mb-4 break-all overflow-x-auto">
-                <code className="text-xs sm:text-sm text-gray-800">{resetPasswordModal.resetLink}</code>
-              </div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-4">
-                Share this link with the user. The token expires in 24 hours.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
-                <button
-                  onClick={copyResetLink}
-                  className="w-full sm:w-auto px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
-                >
-                  Copy Link
-                </button>
-                <button
-                  onClick={closeResetModal}
-                  className="w-full sm:w-auto px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-medium"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Reset Password: unified ErrorModal */}
+      <ErrorModal
+        open={!!(resetPasswordModal.user && resetPasswordModal.resetLink)}
+        onClose={closeResetModal}
+        type="info"
+        message={
+          resetPasswordModal.user && resetPasswordModal.resetLink
+            ? `Password Reset Link Generated\n\nReset link for ${resetPasswordModal.user.name} (${resetPasswordModal.user.email}):\n\n${resetPasswordModal.resetLink}\n\nShare this link with the user. The token expires in 24 hours.`
+            : ''
+        }
+        actions={[
+          { label: 'Dismiss', variant: 'ghost', onClick: closeResetModal },
+          { label: 'Copy Link', variant: 'primary', onClick: copyResetLink },
+        ]}
+      />
     </div>
   )
 }

@@ -5,6 +5,7 @@ import { SupportTicket, SupportTicketStatus, UserRole } from '../../types'
 import { useAuth } from '../../contexts/AuthContext'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
+import { ErrorModal } from '@/components/common/ErrorModal'
 
 interface TicketDetailDrawerProps {
   ticket: SupportTicket | null
@@ -19,6 +20,7 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh }: TicketDetail
   const [note, setNote] = useState('')
   const [followUpDate, setFollowUpDate] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
 
   const canManageTickets = hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS])
 
@@ -72,9 +74,12 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh }: TicketDetail
   }
 
   const handleCloseTicket = () => {
-    if (window.confirm(`Are you sure you want to close ticket ${ticket?.ticketNumber}?`)) {
-      closeTicketMutation.mutate()
-    }
+    setShowCloseConfirm(true)
+  }
+
+  const runCloseTicket = () => {
+    closeTicketMutation.mutate()
+    setShowCloseConfirm(false)
   }
 
   const getStatusColor = (status: SupportTicketStatus) => {
@@ -299,6 +304,17 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh }: TicketDetail
           )}
         </div>
       </div>
+
+      <ErrorModal
+        open={showCloseConfirm}
+        onClose={() => setShowCloseConfirm(false)}
+        type="warning"
+        message={ticket ? `Are you sure you want to close ticket ${ticket.ticketNumber}?` : ''}
+        actions={[
+          { label: 'Cancel', variant: 'ghost', onClick: () => setShowCloseConfirm(false) },
+          { label: 'Confirm', variant: 'primary', onClick: runCloseTicket },
+        ]}
+      />
     </>
   )
 }

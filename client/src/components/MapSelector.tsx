@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { ErrorModal } from '@/components/common/ErrorModal'
 
 interface MapSelectorProps {
   latitude?: number | null
@@ -12,6 +13,7 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
   const [lngInput, setLngInput] = useState<string>(longitude?.toString() || '')
   const [mapLink, setMapLink] = useState<string>('')
   const [mapUrl, setMapUrl] = useState<string>('')
+  const [locationError, setLocationError] = useState<{ message: string; type: 'error' | 'info' } | null>(null)
   const mapRef = useRef<HTMLIFrameElement>(null)
 
   // Function to generate Google Maps link from coordinates
@@ -212,11 +214,11 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
         },
         (error) => {
           if (import.meta.env.DEV) console.error('Error getting location:', error)
-          alert('Unable to retrieve your location. Please enter coordinates manually.')
+          setLocationError({ message: 'Unable to retrieve your location. Please enter coordinates manually.', type: 'error' })
         }
       )
     } else {
-      alert('Geolocation is not supported by your browser.')
+      setLocationError({ message: 'Geolocation is not supported by your browser.', type: 'info' })
     }
   }
 
@@ -441,6 +443,14 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
           🗺️ Open in Google Maps
         </button>
       </div>
+
+      <ErrorModal
+        open={!!locationError}
+        onClose={() => setLocationError(null)}
+        type={locationError?.type ?? 'error'}
+        message={locationError?.message ?? ''}
+        actions={[{ label: 'Dismiss', variant: 'ghost', onClick: () => setLocationError(null) }]}
+      />
     </div>
   )
 }

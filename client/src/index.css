@@ -94,7 +94,7 @@ textarea,
   }
 }
 
-/* New Customer modal: thinner header and single scroll on short/landscape so form is easier to fill */
+/* New Customer modal: thinner header and single scroll on short/landscape so form is easier to fill (mobile + iPad) */
 @media (max-height: 500px), (orientation: landscape) and (max-height: 600px) {
   .customer-form-modal-header {
     padding-top: 0.5rem !important;
@@ -112,7 +112,14 @@ textarea,
   }
   .customer-form-modal-scroll {
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
+}
+
+/* Customer form scroll: smooth touch scroll on iOS/iPad */
+.customer-form-modal-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 /* Mobile portrait: avoid clipping donut charts when page scrolls (no overflow hidden on dashboard) */

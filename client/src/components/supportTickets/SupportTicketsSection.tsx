@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import CreateTicketModal from './CreateTicketModal'
 import ViewTicketModal from './ViewTicketModal'
+import { ErrorModal } from '@/components/common/ErrorModal'
 
 interface SupportTicketsSectionProps {
   projectId: string
@@ -18,6 +19,7 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
   const queryClient = useQueryClient()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null)
+  const [confirmState, setConfirmState] = useState<{ action: 'close' | 'delete'; ticket: SupportTicket } | null>(null)
 
   const canManageTickets = hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS])
   const isAdmin = hasRole([UserRole.ADMIN])
@@ -87,19 +89,25 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
   }
 
   const handleCloseTicket = (ticket: SupportTicket) => {
-    if (window.confirm(`Are you sure you want to close ticket ${ticket.ticketNumber}?`)) {
-      closeTicketMutation.mutate(ticket.id)
-    }
+    setConfirmState({ action: 'close', ticket })
   }
 
   const handleDeleteTicket = (ticket: SupportTicket) => {
-    if (window.confirm(`Are you sure you want to permanently delete ticket ${ticket.ticketNumber}? This action cannot be undone.`)) {
-      deleteTicketMutation.mutate(ticket.id)
+    setConfirmState({ action: 'delete', ticket })
+  }
+
+  const runConfirmAction = () => {
+    if (!confirmState) return
+    if (confirmState.action === 'close') {
+      closeTicketMutation.mutate(confirmState.ticket.id)
+    } else {
+      deleteTicketMutation.mutate(confirmState.ticket.id)
     }
+    setConfirmState(null)
   }
 
   return (
-    <>
+    <div className="relative">
       <div className="bg-gradient-to-br from-orange-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-orange-400 shadow-sm">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
@@ -253,7 +261,25 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
           }}
         />
       )}
-    </>
+
+      <ErrorModal
+        open={!!confirmState}
+        onClose={() => setConfirmState(null)}
+        type="warning"
+        anchor="parent"
+        message={
+          confirmState
+            ? confirmState.action === 'close'
+              ? `Are you sure you want to close ticket ${confirmState.ticket.ticketNumber}?`
+              : `Are you sure you want to permanently delete ticket ${confirmState.ticket.ticketNumber}? This action cannot be undone.`
+            : ''
+        }
+        actions={[
+          { label: 'Cancel', variant: 'ghost', onClick: () => setConfirmState(null) },
+          { label: 'Confirm', variant: 'primary', onClick: runConfirmAction },
+        ]}
+      />
+    </div>
   )
 }
 
