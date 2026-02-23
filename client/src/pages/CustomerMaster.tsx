@@ -813,7 +813,7 @@ const CustomerForm = ({
     if (import.meta.env.DEV) console.log('Submitting customer')
     
     // Remove salespersonId if user doesn't have permission to change it (Sales users)
-    // Only Management and Admin can change salespersonId
+    // Only Management and Admin can change salespersonId. Admin must provide it for new customers.
     if (!hasRole([UserRole.MANAGEMENT, UserRole.ADMIN])) {
       delete submitData.salespersonId
     }
@@ -1079,20 +1079,32 @@ const CustomerForm = ({
             </div>
           </div>
 
-          {/* Card 5: Assignment (Management/Admin only) */}
-          {(hasRole([UserRole.MANAGEMENT]) || hasRole([UserRole.ADMIN])) && customerData && (
+          {/* Card 5: Assignment (Management/Admin only) - shown for New Customer (Admin) and Edit (Admin/Management) */}
+          {(hasRole([UserRole.MANAGEMENT]) || hasRole([UserRole.ADMIN])) && (
             <div className="bg-gradient-to-br from-amber-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-amber-400">
               <div className="flex items-center gap-2">
                 <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                 <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Assignment</h3>
+                {!customerData && <span className="text-red-500">*</span>}
               </div>
               <div>
-                <label className={labelCls}>Salesperson</label>
-                <select {...register('salespersonId')} className={selectCls}>
-                  <option value="">No Salesperson Assigned</option>
+                <label className={labelCls}>Salesperson {!customerData && <span className="text-red-500">*</span>}</label>
+                <select
+                  {...register('salespersonId', {
+                    validate: (v) =>
+                      !customerData && hasRole([UserRole.ADMIN])
+                        ? (v && v.trim() !== '' ? true : 'Sales Person is required for a new customer')
+                        : true,
+                  })}
+                  className={`${selectCls} ${!customerData && hasRole([UserRole.ADMIN]) && !watch('salespersonId')?.trim() ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : ''}`}
+                >
+                  <option value="">{customerData ? 'No Salesperson Assigned' : 'Select Sales Person'}</option>
                   {salespersons?.map((sp: any) => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
                 </select>
-                <p className="text-xs text-gray-500 mt-1.5">Only Management and Admin can change the salesperson for a customer</p>
+                {errors.salespersonId && <p className="text-red-500 text-xs mt-1">{errors.salespersonId.message as string}</p>}
+                <p className="text-xs text-gray-500 mt-1.5">
+                  {customerData ? 'Only Management and Admin can change the salesperson for a customer' : 'Admin must assign a Sales Person when creating a new customer'}
+                </p>
               </div>
             </div>
           )}

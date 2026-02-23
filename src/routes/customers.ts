@@ -340,12 +340,32 @@ router.post(
         idProofNumber,
         idProofType,
         companyName,
-        companyGst
+        companyGst,
+        salespersonId: salespersonIdFromBody,
       } = req.body;
       
       // Validate: If Id Proof# is provided, Type of Id Proof is mandatory
       if (idProofNumber && idProofNumber.trim() !== '' && (!idProofType || idProofType.trim() === '')) {
         return res.status(400).json({ error: 'Type of Id Proof is required when Id Proof# is provided' });
+      }
+
+      // Admin must select a Sales Person when creating a new customer
+      let resolvedSalespersonId: string | null = null;
+      if (req.user.role === UserRole.SALES) {
+        resolvedSalespersonId = req.user.id; // Auto-tag Sales user
+      } else if (req.user.role === UserRole.ADMIN) {
+        const spId = salespersonIdFromBody != null ? String(salespersonIdFromBody).trim() : '';
+        if (!spId) {
+          return res.status(400).json({ error: 'Sales Person is required when Admin creates a new customer' });
+        }
+        const salesperson = await prisma.user.findUnique({
+          where: { id: spId },
+          select: { id: true, role: true },
+        });
+        if (!salesperson) {
+          return res.status(400).json({ error: 'Invalid salesperson ID: User not found' });
+        }
+        resolvedSalespersonId = salesperson.id;
       }
 
       // Generate unique customer ID
@@ -417,8 +437,7 @@ router.post(
           companyName: companyName || null,
           companyGst: companyGst || null,
           createdById: req.user.id, // Track who created the customer
-          // Auto-tag the creating Sales person as the salesperson for this customer
-          salespersonId: req.user.role === UserRole.SALES ? req.user.id : null,
+          salespersonId: resolvedSalespersonId,
         },
       });
 
@@ -639,6 +658,8 @@ router.put(
       }
 
       // Handle salespersonId - Only Management and Admin can change it
+      // When changed, cascade to all projects under this customer
+      let newSalespersonId: string | null | undefined = undefined; // Only set if salespersonId is being changed
       if (req.body.salespersonId !== undefined) {
         const canChangeSalesperson = req.user.role === UserRole.ADMIN || req.user.role === UserRole.MANAGEMENT;
         
@@ -648,10 +669,12 @@ router.put(
 
         if (req.body.salespersonId === null || req.body.salespersonId === '' || req.body.salespersonId === 'null') {
           updateData.salespersonId = null;
+          newSalespersonId = null;
         } else {
           const salespersonIdStr = String(req.body.salespersonId).trim();
           if (!salespersonIdStr) {
             updateData.salespersonId = null;
+            newSalespersonId = null;
           } else {
             try {
               const salesperson = await prisma.user.findUnique({
@@ -662,6 +685,7 @@ router.put(
                 return res.status(400).json({ error: 'Invalid salesperson ID: User not found' });
               }
               updateData.salespersonId = salespersonIdStr;
+              newSalespersonId = salespersonIdStr;
             } catch (error: any) {
               console.error('Error validating salespersonId:', error);
               return res.status(400).json({ error: `Invalid salesperson ID format: ${error.message}` });
@@ -688,6 +712,20 @@ router.put(
         where: { id: req.params.id },
         data: updateData,
       });
+
+      // When salespersonId changed, cascade to all projects under this customer
+      // so they reflect when querying by sales person
+      if (newSalespersonId !== undefined) {
+        await prisma.project.updateMany({
+          where: { customerId: req.params.id },
+          data: { salespersonId: newSalespersonId },
+        });
+        if (process.env.NODE_ENV === 'development') {
+          const count = await prisma.project.count({ where: { customerId: req.params.id } });
+          console.log('[CUSTOMER UPDATE] Cascaded salespersonId to', count, 'projects for customer', req.params.id);
+        }
+      }
+
       if (process.env.NODE_ENV === 'development') console.log('[CUSTOMER UPDATE] Customer updated successfully:', updatedCustomer.id);
       res.json(updatedCustomer);
     } catch (error: any) {

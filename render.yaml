@@ -1,6 +1,9 @@
 # Render Blueprint: frontend static site only.
 # Backend: create a separate Web Service (see DEPLOYMENT_GUIDE.md).
 # Set VITE_API_BASE_URL in Render dashboard to your backend URL after backend is deployed.
+#
+# Build stability: NODE_OPTIONS increases Node heap for Vite/tsc (avoids OOM hang on free tier).
+# 404 copy is done via scripts/copy-404.cjs (no inline require in ESM package).
 services:
   - type: web
     name: rayenna-crm-frontend
@@ -12,3 +15,6 @@ services:
     envVars:
       - key: VITE_API_BASE_URL
         value: https://rayenna-crm-backend.onrender.com
+      # Reduce OOM risk during build (Vite + tsc can be memory-heavy on free tier)
+      - key: NODE_OPTIONS
+        value: "--max-old-space-size=2048"

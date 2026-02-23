@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && node -e \"require('fs').copyFileSync('dist/index.html','dist/404.html')\"",
+    "build": "tsc --noEmit && vite build && node scripts/copy-404.cjs",
     "preview": "vite preview",
     "deploy": "vercel --prod",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives"
