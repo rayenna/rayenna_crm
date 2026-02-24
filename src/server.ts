@@ -221,7 +221,3 @@ process.on('beforeExit', async () => {
 });
 
 export default app;
-</think>
-Making the 503 middleware conditional so we stop returning 503 after routes are loaded:
-<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
-StrReplace
