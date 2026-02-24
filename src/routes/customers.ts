@@ -8,9 +8,9 @@ import * as XLSX from 'xlsx';
 
 const router = express.Router();
 
-// Helper function to check if user can create customers (only Sales and Admin)
+// Helper function to check if user can create customers (Sales, Management, Admin)
 const canCreateCustomer = (role: UserRole): boolean => {
-  return role === UserRole.SALES || role === UserRole.ADMIN;
+  return role === UserRole.SALES || role === UserRole.MANAGEMENT || role === UserRole.ADMIN;
 };
 
 // Helper function to check if user can modify customers
@@ -75,7 +75,7 @@ router.get(
         
         where.OR = orConditions;
       } else if (req.user?.role !== UserRole.SALES) {
-        // For non-Sales users: filter by salespersonId if provided
+        // For non-Sales users: filter by current salesperson assignment if provided
         if (salespersonId) {
           const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : [salespersonId];
           // Filter out empty strings and null values, and ensure they're strings
@@ -83,10 +83,11 @@ router.get(
             .filter((id): id is string => typeof id === 'string' && id.trim() !== '');
           
           if (validSalespersonIds.length > 0) {
-            // Get customer IDs where this salesperson has created projects (backward compatibility)
+            // Build condition: filter by current salesperson assignment on the customer
+            // and by any projects currently assigned to that salesperson.
             const userProjects = await prisma.project.findMany({
               where: {
-                createdById: { in: validSalespersonIds },
+                salespersonId: { in: validSalespersonIds },
               },
               select: {
                 customerId: true,
@@ -94,17 +95,15 @@ router.get(
               distinct: ['customerId'],
             });
             const customerIdsFromProjects = userProjects.map(p => p.customerId);
-            
-            // Build OR condition: salespersonId matches OR customer has projects created by salesperson
+
             const orConditions: any[] = [
               { salespersonId: { in: validSalespersonIds } },
             ];
-            
-            // Add customer IDs from projects if any exist
+
             if (customerIdsFromProjects.length > 0) {
               orConditions.push({ id: { in: customerIdsFromProjects } });
             }
-            
+
             where.OR = orConditions;
           }
         }
@@ -313,7 +312,7 @@ router.post(
       }
 
       if (!canCreateCustomer(req.user.role)) {
-        return res.status(403).json({ error: 'Only Sales and Admin users can create customers' });
+        return res.status(403).json({ error: 'Only Sales, Management and Admin users can create customers' });
       }
 
       const errors = validationResult(req);
@@ -809,7 +808,7 @@ router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req:
         .filter((id): id is string => typeof id === 'string' && id.trim() !== '');
       if (validSalespersonIds.length > 0) {
         const userProjects = await prisma.project.findMany({
-          where: { createdById: { in: validSalespersonIds } },
+          where: { salespersonId: { in: validSalespersonIds } },
           select: { customerId: true },
           distinct: ['customerId'],
         });
@@ -952,7 +951,7 @@ router.get('/export/csv', authenticate, authorize(UserRole.ADMIN), async (req: R
         .filter((id): id is string => typeof id === 'string' && id.trim() !== '');
       if (validSalespersonIds.length > 0) {
         const userProjects = await prisma.project.findMany({
-          where: { createdById: { in: validSalespersonIds } },
+          where: { salespersonId: { in: validSalespersonIds } },
           select: { customerId: true },
           distinct: ['customerId'],
         });

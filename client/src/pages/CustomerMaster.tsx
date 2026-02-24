@@ -50,7 +50,7 @@ const CustomerMaster = () => {
   const [customerFilter, setCustomerFilter] = useState<'all' | 'my'>('my') // Default to 'my' for Sales users
   const [selectedSalespersonIds, setSelectedSalespersonIds] = useState<string[]>([])
 
-  const canCreate = hasRole([UserRole.SALES, UserRole.ADMIN])
+  const canCreate = hasRole([UserRole.SALES, UserRole.MANAGEMENT, UserRole.ADMIN])
   const isSalesUser = user?.role === UserRole.SALES
 
   // Fetch sales users for the filter dropdown (only for non-SALES users)
