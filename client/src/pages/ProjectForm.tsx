@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import axiosInstance from '../utils/axios'
+import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Project, ProjectType, ProjectServiceType, UserRole, ProjectStatus, LostReason, LostToCompetitionReason, LeadSource } from '../types'
@@ -77,7 +77,7 @@ const FileUploadSection = ({
       queryClient.invalidateQueries({ queryKey: ['project', projectId] })
     },
     onError: (error: unknown) => {
-      const msg = (error as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to upload file'
+      const msg = getFriendlyApiErrorMessage(error)
       showError(msg)
       setUploading(false)
     },

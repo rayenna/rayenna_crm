@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import axiosInstance from '../../utils/axios'
+import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -58,8 +58,7 @@ const ProposalPreview = ({ projectId, onClose }: ProposalPreviewProps) => {
       toast.success('Proposal generated successfully!')
     } catch (error: unknown) {
       if (import.meta.env.DEV) console.error('Error generating proposal:', error)
-      const e = error as { response?: { data?: { error?: string } } }
-      toast.error(e?.response?.data?.error || 'Failed to generate proposal')
+      toast.error(getFriendlyApiErrorMessage(error))
     } finally {
       setLoading(false)
     }
@@ -89,8 +88,7 @@ const ProposalPreview = ({ projectId, onClose }: ProposalPreviewProps) => {
       toast.success('PDF downloaded and saved to Key Artifacts!')
     } catch (error: unknown) {
       if (import.meta.env.DEV) console.error('Error downloading PDF:', error)
-      const e = error as { response?: { data?: { error?: string } } }
-      toast.error(e?.response?.data?.error || 'Failed to download PDF')
+      toast.error(getFriendlyApiErrorMessage(error))
     } finally {
       setPdfLoading(false)
     }

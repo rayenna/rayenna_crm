@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useMutation } from '@tanstack/react-query'
-import axiosInstance from '../utils/axios'
+import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
@@ -43,8 +43,8 @@ const ChangePassword = () => {
       // Optionally navigate back or logout
       navigate('/dashboard')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to change password')
+    onError: (error: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(error))
     },
   })
 

@@ -48,32 +48,10 @@ router.get(
 
       const where: any = {};
 
-      // For Sales users: if myCustomers is 'true', filter to their customers
+      // For Sales users: if myCustomers is 'true', show only customers
+      // where they are the *currently assigned* salesperson.
       if (req.user?.role === UserRole.SALES && myCustomers === 'true') {
-        // Get customer IDs where this Sales user has created projects (backward compatibility)
-        const userProjects = await prisma.project.findMany({
-          where: {
-            createdById: req.user.id,
-          },
-          select: {
-            customerId: true,
-          },
-          distinct: ['customerId'],
-        });
-        const customerIdsFromProjects = userProjects.map(p => p.customerId);
-        
-        // Build OR condition: created by user, tagged to user, OR has projects created by user
-        const orConditions: any[] = [
-          { createdById: req.user.id },
-          { salespersonId: req.user.id },
-        ];
-        
-        // Add customer IDs from projects if any exist
-        if (customerIdsFromProjects.length > 0) {
-          orConditions.push({ id: { in: customerIdsFromProjects } });
-        }
-        
-        where.OR = orConditions;
+        where.salespersonId = req.user.id;
       } else if (req.user?.role !== UserRole.SALES) {
         // For non-Sales users: filter by current salesperson assignment if provided
         if (salespersonId) {
@@ -496,43 +474,34 @@ router.put(
       const isManagement = req.user.role === UserRole.MANAGEMENT;
       
       if (isAdmin || isManagement) {
-        // Admin and Management can always edit (Management needs this to change salesperson)
+        // Admin and Management can always edit (and can change salesperson assignment)
       } else if (req.user.role === UserRole.SALES) {
-        // For Sales users, ONLY allow if they created the customer OR are tagged as salesperson
-        // OR if they have created projects for this customer (backward compatibility)
-        // This logic MUST match the GET endpoint filter logic exactly
-        const isCreator = customer.createdById != null && customer.createdById === req.user.id;
-        const isTaggedSalesperson = customer.salespersonId != null && customer.salespersonId === req.user.id;
-        
-        // Always check for projects (backward compatibility) - matches GET endpoint logic
-        const userProjectCount = await prisma.project.count({
-          where: {
-            customerId: customer.id,
-            createdById: req.user.id,
-          },
-        });
-        const hasUserProjects = userProjectCount > 0;
+        // For Sales users: they may edit only when they are the *currently assigned*
+        // salesperson for this customer.
+        const isAssignedSalesperson =
+          customer.salespersonId != null && customer.salespersonId === req.user.id;
+
         if (process.env.NODE_ENV === 'development') {
-          console.log('[CUSTOMER UPDATE] Permission check:', {
+          console.log('[CUSTOMER UPDATE] Permission check (Sales):', {
             userId: req.user.id,
             customerId: customer.id,
             createdById: customer.createdById,
             salespersonId: customer.salespersonId,
-            isCreator,
-            isTaggedSalesperson,
-            userProjectCount,
-            hasUserProjects,
-            permissionGranted: isCreator || isTaggedSalesperson || hasUserProjects,
+            isAssignedSalesperson,
           });
         }
-        if (!isCreator && !isTaggedSalesperson && !hasUserProjects) {
-          if (process.env.NODE_ENV === 'development') console.log('[CUSTOMER UPDATE] Permission denied - user does not have access');
-          return res.status(403).json({ error: 'Only the Sales person who created or is tagged to this customer, or Admin/Management can edit it' });
+
+        if (!isAssignedSalesperson) {
+          if (process.env.NODE_ENV === 'development') console.log('[CUSTOMER UPDATE] Permission denied - Sales user is not current salesperson');
+          return res.status(403).json({
+            error: 'Only the Sales person currently assigned to this customer, or Admin/Management, can edit it',
+          });
         }
-        if (process.env.NODE_ENV === 'development') console.log('[CUSTOMER UPDATE] Permission granted');
       } else {
         // Other roles cannot edit
-        return res.status(403).json({ error: 'Only Sales users (who created or are tagged to the customer), Admin, or Management can edit customers' });
+        return res.status(403).json({
+          error: 'Only the currently assigned Sales user, Admin, or Management can edit customers',
+        });
       }
 
       const { 

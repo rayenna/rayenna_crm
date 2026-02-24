@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import axiosInstance from '../utils/axios'
+import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import toast from 'react-hot-toast'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
@@ -50,8 +50,8 @@ const ResetPassword = () => {
       reset()
       navigate('/login')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to reset password')
+    onError: (error: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(error))
     },
   })
 

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import axiosInstance from '../../utils/axios'
+import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
 import { ProjectRemark } from '../../types'
 import { format } from 'date-fns'
@@ -46,9 +46,7 @@ const RemarksSection = ({ projectId, isEditMode = false }: RemarksSectionProps) 
         console.error('Error adding remark:', error)
         console.error('Error details:', { message: err?.response?.data?.error || err?.message, status: err?.response?.status })
       }
-      const err = error as { response?: { data?: { error?: string } }; message?: string }
-      const errorMessage = err?.response?.data?.error || err?.message || 'Failed to add remark'
-      toast.error(errorMessage)
+      toast.error(getFriendlyApiErrorMessage(error))
     },
   })
 
@@ -64,8 +62,8 @@ const RemarksSection = ({ projectId, isEditMode = false }: RemarksSectionProps) 
       setEditText('')
       queryClient.invalidateQueries({ queryKey: ['remarks', projectId] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to update remark')
+    onError: (error: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(error))
     },
   })
 
@@ -78,8 +76,8 @@ const RemarksSection = ({ projectId, isEditMode = false }: RemarksSectionProps) 
       toast.success('Remark deleted successfully')
       queryClient.invalidateQueries({ queryKey: ['remarks', projectId] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to delete remark')
+    onError: (error: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(error))
     },
   })
 

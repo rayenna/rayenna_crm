@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import axiosInstance from '../../utils/axios'
+import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import { SupportTicket, SupportTicketStatus, UserRole } from '../../types'
 import { useAuth } from '../../contexts/AuthContext'
 import { format } from 'date-fns'
@@ -37,8 +37,8 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh }: TicketDetail
       // Refresh the ticket data
       queryClient.invalidateQueries({ queryKey: ['support-ticket', ticket!.id] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to add follow-up')
+    onError: (error: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(error))
     },
     onSettled: () => {
       setIsSubmitting(false)
@@ -55,8 +55,8 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh }: TicketDetail
       onRefresh()
       queryClient.invalidateQueries({ queryKey: ['support-ticket', ticket!.id] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to close ticket')
+    onError: (error: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(error))
     },
   })
 

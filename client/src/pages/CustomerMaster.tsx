@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import axiosInstance from '../utils/axios'
+import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
 import { Customer, UserRole } from '../types'
 import toast from 'react-hot-toast'
@@ -106,8 +106,8 @@ const CustomerMaster = () => {
       toast.success('Customer deleted successfully')
       queryClient.invalidateQueries({ queryKey: ['customers'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to delete customer')
+    onError: (error: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(error))
     },
   })
 
@@ -198,9 +198,8 @@ const CustomerMaster = () => {
       
       toast.success(`Customers exported to ${pendingExportType.toUpperCase()} successfully`)
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { error?: string } } }
       if (import.meta.env.DEV) console.error('Export error:', error)
-      toast.error(err?.response?.data?.error || `Failed to export customers to ${pendingExportType?.toUpperCase() ?? 'file'}`)
+      toast.error(getFriendlyApiErrorMessage(error))
     } finally {
       setShowExportConfirm(false)
       setPendingExportType(null)
@@ -751,8 +750,8 @@ const CustomerForm = ({
       toast.success(customerData ? 'Customer updated successfully' : 'Customer created successfully')
       onSuccess()
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Operation failed')
+    onError: (error: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(error))
     },
   })
 

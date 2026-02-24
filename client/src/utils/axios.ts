@@ -17,7 +17,7 @@ export function isTimeoutOrNetworkError(error: unknown): boolean {
   return err?.code === 'ECONNABORTED' || err?.code === 'ERR_NETWORK' || err?.message === 'Network Error'
 }
 
-/** User-friendly message for API errors (dashboard, lists, etc.). Handles timeout, network, 401, and generic. */
+/** User-friendly message for API errors (dashboard, lists, etc.). Handles timeout, network, 401, 403, and generic. */
 export function getFriendlyApiErrorMessage(error: unknown): string {
   if (isTimeoutOrNetworkError(error)) {
     return 'The server may be waking up (e.g. after idle). Please try again in a moment.'
@@ -25,6 +25,9 @@ export function getFriendlyApiErrorMessage(error: unknown): string {
   const err = error as { response?: { status?: number; data?: { error?: string } }; message?: string }
   if (err?.response?.status === 401) {
     return 'Your session may have expired. Please log in again.'
+  }
+  if (err?.response?.status === 403) {
+    return 'You do not seem to have access to this page. Please check with your Leadership team or the Administrator.'
   }
   if (err?.response?.data?.error && typeof err.response.data.error === 'string') {
     return err.response.data.error

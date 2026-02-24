@@ -1,7 +1,7 @@
 import { useState } from 'react'
 // Payment Status: Shows N/A in red for projects without Order Value or in early/lost stages
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import axiosInstance from '../utils/axios'
+import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Project, UserRole, ProjectStatus } from '../types'
@@ -64,8 +64,8 @@ const ProjectDetail = () => {
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       navigate('/projects')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to delete project')
+    onError: (error: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(error))
     },
   })
 
@@ -875,8 +875,8 @@ const DocumentDownloadButton = ({ documentId }: { documentId: string }) => {
       }
 
       window.open(url, '_blank')
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to download file')
+    } catch (error: unknown) {
+      toast.error(getFriendlyApiErrorMessage(error))
     } finally {
       setDownloading(false)
     }
@@ -926,8 +926,8 @@ const DocumentDeleteButton = ({ documentId, projectId }: { documentId: string; p
       setShowConfirm(false)
       // Refresh project data
       queryClient.invalidateQueries({ queryKey: ['project', projectId] })
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to delete document')
+    } catch (error: unknown) {
+      toast.error(getFriendlyApiErrorMessage(error))
       setShowConfirm(false)
     } finally {
       setIsDeleting(false)

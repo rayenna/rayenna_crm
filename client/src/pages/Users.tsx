@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import axiosInstance from '../utils/axios'
+import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
 import { User, UserRole } from '../types'
 import toast from 'react-hot-toast'
@@ -50,8 +50,8 @@ const Users = () => {
       setShowForm(false)
       setFormData({ email: '', name: '', password: '', role: UserRole.SALES })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to create user')
+    onError: (error: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(error))
     },
   })
 
@@ -63,8 +63,8 @@ const Users = () => {
       toast.success('User deleted successfully')
       queryClient.invalidateQueries({ queryKey: ['users'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to delete user')
+    onError: (error: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(error))
     },
   })
 
@@ -78,8 +78,8 @@ const Users = () => {
       setResetPasswordModal({ user: user || null, resetLink: data.resetLink })
       toast.success('Password reset token generated successfully')
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to generate reset token')
+    onError: (error: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(error))
     },
   })
 

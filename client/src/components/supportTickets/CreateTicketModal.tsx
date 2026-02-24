@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import axiosInstance from '../../utils/axios'
+import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import toast from 'react-hot-toast'
 
 interface CreateTicketModalProps {
@@ -22,8 +22,8 @@ const CreateTicketModal = ({ projectId, onClose, onSuccess }: CreateTicketModalP
       toast.success('Support ticket created successfully')
       onSuccess()
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to create ticket')
+    onError: (error: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(error))
     },
   })
 

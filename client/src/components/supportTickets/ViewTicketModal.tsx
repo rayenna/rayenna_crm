@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import axiosInstance from '../../utils/axios'
+import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
 import { SupportTicket, SupportTicketStatus, UserRole } from '../../types'
 import { format } from 'date-fns'
@@ -47,8 +47,8 @@ const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) =
       queryClient.invalidateQueries({ queryKey: ['support-tickets', ticket.projectId] })
       onRefresh()
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to add follow-up')
+    onError: (error: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(error))
     },
   })
 
@@ -64,8 +64,8 @@ const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) =
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       onRefresh()
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to close ticket')
+    onError: (error: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(error))
     },
   })
 
@@ -79,8 +79,8 @@ const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) =
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       onClose() // Close modal after deletion
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || 'Failed to delete ticket')
+    onError: (error: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(error))
     },
   })
 

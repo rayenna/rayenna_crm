@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import axiosInstance from '../utils/axios'
+import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Project, ProjectStatus, ProjectType, ProjectServiceType, UserRole, LeadSource } from '../types'
@@ -602,8 +602,7 @@ const Projects = () => {
       toast.success(`Projects exported to ${pendingExportType.toUpperCase()} successfully`)
     } catch (error: unknown) {
       if (import.meta.env.DEV) console.error('Export error:', error)
-      const err = error as { response?: { data?: { error?: string } } }
-      toast.error(err?.response?.data?.error || `Failed to export projects to ${pendingExportType?.toUpperCase() ?? 'file'}`)
+      toast.error(getFriendlyApiErrorMessage(error))
     } finally {
       setShowExportConfirm(false)
       setPendingExportType(null)
