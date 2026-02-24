@@ -4,29 +4,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import * as Sentry from '@sentry/node';
-import prisma from './prisma';
+// Prisma and route modules are loaded after listen() so /health can respond within Render's 5s timeout
 
-// Import routes
-import authRoutes from './routes/auth';
-import projectRoutes from './routes/projects';
-import documentRoutes from './routes/documents';
-import dashboardRoutes from './routes/dashboard';
-import dashboardEnhancedRoutes from './routes/dashboard-enhanced';
-import wordCloudRoutes from './routes/wordcloud';
-import tallyRoutes from './routes/tally';
-import userRoutes from './routes/users';
-import customerRoutes from './routes/customers';
-import leadRoutes from './routes/leads';
-import siteSurveyRoutes from './routes/siteSurveys';
-import proposalRoutes from './routes/proposals';
-import installationRoutes from './routes/installations';
-import invoiceRoutes from './routes/invoices';
-import amcRoutes from './routes/amc';
-import serviceTicketRoutes from './routes/serviceTickets';
-import supportTicketsRoutes from './routes/supportTickets';
-import salesTeamPerformanceRoutes from './routes/salesTeamPerformance';
-import remarksRoutes from './routes/remarks';
-import adminAuditRoutes from './routes/adminAudit';
 import { scrubSentryEvent } from './utils/sentryScrub';
 
 dotenv.config();
@@ -44,7 +23,7 @@ if (process.env.SENTRY_DSN) {
   });
 }
 
-// Validate required environment variables at startup
+// Validate required environment variables at startup (fast; no I/O)
 if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET is not set");
 }
@@ -57,7 +36,8 @@ if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
 
 const app = express();
 
-// Health check FIRST — before any middleware, for Render deploy health checks (5s timeout)
+// Health check FIRST — before any middleware, for Render deploy health checks (5s timeout).
+// Server calls listen() before loading Prisma/routes so this responds in <5s.
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -65,8 +45,7 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Middleware
-// CORS configuration - allow local development and production frontend
+// Middleware (lightweight; no DB or heavy imports)
 const allowedOrigins = [
   'http://localhost:5173', // Local Vite dev server
   'http://localhost:3000', // Local backend (if needed)
@@ -84,7 +63,6 @@ function isOriginAllowed(origin: string | undefined): boolean {
   if (allowedOrigins.map(normalizeOrigin).includes(n)) return true;
   if (process.env.NODE_ENV === 'development') return true;
   if (origin.includes('render.com') || origin.includes('localhost')) return true;
-  // Allow any Vercel deployment (*.vercel.app) for parallel frontend
   try {
     const u = new URL(origin);
     if (u.hostname.endsWith('.vercel.app')) return true;
@@ -94,7 +72,6 @@ function isOriginAllowed(origin: string | undefined): boolean {
   return false;
 }
 
-// CORS options configuration
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     if (isOriginAllowed(origin)) {
@@ -109,7 +86,6 @@ const corsOptions = {
   exposedHeaders: ['Content-Type'],
 };
 
-// Handle preflight OPTIONS first — ensure CORS headers on 204 (avoids 404 without CORS)
 app.use((req, res, next) => {
   if (req.method !== 'OPTIONS') return next();
   const origin = req.headers.origin as string | undefined;
@@ -130,35 +106,24 @@ app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Note: Uploaded files are now served through protected API endpoint /api/documents/:id/download
-// This ensures only authorized users (Admin, Management, or uploader) can access files
 const uploadsPath = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsPath)) {
   fs.mkdirSync(uploadsPath, { recursive: true });
 }
-// Removed public static serving - files are now protected via API
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/projects', projectRoutes);
-app.use('/api/documents', documentRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/dashboard-enhanced', dashboardEnhancedRoutes);
-app.use('/api/dashboard', wordCloudRoutes);
-app.use('/api/tally', tallyRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/customers', customerRoutes);
-app.use('/api/leads', leadRoutes);
-app.use('/api/site-surveys', siteSurveyRoutes);
-app.use('/api/proposals', proposalRoutes);
-app.use('/api/installations', installationRoutes);
-app.use('/api/invoices', invoiceRoutes);
-app.use('/api/amc', amcRoutes);
-app.use('/api/service-tickets', serviceTicketRoutes);
-app.use('/api/support-tickets', supportTicketsRoutes);
-app.use('/api/sales-team-performance', salesTeamPerformanceRoutes);
-app.use('/api/remarks', remarksRoutes);
-app.use('/api/admin/audit', adminAuditRoutes);
+// API router: routes are mounted here after listen (see below)
+const apiRouter = express.Router();
+app.use('/api', apiRouter);
+
+// Until routes are loaded, non-health requests get 503 so clients can retry. After load, next().
+let routesLoaded = false;
+app.use((req, res, next) => {
+  if (routesLoaded) return next();
+  res.status(503).set('Retry-After', '15').json({
+    error: 'Service starting up',
+    retryAfter: 15,
+  });
+});
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -174,8 +139,62 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 const PORT = process.env.PORT || 3000;
 
-const server = app.listen(PORT, () => {
+// Listen immediately so /health responds within Render's 5s health check timeout.
+// Then load Prisma and routes asynchronously.
+const server = app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
+  try {
+    const prisma = (await import('./prisma')).default;
+    (global as any).__prisma = prisma;
+
+    const authRoutes = (await import('./routes/auth')).default;
+    const projectRoutes = (await import('./routes/projects')).default;
+    const documentRoutes = (await import('./routes/documents')).default;
+    const dashboardRoutes = (await import('./routes/dashboard')).default;
+    const dashboardEnhancedRoutes = (await import('./routes/dashboard-enhanced')).default;
+    const wordCloudRoutes = (await import('./routes/wordcloud')).default;
+    const tallyRoutes = (await import('./routes/tally')).default;
+    const userRoutes = (await import('./routes/users')).default;
+    const customerRoutes = (await import('./routes/customers')).default;
+    const leadRoutes = (await import('./routes/leads')).default;
+    const siteSurveyRoutes = (await import('./routes/siteSurveys')).default;
+    const proposalRoutes = (await import('./routes/proposals')).default;
+    const installationRoutes = (await import('./routes/installations')).default;
+    const invoiceRoutes = (await import('./routes/invoices')).default;
+    const amcRoutes = (await import('./routes/amc')).default;
+    const serviceTicketRoutes = (await import('./routes/serviceTickets')).default;
+    const supportTicketsRoutes = (await import('./routes/supportTickets')).default;
+    const salesTeamPerformanceRoutes = (await import('./routes/salesTeamPerformance')).default;
+    const remarksRoutes = (await import('./routes/remarks')).default;
+    const adminAuditRoutes = (await import('./routes/adminAudit')).default;
+
+    apiRouter.use('/auth', authRoutes);
+    apiRouter.use('/projects', projectRoutes);
+    apiRouter.use('/documents', documentRoutes);
+    apiRouter.use('/dashboard', dashboardRoutes);
+    apiRouter.use('/dashboard-enhanced', dashboardEnhancedRoutes);
+    apiRouter.use('/dashboard', wordCloudRoutes);
+    apiRouter.use('/tally', tallyRoutes);
+    apiRouter.use('/users', userRoutes);
+    apiRouter.use('/customers', customerRoutes);
+    apiRouter.use('/leads', leadRoutes);
+    apiRouter.use('/site-surveys', siteSurveyRoutes);
+    apiRouter.use('/proposals', proposalRoutes);
+    apiRouter.use('/installations', installationRoutes);
+    apiRouter.use('/invoices', invoiceRoutes);
+    apiRouter.use('/amc', amcRoutes);
+    apiRouter.use('/service-tickets', serviceTicketRoutes);
+    apiRouter.use('/support-tickets', supportTicketsRoutes);
+    apiRouter.use('/sales-team-performance', salesTeamPerformanceRoutes);
+    apiRouter.use('/remarks', remarksRoutes);
+    apiRouter.use('/admin/audit', adminAuditRoutes);
+
+    routesLoaded = true;
+    console.log('API routes ready');
+  } catch (err) {
+    console.error('Failed to load API routes:', err);
+    process.exit(1);
+  }
 });
 
 // Handle port already in use error gracefully
@@ -195,9 +214,14 @@ server.on('error', (err: any) => {
   }
 });
 
-// Graceful shutdown
+// Graceful shutdown (prisma is set when routes load)
 process.on('beforeExit', async () => {
-  await prisma.$disconnect();
+  const prisma = (global as any).__prisma;
+  if (prisma) await prisma.$disconnect();
 });
 
 export default app;
+</think>
+Making the 503 middleware conditional so we stop returning 503 after routes are loaded:
+<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
+StrReplace

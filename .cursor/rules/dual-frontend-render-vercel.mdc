@@ -1,0 +1,42 @@
+---
+description: Keep Render static site and Vercel frontend compatible for business continuity
+alwaysApply: true
+---
+
+# Dual frontend: Render + Vercel compatibility
+
+This project runs **two production frontends** in parallel for business continuity:
+
+- **Render:** Static site from `render.yaml` (rootDir: `client`, build: `npm install && npm run build`, publish: `dist`). Env in Render dashboard.
+- **Vercel:** From same repo; Root Directory = `client` uses `client/vercel.json`; repo root uses root `vercel.json`. Env in Vercel project settings.
+
+Any change to frontend build, config, or env must work on **both** platforms.
+
+## Rules
+
+1. **Single build**  
+   The app must build with `npm run build` from `client/`. Same output: `dist/` and `dist/404.html`. No platform-specific build steps or branches in source.
+
+2. **Env only via VITE_***  
+   All runtime config (e.g. API URL) must use `import.meta.env.VITE_*`. No hardcoded hostnames or backend URLs in `client/src`. Document any new `VITE_*` in the deployment plan and in both Render and Vercel env instructions.
+
+3. **No platform-specific code**  
+   Do not branch on hostname, `vercel` vs `render`, or deploy target in client code. One codebase for both.
+
+4. **Config files**  
+   - `client/vercel.json`: used by Vercel when Root Directory = `client`. Keep `buildCommand`, `outputDirectory`, `framework`, rewrites, and headers.  
+   - Root `vercel.json`: used when Vercel builds from repo root. Keep build/install pointing at `client/` and output `client/dist`.  
+   - `render.yaml`: used only by Render. Do not remove or change the frontend service; keep `rootDir: client`, same build command, `staticPublishPath: dist`, and env vars (e.g. `VITE_API_BASE_URL`).
+
+5. **Backend CORS**  
+   In `src/server.ts`, keep allowed origins for **both** Render (e.g. `rayenna-crm-frontend.onrender.com`, `render.com`) and Vercel (`*.vercel.app`). Any new frontend URL must be added so both platforms remain allowed.
+
+6. **Docs**  
+   When adding env vars or deployment steps, update `VERCEL_PARALLEL_DEPLOYMENT_PLAN.md` (or equivalent) so both Render and Vercel are covered.
+
+## Quick check before committing
+
+- [ ] `cd client && npm run build` succeeds and produces `dist/` and `dist/404.html`.
+- [ ] No hardcoded API or app URLs in `client/src`.
+- [ ] No code that behaves differently on Render vs Vercel.
+- [ ] CORS still allows both Render and Vercel frontend origins.
