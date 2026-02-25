@@ -817,13 +817,12 @@ router.post(
         return res.status(404).json({ error: 'Customer not found' });
       }
 
-      // For Sales users: Only allow creating projects for customers they created or are tagged to
+      // For Sales users: Only allow creating projects for customers currently assigned to them.
+      // Customer ownership is determined by salespersonId (current assignment), not createdById.
+      // If the customer has been reassigned to another salesperson, this user can no longer create projects for it.
       if (req.user?.role === UserRole.SALES) {
-        const isCustomerCreator = customer.createdById === req.user.id;
-        const isTaggedSalesperson = customer.salespersonId === req.user.id;
-        
-        if (!isCustomerCreator && !isTaggedSalesperson) {
-          return res.status(403).json({ error: 'You can only create projects for customers you created or are tagged to' });
+        if (customer.salespersonId !== req.user.id) {
+          return res.status(403).json({ error: 'You can only create projects for customers currently assigned to you' });
         }
       }
 

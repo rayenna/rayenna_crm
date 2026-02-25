@@ -105,6 +105,7 @@ const CustomerMaster = () => {
     onSuccess: () => {
       toast.success('Customer deleted successfully')
       queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
     },
     onError: (error: unknown) => {
       toast.error(getFriendlyApiErrorMessage(error))
@@ -521,6 +522,9 @@ const CustomerMaster = () => {
             setShowForm(false)
             setEditingCustomer(null)
             queryClient.invalidateQueries({ queryKey: ['customers'] })
+            // Reassigning a customer cascades salespersonId to all its projects on the server.
+            // Invalidate projects cache so both old and new salesperson see updated ownership immediately.
+            queryClient.invalidateQueries({ queryKey: ['projects'] })
           }}
         />
       )}
