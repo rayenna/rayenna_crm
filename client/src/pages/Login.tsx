@@ -1,36 +1,67 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { apiBaseUrl, isTimeoutOrNetworkError } from '../utils/axios'
+import axios from 'axios'
 import toast from 'react-hot-toast'
 
 const isProd = typeof window !== 'undefined' && !window.location.hostname.includes('localhost')
 const apiNotConfigured = isProd && !apiBaseUrl
 
+type ServerStatus = 'checking' | 'ready' | 'slow' | 'unknown'
+
 const Login = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
+  const [serverStatus, setServerStatus] = useState<ServerStatus>('unknown')
   const { login } = useAuth()
   const navigate = useNavigate()
+  const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Pre-warm the backend as soon as the login page loads
+  useEffect(() => {
+    if (!apiBaseUrl || !isProd) return
+    setServerStatus('checking')
+    const controller = new AbortController()
+    axios.get(`${apiBaseUrl}/api/health`, { signal: controller.signal, timeout: 90_000 })
+      .then(() => setServerStatus('ready'))
+      .catch(() => setServerStatus('slow'))
+    return () => controller.abort()
+  }, [])
+
+  const startElapsedCounter = () => {
+    setElapsed(0)
+    elapsedRef.current = setInterval(() => setElapsed(s => s + 1), 1000)
+  }
+
+  const stopElapsedCounter = () => {
+    if (elapsedRef.current) { clearInterval(elapsedRef.current); elapsedRef.current = null }
+    setElapsed(0)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    startElapsedCounter()
 
     try {
       await login(email, password)
+      stopElapsedCounter()
       toast.success('Login successful')
       navigate('/dashboard')
     } catch (error: unknown) {
+      stopElapsedCounter()
       const err = error as { response?: { data?: { error?: string }; status?: number } }
       const fallback = typeof window !== 'undefined' && window.location.hostname.includes('localhost')
         ? 'Cannot reach API. Start backend and frontend: run "npm run dev" from the project root (backend on :3000, frontend on :5173).'
         : isTimeoutOrNetworkError(error)
-          ? 'The API server may be waking up (it can sleep after inactivity). Please try again in a moment.'
+          ? 'Server took too long to respond. It may still be waking up — please try again.'
           : 'Cannot reach API. Set VITE_API_BASE_URL, redeploy static site, ensure backend is live.'
       const msg = err?.response?.data?.error ?? (err?.response ? 'Login failed' : fallback)
       toast.error(msg)
+      setServerStatus('slow')
     } finally {
       setIsLoading(false)
     }
@@ -50,6 +81,30 @@ const Login = () => {
         {apiNotConfigured && (
           <div className="mb-4 p-3 rounded-lg bg-amber-100 border border-amber-400 text-amber-900 text-sm">
             <strong>API not configured.</strong> Set <code className="bg-amber-200/60 px-1 rounded">VITE_API_BASE_URL</code> in your deployment (Render: Static Site → Environment; Vercel: Settings → Environment Variables) to your backend URL (e.g. <code className="bg-amber-200/60 px-1 rounded">https://rayenna-crm.onrender.com</code>), then <strong>redeploy</strong>. Login will not work until then.
+          </div>
+        )}
+
+        {/* Server warm-up status banner */}
+        {isProd && !apiNotConfigured && serverStatus === 'checking' && (
+          <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-sm flex items-center gap-2">
+            <svg className="animate-spin h-4 w-4 shrink-0 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            </svg>
+            <span>Connecting to server — this can take up to 60 s after a period of inactivity. Please wait before signing in.</span>
+          </div>
+        )}
+        {isProd && !apiNotConfigured && serverStatus === 'ready' && (
+          <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm flex items-center gap-2">
+            <svg className="h-4 w-4 shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+            </svg>
+            <span>Server is ready.</span>
+          </div>
+        )}
+        {isProd && !apiNotConfigured && serverStatus === 'slow' && !isLoading && (
+          <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+            Server is slow to respond (free-tier wake-up). Try signing in — it may succeed now, or wait a few more seconds and try again.
           </div>
         )}
         <div className="text-center">
@@ -106,11 +161,30 @@ const Login = () => {
           <div>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || serverStatus === 'checking'}
               className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
-              {isLoading ? 'Signing in...' : 'Sign in'}
+              {isLoading
+                ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg>
+                    {elapsed > 10
+                      ? `Waking server up… ${elapsed}s — please wait`
+                      : 'Signing in…'}
+                  </span>
+                )
+                : serverStatus === 'checking'
+                  ? 'Connecting to server…'
+                  : 'Sign in'}
             </button>
+            {isLoading && elapsed > 5 && (
+              <p className="mt-2 text-xs text-center text-gray-500">
+                The server may be waking from sleep. <strong>Please do not press the button again</strong> — your request is in progress.
+              </p>
+            )}
           </div>
         </form>
         

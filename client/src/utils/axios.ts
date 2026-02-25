@@ -5,8 +5,8 @@ import { notifyAuthError } from './authErrorHandler';
 // Falls back to empty string (relative URLs) for local development with Vite proxy
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
-/** Timeout for API requests (ms). 60s allows backend to wake from Render free-tier hibernation (~15–50s). */
-export const API_TIMEOUT_MS = 60_000;
+/** Timeout for API requests (ms). 90s allows backend to wake from Render free-tier hibernation (~15–80s). */
+export const API_TIMEOUT_MS = 90_000;
 
 /** Exported for Login-page check when API is not configured (production). */
 export const apiBaseUrl = API_BASE_URL;
