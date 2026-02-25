@@ -20,15 +20,33 @@ const Login = () => {
   const navigate = useNavigate()
   const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Pre-warm the backend as soon as the login page loads
+  // Pre-warm the backend as soon as the login page loads.
+  // Guard against setting state after unmount (abort fires the catch).
   useEffect(() => {
     if (!apiBaseUrl || !isProd) return
+    let mounted = true
     setServerStatus('checking')
     const controller = new AbortController()
-    axios.get(`${apiBaseUrl}/api/health`, { signal: controller.signal, timeout: 90_000 })
-      .then(() => setServerStatus('ready'))
-      .catch(() => setServerStatus('slow'))
-    return () => controller.abort()
+    axios
+      .get(`${apiBaseUrl}/api/health`, { signal: controller.signal, timeout: 90_000 })
+      .then(() => { if (mounted) setServerStatus('ready') })
+      .catch((err) => {
+        if (!mounted) return
+        // AbortError means the component unmounted — not a real failure
+        if (axios.isCancel(err) || err?.code === 'ERR_CANCELED') return
+        setServerStatus('slow')
+      })
+    return () => {
+      mounted = false
+      controller.abort()
+    }
+  }, [])
+
+  // Clean up the elapsed interval on unmount (e.g. if user navigates away mid-login)
+  useEffect(() => {
+    return () => {
+      if (elapsedRef.current) clearInterval(elapsedRef.current)
+    }
   }, [])
 
   const startElapsedCounter = () => {

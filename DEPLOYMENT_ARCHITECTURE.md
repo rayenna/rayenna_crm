@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Rayenna CRM is a modern, cloud-native Customer Relationship Management system built for Rayenna Energy's solar EPC operations. The platform is deployed on a unified cloud infrastructure with enterprise-grade security, automatic scaling, and continuous deployment.
+Rayenna CRM is a modern, cloud-native Customer Relationship Management system built for Rayenna Energy's solar EPC operations. The platform is deployed on a unified cloud infrastructure with enterprise-grade security, automatic scaling, and continuous deployment. The **frontend runs on two production hosts in parallel**—Render (Static Site) and Vercel—for business continuity; both use the same codebase and the same Render backend API.
 
 ---
 
@@ -17,15 +17,16 @@ Rayenna CRM is a modern, cloud-native Customer Relationship Management system bu
                                         │ HTTPS
                                         ▼
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                          FRONTEND (Render Static Site)                               │
+│                    FRONTEND (Dual deployment – same app, two hosts)                  │
 │  ┌─────────────────────────────────────────────────────────────────────────────┐   │
 │  │                        React Single Page Application                         │   │
 │  │  • React 18 + TypeScript          • Tailwind CSS (UI Framework)              │   │
 │  │  • Vite (Build Tool)              • React Query (Server State)               │   │
-│  │  • React Router (Navigation)      • Recharts (Analytics Dashboards)          │   │
-│  │  • React Hook Form (Forms)        • Sentry (Error Tracking)                  │   │
+│  │  • React Router (Navigation)      • Recharts (Analytics Dashboards)           │   │
+│  │  • React Hook Form (Forms)        • Sentry (Error Tracking)                   │   │
 │  └─────────────────────────────────────────────────────────────────────────────┘   │
-│                           URL: rayenna-crm-frontend.onrender.com                     │
+│  • Render: rayenna-crm-frontend.onrender.com  • Vercel: e.g. rayennacrm.vercel.app   │
+│  Single build (client/); env via VITE_*; no platform-specific code                  │
 └─────────────────────────────────────────────────────────────────────────────────────┘
                                         │
                                         │ REST API (HTTPS)
@@ -37,11 +38,11 @@ Rayenna CRM is a modern, cloud-native Customer Relationship Management system bu
 │  │                         Node.js + Express Server                             │   │
 │  │  • TypeScript                     • JWT Authentication                       │   │
 │  │  • Express Validator              • Rate Limiting                            │   │
-│  │  • Prisma ORM                     • CORS Security                            │   │
+│  │  • Prisma ORM                     • CORS (Render + Vercel origins)           │   │
 │  │  • Sentry (Error Tracking)        • PDF Generation (PDFKit)                  │   │
-│  │  • Excel Export (xlsx)            • Multer (File Uploads)                    │   │
+│  │  • Excel Export (xlsx)            • Multer (File Uploads)                     │   │
 │  └─────────────────────────────────────────────────────────────────────────────┘   │
-│                           URL: rayenna-crm-backend.onrender.com                      │
+│  URL: e.g. rayenna-crm.onrender.com  • Serves both Render and Vercel frontends       │
 └─────────────────────────────────────────────────────────────────────────────────────┘
                         │                               │
            ┌────────────┴────────────┐     ┌───────────┴───────────┐
@@ -75,25 +76,29 @@ Rayenna CRM is a modern, cloud-native Customer Relationship Management system bu
 
 ---
 
-## Unified Render Platform
+## Frontend & Backend Hosting
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                              RENDER CLOUD PLATFORM                                   │
+│                         FRONTEND (dual deployment – business continuity)             │
 │                                                                                      │
 │   ┌─────────────────────────────┐      ┌─────────────────────────────┐              │
-│   │     STATIC SITE             │      │      WEB SERVICE            │              │
-│   │     (Frontend)              │      │      (Backend API)          │              │
-│   │                             │      │                             │              │
-│   │  • React SPA                │ ───► │  • Node.js + Express        │              │
-│   │  • Auto-build on push       │      │  • Auto-deploy on push      │              │
-│   │  • SPA routing (404.html)   │      │  • Prisma migrations        │              │
-│   │  • Asset optimization       │      │  • Environment variables    │              │
-│   └─────────────────────────────┘      └─────────────────────────────┘              │
-│                                                                                      │
-│                         • Unified Dashboard & Monitoring                             │
-│                         • Automatic SSL Certificates                                 │
-│                         • Git-based CI/CD Pipeline                                   │
+│   │   RENDER STATIC SITE         │      │   VERCEL                    │              │
+│   │   (Frontend)                 │      │   (Frontend)                 │              │
+│   │                              │      │                             │              │
+│   │  • Same React SPA             │      │  • Same React SPA           │              │
+│   │  • rootDir: client            │      │  • Root Directory: client   │              │
+│   │  • npm run build → dist/      │      │  • Same build → dist/       │              │
+│   │  • VITE_* env in dashboard    │      │  • VITE_* env in project     │              │
+│   └──────────────┬───────────────┘      └──────────────┬──────────────┘              │
+│                  │                                      │                            │
+│                  └──────────────────┬───────────────────┘                            │
+│                                     │ REST API (HTTPS)                                │
+│                                     ▼                                                 │
+│   ┌─────────────────────────────────────────────────────────────────────────────────┐ │
+│   │                    RENDER WEB SERVICE (Backend API)                             │ │
+│   │  • Node.js + Express  • CORS allows Render + *.vercel.app  • Single backend      │ │
+│   └─────────────────────────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -103,9 +108,9 @@ Rayenna CRM is a modern, cloud-native Customer Relationship Management system bu
 
 | Layer | Technology | Hosting | Purpose |
 |-------|------------|---------|---------|
-| **Frontend** | React 18 + TypeScript + Vite | Render Static Site | Modern, responsive user interface |
+| **Frontend** | React 18 + TypeScript + Vite | Render Static Site **and** Vercel | Same SPA on both; business continuity |
 | **Styling** | Tailwind CSS | - | Consistent, mobile-first design |
-| **Backend** | Node.js + Express + TypeScript | Render Web Service | RESTful API server |
+| **Backend** | Node.js + Express + TypeScript | Render Web Service | RESTful API server (serves both frontends) |
 | **ORM** | Prisma | - | Type-safe database access |
 | **Database** | PostgreSQL (Serverless) | Neon | Scalable data storage |
 | **File Storage** | CDN-backed media | Cloudinary | Document & image management |
@@ -143,19 +148,21 @@ Rayenna CRM is a modern, cloud-native Customer Relationship Management system bu
 ## Deployment Pipeline
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────────────────────────────────┐
-│  Developer  │────►│   GitHub    │────►│              RENDER                      │
-│  Git Push   │     │    main     │     │                                         │
-└─────────────┘     └─────────────┘     │   ┌─────────────┐   ┌─────────────┐     │
-                                        │   │Static Site  │   │Web Service  │     │
-                                        │   │             │   │             │     │
-                                        │   │• npm install│   │• npm install│     │
-                                        │   │• npm build  │   │• prisma gen │     │
-                                        │   │• Deploy     │   │• prisma mig │     │
-                                        │   │             │   │• tsc build  │     │
-                                        │   │             │   │• Start      │     │
-                                        │   └─────────────┘   └─────────────┘     │
-                                        └─────────────────────────────────────────┘
+┌─────────────┐     ┌─────────────┐     ┌─────────────────────────────────────────────────────────┐
+│  Developer  │────►│   GitHub    │────►│  RENDER (frontend + backend)   VERCEL (frontend only)   │
+│  Git Push   │     │    main     │     │                                                         │
+└─────────────┘     └─────────────┘     │   ┌─────────────────┐   ┌─────────────────┐   ┌──────────────┐ │
+                                        │   │ Static Site     │   │ Web Service     │   │ Frontend     │ │
+                                        │   │ (client/)       │   │ (Backend)       │   │ (client/)    │ │
+                                        │   │ • npm install   │   │ • npm install   │   │ • same build │ │
+                                        │   │ • npm run build │   │ • prisma gen    │   │ • dist/      │ │
+                                        │   │ • publish dist/ │   │ • prisma mig    │   │ • SPA routes │ │
+                                        │   │                 │   │ • tsc build     │   │              │ │
+                                        │   └────────┬────────┘   └────────┬────────┘   └──────┬───────┘ │
+                                        │            │                    │                    │         │
+                                        │            └────────────────────┼────────────────────┘         │
+                                        │                                 │  Both frontends → same API   │
+                                        └─────────────────────────────────┴───────────────────────────────┘
 ```
 
 ---
@@ -168,7 +175,7 @@ Rayenna CRM is a modern, cloud-native Customer Relationship Management system bu
 | **Session Security** | Auto-logout on browser close |
 | | 5-minute inactivity timeout with warning |
 | **Transport Security** | HTTPS/SSL on all connections |
-| **CORS Policy** | Whitelist-only origin policy |
+| **CORS Policy** | Whitelist-only: Render (*.onrender.com) and Vercel (*.vercel.app) frontend origins |
 | **Rate Limiting** | API request throttling |
 | **Data Encryption** | SSL database connections |
 | **Input Validation** | Express Validator on all endpoints |
@@ -201,8 +208,8 @@ Rayenna CRM is a modern, cloud-native Customer Relationship Management system bu
 
 | Component | Strategy | Benefit |
 |-----------|----------|---------|
-| **Frontend** | Render Static Site with CDN | Fast global delivery |
-| **Backend** | Render auto-scaling | Handles traffic spikes |
+| **Frontend** | Dual deployment (Render Static Site + Vercel) | Business continuity; same build, two hosts |
+| **Backend** | Render Web Service | Single API for both frontends; auto-deploy on push |
 | **Database** | Neon serverless PostgreSQL | Scales to zero, auto-scales up |
 | **Files** | Cloudinary CDN | Global distribution, auto-optimization |
 
@@ -210,16 +217,23 @@ Rayenna CRM is a modern, cloud-native Customer Relationship Management system bu
 
 ## Key Platform Benefits
 
-### Unified Render Hosting
+### Dual Frontend (Render + Vercel)
 
 | Benefit | Description |
 |---------|-------------|
-| **Single Platform** | Frontend + Backend on same provider |
-| **Unified Dashboard** | Monitor both services in one place |
-| **Automatic SSL** | Free HTTPS certificates |
-| **Git Integration** | Auto-deploy on every push to `main` |
-| **Environment Sync** | Easy env var management across services |
-| **Cost Efficiency** | Single billing, predictable costs |
+| **Business continuity** | Two production frontends; if one platform has an incident, the other can be used |
+| **Single codebase** | Same `client/` build; no platform-specific code; env via `VITE_*` only |
+| **Zero-downtime option** | Render remains primary; Vercel is additive; no breaking of existing production |
+| **Unified backend** | One Render backend serves both frontends; CORS allows both origins |
+
+### Render & Vercel Hosting
+
+| Benefit | Description |
+|---------|-------------|
+| **Render** | Frontend (Static Site) + Backend (Web Service); unified dashboard; Git auto-deploy |
+| **Vercel** | Frontend only; Root Directory = `client`; same build command; env in project settings |
+| **Automatic SSL** | HTTPS on both Render and Vercel |
+| **Environment** | `VITE_API_BASE_URL` (and optional `VITE_SENTRY_DSN`) set in each platform’s dashboard |
 
 ### Cloud-Native Architecture
 
@@ -236,6 +250,8 @@ Rayenna CRM is a modern, cloud-native Customer Relationship Management system bu
 
 | Service | Provider | Purpose |
 |---------|----------|---------|
+| **Frontend hosting** | Render + Vercel | Dual production frontends; same build, env via VITE_* |
+| **Backend hosting** | Render | Single Web Service; serves both frontends |
 | **Database** | Neon | Serverless PostgreSQL with auto-scaling |
 | **File Storage** | Cloudinary | Document/image CDN with optimization |
 | **AI Features** | OpenAI | Intelligent suggestions and analysis |
@@ -268,11 +284,13 @@ Rayenna CRM is a modern, cloud-native Customer Relationship Management system bu
 Rayenna CRM is built on a **modern, scalable, and secure** cloud architecture that provides:
 
 - **Reliability**: Automatic deployments, health monitoring, and error tracking
-- **Security**: Multi-layer security with JWT auth, CORS, rate limiting, and encryption
+- **Security**: Multi-layer security with JWT auth, CORS (Render + Vercel origins), rate limiting, and encryption
 - **Scalability**: Serverless database and auto-scaling backend
-- **Performance**: CDN delivery for frontend and media assets
-- **Maintainability**: Unified platform with Git-based CI/CD
+- **Performance**: CDN delivery for frontend and media assets; dual frontend (Render + Vercel) for continuity
+- **Maintainability**: Single codebase; Git-based CI/CD; same build deploys to both frontend hosts
+
+For detailed steps and verification of the dual frontend setup, see **VERCEL_PARALLEL_DEPLOYMENT_PLAN.md**.
 
 ---
 
-*Document generated for Board Presentation - February 2026*
+*Document updated for Board Presentation - February 2026*
