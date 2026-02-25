@@ -177,19 +177,27 @@ const ProjectForm = () => {
     },
   })
 
+  // Sales users fetch only their currently-assigned customers (server enforces salespersonId = user.id).
+  // Admin/Management/Operations fetch all customers.
+  // This ensures re-allocated customers disappear from the Sales user's dropdown immediately.
+  const isSalesUser = user?.role === UserRole.SALES
+  const customersUrl = isSalesUser
+    ? '/api/customers?limit=10000&myCustomers=true'
+    : '/api/customers?limit=10000'
+
   const { data: customers, isLoading: customersLoading, error: customersError } = useQuery({
-    queryKey: ['customers', 'all'],
+    queryKey: ['customers', isSalesUser ? 'mine' : 'all'],
     queryFn: async () => {
       try {
-        const res = await axiosInstance.get('/api/customers?limit=10000') // Fetch all customers (up to 10000)
+        const res = await axiosInstance.get(customersUrl)
         return res.data
       } catch (error: unknown) {
         if (import.meta.env.DEV) console.error('Error fetching customers:', error)
         throw error
       }
     },
-    enabled: true, // Always fetch customers
-    retry: 2, // Retry on failure
+    enabled: !!user, // Wait until user is known so the correct URL is used
+    retry: 2,
   })
 
   // Function to calculate Financial Year from a date
@@ -290,35 +298,25 @@ const ProjectForm = () => {
     }
   }, [projectType, isEdit, setValue])
 
-  // Filter customers based on search and user permissions
+  // Filter customers based on search.
+  // For Sales users the API already returns only their currently-assigned customers
+  // (myCustomers=true → WHERE salespersonId = user.id), so no extra client-side
+  // role filter is needed here. Re-allocated customers are excluded server-side.
   const filteredCustomers = useMemo(() => {
     if (!customers?.customers) return []
-    
-    // For Sales users, only show customers they created or are tagged to
-    let availableCustomers = customers.customers
-    if (user?.role === UserRole.SALES && user?.id) {
-      availableCustomers = customers.customers.filter((customer: any) => {
-        const isCreator = customer.createdById === user.id
-        const isTagged = customer.salespersonId === user.id
-        // Backward compatibility: if customer has projects, check if any were created by this user
-        const hasUserProjects = customer.projects && customer.projects.length > 0 && 
-          customer.projects.some((project: any) => project.createdById === user.id)
-        const matches = isCreator || isTagged || hasUserProjects
-        return matches
-      })
-    }
-    
-    // Apply search filter
+
+    const availableCustomers = customers.customers
+
     if (!customerSearch.trim()) return availableCustomers
-    
+
     const searchLower = customerSearch.toLowerCase()
-    return availableCustomers.filter((customer: any) => 
+    return availableCustomers.filter((customer: any) =>
       customer.customerName?.toLowerCase().includes(searchLower) ||
       customer.customerId?.toLowerCase().includes(searchLower) ||
       (customer.consumerNumber && customer.consumerNumber.toLowerCase().includes(searchLower)) ||
       (customer.address && customer.address.toLowerCase().includes(searchLower))
     )
-  }, [customers?.customers, customerSearch, user?.role, user?.id])
+  }, [customers?.customers, customerSearch])
 
   // Close dropdown when clicking outside
   useEffect(() => {
