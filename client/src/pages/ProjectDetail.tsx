@@ -442,6 +442,19 @@ const ProjectDetail = () => {
                           RBL_BANK: 'RBL Bank',
                           TAMILNADU_MERCANTILE_BANK: 'Tamilnadu Mercantile Bank',
                           CITY_UNION_BANK: 'City Union Bank',
+                          INDIAN_BANK: 'Indian Bank',
+                          INDIAN_OVERSEAS_BANK: 'Indian Overseas Bank',
+                          DCB_BANK: 'DCB Bank',
+                          KARUR_VYSYA_BANK: 'Karur Vysya Bank',
+                          EQUITAS_SMALL_FINANCE_BANK: 'Equitas Small Finance Bank',
+                          UJJIVAN_SMALL_FINANCE_BANK: 'Ujjivan Small Finance Bank',
+                          JANA_SMALL_FINANCE_BANK: 'Jana Small Finance Bank',
+                          UTKARSH_SMALL_FINANCE_BANK: 'Utkarsh Small Finance Bank',
+                          SHIVALIK_SMALL_FINANCE_BANK: 'Shivalik Small Finance Bank',
+                          AU_SMALL_FINANCE_BANK: 'AU Small Finance Bank',
+                          CAPITAL_SMALL_FINANCE_BANK: 'Capital Small Finance Bank',
+                          BANDHAN_BANK: 'Bandhan Bank',
+                          JAMMU_KASHMIR_BANK: 'Jammu & Kashmir Bank',
                         }
                         if (project.financingBank === 'OTHER') {
                           return project.financingBankOther || 'Other'

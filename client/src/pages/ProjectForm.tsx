@@ -1373,6 +1373,19 @@ const ProjectForm = () => {
                         <option value="RBL_BANK">RBL Bank</option>
                         <option value="TAMILNADU_MERCANTILE_BANK">Tamilnadu Mercantile Bank</option>
                         <option value="CITY_UNION_BANK">City Union Bank</option>
+                        <option value="INDIAN_BANK">Indian Bank</option>
+                        <option value="INDIAN_OVERSEAS_BANK">Indian Overseas Bank</option>
+                        <option value="DCB_BANK">DCB Bank</option>
+                        <option value="KARUR_VYSYA_BANK">Karur Vysya Bank</option>
+                        <option value="EQUITAS_SMALL_FINANCE_BANK">Equitas Small Finance Bank</option>
+                        <option value="UJJIVAN_SMALL_FINANCE_BANK">Ujjivan Small Finance Bank</option>
+                        <option value="JANA_SMALL_FINANCE_BANK">Jana Small Finance Bank</option>
+                        <option value="UTKARSH_SMALL_FINANCE_BANK">Utkarsh Small Finance Bank</option>
+                        <option value="SHIVALIK_SMALL_FINANCE_BANK">Shivalik Small Finance Bank</option>
+                        <option value="AU_SMALL_FINANCE_BANK">AU Small Finance Bank</option>
+                        <option value="CAPITAL_SMALL_FINANCE_BANK">Capital Small Finance Bank</option>
+                        <option value="BANDHAN_BANK">Bandhan Bank</option>
+                        <option value="JAMMU_KASHMIR_BANK">Jammu &amp; Kashmir Bank</option>
                         <option value="OTHER">Other</option>
                       </select>
                     </div>
