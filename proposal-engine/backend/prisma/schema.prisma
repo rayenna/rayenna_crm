@@ -1,0 +1,87 @@
+// Proposal Engine — Solar Prisma Schema (SQLite)
+// ISOLATED from the main CRM's PostgreSQL schema.
+// This file is the ONLY Prisma schema for the proposal-engine module.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// PROPOSAL
+// ─────────────────────────────────────────────
+model Proposal {
+  id             Int      @id @default(autoincrement())
+  customerName   String
+  systemSizeKw   Float
+  location       String
+  tariff         Float                   // ₹ per kWh
+  createdAt      DateTime @default(now())
+
+  costingItems   CostingItem[]
+  bomItems       BOMItem[]
+  roi            ROI?
+}
+
+// ─────────────────────────────────────────────
+// COSTING ITEM
+// ─────────────────────────────────────────────
+// category values: module | inverter | structure | cable | labour | misc
+model CostingItem {
+  id         Int      @id @default(autoincrement())
+  proposalId Int
+  category   String   // module | inverter | structure | cable | labour | misc
+  itemName   String
+  quantity   Float
+  unitCost   Float
+  totalCost  Float
+
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────────
+// BOM ITEM
+// ─────────────────────────────────────────────
+model BOMItem {
+  id            Int      @id @default(autoincrement())
+  proposalId    Int
+  itemName      String
+  specification String
+  quantity      Float
+  brand         String
+  warranty      String   // e.g. "25 years", "10 years"
+
+  proposal      Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────────
+// ROI
+// ─────────────────────────────────────────────
+model ROI {
+  id                  Int      @id @default(autoincrement())
+  proposalId          Int      @unique          // one-to-one with Proposal
+
+  // ── Inputs (stored so results are reproducible) ──
+  systemSizeKw        Float                     // kW (copied from Proposal at save time)
+  tariff              Float                     // ₹/kWh (copied from Proposal)
+  generationFactor    Float                     // kWh/kW/year (location-based, e.g. 1400–1600)
+  escalationPercent   Float                     // annual tariff escalation %, e.g. 5
+
+  // ── Outputs (derived, stored for fast retrieval) ──
+  annualGeneration    Float                     // kWh/year = systemSizeKw × generationFactor
+  annualSavings       Float                     // ₹/year (year-1)
+  paybackYears        Float                     // project cost ÷ year-1 savings
+  totalSavings25Years Float                     // NPV-style sum over 25 years with escalation
+
+  // ── Metadata ──
+  projectCost         Float    @default(0)      // total from costing sheet at time of calculation
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  proposal            Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+}
