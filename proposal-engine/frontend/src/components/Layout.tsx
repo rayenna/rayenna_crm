@@ -11,13 +11,18 @@ const NAV = [
   { label: 'Proposal',      to: '/proposal' },
 ];
 
+/* Exact gradient used by the CRM navbar */
+const NAV_GRADIENT = 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)';
+/* CRM active link: bg-white/30 = rgba(255,255,255,0.30) */
+const ACTIVE_LINK  = 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40';
+const IDLE_LINK    = 'text-white hover:bg-white/20 hover:text-white';
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const [health, setHealth]     = useState<HealthStatus | null>(null);
   const [error, setError]       = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Close menu on route change
   useEffect(() => { setMenuOpen(false); }, [pathname]);
 
   useEffect(() => {
@@ -28,96 +33,103 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-950">
-      <header className="border-b border-gray-800 bg-gray-900/60 backdrop-blur-sm sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+    <div className="min-h-screen bg-gray-50/80">
 
-          {/* ── Brand ── */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="w-7 h-7 rounded-md bg-indigo-600 flex items-center justify-center text-white font-bold text-xs">
-              PE
-            </div>
-            <span className="text-white font-semibold tracking-tight text-sm sm:text-base">
-              Proposal Engine
-            </span>
-            <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded-full hidden md:inline">
-              v1.0.0 · dev
-            </span>
-          </div>
+      {/* ── Navbar — pixel-perfect match to CRM ── */}
+      <nav
+        style={{ background: NAV_GRADIENT }}
+        className="shadow-lg border-b-4 border-primary-400 sticky top-0 z-20"
+      >
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
+          <div className="flex items-center justify-between h-20 gap-2">
 
-          {/* ── Desktop nav (hidden on mobile) ── */}
-          <nav className="hidden md:flex items-center gap-1 mx-4 flex-1 justify-center">
-            {NAV.map((n) => (
-              <Link
-                key={n.to}
-                to={n.to}
-                className={`px-3 py-1.5 rounded-md text-sm transition-colors whitespace-nowrap ${
-                  pathname === n.to
-                    ? 'bg-gray-800 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800/60'
-                }`}
-              >
-                {n.label}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-3">
-            {/* ── Health pill (hidden on xs) ── */}
-            <div className="hidden sm:flex items-center">
-              {error ? (
-                <span className="flex items-center gap-1.5 text-xs text-red-400 bg-red-950/50 border border-red-800 px-3 py-1 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
-                  Offline
-                </span>
-              ) : health ? (
-                <span className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-950/50 border border-emerald-800 px-3 py-1 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
-                  <span className="hidden lg:inline">{health.message}</span>
-                  <span className="lg:hidden">Live</span>
-                </span>
-              ) : (
-                <span className="text-xs text-gray-500 animate-pulse">…</span>
-              )}
+            {/* Brand */}
+            <div className="flex items-center gap-2.5 flex-shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-white/25 border border-white/40 flex items-center justify-center text-white font-bold text-xs shadow-lg">
+                PE
+              </div>
+              <span className="text-white font-bold tracking-tight text-sm sm:text-base drop-shadow">
+                Proposal Engine
+              </span>
+              <span className="text-[10px] text-white/70 bg-white/10 border border-white/20 px-2 py-0.5 rounded-full hidden md:inline">
+                v1.0 · dev
+              </span>
             </div>
 
-            {/* ── Hamburger (visible on mobile only) ── */}
-            <button
-              onClick={() => setMenuOpen((o) => !o)}
-              aria-label="Toggle menu"
-              className="md:hidden flex flex-col justify-center items-center w-8 h-8 gap-1.5 rounded-md hover:bg-gray-800 transition-colors"
-            >
-              <span className={`block w-5 h-0.5 bg-gray-300 transition-transform duration-200 ${menuOpen ? 'rotate-45 translate-y-2' : ''}`} />
-              <span className={`block w-5 h-0.5 bg-gray-300 transition-opacity duration-200 ${menuOpen ? 'opacity-0' : ''}`} />
-              <span className={`block w-5 h-0.5 bg-gray-300 transition-transform duration-200 ${menuOpen ? '-rotate-45 -translate-y-2' : ''}`} />
-            </button>
-          </div>
-        </div>
-
-        {/* ── Mobile dropdown menu ── */}
-        {menuOpen && (
-          <div className="md:hidden border-t border-gray-800 bg-gray-900/95 backdrop-blur-sm">
-            <nav className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
+            {/* Desktop nav */}
+            <div className="hidden md:flex items-center gap-1 flex-1 justify-center flex-wrap">
               {NAV.map((n) => (
                 <Link
                   key={n.to}
                   to={n.to}
-                  className={`px-4 py-2.5 rounded-lg text-sm transition-colors ${
-                    pathname === n.to
-                      ? 'bg-gray-800 text-white font-medium'
-                      : 'text-gray-400 hover:text-white hover:bg-gray-800/60'
+                  className={`inline-flex items-center px-3 py-2 rounded-lg text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
+                    pathname === n.to ? ACTIVE_LINK : IDLE_LINK
                   }`}
                 >
                   {n.label}
                 </Link>
               ))}
-              {/* Health status in mobile menu */}
-              <div className="mt-2 pt-2 border-t border-gray-800">
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Health pill */}
+              <div className="hidden sm:flex items-center">
                 {error ? (
-                  <p className="text-xs text-red-400 px-4">Backend offline</p>
+                  <span className="flex items-center gap-1.5 text-xs text-red-200 bg-red-900/40 border border-red-300/30 px-3 py-1 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-300 inline-block" />
+                    <span className="hidden lg:inline">Offline</span>
+                  </span>
                 ) : health ? (
-                  <p className="text-xs text-emerald-400 px-4 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                  <span className="flex items-center gap-1.5 text-xs text-white/90 bg-white/20 border border-white/30 px-3 py-1 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse inline-block" />
+                    <span className="hidden lg:inline">{health.message}</span>
+                    <span className="lg:hidden">Live</span>
+                  </span>
+                ) : (
+                  <span className="text-xs text-white/50 animate-pulse">…</span>
+                )}
+              </div>
+
+              {/* Hamburger — mobile only */}
+              <button
+                onClick={() => setMenuOpen((o) => !o)}
+                aria-label="Toggle menu"
+                className="md:hidden flex flex-col justify-center items-center w-8 h-8 gap-1.5 rounded-md hover:bg-white/20 transition-colors"
+              >
+                <span className={`block w-5 h-0.5 bg-white transition-transform duration-200 ${menuOpen ? 'rotate-45 translate-y-2' : ''}`} />
+                <span className={`block w-5 h-0.5 bg-white transition-opacity duration-200 ${menuOpen ? 'opacity-0' : ''}`} />
+                <span className={`block w-5 h-0.5 bg-white transition-transform duration-200 ${menuOpen ? '-rotate-45 -translate-y-2' : ''}`} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile dropdown */}
+        {menuOpen && (
+          <div
+            className="md:hidden border-t border-white/20 backdrop-blur-sm"
+            style={{ background: '#0d1b3aF2' }}
+          >
+            <nav className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
+              {NAV.map((n) => (
+                <Link
+                  key={n.to}
+                  to={n.to}
+                  className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                    pathname === n.to
+                      ? 'bg-white/30 text-white border border-white/40'
+                      : 'text-white/90 hover:bg-white/20 hover:text-white'
+                  }`}
+                >
+                  {n.label}
+                </Link>
+              ))}
+              <div className="mt-2 pt-2 border-t border-white/20">
+                {error ? (
+                  <p className="text-xs text-red-200 px-4">Backend offline</p>
+                ) : health ? (
+                  <p className="text-xs text-white/80 px-4 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse inline-block" />
                     {health.message}
                   </p>
                 ) : null}
@@ -125,9 +137,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </nav>
           </div>
         )}
-      </header>
+      </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      <main className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-6">
         {children}
       </main>
     </div>
