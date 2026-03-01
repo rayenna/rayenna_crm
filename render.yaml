@@ -21,3 +21,15 @@ services:
       # Reduce OOM risk during build (Vite + tsc can be memory-heavy on free tier)
       - key: NODE_OPTIONS
         value: "--max-old-space-size=2048"
+
+  # ── Proposal Engine (standalone, no connection to CRM) ──────────────────────
+  - type: web
+    name: rayenna-proposal-engine
+    runtime: static
+    plan: free
+    rootDir: proposal-engine/frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: NODE_OPTIONS
+        value: "--max-old-space-size=2048"

@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-
-type HealthStatus = { status: string; message: string };
+import { getActiveCustomer } from '../lib/customerStore';
 
 const NAV = [
-  { label: 'Dashboard',     to: '/'         },
-  { label: 'Costing Sheet', to: '/costing'  },
-  { label: 'BOM',           to: '/bom'      },
-  { label: 'ROI',           to: '/roi'      },
-  { label: 'Proposal',      to: '/proposal' },
+  { label: 'Dashboard',     to: '/'          },
+  { label: 'Customers',     to: '/customers' },
+  { label: 'Costing Sheet', to: '/costing'   },
+  { label: 'BOM',           to: '/bom'       },
+  { label: 'ROI',           to: '/roi'       },
+  { label: 'Proposal',      to: '/proposal'  },
 ];
 
 /* Exact gradient used by the CRM navbar */
@@ -19,18 +19,11 @@ const IDLE_LINK    = 'text-white hover:bg-white/20 hover:text-white';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
-  const [health, setHealth]     = useState<HealthStatus | null>(null);
-  const [error, setError]       = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Re-read active customer on every navigation so the pill stays current
+  const activeCustomer = getActiveCustomer();
 
   useEffect(() => { setMenuOpen(false); }, [pathname]);
-
-  useEffect(() => {
-    fetch('/health')
-      .then((r) => r.json())
-      .then((d: HealthStatus) => setHealth(d))
-      .catch(() => setError(true));
-  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50/80">
@@ -72,23 +65,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Health pill */}
-              <div className="hidden sm:flex items-center">
-                {error ? (
-                  <span className="flex items-center gap-1.5 text-xs text-red-200 bg-red-900/40 border border-red-300/30 px-3 py-1 rounded-full">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-300 inline-block" />
-                    <span className="hidden lg:inline">Offline</span>
-                  </span>
-                ) : health ? (
-                  <span className="flex items-center gap-1.5 text-xs text-white/90 bg-white/20 border border-white/30 px-3 py-1 rounded-full">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse inline-block" />
-                    <span className="hidden lg:inline">{health.message}</span>
-                    <span className="lg:hidden">Live</span>
-                  </span>
-                ) : (
-                  <span className="text-xs text-white/50 animate-pulse">…</span>
-                )}
-              </div>
+              {/* Active customer pill */}
+              {activeCustomer && (
+                <Link
+                  to={`/customers/${activeCustomer.id}`}
+                  className="hidden md:flex items-center gap-1.5 text-xs text-white/90 bg-white/15 hover:bg-white/25 border border-white/30 px-2.5 py-1 rounded-full transition-colors max-w-[160px] xl:max-w-[200px]"
+                  title={`Active: ${activeCustomer.master.name}`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-300 inline-block flex-shrink-0 animate-pulse" />
+                  <span className="truncate font-medium">{activeCustomer.master.name}</span>
+                </Link>
+              )}
 
               {/* Hamburger — mobile only */}
               <button
@@ -124,15 +111,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   {n.label}
                 </Link>
               ))}
-              <div className="mt-2 pt-2 border-t border-white/20">
-                {error ? (
-                  <p className="text-xs text-red-200 px-4">Backend offline</p>
-                ) : health ? (
-                  <p className="text-xs text-white/80 px-4 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse inline-block" />
-                    {health.message}
-                  </p>
-                ) : null}
+              <div className="mt-2 pt-2 border-t border-white/20 space-y-1">
+                {activeCustomer && (
+                  <Link
+                    to={`/customers/${activeCustomer.id}`}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-white/90 hover:bg-white/20 transition-colors"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-300 inline-block flex-shrink-0 animate-pulse" />
+                    <span className="truncate font-medium">{activeCustomer.master.name}</span>
+                    <span className="text-[10px] text-white/50 ml-auto flex-shrink-0">Active</span>
+                  </Link>
+                )}
               </div>
             </nav>
           </div>

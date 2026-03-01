@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Print styles (used by the dedicated print window opened by exportToPdf) ── */
+@media print {
+  @page { size: A4 portrait; margin: 12mm 14mm; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  table, tr { break-inside: avoid; page-break-inside: avoid; }
+  svg { overflow: visible !important; }
+}
+
 @layer base {
   :root {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
