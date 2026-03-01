@@ -7,6 +7,7 @@ import CostingSheet from './pages/CostingSheet';
 import BOMSheet from './pages/BOMSheet';
 import ROICalculator from './pages/ROICalculator';
 import ProposalPreview from './pages/ProposalPreview';
+import HelpPage from './pages/HelpPage';
 import NotFound from './pages/NotFound';
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/bom"                element={<BOMSheet />} />
         <Route path="/roi"                element={<ROICalculator />} />
         <Route path="/proposal"           element={<ProposalPreview />} />
+        <Route path="/help"               element={<HelpPage />} />
         <Route path="*"                   element={<NotFound />} />
       </Routes>
     </Layout>

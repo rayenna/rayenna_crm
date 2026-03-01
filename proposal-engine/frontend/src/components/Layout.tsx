@@ -9,6 +9,7 @@ const NAV = [
   { label: 'BOM',           to: '/bom'       },
   { label: 'ROI',           to: '/roi'       },
   { label: 'Proposal',      to: '/proposal'  },
+  { label: '? Help',        to: '/help'      },
 ];
 
 /* Exact gradient used by the CRM navbar */
