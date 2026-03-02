@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   SHEETS_STORAGE_KEY,
@@ -2448,6 +2448,9 @@ function CustomerForm({ onGenerate }: { onGenerate: (c: CustomerDetails) => void
 // Main page
 // ─────────────────────────────────────────────
 
+// localStorage key for persisting the edited proposal HTML between sessions
+const PROPOSAL_HTML_KEY = 'rayenna_proposal_edited_html_v1';
+
 export default function ProposalPreview() {
   const [proposal, setProposal]               = useState<ProposalData | null>(null);
   const [exporting, setExporting]             = useState<'pdf' | 'docx' | null>(null);
@@ -2456,6 +2459,23 @@ export default function ProposalPreview() {
   const [isEditing, setIsEditing]             = useState(false);
   const [saveStatus, setSaveStatus]           = useState<'idle' | 'saving' | 'saved'>('idle');
   const printRef                              = useRef<HTMLDivElement>(null);
+  // Ref to the contentEditable document body div so we can read its innerHTML on save
+  const docBodyRef                            = useRef<HTMLDivElement>(null);
+
+  // ── Restore saved inline edits when a proposal is (re)generated ──
+  // We use a useEffect so the DOM is fully rendered before we inject HTML.
+  // Priority: customer record editedHtml > localStorage fallback.
+  useEffect(() => {
+    if (!proposal || !docBodyRef.current) return;
+    const activeCustomer = getActiveCustomer();
+    const savedHtml =
+      activeCustomer?.proposal?.editedHtml
+      ?? localStorage.getItem(PROPOSAL_HTML_KEY)
+      ?? null;
+    if (savedHtml) {
+      docBodyRef.current.innerHTML = savedHtml;
+    }
+  }, [proposal]);
 
   // ── Save comments to active customer record ──
   const persistComments = (comments: Record<string, string>) => {
@@ -2471,15 +2491,23 @@ export default function ProposalPreview() {
     }
   };
 
-  // ── Unified save: comments + all 4 artifacts + any inline edits ──
+  // ── Unified save: comments + inline edits + all 4 artifacts ──
   const handleSave = () => {
     if (!proposal) return;
     setSaveStatus('saving');
 
-    // 1. Persist BOM comments
+    // 1. Capture current edited HTML from the document body div
+    const editedHtml = docBodyRef.current?.innerHTML ?? undefined;
+
+    // 2. Persist edited HTML to localStorage as a fast fallback
+    if (editedHtml) {
+      localStorage.setItem(PROPOSAL_HTML_KEY, editedHtml);
+    }
+
+    // 3. Persist BOM comments
     persistComments(bomComments);
 
-    // 2. Save all 4 artifacts to active customer (same logic as handleGenerate)
+    // 4. Save all 4 artifacts + editedHtml to active customer record
     const activeCustomer = getActiveCustomer();
     if (activeCustomer) {
       const sheet = proposal.sheet;
@@ -2506,13 +2534,14 @@ export default function ProposalPreview() {
         generatedAt: proposal.generatedAt,
         summary:     execSummary(proposal).slice(0, 200),
         bomComments,
+        editedHtml,
       };
 
       saveAllArtifacts(activeCustomer.id, costingArtifact, bomArtifact, roiArtifact, proposalArtifact);
       setSavedToCustomer(activeCustomer.master.name);
     }
 
-    // 3. Exit edit mode if active
+    // 5. Exit edit mode
     setIsEditing(false);
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 3000);
@@ -2526,7 +2555,7 @@ export default function ProposalPreview() {
     const p = buildProposal(customer, sheet, bom, roi, roiAutofill);
     setProposal(p);
 
-    // ── Restore saved comments: prefer customer record, fall back to localStorage ──
+    // ── Restore saved comments + editedHtml: prefer customer record, fall back to localStorage ──
     const activeCustomer = getActiveCustomer();
     const savedComments: Record<string, string> =
       activeCustomer?.proposal?.bomComments
@@ -2534,7 +2563,7 @@ export default function ProposalPreview() {
       ?? {};
     setBomComments(savedComments);
 
-    // ── Single save: persist all 4 artifacts to active customer ──
+    // ── Persist all 4 artifacts to active customer, preserving any previously saved editedHtml ──
     if (activeCustomer) {
       const now = new Date().toISOString();
 
@@ -2563,6 +2592,8 @@ export default function ProposalPreview() {
         generatedAt: p.generatedAt,
         summary:     execSummary(p).slice(0, 200),
         bomComments: savedComments,
+        // Preserve any previously saved inline edits — do NOT overwrite with undefined
+        editedHtml:  activeCustomer.proposal?.editedHtml,
       };
 
       saveAllArtifacts(activeCustomer.id, costingArtifact, bomArtifact, roiArtifact, proposalArtifact);
@@ -2570,7 +2601,13 @@ export default function ProposalPreview() {
     }
   };
 
-  const handleRegenerate = () => { setProposal(null); setSavedToCustomer(null); setBomComments({}); };
+  const handleRegenerate = () => {
+    setProposal(null);
+    setSavedToCustomer(null);
+    setBomComments({});
+    setIsEditing(false);
+    setSaveStatus('idle');
+  };
 
   const handleExportPdf = () => {
     if (!proposal) return;
@@ -2729,8 +2766,9 @@ export default function ProposalPreview() {
                 </div>
               </div>
 
-              {/* Document body */}
+              {/* Document body — ref used to read/restore edited HTML */}
               <div
+                ref={docBodyRef}
                 className="px-4 sm:px-8 py-6 sm:py-8"
                 contentEditable={isEditing}
                 suppressContentEditableWarning

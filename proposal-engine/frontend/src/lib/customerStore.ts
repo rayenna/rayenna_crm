@@ -211,6 +211,8 @@ export interface ProposalArtifact {
   summary:     string;
   /** Per-category notes typed in the Bill of Quantities section */
   bomComments?: Record<string, string>;
+  /** Saved innerHTML of the proposal document body — captures inline edits */
+  editedHtml?: string;
 
   // ── Future CRM integration fields ──────────────────────────────────────────
   /**
