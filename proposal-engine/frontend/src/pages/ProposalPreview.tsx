@@ -908,10 +908,16 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
   })() : [];
 
   // ── Commercials ──
-  const grandTotal = p.roiAutofill?.grandTotal ?? p.roi?.inputs.projectCost ?? p.sheet?.grandTotal ?? 0;
+  const grandTotal = p.sheet?.grandTotal ?? p.roiAutofill?.grandTotal ?? p.roi?.inputs.projectCost ?? 0;
   const commercialsSection = grandTotal > 0 ? (() => {
-    const preGst    = Math.round(grandTotal / 1.18);
-    const gstAmount = Math.round(grandTotal - preGst);
+    const grandRounded = Math.round(grandTotal);
+    const hasSheetGst  = !!p.sheet && (p.sheet.totalGst ?? 0) > 0;
+    const gstAmount    = hasSheetGst ? Math.round(p.sheet!.totalGst) : (() => {
+      const pre = Math.round(grandRounded / 1.18);
+      return Math.round(grandRounded - pre);
+    })();
+    const preGst       = hasSheetGst ? Math.round(grandRounded - gstAmount) : Math.round(grandRounded / 1.18);
+    const gstLabel     = hasSheetGst ? 'GST (mixed: 5% & 18%)' : 'GST @ 18% (estimate)';
     const sizeKw    = p.roiAutofill?.systemSizeKw ?? p.sheet?.systemSizeKw ?? 0;
     return [
       heading('Commercials'),
@@ -926,14 +932,14 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
           }),
           new TableRow({
             children: [
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'GST @ 18%', size: 20, color: '1D4ED8' })] })] }),
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: gstLabel, size: 20, color: '1D4ED8' })] })] }),
               new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINR(gstAmount), bold: true, size: 20, color: '1D4ED8' })], alignment: AlignmentType.RIGHT })] }),
             ],
           }),
           new TableRow({
             children: [
               new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'TOTAL PROJECT COST (incl. GST)', bold: true, size: 22, color: white })], alignment: AlignmentType.LEFT })], shading: { type: ShadingType.SOLID, color: navy } }),
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINR(grandTotal), bold: true, size: 24, color: white })], alignment: AlignmentType.RIGHT })], shading: { type: ShadingType.SOLID, color: navy } }),
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINR(grandRounded), bold: true, size: 24, color: white })], alignment: AlignmentType.RIGHT })], shading: { type: ShadingType.SOLID, color: navy } }),
             ],
           }),
         ],
@@ -2246,15 +2252,22 @@ function BOMGroupedTable({ items, comments, onCommentsChange }: {
 }
 
 function CommercialsBlock({ sheet, roi, roiAutofill }: { sheet: SavedSheet | null; roi: ROIResult | null; roiAutofill: RoiAutofill | null }) {
-  // grandTotal already includes base cost + item-level GST + margin
-  const grandTotal = roiAutofill?.grandTotal ?? roi?.inputs.projectCost ?? sheet?.grandTotal ?? 0;
+  // Prefer the saved costing sheet total (it carries the correct mixed GST breakdown).
+  // Fall back to ROI inputs only when no costing sheet exists.
+  const grandTotal = sheet?.grandTotal ?? roiAutofill?.grandTotal ?? roi?.inputs.projectCost ?? 0;
   if (!grandTotal) return null;
 
-  // Present as: Equipment & Installation (lump sum) + 18% GST on that = Total
-  const gstRate    = 18;
-  // Back-calculate the pre-GST value: grandTotal = base × (1 + 0.18)  →  base = grandTotal / 1.18
-  const preGst     = Math.round(grandTotal / 1.18);
-  const gstAmount  = Math.round(grandTotal - preGst);
+  const grandRounded = Math.round(grandTotal);
+
+  // If we have a saved sheet GST total, use it (matches Excel \"Revised Costing Sheet\").
+  // Otherwise fall back to a flat 18% breakdown.
+  const hasSheetGst = !!sheet && (sheet.totalGst ?? 0) > 0;
+  const gstAmount   = hasSheetGst ? Math.round(sheet!.totalGst) : (() => {
+    const pre = Math.round(grandRounded / 1.18);
+    return Math.round(grandRounded - pre);
+  })();
+  const preGst      = hasSheetGst ? Math.round(grandRounded - gstAmount) : Math.round(grandRounded / 1.18);
+  const gstLabel    = hasSheetGst ? 'GST (mixed: 5% & 18%)' : 'GST @ 18% (estimate)';
 
   return (
     <div className="mb-8">
@@ -2279,7 +2292,7 @@ function CommercialsBlock({ sheet, roi, roiAutofill }: { sheet: SavedSheet | nul
               </td>
             </tr>
             <tr className="border-b border-primary-100 bg-blue-50/40">
-              <td className="px-5 py-3 text-blue-700">GST @ {gstRate}%</td>
+              <td className="px-5 py-3 text-blue-700">{gstLabel}</td>
               <td className="px-5 py-3 text-right text-blue-700 font-semibold tabular-nums">
                 {fmtINR(gstAmount)}
               </td>
@@ -2289,7 +2302,7 @@ function CommercialsBlock({ sheet, roi, roiAutofill }: { sheet: SavedSheet | nul
                 Total Project Cost (incl. GST)
               </td>
               <td className="px-5 py-3 text-right text-white font-extrabold text-base tabular-nums drop-shadow">
-                {fmtINR(grandTotal)}
+                {fmtINR(grandRounded)}
               </td>
             </tr>
           </tbody>
@@ -2639,6 +2652,7 @@ export default function ProposalPreview() {
         showGst:       sheet.showGst,
         marginPercent: sheet.marginPercent,
         grandTotal:    sheet.grandTotal,
+        totalGst:      sheet.totalGst ?? 0,
         systemSizeKw:  sheet.systemSizeKw,
       } : null;
 
@@ -2682,6 +2696,7 @@ export default function ProposalPreview() {
           showGst:       activeCustomer.costing.showGst,
           marginPercent: activeCustomer.costing.marginPercent,
           grandTotal:    activeCustomer.costing.grandTotal,
+          totalGst:      activeCustomer.costing.totalGst,
           systemSizeKw:  activeCustomer.costing.systemSizeKw,
         }
       : getLatestSheet();
@@ -2729,6 +2744,7 @@ export default function ProposalPreview() {
         showGst:       sheet.showGst,
         marginPercent: sheet.marginPercent,
         grandTotal:    sheet.grandTotal,
+        totalGst:      sheet.totalGst ?? 0,
         systemSizeKw:  sheet.systemSizeKw,
       } : null;
 

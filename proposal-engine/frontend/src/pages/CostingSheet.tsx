@@ -8,7 +8,7 @@ import {
   CATEGORIES, CATEGORY_GST, CATEGORY_COLORS,
   SHEETS_STORAGE_KEY, BOM_FROM_COSTING_KEY, ROI_AUTOFILL_KEY,
   DEFAULT_MARGIN,
-  snapCategory, catAccentColor, deriveSystemSizeKw, sheetGrandTotal, costingToBom,
+  snapCategory, catAccentColor, deriveSystemSizeKw, sheetGrandTotal, sheetTotalGst, costingToBom,
 } from '../lib/costingConstants';
 import type {
   Category, LineItem, SavedSheet, StoredBom, RoiAutofill,
@@ -19,6 +19,7 @@ import type {
 // ─────────────────────────────────────────────
 
 function exportCostingXlsx(items: LineItem[], sheetName: string, showGst: boolean, marginPercent: number) {
+  const m = 1 + marginPercent / 100;
   const headerRow = showGst
     ? ['Category', 'Item / Description', 'Specification', 'Qty', 'Unit Cost (₹)', 'GST %', 'GST Amount (₹)', 'Total (incl. GST) (₹)']
     : ['Category', 'Item / Description', 'Specification', 'Qty', 'Unit Cost (₹)', 'Total (₹)'];
@@ -26,19 +27,22 @@ function exportCostingXlsx(items: LineItem[], sheetName: string, showGst: boolea
   const dataRows = items
     .filter((r) => r.itemName.trim())
     .map((r) => {
-      const base = toNum(r.quantity) * toNum(r.unitCost);
+      const unitWithMargin = toNum(r.unitCost) * m;
+      const base = toNum(r.quantity) * unitWithMargin;
       const gst  = base * (toNum(r.gstPercent) / 100);
       if (showGst) {
-        return [r.category, r.itemName, r.specification ?? '', toNum(r.quantity), toNum(r.unitCost), toNum(r.gstPercent), Math.round(gst), Math.round(base + gst)];
+        return [r.category, r.itemName, r.specification ?? '', toNum(r.quantity), Math.round(unitWithMargin), toNum(r.gstPercent), Math.round(gst), Math.round(base + gst)];
       }
-      return [r.category, r.itemName, r.specification ?? '', toNum(r.quantity), toNum(r.unitCost), Math.round(base)];
+      return [r.category, r.itemName, r.specification ?? '', toNum(r.quantity), Math.round(unitWithMargin), Math.round(base)];
     });
 
-  const totalBase = items.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost), 0);
-  const totalGst  = showGst ? items.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost) * (toNum(r.gstPercent) / 100), 0) : 0;
-  const subtotal  = totalBase + totalGst;
-  const margin    = subtotal * (marginPercent / 100);
-  const grand     = subtotal + margin;
+  // Subtotal = sum of (qty × unitWithMargin), i.e. base cost at margin-inclusive prices
+  const filtered  = items.filter(r => r.itemName.trim());
+  const totalBase = filtered.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost) * m, 0);
+  const baseNoMargin = filtered.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost), 0);
+  const totalMargin  = totalBase - baseNoMargin;
+  const totalGst  = showGst ? filtered.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost) * m * (toNum(r.gstPercent) / 100), 0) : 0;
+  const grand     = totalBase + totalGst;
 
   const blankRow  = showGst ? ['', '', '', '', '', '', '', ''] : ['', '', '', '', '', ''];
   const subtotalRow = showGst
@@ -48,8 +52,8 @@ function exportCostingXlsx(items: LineItem[], sheetName: string, showGst: boolea
     ? ['', 'Total GST', '', '', '', '', '', Math.round(totalGst)]
     : null;
   const marginRow = showGst
-    ? ['', `Margin (${marginPercent}%)`, '', '', '', '', '', Math.round(margin)]
-    : ['', `Margin (${marginPercent}%)`, '', '', '', Math.round(margin)];
+    ? ['', `Margin (${marginPercent}%)`, '', '', '', '', '', Math.round(totalMargin)]
+    : ['', `Margin (${marginPercent}%)`, '', '', '', Math.round(totalMargin)];
   const grandRow = showGst
     ? ['', 'TOTAL PROJECT COST (incl. GST)', '', '', '', '', '', Math.round(grand)]
     : ['', 'TOTAL PROJECT COST', '', '', '', Math.round(grand)];
@@ -84,25 +88,29 @@ function exportCostingCsv(items: LineItem[], sheetName: string, showGst: boolean
     return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
   };
 
+  const mCsv = 1 + marginPercent / 100;
   const rows = items
     .filter((r) => r.itemName.trim())
     .map((r) => {
-      const base = toNum(r.quantity) * toNum(r.unitCost);
+      const unitWithMargin = toNum(r.unitCost) * mCsv;
+      const base = toNum(r.quantity) * unitWithMargin;
       const gst  = base * (toNum(r.gstPercent) / 100);
       if (showGst) {
-        return [r.category, r.itemName, r.specification ?? '', toNum(r.quantity), toNum(r.unitCost), toNum(r.gstPercent), Math.round(gst), Math.round(base + gst)].map(escape).join(',');
+        return [r.category, r.itemName, r.specification ?? '', toNum(r.quantity), Math.round(unitWithMargin), toNum(r.gstPercent), Math.round(gst), Math.round(base + gst)].map(escape).join(',');
       }
-      return [r.category, r.itemName, r.specification ?? '', toNum(r.quantity), toNum(r.unitCost), Math.round(base)].map(escape).join(',');
+      return [r.category, r.itemName, r.specification ?? '', toNum(r.quantity), Math.round(unitWithMargin), Math.round(base)].map(escape).join(',');
     });
 
-  const totalBase = items.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost), 0);
-  const totalGst  = showGst ? items.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost) * (toNum(r.gstPercent) / 100), 0) : 0;
-  const subtotal  = totalBase + totalGst;
-  const grand     = subtotal + subtotal * (marginPercent / 100);
+  const filteredItems = items.filter(r => r.itemName.trim());
+  const totalBase = filteredItems.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost) * mCsv, 0);
+  const baseNoMargin = filteredItems.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost), 0);
+  const totalMargin  = totalBase - baseNoMargin;
+  const totalGst  = showGst ? filteredItems.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost) * mCsv * (toNum(r.gstPercent) / 100), 0) : 0;
+  const grand     = totalBase + totalGst;
 
   const summaryLines = showGst
-    ? [`,,,,,,,`, `,"Subtotal (excl. GST)",,,,,,${Math.round(totalBase)}`, `,"Total GST",,,,,,${Math.round(totalGst)}`, `,"Margin (${marginPercent}%)",,,,,,${Math.round(subtotal * marginPercent / 100)}`, `,"TOTAL PROJECT COST (incl. GST)",,,,,,${Math.round(grand)}`]
-    : [`,,,,`, `,"Subtotal",,,,${Math.round(totalBase)}`, `,"Margin (${marginPercent}%)",,,,${Math.round(subtotal * marginPercent / 100)}`, `,"TOTAL PROJECT COST",,,,${Math.round(grand)}`];
+    ? [`,,,,,,,`, `,"Subtotal (excl. GST)",,,,,,${Math.round(totalBase)}`, `,"Total GST",,,,,,${Math.round(totalGst)}`, `,"Margin (${marginPercent}%)",,,,,,${Math.round(totalMargin)}`, `,"TOTAL PROJECT COST (incl. GST)",,,,,,${Math.round(grand)}`]
+    : [`,,,,`, `,"Subtotal",,,,${Math.round(totalBase)}`, `,"Margin (${marginPercent}%)",,,,${Math.round(totalMargin)}`, `,"TOTAL PROJECT COST",,,,${Math.round(grand)}`];
 
   const csv = [header, ...rows, ...summaryLines].join('\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -1486,6 +1494,7 @@ function CostRow({
   onRemove,
   isOnly,
   showGst,
+  marginPercent,
 }: {
   index: number;
   control: ReturnType<typeof useForm<FormValues>>['control'];
@@ -1494,12 +1503,15 @@ function CostRow({
   onRemove: () => void;
   isOnly: boolean;
   showGst: boolean;
+  marginPercent: number;
 }) {
   const qty        = useWatch({ control, name: `items.${index}.quantity` });
   const unitCost   = useWatch({ control, name: `items.${index}.unitCost` });
   const gstPercent = useWatch({ control, name: `items.${index}.gstPercent` });
 
-  const baseTotal = toNum(qty) * toNum(unitCost);
+  const m = 1 + (marginPercent / 100);
+  const baseTotalNoMargin = toNum(qty) * toNum(unitCost);
+  const baseTotal = baseTotalNoMargin * m; // margin-inclusive base (excl. GST)
   const gstAmt    = baseTotal * (toNum(gstPercent) / 100);
   const rowTotal  = showGst ? baseTotal + gstAmt : baseTotal;
 
@@ -1587,7 +1599,10 @@ function CostRow({
           ₹{fmt(rowTotal)}
         </span>
         {showGst && baseTotal > 0 && (
-          <span className="text-[9px] text-secondary-400 block">excl. ₹{fmt(baseTotal)}</span>
+          <span className="text-[9px] text-secondary-400 block">
+            excl. ₹{fmt(baseTotal)}
+            {baseTotalNoMargin > 0 && <span className="ml-1">· cost ₹{fmt(baseTotalNoMargin)}</span>}
+          </span>
         )}
       </td>
 
@@ -1610,7 +1625,7 @@ function CostRow({
 // by the parent — no useWatch/getValues inside, zero lag issues.
 function CostingGroupedTable({
   fields, control, register, setValue, remove, append,
-  showGst, itemCategories, liveItems, allCollapsed, resetSignal,
+  showGst, marginPercent, itemCategories, liveItems, allCollapsed, resetSignal,
 }: {
   fields:         { id: string }[];
   control:        ReturnType<typeof useForm<FormValues>>['control'];
@@ -1619,6 +1634,7 @@ function CostingGroupedTable({
   remove:         (index: number) => void;
   append:         (row: LineItem) => void;
   showGst:        boolean;
+  marginPercent:  number;
   itemCategories: string[];   // index → category key, pre-resolved by parent
   liveItems:      LineItem[];
   allCollapsed:   boolean;    // true = collapse all, false = expand all
@@ -1687,8 +1703,9 @@ function CostingGroupedTable({
             const isOpen   = !collapsed.has(cat.value);
             const accent   = catAccentColor(cat.value);
             const catItems = indices.map((i) => liveItems[i]).filter(Boolean);
-            const base     = catItems.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost), 0);
-            const gst      = catItems.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost) * (toNum(r.gstPercent) / 100), 0);
+            const m = 1 + (marginPercent / 100);
+            const base     = catItems.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost) * m, 0);
+            const gst      = catItems.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost) * m * (toNum(r.gstPercent) / 100), 0);
             const catTotal = showGst ? base + gst : base;
 
             return (
@@ -1746,6 +1763,7 @@ function CostingGroupedTable({
                     onRemove={() => remove(globalIdx)}
                     isOnly={fields.length === 1}
                     showGst={showGst}
+                    marginPercent={marginPercent}
                   />
                 ))}
 
@@ -1775,18 +1793,16 @@ function CostingGroupedTable({
 // ─────────────────────────────────────────────
 
 function GrandTotalCard({ items, showGst, marginPercent }: { items: LineItem[]; showGst: boolean; marginPercent: number }) {
-  const totalBase = items.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost), 0);
-  const totalGst  = items.reduce((s, r) => {
-    const base = toNum(r.quantity) * toNum(r.unitCost);
-    return s + base * (toNum(r.gstPercent) / 100);
-  }, 0);
-  const subtotal = showGst ? totalBase + totalGst : totalBase;
-  const margin   = subtotal * (marginPercent / 100);
-  const grand    = subtotal + margin;
+  const m = 1 + (marginPercent / 100);
+  const baseNoMargin = items.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost), 0);
+  const totalBase    = items.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost) * m, 0); // excl. GST, incl. margin
+  const totalMargin  = totalBase - baseNoMargin;
+  const totalGst     = showGst ? sheetTotalGst(items, marginPercent) : 0;
+  const grand        = totalBase + totalGst;
 
   const gstByRate: Record<number, number> = {};
   items.forEach((r) => {
-    const base = toNum(r.quantity) * toNum(r.unitCost);
+    const base = toNum(r.quantity) * toNum(r.unitCost) * m;
     const rate = toNum(r.gstPercent);
     if (rate > 0 && base > 0) {
       gstByRate[rate] = (gstByRate[rate] ?? 0) + base * (rate / 100);
@@ -1800,9 +1816,15 @@ function GrandTotalCard({ items, showGst, marginPercent }: { items: LineItem[]; 
       </div>
       <div className="bg-white divide-y divide-primary-100">
         <div className="flex items-center justify-between px-4 py-2.5">
-          <span className="text-xs text-secondary-500">Equipment subtotal {showGst ? '(excl. GST)' : ''}</span>
+          <span className="text-xs text-secondary-500">Subtotal {showGst ? '(excl. GST)' : ''}</span>
           <span className="text-sm font-medium text-secondary-700 tabular-nums">₹{fmt(totalBase)}</span>
         </div>
+        {totalMargin > 0 && (
+          <div className="flex items-center justify-between px-4 py-2 bg-yellow-50/40">
+            <span className="text-xs text-secondary-500">Margin ({marginPercent}%)</span>
+            <span className="text-xs font-medium text-yellow-700 tabular-nums">+ ₹{fmt(totalMargin)}</span>
+          </div>
+        )}
         {showGst && Object.entries(gstByRate).sort(([a], [b]) => Number(a) - Number(b)).map(([rate, amt]) => (
           <div key={rate} className="flex items-center justify-between px-4 py-2 bg-blue-50/40">
             <span className="text-xs text-blue-700">
@@ -1820,10 +1842,6 @@ function GrandTotalCard({ items, showGst, marginPercent }: { items: LineItem[]; 
             <span className="text-sm font-bold text-blue-800 tabular-nums">₹{fmt(totalGst)}</span>
           </div>
         )}
-        <div className="flex items-center justify-between px-4 py-2 bg-yellow-50/60">
-          <span className="text-xs text-secondary-500">Margin ({marginPercent}%)</span>
-          <span className="text-sm font-medium text-yellow-600 tabular-nums">+ ₹{fmt(margin)}</span>
-        </div>
       </div>
       <div
         className="flex items-center justify-between px-4 py-3"
@@ -1996,6 +2014,7 @@ export default function CostingSheet() {
   const handleSaveSheet = useCallback((name: string, description: string) => {
     const validItems  = liveItems.filter((r) => r.itemName.trim());
     const grand       = sheetGrandTotal(validItems, showGst, marginPercent);
+    const totalGst    = showGst ? sheetTotalGst(validItems, marginPercent) : 0;
     const sizeKw      = deriveSystemSizeKw(validItems);
     const now         = new Date().toISOString();
 
@@ -2014,6 +2033,7 @@ export default function CostingSheet() {
       showGst,
       marginPercent,
       grandTotal:    grand,
+      totalGst,
       systemSizeKw:  sizeKw,
     };
 
@@ -2055,6 +2075,7 @@ export default function CostingSheet() {
         showGst,
         marginPercent,
         grandTotal:    grand,
+        totalGst,
         systemSizeKw:  sizeKw,
       };
       upsertCustomer({ ...activeCustomer, costing: artifact, updatedAt: now });
@@ -2435,6 +2456,7 @@ export default function CostingSheet() {
                 remove={remove}
                 append={append}
                 showGst={showGst}
+                marginPercent={marginPercent}
                 itemCategories={fields.map((_, i) =>
                   initialItemsRef.current[i]?.category || liveItems[i]?.category || 'others'
                 )}

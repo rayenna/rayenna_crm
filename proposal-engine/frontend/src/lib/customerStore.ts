@@ -191,6 +191,7 @@ export interface CostingArtifact {
   showGst:       boolean;
   marginPercent: number;
   grandTotal:    number;
+  totalGst:      number;  // actual GST on margin-inclusive prices (for Proposal display)
   systemSizeKw:  number;
 }
 
@@ -380,6 +381,7 @@ export function switchActiveCustomer(id: string): void {
       showGst:       record.costing.showGst,
       marginPercent: record.costing.marginPercent,
       grandTotal:    record.costing.grandTotal,
+      totalGst:      record.costing.totalGst ?? 0,
       systemSizeKw:  record.costing.systemSizeKw,
     };
     localStorage.setItem(WIP_KEYS.sheets, JSON.stringify([sheet]));

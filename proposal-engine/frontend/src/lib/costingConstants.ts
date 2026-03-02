@@ -88,6 +88,7 @@ export interface SavedSheet {
   showGst:       boolean;
   marginPercent: number;
   grandTotal:    number;
+  totalGst:      number;  // actual GST on margin-inclusive prices (for Proposal display)
   systemSizeKw:  number;
 }
 
@@ -229,17 +230,34 @@ export function deriveSystemSizeKw(items: LineItem[]): number {
   return totalWatts > 0 ? Math.round((totalWatts / 1000) * 100) / 100 : 0;
 }
 
+/**
+ * Correct formula (Revised Costing Sheet):
+ *   Margin is applied to each unit price first.
+ *   GST is then calculated on the margin-inclusive unit price.
+ *
+ *   unitPriceWithMargin = unitCost × (1 + marginPct/100)
+ *   rowBase             = qty × unitPriceWithMargin
+ *   rowGst              = rowBase × gstPct/100
+ *   grand               = Σ(rowBase + rowGst)
+ */
 export function sheetGrandTotal(items: LineItem[], inclGst: boolean, marginPct = DEFAULT_MARGIN): number {
   const toNum = (v: string) => parseFloat(v) || 0;
-  const base = items.reduce((s, r) => s + toNum(r.quantity) * toNum(r.unitCost), 0);
-  const gst  = inclGst
-    ? items.reduce((s, r) => {
-        const b = toNum(r.quantity) * toNum(r.unitCost);
-        return s + b * (toNum(r.gstPercent) / 100);
-      }, 0)
-    : 0;
-  const subtotal = base + gst;
-  return subtotal + subtotal * (marginPct / 100);
+  const m = 1 + marginPct / 100;
+  return items.reduce((s, r) => {
+    const base = toNum(r.quantity) * toNum(r.unitCost) * m;
+    const gst  = inclGst ? base * (toNum(r.gstPercent) / 100) : 0;
+    return s + base + gst;
+  }, 0);
+}
+
+/** Total GST amount at margin-inclusive prices (for Proposal Commercials display). */
+export function sheetTotalGst(items: LineItem[], marginPct = DEFAULT_MARGIN): number {
+  const toNum = (v: string) => parseFloat(v) || 0;
+  const m = 1 + marginPct / 100;
+  return items.reduce((s, r) => {
+    const base = toNum(r.quantity) * toNum(r.unitCost) * m;
+    return s + base * (toNum(r.gstPercent) / 100);
+  }, 0);
 }
 
 export function costingToBom(items: LineItem[]): BomRowGenerated[] {
