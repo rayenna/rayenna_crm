@@ -440,7 +440,28 @@ function exportToPdf(printRootId: string): void {
   };
 }
 
-function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?: Record<string, string>, logoImageData?: ArrayBuffer): Document {
+/**
+ * Text overrides extracted from the live DOM before DOCX export.
+ * Keys match the data-docx-section attribute values on rendered elements.
+ * Values are the current innerText of those elements (may include user edits).
+ */
+interface TextOverrides {
+  'exec-summary-p1'?:    string;
+  'exec-summary-p2'?:    string;
+  'about-p1'?:           string;
+  'about-p2'?:           string;
+  'financial-p1'?:       string;
+  'financial-p2'?:       string;
+  'financial-no-roi'?:   string;
+  'scope-intro'?:        string;
+  'what-we-offer-intro'?: string;
+  'our-process-intro'?:  string;
+  'section-closing-note'?: string;
+  // ListBlock items: key = "list-<title>", value = newline-joined item texts
+  [key: string]: string | undefined;
+}
+
+function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?: Record<string, string>, logoImageData?: ArrayBuffer, textOverrides?: TextOverrides): Document {
   const navy  = '0d1b3a';
   const white = 'FFFFFF';
 
@@ -953,10 +974,17 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
       ],
     }),
     new Paragraph({ text: '', spacing: { after: 120 } }),
-    // Body paragraphs
+    // Body paragraphs — use DOM-extracted text if user has edited inline
     (() => {
       const sz  = (p.roi?.inputs.systemSizeKw ?? 0) > 0 ? p.roi!.inputs.systemSizeKw : (p.systemSizeKw || p.roiAutofill?.systemSizeKw || 0);
       const loc = p.customer.location;
+      const override = textOverrides?.['exec-summary-p1'];
+      if (override) {
+        return new Paragraph({
+          children: [new TextRun({ text: override, size: 22, color: '374151' })],
+          spacing: { after: 120 },
+        });
+      }
       return new Paragraph({
         children: [
           new TextRun({ text: 'Rayenna Energy Private Limited is pleased to present this techno-commercial proposal for the design, supply, installation, and commissioning of', size: 22, color: '374151' }),
@@ -969,7 +997,7 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
       });
     })(),
     new Paragraph({
-      children: [new TextRun({ text: 'This proposal has been prepared based on a detailed assessment of your energy requirements and site conditions. The proposed solar system will significantly reduce your electricity costs, provide energy independence, and contribute to a cleaner environment.', size: 22, color: '374151' })],
+      children: [new TextRun({ text: textOverrides?.['exec-summary-p2'] ?? 'This proposal has been prepared based on a detailed assessment of your energy requirements and site conditions. The proposed solar system will significantly reduce your electricity costs, provide energy independence, and contribute to a cleaner environment.', size: 22, color: '374151' })],
       spacing: { after: 160 },
     }),
     // Key metrics table (only if data available)
@@ -1005,14 +1033,16 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
     })(),
     heading('About Rayenna Energy'),
     new Paragraph({
-      children: [
-        new TextRun({ text: 'Rayenna Energy Private Limited', bold: true, size: 22, color: navy }),
-        new TextRun({ text: ' is a leading solar energy solutions provider based in Kochi, Kerala. We specialise in the design, supply, installation, and commissioning of On-Grid, Off-Grid, and Hybrid Solar Power Plants for residential, commercial, and industrial clients across India.', size: 22, color: '374151' }),
-      ],
+      children: textOverrides?.['about-p1']
+        ? [new TextRun({ text: textOverrides['about-p1'], size: 22, color: '374151' })]
+        : [
+            new TextRun({ text: 'Rayenna Energy Private Limited', bold: true, size: 22, color: navy }),
+            new TextRun({ text: ' is a leading solar energy solutions provider based in Kochi, Kerala. We specialise in the design, supply, installation, and commissioning of On-Grid, Off-Grid, and Hybrid Solar Power Plants for residential, commercial, and industrial clients across India.', size: 22, color: '374151' }),
+          ],
       spacing: { after: 120 },
     }),
     new Paragraph({
-      children: [new TextRun({ text: 'Our team of experienced engineers and technicians ensures that every installation meets the highest standards of quality, safety, and performance. We are committed to delivering reliable, cost-effective solar solutions that provide long-term value to our customers.', size: 22, color: '374151' })],
+      children: [new TextRun({ text: textOverrides?.['about-p2'] ?? 'Our team of experienced engineers and technicians ensures that every installation meets the highest standards of quality, safety, and performance. We are committed to delivering reliable, cost-effective solar solutions that provide long-term value to our customers.', size: 22, color: '374151' })],
       spacing: { after: 160 },
     }),
     // Key Highlights header row
@@ -1073,7 +1103,7 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
                 left:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
                 right:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
               },
-              children: WHAT_WE_OFFER_INTRO.split('\n\n').map((para) =>
+              children: (textOverrides?.['what-we-offer-intro'] ?? WHAT_WE_OFFER_INTRO).split('\n\n').map((para) =>
                 new Paragraph({
                   children: [new TextRun({ text: para, size: 22, color: '374151' })],
                   spacing: { after: 120 },
@@ -1172,16 +1202,23 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
           ],
         }),
         new Paragraph({ text: '', spacing: { after: 120 } }),
-        // LCOE paragraph
+        // LCOE paragraph — use DOM override if available
         new Paragraph({
-          children: [
-            new TextRun({ text: 'Levelised Cost of Energy (LCOE): ', bold: true, size: 22, color: navy }),
-            new TextRun({ text: `At ₹${r.lcoe.toFixed(4)}/kWh, this system generates electricity at a fraction of the current grid tariff of ₹${r.inputs.tariff}/kWh — locking in savings that grow every year as tariffs escalate at ${r.inputs.escalationPercent}% annually.`, size: 22, color: '374151' }),
-          ],
+          children: textOverrides?.['financial-p1']
+            ? [new TextRun({ text: textOverrides['financial-p1'], size: 22, color: '374151' })]
+            : [
+                new TextRun({ text: 'Levelised Cost of Energy (LCOE): ', bold: true, size: 22, color: navy }),
+                new TextRun({ text: `At ₹${r.lcoe.toFixed(4)}/kWh, this system generates electricity at a fraction of the current grid tariff of ₹${r.inputs.tariff}/kWh — locking in savings that grow every year as tariffs escalate at ${r.inputs.escalationPercent}% annually.`, size: 22, color: '374151' }),
+              ],
           spacing: { after: 100 },
         }),
+        // Tariff escalation paragraph — use DOM override if available
+        ...(textOverrides?.['financial-p2'] ? [new Paragraph({
+          children: [new TextRun({ text: textOverrides['financial-p2'], size: 22, color: '374151' })],
+          spacing: { after: 100 },
+        })] : []),
       ];
-    })() : multilineParagraphs(savingsText(p))),
+    })() : multilineParagraphs(textOverrides?.['financial-no-roi'] ?? savingsText(p))),
     new Paragraph({ text: '', spacing: { after: 80 } }),
     heading('Environmental Impact'),
     new Paragraph({
@@ -1283,7 +1320,7 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
     new Paragraph({ text: '', spacing: { after: 120 } }),
     heading('Scope of Work'),
     new Paragraph({
-      children: [new TextRun({ text: scopeText(p), size: 22, color: '374151' })],
+      children: [new TextRun({ text: textOverrides?.['scope-intro'] ?? scopeText(p), size: 22, color: '374151' })],
       spacing: { after: 160 },
     }),
     new Table({
@@ -1348,13 +1385,21 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
     ...bomSection,
     ...commercialsSection,
     heading('Client Scope'),
-    ...CLIENT_SCOPE.map((t, i) => listItem(t, i + 1)),
+    ...(textOverrides?.['list-client-scope']
+      ? textOverrides['list-client-scope'].split('\n').filter(Boolean).map((t, i) => listItem(t, i + 1))
+      : CLIENT_SCOPE.map((t, i) => listItem(t, i + 1))),
     heading('Terms & Conditions'),
-    ...TERMS_AND_CONDITIONS.map((t, i) => listItem(t, i + 1)),
+    ...(textOverrides?.['list-terms-&-conditions']
+      ? textOverrides['list-terms-&-conditions'].split('\n').filter(Boolean).map((t, i) => listItem(t, i + 1))
+      : TERMS_AND_CONDITIONS.map((t, i) => listItem(t, i + 1))),
     heading('Service Details'),
-    ...SERVICE_DETAILS.map((t, i) => listItem(t, i + 1)),
+    ...(textOverrides?.['list-service-details']
+      ? textOverrides['list-service-details'].split('\n').filter(Boolean).map((t, i) => listItem(t, i + 1))
+      : SERVICE_DETAILS.map((t, i) => listItem(t, i + 1))),
     heading('Payment Terms'),
-    ...PAYMENT_TERMS.map((t, i) => listItem(t, i + 1)),
+    ...(textOverrides?.['list-payment-terms']
+      ? textOverrides['list-payment-terms'].split('\n').filter(Boolean).map((t, i) => listItem(t, i + 1))
+      : PAYMENT_TERMS.map((t, i) => listItem(t, i + 1))),
     heading('Account Details'),
     new Table({
       width: { size: 60, type: WidthType.PERCENTAGE },
@@ -1381,11 +1426,15 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
     }),
     new Paragraph({ text: '', spacing: { after: 120 } }),
     heading('Warranty'),
-    ...WARRANTY_TERMS.map((t, i) => listItem(t, i + 1)),
+    ...(textOverrides?.['list-warranty']
+      ? textOverrides['list-warranty'].split('\n').filter(Boolean).map((t, i) => listItem(t, i + 1))
+      : WARRANTY_TERMS.map((t, i) => listItem(t, i + 1))),
     heading('Material Delivery Period'),
-    ...DELIVERY_TERMS.map((t, i) => listItem(t, i + 1)),
+    ...(textOverrides?.['list-material-delivery-period']
+      ? textOverrides['list-material-delivery-period'].split('\n').filter(Boolean).map((t, i) => listItem(t, i + 1))
+      : DELIVERY_TERMS.map((t, i) => listItem(t, i + 1))),
     heading('Closing Note'),
-    ...multilineParagraphs(closingText(p)),
+    ...multilineParagraphs(textOverrides?.['section-closing-note'] ?? closingText(p)),
     new Paragraph({
       children: [new TextRun({ text: `Generated: ${new Date(p.generatedAt).toLocaleString('en-IN')}  |  ${p.refNumber}`, size: 16, color: '9CA3AF', italics: true })],
       alignment: AlignmentType.CENTER,
@@ -1406,7 +1455,40 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
   });
 }
 
-async function exportToDocx(p: ProposalData, bomComments?: Record<string, string>): Promise<void> {
+/**
+ * Walk the rendered proposal DOM and extract current text content from every
+ * element that carries a data-docx-section attribute.
+ *
+ * For list sections (ListBlock), each data-docx-list-text span is collected
+ * and joined with newlines so buildDocx can re-render them as list items.
+ */
+function extractTextOverrides(root: HTMLElement): TextOverrides {
+  const overrides: TextOverrides = {};
+
+  // Collect all elements tagged with data-docx-section
+  const sections = root.querySelectorAll<HTMLElement>('[data-docx-section]');
+  sections.forEach((el) => {
+    const key = el.getAttribute('data-docx-section');
+    if (!key) return;
+
+    // Check if this section contains list items (ListBlock pattern)
+    const listTexts = el.querySelectorAll<HTMLElement>('[data-docx-list-text]');
+    if (listTexts.length > 0) {
+      // Join each item's text with newline — buildDocx splits on '\n' to rebuild list
+      overrides[key] = Array.from(listTexts)
+        .map((span) => span.innerText.trim())
+        .filter(Boolean)
+        .join('\n');
+    } else {
+      // Plain text / paragraph section
+      overrides[key] = el.innerText.trim();
+    }
+  });
+
+  return overrides;
+}
+
+async function exportToDocx(p: ProposalData, bomComments?: Record<string, string>, textOverrides?: TextOverrides): Promise<void> {
   let diagramImageData: ArrayBuffer | undefined;
   let logoImageData: ArrayBuffer | undefined;
   try {
@@ -1417,7 +1499,7 @@ async function exportToDocx(p: ProposalData, bomComments?: Record<string, string
     if (diagResp.ok) diagramImageData = await diagResp.arrayBuffer();
     if (logoResp.ok) logoImageData    = await logoResp.arrayBuffer();
   } catch { /* image embedding optional */ }
-  const doc = buildDocx(p, diagramImageData, bomComments, logoImageData);
+  const doc = buildDocx(p, diagramImageData, bomComments, logoImageData, textOverrides);
   const blob = await Packer.toBlob(doc);
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1452,6 +1534,7 @@ const SECTION_META: Record<string, { icon: string; accent: string }> = {
 
 function SectionBlock({ title, content }: { title: string; content: string }) {
   const meta = SECTION_META[title] ?? { icon: '📌', accent: '#0d1b3a' };
+  const sectionKey = `section-${title.toLowerCase().replace(/\s+/g, '-')}`;
   return (
     <div className="mb-8">
       <div className="flex items-center gap-3 mb-4">
@@ -1464,7 +1547,7 @@ function SectionBlock({ title, content }: { title: string; content: string }) {
           {title}
         </h2>
       </div>
-      <div className="text-secondary-700 text-sm leading-relaxed whitespace-pre-line pl-7">{content}</div>
+      <div data-docx-section={sectionKey} className="text-secondary-700 text-sm leading-relaxed whitespace-pre-line pl-7">{content}</div>
     </div>
   );
 }
@@ -1509,13 +1592,13 @@ function ExecutiveSummaryBlock({ proposal }: { proposal: ProposalData }) {
       </div>
 
       {/* Body text */}
-      <p className="text-sm text-secondary-700 leading-relaxed mb-4">
+      <p data-docx-section="exec-summary-p1" className="text-sm text-secondary-700 leading-relaxed mb-4">
         Rayenna Energy Private Limited is pleased to present this techno-commercial proposal for the
         design, supply, installation, and commissioning of
         {sz > 0 ? <> a <span className="font-bold text-secondary-800">{sz} kW</span></> : ' an'} On-Grid
         Solar Photovoltaic Power Plant at your premises{loc ? <> in <span className="font-semibold text-secondary-800">{loc}</span></> : ''}.
       </p>
-      <p className="text-sm text-secondary-700 leading-relaxed mb-5">
+      <p data-docx-section="exec-summary-p2" className="text-sm text-secondary-700 leading-relaxed mb-5">
         This proposal has been prepared based on a detailed assessment of your energy requirements and
         site conditions. The proposed solar system will significantly reduce your electricity costs,
         provide energy independence, and contribute to a cleaner environment.
@@ -1556,13 +1639,13 @@ function AboutRayennaBlock() {
       </div>
 
       {/* Intro paragraphs */}
-      <p className="text-sm text-secondary-700 leading-relaxed mb-2">
+      <p data-docx-section="about-p1" className="text-sm text-secondary-700 leading-relaxed mb-2">
         <span className="font-bold text-secondary-800">Rayenna Energy Private Limited</span> is a leading
         solar energy solutions provider based in Kochi, Kerala. We specialise in the design, supply,
         installation, and commissioning of On-Grid, Off-Grid, and Hybrid Solar Power Plants for
         residential, commercial, and industrial clients across India.
       </p>
-      <p className="text-sm text-secondary-700 leading-relaxed mb-5">
+      <p data-docx-section="about-p2" className="text-sm text-secondary-700 leading-relaxed mb-5">
         Our team of experienced engineers and technicians ensures that every installation meets the
         highest standards of quality, safety, and performance. We are committed to delivering reliable,
         cost-effective solar solutions that provide long-term value to our customers.
@@ -1609,7 +1692,7 @@ function WhatWeOfferBlock() {
       <div className="flex flex-col lg:flex-row gap-6 mb-6">
         {/* Left: intro text */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-secondary-700 leading-relaxed mb-4">
+          <p data-docx-section="what-we-offer-intro" className="text-sm text-secondary-700 leading-relaxed mb-4">
             {WHAT_WE_OFFER_INTRO.split('\n\n').map((para, i) => (
               <span key={i}>{i > 0 && <><br /><br /></>}{para}</span>
             ))}
@@ -1660,7 +1743,7 @@ function OurProcessBlock() {
         </h2>
       </div>
 
-      <p className="text-sm text-secondary-700 leading-relaxed mb-5">{OUR_PROCESS_INTRO}</p>
+      <p data-docx-section="our-process-intro" className="text-sm text-secondary-700 leading-relaxed mb-5">{OUR_PROCESS_INTRO}</p>
 
       {/* Process steps — horizontal timeline-style on desktop, stacked on mobile */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -1701,7 +1784,7 @@ function ScopeOfWorkBlock({ proposal }: { proposal: ProposalData }) {
         <span className="text-lg leading-none">🔩</span>
         <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0369a1' }}>Scope of Work</h2>
       </div>
-      <p className="text-sm text-secondary-500 mb-5 pl-7">
+      <p data-docx-section="scope-intro" className="text-sm text-secondary-500 mb-5 pl-7">
         The scope of work for the {sz > 0 ? `${sz} kW ` : ''}On-Grid Solar Power Plant covers four key areas:
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1821,13 +1904,13 @@ function FinancialBenefitsBlock({ proposal }: { proposal: ProposalData }) {
 
             {/* Supporting paragraphs */}
             <div className="space-y-2.5 pl-1">
-              <p className="text-sm text-secondary-600 leading-relaxed">
+              <p data-docx-section="financial-p1" className="text-sm text-secondary-600 leading-relaxed">
                 <span className="font-semibold text-secondary-800">Levelised Cost of Energy (LCOE):</span>{' '}
                 At <span className="font-bold text-primary-700">₹{roi.lcoe.toFixed(4)}/kWh</span>, this system generates electricity
                 at a fraction of the current grid tariff of ₹{roi.inputs.tariff}/kWh — locking in energy cost savings
                 that grow every year as tariffs escalate.
               </p>
-              <p className="text-sm text-secondary-600 leading-relaxed">
+              <p data-docx-section="financial-p2" className="text-sm text-secondary-600 leading-relaxed">
                 <span className="font-semibold text-secondary-800">Tariff escalation advantage:</span>{' '}
                 With an assumed annual tariff escalation of{' '}
                 <span className="font-bold text-primary-700">{roi.inputs.escalationPercent}%</span>,
@@ -1839,7 +1922,7 @@ function FinancialBenefitsBlock({ proposal }: { proposal: ProposalData }) {
         );
       })() : (
         <div className="mb-6 rounded-xl border border-emerald-100 bg-emerald-50/40 px-5 py-4">
-          <p className="text-sm text-secondary-700 leading-relaxed">
+          <p data-docx-section="financial-no-roi" className="text-sm text-secondary-700 leading-relaxed">
             The proposed solar system will generate clean electricity from sunlight, directly offsetting
             your grid electricity consumption and reducing your monthly electricity bills substantially.
             With rising electricity tariffs in India (historically escalating at 5–7% per year), the
@@ -2229,6 +2312,7 @@ const LIST_META: Record<string, { icon: string; accent: string; bg: string; bord
 
 function ListBlock({ title, items }: { title: string; items: string[] }) {
   const meta = LIST_META[title] ?? { icon: '📌', accent: '#0d1b3a', bg: '#f8fafc', border: '#e2e8f0' };
+  const sectionKey = `list-${title.toLowerCase().replace(/\s+/g, '-')}`;
   return (
     <div className="mb-8">
       {/* Section header */}
@@ -2239,12 +2323,14 @@ function ListBlock({ title, items }: { title: string; items: string[] }) {
       </div>
       {/* Items */}
       <div
+        data-docx-section={sectionKey}
         className="rounded-xl border overflow-hidden"
         style={{ borderColor: meta.border, background: meta.bg }}
       >
         {items.map((item, i) => (
           <div
             key={i}
+            data-docx-list-item={i}
             className="flex items-start gap-3 px-4 py-2.5 text-sm text-secondary-700 border-b last:border-b-0"
             style={{ borderColor: `${meta.border}80` }}
           >
@@ -2254,7 +2340,7 @@ function ListBlock({ title, items }: { title: string; items: string[] }) {
             >
               {i + 1}
             </span>
-            <span className="leading-relaxed">{item}</span>
+            <span data-docx-list-text className="leading-relaxed">{item}</span>
           </div>
         ))}
       </div>
@@ -2491,13 +2577,14 @@ export default function ProposalPreview() {
     }
   };
 
-  // ── Unified save: comments + inline edits + all 4 artifacts ──
+  // ── Unified save: comments + inline edits + textOverrides + all 4 artifacts ──
   const handleSave = () => {
     if (!proposal) return;
     setSaveStatus('saving');
 
-    // 1. Capture current edited HTML from the document body div
-    const editedHtml = docBodyRef.current?.innerHTML ?? undefined;
+    // 1. Capture current edited HTML and extract per-section text overrides
+    const editedHtml     = docBodyRef.current?.innerHTML ?? undefined;
+    const textOverrides  = docBodyRef.current ? extractTextOverrides(docBodyRef.current) : undefined;
 
     // 2. Persist edited HTML to localStorage as a fast fallback
     if (editedHtml) {
@@ -2507,7 +2594,7 @@ export default function ProposalPreview() {
     // 3. Persist BOM comments
     persistComments(bomComments);
 
-    // 4. Save all 4 artifacts + editedHtml to active customer record
+    // 4. Save all 4 artifacts + editedHtml + textOverrides to active customer record
     const activeCustomer = getActiveCustomer();
     if (activeCustomer) {
       const sheet = proposal.sheet;
@@ -2535,6 +2622,7 @@ export default function ProposalPreview() {
         summary:     execSummary(proposal).slice(0, 200),
         bomComments,
         editedHtml,
+        textOverrides,
       };
 
       saveAllArtifacts(activeCustomer.id, costingArtifact, bomArtifact, roiArtifact, proposalArtifact);
@@ -2592,8 +2680,9 @@ export default function ProposalPreview() {
         generatedAt: p.generatedAt,
         summary:     execSummary(p).slice(0, 200),
         bomComments: savedComments,
-        // Preserve any previously saved inline edits — do NOT overwrite with undefined
-        editedHtml:  activeCustomer.proposal?.editedHtml,
+        // Preserve any previously saved inline edits and text overrides — do NOT overwrite with undefined
+        editedHtml:    activeCustomer.proposal?.editedHtml,
+        textOverrides: activeCustomer.proposal?.textOverrides,
       };
 
       saveAllArtifacts(activeCustomer.id, costingArtifact, bomArtifact, roiArtifact, proposalArtifact);
@@ -2618,7 +2707,16 @@ export default function ProposalPreview() {
     if (!proposal) return;
     setExporting('docx');
     try {
-      await exportToDocx(proposal, bomComments);
+      // Prefer live DOM overrides (captures any unsaved edits too);
+      // fall back to last-saved overrides from the customer record.
+      const liveOverrides = docBodyRef.current
+        ? extractTextOverrides(docBodyRef.current)
+        : undefined;
+      const savedOverrides = getActiveCustomer()?.proposal?.textOverrides;
+      const textOverrides = (liveOverrides && Object.keys(liveOverrides).length > 0)
+        ? liveOverrides
+        : savedOverrides;
+      await exportToDocx(proposal, bomComments, textOverrides);
     } finally {
       setExporting(null);
     }
