@@ -11,6 +11,21 @@ interface AccordionProps {
   defaultOpen?: boolean;
 }
 
+/* ─── Back to top link ───────────────────────────────────────────────────── */
+function BackToTop() {
+  return (
+    <div className="pt-4 mt-4 border-t border-gray-100 flex justify-end">
+      <a
+        href="#toc"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-500 hover:text-indigo-700 transition-colors group"
+      >
+        <span className="transition-transform group-hover:-translate-y-0.5">↑</span>
+        Back to top
+      </a>
+    </div>
+  );
+}
+
 /* ─── Accordion wrapper (always open on md+, collapsible on mobile) ──────── */
 function Section({ id, icon, title, accent, children, defaultOpen = false }: AccordionProps) {
   const [open, setOpen] = useState(defaultOpen);
@@ -31,8 +46,9 @@ function Section({ id, icon, title, accent, children, defaultOpen = false }: Acc
         </span>
       </button>
       {/* Body — always visible on md+ */}
-      <div className={`${open ? 'block' : 'hidden'} md:block border-t border-gray-100 px-5 pb-6 pt-4`}>
+      <div className={`${open ? 'block' : 'hidden'} md:block border-t border-gray-100 px-5 pb-5 pt-4`}>
         {children}
+        <BackToTop />
       </div>
     </div>
   );
@@ -154,7 +170,7 @@ export default function HelpPage() {
       </div>
 
       {/* ── Table of Contents ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+      <div id="toc" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 scroll-mt-24">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Jump to section</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {TOC.map((t) => (
