@@ -52,15 +52,15 @@ function EditCustomerModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-secondary-900/50 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative bg-white rounded-2xl shadow-2xl border-2 border-primary-200/50 w-full max-w-lg overflow-hidden">
-        <div className="px-6 py-4 flex items-center justify-between" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
+      <div className="relative bg-white rounded-2xl shadow-2xl border-2 border-primary-200/50 w-full max-w-lg flex flex-col" style={{ maxHeight: 'min(96vh, 600px)' }}>
+        <div className="px-6 py-4 flex-shrink-0 flex items-center justify-between" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
           <div className="flex items-center gap-3">
             <span className="text-xl">✏️</span>
             <h2 className="text-white font-extrabold text-base drop-shadow">Edit Customer Details</h2>
           </div>
           <button onClick={onCancel} className="text-white/70 hover:text-white text-xl leading-none">×</button>
         </div>
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-secondary-600 uppercase tracking-wide mb-1.5">Customer / Company Name <span className="text-red-400">*</span></label>
@@ -90,9 +90,9 @@ function EditCustomerModal({
             </div>
           </div>
         </div>
-        <div className="px-6 py-4 border-t border-secondary-100 bg-secondary-50/60 flex items-center justify-end gap-3">
-          <button onClick={onCancel} className="text-sm text-secondary-500 hover:text-secondary-700 px-4 py-2 rounded-lg border border-secondary-200 hover:bg-secondary-100 transition-colors">Cancel</button>
-          <button onClick={handleSave} className="text-sm text-white font-semibold px-5 py-2 rounded-xl shadow-lg transition-all"
+        <div className="px-6 py-4 border-t border-secondary-100 bg-secondary-50/60 flex-shrink-0 flex items-center justify-end gap-3">
+          <button onClick={onCancel} className="text-sm text-secondary-500 hover:text-secondary-700 px-4 py-2.5 rounded-lg border border-secondary-200 hover:bg-secondary-100 transition-colors">Cancel</button>
+          <button onClick={handleSave} className="text-sm text-white font-semibold px-5 py-2.5 rounded-xl shadow-lg transition-all"
             style={{ background: '#0d1b3a' }}
             onMouseEnter={e => (e.currentTarget.style.background = '#0a1530')}
             onMouseLeave={e => (e.currentTarget.style.background = '#0d1b3a')}>

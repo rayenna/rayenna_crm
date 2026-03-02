@@ -2365,11 +2365,11 @@ function AccountDetailsBlock() {
         {rows.map(({ label, value }, i) => (
           <div
             key={i}
-            className="flex items-center gap-4 px-4 py-2.5 text-sm border-b last:border-b-0"
+            className="flex items-start gap-3 px-4 py-2.5 text-sm border-b last:border-b-0"
             style={{ borderColor: '#c7d2fe60', background: i % 2 === 0 ? '#e0e7ff40' : 'white' }}
           >
-            <span className="w-36 flex-shrink-0 text-secondary-500 font-medium text-xs uppercase tracking-wide">{label}</span>
-            <span className="font-bold tabular-nums" style={{ color: '#0d1b3a' }}>{value}</span>
+            <span className="w-28 sm:w-36 flex-shrink-0 text-secondary-500 font-medium text-xs uppercase tracking-wide pt-0.5">{label}</span>
+            <span className="font-bold tabular-nums min-w-0 break-all" style={{ color: '#0d1b3a' }}>{value}</span>
           </div>
         ))}
       </div>
@@ -2431,34 +2431,36 @@ function CustomerForm({ onGenerate }: { onGenerate: (c: CustomerDetails) => void
       {/* Active customer banner */}
       {activeCustomer ? (
         <div className="mb-5 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 flex items-center justify-between gap-3">
-          <p className="text-xs text-sky-700">
+          <p className="text-xs text-sky-700 min-w-0">
             <span className="font-semibold">Active customer:</span> {activeCustomer.master.name}
             {' · '}Generating proposal will save all 4 artifacts to this customer record.
           </p>
-          <Link to={`/customers/${activeCustomer.id}`} className="text-xs text-sky-600 hover:text-sky-800 font-medium whitespace-nowrap transition-colors">
+          <Link to={`/customers/${activeCustomer.id}`} className="text-xs text-sky-600 hover:text-sky-800 font-medium whitespace-nowrap flex-shrink-0 transition-colors">
             View workspace →
           </Link>
         </div>
       ) : (
         <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 flex items-center justify-between gap-3">
-          <p className="text-xs text-amber-700">No active customer. Proposal will be generated but not saved to a customer record.</p>
-          <Link to="/customers" className="text-xs text-amber-700 hover:text-amber-900 font-semibold border border-amber-300 hover:bg-amber-100 px-3 py-1 rounded-lg transition-colors whitespace-nowrap">
+          <p className="text-xs text-amber-700 min-w-0">No active customer. Proposal will be generated but not saved to a customer record.</p>
+          <Link to="/customers" className="text-xs text-amber-700 hover:text-amber-900 font-semibold border border-amber-300 hover:bg-amber-100 px-3 py-1 rounded-lg transition-colors whitespace-nowrap flex-shrink-0">
             Select Customer →
           </Link>
         </div>
       )}
 
-      {/* Data status */}
-      <div className="mb-6 grid grid-cols-3 gap-3">
+      {/* Data status — 3 cols on sm+, single col on xs so text is readable */}
+      <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
           { label: 'Costing Sheet', ok: hasSheet, detail: sheet ? sheet.name : 'Not saved yet' },
           { label: 'BOM',           ok: hasBom,   detail: hasBom ? `${bom.length} items` : 'Not generated yet' },
           { label: 'ROI Result',    ok: hasRoi,   detail: hasRoi ? `Payback ${roi!.paybackYears.toFixed(1)} yrs` : 'Not calculated yet' },
         ].map((s) => (
-          <div key={s.label} className={`rounded-xl border p-3 text-center ${s.ok ? 'border-emerald-200 bg-emerald-50' : 'border-secondary-200 bg-secondary-50'}`}>
-            <p className="text-lg mb-1">{s.ok ? '✓' : '○'}</p>
-            <p className={`text-xs font-semibold ${s.ok ? 'text-emerald-700' : 'text-secondary-500'}`}>{s.label}</p>
-            <p className="text-[10px] text-secondary-400 mt-0.5 truncate">{s.detail}</p>
+          <div key={s.label} className={`rounded-xl border p-3 flex sm:flex-col items-center sm:text-center gap-3 sm:gap-0 ${s.ok ? 'border-emerald-200 bg-emerald-50' : 'border-secondary-200 bg-secondary-50'}`}>
+            <p className="text-lg sm:mb-1 flex-shrink-0">{s.ok ? '✓' : '○'}</p>
+            <div className="flex-1 sm:flex-none min-w-0">
+              <p className={`text-xs font-semibold ${s.ok ? 'text-emerald-700' : 'text-secondary-500'}`}>{s.label}</p>
+              <p className="text-[10px] text-secondary-400 mt-0.5 truncate">{s.detail}</p>
+            </div>
           </div>
         ))}
       </div>
@@ -2808,7 +2810,7 @@ export default function ProposalPreview() {
                 <button
                   onClick={() => setIsEditing((e) => !e)}
                   title={isEditing ? 'Exit edit mode' : 'Edit proposal'}
-                  className={`flex items-center justify-center gap-1.5 border text-xs font-semibold px-3 py-2 rounded-lg transition-all min-h-[36px] ${
+                  className={`w-full sm:w-auto flex items-center justify-center gap-1.5 border text-xs font-semibold px-3 py-2 rounded-lg transition-all min-h-[36px] ${
                     isEditing
                       ? 'bg-amber-400 border-amber-300 text-gray-900 hover:bg-amber-300'
                       : 'bg-white/20 hover:bg-white/30 border-white/40 text-white'
@@ -2816,8 +2818,8 @@ export default function ProposalPreview() {
                 >
                   {isEditing ? '✏️ Editing…' : '✏️ Edit'}
                 </button>
-                {/* Export buttons */}
-                <div className="flex items-center gap-2">
+                {/* Export buttons — full-width row on mobile so they match other buttons */}
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   <button
                     onClick={handleExportPdf}
                     disabled={!!exporting}
@@ -2841,7 +2843,7 @@ export default function ProposalPreview() {
                 </div>
                 <button
                   onClick={handleRegenerate}
-                  className="flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all min-h-[36px]"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all min-h-[36px]"
                 >
                   ← New Proposal
                 </button>
@@ -2895,9 +2897,9 @@ export default function ProposalPreview() {
                     </div>
                   </div>
                   {/* Ref + Date */}
-                  <div className="sm:text-right flex-shrink-0">
+                  <div className="sm:text-right sm:flex-shrink-0 sm:max-w-[180px]">
                     <p className="text-[10px] text-white/50 uppercase tracking-widest mb-0.5">Reference</p>
-                    <p className="text-white font-mono text-sm font-semibold">{proposal.refNumber}</p>
+                    <p className="text-white font-mono text-sm font-semibold break-all">{proposal.refNumber}</p>
                     <p className="text-[10px] text-white/50 uppercase tracking-widest mt-2 mb-0.5">Date</p>
                     <p className="text-white text-sm font-medium">
                       {new Date(proposal.generatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}
@@ -3005,50 +3007,56 @@ export default function ProposalPreview() {
 
               {/* Footer — Save + Export */}
               <div className="print-hide border-t border-primary-100 bg-gradient-to-br from-primary-50/30 to-transparent px-5 sm:px-8 py-4">
+                {/* Meta line — visible on all screens, smaller on mobile */}
+                <p className="text-[10px] sm:text-xs text-secondary-400 mb-3 sm:mb-0 sm:hidden">
+                  Ref: {proposal.refNumber} · {new Date(proposal.generatedAt).toLocaleDateString('en-IN')}
+                </p>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  {/* Left: meta */}
+                  {/* Left: meta — desktop only */}
                   <p className="text-xs text-secondary-400 hidden sm:block">
                     Generated {new Date(proposal.generatedAt).toLocaleString('en-IN')} · {proposal.refNumber}
                   </p>
 
-                  {/* Right: actions */}
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                    {/* Export buttons */}
-                    <button
-                      onClick={handleExportPdf}
-                      disabled={!!exporting || saveStatus === 'saving'}
-                      className="flex items-center justify-center gap-1.5 text-xs font-semibold text-white px-4 py-2.5 rounded-xl shadow transition-all disabled:opacity-60 min-h-[44px] sm:min-h-0"
-                      style={{ background: '#374151' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#1f2937')}
-                      onMouseLeave={e => (e.currentTarget.style.background = '#374151')}
-                    >
-                      {exporting === 'pdf'
-                        ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        : '⬇'}
-                      Export PDF
-                    </button>
-                    <button
-                      onClick={handleExportDocx}
-                      disabled={!!exporting || saveStatus === 'saving'}
-                      className="flex items-center justify-center gap-1.5 text-xs font-semibold text-white px-4 py-2.5 rounded-xl shadow transition-all disabled:opacity-60 min-h-[44px] sm:min-h-0"
-                      style={{ background: '#374151' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#1f2937')}
-                      onMouseLeave={e => (e.currentTarget.style.background = '#374151')}
-                    >
-                      {exporting === 'docx'
-                        ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        : '⬇'}
-                      Export DOCX
-                    </button>
+                  {/* Right: actions — stack on mobile, row on sm+ */}
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3">
+                    {/* Export buttons row */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleExportPdf}
+                        disabled={!!exporting || saveStatus === 'saving'}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-xs font-semibold text-white px-4 py-2.5 rounded-xl shadow transition-all disabled:opacity-60 min-h-[44px] sm:min-h-0"
+                        style={{ background: '#374151' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = '#1f2937')}
+                        onMouseLeave={e => (e.currentTarget.style.background = '#374151')}
+                      >
+                        {exporting === 'pdf'
+                          ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          : '⬇'}
+                        Export PDF
+                      </button>
+                      <button
+                        onClick={handleExportDocx}
+                        disabled={!!exporting || saveStatus === 'saving'}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-xs font-semibold text-white px-4 py-2.5 rounded-xl shadow transition-all disabled:opacity-60 min-h-[44px] sm:min-h-0"
+                        style={{ background: '#374151' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = '#1f2937')}
+                        onMouseLeave={e => (e.currentTarget.style.background = '#374151')}
+                      >
+                        {exporting === 'docx'
+                          ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          : '⬇'}
+                        Export DOCX
+                      </button>
+                    </div>
 
                     {/* Divider */}
                     <span className="hidden sm:block w-px h-6 bg-gray-200" />
 
-                    {/* Primary Save button */}
+                    {/* Primary Save button — full width on mobile */}
                     <button
                       onClick={handleSave}
                       disabled={saveStatus === 'saving' || !!exporting}
-                      className="flex items-center justify-center gap-2 text-sm font-bold text-white px-6 py-2.5 rounded-xl shadow-lg transition-all disabled:opacity-60 min-h-[44px] sm:min-h-0"
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 text-sm font-bold text-white px-6 py-2.5 rounded-xl shadow-lg transition-all disabled:opacity-60 min-h-[44px] sm:min-h-0"
                       style={{ background: saveStatus === 'saved' ? '#16a34a' : '#0d1b3a' }}
                       onMouseEnter={e => { if (saveStatus !== 'saved') e.currentTarget.style.background = '#0a1530'; }}
                       onMouseLeave={e => { if (saveStatus !== 'saved') e.currentTarget.style.background = '#0d1b3a'; }}
@@ -3062,7 +3070,7 @@ export default function ProposalPreview() {
                     {/* Edit Details link */}
                     <button
                       onClick={handleRegenerate}
-                      className="text-xs text-primary-600 hover:text-primary-800 font-medium transition-colors py-1"
+                      className="text-xs text-primary-600 hover:text-primary-800 font-medium transition-colors py-1 text-center sm:text-left"
                     >
                       ← Edit Details
                     </button>
