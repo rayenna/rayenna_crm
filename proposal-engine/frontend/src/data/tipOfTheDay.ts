@@ -1,0 +1,124 @@
+/**
+ * Tip of the Day — Proposal Engine
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Mirror of client/src/data/tipOfTheDay.ts in the Rayenna CRM.
+ * Same structure and helper functions; Proposal-Engine-specific localStorage
+ * keys avoid collision if both apps ever run on the same origin.
+ *
+ * FUTURE INTEGRATION:
+ * When merging with the CRM, concatenate this TIPS array with the CRM TIPS
+ * array and unify the localStorage keys. No other code changes are needed.
+ *
+ * USAGE:
+ * 1. Import: import { getTipForToday, shouldShowTip, markTipShown, markDontShowAgain } from '../data/tipOfTheDay'
+ * 2. On Layout mount: if (shouldShowTip()) setShowTip(true) and setTip(getTipForToday())
+ * 3. On "Got it" click: markTipShown(); setShowTip(false)
+ * 4. On "Don't show again" click: markDontShowAgain(); setShowTip(false)
+ */
+
+const STORAGE_KEY_LAST_SHOWN = 'rayenna_pe_tip_last_shown'
+const STORAGE_KEY_DONT_SHOW  = 'rayenna_pe_tip_dont_show'
+
+/** Tips — rotates by day of year. Add or edit as needed. */
+export const TIPS: string[] = [
+  // ── Customers ──────────────────────────────────────────────────────────────
+  'Always click "Set Active" on a customer before starting the Costing Sheet — all four pages work on the active customer only.',
+  'You only need a customer name to get started — add location, contact, and email later from the customer workspace.',
+  'The pulsing blue dot in the navbar shows which customer is currently active. Check it before saving any work.',
+  'Customer status updates to "Proposal Ready" automatically when you click Save on the Proposal page.',
+  'Use the search bar on the Customers page to quickly find a customer by name or location.',
+
+  // ── Costing Sheet ───────────────────────────────────────────────────────────
+  'Six built-in templates cover the most common Rayenna project types — always start from the closest template and adjust.',
+  'The grand total updates in real time as you type — no need to save to see the impact of a price change.',
+  'Set your Margin % before saving — it is factored into the grand total and passed to the ROI Calculator automatically.',
+  'When loading a template, choose "Append" to add items to an existing sheet, or "Replace" to start fresh.',
+  'GST rates default to 5% for PV Modules and Inverters, and 18% for everything else — override per row if needed.',
+  'Save a customised sheet as a Template to reuse it for future customers of the same project type.',
+  'Use the Collapse All toggle to get a quick category-level summary without scrolling through every line item.',
+
+  // ── BOM ─────────────────────────────────────────────────────────────────────
+  'The BOM is auto-generated when you save the Costing Sheet — you do not need to build it manually.',
+  'The most important thing to add in the BOM is the Brand name for each item — this appears in the proposal.',
+  'Use the Expand All / Collapse All toggle in the BOM to quickly review all items or focus on one category.',
+  'Add manual rows inside any category group using the "+ Add Row" button for items not in the costing sheet.',
+  'Auto-generated rows are tagged with an "auto" badge; rows you add manually show "manual" — easy to distinguish.',
+
+  // ── ROI Calculator ──────────────────────────────────────────────────────────
+  'System size and project cost are auto-filled from the Costing Sheet — you only need to adjust the tariff and escalation rate.',
+  'The default generation factor of 1500 kWh/kW/year is the Kerala average — adjust for other states or shading conditions.',
+  'Blue bars on the 25-year chart are pre-payback years; green bars are post-payback — the more green, the better the ROI.',
+  'LCOE (Levelised Cost of Energy) should be well below the current grid tariff — a good indicator of project viability.',
+  'Always click "Save Result" after calculating — unsaved ROI results will not appear in the Proposal\'s Financial Benefits section.',
+
+  // ── Proposal ────────────────────────────────────────────────────────────────
+  'Generate the Proposal only after saving the Costing Sheet, BOM, and ROI result — all three feed into the proposal automatically.',
+  'Use the Edit button to make inline changes directly on the proposal text — click any paragraph and type your changes.',
+  'An amber border around the proposal confirms you are in Edit mode — click the Edit button again to exit without saving.',
+  'The single Save button at the bottom saves everything: inline edits, BOM comments, and all four artifacts in one shot.',
+  'Add per-category notes in the Bill of Quantities section to specify brands or special conditions (e.g. "Adani DCR modules as per MNRE list").',
+  'PDF export captures your inline edits automatically because it renders the live document — always save before exporting.',
+  'DOCX export also reflects your inline edits — the saved text overrides are applied to every section of the Word document.',
+  'The proposal reference number (REY/YYYY/MM/XXXXX) is generated automatically — it is unique to each generation.',
+
+  // ── Export & Data ───────────────────────────────────────────────────────────
+  'Enable "Background graphics" in your browser\'s print settings for the best PDF output — logos and colour headers will print correctly.',
+  'All data is stored in your browser\'s local storage — export important proposals to PDF or DOCX as a backup before clearing browser data.',
+  'Use XLSX export on the Costing Sheet to get a formatted Excel file with subtotals, GST rows, margin, and grand total.',
+  'The BOM XLSX export includes Item Name, Specification, Quantity, Brand, and GST % — useful for procurement teams.',
+
+  // ── Workflow ─────────────────────────────────────────────────────────────────
+  'Press ? from any page to open the User Guide instantly.',
+]
+
+/**
+ * Returns the tip for today. Uses day-of-year modulo to rotate through tips.
+ */
+export function getTipForToday(): string {
+  const now   = new Date()
+  const start = new Date(now.getFullYear(), 0, 0)
+  const diff  = now.getTime() - start.getTime()
+  const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const index = dayOfYear % TIPS.length
+  return TIPS[index]
+}
+
+/**
+ * Whether we should show the tip today.
+ * Returns false if user chose "Don't show again" or if we already showed today.
+ */
+export function shouldShowTip(): boolean {
+  if (typeof window === 'undefined') return false
+  if (localStorage.getItem(STORAGE_KEY_DONT_SHOW) === '1') return false
+
+  const lastShown = localStorage.getItem(STORAGE_KEY_LAST_SHOWN)
+  if (!lastShown) return true
+
+  const today = new Date().toDateString()
+  return lastShown !== today
+}
+
+/**
+ * Call when user dismisses the tip. Stores today's date so we don't show again today.
+ */
+export function markTipShown(): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(STORAGE_KEY_LAST_SHOWN, new Date().toDateString())
+}
+
+/**
+ * Call when user clicks "Don't show again". Tip will not show until they clear this.
+ */
+export function markDontShowAgain(): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(STORAGE_KEY_DONT_SHOW, '1')
+}
+
+/**
+ * Reset "Don't show again" — useful if user changes their mind.
+ * Can also be called from browser console: localStorage.removeItem('rayenna_pe_tip_dont_show')
+ */
+export function resetDontShowAgain(): void {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem(STORAGE_KEY_DONT_SHOW)
+}

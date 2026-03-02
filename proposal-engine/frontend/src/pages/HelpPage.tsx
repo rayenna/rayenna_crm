@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { TIPS } from '../data/tipOfTheDay';
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 interface AccordionProps {
@@ -131,20 +132,45 @@ function FaqItem({ q, children }: { q: string; children: React.ReactNode }) {
   );
 }
 
+/* ─── Tip category labels for the Help page tip list ────────────────────── */
+const TIP_CATEGORIES: { label: string; icon: string; accent: string; bg: string; border: string }[] = [
+  { label: 'Customers',      icon: '👥', accent: '#0369a1', bg: '#eff6ff', border: '#bfdbfe' },
+  { label: 'Costing Sheet',  icon: '📊', accent: '#059669', bg: '#f0fdf4', border: '#a7f3d0' },
+  { label: 'BOM',            icon: '📦', accent: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+  { label: 'ROI Calculator', icon: '📈', accent: '#7c3aed', bg: '#faf5ff', border: '#ddd6fe' },
+  { label: 'Proposal',       icon: '📄', accent: '#be185d', bg: '#fdf2f8', border: '#fbcfe8' },
+  { label: 'Export & Data',  icon: '💾', accent: '#0891b2', bg: '#ecfeff', border: '#a5f3fc' },
+  { label: 'Workflow',       icon: '⚡', accent: '#0d1b3a', bg: '#f0f4ff', border: '#c7d2fe' },
+];
+
+// Tip count per category (matches order in tipOfTheDay.ts)
+const TIP_COUNTS = [5, 7, 5, 5, 8, 4, 1];
+
 /* ─── Table of Contents ─────────────────────────────────────────────────── */
 const TOC = [
-  { id: 'quickstart',  icon: '🚀', label: 'Quick Start'           },
-  { id: 'customers',   icon: '👥', label: 'Managing Customers'    },
-  { id: 'costing',     icon: '📊', label: 'Costing Sheet'         },
-  { id: 'bom',         icon: '📦', label: 'Bill of Materials'     },
-  { id: 'roi',         icon: '📈', label: 'ROI Calculator'        },
-  { id: 'proposal',    icon: '📄', label: 'Proposal'              },
-  { id: 'tips',        icon: '✨', label: 'Tips & Shortcuts'      },
-  { id: 'faq',         icon: '❓', label: 'FAQ'                   },
+  { id: 'quickstart',     icon: '🚀', label: 'Quick Start'           },
+  { id: 'customers',      icon: '👥', label: 'Managing Customers'    },
+  { id: 'costing',        icon: '📊', label: 'Costing Sheet'         },
+  { id: 'bom',            icon: '📦', label: 'Bill of Materials'     },
+  { id: 'roi',            icon: '📈', label: 'ROI Calculator'        },
+  { id: 'proposal',       icon: '📄', label: 'Proposal'              },
+  { id: 'tips',           icon: '✨', label: 'Tips & Shortcuts'      },
+  { id: 'tip-of-the-day', icon: '💡', label: 'Tip of the Day'        },
+  { id: 'faq',            icon: '❓', label: 'FAQ'                   },
 ];
 
 /* ─── Main page ─────────────────────────────────────────────────────────── */
 export default function HelpPage() {
+  const { pathname } = useLocation();
+
+  // Build grouped tip list from the flat TIPS array using TIP_COUNTS
+  const groupedTips: { category: typeof TIP_CATEGORIES[0]; tips: string[] }[] = [];
+  let offset = 0;
+  TIP_COUNTS.forEach((count, i) => {
+    groupedTips.push({ category: TIP_CATEGORIES[i], tips: TIPS.slice(offset, offset + count) });
+    offset += count;
+  });
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
 
@@ -678,7 +704,74 @@ export default function HelpPage() {
       </Section>
 
       {/* ══════════════════════════════════════════════════════════════════ */}
-      {/* 8. FAQ                                                            */}
+      {/* 8. TIP OF THE DAY                                                 */}
+      {/* ══════════════════════════════════════════════════════════════════ */}
+      <Section id="tip-of-the-day" icon="💡" title="Tip of the Day" accent="bg-amber-100 text-amber-700">
+
+        {/* Launch button */}
+        <div className="flex items-center justify-between mb-6 p-4 rounded-xl border border-amber-200 bg-amber-50">
+          <div>
+            <p className="font-semibold text-gray-800 text-sm">Show today's tip</p>
+            <p className="text-xs text-gray-500 mt-0.5">A new tip rotates every day. Use Next Tip to browse all {TIPS.length} tips.</p>
+          </div>
+          <a
+            href={`${pathname}?showTip=1`}
+            className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+            style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848)' }}
+          >
+            <span>💡</span>
+            Launch
+          </a>
+        </div>
+
+        {/* All tips grouped by category */}
+        <div className="space-y-6">
+          {groupedTips.map(({ category, tips }) => (
+            <div key={category.label}>
+              {/* Category header */}
+              <div className="flex items-center gap-2 mb-3">
+                <div
+                  className="w-1 h-5 rounded-full flex-shrink-0"
+                  style={{ background: category.accent }}
+                />
+                <span className="text-base leading-none">{category.icon}</span>
+                <h3
+                  className="text-xs font-extrabold uppercase tracking-widest"
+                  style={{ color: category.accent }}
+                >
+                  {category.label}
+                </h3>
+                <span className="text-xs text-gray-400 font-medium">({tips.length})</span>
+              </div>
+
+              {/* Tip cards */}
+              <div
+                className="rounded-xl border overflow-hidden"
+                style={{ borderColor: category.border, background: category.bg }}
+              >
+                {tips.map((tip, i) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-3 px-4 py-3 text-sm text-gray-700 border-b last:border-b-0"
+                    style={{ borderColor: `${category.border}80` }}
+                  >
+                    <span
+                      className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-extrabold text-white mt-0.5"
+                      style={{ background: category.accent }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className="leading-relaxed">{tip}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* ══════════════════════════════════════════════════════════════════ */}
+      {/* 9. FAQ                                                            */}
       {/* ══════════════════════════════════════════════════════════════════ */}
       <Section id="faq" icon="❓" title="Frequently Asked Questions" accent="bg-teal-100 text-teal-700">
 

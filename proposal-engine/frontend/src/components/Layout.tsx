@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getActiveCustomer } from '../lib/customerStore';
+import TipOfTheDay from './TipOfTheDay';
 
 const NAV = [
   { label: 'Dashboard',     to: '/'          },
@@ -9,7 +10,6 @@ const NAV = [
   { label: 'BOM',           to: '/bom'       },
   { label: 'ROI',           to: '/roi'       },
   { label: 'Proposal',      to: '/proposal'  },
-  { label: '? Help',        to: '/help'      },
 ];
 
 /* Exact gradient used by the CRM navbar */
@@ -21,11 +21,24 @@ const IDLE_LINK    = 'text-white hover:bg-white/20 hover:text-white';
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const navigate     = useNavigate();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen]     = useState(false);
+  const [helpOpen, setHelpOpen]     = useState(false);
+  const helpRef                     = useRef<HTMLDivElement>(null);
   // Re-read active customer on every navigation so the pill stays current
   const activeCustomer = getActiveCustomer();
 
-  useEffect(() => { setMenuOpen(false); }, [pathname]);
+  useEffect(() => { setMenuOpen(false); setHelpOpen(false); }, [pathname]);
+
+  // Close Help dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (helpRef.current && !helpRef.current.contains(e.target as Node)) {
+        setHelpOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   // Press ? anywhere (outside inputs) to open Help
   useEffect(() => {
@@ -78,6 +91,37 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   {n.label}
                 </Link>
               ))}
+
+              {/* Help dropdown */}
+              <div ref={helpRef} className="relative">
+                <button
+                  onClick={() => setHelpOpen((o) => !o)}
+                  className={`inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
+                    pathname === '/help' ? ACTIVE_LINK : IDLE_LINK
+                  }`}
+                >
+                  <span>? Help</span>
+                  <span className={`text-[10px] transition-transform duration-150 ${helpOpen ? 'rotate-180' : ''}`}>▾</span>
+                </button>
+                {helpOpen && (
+                  <div className="absolute top-full left-0 mt-1.5 w-44 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-30">
+                    <Link
+                      to="/help"
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                    >
+                      <span>📘</span>
+                      <span className="font-medium">User Guide</span>
+                    </Link>
+                    <button
+                      onClick={() => { setHelpOpen(false); navigate(`${pathname}?showTip=1`); }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors border-t border-gray-100"
+                    >
+                      <span>💡</span>
+                      <span className="font-medium">Tip of the Day</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-3">
@@ -127,8 +171,31 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   {n.label}
                 </Link>
               ))}
-              <div className="mt-2 pt-2 border-t border-white/20 space-y-1">
-                {activeCustomer && (
+
+              {/* Help group — mobile */}
+              <div className="mt-1 pt-1 border-t border-white/20 space-y-1">
+                <Link
+                  to="/help"
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                    pathname === '/help'
+                      ? 'bg-white/30 text-white border border-white/40'
+                      : 'text-white/90 hover:bg-white/20 hover:text-white'
+                  }`}
+                >
+                  <span>📘</span>
+                  <span>User Guide</span>
+                </Link>
+                <button
+                  onClick={() => { setMenuOpen(false); navigate(`${pathname}?showTip=1`); }}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white/90 hover:bg-white/20 hover:text-white transition-colors"
+                >
+                  <span>💡</span>
+                  <span>Tip of the Day</span>
+                </button>
+              </div>
+
+              {activeCustomer && (
+                <div className="mt-1 pt-1 border-t border-white/20">
                   <Link
                     to={`/customers/${activeCustomer.id}`}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-white/90 hover:bg-white/20 transition-colors"
@@ -137,8 +204,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     <span className="truncate font-medium">{activeCustomer.master.name}</span>
                     <span className="text-[10px] text-white/50 ml-auto flex-shrink-0">Active</span>
                   </Link>
-                )}
-              </div>
+                </div>
+              )}
             </nav>
           </div>
         )}
@@ -147,6 +214,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <main className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-6">
         {children}
       </main>
+
+      <TipOfTheDay />
     </div>
   );
 }
