@@ -57,20 +57,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-gray-50/80">
 
-      {/* ── Navbar — pixel-perfect match to CRM ── */}
+      {/* ── Navbar ── */}
       <nav
         style={{ background: NAV_GRADIENT }}
         className="shadow-lg border-b-4 border-primary-400 sticky top-0 z-20"
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
-          <div className="flex items-center justify-between h-20 gap-2">
+          {/* Navbar row — shorter in landscape (h-12) vs portrait (h-16) vs desktop (h-20) */}
+          <div className="flex items-center justify-between h-16 landscape:h-12 md:landscape:h-20 md:h-20 gap-2">
 
             {/* Brand */}
-            <div className="flex items-center gap-2.5 flex-shrink-0">
-              <div className="w-9 h-9 rounded-lg bg-white/25 border border-white/40 flex items-center justify-center text-white font-bold text-xs shadow-lg">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="w-8 h-8 landscape:w-7 landscape:h-7 md:w-9 md:h-9 rounded-lg bg-white/25 border border-white/40 flex items-center justify-center text-white font-bold text-xs shadow-lg">
                 PE
               </div>
-              <span className="text-white font-bold tracking-tight text-sm sm:text-base drop-shadow">
+              <span className="text-white font-bold tracking-tight text-sm drop-shadow">
                 Proposal Engine
               </span>
               <span className="text-[10px] text-white/70 bg-white/10 border border-white/20 px-2 py-0.5 rounded-full hidden md:inline">
@@ -78,7 +79,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </span>
             </div>
 
-            {/* Desktop nav */}
+            {/* Desktop nav (md and above) */}
             <div className="hidden md:flex items-center gap-1 flex-1 justify-center flex-wrap">
               {NAV.map((n) => (
                 <Link
@@ -131,8 +132,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Active customer pill */}
+            <div className="flex items-center gap-2">
+              {/* Active customer pill — desktop only */}
               {activeCustomer && (
                 <Link
                   to={`/customers/${activeCustomer.id}`}
@@ -144,11 +145,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </Link>
               )}
 
+              {/* Active customer dot — mobile only (compact) */}
+              {activeCustomer && (
+                <Link
+                  to={`/customers/${activeCustomer.id}`}
+                  className="md:hidden flex items-center gap-1 text-[11px] text-white/90 bg-white/15 border border-white/30 px-2 py-0.5 rounded-full max-w-[110px]"
+                  title={`Active: ${activeCustomer.master.name}`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-300 inline-block flex-shrink-0 animate-pulse" />
+                  <span className="truncate font-medium">{activeCustomer.master.name}</span>
+                </Link>
+              )}
+
               {/* Hamburger — mobile only */}
               <button
                 onClick={() => setMenuOpen((o) => !o)}
                 aria-label="Toggle menu"
-                className="md:hidden flex flex-col justify-center items-center w-8 h-8 gap-1.5 rounded-md hover:bg-white/20 transition-colors"
+                className="md:hidden flex flex-col justify-center items-center w-8 h-8 gap-1.5 rounded-md hover:bg-white/20 transition-colors flex-shrink-0"
               >
                 <span className={`block w-5 h-0.5 bg-white transition-transform duration-200 ${menuOpen ? 'rotate-45 translate-y-2' : ''}`} />
                 <span className={`block w-5 h-0.5 bg-white transition-opacity duration-200 ${menuOpen ? 'opacity-0' : ''}`} />
@@ -158,78 +171,78 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Mobile dropdown */}
+        {/* ── Mobile dropdown — scrollable, compact in landscape ── */}
         {menuOpen && (
           <div
             className="md:hidden border-t border-white/20 backdrop-blur-sm"
             style={{ background: '#0d1b3aF2' }}
           >
-            <nav className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
-              {NAV.map((n) => (
-                <Link
-                  key={n.to}
-                  to={n.to}
-                  className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-                    pathname === n.to
-                      ? 'bg-white/30 text-white border border-white/40'
-                      : 'text-white/90 hover:bg-white/20 hover:text-white'
-                  }`}
-                >
-                  {n.label}
-                </Link>
-              ))}
-
-              {/* Help group — mobile */}
-              <div className="mt-1 pt-1 border-t border-white/20 space-y-1">
-                <Link
-                  to="/help"
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-                    pathname === '/help'
-                      ? 'bg-white/30 text-white border border-white/40'
-                      : 'text-white/90 hover:bg-white/20 hover:text-white'
-                  }`}
-                >
-                  <span>📘</span>
-                  <span>User Guide</span>
-                </Link>
-                <button
-                  onClick={() => { setMenuOpen(false); navigate(`${pathname}?showTip=1`); }}
-                  className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white/90 hover:bg-white/20 hover:text-white transition-colors"
-                >
-                  <span>💡</span>
-                  <span>Tip of the Day</span>
-                </button>
-                <Link
-                  to="/about"
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-                    pathname === '/about'
-                      ? 'bg-white/30 text-white border border-white/40'
-                      : 'text-white/90 hover:bg-white/20 hover:text-white'
-                  }`}
-                >
-                  <span>ℹ️</span>
-                  <span>About</span>
-                </Link>
+            {/*
+              max-h: limits height so it never covers the whole screen.
+              In portrait: up to 70vh. In landscape: up to 60vh (less vertical room).
+              overflow-y-auto: enables scrolling when content overflows.
+            */}
+            <nav
+              className="max-w-7xl mx-auto px-3 py-2 overflow-y-auto"
+              style={{ maxHeight: 'min(70vh, 480px)' }}
+            >
+              {/* Nav links — 2-column grid in landscape, 1-column in portrait */}
+              <div className="grid grid-cols-1 landscape:grid-cols-2 gap-1">
+                {NAV.map((n) => (
+                  <Link
+                    key={n.to}
+                    to={n.to}
+                    className={`flex items-center px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                      pathname === n.to
+                        ? 'bg-white/30 text-white border border-white/40'
+                        : 'text-white/90 hover:bg-white/20 hover:text-white'
+                    }`}
+                  >
+                    {n.label}
+                  </Link>
+                ))}
               </div>
 
-              {activeCustomer && (
-                <div className="mt-1 pt-1 border-t border-white/20">
+              {/* Help group — 3-column grid in landscape */}
+              <div className="mt-1 pt-1 border-t border-white/20">
+                <div className="grid grid-cols-1 landscape:grid-cols-3 gap-1">
                   <Link
-                    to={`/customers/${activeCustomer.id}`}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-white/90 hover:bg-white/20 transition-colors"
+                    to="/help"
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                      pathname === '/help'
+                        ? 'bg-white/30 text-white border border-white/40'
+                        : 'text-white/90 hover:bg-white/20 hover:text-white'
+                    }`}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-sky-300 inline-block flex-shrink-0 animate-pulse" />
-                    <span className="truncate font-medium">{activeCustomer.master.name}</span>
-                    <span className="text-[10px] text-white/50 ml-auto flex-shrink-0">Active</span>
+                    <span>📘</span>
+                    <span>User Guide</span>
+                  </Link>
+                  <button
+                    onClick={() => { setMenuOpen(false); navigate(`${pathname}?showTip=1`); }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-white/90 hover:bg-white/20 hover:text-white transition-colors"
+                  >
+                    <span>💡</span>
+                    <span>Tip of the Day</span>
+                  </button>
+                  <Link
+                    to="/about"
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                      pathname === '/about'
+                        ? 'bg-white/30 text-white border border-white/40'
+                        : 'text-white/90 hover:bg-white/20 hover:text-white'
+                    }`}
+                  >
+                    <span>ℹ️</span>
+                    <span>About</span>
                   </Link>
                 </div>
-              )}
+              </div>
             </nav>
           </div>
         )}
       </nav>
 
-      <main className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-6">
+      <main className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6">
         {children}
       </main>
 

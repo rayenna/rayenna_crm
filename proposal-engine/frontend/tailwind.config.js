@@ -3,6 +3,10 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      screens: {
+        // Landscape orientation variant — used for compact mobile navbar/menu in landscape
+        landscape: { raw: '(orientation: landscape)' },
+      },
       colors: {
         primary: {
           50:  '#e8eaf0',
