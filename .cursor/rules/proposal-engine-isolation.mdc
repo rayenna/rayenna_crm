@@ -1,0 +1,51 @@
+---
+description: Proposal Engine git isolation — never touch CRM files when committing Proposal Engine changes
+alwaysApply: true
+---
+
+# Proposal Engine / Rayenna CRM Git Isolation
+
+This repo contains two completely separate products. They must NEVER cross-contaminate each other in any git commit.
+
+## Directory ownership
+
+| Path | Product | May be changed by |
+|---|---|---|
+| `proposal-engine/` | Proposal Engine | Proposal Engine tasks only |
+| `client/` | Rayenna CRM frontend | CRM tasks only |
+| `src/` | Rayenna CRM backend | CRM tasks only |
+| `prisma/` | Rayenna CRM database | CRM tasks only |
+| `render.yaml` | Both (separate services) | Only when explicitly requested |
+| `vercel.json` | CRM frontend | CRM tasks only |
+| `package.json` (root) | CRM | CRM tasks only |
+
+## Rules
+
+1. **Stage only the relevant tree before every commit.**
+   - Proposal Engine commits: `git add proposal-engine/...` only.
+   - CRM commits: `git add client/... src/... prisma/...` only.
+   - Never use `git add .` or `git add -A` — always stage files explicitly by path.
+
+2. **Verify before committing** with `git diff --cached --name-only` and confirm every staged file belongs to the correct product.
+
+3. **Never import across the boundary.**
+   - Proposal Engine code must not import from `client/src/` or `src/`.
+   - CRM code must not import from `proposal-engine/`.
+
+4. **Commit message prefix** must reflect the product:
+   - Proposal Engine: `feat(proposal-engine):`, `fix(proposal-engine):`, etc.
+   - CRM: `feat(crm):`, `fix(crm):`, `feat(dashboard):`, etc.
+
+## Quick check before every Proposal Engine commit
+
+```bash
+git diff --cached --name-only
+# Every line must start with proposal-engine/
+```
+
+## Quick check before every CRM commit
+
+```bash
+git diff --cached --name-only
+# No line must start with proposal-engine/
+```
