@@ -214,7 +214,7 @@ export interface ProposalArtifact {
   /** Saved innerHTML of the proposal document body — captures inline edits */
   editedHtml?: string;
   /** Per-section text overrides extracted from the edited DOM — used for DOCX export */
-  textOverrides?: Record<string, string>;
+  textOverrides?: Record<string, string | undefined>;
 
   // ── Future CRM integration fields ──────────────────────────────────────────
   /**

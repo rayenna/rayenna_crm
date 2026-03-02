@@ -1462,8 +1462,8 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
  * For list sections (ListBlock), each data-docx-list-text span is collected
  * and joined with newlines so buildDocx can re-render them as list items.
  */
-function extractTextOverrides(root: HTMLElement): TextOverrides {
-  const overrides: TextOverrides = {};
+function extractTextOverrides(root: HTMLElement): Record<string, string> {
+  const overrides: Record<string, string> = {};
 
   // Collect all elements tagged with data-docx-section
   const sections = root.querySelectorAll<HTMLElement>('[data-docx-section]');
