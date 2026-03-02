@@ -89,7 +89,7 @@ export default function Dashboard() {
           {/* Status badge */}
           <div className="inline-flex items-center gap-2 text-xs text-primary-700 bg-gradient-to-r from-white to-primary-50 px-3 py-1.5 rounded-full font-bold shadow border-2 border-white/50 mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
-            Proposal Engine Dev Environment Running
+            Rayenna Proposal Engine · Production
           </div>
 
           {/* Active customer quick-access */}
@@ -190,16 +190,14 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Env status */}
-          <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 p-5">
-            <h2 className="text-secondary-700 font-semibold text-sm mb-4 uppercase tracking-wide">
-              Environment
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <EnvRow label="Frontend" value="localhost:5174" />
-              <EnvRow label="Backend"  value="localhost:5001" />
-              <EnvRow label="Database" value="SQLite · dev.db" />
-            </div>
+          {/* Production info footer */}
+          <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <p className="text-xs text-secondary-400">
+              All data is stored locally in your browser. Nothing is sent to any server.
+            </p>
+            <p className="text-xs text-secondary-400 sm:text-right flex-shrink-0">
+              v1.0 · Rayenna Energy Pvt Ltd
+            </p>
           </div>
         </div>
       </div>
@@ -237,17 +235,5 @@ function RecentCustomerCard({ record, isActive }: { record: CustomerRecord; isAc
         </span>
       </div>
     </Link>
-  );
-}
-
-function EnvRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-start gap-3">
-      <span className="mt-1 w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
-      <div>
-        <p className="text-secondary-400 text-xs uppercase tracking-wide mb-0.5">{label}</p>
-        <p className="text-secondary-800 text-sm font-mono font-medium">{value}</p>
-      </div>
-    </div>
   );
 }
