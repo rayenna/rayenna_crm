@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   SHEETS_STORAGE_KEY,
@@ -2395,6 +2395,25 @@ function CustomerForm({ onGenerate }: { onGenerate: (c: CustomerDetails) => void
   const [email,          setEmail]          = useState(ac?.email          ?? '');
   const [err,            setErr]            = useState('');
 
+  // Sync form fields whenever the active customer changes (e.g. user switches customer
+  // while already on the Proposal page without navigating away and back).
+  const syncFields = useCallback(() => {
+    const current = getActiveCustomer()?.master;
+    setCustomerName(current?.name          ?? '');
+    setLocation    (current?.location      ?? '');
+    setContactPerson(current?.contactPerson ?? '');
+    setPhone       (current?.phone         ?? '');
+    setEmail       (current?.email         ?? '');
+    setErr('');
+  }, []);
+
+  // Re-sync on every focus (catches the case where the user switches customer
+  // in another tab/window and comes back to this page).
+  useEffect(() => {
+    window.addEventListener('focus', syncFields);
+    return () => window.removeEventListener('focus', syncFields);
+  }, [syncFields]);
+
   const sheet      = getLatestSheet();
   const bom        = getBom();
   const roi: ROIResult | null = readStorage(ROI_STORAGE_KEY);
@@ -2548,6 +2567,29 @@ export default function ProposalPreview() {
   // Ref to the contentEditable document body div so we can read its innerHTML on save
   const docBodyRef                            = useRef<HTMLDivElement>(null);
 
+  // Track the active customer ID so CustomerForm remounts when the customer changes.
+  // This guarantees the form fields always reflect the correct customer.
+  const [activeCustomerId, setActiveCustomerId] = useState<string | null>(
+    () => getActiveCustomer()?.id ?? null,
+  );
+
+  // Poll for active customer changes (covers navigating away and back, or switching
+  // customer in another tab). Runs every time the page gains focus.
+  useEffect(() => {
+    const sync = () => {
+      const id = getActiveCustomer()?.id ?? null;
+      setActiveCustomerId(id);
+      // If the customer changed while a proposal was already shown, reset it
+      // so the new customer's data is used on the next Generate.
+      setProposal((prev) => {
+        if (prev !== null && id !== null) return null;
+        return prev;
+      });
+    };
+    window.addEventListener('focus', sync);
+    return () => window.removeEventListener('focus', sync);
+  }, []);
+
   // ── Restore saved inline edits when a proposal is (re)generated ──
   // We use a useEffect so the DOM is fully rendered before we inject HTML.
   // Priority: customer record editedHtml > localStorage fallback.
@@ -2642,6 +2684,8 @@ export default function ProposalPreview() {
     const roiAutofill: RoiAutofill | null = readStorage(ROI_AUTOFILL_KEY);
     const p = buildProposal(customer, sheet, bom, roi, roiAutofill);
     setProposal(p);
+    // Keep activeCustomerId in sync so the key stays correct
+    setActiveCustomerId(getActiveCustomer()?.id ?? null);
 
     // ── Restore saved comments + editedHtml: prefer customer record, fall back to localStorage ──
     const activeCustomer = getActiveCustomer();
@@ -2787,7 +2831,9 @@ export default function ProposalPreview() {
 
         <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
           {!proposal ? (
-            <CustomerForm onGenerate={handleGenerate} />
+            // key = activeCustomerId forces a full remount whenever the active
+            // customer changes, ensuring useState initialises from the new customer.
+            <CustomerForm key={activeCustomerId ?? 'no-customer'} onGenerate={handleGenerate} />
           ) : (
             <div
               ref={printRef}
