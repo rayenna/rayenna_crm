@@ -259,6 +259,7 @@ export interface CustomerRecord {
 const CUSTOMERS_KEY       = 'rayenna_customers_v1';
 const ACTIVE_CUSTOMER_KEY = 'rayenna_active_customer_v1';
 
+
 // ─────────────────────────────────────────────
 // CRUD helpers
 // ─────────────────────────────────────────────
@@ -332,6 +333,85 @@ export function setActiveCustomer(id: string): void {
 
 export function clearActiveCustomer(): void {
   localStorage.removeItem(ACTIVE_CUSTOMER_KEY);
+}
+
+// ─────────────────────────────────────────────
+// Work-in-progress localStorage keys
+// These are the global keys used by the four work pages.
+// They must be flushed and reloaded whenever the active customer changes.
+// ─────────────────────────────────────────────
+
+const WIP_KEYS = {
+  sheets:       'rayenna_costing_sheets_v1',
+  bomCosting:   'rayenna_bom_from_costing_v1',
+  bomOverrides: 'rayenna_bom_overrides_v1',
+  roiResult:    'rayenna_roi_result_v1',
+  roiAutofill:  'rayenna_roi_autofill_v1',
+  bomComments:  'rayenna_bom_comments_v1',
+  proposalHtml: 'rayenna_proposal_edited_html_v1',
+} as const;
+
+/**
+ * Switch the active customer and reload all work-in-progress localStorage keys
+ * from the new customer's saved artifacts.
+ *
+ * This prevents stale data from a previous customer bleeding into the next
+ * customer's Costing Sheet, BOM, ROI, and Proposal pages.
+ *
+ * Call this instead of setActiveCustomer() whenever the user explicitly
+ * switches to a different customer.
+ */
+export function switchActiveCustomer(id: string): void {
+  localStorage.setItem(ACTIVE_CUSTOMER_KEY, id);
+
+  // Clear all work-in-progress keys
+  Object.values(WIP_KEYS).forEach((key) => localStorage.removeItem(key));
+
+  const record = getCustomer(id);
+  if (!record) return;
+
+  // Restore costing sheet from saved artifact
+  if (record.costing) {
+    const sheet = {
+      id:            `sheet_${id}`,
+      name:          record.costing.sheetName,
+      savedAt:       record.costing.savedAt,
+      items:         record.costing.items,
+      showGst:       record.costing.showGst,
+      marginPercent: record.costing.marginPercent,
+      grandTotal:    record.costing.grandTotal,
+      systemSizeKw:  record.costing.systemSizeKw,
+    };
+    localStorage.setItem(WIP_KEYS.sheets, JSON.stringify([sheet]));
+
+    // Restore ROI autofill from costing data
+    const roiAutofill = {
+      systemSizeKw: record.costing.systemSizeKw,
+      grandTotal:   record.costing.grandTotal,
+    };
+    localStorage.setItem(WIP_KEYS.roiAutofill, JSON.stringify(roiAutofill));
+  }
+
+  // Restore BOM from saved artifact
+  if (record.bom) {
+    const storedBom = { rows: record.bom.rows };
+    localStorage.setItem(WIP_KEYS.bomCosting, JSON.stringify(storedBom));
+  }
+
+  // Restore ROI result from saved artifact
+  if (record.roi) {
+    localStorage.setItem(WIP_KEYS.roiResult, JSON.stringify(record.roi.result));
+  }
+
+  // Restore BOM comments from saved proposal artifact
+  if (record.proposal?.bomComments) {
+    localStorage.setItem(WIP_KEYS.bomComments, JSON.stringify(record.proposal.bomComments));
+  }
+
+  // Restore edited proposal HTML from saved proposal artifact
+  if (record.proposal?.editedHtml) {
+    localStorage.setItem(WIP_KEYS.proposalHtml, record.proposal.editedHtml);
+  }
 }
 
 // ─────────────────────────────────────────────

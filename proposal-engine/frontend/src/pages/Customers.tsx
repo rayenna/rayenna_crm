@@ -4,7 +4,7 @@ import {
   loadCustomers,
   createCustomer,
   deleteCustomer,
-  setActiveCustomer,
+  switchActiveCustomer,
   getActiveCustomerId,
   STATUS_LABELS,
   STATUS_COLORS,
@@ -330,7 +330,7 @@ export default function Customers() {
 
   const handleCreate = (master: CustomerMaster) => {
     const record = createCustomer(master);
-    setActiveCustomer(record.id);
+    switchActiveCustomer(record.id);
     setShowNew(false);
     navigate(`/customers/${record.id}`);
   };
@@ -340,7 +340,7 @@ export default function Customers() {
   };
 
   const handleSetActive = (id: string) => {
-    setActiveCustomer(id);
+    switchActiveCustomer(id);
     refresh();
   };
 

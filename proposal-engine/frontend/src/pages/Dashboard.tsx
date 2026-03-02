@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import {
   loadCustomers,
   getActiveCustomer,
-  setActiveCustomer,
+  switchActiveCustomer,
   STATUS_LABELS,
   STATUS_COLORS,
   artifactSummary,
@@ -217,7 +217,7 @@ function RecentCustomerCard({ record, isActive }: { record: CustomerRecord; isAc
   return (
     <Link
       to={`/customers/${record.id}`}
-      onClick={() => setActiveCustomer(record.id)}
+      onClick={() => switchActiveCustomer(record.id)}
       className={`bg-white rounded-xl border shadow-sm hover:shadow-md transition-all p-4 block ${isActive ? 'border-primary-400 ring-2 ring-primary-200' : 'border-secondary-200'}`}
       style={{ borderLeftWidth: '4px', borderLeftColor: isActive ? '#0d1b3a' : '#e2e8f0' }}
     >

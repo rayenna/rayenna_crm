@@ -24,8 +24,6 @@ import type { CostingArtifact, BomArtifact, RoiArtifact, ProposalArtifact } from
 
 const BOM_OVERRIDES_KEY    = 'rayenna_bom_overrides_v1';
 const ROI_STORAGE_KEY      = 'rayenna_roi_result_v1';
-const BOM_COMMENTS_KEY     = 'rayenna_bom_comments_v1';
-
 // ─────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────
@@ -2554,8 +2552,6 @@ function CustomerForm({ onGenerate }: { onGenerate: (c: CustomerDetails) => void
 // ─────────────────────────────────────────────
 
 // localStorage key for persisting the edited proposal HTML between sessions
-const PROPOSAL_HTML_KEY = 'rayenna_proposal_edited_html_v1';
-
 export default function ProposalPreview() {
   const [proposal, setProposal]               = useState<ProposalData | null>(null);
   const [exporting, setExporting]             = useState<'pdf' | 'docx' | null>(null);
@@ -2592,14 +2588,12 @@ export default function ProposalPreview() {
 
   // ── Restore saved inline edits when a proposal is (re)generated ──
   // We use a useEffect so the DOM is fully rendered before we inject HTML.
-  // Priority: customer record editedHtml > localStorage fallback.
+  // Only restore from the customer record — never from the global localStorage
+  // key, which may contain a different customer's edits.
   useEffect(() => {
     if (!proposal || !docBodyRef.current) return;
     const activeCustomer = getActiveCustomer();
-    const savedHtml =
-      activeCustomer?.proposal?.editedHtml
-      ?? localStorage.getItem(PROPOSAL_HTML_KEY)
-      ?? null;
+    const savedHtml = activeCustomer?.proposal?.editedHtml ?? null;
     if (savedHtml) {
       docBodyRef.current.innerHTML = savedHtml;
     }
@@ -2607,9 +2601,6 @@ export default function ProposalPreview() {
 
   // ── Save comments to active customer record ──
   const persistComments = (comments: Record<string, string>) => {
-    // Always persist to localStorage as fallback
-    localStorage.setItem(BOM_COMMENTS_KEY, JSON.stringify(comments));
-    // Also persist into the customer record if one is active
     const ac = getActiveCustomer();
     if (ac && ac.proposal) {
       saveAllArtifacts(ac.id, null, null, null, {
@@ -2628,15 +2619,10 @@ export default function ProposalPreview() {
     const editedHtml     = docBodyRef.current?.innerHTML ?? undefined;
     const textOverrides  = docBodyRef.current ? extractTextOverrides(docBodyRef.current) : undefined;
 
-    // 2. Persist edited HTML to localStorage as a fast fallback
-    if (editedHtml) {
-      localStorage.setItem(PROPOSAL_HTML_KEY, editedHtml);
-    }
-
-    // 3. Persist BOM comments
+    // 2. Persist BOM comments
     persistComments(bomComments);
 
-    // 4. Save all 4 artifacts + editedHtml + textOverrides to active customer record
+    // 3. Save all 4 artifacts + editedHtml + textOverrides to active customer record
     const activeCustomer = getActiveCustomer();
     if (activeCustomer) {
       const sheet = proposal.sheet;
@@ -2671,28 +2657,63 @@ export default function ProposalPreview() {
       setSavedToCustomer(activeCustomer.master.name);
     }
 
-    // 5. Exit edit mode
+    // 4. Exit edit mode
     setIsEditing(false);
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 3000);
   };
 
   const handleGenerate = (customer: CustomerDetails) => {
-    const sheet         = getLatestSheet();
-    const bom           = getBom();
-    const roi: ROIResult | null           = readStorage(ROI_STORAGE_KEY);
-    const roiAutofill: RoiAutofill | null = readStorage(ROI_AUTOFILL_KEY);
+    // Always read the active customer record first — this is the source of truth.
+    // Global localStorage keys may still hold data from a previously active customer,
+    // so we prefer the customer record and only fall back to globals when no record exists.
+    const activeCustomer = getActiveCustomer();
+
+    // Costing: prefer customer record, fall back to global key
+    const sheet: SavedSheet | null = activeCustomer?.costing
+      ? {
+          id:            `sheet_${activeCustomer.id}`,
+          name:          activeCustomer.costing.sheetName,
+          description:   '',
+          savedAt:       activeCustomer.costing.savedAt,
+          items:         activeCustomer.costing.items,
+          showGst:       activeCustomer.costing.showGst,
+          marginPercent: activeCustomer.costing.marginPercent,
+          grandTotal:    activeCustomer.costing.grandTotal,
+          systemSizeKw:  activeCustomer.costing.systemSizeKw,
+        }
+      : getLatestSheet();
+
+    // BOM: prefer customer record, fall back to global key.
+    // BomArtifact rows are BomRow (customerStore type); cast to BomRowGenerated
+    // which is structurally compatible for the fields buildProposal actually uses.
+    const bom: BomRowGenerated[] = (activeCustomer?.bom?.rows && activeCustomer.bom.rows.length > 0)
+      ? (activeCustomer.bom.rows as unknown as BomRowGenerated[])
+      : getBom();
+
+    // ROI: prefer customer record, fall back to global key
+    const roi: ROIResult | null = (activeCustomer?.roi?.result as ROIResult | null)
+      ?? readStorage(ROI_STORAGE_KEY);
+
+    // ROI autofill: derive from customer costing if available, fall back to global key
+    const roiAutofill: RoiAutofill | null = activeCustomer?.costing
+      ? {
+          source:       'costing-sheet',
+          sourceName:   activeCustomer.costing.sheetName,
+          savedAt:      activeCustomer.costing.savedAt,
+          systemSizeKw: activeCustomer.costing.systemSizeKw,
+          grandTotal:   activeCustomer.costing.grandTotal,
+        }
+      : readStorage(ROI_AUTOFILL_KEY);
     const p = buildProposal(customer, sheet, bom, roi, roiAutofill);
     setProposal(p);
     // Keep activeCustomerId in sync so the key stays correct
-    setActiveCustomerId(getActiveCustomer()?.id ?? null);
+    setActiveCustomerId(activeCustomer?.id ?? null);
 
-    // ── Restore saved comments + editedHtml: prefer customer record, fall back to localStorage ──
-    const activeCustomer = getActiveCustomer();
+    // ── Restore saved comments from customer record only ──
+    // Never fall back to global localStorage — it may contain a different customer's comments.
     const savedComments: Record<string, string> =
-      activeCustomer?.proposal?.bomComments
-      ?? readStorage<Record<string, string>>(BOM_COMMENTS_KEY)
-      ?? {};
+      activeCustomer?.proposal?.bomComments ?? {};
     setBomComments(savedComments);
 
     // ── Persist all 4 artifacts to active customer, preserving any previously saved editedHtml ──
@@ -2958,8 +2979,6 @@ export default function ProposalPreview() {
                       comments={bomComments}
                       onCommentsChange={(c) => {
                         setBomComments(c);
-                        // Auto-persist to localStorage so comments survive page refresh
-                        localStorage.setItem(BOM_COMMENTS_KEY, JSON.stringify(c));
                       }}
                     />
                   </>

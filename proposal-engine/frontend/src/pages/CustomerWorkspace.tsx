@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   getCustomer,
   upsertCustomer,
-  setActiveCustomer,
+  switchActiveCustomer,
   getActiveCustomerId,
   STATUS_LABELS,
   STATUS_COLORS,
@@ -199,7 +199,7 @@ export default function CustomerWorkspace() {
   const isActive = record.id === activeId;
 
   const handleSetActive = () => {
-    setActiveCustomer(record.id);
+    switchActiveCustomer(record.id);
     refresh();
   };
 
@@ -216,9 +216,10 @@ export default function CustomerWorkspace() {
     setRecord(updated);
   };
 
-  // Navigate to a work page and ensure this customer is active
+  // Navigate to a work page and ensure this customer is active,
+  // flushing stale work-in-progress data from any previous customer.
   const openWorkPage = (path: string) => {
-    setActiveCustomer(record.id);
+    switchActiveCustomer(record.id);
     navigate(path);
   };
 
