@@ -97,7 +97,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <button
                   onClick={() => setHelpOpen((o) => !o)}
                   className={`inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
-                    pathname === '/help' ? ACTIVE_LINK : IDLE_LINK
+                    pathname === '/help' || pathname === '/about' ? ACTIVE_LINK : IDLE_LINK
                   }`}
                 >
                   <span>? Help</span>
@@ -119,6 +119,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       <span>💡</span>
                       <span className="font-medium">Tip of the Day</span>
                     </button>
+                    <Link
+                      to="/about"
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors border-t border-gray-100"
+                    >
+                      <span>ℹ️</span>
+                      <span className="font-medium">About</span>
+                    </Link>
                   </div>
                 )}
               </div>
@@ -192,6 +199,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <span>💡</span>
                   <span>Tip of the Day</span>
                 </button>
+                <Link
+                  to="/about"
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                    pathname === '/about'
+                      ? 'bg-white/30 text-white border border-white/40'
+                      : 'text-white/90 hover:bg-white/20 hover:text-white'
+                  }`}
+                >
+                  <span>ℹ️</span>
+                  <span>About</span>
+                </Link>
               </div>
 
               {activeCustomer && (
