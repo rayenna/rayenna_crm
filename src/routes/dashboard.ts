@@ -1285,7 +1285,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
           prisma.project.count({
             where: {
               ...where,
-              projectStatus: { in: [ProjectStatus.CONFIRMED, ProjectStatus.UNDER_INSTALLATION] },
+              projectStatus: ProjectStatus.UNDER_INSTALLATION,
             },
           }),
           prisma.project.count({

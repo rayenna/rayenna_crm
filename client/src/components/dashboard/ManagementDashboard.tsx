@@ -126,11 +126,11 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
         />
         {/* Row 2 – five tiles */}
         <MetricCard
-          title="Pending Installation"
+          title="Under Installation"
           value={data?.operations?.pendingInstallation || 0}
           icon={<FaCog />}
           gradient="from-indigo-500 to-indigo-600"
-          to={buildProjectsUrl({ status: [ProjectStatus.UNDER_INSTALLATION, ProjectStatus.CONFIRMED] }, tileParams)}
+          to={buildProjectsUrl({ status: [ProjectStatus.UNDER_INSTALLATION] }, tileParams)}
         />
         <MetricCard
           title="Completed Installation"

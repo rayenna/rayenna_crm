@@ -85,6 +85,17 @@ const Dashboard = () => {
       )}
       {!isFyError && getDashboardComponent()}
 
+      {/* Footnote for Operations view */}
+      {user?.role === UserRole.OPERATIONS && (
+        <footer className="mt-8 pt-6 border-t border-primary-100 min-w-0 max-w-full bg-gradient-to-br from-primary-50/30 to-transparent rounded-xl p-4">
+          <p className="text-[11px] sm:text-xs text-gray-500 leading-relaxed break-words">
+            <span className="font-semibold text-gray-600">Note:</span>
+            <br />
+            1. Pending Installation Quick Access Tile displays those projects, which are in Stages "Confirmed" and "Under Installation"
+          </p>
+        </footer>
+      )}
+
       {/* Footnote for Admin, Sales and Management views */}
       {(user?.role === UserRole.ADMIN || user?.role === UserRole.SALES || user?.role === UserRole.MANAGEMENT) && (
         <footer className="mt-8 pt-6 border-t border-primary-100 min-w-0 max-w-full bg-gradient-to-br from-primary-50/30 to-transparent rounded-xl p-4">
@@ -98,8 +109,6 @@ const Dashboard = () => {
             3. Pipeline Conversion (%) = (Total Revenue / Total Pipeline) × 100
             <br />
             4. Open Deals includes those that are in Lead, Site Survey and Proposal stages.
-            <br />
-            5. Pending Installation Deals includes Projects those that are in Confirmed and Under Installation Stages.
           </p>
         </footer>
       )}
