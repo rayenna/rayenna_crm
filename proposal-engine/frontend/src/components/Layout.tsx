@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getActiveCustomer } from '../lib/customerStore';
 
 const NAV = [
@@ -20,11 +20,26 @@ const IDLE_LINK    = 'text-white hover:bg-white/20 hover:text-white';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
+  const navigate     = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   // Re-read active customer on every navigation so the pill stays current
   const activeCustomer = getActiveCustomer();
 
   useEffect(() => { setMenuOpen(false); }, [pathname]);
+
+  // Press ? anywhere (outside inputs) to open Help
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== '?') return;
+      const tag = (e.target as HTMLElement).tagName;
+      const isEditable = (e.target as HTMLElement).isContentEditable;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || isEditable) return;
+      e.preventDefault();
+      navigate('/help');
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50/80">

@@ -207,7 +207,7 @@ export default function HelpPage() {
           </Step>
 
           <Step n={5} title="Generate and Export the Proposal">
-            Go to <Link to="/proposal" className="text-indigo-600 underline font-medium">Proposal</Link>. Click <strong>Generate Proposal</strong> to see the full document. Add any notes in the Bill of Quantities section, then click <strong>💾 Generate &amp; Save Proposal</strong> to lock everything in. Export as <strong>PDF</strong> or <strong>DOCX</strong> to share with your customer.
+            Go to <Link to="/proposal" className="text-indigo-600 underline font-medium">Proposal</Link>. Click <strong>Generate Proposal</strong> to see the full document. Use the <strong>✏️ Edit</strong> button to make any inline changes directly on the proposal text. Add notes in the Bill of Quantities section, then click <strong>💾 Save</strong> at the bottom to lock everything in. Export as <strong>PDF</strong> or <strong>DOCX</strong> to share with your customer.
           </Step>
         </div>
 
@@ -255,7 +255,7 @@ export default function HelpPage() {
                 <span key={s.label} className={`px-2 py-1.5 rounded-full border font-semibold ${s.color}`}>{s.label}</span>
               ))}
             </div>
-            <p className="text-sm text-gray-500 mt-2">Status is set to <em>Proposal Ready</em> automatically when you click <strong>Generate &amp; Save Proposal</strong>.</p>
+            <p className="text-sm text-gray-500 mt-2">Status is set to <em>Proposal Ready</em> automatically when you click <strong>💾 Save</strong> on the Proposal page.</p>
           </div>
 
           <div>
@@ -560,16 +560,23 @@ export default function HelpPage() {
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-800 mb-2">Adding BOM Comments</h3>
+            <h3 className="font-semibold text-gray-800 mb-2">Editing the Proposal Inline</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              In the <strong>Bill of Quantities</strong> section of the proposal, each category has a comment field. Use this to add notes like <em>"Adani DCR modules as per MNRE approved list"</em> or <em>"Deye hybrid inverter with 5-year warranty"</em>. Click <strong>💾 Save Comments</strong> to persist them — they will be there next time you open the proposal and will be included in DOCX and PDF exports.
+              Click the <strong>✏️ Edit</strong> button in the top-right of the proposal header. The entire proposal document becomes editable — click on any text (executive summary, scope of work, terms, any section) and type directly. An amber border and banner appear to confirm you are in edit mode. Click <strong>✏️ Editing…</strong> again to exit edit mode without saving, or click <strong>💾 Save</strong> at the bottom to save your changes.
             </p>
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-800 mb-2">Saving All Artifacts</h3>
+            <h3 className="font-semibold text-gray-800 mb-2">Adding BOM Comments</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Click <strong>💾 Generate &amp; Save Proposal</strong> to save all four artifacts (Costing, BOM, ROI, Proposal) together under the active customer in one shot. The customer status is automatically updated to <em>Proposal Ready</em>.
+              In the <strong>Bill of Quantities</strong> section of the proposal, each category has a comment field. Use this to add notes like <em>"Adani DCR modules as per MNRE approved list"</em> or <em>"Deye hybrid inverter with 5-year warranty"</em>. These are saved automatically when you click <strong>💾 Save</strong> and will be included in DOCX and PDF exports.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Saving Everything in One Shot</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Click <strong>💾 Save</strong> at the bottom of the proposal page. This single button saves everything together — BOM comments, any inline edits, and all four artifacts (Costing, BOM, ROI, Proposal) to the active customer record. The customer status is automatically updated to <em>Proposal Ready</em>.
             </p>
           </div>
 
@@ -679,6 +686,10 @@ export default function HelpPage() {
 
           <FaqItem q="My Excel import is showing wrong categories. How do I fix it?">
             Check the <em>Category Reference</em> tab in the downloaded template for the exact category keys to use (e.g. <code className="bg-gray-100 px-1 rounded text-xs">pv-modules</code>, not <code className="bg-gray-100 px-1 rounded text-xs">PV Modules</code>). The import does fuzzy-matching but exact keys work best. Any unrecognised category defaults to <em>others</em>.
+          </FaqItem>
+
+          <FaqItem q="How do I edit the text in a generated proposal?">
+            Click the <strong>✏️ Edit</strong> button in the proposal header. The document turns editable (amber border appears). Click on any text and type your changes. When done, click <strong>💾 Save</strong> at the bottom — this saves your edits, BOM comments, and all artifacts together. The PDF export will capture your inline edits automatically since it renders the live document.
           </FaqItem>
 
           <FaqItem q="The PDF export is showing a blank page. What should I do?">
