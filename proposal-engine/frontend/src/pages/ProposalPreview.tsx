@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   SHEETS_STORAGE_KEY,
@@ -366,6 +366,8 @@ const WARRANTY_TERMS = [
 const DELIVERY_TERMS = [
   '7 to 15 working days from the date of confirmed purchase order with advance.',
 ];
+
+const SUBSIDY_DISCLAIMER_TEXT = `The subsidy, if applicable, is subject to approval and disbursement by the relevant DISCOM and/or government authority. Rayenna Energy's scope is limited to providing reasonable assistance with documentation and procedural requirements. We have no control over, and shall not be liable or responsible for, any delay, rejection, non-approval, or non-disbursement of the subsidy by the concerned authorities. The Customer expressly acknowledges and agrees that all payment obligations under this agreement are absolute and unconditional, and are not linked to, dependent upon, or contingent upon the approval or receipt of any subsidy amount.`;
 
 function closingText(p: ProposalData): string {
   return `We at Rayenna Energy are committed to delivering a world-class solar installation that meets your energy needs and exceeds your expectations. Our team will be with you at every step — from design and installation to commissioning and beyond.
@@ -950,14 +952,29 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
       commercialRows.push(
         new TableRow({
           children: [
-            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Less: Provision for Govt Subsidy (as per PM-Surya Ghar / MNRE scheme)', size: 20, color: '92400E' })] })] }),
-            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINR(subsidyAmt), bold: true, size: 20, color: '92400E' })], alignment: AlignmentType.RIGHT })] }),
-          ],
-        }),
-        new TableRow({
-          children: [
-            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Net amount payable by customer', bold: true, size: 20, color: '065F46' })] })] }),
-            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINR(Math.round(grandRounded - subsidyAmt)), bold: true, size: 22, color: '065F46' })], alignment: AlignmentType.RIGHT })] }),
+            new TableCell({
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `Subsidy Eligible – Rs. ${subsidyAmt.toLocaleString('en-IN')}/-`,
+                      size: 20,
+                      color: '92400E',
+                    }),
+                  ],
+                }),
+              ],
+            }),
+            new TableCell({
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({ text: fmtINR(subsidyAmt), bold: true, size: 20, color: '92400E' }),
+                  ],
+                  alignment: AlignmentType.RIGHT,
+                }),
+              ],
+            }),
           ],
         }),
       );
@@ -1463,6 +1480,8 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
       : DELIVERY_TERMS.map((t, i) => listItem(t, i + 1))),
     heading('Closing Note'),
     ...multilineParagraphs(textOverrides?.['section-closing-note'] ?? closingText(p)),
+    heading('Subsidy Disclaimer and Payment Terms'),
+    ...multilineParagraphs(SUBSIDY_DISCLAIMER_TEXT),
     new Paragraph({
       children: [new TextRun({ text: `Generated: ${new Date(p.generatedAt).toLocaleString('en-IN')}  |  ${p.refNumber}`, size: 16, color: '9CA3AF', italics: true })],
       alignment: AlignmentType.CENTER,
@@ -1516,13 +1535,17 @@ function extractTextOverrides(root: HTMLElement): Record<string, string> {
   return overrides;
 }
 
-/** Get image as ArrayBuffer from an already-loaded img element (for mobile DOCX export when fetch fails). */
-function imageElementToArrayBuffer(img: HTMLImageElement): Promise<ArrayBuffer> {
+/** Get image as ArrayBuffer from an already-rendered img element (for mobile DOCX export when fetch fails). */
+async function imageElementToArrayBuffer(img: HTMLImageElement): Promise<ArrayBuffer> {
+  if (!img.complete || img.naturalWidth === 0) {
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = reject;
+      if (img.complete && img.naturalWidth > 0) resolve();
+    });
+  }
+  if (img.naturalWidth === 0) return Promise.reject(new Error('Image not loaded'));
   return new Promise((resolve, reject) => {
-    if (!img.complete || img.naturalWidth === 0) {
-      reject(new Error('Image not loaded'));
-      return;
-    }
     const canvas = document.createElement('canvas');
     canvas.width = img.naturalWidth;
     canvas.height = img.naturalHeight;
@@ -1557,21 +1580,43 @@ async function exportToDocx(
 ): Promise<void> {
   let diagramImageData: ArrayBuffer | undefined;
   let logoImageData: ArrayBuffer | undefined;
-  try {
-    const [diagResp, logoResp] = await Promise.all([
-      fetch('/rayenna_proposal.jpg'),
-      fetch('/rayenna_logo.jpg'),
-    ]);
-    if (diagResp.ok) diagramImageData = await diagResp.arrayBuffer();
-    if (logoResp.ok) logoImageData    = await logoResp.arrayBuffer();
-  } catch { /* image embedding optional */ }
-
-  // On mobile, fetch for same-origin images can fail; use already-rendered img elements as fallback
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  if (container && (isMobile || !diagramImageData || !logoImageData)) {
+
+  // On mobile, fetch often fails; try DOM fallback first using already-rendered images
+  if (container && isMobile) {
     try {
-      const diagramImg = container.querySelector<HTMLImageElement>('img[src*="rayenna_proposal"]');
-      const logoImg    = container.querySelector<HTMLImageElement>('img[src*="rayenna_logo"]');
+      const diagramImg = container.querySelector<HTMLImageElement>('[data-docx-image="diagram"]')
+        ?? container.querySelector<HTMLImageElement>('img[src*="rayenna_proposal"]');
+      const logoImg = container.querySelector<HTMLImageElement>('[data-docx-image="logo"]')
+        ?? container.querySelector<HTMLImageElement>('img[src*="rayenna_logo"]');
+      if (diagramImg && diagramImg.decode) await diagramImg.decode().catch(() => {});
+      if (logoImg && logoImg.decode) await logoImg.decode().catch(() => {});
+      if (diagramImg) diagramImageData = await imageElementToArrayBuffer(diagramImg);
+      if (logoImg)    logoImageData    = await imageElementToArrayBuffer(logoImg);
+    } catch { /* optional */ }
+  }
+
+  // Fetch from network (desktop or when DOM fallback didn't provide both)
+  if (!diagramImageData || !logoImageData) {
+    try {
+      const [diagResp, logoResp] = await Promise.all([
+        fetch('/rayenna_proposal.jpg'),
+        fetch('/rayenna_logo.jpg'),
+      ]);
+      if (!diagramImageData && diagResp.ok) diagramImageData = await diagResp.arrayBuffer();
+      if (!logoImageData && logoResp.ok)    logoImageData    = await logoResp.arrayBuffer();
+    } catch { /* optional */ }
+  }
+
+  // Non-mobile or missing after fetch: try DOM fallback if container available
+  if (container && (!diagramImageData || !logoImageData)) {
+    try {
+      const diagramImg = container.querySelector<HTMLImageElement>('[data-docx-image="diagram"]')
+        ?? container.querySelector<HTMLImageElement>('img[src*="rayenna_proposal"]');
+      const logoImg = container.querySelector<HTMLImageElement>('[data-docx-image="logo"]')
+        ?? container.querySelector<HTMLImageElement>('img[src*="rayenna_logo"]');
+      if (diagramImg && diagramImg.decode) await diagramImg.decode().catch(() => {});
+      if (logoImg && logoImg.decode) await logoImg.decode().catch(() => {});
       if (!diagramImageData && diagramImg) diagramImageData = await imageElementToArrayBuffer(diagramImg);
       if (!logoImageData && logoImg)    logoImageData    = await imageElementToArrayBuffer(logoImg);
     } catch { /* optional */ }
@@ -1608,6 +1653,7 @@ const SECTION_META: Record<string, { icon: string; accent: string }> = {
   'Environmental Impact':       { icon: '🌱', accent: '#16a34a' },
   'Our Process':                { icon: '🔄', accent: '#7c3aed' },
   'Closing Note':               { icon: '🤝', accent: '#7c3aed' },
+  'Subsidy Disclaimer and Payment Terms': { icon: '📜', accent: '#b45309' },
 };
 
 function SectionBlock({ title, content }: { title: string; content: string }) {
@@ -1779,6 +1825,7 @@ function WhatWeOfferBlock() {
         {/* Right: diagram image */}
         <div className="lg:w-[42%] flex-shrink-0 flex items-center justify-center">
           <img
+            data-docx-image="diagram"
             src="/rayenna_proposal.jpg"
             alt="Solar System Diagram"
             className="w-full h-auto"
@@ -2211,7 +2258,7 @@ function BOMGroupedTable({ items, comments, onCommentsChange }: {
         </p>
         <button
           type="button"
-          onClick={toggleAll}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleAll(); }}
           className="print-hide flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2.5 min-h-[44px] min-w-[44px] rounded-lg border transition-colors touch-manipulation"
           style={{ borderColor: '#b45309', color: '#b45309', background: '#fff7ed', touchAction: 'manipulation' }}
           aria-label={allCollapsed ? 'Expand all categories' : 'Collapse all categories'}
@@ -2239,10 +2286,9 @@ function BOMGroupedTable({ items, comments, onCommentsChange }: {
               const isOpen  = !collapsed[cat];
               const comment = comments[cat] ?? '';
               return (
-                <>
+                <React.Fragment key={cat}>
                   {/* Category header row */}
                   <tr
-                    key={`hdr-${cat}`}
                     className="cursor-pointer select-none"
                     style={{ background: a.headerBg, borderTop: `2px solid ${a.border}` }}
                     onClick={() => setCollapsed((p) => ({ ...p, [cat]: !p[cat] }))}
@@ -2317,7 +2363,7 @@ function BOMGroupedTable({ items, comments, onCommentsChange }: {
                       </td>
                     </tr>
                   )}
-                </>
+                </React.Fragment>
               );
             })}
           </tbody>
@@ -2384,24 +2430,14 @@ function CommercialsBlock({ sheet, roi, roiAutofill }: { sheet: SavedSheet | nul
               </td>
             </tr>
             {showSubsidy && (
-              <>
-                <tr className="border-b border-primary-100 bg-amber-50/60">
-                  <td className="px-5 py-3 text-amber-800">
-                    Less: Provision for Govt Subsidy (as per PM-Surya Ghar / MNRE scheme)
-                  </td>
-                  <td className="px-5 py-3 text-right text-amber-800 font-semibold tabular-nums w-44">
-                    {fmtINR(subsidyAmount)}
-                  </td>
-                </tr>
-                <tr className="bg-emerald-50/80 border-t-2 border-emerald-200">
-                  <td className="px-5 py-3 text-emerald-800 font-bold">
-                    Net amount payable by customer
-                  </td>
-                  <td className="px-5 py-3 text-right text-emerald-800 font-extrabold tabular-nums w-44">
-                    {fmtINR(Math.round(grandRounded - subsidyAmount))}
-                  </td>
-                </tr>
-              </>
+              <tr className="border-b border-primary-100 bg-amber-50/60">
+                <td className="px-5 py-3 text-amber-800 font-medium">
+                  Subsidy Eligible – Rs. {subsidyAmount.toLocaleString('en-IN')}/-
+                </td>
+                <td className="px-5 py-3 text-right text-amber-800 font-semibold tabular-nums w-44">
+                  {fmtINR(subsidyAmount)}
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
@@ -2996,6 +3032,7 @@ export default function ProposalPreview() {
                   <div className="flex items-center gap-4">
                     <div className="flex-shrink-0 bg-white rounded-xl p-1.5 shadow-lg">
                       <img
+                        data-docx-image="logo"
                         src="/rayenna_logo.jpg"
                         alt="Rayenna Energy"
                         className="h-14 w-auto object-contain"
@@ -3117,6 +3154,8 @@ export default function ProposalPreview() {
                 <ListBlock title="Material Delivery Period" items={DELIVERY_TERMS} />
                 <Divider />
                 <SectionBlock title="Closing Note" content={closingText(proposal)} />
+                <Divider />
+                <SectionBlock title="Subsidy Disclaimer and Payment Terms" content={SUBSIDY_DISCLAIMER_TEXT} />
               </div>
 
               {/* Footer — Save + Export */}
