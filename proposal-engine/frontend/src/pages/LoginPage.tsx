@@ -2,6 +2,8 @@ import { FormEvent, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { clearToken, loginWithEmailPassword, setToken } from '../lib/apiClient';
 
+const bgImageUrl = new URL('../assets/background.jpg', import.meta.url).href;
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -38,7 +40,7 @@ export default function LoginPage() {
     <div
       className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-900/70 bg-blend-multiply"
       style={{
-        backgroundImage: 'url(/background.jpg)',
+        backgroundImage: `url(${bgImageUrl})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
