@@ -1492,7 +1492,45 @@ function extractTextOverrides(root: HTMLElement): Record<string, string> {
   return overrides;
 }
 
-async function exportToDocx(p: ProposalData, bomComments?: Record<string, string>, textOverrides?: TextOverrides): Promise<void> {
+/** Get image as ArrayBuffer from an already-loaded img element (for mobile DOCX export when fetch fails). */
+function imageElementToArrayBuffer(img: HTMLImageElement): Promise<ArrayBuffer> {
+  return new Promise((resolve, reject) => {
+    if (!img.complete || img.naturalWidth === 0) {
+      reject(new Error('Image not loaded'));
+      return;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      reject(new Error('Canvas 2d unavailable'));
+      return;
+    }
+    ctx.drawImage(img, 0, 0);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error('toBlob failed'));
+          return;
+        }
+        const fr = new FileReader();
+        fr.onload = () => resolve(fr.result as ArrayBuffer);
+        fr.onerror = () => reject(fr.error);
+        fr.readAsArrayBuffer(blob);
+      },
+      'image/jpeg',
+      0.92
+    );
+  });
+}
+
+async function exportToDocx(
+  p: ProposalData,
+  bomComments?: Record<string, string>,
+  textOverrides?: TextOverrides,
+  container?: HTMLElement | null
+): Promise<void> {
   let diagramImageData: ArrayBuffer | undefined;
   let logoImageData: ArrayBuffer | undefined;
   try {
@@ -1503,6 +1541,18 @@ async function exportToDocx(p: ProposalData, bomComments?: Record<string, string
     if (diagResp.ok) diagramImageData = await diagResp.arrayBuffer();
     if (logoResp.ok) logoImageData    = await logoResp.arrayBuffer();
   } catch { /* image embedding optional */ }
+
+  // On mobile, fetch for same-origin images can fail; use already-rendered img elements as fallback
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  if (container && (isMobile || !diagramImageData || !logoImageData)) {
+    try {
+      const diagramImg = container.querySelector<HTMLImageElement>('img[src*="rayenna_proposal"]');
+      const logoImg    = container.querySelector<HTMLImageElement>('img[src*="rayenna_logo"]');
+      if (!diagramImageData && diagramImg) diagramImageData = await imageElementToArrayBuffer(diagramImg);
+      if (!logoImageData && logoImg)    logoImageData    = await imageElementToArrayBuffer(logoImg);
+    } catch { /* optional */ }
+  }
+
   const doc = buildDocx(p, diagramImageData, bomComments, logoImageData, textOverrides);
   const blob = await Packer.toBlob(doc);
   const url = URL.createObjectURL(blob);
@@ -2136,9 +2186,11 @@ function BOMGroupedTable({ items, comments, onCommentsChange }: {
           {grouped.length} categories · {items.length} items
         </p>
         <button
+          type="button"
           onClick={toggleAll}
-          className="print-hide flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors"
-          style={{ borderColor: '#b45309', color: '#b45309', background: '#fff7ed' }}
+          className="print-hide flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2.5 min-h-[44px] min-w-[44px] rounded-lg border transition-colors touch-manipulation"
+          style={{ borderColor: '#b45309', color: '#b45309', background: '#fff7ed', touchAction: 'manipulation' }}
+          aria-label={allCollapsed ? 'Expand all categories' : 'Collapse all categories'}
         >
           {allCollapsed ? '▶ Expand All' : '▼ Collapse All'}
         </button>
@@ -2799,7 +2851,7 @@ export default function ProposalPreview() {
       const textOverrides = (liveOverrides && Object.keys(liveOverrides).length > 0)
         ? liveOverrides
         : savedOverrides;
-      await exportToDocx(proposal, bomComments, textOverrides);
+      await exportToDocx(proposal, bomComments, textOverrides, printRef.current ?? undefined);
     } finally {
       setExporting(null);
     }
