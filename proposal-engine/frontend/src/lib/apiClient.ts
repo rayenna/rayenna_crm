@@ -1,12 +1,13 @@
 const TOKEN_KEY = 'pe_jwt';
 
-const API_BASE =
-  // Prefer explicit base URL when deployed (e.g. https://rayenna-crm.onrender.com)
-  // and fall back to relative /api for local dev (proxied via Vite).
-  (import.meta as any).env?.VITE_API_BASE_URL ?? '/api';
+// Match CRM frontend behaviour:
+// - In dev: VITE_API_BASE_URL is usually empty → use relative `/api/...` (Vite proxy).
+// - In prod: VITE_API_BASE_URL is the backend origin, e.g. https://rayenna-crm.onrender.com
+//   and we always prefix paths with `/api/...`.
+const API_BASE_URL: string = (import.meta as any).env?.VITE_API_BASE_URL || '';
 
 export function getApiBaseUrl(): string {
-  return API_BASE;
+  return API_BASE_URL;
 }
 
 export function getToken(): string | null {
@@ -56,7 +57,7 @@ export async function apiFetch<TResponse = unknown>(
   const method: ApiMethod = options.method ?? 'GET';
   const auth = options.auth ?? true;
 
-  const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
+  const url = path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
 
   const headers = new Headers(options.headers ?? {});
 
@@ -109,7 +110,7 @@ export interface LoginResponse {
 export async function loginWithEmailPassword(email: string, password: string): Promise<LoginResponse> {
   const body = JSON.stringify({ email, password });
 
-  const res = await fetch(`${API_BASE}/auth/login`, {
+  const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

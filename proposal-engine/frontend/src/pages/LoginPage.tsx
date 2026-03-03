@@ -36,7 +36,7 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4 bg-slate-900/70 bg-blend-multiply"
+      className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-900/70 bg-blend-multiply"
       style={{
         backgroundImage: 'url(/background.jpg)',
         backgroundSize: 'cover',
@@ -46,21 +46,19 @@ export default function LoginPage() {
     >
       <div className="w-full max-w-md bg-white/95 backdrop-blur rounded-2xl shadow-2xl border border-slate-200 px-6 py-8 space-y-6">
         <header className="space-y-3 text-center">
-          <div className="inline-flex items-center justify-center">
+          <div className="mb-4">
             <img
               src="/rayenna_logo.jpg"
-              alt="Rayenna"
-              className="h-12 w-auto rounded-xl bg-white shadow-md border border-slate-200 object-contain px-2"
+              alt="Rayenna Energy Logo"
+              className="h-32 w-auto mx-auto mb-2 drop-shadow-lg"
             />
           </div>
-          <div className="space-y-1">
-            <h1 className="text-xl font-semibold text-slate-900">
-              Proposal Engine Login
-            </h1>
-            <p className="text-sm text-slate-600">
-              Sign in with your existing Rayenna CRM credentials.
-            </p>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+            Proposal Engine
+          </h1>
+          <p className="mt-2 text-sm font-medium text-slate-600">
+            Sign in with your existing Rayenna CRM credentials.
+          </p>
         </header>
 
         {error && (
