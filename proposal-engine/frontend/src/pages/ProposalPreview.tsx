@@ -2231,6 +2231,14 @@ function BOMGroupedTable({ items, comments, onCommentsChange }: {
   const [collapsed, setCollapsed]       = useState<Record<string, boolean>>({});
   const [allCollapsed, setAllCollapsed] = useState(false);
 
+  // Whenever the BOM items array changes (e.g. after regenerating / loading
+  // a different customer), reset the collapse state so controls behave
+  // predictably and don't carry over from a previous proposal.
+  useEffect(() => {
+    setCollapsed({});
+    setAllCollapsed(false);
+  }, [items]);
+
   if (!items.length) return null;
 
   // Group items by category, preserving CATEGORIES order
