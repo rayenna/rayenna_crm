@@ -117,19 +117,29 @@ export async function loginWithEmailPassword(email: string, password: string): P
     body,
   });
 
-  const data = (await res.json()) as any;
+  let rawText: string | null = null;
+  let data: any = null;
+
+  try {
+    rawText = await res.text();
+    data = rawText ? JSON.parse(rawText) : null;
+  } catch {
+    // Non-JSON or empty body – handled below.
+  }
 
   if (!res.ok) {
     const message =
       data?.error ||
       data?.message ||
       (Array.isArray(data?.errors) && data.errors[0]?.msg) ||
-      'Login failed';
+      (rawText && rawText.trim().length > 0
+        ? `Login failed (${res.status}).`
+        : 'Login failed. No response body from server.');
     throw new Error(message);
   }
 
   if (!data?.token) {
-    throw new Error('Login succeeded but no token was returned.');
+    throw new Error('Login succeeded but no token was returned by the CRM backend.');
   }
 
   return data as LoginResponse;

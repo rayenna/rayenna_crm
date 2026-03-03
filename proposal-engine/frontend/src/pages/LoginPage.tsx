@@ -35,18 +35,32 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-amber-500 px-4">
+    <div
+      className="min-h-screen flex items-center justify-center px-4 bg-slate-900/70 bg-blend-multiply"
+      style={{
+        backgroundImage: 'url(/background.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
       <div className="w-full max-w-md bg-white/95 backdrop-blur rounded-2xl shadow-2xl border border-slate-200 px-6 py-8 space-y-6">
-        <header className="space-y-2 text-center">
-          <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-slate-900 text-amber-300 font-bold shadow-md">
-            PE
+        <header className="space-y-3 text-center">
+          <div className="inline-flex items-center justify-center">
+            <img
+              src="/rayenna_logo.jpg"
+              alt="Rayenna"
+              className="h-12 w-auto rounded-xl bg-white shadow-md border border-slate-200 object-contain px-2"
+            />
           </div>
-          <h1 className="text-xl font-semibold text-slate-900">
-            Proposal Engine Login
-          </h1>
-          <p className="text-sm text-slate-600">
-            Sign in with your existing Rayenna CRM credentials.
-          </p>
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold text-slate-900">
+              Proposal Engine Login
+            </h1>
+            <p className="text-sm text-slate-600">
+              Sign in with your existing Rayenna CRM credentials.
+            </p>
+          </div>
         </header>
 
         {error && (
@@ -97,11 +111,20 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-xs text-center text-slate-500">
-          Forgot your password? Use the password reset flow in the main CRM.
-        </p>
+        <div className="mt-4 text-center">
+          <p className="text-xs text-slate-600">
+            Forgot your Password? Contact your administrator
+          </p>
+        </div>
+
+        <div className="mt-6 pt-6 border-t border-slate-200">
+          <p className="text-xs text-slate-500 text-center leading-relaxed">
+            By signing in, you acknowledge and agree to the Credits, Copyright, intellectual property and Terms of Usage of this product. Refer the About section to know more
+          </p>
+        </div>
       </div>
     </div>
   );
 }
+
 
