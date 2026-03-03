@@ -1593,22 +1593,11 @@ async function exportToDocx(
 ): Promise<void> {
   let diagramImageData: ArrayBuffer | undefined;
   let logoImageData: ArrayBuffer | undefined;
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
-  // 1) Try network fetch first (works reliably on desktop)
-  try {
-    const [diagResp, logoResp] = await Promise.all([
-      fetch('/rayenna_proposal.jpg'),
-      fetch('/rayenna_logo.jpg'),
-    ]);
-    if (diagResp.ok) diagramImageData = await diagResp.arrayBuffer();
-    if (logoResp.ok) logoImageData    = await logoResp.arrayBuffer();
-  } catch {
-    // ignore – we'll fall back to DOM
-  }
-
-  // 2) On mobile, or if either image is still missing, fall back to the already-rendered <img> tags
-  if (container && (isMobile || !diagramImageData || !logoImageData)) {
+  // 1) Prefer the already-rendered <img> elements inside the proposal.
+  // This works consistently on both mobile and desktop and avoids any
+  // fetch/CORS quirks; we only fall back to network fetch if needed.
+  if (container) {
     try {
       const diagramImg =
         container.querySelector<HTMLImageElement>('[data-docx-image="diagram"]')
@@ -1617,14 +1606,32 @@ async function exportToDocx(
         container.querySelector<HTMLImageElement>('[data-docx-image="logo"]')
         ?? container.querySelector<HTMLImageElement>('img[src*="rayenna_logo"]');
 
-      if (!diagramImageData && diagramImg) {
+      if (diagramImg) {
         diagramImageData = await imageElementToArrayBuffer(diagramImg);
       }
-      if (!logoImageData && logoImg) {
+      if (logoImg) {
         logoImageData = await imageElementToArrayBuffer(logoImg);
       }
     } catch {
-      // best-effort only; images are optional
+      // best-effort only; we will still try network fetch below
+    }
+  }
+
+  // 2) If either image is still missing, try network fetch as a fallback.
+  if (!diagramImageData || !logoImageData) {
+    try {
+      const [diagResp, logoResp] = await Promise.all([
+        fetch('/rayenna_proposal.jpg'),
+        fetch('/rayenna_logo.jpg'),
+      ]);
+      if (!diagramImageData && diagResp.ok) {
+        diagramImageData = await diagResp.arrayBuffer();
+      }
+      if (!logoImageData && logoResp.ok) {
+        logoImageData = await logoResp.arrayBuffer();
+      }
+    } catch {
+      // still optional; if fetch fails we just omit the images
     }
   }
 
