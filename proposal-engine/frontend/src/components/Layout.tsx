@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getActiveCustomer } from '../lib/customerStore';
+import { clearToken, getToken } from '../lib/apiClient';
 import TipOfTheDay from './TipOfTheDay';
 
 const NAV = [
@@ -26,6 +27,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const helpRef                     = useRef<HTMLDivElement>(null);
   // Re-read active customer on every navigation so the pill stays current
   const activeCustomer = getActiveCustomer();
+  const hasToken       = !!getToken();
 
   useEffect(() => { setMenuOpen(false); setHelpOpen(false); }, [pathname]);
 
@@ -53,6 +55,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [navigate]);
+
+  const handleLogout = () => {
+    clearToken();
+    navigate('/login', { replace: true });
+  };
+
+  // For the login page, render children without the full chrome to keep the
+  // experience focused and avoid showing navigation before authentication.
+  if (pathname === '/login') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50/80">
@@ -155,6 +172,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <span className="w-1.5 h-1.5 rounded-full bg-sky-300 inline-block flex-shrink-0 animate-pulse" />
                   <span className="truncate font-medium">{activeCustomer.master.name}</span>
                 </Link>
+              )}
+
+              {/* Logout button — desktop only */}
+              {hasToken && (
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="hidden md:inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold text-slate-900 bg-white/90 hover:bg-amber-300 border border-white/70 shadow-sm transition-colors"
+                >
+                  Logout
+                </button>
               )}
 
               {/* Hamburger — mobile only */}
