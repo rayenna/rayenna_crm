@@ -52,6 +52,7 @@ const allowedOrigins = [
   'https://rayenna-crm-kappa.vercel.app', // Vercel (legacy)
   'https://rayennacrm.vercel.app', // Vercel production frontend
   'https://rayenna-crm-frontend.onrender.com', // Render static frontend
+  'https://rayenna-proposal-engine.onrender.com', // Proposal Engine frontend
   process.env.FRONTEND_URL, // Production frontend from env (if different)
 ].filter(Boolean) as string[];
 
@@ -167,6 +168,7 @@ const server = app.listen(PORT, async () => {
     const salesTeamPerformanceRoutes = (await import('./routes/salesTeamPerformance')).default;
     const remarksRoutes = (await import('./routes/remarks')).default;
     const adminAuditRoutes = (await import('./routes/adminAudit')).default;
+    const proposalEngineRoutes = (await import('./routes/proposalEngine')).default;
 
     apiRouter.use('/auth', authRoutes);
     apiRouter.use('/projects', projectRoutes);
@@ -188,6 +190,7 @@ const server = app.listen(PORT, async () => {
     apiRouter.use('/sales-team-performance', salesTeamPerformanceRoutes);
     apiRouter.use('/remarks', remarksRoutes);
     apiRouter.use('/admin/audit', adminAuditRoutes);
+    apiRouter.use('/proposal-engine', proposalEngineRoutes);
 
     routesLoaded = true;
     console.log('API routes ready');

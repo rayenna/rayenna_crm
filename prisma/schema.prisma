@@ -158,6 +158,11 @@ model User {
   createdTickets    SupportTicket[] @relation("TicketCreatedBy")
   ticketActivities  SupportTicketActivity[] @relation("ActivityCreatedBy")
 
+  peCostingSheets PECostingSheet[] @relation("PECostingSheetCreatedBy")
+  peBomSheets     PEBomSheet[]     @relation("PEBomSheetCreatedBy")
+  peRoiResults    PERoiResult[]    @relation("PERoiResultCreatedBy")
+  peProposals     PEProposal[]     @relation("PEProposalCreatedBy")
+
   @@index([resetToken])
   @@map("users")
 }
@@ -330,6 +335,11 @@ model Project {
   serviceTickets ServiceTicket[]
   supportTickets SupportTicket[] @relation("SupportTickets")
   projectRemarks ProjectRemark[]
+
+  peCostingSheets PECostingSheet[]
+  peBomSheets     PEBomSheet[]
+  peRoiResults    PERoiResult[]
+  peProposals     PEProposal[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -585,4 +595,66 @@ model AccessLog {
   @@index([actionType])
   @@index([createdAt])
   @@map("access_logs")
+}
+
+model PECostingSheet {
+  id           String   @id @default(cuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdById  String
+  createdBy    User     @relation("PECostingSheetCreatedBy", fields: [createdById], references: [id])
+  sheetName    String
+  items        Json
+  showGst      Boolean  @default(true)
+  marginPct    Float    @default(0)
+  grandTotal   Float
+  systemSizeKw Float    @default(0)
+  savedAt      DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("pe_costing_sheets")
+}
+
+model PEBomSheet {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User     @relation("PEBomSheetCreatedBy", fields: [createdById], references: [id])
+  rows        Json
+  savedAt     DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("pe_bom_sheets")
+}
+
+model PERoiResult {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User     @relation("PERoiResultCreatedBy", fields: [createdById], references: [id])
+  result      Json
+  savedAt     DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("pe_roi_results")
+}
+
+model PEProposal {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdById   String
+  createdBy     User     @relation("PEProposalCreatedBy", fields: [createdById], references: [id])
+  refNumber     String
+  generatedAt   DateTime
+  bomComments   Json?
+  editedHtml    String?  @db.Text
+  textOverrides Json?
+  summary       String?
+  savedAt       DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("pe_proposals")
 }
