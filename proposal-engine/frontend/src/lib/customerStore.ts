@@ -121,6 +121,10 @@ export interface ROIInputs {
   generationFactor:  number;
   escalationPercent: number;
   projectCost:       number;
+  /** Whether customer is eligible for govt subsidy (e.g. MNRE/State scheme) */
+  subsidyEligible?:  boolean;
+  /** Subsidy amount in ₹ (for proposal "Provision for Govt Subsidy"); ROI uses effectiveProjectCost when > 0 */
+  subsidyAmount?:    number;
 }
 
 export interface YearlyRow {
@@ -142,6 +146,8 @@ export interface ROIResult {
   lcoe:               number;
   co2OffsetTons:      number;
   yearlyBreakdown:    YearlyRow[];
+  /** Project cost minus subsidy; used for payback/ROI when subsidy applied */
+  effectiveProjectCost?: number;
 }
 
 // ─────────────────────────────────────────────

@@ -40,10 +40,15 @@ interface YearlyRow {
 }
 
 interface ROIResult {
-  inputs: { systemSizeKw: number; tariff: number; generationFactor: number; escalationPercent: number; projectCost: number; };
+  inputs: {
+    systemSizeKw: number; tariff: number; generationFactor: number; escalationPercent: number; projectCost: number;
+    subsidyEligible?: boolean;
+    subsidyAmount?: number;
+  };
   annualGeneration: number; annualSavings: number; paybackYears: number;
   totalSavings25Years: number; roiPercent: number; lcoe: number; co2OffsetTons: number;
   yearlyBreakdown?: YearlyRow[];
+  effectiveProjectCost?: number;
 }
 
 interface CustomerDetails {
@@ -911,6 +916,8 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
   const grandTotal = p.sheet?.grandTotal ?? p.roiAutofill?.grandTotal ?? p.roi?.inputs.projectCost ?? 0;
   const commercialsSection = grandTotal > 0 ? (() => {
     const grandRounded = Math.round(grandTotal);
+    const subsidyAmt   = p.roi?.inputs?.subsidyAmount ?? 0;
+    const showSubsidy  = subsidyAmt > 0;
     const hasSheetGst  = !!p.sheet && (p.sheet.totalGst ?? 0) > 0;
     const gstAmount    = hasSheetGst ? Math.round(p.sheet!.totalGst) : (() => {
       const pre = Math.round(grandRounded / 1.18);
@@ -919,30 +926,47 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
     const preGst       = hasSheetGst ? Math.round(grandRounded - gstAmount) : Math.round(grandRounded / 1.18);
     const gstLabel     = hasSheetGst ? 'GST (mixed: 5% & 18%)' : 'GST @ 18% (estimate)';
     const sizeKw    = p.roiAutofill?.systemSizeKw ?? p.sheet?.systemSizeKw ?? 0;
+    const commercialRows: TableRow[] = [
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Design, Supply, Installation & Commissioning of ${sizeKw > 0 ? `${sizeKw} kW ` : ''}On-Grid Solar Power Plant including all electrical and structural work`, size: 20 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINR(preGst), bold: true, size: 20 })], alignment: AlignmentType.RIGHT })], width: { size: 20, type: WidthType.PERCENTAGE } }),
+        ],
+      }),
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: gstLabel, size: 20, color: '1D4ED8' })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINR(gstAmount), bold: true, size: 20, color: '1D4ED8' })], alignment: AlignmentType.RIGHT })] }),
+        ],
+      }),
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'TOTAL PROJECT COST (incl. GST)', bold: true, size: 22, color: white })], alignment: AlignmentType.LEFT })], shading: { type: ShadingType.SOLID, color: navy } }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINR(grandRounded), bold: true, size: 24, color: white })], alignment: AlignmentType.RIGHT })], shading: { type: ShadingType.SOLID, color: navy } }),
+        ],
+      }),
+    ];
+    if (showSubsidy) {
+      commercialRows.push(
+        new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Less: Provision for Govt Subsidy (as per PM-Surya Ghar / MNRE scheme)', size: 20, color: '92400E' })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINR(subsidyAmt), bold: true, size: 20, color: '92400E' })], alignment: AlignmentType.RIGHT })] }),
+          ],
+        }),
+        new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Net amount payable by customer', bold: true, size: 20, color: '065F46' })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINR(Math.round(grandRounded - subsidyAmt)), bold: true, size: 22, color: '065F46' })], alignment: AlignmentType.RIGHT })] }),
+          ],
+        }),
+      );
+    }
     return [
       heading('Commercials'),
       new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
-        rows: [
-          new TableRow({
-            children: [
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Design, Supply, Installation & Commissioning of ${sizeKw > 0 ? `${sizeKw} kW ` : ''}On-Grid Solar Power Plant including all electrical and structural work`, size: 20 })] })] }),
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINR(preGst), bold: true, size: 20 })], alignment: AlignmentType.RIGHT })], width: { size: 20, type: WidthType.PERCENTAGE } }),
-            ],
-          }),
-          new TableRow({
-            children: [
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: gstLabel, size: 20, color: '1D4ED8' })] })] }),
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINR(gstAmount), bold: true, size: 20, color: '1D4ED8' })], alignment: AlignmentType.RIGHT })] }),
-            ],
-          }),
-          new TableRow({
-            children: [
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'TOTAL PROJECT COST (incl. GST)', bold: true, size: 22, color: white })], alignment: AlignmentType.LEFT })], shading: { type: ShadingType.SOLID, color: navy } }),
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINR(grandRounded), bold: true, size: 24, color: white })], alignment: AlignmentType.RIGHT })], shading: { type: ShadingType.SOLID, color: navy } }),
-            ],
-          }),
-        ],
+        rows: commercialRows,
       }),
       new Paragraph({ text: '', spacing: { after: 200 } }),
     ];
@@ -2310,6 +2334,8 @@ function CommercialsBlock({ sheet, roi, roiAutofill }: { sheet: SavedSheet | nul
   if (!grandTotal) return null;
 
   const grandRounded = Math.round(grandTotal);
+  const subsidyAmount = roi?.inputs?.subsidyAmount ?? 0;
+  const showSubsidy = subsidyAmount > 0;
 
   // If we have a saved sheet GST total, use it (matches Excel \"Revised Costing Sheet\").
   // Otherwise fall back to a flat 18% breakdown.
@@ -2357,6 +2383,26 @@ function CommercialsBlock({ sheet, roi, roiAutofill }: { sheet: SavedSheet | nul
                 {fmtINR(grandRounded)}
               </td>
             </tr>
+            {showSubsidy && (
+              <>
+                <tr className="border-b border-primary-100 bg-amber-50/60">
+                  <td className="px-5 py-3 text-amber-800">
+                    Less: Provision for Govt Subsidy (as per PM-Surya Ghar / MNRE scheme)
+                  </td>
+                  <td className="px-5 py-3 text-right text-amber-800 font-semibold tabular-nums w-44">
+                    {fmtINR(subsidyAmount)}
+                  </td>
+                </tr>
+                <tr className="bg-emerald-50/80 border-t-2 border-emerald-200">
+                  <td className="px-5 py-3 text-emerald-800 font-bold">
+                    Net amount payable by customer
+                  </td>
+                  <td className="px-5 py-3 text-right text-emerald-800 font-extrabold tabular-nums w-44">
+                    {fmtINR(Math.round(grandRounded - subsidyAmount))}
+                  </td>
+                </tr>
+              </>
+            )}
           </tbody>
         </table>
       </div>

@@ -25,6 +25,8 @@ interface ROIResult {
     generationFactor: number;
     escalationPercent: number;
     projectCost: number;
+    subsidyEligible?: boolean;
+    subsidyAmount?: number;
   };
   annualGeneration: number;
   annualSavings: number;
@@ -34,6 +36,7 @@ interface ROIResult {
   lcoe: number;
   co2OffsetTons: number;
   yearlyBreakdown: YearlyRow[];
+  effectiveProjectCost?: number;
 }
 
 // ─────────────────────────────────────────────
@@ -47,8 +50,22 @@ const CO2_FACTOR        = 0.82;
 function r2(n: number) { return Math.round(n * 100) / 100; }
 function r4(n: number) { return Math.round(n * 10000) / 10000; }
 
+/**
+ * Subsidy support as per PM-Surya Ghar / MNRE rooftop solar scheme
+ * (myscheme.gov.in — Suitable Rooftop Solar Plant Capacity for households).
+ * 0–150 units/mo → 1–2 kW → ₹30,000–₹60,000; 150–300 → 2–3 kW → ₹60,000–₹78,000; >300 → above 3 kW → ₹78,000.
+ */
+function getSubsidyByCapacityKw(kw: number): number {
+  if (kw <= 0) return 0;
+  if (kw <= 2) return Math.round(kw * 30000);
+  if (kw <= 3) return Math.round(60000 + (kw - 2) * 18000);
+  return 78000;
+}
+
 function calculateROI(inputs: ROIResult['inputs']): ROIResult {
-  const { systemSizeKw, tariff, generationFactor, escalationPercent, projectCost } = inputs;
+  const { systemSizeKw, tariff, generationFactor, escalationPercent, projectCost, subsidyEligible, subsidyAmount } = inputs;
+  const effectiveCost = Math.max(0, projectCost - (subsidyEligible && (subsidyAmount ?? 0) > 0 ? (subsidyAmount ?? 0) : 0));
+
   const escRate          = escalationPercent / 100;
   const annualGeneration = r2(systemSizeKw * generationFactor);
   const annualSavings    = r2(annualGeneration * tariff);
@@ -64,25 +81,36 @@ function calculateROI(inputs: ROIResult['inputs']): ROIResult {
     cumulative         = r2(cumulative + savings);
     totalGen25        += generation;
 
-    if (!paybackFound && projectCost > 0 && cumulative >= projectCost) {
+    if (!paybackFound && effectiveCost > 0 && cumulative >= effectiveCost) {
       const prev = cumulative - savings;
-      paybackYears = r2(y - 1 + (projectCost - prev) / savings);
+      paybackYears = r2(y - 1 + (effectiveCost - prev) / savings);
       paybackFound = true;
     }
 
     yearlyBreakdown.push({
       year: y, generation, tariffRate, savings,
       cumulativeSavings: cumulative,
-      paybackReached: projectCost > 0 && cumulative >= projectCost,
+      paybackReached: effectiveCost > 0 && cumulative >= effectiveCost,
     });
   }
 
   const totalSavings25Years = r2(cumulative);
-  const roiPercent    = projectCost > 0 ? r2(((totalSavings25Years - projectCost) / projectCost) * 100) : 0;
-  const lcoe          = totalGen25 > 0 ? r4(projectCost / totalGen25) : 0;
+  const roiPercent    = effectiveCost > 0 ? r2(((totalSavings25Years - effectiveCost) / effectiveCost) * 100) : 0;
+  const lcoe          = totalGen25 > 0 ? r4(effectiveCost / totalGen25) : 0;
   const co2OffsetTons = r2((totalGen25 * CO2_FACTOR) / 1000);
 
-  return { inputs, annualGeneration, annualSavings, paybackYears, totalSavings25Years, roiPercent, lcoe, co2OffsetTons, yearlyBreakdown };
+  return {
+    inputs: { ...inputs, subsidyEligible, subsidyAmount },
+    annualGeneration,
+    annualSavings,
+    paybackYears,
+    totalSavings25Years,
+    roiPercent,
+    lcoe,
+    co2OffsetTons,
+    yearlyBreakdown,
+    effectiveProjectCost: effectiveCost > 0 && effectiveCost !== projectCost ? effectiveCost : undefined,
+  };
 }
 
 // ─────────────────────────────────────────────
@@ -336,6 +364,9 @@ export default function ROICalculator() {
   const [generationFactor,  setGenerationFactor]  = useState('1500');
   const [escalationPercent, setEscalationPercent] = useState('5');
   const [projectCost,       setProjectCost]       = useState(autoFill && autoFill.grandTotal > 0 ? String(Math.round(autoFill.grandTotal)) : '');
+  const [subsidyEligible,   setSubsidyEligible]   = useState(false);
+  /** Optional override in ₹; when empty, use scheme amount from capacity (PM-Surya Ghar). */
+  const [subsidyOverride,   setSubsidyOverride]   = useState('');
 
   const [formError,   setFormError]   = useState<string | null>(null);
   const [result,      setResult]      = useState<ROIResult | null>(null);
@@ -346,22 +377,40 @@ export default function ROICalculator() {
   useEffect(() => {
     const ac = getActiveCustomer();
     if (ac?.roi?.result) {
-      setResult(ac.roi.result as ROIResult);
-      // Also restore inputs from the saved result
-      const inp = ac.roi.result.inputs;
+      const saved = ac.roi.result as ROIResult;
+      setResult(saved);
+      const inp = saved.inputs;
       if (inp) {
         if (inp.systemSizeKw > 0) setSystemSizeKw(String(inp.systemSizeKw));
         if (inp.tariff > 0)       setTariff(String(inp.tariff));
         if (inp.generationFactor > 0) setGenerationFactor(String(inp.generationFactor));
         if (inp.escalationPercent >= 0) setEscalationPercent(String(inp.escalationPercent));
         if (inp.projectCost > 0)  setProjectCost(String(Math.round(inp.projectCost)));
+        if (inp.subsidyEligible) {
+          setSubsidyEligible(true);
+          const schemeAmt = getSubsidyByCapacityKw(inp.systemSizeKw);
+          if ((inp.subsidyAmount ?? 0) > 0 && inp.subsidyAmount !== schemeAmt) {
+            setSubsidyOverride(String(Math.round(inp.subsidyAmount!)));
+          }
+        }
       }
       return;
     }
     // Fall back to localStorage
     try {
       const raw = localStorage.getItem(ROI_STORAGE_KEY);
-      if (raw) setResult(JSON.parse(raw));
+      if (raw) {
+        const saved = JSON.parse(raw) as ROIResult;
+        setResult(saved);
+        const inp = saved.inputs;
+        if (inp?.subsidyEligible) {
+          setSubsidyEligible(true);
+          const schemeAmt = getSubsidyByCapacityKw(inp.systemSizeKw ?? 0);
+          if ((inp.subsidyAmount ?? 0) > 0 && inp.subsidyAmount !== schemeAmt) {
+            setSubsidyOverride(String(Math.round(inp.subsidyAmount!)));
+          }
+        }
+      }
     } catch { /* ignore */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -380,14 +429,28 @@ export default function ROICalculator() {
     const gf  = parseFloat(generationFactor);
     const esc = parseFloat(escalationPercent);
     const pc  = parseFloat(projectCost) || 0;
+    const overrideVal = subsidyOverride.trim() ? parseFloat(subsidyOverride) : NaN;
 
     if (!sz  || sz  <= 0) { setFormError('System Size is required and must be > 0'); return; }
     if (!tr  || tr  <= 0) { setFormError('Electricity Tariff is required and must be > 0'); return; }
     if (!gf  || gf  <= 0) { setFormError('Generation Factor is required and must be > 0'); return; }
     if (isNaN(esc))        { setFormError('Tariff Escalation is required'); return; }
+    if (subsidyEligible && !isNaN(overrideVal) && overrideVal < 0) { setFormError('Subsidy override must be ≥ 0'); return; }
 
     setFormError(null);
-    const res = calculateROI({ systemSizeKw: sz, tariff: tr, generationFactor: gf, escalationPercent: esc, projectCost: pc });
+    const schemeSubsidy = getSubsidyByCapacityKw(sz);
+    const subsidyAmt = subsidyEligible
+      ? (!isNaN(overrideVal) && overrideVal >= 0 ? Math.round(overrideVal) : schemeSubsidy)
+      : 0;
+    const res = calculateROI({
+      systemSizeKw: sz,
+      tariff: tr,
+      generationFactor: gf,
+      escalationPercent: esc,
+      projectCost: pc,
+      subsidyEligible: subsidyEligible && subsidyAmt > 0,
+      subsidyAmount: subsidyAmt > 0 ? subsidyAmt : undefined,
+    });
     setResult(res);
   };
 
@@ -538,6 +601,50 @@ export default function ROICalculator() {
                     min="0"
                   />
 
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={subsidyEligible}
+                        onChange={(e) => setSubsidyEligible(e.target.checked)}
+                        className="rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span className="text-xs font-semibold text-secondary-700 uppercase tracking-wide">
+                        Eligible for Govt subsidy (PM-Surya Ghar / MNRE rooftop solar)
+                      </span>
+                    </label>
+                    {subsidyEligible && (
+                      <>
+                        {(() => {
+                          const sz = parseFloat(systemSizeKw) || 0;
+                          const schemeAmt = sz > 0 ? getSubsidyByCapacityKw(sz) : 0;
+                          return (
+                            <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2.5 space-y-2">
+                              <p className="text-xs text-amber-800">
+                                As per <a href="https://www.myscheme.gov.in/schemes/pmsgmb" target="_blank" rel="noopener noreferrer" className="underline font-medium">myscheme.gov.in</a> (capacity-based): 1–2 kW → ₹30k–₹60k, 2–3 kW → ₹60k–₹78k, &gt;3 kW → ₹78,000 cap.
+                              </p>
+                              {sz > 0 && (
+                                <p className="text-xs font-semibold text-amber-900">
+                                  Scheme subsidy for {sz} kW: <span className="tabular-nums">₹{schemeAmt.toLocaleString('en-IN')}</span>
+                                  {!subsidyOverride.trim() && ' (leave override blank to use)'}
+                                </p>
+                              )}
+                              <Field
+                                label="Override subsidy amount (₹)"
+                                unit="₹"
+                                hint="Optional. Leave blank to use scheme amount above. Subject to disbursement by DISCOM/agency."
+                                value={subsidyOverride}
+                                onChange={setSubsidyOverride}
+                                step="1000"
+                                min="0"
+                              />
+                            </div>
+                          );
+                        })()}
+                      </>
+                    )}
+                  </div>
+
                   {formError && (
                     <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{formError}</p>
                   )}
@@ -613,7 +720,7 @@ export default function ROICalculator() {
                   </div>
 
                   <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 p-6">
-                    <SavingsChart rows={result.yearlyBreakdown} projectCost={result.inputs.projectCost} />
+                    <SavingsChart rows={result.yearlyBreakdown} projectCost={result.effectiveProjectCost ?? result.inputs.projectCost} />
                   </div>
 
                   <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 p-6">
