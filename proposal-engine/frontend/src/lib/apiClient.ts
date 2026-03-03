@@ -4,7 +4,8 @@ const TOKEN_KEY = 'pe_jwt';
 // - In dev: VITE_API_BASE_URL is usually empty → use relative `/api/...` (Vite proxy).
 // - In prod: VITE_API_BASE_URL is the backend origin, e.g. https://rayenna-crm.onrender.com
 //   and we always prefix paths with `/api/...`.
-const API_BASE_URL: string = (import.meta as any).env?.VITE_API_BASE_URL || '';
+const RAW_API_BASE_URL: string = (import.meta as any).env?.VITE_API_BASE_URL || '';
+const API_BASE_URL: string = RAW_API_BASE_URL.replace(/\/+$/, '');
 
 export function getApiBaseUrl(): string {
   return API_BASE_URL;
