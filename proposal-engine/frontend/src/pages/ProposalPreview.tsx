@@ -2749,18 +2749,11 @@ export default function ProposalPreview() {
     return () => window.removeEventListener('focus', sync);
   }, []);
 
-  // ── Restore saved inline edits when a proposal is (re)generated ──
-  // We use a useEffect so the DOM is fully rendered before we inject HTML.
-  // Only restore from the customer record — never from the global localStorage
-  // key, which may contain a different customer's edits.
-  useEffect(() => {
-    if (!proposal || !docBodyRef.current) return;
-    const activeCustomer = getActiveCustomer();
-    const savedHtml = activeCustomer?.proposal?.editedHtml ?? null;
-    if (savedHtml) {
-      docBodyRef.current.innerHTML = savedHtml;
-    }
-  }, [proposal]);
+  // NOTE: We intentionally DO NOT re-inject previously saved editedHtml into
+  // the DOM here. Doing so would replace the React-rendered proposal body
+  // (including interactive components like the BOM Collapse All button) with
+  // static HTML, breaking interactivity for existing customers. Text edits are
+  // still captured via extractTextOverrides() on save and used for DOCX.
 
   // ── Save comments to active customer record ──
   const persistComments = (comments: Record<string, string>) => {
@@ -3033,9 +3026,16 @@ export default function ProposalPreview() {
             >
               {/* Edit mode banner */}
               {isEditing && (
-                <div className="print-hide bg-amber-50 border-b border-amber-200 px-5 py-2.5 flex items-center gap-2 text-amber-800 text-xs font-medium">
-                  <span>✏️</span>
-                  <span>Edit mode — click on any text in the proposal to edit it directly. Click <strong>Save</strong> at the bottom when done.</span>
+                <div className="print-hide bg-amber-50 border-b border-amber-200 px-5 py-2.5 flex flex-col sm:flex-row sm:items-center gap-2 text-amber-800 text-[11px] sm:text-xs font-medium">
+                  <div className="flex items-center gap-2">
+                    <span>✏️</span>
+                    <span>
+                      Edit mode — click on any text in the proposal to edit it directly. Click <strong>Save</strong> at the bottom when done.
+                    </span>
+                  </div>
+                  <p className="sm:ml-6 text-[10px] sm:text-[11px] text-amber-700">
+                    Text changes are used in exports; layout, buttons, and collapse behaviour stay controlled by the app.
+                  </p>
                 </div>
               )}
               {/* Letterhead */}
