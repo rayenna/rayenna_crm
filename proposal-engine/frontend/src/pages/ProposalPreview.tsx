@@ -919,7 +919,7 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
   const commercialsSection = grandTotal > 0 ? (() => {
     const grandRounded = Math.round(grandTotal);
     const subsidyAmt   = p.roi?.inputs?.subsidyAmount ?? 0;
-    const showSubsidy  = subsidyAmt > 0;
+    const showSubsidy  = !!p.roi?.inputs?.subsidyEligible && subsidyAmt > 0;
     const hasSheetGst  = !!p.sheet && (p.sheet.totalGst ?? 0) > 0;
     const gstAmount    = hasSheetGst ? Math.round(p.sheet!.totalGst) : (() => {
       const pre = Math.round(grandRounded / 1.18);
@@ -1537,14 +1537,17 @@ function extractTextOverrides(root: HTMLElement): Record<string, string> {
 
 /** Get image as ArrayBuffer from an already-rendered img element (for mobile DOCX export when fetch fails). */
 async function imageElementToArrayBuffer(img: HTMLImageElement): Promise<ArrayBuffer> {
+  // Ensure the image has finished loading before drawing
   if (!img.complete || img.naturalWidth === 0) {
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = reject;
+    await new Promise<void>((resolve) => {
+      const done = () => resolve();
+      img.addEventListener('load', done, { once: true });
+      img.addEventListener('error', done, { once: true });
       if (img.complete && img.naturalWidth > 0) resolve();
     });
   }
   if (img.naturalWidth === 0) return Promise.reject(new Error('Image not loaded'));
+
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
     canvas.width = img.naturalWidth;
@@ -1582,44 +1585,37 @@ async function exportToDocx(
   let logoImageData: ArrayBuffer | undefined;
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
-  // On mobile, fetch often fails; try DOM fallback first using already-rendered images
-  if (container && isMobile) {
-    try {
-      const diagramImg = container.querySelector<HTMLImageElement>('[data-docx-image="diagram"]')
-        ?? container.querySelector<HTMLImageElement>('img[src*="rayenna_proposal"]');
-      const logoImg = container.querySelector<HTMLImageElement>('[data-docx-image="logo"]')
-        ?? container.querySelector<HTMLImageElement>('img[src*="rayenna_logo"]');
-      if (diagramImg && diagramImg.decode) await diagramImg.decode().catch(() => {});
-      if (logoImg && logoImg.decode) await logoImg.decode().catch(() => {});
-      if (diagramImg) diagramImageData = await imageElementToArrayBuffer(diagramImg);
-      if (logoImg)    logoImageData    = await imageElementToArrayBuffer(logoImg);
-    } catch { /* optional */ }
+  // 1) Try network fetch first (works reliably on desktop)
+  try {
+    const [diagResp, logoResp] = await Promise.all([
+      fetch('/rayenna_proposal.jpg'),
+      fetch('/rayenna_logo.jpg'),
+    ]);
+    if (diagResp.ok) diagramImageData = await diagResp.arrayBuffer();
+    if (logoResp.ok) logoImageData    = await logoResp.arrayBuffer();
+  } catch {
+    // ignore – we'll fall back to DOM
   }
 
-  // Fetch from network (desktop or when DOM fallback didn't provide both)
-  if (!diagramImageData || !logoImageData) {
+  // 2) On mobile, or if either image is still missing, fall back to the already-rendered <img> tags
+  if (container && (isMobile || !diagramImageData || !logoImageData)) {
     try {
-      const [diagResp, logoResp] = await Promise.all([
-        fetch('/rayenna_proposal.jpg'),
-        fetch('/rayenna_logo.jpg'),
-      ]);
-      if (!diagramImageData && diagResp.ok) diagramImageData = await diagResp.arrayBuffer();
-      if (!logoImageData && logoResp.ok)    logoImageData    = await logoResp.arrayBuffer();
-    } catch { /* optional */ }
-  }
-
-  // Non-mobile or missing after fetch: try DOM fallback if container available
-  if (container && (!diagramImageData || !logoImageData)) {
-    try {
-      const diagramImg = container.querySelector<HTMLImageElement>('[data-docx-image="diagram"]')
+      const diagramImg =
+        container.querySelector<HTMLImageElement>('[data-docx-image="diagram"]')
         ?? container.querySelector<HTMLImageElement>('img[src*="rayenna_proposal"]');
-      const logoImg = container.querySelector<HTMLImageElement>('[data-docx-image="logo"]')
+      const logoImg =
+        container.querySelector<HTMLImageElement>('[data-docx-image="logo"]')
         ?? container.querySelector<HTMLImageElement>('img[src*="rayenna_logo"]');
-      if (diagramImg && diagramImg.decode) await diagramImg.decode().catch(() => {});
-      if (logoImg && logoImg.decode) await logoImg.decode().catch(() => {});
-      if (!diagramImageData && diagramImg) diagramImageData = await imageElementToArrayBuffer(diagramImg);
-      if (!logoImageData && logoImg)    logoImageData    = await imageElementToArrayBuffer(logoImg);
-    } catch { /* optional */ }
+
+      if (!diagramImageData && diagramImg) {
+        diagramImageData = await imageElementToArrayBuffer(diagramImg);
+      }
+      if (!logoImageData && logoImg) {
+        logoImageData = await imageElementToArrayBuffer(logoImg);
+      }
+    } catch {
+      // best-effort only; images are optional
+    }
   }
 
   const doc = buildDocx(p, diagramImageData, bomComments, logoImageData, textOverrides);
@@ -2258,7 +2254,7 @@ function BOMGroupedTable({ items, comments, onCommentsChange }: {
         </p>
         <button
           type="button"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleAll(); }}
+          onClick={toggleAll}
           className="print-hide flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2.5 min-h-[44px] min-w-[44px] rounded-lg border transition-colors touch-manipulation"
           style={{ borderColor: '#b45309', color: '#b45309', background: '#fff7ed', touchAction: 'manipulation' }}
           aria-label={allCollapsed ? 'Expand all categories' : 'Collapse all categories'}
@@ -2381,7 +2377,7 @@ function CommercialsBlock({ sheet, roi, roiAutofill }: { sheet: SavedSheet | nul
 
   const grandRounded = Math.round(grandTotal);
   const subsidyAmount = roi?.inputs?.subsidyAmount ?? 0;
-  const showSubsidy = subsidyAmount > 0;
+  const showSubsidy = !!roi?.inputs?.subsidyEligible && subsidyAmount > 0;
 
   // If we have a saved sheet GST total, use it (matches Excel \"Revised Costing Sheet\").
   // Otherwise fall back to a flat 18% breakdown.

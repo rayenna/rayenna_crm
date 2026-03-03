@@ -301,7 +301,13 @@ export function upsertCustomer(record: CustomerRecord): void {
 
 export function deleteCustomer(id: string): void {
   saveCustomers(loadCustomers().filter((c) => c.id !== id));
-  if (getActiveCustomerId() === id) clearActiveCustomer();
+  const activeId = getActiveCustomerId();
+  if (activeId === id) {
+    clearActiveCustomer();
+    // When the active customer is deleted, clear all work-in-progress data so
+    // Costing Sheet, BOM, ROI, and Proposal views reset to a blank state.
+    Object.values(WIP_KEYS).forEach((key) => localStorage.removeItem(key));
+  }
 }
 
 export function createCustomer(master: CustomerMaster): CustomerRecord {
