@@ -264,6 +264,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     <span>About</span>
                   </Link>
                 </div>
+
+                {/* Mobile logout button */}
+                {hasToken && (
+                  <button
+                    type="button"
+                    onClick={() => { setMenuOpen(false); handleLogout(); }}
+                    className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-slate-900 bg-white/90 hover:bg-amber-300 border border-white/70 shadow-sm transition-colors"
+                  >
+                    <span>⎋</span>
+                    <span>Logout</span>
+                  </button>
+                )}
               </div>
             </nav>
           </div>
