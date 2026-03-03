@@ -80,6 +80,12 @@ function fmtINR(n: number): string {
   return `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 }
 
+// For Commercials section: always show the full rupee amount (no Lacs/Cr, no decimals)
+function fmtINRFull(n: number): string {
+  const rounded = Math.round(n);
+  return `₹${rounded.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+}
+
 function genRef(): string {
   const now = new Date();
   return `REY/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(Date.now()).slice(-5)}`;
@@ -929,24 +935,24 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
     const gstLabel     = hasSheetGst ? 'GST (mixed: 5% & 18%)' : 'GST @ 18% (estimate)';
     const sizeKw    = p.roiAutofill?.systemSizeKw ?? p.sheet?.systemSizeKw ?? 0;
     const commercialRows: TableRow[] = [
-      new TableRow({
-        children: [
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Design, Supply, Installation & Commissioning of ${sizeKw > 0 ? `${sizeKw} kW ` : ''}On-Grid Solar Power Plant including all electrical and structural work`, size: 20 })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINR(preGst), bold: true, size: 20 })], alignment: AlignmentType.RIGHT })], width: { size: 20, type: WidthType.PERCENTAGE } }),
-        ],
-      }),
-      new TableRow({
-        children: [
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: gstLabel, size: 20, color: '1D4ED8' })] })] }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINR(gstAmount), bold: true, size: 20, color: '1D4ED8' })], alignment: AlignmentType.RIGHT })] }),
-        ],
-      }),
-      new TableRow({
-        children: [
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'TOTAL PROJECT COST (incl. GST)', bold: true, size: 22, color: white })], alignment: AlignmentType.LEFT })], shading: { type: ShadingType.SOLID, color: navy } }),
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINR(grandRounded), bold: true, size: 24, color: white })], alignment: AlignmentType.RIGHT })], shading: { type: ShadingType.SOLID, color: navy } }),
-        ],
-      }),
+          new TableRow({
+            children: [
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Design, Supply, Installation & Commissioning of ${sizeKw > 0 ? `${sizeKw} kW ` : ''}On-Grid Solar Power Plant including all electrical and structural work`, size: 20 })] })] }),
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINRFull(preGst), bold: true, size: 20 })], alignment: AlignmentType.RIGHT })], width: { size: 20, type: WidthType.PERCENTAGE } }),
+            ],
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: gstLabel, size: 20, color: '1D4ED8' })] })] }),
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINRFull(gstAmount), bold: true, size: 20, color: '1D4ED8' })], alignment: AlignmentType.RIGHT })] }),
+            ],
+          }),
+          new TableRow({
+            children: [
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'TOTAL PROJECT COST (incl. GST)', bold: true, size: 22, color: white })], alignment: AlignmentType.LEFT })], shading: { type: ShadingType.SOLID, color: navy } }),
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fmtINRFull(grandRounded), bold: true, size: 24, color: white })], alignment: AlignmentType.RIGHT })], shading: { type: ShadingType.SOLID, color: navy } }),
+            ],
+          }),
     ];
     if (showSubsidy) {
       commercialRows.push(
@@ -969,7 +975,7 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
               children: [
                 new Paragraph({
                   children: [
-                    new TextRun({ text: fmtINR(subsidyAmt), bold: true, size: 20, color: '92400E' }),
+                    new TextRun({ text: fmtINRFull(subsidyAmt), bold: true, size: 20, color: '92400E' }),
                   ],
                   alignment: AlignmentType.RIGHT,
                 }),
@@ -2408,13 +2414,13 @@ function CommercialsBlock({ sheet, roi, roiAutofill }: { sheet: SavedSheet | nul
                 On-Grid Solar Power Plant including all electrical and structural work
               </td>
               <td className="px-5 py-3 text-right text-secondary-800 font-semibold tabular-nums w-44">
-                {fmtINR(preGst)}
+                {fmtINRFull(preGst)}
               </td>
             </tr>
             <tr className="border-b border-primary-100 bg-blue-50/40">
               <td className="px-5 py-3 text-blue-700">{gstLabel}</td>
               <td className="px-5 py-3 text-right text-blue-700 font-semibold tabular-nums">
-                {fmtINR(gstAmount)}
+                {fmtINRFull(gstAmount)}
               </td>
             </tr>
             <tr style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
@@ -2422,7 +2428,7 @@ function CommercialsBlock({ sheet, roi, roiAutofill }: { sheet: SavedSheet | nul
                 Total Project Cost (incl. GST)
               </td>
               <td className="px-5 py-3 text-right text-white font-extrabold text-base tabular-nums drop-shadow">
-                {fmtINR(grandRounded)}
+                {fmtINRFull(grandRounded)}
               </td>
             </tr>
             {showSubsidy && (
@@ -2431,7 +2437,7 @@ function CommercialsBlock({ sheet, roi, roiAutofill }: { sheet: SavedSheet | nul
                   Subsidy Eligible – Rs. {subsidyAmount.toLocaleString('en-IN')}/-
                 </td>
                 <td className="px-5 py-3 text-right text-amber-800 font-semibold tabular-nums w-44">
-                  {fmtINR(subsidyAmount)}
+                  {fmtINRFull(subsidyAmount)}
                 </td>
               </tr>
             )}
