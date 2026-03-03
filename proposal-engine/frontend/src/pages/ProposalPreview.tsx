@@ -1485,7 +1485,11 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
       ? textOverrides['list-material-delivery-period'].split('\n').filter(Boolean).map((t, i) => listItem(t, i + 1))
       : DELIVERY_TERMS.map((t, i) => listItem(t, i + 1))),
     heading('Closing Note'),
-    ...multilineParagraphs(textOverrides?.['section-closing-note'] ?? closingText(p)),
+    ...(() => {
+      const override = textOverrides?.['section-closing-note'];
+      const body = override && override.trim().length > 0 ? override : closingText(p);
+      return multilineParagraphs(body);
+    })(),
     heading('Subsidy Disclaimer and Payment Terms'),
     ...multilineParagraphs(SUBSIDY_DISCLAIMER_TEXT),
     new Paragraph({
