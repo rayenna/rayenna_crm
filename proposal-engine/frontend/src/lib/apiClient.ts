@@ -13,7 +13,20 @@ export function getApiBaseUrl(): string {
 
 export function getToken(): string | null {
   try {
-    return window.localStorage.getItem(TOKEN_KEY);
+    // Prefer sessionStorage so closing the tab/window logs the user out,
+    // mirroring Rayenna CRM behaviour.
+    const sessionToken = window.sessionStorage.getItem(TOKEN_KEY);
+    if (sessionToken) return sessionToken;
+
+    // Backwards compatibility: if an old token exists in localStorage, migrate it.
+    const legacyToken = window.localStorage.getItem(TOKEN_KEY);
+    if (legacyToken) {
+      window.sessionStorage.setItem(TOKEN_KEY, legacyToken);
+      window.localStorage.removeItem(TOKEN_KEY);
+      return legacyToken;
+    }
+
+    return null;
   } catch {
     return null;
   }
@@ -21,7 +34,9 @@ export function getToken(): string | null {
 
 export function setToken(token: string): void {
   try {
-    window.localStorage.setItem(TOKEN_KEY, token);
+    window.sessionStorage.setItem(TOKEN_KEY, token);
+    // Ensure any legacy localStorage value is cleared.
+    window.localStorage.removeItem(TOKEN_KEY);
   } catch {
     // ignore quota / storage errors
   }
@@ -29,6 +44,7 @@ export function setToken(token: string): void {
 
 export function clearToken(): void {
   try {
+    window.sessionStorage.removeItem(TOKEN_KEY);
     window.localStorage.removeItem(TOKEN_KEY);
   } catch {
     // ignore

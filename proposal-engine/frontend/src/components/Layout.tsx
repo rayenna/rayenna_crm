@@ -24,12 +24,63 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const navigate     = useNavigate();
   const [menuOpen, setMenuOpen]     = useState(false);
   const [helpOpen, setHelpOpen]     = useState(false);
+  const [showIdleWarning, setShowIdleWarning] = useState(false);
+  const [idleCountdown, setIdleCountdown]     = useState(60);
   const helpRef                     = useRef<HTMLDivElement>(null);
   // Re-read active customer on every navigation so the pill stays current
   const activeCustomer = getActiveCustomer();
   const hasToken       = !!getToken();
 
+  // Inactivity timeout configuration – match CRM behaviour
+  const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+  const WARNING_BEFORE_MS = 60 * 1000;   // 1 minute before logout
+
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => { setMenuOpen(false); setHelpOpen(false); }, [pathname]);
+
+  // Inactivity timer helpers
+  const clearIdleTimers = () => {
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    idleTimerRef.current = null;
+    warningTimerRef.current = null;
+    countdownIntervalRef.current = null;
+  };
+
+  const resetIdleTimer = () => {
+    clearIdleTimers();
+    setShowIdleWarning(false);
+    setIdleCountdown(60);
+
+    if (!getToken()) return;
+
+    // Warning timer – show 1 minute before auto logout
+    warningTimerRef.current = setTimeout(() => {
+      setShowIdleWarning(true);
+      setIdleCountdown(60);
+
+      countdownIntervalRef.current = setInterval(() => {
+        setIdleCountdown((prev) => {
+          if (prev <= 1) {
+            if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }, IDLE_TIMEOUT_MS - WARNING_BEFORE_MS);
+
+    // Auto-logout timer
+    idleTimerRef.current = setTimeout(() => {
+      setShowIdleWarning(false);
+      clearIdleTimers();
+      handleLogout();
+    }, IDLE_TIMEOUT_MS);
+  };
 
   // Close Help dropdown when clicking outside
   useEffect(() => {
@@ -60,6 +111,40 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     clearToken();
     navigate('/login', { replace: true });
   };
+
+  // Set up global activity listeners to reset inactivity timer
+  useEffect(() => {
+    const activityEvents: (keyof DocumentEventMap)[] = [
+      'mousedown',
+      'mousemove',
+      'keydown',
+      'scroll',
+      'touchstart',
+      'click',
+    ];
+
+    const handleActivity = () => {
+      if (getToken()) {
+        resetIdleTimer();
+      }
+    };
+
+    activityEvents.forEach((event) => {
+      document.addEventListener(event, handleActivity, { passive: true });
+    });
+
+    // Initial timer setup if already logged in
+    if (getToken()) {
+      resetIdleTimer();
+    }
+
+    return () => {
+      activityEvents.forEach((event) => {
+        document.removeEventListener(event, handleActivity);
+      });
+      clearIdleTimers();
+    };
+  }, []);
 
   // For the login page, render children without the full chrome to keep the
   // experience focused and avoid showing navigation before authentication.
@@ -287,6 +372,39 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       <TipOfTheDay />
+
+      {/* Inactivity warning banner */}
+      {showIdleWarning && (
+        <div className="fixed inset-x-0 bottom-0 z-30 px-3 pb-3">
+          <div className="max-w-md mx-auto rounded-xl bg-slate-900 text-white shadow-2xl border border-slate-700 px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div className="flex-1 text-xs sm:text-sm">
+              <p className="font-semibold">
+                You’ve been inactive for a while.
+              </p>
+              <p className="mt-1 text-slate-200">
+                For security, you’ll be logged out in{' '}
+                <span className="font-bold">{idleCountdown}s</span> unless you choose to stay logged in.
+              </p>
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-slate-800 hover:bg-slate-700 border border-slate-600 transition-colors"
+              >
+                Logout now
+              </button>
+              <button
+                type="button"
+                onClick={resetIdleTimer}
+                className="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-amber-400 text-slate-900 hover:bg-amber-300 border border-amber-300 transition-colors"
+              >
+                Stay logged in
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
