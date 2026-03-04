@@ -4,6 +4,7 @@ import { ROI_AUTOFILL_KEY } from '../lib/costingConstants';
 import type { RoiAutofill } from '../lib/costingConstants';
 import { getActiveCustomer, upsertCustomer } from '../lib/customerStore';
 import type { RoiArtifact } from '../lib/customerStore';
+import { AlertCard } from '../components/AlertCard';
 
 // ─────────────────────────────────────────────
 // Types
@@ -431,7 +432,10 @@ export default function ROICalculator() {
     const pc  = parseFloat(projectCost) || 0;
     const overrideVal = subsidyOverride.trim() ? parseFloat(subsidyOverride) : NaN;
 
-    if (!sz  || sz  <= 0) { setFormError('System Size is required and must be > 0'); return; }
+    if (!sz || sz <= 0 || !Number.isInteger(sz)) {
+      setFormError('System Size is required and must be a whole number in kW (1, 2, 3, …).');
+      return;
+    }
     if (!tr  || tr  <= 0) { setFormError('Electricity Tariff is required and must be > 0'); return; }
     if (!gf  || gf  <= 0) { setFormError('Generation Factor is required and must be > 0'); return; }
     if (isNaN(esc))        { setFormError('Tariff Escalation is required'); return; }
@@ -558,11 +562,11 @@ export default function ROICalculator() {
                   <Field
                     label="System Size"
                     unit="kW"
-                    hint={autoFill && autoFill.systemSizeKw > 0 ? `⚡ Auto-filled from "${autoFill.sourceName}"` : 'Installed capacity'}
+                    hint={autoFill && autoFill.systemSizeKw > 0 ? `⚡ Auto-filled from "${autoFill.sourceName}"` : 'Installed capacity (whole kW only)'}
                     value={systemSizeKw}
                     onChange={setSystemSizeKw}
-                    step="0.1"
-                    min="0.1"
+                    step="1"
+                    min="1"
                   />
                   <Field
                     label="Electricity Tariff"
@@ -646,7 +650,12 @@ export default function ROICalculator() {
                   </div>
 
                   {formError && (
-                    <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{formError}</p>
+                    <AlertCard
+                      variant="error"
+                      title="Please check your inputs"
+                      message={formError}
+                      className="mt-1"
+                    />
                   )}
 
                   <button

@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { clearToken, loginWithEmailPassword, setToken } from '../lib/apiClient';
+import { AlertCard } from '../components/AlertCard';
 
 const bgImageUrl = new URL('../assets/background.jpg', import.meta.url).href;
 
@@ -64,9 +65,11 @@ export default function LoginPage() {
         </header>
 
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
-          </div>
+          <AlertCard
+            variant="error"
+            title="Login failed"
+            message={error}
+          />
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">

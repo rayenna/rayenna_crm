@@ -9,6 +9,7 @@ import type { StoredBom, RoiAutofill } from '../lib/costingConstants';
 import * as XLSX from 'xlsx';
 import { getActiveCustomer, upsertCustomer } from '../lib/customerStore';
 import type { BomArtifact } from '../lib/customerStore';
+import { AlertCard } from '../components/AlertCard';
 
 // ─────────────────────────────────────────────
 // Export helpers (BOM)
@@ -773,9 +774,12 @@ export default function BOMSheet() {
 
           {/* Error */}
           {fetchError && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 text-sm">
-              Failed to load BOM: {fetchError}
-            </div>
+            <AlertCard
+              variant="warning"
+              title="Unable to load BOM"
+              message={fetchError}
+              className="mb-4"
+            />
           )}
 
           {!loading && !fetchError && (
