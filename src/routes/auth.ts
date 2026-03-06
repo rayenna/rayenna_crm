@@ -21,7 +21,19 @@ router.post(
     body('password').notEmpty(),
   ],
   async (req: Request, res: Response) => {
+    const send500 = (msg: string, extra?: Record<string, unknown>) => {
+      if (!res.headersSent) {
+        res.status(500).json({ error: msg, ...extra });
+      }
+    };
     try {
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret || jwtSecret.trim() === '') {
+        console.error('Login: JWT_SECRET is missing or empty');
+        send500('Server misconfiguration: JWT_SECRET is not set. Contact your administrator.');
+        return;
+      }
+
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -44,7 +56,6 @@ router.post(
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      const jwtSecret: string = process.env.JWT_SECRET!;
       const expiresIn: string = process.env.JWT_EXPIRES_IN || '7d';
 
       const payload = {
@@ -79,17 +90,17 @@ router.post(
         meta: error?.meta,
         stack: error?.stack,
       });
-      
+
       // Provide better error messages for common issues
       let errorMessage = 'Internal server error';
       if (error?.code === 'P1001') {
         errorMessage = 'Database connection failed. Please check DATABASE_URL.';
-      } else if (error?.code?.startsWith('P1')) {
-        errorMessage = `Database error: ${error.message}`;
+      } else if (error?.code?.startsWith?.('P1')) {
+        errorMessage = `Database error: ${error?.message ?? 'Unknown'}`;
       } else if (error?.message) {
         errorMessage = error.message;
       }
-      
+
       const response: any = { error: errorMessage };
       if (process.env.NODE_ENV === 'development') {
         response.details = {
@@ -98,8 +109,7 @@ router.post(
           meta: error?.meta,
         };
       }
-      
-      res.status(500).json(response);
+      if (!res.headersSent) res.status(500).json(response);
     }
   }
 );

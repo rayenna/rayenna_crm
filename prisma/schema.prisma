@@ -158,10 +158,12 @@ model User {
   createdTickets    SupportTicket[] @relation("TicketCreatedBy")
   ticketActivities  SupportTicketActivity[] @relation("ActivityCreatedBy")
 
-  peCostingSheets PECostingSheet[] @relation("PECostingSheetCreatedBy")
-  peBomSheets     PEBomSheet[]     @relation("PEBomSheetCreatedBy")
-  peRoiResults    PERoiResult[]    @relation("PERoiResultCreatedBy")
-  peProposals     PEProposal[]     @relation("PEProposalCreatedBy")
+  peCostingSheets   PECostingSheet[]   @relation("PECostingSheetCreatedBy")
+  peBomSheets       PEBomSheet[]       @relation("PEBomSheetCreatedBy")
+  peRoiResults      PERoiResult[]      @relation("PERoiResultCreatedBy")
+  peProposals       PEProposal[]       @relation("PEProposalCreatedBy")
+  peRemovedProjects PERemovedProject[] @relation("PERemovedProjectRemovedBy")
+  peSelectedProjects PESelectedProject[] @relation("PESelectedProjectSelectedBy")
 
   @@index([resetToken])
   @@map("users")
@@ -340,6 +342,7 @@ model Project {
   peBomSheets     PEBomSheet[]
   peRoiResults    PERoiResult[]
   peProposals     PEProposal[]
+  peSelection     PESelectedProject?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -657,4 +660,30 @@ model PEProposal {
   updatedAt     DateTime @updatedAt
 
   @@map("pe_proposals")
+}
+
+// When Admin or owning Sales removes a project from Proposal Engine, it disappears from all users' lists.
+model PERemovedProject {
+  id          String   @id @default(cuid())
+  projectId   String   @unique
+  removedAt   DateTime @default(now())
+  removedById String
+  removedBy   User     @relation("PERemovedProjectRemovedBy", fields: [removedById], references: [id])
+
+  @@map("pe_removed_projects")
+}
+
+// When a Sales user selects a CRM project in Proposal Engine, we track it server-side
+// so it appears in lists for that user and for view-all roles (Ops/Finance/Management/Admin).
+model PESelectedProject {
+  id           String   @id @default(cuid())
+  projectId    String   @unique
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  selectedById String
+  selectedBy   User     @relation("PESelectedProjectSelectedBy", fields: [selectedById], references: [id])
+  selectedAt   DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([selectedById])
+  @@map("pe_selected_projects")
 }

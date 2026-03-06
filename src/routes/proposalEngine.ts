@@ -6,14 +6,13 @@ import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 
-function getOperationsAllowedStatuses(): ProjectStatus[] {
-  return [
-    ProjectStatus.CONFIRMED,
-    ProjectStatus.UNDER_INSTALLATION,
-    ProjectStatus.COMPLETED,
-    ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
-  ];
-}
+/** Roles that may view any project's proposal artifacts (not limited to own projects). */
+const ROLES_CAN_VIEW_ALL_PROPOSALS: UserRole[] = [
+  UserRole.OPERATIONS,
+  UserRole.MANAGEMENT,
+  UserRole.FINANCE,
+  UserRole.ADMIN,
+];
 
 function ensureProjectAccess(project: any, req: Request, res: Response): boolean {
   if (!project) {
@@ -21,57 +20,238 @@ function ensureProjectAccess(project: any, req: Request, res: Response): boolean
     return false;
   }
 
-  if (
-    req.user?.role === UserRole.SALES &&
-    project.salespersonId !== req.user.id &&
-    project.createdById !== req.user.id
-  ) {
-    res.status(403).json({ error: 'Access denied' });
-    return false;
+  const role = req.user?.role;
+  const userId = req.user?.id;
+
+  // Operations, Management, Finance, Admin: can view any project's proposals.
+  if (role && ROLES_CAN_VIEW_ALL_PROPOSALS.includes(role)) {
+    return true;
   }
 
-  if (req.user?.role === UserRole.OPERATIONS) {
-    const allowedStatuses = getOperationsAllowedStatuses();
-    if (!allowedStatuses.includes(project.projectStatus)) {
-      res.status(403).json({
-        error:
-          'Access denied. Operations users can only access projects with status: Confirmed, Installation, Completed, or Completed - Subsidy Credited.',
-      });
+  // Sales: only the project's assigned salesperson or creator may view this project's proposals.
+  if (role === UserRole.SALES && userId) {
+    const isOwner =
+      project.salespersonId === userId || project.createdById === userId;
+    if (!isOwner) {
+      res.status(403).json({ error: 'Access denied. Proposals are visible only to the owning salesperson and to Operations, Management, Finance, and Admin.' });
       return false;
     }
+    return true;
   }
 
-  return true;
+  // Any other or unauthenticated: deny.
+  res.status(403).json({ error: 'Access denied. Proposals are visible only to the owning salesperson and to Operations, Management, Finance, and Admin.' });
+  return false;
 }
 
+/** Only Admin (all projects) or Sales (own project) may create/update/delete artifacts. Operations, Management, Finance are read-only. */
+function ensureProjectWriteAccess(project: any, req: Request, res: Response): boolean {
+  if (!project) return false;
+  const role = req.user?.role;
+  const userId = req.user?.id;
+  const roleStr = role != null ? String(role).toUpperCase() : '';
+  if (roleStr === 'ADMIN') return true;
+  if (role === UserRole.SALES && userId && (project.salespersonId === userId || project.createdById === userId)) {
+    return true;
+  }
+  res.status(403).json({
+    error: 'Only the owning salesperson or Admin can edit or delete proposal artifacts. Your role has read-only access.',
+  });
+  return false;
+}
+
+// List projects that have been explicitly selected in Proposal Engine.
+// This is the only list used across all roles (Sales sees only own selections).
 router.get('/projects', authenticate, async (req: Request, res: Response) => {
   try {
-    const where: any = {};
+    const role = req.user?.role;
+    const userId = req.user?.id;
 
-    if (req.user?.role === UserRole.SALES) {
-      where.OR = [
-        { salespersonId: req.user.id },
-        { createdById: req.user.id },
-      ];
-    } else if (req.user?.role === UserRole.OPERATIONS) {
-      where.projectStatus = { in: getOperationsAllowedStatuses() };
+    // Only Sales (own projects) and Operations/Management/Finance/Admin (all projects) may list.
+    if (!role || (!ROLES_CAN_VIEW_ALL_PROPOSALS.includes(role) && role !== UserRole.SALES)) {
+      res.status(403).json({
+        error: 'Access denied. Proposal Engine projects are visible only to the owning salesperson and to Operations, Management, Finance, and Admin.',
+      });
+      return;
+    }
+
+    const selectionWhere: any = {};
+    if (role === UserRole.SALES && userId) {
+      selectionWhere.selectedById = userId;
+    }
+
+    const selections = await prisma.pESelectedProject.findMany({
+      where: selectionWhere,
+      include: {
+        project: {
+          include: {
+            customer: true,
+            salesperson: {
+              select: { id: true, name: true },
+            },
+          },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 200,
+    });
+
+    const projectIds = selections.map((s) => s.projectId);
+    const proposals = projectIds.length
+      ? await prisma.pEProposal.findMany({
+          where: { projectId: { in: projectIds } },
+          select: { projectId: true },
+        })
+      : [];
+    const hasProposal = new Set(proposals.map((p) => p.projectId));
+
+    const payload = selections
+      .map((s) => ({
+        ...s.project,
+        peStatus: hasProposal.has(s.projectId) ? 'proposal-ready' : 'draft',
+        peSelectedAt: s.selectedAt,
+        peSelectedById: s.selectedById,
+      }))
+      // Only show Draft or Proposal Ready (per spec)
+      .filter((p) => p.peStatus === 'draft' || p.peStatus === 'proposal-ready');
+
+    res.json(payload);
+  } catch (error: any) {
+    console.error('Error fetching proposal engine projects:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+// List eligible CRM projects that can be selected into Proposal Engine.
+router.get('/projects/eligible', authenticate, async (req: Request, res: Response) => {
+  try {
+    const role = req.user?.role;
+    const userId = req.user?.id;
+    const roleStr = role != null ? String(role).toUpperCase() : '';
+
+    if (!role || (!ROLES_CAN_VIEW_ALL_PROPOSALS.includes(role) && role !== UserRole.SALES)) {
+      res.status(403).json({ error: 'Access denied.' });
+      return;
+    }
+
+    const selected = await prisma.pESelectedProject.findMany({
+      select: { projectId: true },
+    });
+    const selectedIds = selected.map((s) => s.projectId);
+
+    const and: any[] = [
+      { projectStatus: { in: [ProjectStatus.PROPOSAL, ProjectStatus.CONFIRMED] } },
+      ...(selectedIds.length > 0 ? [{ id: { notIn: selectedIds } }] : []),
+    ];
+    if (role === UserRole.SALES && userId) {
+      and.push({
+        OR: [{ salespersonId: userId }, { createdById: userId }],
+      });
     }
 
     const projects = await prisma.project.findMany({
-      where,
+      where: { AND: and },
       include: {
         customer: true,
+        salesperson: { select: { id: true, name: true } },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 100,
+      orderBy: { createdAt: 'desc' },
+      take: 200,
     });
 
     res.json(projects);
   } catch (error: any) {
-    console.error('Error fetching proposal engine projects:', error);
+    console.error('Error fetching eligible CRM projects:', error);
     res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+// Mark a CRM project as selected into Proposal Engine (Admin or owning Sales).
+router.post('/projects/:id/select', authenticate, async (req: Request, res: Response) => {
+  try {
+    const project = await prisma.project.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!ensureProjectAccess(project, req, res)) return;
+    if (!ensureProjectWriteAccess(project, req, res)) return;
+
+    await prisma.pESelectedProject.upsert({
+      where: { projectId: req.params.id },
+      create: {
+        projectId: req.params.id,
+        selectedById: req.user!.id,
+      },
+      update: {
+        selectedById: req.user!.id,
+      },
+    });
+
+    // Legacy compatibility: ensure it isn't hidden by removed marker.
+    await prisma.pERemovedProject.deleteMany({ where: { projectId: req.params.id } });
+
+    res.json({ message: 'Project selected' });
+  } catch (error: any) {
+    console.error('Error selecting project:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+// Admin-only: clear saved Proposal Engine artifacts for all PROPOSAL/CONFIRMED projects.
+// NOTE: Does NOT touch any frontend templates (those are local-only).
+router.post('/admin/clear', authenticate, async (req: Request, res: Response) => {
+  try {
+    const roleStr = req.user?.role != null ? String(req.user.role).toUpperCase() : '';
+    if (roleStr !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only Admin can clear Proposal Engine artifacts.' });
+    }
+
+    // Clear artifacts only for projects that were selected into Proposal Engine.
+    const selected = await prisma.pESelectedProject.findMany({
+      select: { projectId: true },
+    });
+    const projectIds = selected.map((s) => s.projectId);
+    if (projectIds.length === 0) {
+      return res.json({ message: 'No selected Proposal Engine projects to clear.', clearedProjects: 0 });
+    }
+
+    await prisma.$transaction([
+      prisma.pECostingSheet.deleteMany({ where: { projectId: { in: projectIds } } }),
+      prisma.pEBomSheet.deleteMany({ where: { projectId: { in: projectIds } } }),
+      prisma.pERoiResult.deleteMany({ where: { projectId: { in: projectIds } } }),
+      prisma.pEProposal.deleteMany({ where: { projectId: { in: projectIds } } }),
+      // Legacy compatibility: unhide if previously marked removed.
+      prisma.pERemovedProject.deleteMany({ where: { projectId: { in: projectIds } } }),
+    ]);
+
+    return res.json({
+      message: 'Proposal Engine artifacts cleared.',
+      clearedProjects: projectIds.length,
+    });
+  } catch (error: any) {
+    console.error('Error clearing Proposal Engine list:', error);
+    return res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+// Admin-only: restore (unhide) all projects that were removed from Proposal Engine list.
+// This does NOT recreate any artifacts; it only clears the "removed" marker.
+router.post('/admin/unhide-all', authenticate, async (req: Request, res: Response) => {
+  try {
+    const roleStr = req.user?.role != null ? String(req.user.role).toUpperCase() : '';
+    if (roleStr !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only Admin can restore hidden Proposal Engine projects.' });
+    }
+
+    const result = await prisma.pERemovedProject.deleteMany({});
+
+    return res.json({
+      message: 'Restored hidden Proposal Engine projects.',
+      restoredProjects: result.count,
+    });
+  } catch (error: any) {
+    console.error('Error restoring hidden Proposal Engine projects:', error);
+    return res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
@@ -173,6 +353,12 @@ router.put(
       if (!ensureProjectAccess(project, req, res)) {
         return;
       }
+      if (!ensureProjectWriteAccess(project, req, res)) {
+        return;
+      }
+
+      // If this project was previously "removed from list", writing a new artifact should make it visible again.
+      await prisma.pERemovedProject.deleteMany({ where: { projectId: req.params.id } });
 
       const existing = await prisma.pECostingSheet.findFirst({
         where: { projectId: req.params.id },
@@ -252,6 +438,12 @@ router.put(
       if (!ensureProjectAccess(project, req, res)) {
         return;
       }
+      if (!ensureProjectWriteAccess(project, req, res)) {
+        return;
+      }
+
+      // If this project was previously "removed from list", writing a new artifact should make it visible again.
+      await prisma.pERemovedProject.deleteMany({ where: { projectId: req.params.id } });
 
       const existing = await prisma.pEBomSheet.findFirst({
         where: { projectId: req.params.id },
@@ -326,6 +518,12 @@ router.put(
       if (!ensureProjectAccess(project, req, res)) {
         return;
       }
+      if (!ensureProjectWriteAccess(project, req, res)) {
+        return;
+      }
+
+      // If this project was previously "removed from list", writing a new artifact should make it visible again.
+      await prisma.pERemovedProject.deleteMany({ where: { projectId: req.params.id } });
 
       const existing = await prisma.pERoiResult.findFirst({
         where: { projectId: req.params.id },
@@ -403,6 +601,12 @@ router.put(
       if (!ensureProjectAccess(project, req, res)) {
         return;
       }
+      if (!ensureProjectWriteAccess(project, req, res)) {
+        return;
+      }
+
+      // If this project was previously "removed from list", writing a new artifact should make it visible again.
+      await prisma.pERemovedProject.deleteMany({ where: { projectId: req.params.id } });
 
       const existing = await prisma.pEProposal.findFirst({
         where: { projectId: req.params.id },
@@ -441,6 +645,63 @@ router.put(
     }
   }
 );
+
+// Delete only the saved proposal artifact for a project (Admin or owning Sales).
+router.delete('/projects/:id/proposal', authenticate, async (req: Request, res: Response) => {
+  try {
+    const project = await prisma.project.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!ensureProjectAccess(project, req, res)) {
+      return;
+    }
+    if (!ensureProjectWriteAccess(project, req, res)) {
+      return;
+    }
+
+    const result = await prisma.pEProposal.deleteMany({
+      where: { projectId: req.params.id },
+    });
+
+    res.status(200).json({ message: 'Proposal cleared', deletedCount: result.count });
+  } catch (error: any) {
+    console.error('Error clearing proposal artifact:', error);
+    res.status(500).json({ error: error.message || 'Failed to clear proposal artifact' });
+  }
+});
+
+// Remove project from Proposal Engine for everyone (Admin or owning Sales only). Deletes all PE artifacts and marks project as removed.
+router.delete('/projects/:id', authenticate, async (req: Request, res: Response) => {
+  try {
+    const project = await prisma.project.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!ensureProjectAccess(project, req, res)) {
+      return;
+    }
+    if (!ensureProjectWriteAccess(project, req, res)) {
+      return;
+    }
+
+    await prisma.$transaction([
+      prisma.pECostingSheet.deleteMany({ where: { projectId: req.params.id } }),
+      prisma.pEBomSheet.deleteMany({ where: { projectId: req.params.id } }),
+      prisma.pERoiResult.deleteMany({ where: { projectId: req.params.id } }),
+      prisma.pEProposal.deleteMany({ where: { projectId: req.params.id } }),
+      // Remove from the selected list; user can re-select later if needed.
+      prisma.pESelectedProject.deleteMany({ where: { projectId: req.params.id } }),
+      // Legacy cleanup
+      prisma.pERemovedProject.deleteMany({ where: { projectId: req.params.id } }),
+    ]);
+
+    res.status(200).json({ message: 'Project removed from Proposal Engine selection' });
+  } catch (error: any) {
+    console.error('Error removing project from Proposal Engine:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
 
 export default router;
 

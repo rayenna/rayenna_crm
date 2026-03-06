@@ -491,6 +491,37 @@ const Projects = () => {
     },
   })
 
+  // Proposal Engine status per project (Draft / Proposal Ready)
+  const { data: proposalEngineProjects } = useQuery({
+    queryKey: ['proposal-engine-projects'],
+    queryFn: async () => {
+      try {
+        const res = await axiosInstance.get('/api/proposal-engine/projects')
+        return res.data as Array<{ id: string; peStatus?: string }>
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          // Non-fatal: lack of access or network issues just mean no PE status badges
+          // eslint-disable-next-line no-console
+          console.warn('Unable to load Proposal Engine project status', error)
+        }
+        return [] as Array<{ id: string; peStatus?: string }>
+      }
+    },
+    enabled: !!user, // only when logged in
+    staleTime: 60_000,
+  })
+
+  const peStatusByProjectId = useMemo(() => {
+    const map = new Map<string, 'draft' | 'proposal-ready'>()
+    ;(proposalEngineProjects ?? []).forEach((p) => {
+      if (!p || typeof p.id !== 'string') return
+      if (p.peStatus === 'draft' || p.peStatus === 'proposal-ready') {
+        map.set(p.id, p.peStatus)
+      }
+    })
+    return map
+  }, [proposalEngineProjects])
+
   const typeOptions = Object.values(ProjectType).map(type => ({
     value: type,
     label: type.replace(/_/g, ' '),
@@ -981,9 +1012,21 @@ Do you want to continue?`}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${getStagePillClasses(project.projectStatus)}`}>
-                      {project.projectStatus.replace(/_/g, ' ')}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${getStagePillClasses(project.projectStatus)}`}>
+                        {project.projectStatus.replace(/_/g, ' ')}
+                      </span>
+                      {peStatusByProjectId.get(project.id) === 'draft' && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-300">
+                          PE Draft
+                        </span>
+                      )}
+                      {peStatusByProjectId.get(project.id) === 'proposal-ready' && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                          PE Ready
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="pl-2 pr-4 py-3 text-right">
                     <span className="text-sm font-bold text-orange-800 tabular-nums">

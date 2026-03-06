@@ -30,6 +30,58 @@ const ProjectDetail = () => {
     retry: 1,
   })
 
+  // Lightweight Proposal Engine summary for this project (status + last updated)
+  const { data: peSummary } = useQuery({
+    queryKey: ['proposal-engine-summary', id],
+    enabled: !!id && !!project && (project.projectStatus === ProjectStatus.PROPOSAL || project.projectStatus === ProjectStatus.CONFIRMED),
+    queryFn: async () => {
+      try {
+        const res = await axiosInstance.get(`/api/proposal-engine/projects/${id}`)
+        const data = res.data as any
+        const artifacts = data?.artifacts ?? {}
+
+        const timestamps: string[] = []
+        if (artifacts.costing?.savedAt) timestamps.push(artifacts.costing.savedAt)
+        if (artifacts.bom?.savedAt) timestamps.push(artifacts.bom.savedAt)
+        if (artifacts.roi?.savedAt) timestamps.push(artifacts.roi.savedAt)
+        if (artifacts.proposal?.generatedAt) timestamps.push(artifacts.proposal.generatedAt)
+
+        let lastUpdated: string | undefined
+        if (timestamps.length) {
+          const msValues = timestamps
+            .map((t) => {
+              const ms = Date.parse(t)
+              return Number.isFinite(ms) ? ms : 0
+            })
+            .filter((ms) => ms > 0)
+          if (msValues.length) {
+            lastUpdated = new Date(Math.max(...msValues)).toISOString()
+          }
+        }
+
+        const hasAnyArtifact =
+          !!artifacts.costing || !!artifacts.bom || !!artifacts.roi || !!artifacts.proposal
+
+        const peStatus: 'none' | 'draft' | 'proposal-ready' =
+          artifacts.proposal
+            ? 'proposal-ready'
+            : hasAnyArtifact
+            ? 'draft'
+            : 'none'
+
+        return { peStatus, lastUpdated }
+      } catch (err: any) {
+        // If user has no access or project isn't in Proposal Engine yet, treat as "none"
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.warn('Unable to load Proposal Engine summary for project', id, err)
+        }
+        return { peStatus: 'none' as const, lastUpdated: undefined as string | undefined }
+      }
+    },
+    staleTime: 60_000,
+  })
+
   // Projects in Lost status cannot be edited (only Admin can delete)
   const isLost = project?.projectStatus === ProjectStatus.LOST
   const canEdit = !isLost && (hasRole([UserRole.ADMIN]) || 
@@ -173,46 +225,90 @@ const ProjectDetail = () => {
               </span>
             </div>
           </div>
-          {/* Key financials - compact highlights */}
-          <div className="flex flex-wrap gap-6 sm:gap-8">
-            {project.projectCost != null && project.projectCost > 0 && (
-              <div className="text-right">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Order Value</p>
-                <p className="text-sm font-bold text-green-800">₹{project.projectCost.toLocaleString('en-IN')}</p>
-              </div>
-            )}
-            {project.totalProjectCost != null && project.totalProjectCost > 0 && (
-              <div className="text-right">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Total Cost</p>
-                <p className="text-sm font-semibold text-gray-900">₹{project.totalProjectCost.toLocaleString('en-IN')}</p>
-              </div>
-            )}
-            {project.grossProfit != null && project.grossProfit !== undefined && (
-              <div className="text-right">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Gross Profit</p>
-                <p className={`text-sm font-semibold ${project.grossProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  ₹{project.grossProfit.toLocaleString('en-IN')}
-                </p>
+          {/* Key financials + Proposal Engine summary */}
+          <div className="flex flex-col items-end gap-3 sm:gap-4">
+            <div className="flex flex-wrap gap-6 sm:gap-8 justify-end">
+              {project.projectCost != null && project.projectCost > 0 && (
+                <div className="text-right">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Order Value</p>
+                  <p className="text-sm font-bold text-green-800">₹{project.projectCost.toLocaleString('en-IN')}</p>
+                </div>
+              )}
+              {project.totalProjectCost != null && project.totalProjectCost > 0 && (
+                <div className="text-right">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Total Cost</p>
+                  <p className="text-sm font-semibold text-gray-900">₹{project.totalProjectCost.toLocaleString('en-IN')}</p>
+                </div>
+              )}
+              {project.grossProfit != null && project.grossProfit !== undefined && (
+                <div className="text-right">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Gross Profit</p>
+                  <p className={`text-sm font-semibold ${project.grossProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    ₹{project.grossProfit.toLocaleString('en-IN')}
+                  </p>
+                </div>
+              )}
+            </div>
+            {(project.projectStatus === ProjectStatus.PROPOSAL || project.projectStatus === ProjectStatus.CONFIRMED) && (
+              <div className="inline-flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl bg-white/80 border border-primary-200 shadow-sm">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-primary-700">Proposal Engine</span>
+                {peSummary?.peStatus === 'proposal-ready' && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                    Proposal Ready
+                  </span>
+                )}
+                {peSummary?.peStatus === 'draft' && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-300">
+                    Draft in PE
+                  </span>
+                )}
+                {(!peSummary || peSummary.peStatus === 'none') && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-gray-50 text-gray-600 border border-gray-200">
+                    Not yet created
+                  </span>
+                )}
+                {peSummary?.lastUpdated && (
+                  <span className="text-[10px] text-gray-500">
+                    Last updated {format(new Date(peSummary.lastUpdated), 'MMM dd, yyyy HH:mm')}
+                  </span>
+                )}
               </div>
             )}
           </div>
         </div>
         <div className="flex flex-wrap gap-2 mt-6 pt-4 border-t border-gray-100">
-          {/* Proposal button - Only for SALES and OPERATIONS users, for projects in Lead, Site Survey, or Proposal stages */}
-          {(hasRole([UserRole.SALES]) || 
-            hasRole([UserRole.OPERATIONS])) && 
-            (project.projectStatus === ProjectStatus.LEAD ||
-             project.projectStatus === ProjectStatus.SITE_SURVEY || 
-             project.projectStatus === ProjectStatus.PROPOSAL) && (
-            <button
-              onClick={() => setShowProposal(true)}
-              className="px-4 py-2 bg-primary-100 text-primary-800 border border-primary-200 rounded-lg hover:bg-primary-200 font-medium text-sm transition-colors flex items-center gap-2"
-            >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Proposal
-            </button>
+          {/* Open in Proposal Engine – flagship integration CTA */}
+          {(hasRole([UserRole.SALES]) || hasRole([UserRole.OPERATIONS]) || hasRole([UserRole.MANAGEMENT]) || hasRole([UserRole.FINANCE]) || hasRole([UserRole.ADMIN])) &&
+            (project.projectStatus === ProjectStatus.PROPOSAL || project.projectStatus === ProjectStatus.CONFIRMED) && (
+              <button
+                onClick={() => {
+                  const base = import.meta.env.VITE_PROPOSAL_ENGINE_URL;
+                  if (!base) {
+                    console.warn('VITE_PROPOSAL_ENGINE_URL is not set');
+                    return;
+                  }
+                  const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
+                  const url = `${normalizedBase}/customers?openProjectId=${encodeURIComponent(id ?? '')}`;
+                  window.open(url, '_blank', 'noopener,noreferrer');
+                }}
+                className="group relative overflow-hidden px-4 py-2 rounded-lg shadow-md hover:shadow-lg bg-gradient-to-r from-primary-700 via-primary-600 to-amber-400 text-white border border-primary-800/70 flex items-center gap-3 text-sm font-semibold"
+              >
+                {/* Glow accent */}
+                <span className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-amber-300/60 to-transparent opacity-80 group-hover:opacity-100 transition-opacity" />
+                <div className="relative flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 border border-white/40 shadow-sm">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6h8m0 0v8m0-8L9 15" />
+                    </svg>
+                  </div>
+                  <span className="inline-flex items-center gap-2">
+                    Open in Proposal Engine
+                    <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-300 text-primary-900 shadow-sm">
+                      New
+                    </span>
+                  </span>
+                </div>
+              </button>
           )}
           {canEdit && (
             <Link

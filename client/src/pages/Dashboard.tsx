@@ -53,8 +53,46 @@ const Dashboard = () => {
     }
   }
 
+  const marqueeText =
+    'New: Rayenna Proposal Engine is now live — create full solar proposals in one click from any eligible project in the CRM.'
+
   return (
-    <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden dashboard-mobile-no-clip">
+    <div className="px-0 -mt-6 pt-0 pb-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden dashboard-mobile-no-clip">
+      {/* Proposal Engine launch banner – tight under header */}
+      <style>
+        {`@keyframes ray-proposal-marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+          }`}
+      </style>
+      <div className="mb-2 px-3 sm:px-0">
+        <div className="relative overflow-hidden rounded-xl border border-primary-800/70 bg-gradient-to-r from-primary-700 via-primary-600 to-amber-400 text-white shadow-md">
+          <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-amber-300/60 to-transparent pointer-events-none" />
+          <div className="flex items-center gap-3 px-4 py-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 border border-white/40 shadow-sm flex-shrink-0">
+              <FaChartLine className="w-4 h-4 text-white" />
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <div
+                className="inline-block whitespace-nowrap text-[11px] sm:text-sm font-semibold"
+                style={{
+                  animation: 'ray-proposal-marquee 22s linear infinite',
+                }}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-300 text-primary-900 shadow-sm">
+                    New
+                  </span>
+                  <span>{marqueeText}</span>
+                </span>
+                <span className="mx-8 text-amber-100/90">•</span>
+                <span>{marqueeText}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <PageCard
         title="Dashboard"
         subtitle="Monitor your business performance at a glance"
