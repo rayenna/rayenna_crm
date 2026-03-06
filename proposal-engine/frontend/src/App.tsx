@@ -33,6 +33,14 @@ export default function App() {
           path="/"
           element={
             <RequireAuth>
+              <Customers />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <RequireAuth>
               <Dashboard />
             </RequireAuth>
           }

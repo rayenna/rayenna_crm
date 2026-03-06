@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { clearToken, loginWithEmailPassword, setToken } from '../lib/apiClient';
+import { clearToken, loginWithEmailPassword, setToken, setUserId, setUserRole, setUserName } from '../lib/apiClient';
 import { AlertCard } from '../components/AlertCard';
 
 const bgImageUrl = new URL('../assets/background.jpg', import.meta.url).href;
@@ -8,9 +8,10 @@ const bgImageUrl = new URL('../assets/background.jpg', import.meta.url).href;
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const fromLocation = (location.state as any)?.from;
   const from =
-    (location.state as any)?.from?.pathname && (location.state as any).from.pathname !== '/login'
-      ? (location.state as any).from.pathname
+    fromLocation && fromLocation.pathname && fromLocation.pathname !== '/login'
+      ? `${fromLocation.pathname}${fromLocation.search ?? ''}`
       : '/';
 
   const [email, setEmail] = useState('');
@@ -29,6 +30,9 @@ export default function LoginPage() {
       clearToken();
       const result = await loginWithEmailPassword(email, password);
       setToken(result.token);
+      setUserId(result.user.id);
+      setUserRole(result.user.role);
+      setUserName(result.user.name || result.user.email);
       navigate(from, { replace: true });
     } catch (err: any) {
       setError(err?.message || 'Login failed. Please try again.');

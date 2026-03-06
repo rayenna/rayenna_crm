@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ROI_AUTOFILL_KEY } from '../lib/costingConstants';
 import type { RoiAutofill } from '../lib/costingConstants';
-import { getActiveCustomer, upsertCustomer } from '../lib/customerStore';
+import { getActiveCustomer, upsertCustomer, getWipKeysForCurrentUser } from '../lib/customerStore';
 import type { RoiArtifact } from '../lib/customerStore';
+import { syncProjectRoi } from '../lib/apiClient';
 import { AlertCard } from '../components/AlertCard';
 
 // ─────────────────────────────────────────────
@@ -348,23 +348,24 @@ function YearlyTable({ rows }: { rows: YearlyRow[] }) {
 // Main page
 // ─────────────────────────────────────────────
 
-const ROI_STORAGE_KEY = 'rayenna_roi_result_v1';
-
 export default function ROICalculator() {
-  // Read autofill synchronously before any state init
-  const autoFill: RoiAutofill | null = (() => {
+  // Read ROI autofill snapshot synchronously before any state init (per-user key)
+  const initialAutoFill: RoiAutofill | null = (() => {
     try {
-      const raw = localStorage.getItem(ROI_AUTOFILL_KEY);
+      const key = getWipKeysForCurrentUser().roiAutofill;
+      const raw = localStorage.getItem(key);
       return raw ? JSON.parse(raw) : null;
     } catch { return null; }
   })();
 
   // ── Controlled input state — initialised directly from autofill / defaults ──
-  const [systemSizeKw,      setSystemSizeKw]      = useState(autoFill && autoFill.systemSizeKw > 0 ? String(autoFill.systemSizeKw) : '');
+  const [systemSizeKw,      setSystemSizeKw]      = useState(
+    initialAutoFill && initialAutoFill.systemSizeKw > 0 ? String(initialAutoFill.systemSizeKw) : '',
+  );
   const [tariff,            setTariff]            = useState('8.20');
   const [generationFactor,  setGenerationFactor]  = useState('1500');
   const [escalationPercent, setEscalationPercent] = useState('5');
-  const [projectCost,       setProjectCost]       = useState(autoFill && autoFill.grandTotal > 0 ? String(Math.round(autoFill.grandTotal)) : '');
+  const [projectCost,       setProjectCost]       = useState(initialAutoFill && initialAutoFill.grandTotal > 0 ? String(Math.round(initialAutoFill.grandTotal)) : '');
   const [subsidyEligible,   setSubsidyEligible]   = useState(false);
   /** Optional override in ₹; when empty, use scheme amount from capacity (PM-Surya Ghar). */
   const [subsidyOverride,   setSubsidyOverride]   = useState('');
@@ -373,6 +374,18 @@ export default function ROICalculator() {
   const [result,      setResult]      = useState<ROIResult | null>(null);
   const [saveStatus,  setSaveStatus]  = useState<'idle' | 'saved'>('idle');
   const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  // Stable reference used for the auto-fill banner and hints
+  const autoFill = initialAutoFill;
+
+  // On mount, prefer CRM Project System Capacity from active customer master
+  useEffect(() => {
+    const ac = getActiveCustomer();
+    const sizeFromCustomer = ac?.master?.systemSizeKw;
+    if (sizeFromCustomer && sizeFromCustomer > 0) {
+      setSystemSizeKw((current) => current && parseFloat(current) > 0 ? current : String(sizeFromCustomer));
+    }
+  }, []);
 
   // Restore last saved result on mount — prefer active customer's ROI artifact
   useEffect(() => {
@@ -397,9 +410,10 @@ export default function ROICalculator() {
       }
       return;
     }
-    // Fall back to localStorage
+    // Fall back to localStorage (per-user key)
     try {
-      const raw = localStorage.getItem(ROI_STORAGE_KEY);
+      const key = getWipKeysForCurrentUser().roiResult;
+      const raw = localStorage.getItem(key);
       if (raw) {
         const saved = JSON.parse(raw) as ROIResult;
         setResult(saved);
@@ -418,9 +432,16 @@ export default function ROICalculator() {
 
   // Re-populate fields if autofill key updates while page is open
   useEffect(() => {
-    if (!autoFill) return;
-    if (autoFill.systemSizeKw > 0) setSystemSizeKw(String(autoFill.systemSizeKw));
-    if (autoFill.grandTotal > 0)   setProjectCost(String(Math.round(autoFill.grandTotal)));
+    try {
+      const key = getWipKeysForCurrentUser().roiAutofill;
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+      const autoFill = JSON.parse(raw) as RoiAutofill;
+      if (autoFill.systemSizeKw > 0) setSystemSizeKw(String(autoFill.systemSizeKw));
+      if (autoFill.grandTotal > 0)   setProjectCost(String(Math.round(autoFill.grandTotal)));
+    } catch {
+      // ignore parse errors
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -433,7 +454,7 @@ export default function ROICalculator() {
     const overrideVal = subsidyOverride.trim() ? parseFloat(subsidyOverride) : NaN;
 
     if (!sz || sz <= 0 || !Number.isInteger(sz)) {
-      setFormError('System Size is required and must be a whole number in kW (1, 2, 3, …).');
+      setFormError('System Capacity is required and must be a whole number in kW (1, 2, 3, …).');
       return;
     }
     if (!tr  || tr  <= 0) { setFormError('Electricity Tariff is required and must be > 0'); return; }
@@ -461,13 +482,18 @@ export default function ROICalculator() {
   const handleSave = () => {
     if (!result) return;
     const now = new Date().toISOString();
-    localStorage.setItem(ROI_STORAGE_KEY, JSON.stringify(result));
+    localStorage.setItem(getWipKeysForCurrentUser().roiResult, JSON.stringify(result));
 
     // Persist ROI artifact to active customer record
     const activeCustomer = getActiveCustomer();
     if (activeCustomer) {
       const artifact: RoiArtifact = { savedAt: now, result };
       upsertCustomer({ ...activeCustomer, roi: artifact, updatedAt: now });
+
+      // Best-effort sync to CRM backend for CRM-linked projects.
+      if (activeCustomer.master.crmProjectId) {
+        void syncProjectRoi(activeCustomer.master.crmProjectId, artifact);
+      }
     }
 
     setSaveStatus('saved');
@@ -512,8 +538,8 @@ export default function ROICalculator() {
                   <span className="font-semibold">Active customer:</span> {ac.master.name}
                   {ac.roi && <span className="ml-2 text-emerald-600 font-medium">· ROI saved ✓</span>}
                 </p>
-                <Link to={`/customers/${ac.id}`} className="text-xs text-sky-600 hover:text-sky-800 font-medium whitespace-nowrap transition-colors">
-                  View workspace →
+                <Link to="/" className="text-xs text-sky-600 hover:text-sky-800 font-medium whitespace-nowrap transition-colors">
+                  View Dashboard →
                 </Link>
               </div>
             ) : (
@@ -537,7 +563,7 @@ export default function ROICalculator() {
                   </p>
                   <p className="text-xs text-emerald-700 mt-0.5">
                     Source: <strong>{autoFill.sourceName}</strong> ·{' '}
-                    System Size: <strong>{autoFill.systemSizeKw} kW</strong> ·{' '}
+                    System Capacity: <strong>{autoFill.systemSizeKw} kW</strong> ·{' '}
                     Project Cost (incl. GST):{' '}
                     <strong>₹{autoFill.grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</strong>
                   </p>
@@ -560,7 +586,7 @@ export default function ROICalculator() {
 
                 <div className="space-y-4">
                   <Field
-                    label="System Size"
+                    label="System Capacity"
                     unit="kW"
                     hint={autoFill && autoFill.systemSizeKw > 0 ? `⚡ Auto-filled from "${autoFill.sourceName}"` : 'Installed capacity (whole kW only)'}
                     value={systemSizeKw}

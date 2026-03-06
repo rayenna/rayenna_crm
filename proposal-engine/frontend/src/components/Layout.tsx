@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getActiveCustomer } from '../lib/customerStore';
-import { clearToken, getToken } from '../lib/apiClient';
+import { clearToken, getCurrentUserName, getToken } from '../lib/apiClient';
 import TipOfTheDay from './TipOfTheDay';
 
 const NAV = [
-  { label: 'Dashboard',     to: '/'          },
   { label: 'Customers',     to: '/customers' },
+  { label: 'Dashboard',     to: '/dashboard' },
   { label: 'Costing Sheet', to: '/costing'   },
   { label: 'BOM',           to: '/bom'       },
   { label: 'ROI',           to: '/roi'       },
@@ -30,6 +30,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   // Re-read active customer on every navigation so the pill stays current
   const activeCustomer = getActiveCustomer();
   const hasToken       = !!getToken();
+  const userName       = getCurrentUserName();
 
   // Inactivity timeout configuration – match CRM behaviour
   const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
@@ -168,26 +169,30 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {/* Navbar row — shorter in landscape (h-12) vs portrait (h-16) vs desktop (h-20) */}
           <div className="flex items-center justify-between h-16 landscape:h-12 md:landscape:h-20 md:h-20 gap-2">
 
-            {/* Brand */}
+            {/* Brand — reuse Rayenna logo, match CRM alignment. Root (/) now lands on Customers. */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              <div className="w-8 h-8 landscape:w-7 landscape:h-7 md:w-9 md:h-9 rounded-lg bg-white/25 border border-white/40 flex items-center justify-center text-white font-bold text-xs shadow-lg">
-                PE
-              </div>
-              <span className="text-white font-bold tracking-tight text-sm drop-shadow">
-                Proposal Engine
-              </span>
-              <span className="text-[10px] text-white/70 bg-white/10 border border-white/20 px-2 py-0.5 rounded-full hidden md:inline">
-                v1.0 · dev
-              </span>
+              <Link
+                to="/"
+                className="flex items-center gap-2 hover:opacity-90 transition-opacity"
+              >
+                <img
+                  src="/rayenna_logo.jpg"
+                  alt="Rayenna Energy Logo"
+                  className="h-14 landscape:h-12 md:h-16 lg:h-[4.6rem] w-auto"
+                />
+                <span className="text-white font-bold tracking-tight text-sm drop-shadow">
+                  Proposal Engine
+                </span>
+              </Link>
             </div>
 
             {/* Desktop nav (md and above) */}
-            <div className="hidden md:flex items-center gap-1 flex-1 justify-center flex-wrap">
+            <div className="hidden md:flex items-center gap-1.5 flex-1 justify-center flex-nowrap">
               {NAV.map((n) => (
                 <Link
                   key={n.to}
                   to={n.to}
-                  className={`inline-flex items-center px-3 py-2 rounded-lg text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
+                  className={`inline-flex items-center px-2.5 py-1.5 rounded-lg text-[11px] lg:text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
                     pathname === n.to ? ACTIVE_LINK : IDLE_LINK
                   }`}
                 >
@@ -199,7 +204,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <div ref={helpRef} className="relative">
                 <button
                   onClick={() => setHelpOpen((o) => !o)}
-                  className={`inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
+                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] lg:text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
                     pathname === '/help' || pathname === '/about' ? ACTIVE_LINK : IDLE_LINK
                   }`}
                 >
@@ -235,24 +240,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Active customer pill — desktop only */}
+              {/* Active customer pill — desktop only (routes to Dashboard) */}
               {activeCustomer && (
                 <Link
-                  to={`/customers/${activeCustomer.id}`}
+                  to="/dashboard"
                   className="hidden md:flex items-center gap-1.5 text-xs text-white/90 bg-white/15 hover:bg-white/25 border border-white/30 px-2.5 py-1 rounded-full transition-colors max-w-[160px] xl:max-w-[200px]"
-                  title={`Active: ${activeCustomer.master.name}`}
+                  title={`Active on dashboard: ${activeCustomer.master.name}`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-sky-300 inline-block flex-shrink-0 animate-pulse" />
                   <span className="truncate font-medium">{activeCustomer.master.name}</span>
                 </Link>
               )}
 
-              {/* Active customer dot — mobile only (compact) */}
+              {/* Active customer dot — mobile only (compact, routes to Dashboard) */}
               {activeCustomer && (
                 <Link
-                  to={`/customers/${activeCustomer.id}`}
+                  to="/dashboard"
                   className="md:hidden flex items-center gap-1 text-[11px] text-white/90 bg-white/15 border border-white/30 px-2 py-0.5 rounded-full max-w-[110px]"
-                  title={`Active: ${activeCustomer.master.name}`}
+                  title={`Active on dashboard: ${activeCustomer.master.name}`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-sky-300 inline-block flex-shrink-0 animate-pulse" />
                   <span className="truncate font-medium">{activeCustomer.master.name}</span>
@@ -261,13 +266,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
               {/* Logout button — desktop only */}
               {hasToken && (
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="hidden md:inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold text-slate-900 bg-white/90 hover:bg-amber-300 border border-white/70 shadow-sm transition-colors"
-                >
-                  Logout
-                </button>
+                <div className="hidden md:flex items-center gap-2">
+                  {userName && (
+                    <span
+                      className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold text-white/95 bg-white/15 border border-white/30 max-w-[180px] xl:max-w-[240px]"
+                      title={userName}
+                    >
+                      <span className="truncate">{userName}</span>
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold text-slate-900 bg-white/90 hover:bg-amber-300 border border-white/70 shadow-sm transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
               )}
 
               {/* Hamburger — mobile only */}

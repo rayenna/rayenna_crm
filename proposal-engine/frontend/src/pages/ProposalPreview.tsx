@@ -1,11 +1,6 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import {
-  SHEETS_STORAGE_KEY,
-  BOM_FROM_COSTING_KEY,
-  ROI_AUTOFILL_KEY,
-  CATEGORIES,
-} from '../lib/costingConstants';
+import React, { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { CATEGORIES } from '../lib/costingConstants';
 import type { SavedSheet, StoredBom, BomRowGenerated, RoiAutofill, Category } from '../lib/costingConstants';
 import {
   Document, Packer, Paragraph, Table, TableRow, TableCell,
@@ -15,15 +10,11 @@ import {
 import {
   getActiveCustomer,
   saveAllArtifacts,
+  getWipKeysForCurrentUser,
 } from '../lib/customerStore';
+import { getCurrentUserRole, syncProjectProposal } from '../lib/apiClient';
 import type { CostingArtifact, BomArtifact, RoiArtifact, ProposalArtifact } from '../lib/customerStore';
 
-// ─────────────────────────────────────────────
-// localStorage key constants (local to this page)
-// ─────────────────────────────────────────────
-
-const BOM_OVERRIDES_KEY    = 'rayenna_bom_overrides_v1';
-const ROI_STORAGE_KEY      = 'rayenna_roi_result_v1';
 // ─────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────
@@ -68,6 +59,10 @@ interface ProposalData {
   bom:            BomRowGenerated[];
   roi:            ROIResult | null;
   roiAutofill:    RoiAutofill | null;
+  /** Human‑readable CRM Customer Number (e.g. "C000123"), when available */
+  customerNumber?: string | null;
+  /** Human‑readable CRM Project Number (Project SL No, e.g. 120), when available */
+  projectNumber?:  number | null;
 }
 
 // ─────────────────────────────────────────────
@@ -86,9 +81,32 @@ function fmtINRFull(n: number): string {
   return `₹${rounded.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 }
 
-function genRef(): string {
-  const now = new Date();
-  return `REY/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(Date.now()).slice(-5)}`;
+interface ProposalMeta {
+  customerNumber?: string | null;
+  projectNumber?:  number | null;
+}
+
+function genRef(meta?: ProposalMeta): string {
+  const now  = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+
+  const parts: string[] = [`REY`, String(year), month];
+
+  if (meta?.projectNumber != null) {
+    parts.push(`PRJ-${String(meta.projectNumber).padStart(4, '0')}`);
+  }
+
+  if (meta?.customerNumber) {
+    parts.push(`CUST-${meta.customerNumber}`);
+  }
+
+  // Fallback uniqueness tail when IDs are missing
+  if (!meta?.projectNumber || !meta?.customerNumber) {
+    parts.push(String(Date.now()).slice(-5));
+  }
+
+  return parts.join('/');
 }
 
 function readStorage<T>(key: string): T | null {
@@ -96,16 +114,17 @@ function readStorage<T>(key: string): T | null {
 }
 
 function getLatestSheet(): SavedSheet | null {
-  const sheets: SavedSheet[] | null = readStorage(SHEETS_STORAGE_KEY);
+  const key = getWipKeysForCurrentUser().sheets;
+  const sheets: SavedSheet[] | null = readStorage(key);
   if (!sheets || !sheets.length) return null;
   return sheets.slice().sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime())[0];
 }
 
 function getBom(): BomRowGenerated[] {
-  // Prefer user overrides, fall back to auto-generated
-  const overrides: BomOverrides | null = readStorage(BOM_OVERRIDES_KEY);
+  const wip = getWipKeysForCurrentUser();
+  const overrides: BomOverrides | null = readStorage(wip.bomOverrides);
   if (overrides && overrides.rows.length) return overrides.rows;
-  const stored: StoredBom | null = readStorage(BOM_FROM_COSTING_KEY);
+  const stored: StoredBom | null = readStorage(wip.bomCosting);
   if (stored && stored.rows.length) return stored.rows;
   return [];
 }
@@ -114,10 +133,17 @@ function getBom(): BomRowGenerated[] {
 // Template text generator
 // ─────────────────────────────────────────────
 
-function buildProposal(customer: CustomerDetails, sheet: SavedSheet | null, bom: BomRowGenerated[], roi: ROIResult | null, roiAutofill: RoiAutofill | null): ProposalData {
+function buildProposal(
+  customer: CustomerDetails,
+  sheet: SavedSheet | null,
+  bom: BomRowGenerated[],
+  roi: ROIResult | null,
+  roiAutofill: RoiAutofill | null,
+  meta?: ProposalMeta,
+): ProposalData {
   const sizeKw = roiAutofill?.systemSizeKw ?? sheet?.systemSizeKw ?? 0;
   return {
-    refNumber:   genRef(),
+    refNumber:   genRef(meta),
     generatedAt: new Date().toISOString(),
     customer,
     systemSizeKw: sizeKw,
@@ -125,6 +151,8 @@ function buildProposal(customer: CustomerDetails, sheet: SavedSheet | null, bom:
     bom,
     roi,
     roiAutofill,
+    customerNumber: meta?.customerNumber ?? null,
+    projectNumber:  meta?.projectNumber ?? null,
   };
 }
 
@@ -2554,44 +2582,24 @@ function CustomerForm({ onGenerate }: { onGenerate: (c: CustomerDetails) => void
   const activeCustomer = getActiveCustomer();
   const ac = activeCustomer?.master;
 
-  const [customerName,   setCustomerName]   = useState(ac?.name          ?? '');
-  const [location,       setLocation]       = useState(ac?.location       ?? '');
-  const [contactPerson,  setContactPerson]  = useState(ac?.contactPerson  ?? '');
-  const [phone,          setPhone]          = useState(ac?.phone          ?? '');
-  const [email,          setEmail]          = useState(ac?.email          ?? '');
-  const [err,            setErr]            = useState('');
-
-  // Sync form fields whenever the active customer changes (e.g. user switches customer
-  // while already on the Proposal page without navigating away and back).
-  const syncFields = useCallback(() => {
-    const current = getActiveCustomer()?.master;
-    setCustomerName(current?.name          ?? '');
-    setLocation    (current?.location      ?? '');
-    setContactPerson(current?.contactPerson ?? '');
-    setPhone       (current?.phone         ?? '');
-    setEmail       (current?.email         ?? '');
-    setErr('');
-  }, []);
-
-  // Re-sync on every focus (catches the case where the user switches customer
-  // in another tab/window and comes back to this page).
-  useEffect(() => {
-    window.addEventListener('focus', syncFields);
-    return () => window.removeEventListener('focus', syncFields);
-  }, [syncFields]);
-
   const sheet      = getLatestSheet();
   const bom        = getBom();
-  const roi: ROIResult | null = readStorage(ROI_STORAGE_KEY);
+  const roi: ROIResult | null = readStorage(getWipKeysForCurrentUser().roiResult);
 
   const hasSheet = !!sheet;
   const hasBom   = bom.length > 0;
   const hasRoi   = !!roi;
 
   const handleSubmit = () => {
-    if (!customerName.trim()) { setErr('Customer name is required.'); return; }
-    setErr('');
-    onGenerate({ customerName: customerName.trim(), location: location.trim(), contactPerson: contactPerson.trim(), phone: phone.trim(), email: email.trim() });
+    const master = getActiveCustomer()?.master;
+    const customer: CustomerDetails = {
+      customerName: master?.name ?? '',
+      location:     master?.location ?? '',
+      contactPerson: master?.contactPerson ?? '',
+      phone:        master?.phone ?? '',
+      email:        master?.email ?? '',
+    };
+    onGenerate(customer);
   };
 
   return (
@@ -2603,8 +2611,8 @@ function CustomerForm({ onGenerate }: { onGenerate: (c: CustomerDetails) => void
             <span className="font-semibold">Active customer:</span> {activeCustomer.master.name}
             {' · '}Generating proposal will save all 4 artifacts to this customer record.
           </p>
-          <Link to={`/customers/${activeCustomer.id}`} className="text-xs text-sky-600 hover:text-sky-800 font-medium whitespace-nowrap flex-shrink-0 transition-colors">
-            View workspace →
+          <Link to="/" className="text-xs text-sky-600 hover:text-sky-800 font-medium whitespace-nowrap flex-shrink-0 transition-colors">
+            View Dashboard →
           </Link>
         </div>
       ) : (
@@ -2640,76 +2648,87 @@ function CustomerForm({ onGenerate }: { onGenerate: (c: CustomerDetails) => void
         </div>
       )}
 
-      {/* Customer details */}
+      {/* Project & Customer snapshot — read-only, from CRM */}
       <div className="bg-white rounded-xl border border-primary-100 shadow-sm p-6 space-y-4">
-        <h3 className="text-xs font-bold text-secondary-600 uppercase tracking-widest mb-4">Customer Details</h3>
+        <div className="flex items-center justify-between gap-3 mb-1">
+          <h3 className="text-xs font-bold text-secondary-600 uppercase tracking-widest">Project &amp; Customer (CRM)</h3>
+          {ac?.projectStage && (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold bg-slate-900 text-amber-300 border border-amber-400/70">
+              Stage: {ac.projectStage}
+            </span>
+          )}
+        </div>
+        <p className="text-[11px] text-secondary-400">
+          These details are pulled from Rayenna CRM and are <span className="font-semibold">read-only</span>. To make changes, edit the Project in CRM.
+        </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-secondary-500">Project #</p>
+            <p className="font-semibold text-secondary-900">{ac?.projectNumber ?? '—'}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-secondary-500">Customer ID</p>
+            <p className="font-semibold text-secondary-900 break-all">{ac?.customerNumber ?? '—'}</p>
+          </div>
           <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold text-secondary-600 uppercase tracking-wide mb-1.5">
-              Customer / Company Name <span className="text-red-400">*</span>
-            </label>
-            <input
-              value={customerName}
-              onChange={(e) => { setCustomerName(e.target.value); setErr(''); }}
-              placeholder="e.g. Sharma Industries Pvt Ltd"
-              className="w-full border border-secondary-300 rounded-lg px-3 py-2.5 text-sm text-secondary-900 placeholder-secondary-400 focus:outline-none focus:ring-2 focus:border-primary-500 transition-all"
-            />
-            {err && <p className="mt-1 text-xs text-red-500">{err}</p>}
+            <p className="text-[10px] uppercase tracking-wide text-secondary-500">Customer Name</p>
+            <p className="font-semibold text-secondary-900">{ac?.name ?? '—'}</p>
           </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-secondary-600 uppercase tracking-wide mb-1.5">Location / Site Address</label>
-            <input
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="e.g. Ernakulam, Kerala"
-              className="w-full border border-secondary-300 rounded-lg px-3 py-2.5 text-sm text-secondary-900 placeholder-secondary-400 focus:outline-none focus:ring-2 focus:border-primary-500 transition-all"
-            />
+          <div className="sm:col-span-2">
+            <p className="text-[10px] uppercase tracking-wide text-secondary-500">Full Address</p>
+            <p className="font-medium text-secondary-800 text-[11px] leading-snug">
+              {ac?.location || '—'}
+            </p>
           </div>
-
           <div>
-            <label className="block text-xs font-semibold text-secondary-600 uppercase tracking-wide mb-1.5">Contact Person</label>
-            <input
-              value={contactPerson}
-              onChange={(e) => setContactPerson(e.target.value)}
-              placeholder="e.g. Mr. Rajesh Sharma"
-              className="w-full border border-secondary-300 rounded-lg px-3 py-2.5 text-sm text-secondary-900 placeholder-secondary-400 focus:outline-none focus:ring-2 focus:border-primary-500 transition-all"
-            />
+            <p className="text-[10px] uppercase tracking-wide text-secondary-500">Contact Number</p>
+            <p className="font-semibold text-secondary-900">{ac?.phone || '—'}</p>
           </div>
-
           <div>
-            <label className="block text-xs font-semibold text-secondary-600 uppercase tracking-wide mb-1.5">Phone</label>
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="e.g. +91 98765 43210"
-              className="w-full border border-secondary-300 rounded-lg px-3 py-2.5 text-sm text-secondary-900 placeholder-secondary-400 focus:outline-none focus:ring-2 focus:border-primary-500 transition-all"
-            />
+            <p className="text-[10px] uppercase tracking-wide text-secondary-500">Email ID</p>
+            <p className="font-semibold text-secondary-900 break-all">{ac?.email || '—'}</p>
           </div>
-
           <div>
-            <label className="block text-xs font-semibold text-secondary-600 uppercase tracking-wide mb-1.5">Email</label>
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. rajesh@company.com"
-              className="w-full border border-secondary-300 rounded-lg px-3 py-2.5 text-sm text-secondary-900 placeholder-secondary-400 focus:outline-none focus:ring-2 focus:border-primary-500 transition-all"
-            />
+            <p className="text-[10px] uppercase tracking-wide text-secondary-500">Consumer Number</p>
+            <p className="font-semibold text-secondary-900 break-all">{ac?.consumerNumber || '—'}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-secondary-500">Segment</p>
+            <p className="font-semibold text-secondary-900">{ac?.segment || '—'}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-secondary-500">Project Stage</p>
+            <p className="font-semibold text-secondary-900">{ac?.projectStage || '—'}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-secondary-500">Sales Person</p>
+            <p className="font-semibold text-secondary-900">{ac?.salespersonName || '—'}</p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-secondary-500">System Capacity (kW)</p>
+            <p className="font-semibold text-secondary-900">
+              {typeof ac?.systemSizeKw === 'number' && ac.systemSizeKw > 0 ? `${ac.systemSizeKw} kW` : '—'}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-secondary-500">Panel Type</p>
+            <p className="font-semibold text-secondary-900">{ac?.panelType || '—'}</p>
           </div>
         </div>
 
-        <div className="pt-2">
+        <div className="pt-3">
           <button
             type="button"
             onClick={handleSubmit}
-            className="w-full text-white text-sm font-semibold py-2.5 rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+            className="w-full text-white text-sm font-semibold py-2.5 rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             style={{ background: '#0d1b3a' }}
             onMouseEnter={e => (e.currentTarget.style.background = '#0a1530')}
             onMouseLeave={e => (e.currentTarget.style.background = '#0d1b3a')}
+            disabled={!activeCustomer}
           >
             <span className="text-base">✦</span>
-            Generate Proposal
+            {activeCustomer ? 'Generate Proposal from CRM Data' : 'Select Customer in CRM to Generate'}
           </button>
         </div>
       </div>
@@ -2723,6 +2742,7 @@ function CustomerForm({ onGenerate }: { onGenerate: (c: CustomerDetails) => void
 
 // localStorage key for persisting the edited proposal HTML between sessions
 export default function ProposalPreview() {
+  const navigate = useNavigate();
   const [proposal, setProposal]               = useState<ProposalData | null>(null);
   const [exporting, setExporting]             = useState<'pdf' | 'docx' | null>(null);
   const [savedToCustomer, setSavedToCustomer] = useState<string | null>(null);
@@ -2732,6 +2752,13 @@ export default function ProposalPreview() {
   const printRef                              = useRef<HTMLDivElement>(null);
   // Ref to the contentEditable document body div so we can read its innerHTML on save
   const docBodyRef                            = useRef<HTMLDivElement>(null);
+
+  const role = getCurrentUserRole();
+  const canWrite = role != null && ['ADMIN', 'SALES'].includes(String(role).toUpperCase());
+
+  useEffect(() => {
+    if (!canWrite && isEditing) setIsEditing(false);
+  }, [canWrite, isEditing]);
 
   // Track the active customer ID so CustomerForm remounts when the customer changes.
   // This guarantees the form fields always reflect the correct customer.
@@ -2775,6 +2802,7 @@ export default function ProposalPreview() {
 
   // ── Unified save: comments + inline edits + textOverrides + all 4 artifacts ──
   const handleSave = () => {
+    if (!canWrite) return;
     if (!proposal) return;
     setSaveStatus('saving');
 
@@ -2790,7 +2818,7 @@ export default function ProposalPreview() {
     if (activeCustomer) {
       const sheet = proposal.sheet;
       const bom   = proposal.bom;
-      const roi: ROIResult | null = readStorage(ROI_STORAGE_KEY);
+      const roi: ROIResult | null = readStorage(getWipKeysForCurrentUser().roiResult);
       const now   = new Date().toISOString();
 
       const costingArtifact: CostingArtifact | null = sheet ? {
@@ -2819,12 +2847,26 @@ export default function ProposalPreview() {
 
       saveAllArtifacts(activeCustomer.id, costingArtifact, bomArtifact, roiArtifact, proposalArtifact);
       setSavedToCustomer(activeCustomer.master.name);
+
+      // Best-effort sync of proposal artifact to CRM backend for CRM-linked projects.
+      if (activeCustomer.master.crmProjectId) {
+        void syncProjectProposal(activeCustomer.master.crmProjectId, proposalArtifact);
+      }
     }
 
     // 4. Exit edit mode
     setIsEditing(false);
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 3000);
+  };
+
+  const handleSaveAndClose = () => {
+    if (!proposal) return;
+    handleSave();
+    // Give a small delay so the saved banner can flash, then go back to Dashboard
+    setTimeout(() => {
+      navigate('/');
+    }, 300);
   };
 
   const handleGenerate = (customer: CustomerDetails) => {
@@ -2856,11 +2898,12 @@ export default function ProposalPreview() {
       ? (activeCustomer.bom.rows as unknown as BomRowGenerated[])
       : getBom();
 
-    // ROI: prefer customer record, fall back to global key
+    // ROI: prefer customer record, fall back to per-user localStorage
+    const wip = getWipKeysForCurrentUser();
     const roi: ROIResult | null = (activeCustomer?.roi?.result as ROIResult | null)
-      ?? readStorage(ROI_STORAGE_KEY);
+      ?? readStorage(wip.roiResult);
 
-    // ROI autofill: derive from customer costing if available, fall back to global key
+    // ROI autofill: derive from customer costing if available, fall back to per-user key
     const roiAutofill: RoiAutofill | null = activeCustomer?.costing
       ? {
           source:       'costing-sheet',
@@ -2869,8 +2912,15 @@ export default function ProposalPreview() {
           systemSizeKw: activeCustomer.costing.systemSizeKw,
           grandTotal:   activeCustomer.costing.grandTotal,
         }
-      : readStorage(ROI_AUTOFILL_KEY);
-    const p = buildProposal(customer, sheet, bom, roi, roiAutofill);
+      : readStorage(wip.roiAutofill);
+    const meta: ProposalMeta | undefined = activeCustomer?.master
+      ? {
+          customerNumber: activeCustomer.master.customerNumber ?? undefined,
+          projectNumber:  activeCustomer.master.projectNumber ?? undefined,
+        }
+      : undefined;
+
+    const p = buildProposal(customer, sheet, bom, roi, roiAutofill, meta);
     setProposal(p);
     // Keep activeCustomerId in sync so the key stays correct
     setActiveCustomerId(activeCustomer?.id ?? null);
@@ -2970,18 +3020,20 @@ export default function ProposalPreview() {
             </div>
             {proposal && (
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto flex-shrink-0">
-                {/* Edit toggle */}
-                <button
-                  onClick={() => setIsEditing((e) => !e)}
-                  title={isEditing ? 'Exit edit mode' : 'Edit proposal'}
-                  className={`w-full sm:w-auto flex items-center justify-center gap-1.5 border text-xs font-semibold px-3 py-2 rounded-lg transition-all min-h-[36px] ${
-                    isEditing
-                      ? 'bg-amber-400 border-amber-300 text-gray-900 hover:bg-amber-300'
-                      : 'bg-white/20 hover:bg-white/30 border-white/40 text-white'
-                  }`}
-                >
-                  {isEditing ? '✏️ Editing…' : '✏️ Edit'}
-                </button>
+                {/* Edit toggle (Admin/Sales only) */}
+                {canWrite && (
+                  <button
+                    onClick={() => setIsEditing((e) => !e)}
+                    title={isEditing ? 'Exit edit mode' : 'Edit proposal'}
+                    className={`w-full sm:w-auto flex items-center justify-center gap-1.5 border text-xs font-semibold px-3 py-2 rounded-lg transition-all min-h-[36px] ${
+                      isEditing
+                        ? 'bg-amber-400 border-amber-300 text-gray-900 hover:bg-amber-300'
+                        : 'bg-white/20 hover:bg-white/30 border-white/40 text-white'
+                    }`}
+                  >
+                    {isEditing ? '✏️ Editing…' : '✏️ Edit'}
+                  </button>
+                )}
                 {/* Export buttons — full-width row on mobile so they match other buttons */}
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <button
@@ -3011,6 +3063,18 @@ export default function ProposalPreview() {
                 >
                   ← New Proposal
                 </button>
+                {canWrite && (
+                  <button
+                    onClick={handleSave}
+                    disabled={saveStatus === 'saving' || !!exporting}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all min-h-[36px] disabled:opacity-60"
+                  >
+                    {saveStatus === 'saving' && (
+                      <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    )}
+                    💾 Save
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -3085,6 +3149,19 @@ export default function ProposalPreview() {
 
                 {(proposal.customer.customerName || proposal.customer.contactPerson) && (
                   <div className="mt-5 pt-4 border-t border-white/20">
+                    {(proposal.projectNumber != null || proposal.customerNumber) && (
+                      <div className="mb-2 text-[11px] text-white/70 font-mono">
+                        {proposal.projectNumber != null && (
+                          <span>
+                            Project #{proposal.projectNumber}
+                            {proposal.customerNumber ? ' · ' : ''}
+                          </span>
+                        )}
+                        {proposal.customerNumber && (
+                          <span>Customer #{proposal.customerNumber}</span>
+                        )}
+                      </div>
+                    )}
                     <p className="text-xs text-white/60 uppercase tracking-widest mb-1">To</p>
                     <p className="text-white font-bold text-base">{proposal.customer.customerName}</p>
                     {proposal.customer.contactPerson && <p className="text-white/80 text-sm">Attn: {proposal.customer.contactPerson}</p>}
@@ -3109,10 +3186,10 @@ export default function ProposalPreview() {
               <div
                 ref={docBodyRef}
                 className="px-4 sm:px-8 py-6 sm:py-8"
-                contentEditable={isEditing}
+                contentEditable={canWrite && isEditing}
                 suppressContentEditableWarning
-                spellCheck={isEditing}
-                style={isEditing ? { outline: 'none', cursor: 'text' } : undefined}
+                spellCheck={canWrite && isEditing}
+                style={canWrite && isEditing ? { outline: 'none', cursor: 'text' } : undefined}
               >
                 {/* Saved-to-customer confirmation */}
                 {savedToCustomer && (
@@ -3226,28 +3303,36 @@ export default function ProposalPreview() {
                     {/* Divider */}
                     <span className="hidden sm:block w-px h-6 bg-gray-200" />
 
-                    {/* Primary Save button — full width on mobile */}
-                    <button
-                      onClick={handleSave}
-                      disabled={saveStatus === 'saving' || !!exporting}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 text-sm font-bold text-white px-6 py-2.5 rounded-xl shadow-lg transition-all disabled:opacity-60 min-h-[44px] sm:min-h-0"
-                      style={{ background: saveStatus === 'saved' ? '#16a34a' : '#0d1b3a' }}
-                      onMouseEnter={e => { if (saveStatus !== 'saved') e.currentTarget.style.background = '#0a1530'; }}
-                      onMouseLeave={e => { if (saveStatus !== 'saved') e.currentTarget.style.background = '#0d1b3a'; }}
-                    >
-                      {saveStatus === 'saving' && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                      {saveStatus === 'saved'  && '✓'}
-                      {saveStatus === 'idle'   && '💾'}
-                      {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved!' : 'Save'}
-                    </button>
+                    {/* Primary Save + Save & Close buttons (Admin/Sales only) */}
+                    {canWrite && (
+                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+                        <button
+                          onClick={handleSave}
+                          disabled={saveStatus === 'saving' || !!exporting}
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-2 text-sm font-bold text-white px-6 py-2.5 rounded-xl shadow-lg transition-all disabled:opacity-60 min-h-[44px] sm:min-h-0"
+                          style={{ background: saveStatus === 'saved' ? '#16a34a' : '#0d1b3a' }}
+                          onMouseEnter={e => { if (saveStatus !== 'saved') e.currentTarget.style.background = '#0a1530'; }}
+                          onMouseLeave={e => { if (saveStatus !== 'saved') e.currentTarget.style.background = '#0d1b3a'; }}
+                        >
+                          {saveStatus === 'saving' && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                          {saveStatus === 'saved'  && '✓'}
+                          {saveStatus === 'idle'   && '💾'}
+                          {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved!' : 'Save'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveAndClose}
+                          disabled={saveStatus === 'saving' || !!exporting}
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-2 text-xs font-semibold text-white px-4 py-2.5 rounded-xl shadow transition-all disabled:opacity-60 min-h-[44px] sm:min-h-0"
+                          style={{ background: '#374151' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = '#1f2937')}
+                          onMouseLeave={e => (e.currentTarget.style.background = '#374151')}
+                        >
+                          💾 Save &amp; Close
+                        </button>
+                      </div>
+                    )}
 
-                    {/* Edit Details link */}
-                    <button
-                      onClick={handleRegenerate}
-                      className="text-xs text-primary-600 hover:text-primary-800 font-medium transition-colors py-1 text-center sm:text-left"
-                    >
-                      ← Edit Details
-                    </button>
                   </div>
                 </div>
               </div>

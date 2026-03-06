@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { TIPS } from '../data/tipOfTheDay';
 
@@ -224,16 +224,16 @@ export default function HelpPage() {
         {/* Visual workflow */}
         <div className="flex flex-wrap items-center gap-2 mb-6 text-xs font-semibold">
           {['1 Customer', '2 Costing', '3 BOM', '4 ROI', '5 Proposal'].map((s, i, arr) => (
-            <>
-              <span key={s} className="px-3 py-1.5 rounded-full bg-indigo-600 text-white shadow-sm">{s}</span>
-              {i < arr.length - 1 && <span key={`arrow-${i}`} className="text-gray-400">→</span>}
-            </>
+            <Fragment key={s}>
+              <span className="px-3 py-1.5 rounded-full bg-indigo-600 text-white shadow-sm">{s}</span>
+              {i < arr.length - 1 && <span className="text-gray-400">→</span>}
+            </Fragment>
           ))}
         </div>
 
         <div className="space-y-5">
-          <Step n={1} title="Create a Customer">
-            Go to <Link to="/customers" className="text-indigo-600 underline font-medium">Customers</Link> and click <strong>+ New Customer</strong>. Enter the customer name and any other details you have. Then open the customer and click <strong>⚡ Set Active</strong> — this tells the app which customer you are working on.
+          <Step n={1} title="Pick a CRM Project">
+            Go to <Link to="/customers" className="text-indigo-600 underline font-medium">Customers / Projects</Link> and click <strong>+ Select Project</strong>. Use the filters to find a Rayenna CRM project in <em>Proposal</em> or <em>Confirmed</em> stage, then click <strong>Select</strong> in the picker. This creates a Proposal Engine record linked to that CRM project and makes it the <strong>active project</strong> on your Dashboard and in all four workflow pages.
           </Step>
 
           <Step n={2} title="Build the Costing Sheet">
@@ -249,7 +249,7 @@ export default function HelpPage() {
           </Step>
 
           <Step n={5} title="Generate and Export the Proposal">
-            Go to <Link to="/proposal" className="text-indigo-600 underline font-medium">Proposal</Link>. Click <strong>Generate Proposal</strong> to see the full document. Use the <strong>✏️ Edit</strong> button to make any inline changes directly on the proposal text. Add notes in the Bill of Quantities section, then click <strong>💾 Save</strong> at the bottom to lock everything in. Export as <strong>PDF</strong> or <strong>DOCX</strong> to share with your customer.
+            Go to <Link to="/proposal" className="text-indigo-600 underline font-medium">Proposal</Link>. Click <strong>Generate Proposal</strong> to see the full document. Use the <strong>✏️ Edit</strong> button to make any inline changes directly on the proposal text. Add notes in the Bill of Quantities section, then click the <strong>💾 Save</strong> button (top-right or at the bottom) to lock everything in. Export as <strong>PDF</strong> or <strong>DOCX</strong> to share with your customer.
           </Step>
         </div>
 
@@ -267,14 +267,14 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Creating a Customer</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Click <strong>+ New Customer</strong> on the Customers page. You only need the customer name to get started — location, contact person, phone, and email can be added later by clicking <strong>✏️ Edit</strong> on the customer workspace.
+              On the <strong>Customers / Projects</strong> page, click <strong>+ Select Project</strong> to open the CRM project picker. It shows Rayenna CRM projects that are in <em>Proposal</em> or <em>Confirmed</em> stages. When you pick a project, the Proposal Engine creates a linked customer record and pulls in master data such as customer ID, name, full address, contact numbers, email, consumer number, system capacity, segment, sales person, project stage, and panel type from the CRM.
             </p>
           </div>
 
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Setting the Active Customer</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              The Costing Sheet, BOM, ROI, and Proposal pages all work on the <strong>active customer</strong>. Open a customer's workspace and click <strong>⚡ Set Active</strong>. A pulsing blue dot in the top navigation bar confirms which customer is active.
+              The Costing Sheet, BOM, ROI, and Proposal pages all work on the <strong>active project</strong>. The active project is shown in the Dashboard (<em>Proposal Command Center</em>) banner at the top of the page and as a pulsing blue dot in the top navigation bar. To switch, either click a <strong>Recent project</strong> tile on the Dashboard or click the <strong>Open</strong> button on a tile in the Customers / Projects page — both actions make that project active and return you to the Dashboard.
             </p>
             <div className="mt-2">
               <Warn>Always check the active customer before saving any work. Saving to the wrong customer will overwrite their data.</Warn>
@@ -284,7 +284,7 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Tracking Proposal Status</h3>
             <p className="text-sm text-gray-600 leading-relaxed mb-2">
-              Each customer has a status that you can update by clicking the coloured pills on their workspace:
+              Each customer has a status that you can update by clicking the coloured pills on the Customers / Projects page:
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs text-center">
               {[
@@ -303,7 +303,7 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Proposal Progress</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              The workspace shows a progress bar (0–4 artifacts complete). Each artifact card shows a green <strong>✓ Saved</strong> badge once it has been saved. Click any card to jump directly to that page with the customer's data pre-loaded.
+              The Dashboard shows a <strong>Proposal Progress</strong> bar for the active project (0–4 artifacts complete). Each of the four large tiles (Costing Sheet, BOM, ROI, Proposal) shows a green <strong>✓ Saved</strong> badge and a short summary once it has been saved — click any tile to jump directly to that page with the project\'s data pre-loaded.
             </p>
           </div>
         </div>
@@ -682,23 +682,20 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Switching Customers Mid-Work</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Go to <Link to="/customers" className="text-indigo-600 underline">Customers</Link>, open the new customer's workspace, and click <strong>⚡ Set Active</strong>. All four pages will immediately reflect the new customer's data.
+              To work on a different project, either click one of the <strong>Recent customers</strong> on the Dashboard or go to <Link to="/customers" className="text-indigo-600 underline">Customers / Projects</Link> and click <strong>Open</strong> on the desired tile. The Dashboard\'s active project banner, Proposal Progress bar, and all four pages will immediately switch to that project.
             </p>
           </div>
 
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Data Storage</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              All data is stored in your browser's local storage. This means:
+              Proposals and artifacts are stored in the Rayenna CRM backend. Your browser's local storage is used only as a per-user workspace (for scratchpads, WIP edits, and templates). This means:
             </p>
             <ul className="mt-1.5 space-y-1 text-sm text-gray-600 list-disc list-inside">
-              <li>Data is private to your browser — it is not shared with other devices or users</li>
-              <li>Clearing browser data or using a different browser will lose your saved work</li>
-              <li>Export important proposals to PDF or DOCX for safe keeping</li>
+              <li>Saved proposals and artifacts are available from any device once you log in</li>
+              <li>Clearing browser data will remove unsaved scratch work and cached local templates, but not the CRM-stored proposals</li>
+              <li>It is still good practice to export important proposals to PDF or DOCX for safe keeping and sharing</li>
             </ul>
-            <div className="mt-2">
-              <Warn>Do not clear browser cache or site data without first exporting your proposals. Local storage is not a backup.</Warn>
-            </div>
           </div>
         </div>
       </Section>

@@ -1,14 +1,22 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, type ReactNode } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   getCustomer,
   upsertCustomer,
   switchActiveCustomer,
   getActiveCustomerId,
+  clearProposalArtifact,
+  getWipKeysForCurrentUser,
   STATUS_LABELS,
   STATUS_COLORS,
 } from '../lib/customerStore';
 import type { CustomerRecord, CustomerMaster, ProposalStatus } from '../lib/customerStore';
+import {
+  fetchProjectWithArtifacts,
+  mapApiArtifactsToRecord,
+  getCurrentUserRole,
+  clearProjectProposalArtifact,
+} from '../lib/apiClient';
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -25,10 +33,10 @@ function fmtDate(iso: string): string {
 }
 
 // ─────────────────────────────────────────────
-// Edit customer modal
+// Edit customer modal (reserved for edit flow)
 // ─────────────────────────────────────────────
 
-function EditCustomerModal({
+export function EditCustomerModal({
   record,
   onSave,
   onCancel,
@@ -110,6 +118,8 @@ function EditCustomerModal({
 
 function ArtifactCard({
   icon, title, description, accentColor, saved, savedAt, summary, onOpen,
+  footerActions,
+  footerHint,
 }: {
   icon:        string;
   title:       string;
@@ -119,6 +129,8 @@ function ArtifactCard({
   savedAt?:    string;
   summary?:    string;
   onOpen:      () => void;
+  footerActions?: ReactNode;
+  footerHint?: string;
 }) {
   return (
     <div
@@ -154,16 +166,24 @@ function ArtifactCard({
           <p className="text-xs text-secondary-500 bg-secondary-50 rounded-lg px-3 py-2 line-clamp-2">{summary}</p>
         )}
 
-        <div className="mt-3 pt-3 border-t border-secondary-100 flex items-center justify-between">
-          <span className="text-xs text-secondary-400 group-hover:text-secondary-600 transition-colors">
-            {saved ? 'Open & edit →' : 'Start →'}
-          </span>
-          <div
-            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-            style={{ background: accentColor }}
-          >
-            →
-          </div>
+        <div className="mt-3 pt-3 border-t border-secondary-100 flex items-center justify-between gap-3">
+          {footerActions ? (
+            <div className="w-full" onClick={(e) => e.stopPropagation()}>
+              {footerActions}
+            </div>
+          ) : (
+            <>
+              <span className="text-xs text-secondary-400 group-hover:text-secondary-600 transition-colors">
+                {footerHint ?? (saved ? 'Open & edit →' : 'Start →')}
+              </span>
+              <div
+                className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ background: accentColor }}
+              >
+                →
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -180,10 +200,44 @@ export default function CustomerWorkspace() {
   const activeId  = getActiveCustomerId();
 
   const [record, setRecord]   = useState<CustomerRecord | null>(() => id ? getCustomer(id) : null);
-  const [showEdit, setShowEdit] = useState(false);
+  const [hydrating, setHydrating] = useState(false);
 
   const refresh = useCallback(() => {
     if (id) setRecord(getCustomer(id));
+  }, [id]);
+
+  // When opening a CRM-linked project, fetch backend artifacts and merge into local record (once per id).
+  useEffect(() => {
+    if (!id) return;
+    const rec = getCustomer(id);
+    const projectId = rec?.master?.crmProjectId;
+    if (!projectId) return;
+    let cancelled = false;
+    setHydrating(true);
+    void (async () => {
+      try {
+        const res = await fetchProjectWithArtifacts(projectId);
+        if (cancelled) return;
+        const fromApi = mapApiArtifactsToRecord(res.artifacts);
+        const hasAny = fromApi.costing || fromApi.bom || fromApi.roi || fromApi.proposal;
+        if (!hasAny) return;
+        const merged: CustomerRecord = {
+          ...rec,
+          costing:  fromApi.costing  ?? rec.costing,
+          bom:      fromApi.bom      ?? rec.bom,
+          roi:      fromApi.roi      ?? rec.roi,
+          proposal: fromApi.proposal ?? rec.proposal,
+        };
+        upsertCustomer(merged);
+        switchActiveCustomer(merged.id);
+        setRecord(getCustomer(id)!);
+      } catch {
+        // Network or auth error — keep local data
+      } finally {
+        if (!cancelled) setHydrating(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [id]);
 
   if (!record) {
@@ -203,24 +257,45 @@ export default function CustomerWorkspace() {
     refresh();
   };
 
-  const handleEditSave = (master: CustomerMaster) => {
-    const updated = { ...record, master, updatedAt: new Date().toISOString() };
-    upsertCustomer(updated);
-    setRecord(updated);
-    setShowEdit(false);
-  };
-
   const handleStatusChange = (status: ProposalStatus) => {
     const updated = { ...record, status, updatedAt: new Date().toISOString() };
     upsertCustomer(updated);
     setRecord(updated);
   };
+  void handleStatusChange; // reserved for status dropdown
 
   // Navigate to a work page and ensure this customer is active,
   // flushing stale work-in-progress data from any previous customer.
   const openWorkPage = (path: string) => {
     switchActiveCustomer(record.id);
     navigate(path);
+  };
+
+  const role = getCurrentUserRole();
+  const canWrite = role != null && ['ADMIN', 'SALES'].includes(String(role).toUpperCase());
+
+  const handleClearProposal = async () => {
+    if (!canWrite) return;
+    const ok = window.confirm('Clear the saved proposal for this project? This cannot be undone.');
+    if (!ok) return;
+
+    // Clear locally first so UI updates immediately.
+    clearProposalArtifact(record.id);
+    try {
+      localStorage.removeItem(getWipKeysForCurrentUser().proposalHtml);
+    } catch {
+      // ignore
+    }
+    refresh();
+
+    // Best-effort: clear server-side proposal for CRM-linked projects.
+    if (record.master.crmProjectId) {
+      try {
+        await clearProjectProposalArtifact(record.master.crmProjectId);
+      } catch {
+        // ignore; backend enforcement still applies
+      }
+    }
   };
 
   const artifacts = [
@@ -271,6 +346,25 @@ export default function CustomerWorkspace() {
       summary:     record.proposal
         ? `Ref: ${record.proposal.refNumber} · ${record.proposal.summary.slice(0, 80)}…`
         : undefined,
+      footerHint:  canWrite ? 'Open & edit →' : 'View →',
+      footerActions: record.proposal && canWrite ? (
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => openWorkPage('/proposal')}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-colors"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleClearProposal()}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      ) : undefined,
     },
   ];
 
@@ -279,14 +373,6 @@ export default function CustomerWorkspace() {
 
   return (
     <>
-      {showEdit && (
-        <EditCustomerModal
-          record={record}
-          onSave={handleEditSave}
-          onCancel={() => setShowEdit(false)}
-        />
-      )}
-
       <div className="bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm">
         {/* Header */}
         <div className="px-6 py-5 sm:px-8 sm:py-6" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
@@ -296,7 +382,13 @@ export default function CustomerWorkspace() {
               <div>
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <h1 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow">{record.master.name}</h1>
-                  {isActive && (
+                  {hydrating && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/20 text-white/90 border border-white/30 font-medium flex items-center gap-1">
+                      <span className="w-2.5 h-2.5 border border-white/50 border-t-white rounded-full animate-spin" />
+                      Syncing from CRM…
+                    </span>
+                  )}
+                  {isActive && !hydrating && (
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/25 text-white border border-white/40 font-semibold">Active</span>
                   )}
                   <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${STATUS_COLORS[record.status]}`}>
@@ -305,6 +397,11 @@ export default function CustomerWorkspace() {
                 </div>
                 {record.master.location && (
                   <p className="text-white/80 text-sm">📍 {record.master.location}</p>
+                )}
+                {typeof record.master.systemSizeKw === 'number' && record.master.systemSizeKw > 0 && (
+                  <p className="text-white/80 text-xs mt-0.5">
+                    ⚡ {record.master.systemSizeKw} kW system
+                  </p>
                 )}
                 {(record.master.contactPerson || record.master.phone) && (
                   <p className="text-white/70 text-xs mt-0.5">
@@ -324,12 +421,6 @@ export default function CustomerWorkspace() {
                   ⚡ Set Active
                 </button>
               )}
-              <button
-                onClick={() => setShowEdit(true)}
-                className="flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 border border-white/40 text-white text-xs font-semibold px-3 py-2 sm:py-1.5 rounded-lg transition-all min-h-[36px] sm:min-h-0"
-              >
-                ✏️ Edit
-              </button>
               <Link
                 to="/customers"
                 className={`flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 border border-white/40 text-white text-xs font-semibold px-3 py-2 sm:py-1.5 rounded-lg transition-all min-h-[36px] sm:min-h-0 ${!isActive ? 'col-span-2 sm:col-span-1' : ''}`}
@@ -356,22 +447,66 @@ export default function CustomerWorkspace() {
 
         <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
 
-          {/* Status selector */}
-          <div className="mb-6 flex items-center gap-3 flex-wrap">
-            <p className="text-xs font-semibold text-secondary-600 uppercase tracking-wide">Status:</p>
-            {(['draft', 'proposal-ready', 'sent', 'won', 'lost'] as ProposalStatus[]).map((s) => (
-              <button
-                key={s}
-                onClick={() => handleStatusChange(s)}
-                className={`text-xs px-3 py-1 rounded-full border font-semibold transition-all ${
-                  record.status === s
-                    ? STATUS_COLORS[s] + ' ring-2 ring-offset-1'
-                    : 'bg-secondary-50 text-secondary-400 border-secondary-200 hover:bg-secondary-100'
-                }`}
-              >
-                {STATUS_LABELS[s]}
-              </button>
-            ))}
+          {/* Project Status (from Rayenna CRM) */}
+          <div className="mb-6 flex flex-col gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-xs font-semibold text-secondary-600 uppercase tracking-wide">Project Status:</p>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 text-amber-300 border border-amber-400/70 font-semibold">
+                {(() => {
+                  const raw = (record.master.projectStage || '').toUpperCase();
+                  switch (raw) {
+                    case 'LEAD': return 'Lead';
+                    case 'SITE_SURVEY': return 'Site Survey';
+                    case 'PROPOSAL': return 'Proposal';
+                    case 'CONFIRMED': return 'Confirmed Order';
+                    case 'UNDER_INSTALLATION': return 'Under Installation';
+                    case 'SUBMITTED_FOR_SUBSIDY': return 'Submitted for Subsidy';
+                    case 'COMPLETED': return 'Completed';
+                    case 'COMPLETED_SUBSIDY_CREDITED': return 'Completed – Subsidy Credited';
+                    case 'LOST': return 'Lost';
+                    default: return record.master.projectStage || 'Not set';
+                  }
+                })()}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              {[
+                'LEAD',
+                'SITE_SURVEY',
+                'PROPOSAL',
+                'CONFIRMED',
+                'UNDER_INSTALLATION',
+                'SUBMITTED_FOR_SUBSIDY',
+                'COMPLETED',
+                'COMPLETED_SUBSIDY_CREDITED',
+                'LOST',
+              ].map((s) => {
+                const raw = (record.master.projectStage || '').toUpperCase();
+                const isActiveStage = raw === s;
+                const label =
+                  s === 'LEAD' ? 'Lead' :
+                  s === 'SITE_SURVEY' ? 'Site Survey' :
+                  s === 'PROPOSAL' ? 'Proposal' :
+                  s === 'CONFIRMED' ? 'Confirmed Order' :
+                  s === 'UNDER_INSTALLATION' ? 'Under Installation' :
+                  s === 'SUBMITTED_FOR_SUBSIDY' ? 'Submitted for Subsidy' :
+                  s === 'COMPLETED' ? 'Completed' :
+                  s === 'COMPLETED_SUBSIDY_CREDITED' ? 'Completed – Subsidy Credited' :
+                  'Lost';
+                return (
+                  <span
+                    key={s}
+                    className={`text-[10px] px-3 py-1 rounded-full border font-semibold cursor-default ${
+                      isActiveStage
+                        ? 'bg-blue-50 text-blue-700 border-blue-400 ring-2 ring-blue-200'
+                        : 'bg-secondary-50 text-secondary-400 border-secondary-200'
+                    }`}
+                  >
+                    {label}
+                  </span>
+                );
+              })}
+            </div>
           </div>
 
           {/* Workflow hint */}

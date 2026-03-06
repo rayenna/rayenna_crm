@@ -2,17 +2,17 @@ import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import * as XLSX from 'xlsx';
 import { Link } from 'react-router-dom';
-import { getActiveCustomer, upsertCustomer } from '../lib/customerStore';
+import { getActiveCustomer, upsertCustomer, getWipKeysForCurrentUser } from '../lib/customerStore';
 import type { CostingArtifact } from '../lib/customerStore';
 import {
   CATEGORIES, CATEGORY_GST, CATEGORY_COLORS,
-  SHEETS_STORAGE_KEY, BOM_FROM_COSTING_KEY, ROI_AUTOFILL_KEY,
   DEFAULT_MARGIN,
   snapCategory, catAccentColor, deriveSystemSizeKw, sheetGrandTotal, sheetTotalGst, costingToBom,
 } from '../lib/costingConstants';
 import type {
   Category, LineItem, SavedSheet, StoredBom, RoiAutofill,
 } from '../lib/costingConstants';
+import { syncProjectCosting } from '../lib/apiClient';
 
 // ─────────────────────────────────────────────
 // Export helpers (Costing Sheet)
@@ -564,7 +564,8 @@ function templateTotal(items: LineItem[]): number {
 
 function loadSheets(): SavedSheet[] {
   try {
-    const raw = localStorage.getItem(SHEETS_STORAGE_KEY);
+    const key = getWipKeysForCurrentUser().sheets;
+    const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -572,7 +573,7 @@ function loadSheets(): SavedSheet[] {
 }
 
 function persistSheets(sheets: SavedSheet[]) {
-  localStorage.setItem(SHEETS_STORAGE_KEY, JSON.stringify(sheets));
+  localStorage.setItem(getWipKeysForCurrentUser().sheets, JSON.stringify(sheets));
 }
 
 // ─────────────────────────────────────────────
@@ -2053,7 +2054,8 @@ export default function CostingSheet() {
       generatedAt: now,
       rows:        bomRows,
     };
-    localStorage.setItem(BOM_FROM_COSTING_KEY, JSON.stringify(storedBom));
+    const wip = getWipKeysForCurrentUser();
+    localStorage.setItem(wip.bomCosting, JSON.stringify(storedBom));
 
     // Write ROI autofill so ROI Calculator picks up the latest values
     const roiAutofill: RoiAutofill = {
@@ -2063,7 +2065,7 @@ export default function CostingSheet() {
       grandTotal:   grand,
       systemSizeKw: sizeKw,
     };
-    localStorage.setItem(ROI_AUTOFILL_KEY, JSON.stringify(roiAutofill));
+    localStorage.setItem(wip.roiAutofill, JSON.stringify(roiAutofill));
 
     // Persist costing artifact to active customer record
     const activeCustomer = getActiveCustomer();
@@ -2079,6 +2081,11 @@ export default function CostingSheet() {
         systemSizeKw:  sizeKw,
       };
       upsertCustomer({ ...activeCustomer, costing: artifact, updatedAt: now });
+
+      // Best-effort sync to CRM backend when this customer is linked to a CRM Project.
+      if (activeCustomer.master.crmProjectId) {
+        void syncProjectCosting(activeCustomer.master.crmProjectId, artifact);
+      }
     }
 
     setShowSaveSheetModal(false);
@@ -2326,6 +2333,15 @@ export default function CostingSheet() {
                     ) : '📥'}
                     Import Excel
                   </button>
+
+                  {/* Quick Save (top-right) */}
+                  <button
+                    type="button"
+                    onClick={onSubmit}
+                    className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all min-h-[36px]"
+                  >
+                    💾 Save Sheet
+                  </button>
                 </div>
 
                 {/* Row 2 — secondary / export actions */}
@@ -2396,8 +2412,8 @@ export default function CostingSheet() {
                     {ac.master.location ? ` · ${ac.master.location}` : ''}
                     {ac.costing && <span className="ml-2 text-emerald-600 font-medium">· Costing saved ✓</span>}
                   </p>
-                  <Link to={`/customers/${ac.id}`} className="text-xs text-sky-600 hover:text-sky-800 font-medium whitespace-nowrap transition-colors">
-                    View workspace →
+                  <Link to="/" className="text-xs text-sky-600 hover:text-sky-800 font-medium whitespace-nowrap transition-colors">
+                    View Dashboard →
                   </Link>
                 </div>
               ) : (

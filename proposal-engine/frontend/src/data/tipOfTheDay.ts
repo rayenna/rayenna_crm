@@ -22,8 +22,8 @@ const STORAGE_KEY_DONT_SHOW  = 'rayenna_pe_tip_dont_show'
 /** Tips — rotates by day of year. Add or edit as needed. */
 export const TIPS: string[] = [
   // ── Customers ──────────────────────────────────────────────────────────────
-  'Always click "Set Active" on a customer before starting the Costing Sheet — all four pages work on the active customer only.',
-  'You only need a customer name to get started — add location, contact, and email later from the customer workspace.',
+  'Use the Dashboard (Proposal Command Center) active project banner or the Customers / Projects page to choose which project is active — all four pages always work on the active project.',
+  'Use the "+ Select Project" button on the Customers / Projects page to pull projects from Rayenna CRM — customer name, address, contacts and system size are filled in automatically.',
   'The pulsing blue dot in the navbar shows which customer is currently active. Check it before saving any work.',
   'Customer status updates to "Proposal Ready" automatically when you click Save on the Proposal page.',
   'Use the search bar on the Customers page to quickly find a customer by name or location.',
@@ -45,7 +45,7 @@ export const TIPS: string[] = [
   'Auto-generated rows are tagged with an "auto" badge; rows you add manually show "manual" — easy to distinguish.',
 
   // ── ROI Calculator ──────────────────────────────────────────────────────────
-  'System size and project cost are auto-filled from the Costing Sheet — you only need to adjust the tariff and escalation rate.',
+  'System size and project cost are auto-filled from the Costing Sheet — you mainly need to review the tariff and escalation rate.',
   'The default generation factor of 1500 kWh/kW/year is the Kerala average — adjust for other states or shading conditions.',
   'Blue bars on the 25-year chart are pre-payback years; green bars are post-payback — the more green, the better the ROI.',
   'LCOE (Levelised Cost of Energy) should be well below the current grid tariff — a good indicator of project viability.',
@@ -55,7 +55,7 @@ export const TIPS: string[] = [
   'Generate the Proposal only after saving the Costing Sheet, BOM, and ROI result — all three feed into the proposal automatically.',
   'Use the Edit button to make inline changes directly on the proposal text — click any paragraph and type your changes.',
   'An amber border around the proposal confirms you are in Edit mode — click the Edit button again to exit without saving.',
-  'The single Save button at the bottom saves everything: inline edits, BOM comments, and all four artifacts in one shot.',
+  'Use the main Save action (top-right or at the bottom) to save everything in one shot: inline edits, BOM comments, and all four artifacts.',
   'Add per-category notes in the Bill of Quantities section to specify brands or special conditions (e.g. "Adani DCR modules as per MNRE list").',
   'PDF export captures your inline edits automatically because it renders the live document — always save before exporting.',
   'DOCX export also reflects your inline edits — the saved text overrides are applied to every section of the Word document.',
@@ -63,7 +63,7 @@ export const TIPS: string[] = [
 
   // ── Export & Data ───────────────────────────────────────────────────────────
   'Enable "Background graphics" in your browser\'s print settings for the best PDF output — logos and colour headers will print correctly.',
-  'All data is stored in your browser\'s local storage — export important proposals to PDF or DOCX as a backup before clearing browser data.',
+  'Proposals and artifacts are stored in the Rayenna CRM backend; your browser workspace is used only for WIP and templates.',
   'Use XLSX export on the Costing Sheet to get a formatted Excel file with subtotals, GST rows, margin, and grand total.',
   'The BOM XLSX export includes Item Name, Specification, Quantity, Brand, and GST % — useful for procurement teams.',
 

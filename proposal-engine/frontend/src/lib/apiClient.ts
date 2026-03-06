@@ -1,4 +1,7 @@
 const TOKEN_KEY = 'pe_jwt';
+const USER_ID_KEY = 'pe_user_id';
+const USER_ROLE_KEY = 'pe_user_role';
+const USER_NAME_KEY = 'pe_user_name';
 
 // Match CRM frontend behaviour:
 // - In dev: VITE_API_BASE_URL is usually empty → use relative `/api/...` (Vite proxy).
@@ -45,9 +48,105 @@ export function setToken(token: string): void {
 export function clearToken(): void {
   try {
     window.sessionStorage.removeItem(TOKEN_KEY);
+    window.sessionStorage.removeItem(USER_ID_KEY);
+    window.sessionStorage.removeItem(USER_ROLE_KEY);
+    window.sessionStorage.removeItem(USER_NAME_KEY);
     window.localStorage.removeItem(TOKEN_KEY);
   } catch {
     // ignore
+  }
+}
+
+export function setUserId(userId: string): void {
+  try {
+    window.sessionStorage.setItem(USER_ID_KEY, userId);
+  } catch {
+    // ignore
+  }
+}
+
+export function setUserRole(role: string): void {
+  try {
+    window.sessionStorage.setItem(USER_ROLE_KEY, role);
+  } catch {
+    // ignore
+  }
+}
+
+export function setUserName(name: string): void {
+  try {
+    window.sessionStorage.setItem(USER_NAME_KEY, name);
+  } catch {
+    // ignore
+  }
+}
+
+/** Current user display name (prefers sessionStorage, falls back to JWT email). */
+export function getCurrentUserName(): string | null {
+  try {
+    const name = window.sessionStorage.getItem(USER_NAME_KEY);
+    if (name) return name;
+    const token = getToken();
+    if (!token) return null;
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(
+      atob(parts[1]!.replace(/-/g, '+').replace(/_/g, '/')),
+    ) as { name?: string; email?: string };
+    const fallback = payload.name ?? payload.email ?? null;
+    if (fallback) {
+      window.sessionStorage.setItem(USER_NAME_KEY, fallback);
+      return fallback;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Current user role (SALES, ADMIN, OPERATIONS, MANAGEMENT, FINANCE) for access control. */
+export function getCurrentUserRole(): string | null {
+  try {
+    let role = window.sessionStorage.getItem(USER_ROLE_KEY);
+    if (role) return role;
+    const token = getToken();
+    if (!token) return null;
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(
+      atob(parts[1]!.replace(/-/g, '+').replace(/_/g, '/')),
+    ) as { role?: string };
+    role = payload.role ?? null;
+    if (role) {
+      window.sessionStorage.setItem(USER_ROLE_KEY, role);
+      return role;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Current user id for scoping localStorage (customers/proposals per user). Uses sessionStorage or decodes JWT as fallback. */
+export function getCurrentUserId(): string | null {
+  try {
+    let uid = window.sessionStorage.getItem(USER_ID_KEY);
+    if (uid) return uid;
+    const token = getToken();
+    if (!token) return null;
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(
+      atob(parts[1]!.replace(/-/g, '+').replace(/_/g, '/')),
+    ) as { userId?: string; sub?: string };
+    uid = payload.userId ?? payload.sub ?? null;
+    if (uid) {
+      window.sessionStorage.setItem(USER_ID_KEY, uid);
+      return uid;
+    }
+    return null;
+  } catch {
+    return null;
   }
 }
 
@@ -125,41 +224,306 @@ export interface LoginResponse {
 }
 
 export async function loginWithEmailPassword(email: string, password: string): Promise<LoginResponse> {
-  const body = JSON.stringify({ email, password });
-
-  const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body,
-  });
-
-  let rawText: string | null = null;
-  let data: any = null;
-
   try {
-    rawText = await res.text();
-    data = rawText ? JSON.parse(rawText) : null;
-  } catch {
-    // Non-JSON or empty body – handled below.
-  }
+    const data = await apiFetch<LoginResponse>('/api/auth/login', {
+      method: 'POST',
+      auth: false,
+      body: JSON.stringify({ email, password }),
+    });
 
-  if (!res.ok) {
-    const message =
-      data?.error ||
-      data?.message ||
-      (Array.isArray(data?.errors) && data.errors[0]?.msg) ||
-      (rawText && rawText.trim().length > 0
-        ? `Login failed (${res.status}).`
-        : 'Login failed. No response body from server.');
-    throw new Error(message);
-  }
+    if (!data?.token) {
+      throw new Error('Login succeeded but no token was returned by the CRM backend.');
+    }
 
-  if (!data?.token) {
-    throw new Error('Login succeeded but no token was returned by the CRM backend.');
+    return data;
+  } catch (err: any) {
+    // Normalize network failures (e.g. backend down / wrong VITE_API_BASE_URL / CORS)
+    const rawMsg = String(err?.message || '');
+    if (rawMsg.toLowerCase().includes('failed to fetch') || rawMsg.toLowerCase().includes('networkerror')) {
+      const base = API_BASE_URL || window.location.origin;
+      throw new Error(`Cannot reach CRM backend from Proposal Engine. Check the backend is running and reachable. (Base: ${base})`);
+    }
+    throw err;
   }
+}
 
-  return data as LoginResponse;
+// ─────────────────────────────────────────────
+// Proposal Engine – CRM Projects
+// ─────────────────────────────────────────────
+
+import type {
+  CostingArtifact,
+  BomArtifact,
+  RoiArtifact,
+  ProposalArtifact,
+} from './customerStore';
+
+export interface ProposalEngineProjectFromApi {
+  id: string;
+  slNo?: number | null;
+  projectStatus?: string | null;
+  projectStage?: string | null;
+  /** Proposal Engine status computed by backend for selected projects. */
+  peStatus?: 'draft' | 'proposal-ready' | string;
+  peSelectedAt?: string | null;
+  peSelectedById?: string | null;
+  systemCapacity?: number | null;
+  siteAddress?: string | null;
+  type?: string | null;
+  panelType?: string | null;
+  projectCost?: number | null;
+  confirmationDate?: string | null;
+  createdAt?: string | null;
+  salesperson?: {
+    id: string;
+    name?: string | null;
+  } | null;
+  customer: {
+    id: string;
+    customerId?: string | null;
+    customerName?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    contactPerson?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    city?: string | null;
+    addressLine1?: string | null;
+    addressLine2?: string | null;
+    state?: string | null;
+    pinCode?: string | null;
+    consumerNumber?: string | null;
+    customerType?: string | null;
+    contactNumbers?: string | null;
+  };
+}
+
+/** Selected projects list (Sales: own selections; Ops/Finance/Management/Admin: all selections). */
+export async function fetchProposalEngineProjects(): Promise<ProposalEngineProjectFromApi[]> {
+  return apiFetch<ProposalEngineProjectFromApi[]>('/api/proposal-engine/projects');
+}
+
+/** Eligible CRM projects that can be selected into Proposal Engine. */
+export async function fetchProposalEngineEligibleProjects(): Promise<ProposalEngineProjectFromApi[]> {
+  return apiFetch<ProposalEngineProjectFromApi[]>('/api/proposal-engine/projects/eligible');
+}
+
+/** Mark a CRM project as selected into Proposal Engine (Admin or owning Sales). */
+export async function selectProposalEngineProject(projectId: string): Promise<void> {
+  await apiFetch(`/api/proposal-engine/projects/${projectId}/select`, { method: 'POST' });
+}
+
+/** Admin-only: clear (hide) all PROPOSAL/CONFIRMED projects from Proposal Engine. Does not touch frontend templates. */
+export async function adminClearProposalEngineList(): Promise<{ clearedProjects: number }> {
+  return apiFetch<{ clearedProjects: number }>('/api/proposal-engine/admin/clear', {
+    method: 'POST',
+  });
+}
+
+/** Admin-only: restore all projects hidden via global removal marker. */
+export async function adminRestoreProposalEngineHidden(): Promise<{ restoredProjects: number }> {
+  return apiFetch<{ restoredProjects: number }>('/api/proposal-engine/admin/unhide-all', {
+    method: 'POST',
+  });
+}
+
+// ─────────────────────────────────────────────
+// Proposal Engine – Artifact sync helpers
+// NOTE: These are best-effort fire-and-forget helpers. The UI continues to
+// rely on localStorage / customerStore as the primary UX state. Backend sync
+// errors are logged but do not block local saves.
+// ─────────────────────────────────────────────
+
+export async function syncProjectCosting(
+  projectId: string,
+  artifact: CostingArtifact,
+): Promise<void> {
+  try {
+    await apiFetch(`/api/proposal-engine/projects/${projectId}/costing`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        sheetName: artifact.sheetName,
+        items: artifact.items,
+        grandTotal: artifact.grandTotal,
+        showGst: artifact.showGst,
+        marginPct: artifact.marginPercent,
+        systemSizeKw: artifact.systemSizeKw,
+      }),
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to sync costing sheet to CRM backend:', err);
+  }
+}
+
+export async function syncProjectBom(
+  projectId: string,
+  artifact: BomArtifact,
+): Promise<void> {
+  try {
+    await apiFetch(`/api/proposal-engine/projects/${projectId}/bom`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        rows: artifact.rows,
+      }),
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to sync BOM to CRM backend:', err);
+  }
+}
+
+export async function syncProjectRoi(
+  projectId: string,
+  artifact: RoiArtifact,
+): Promise<void> {
+  try {
+    await apiFetch(`/api/proposal-engine/projects/${projectId}/roi`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        result: artifact.result,
+      }),
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to sync ROI result to CRM backend:', err);
+  }
+}
+
+/** Remove project from Proposal Engine for everyone (Admin or owning Sales). Deletes all PE artifacts server-side. */
+export async function deleteProjectFromProposalEngine(projectId: string): Promise<void> {
+  await apiFetch(`/api/proposal-engine/projects/${projectId}`, {
+    method: 'DELETE',
+  });
+}
+
+/** Clear only the Proposal artifact for a project (Admin or owning Sales). */
+export async function clearProjectProposalArtifact(projectId: string): Promise<void> {
+  await apiFetch(`/api/proposal-engine/projects/${projectId}/proposal`, {
+    method: 'DELETE',
+  });
+}
+
+export async function syncProjectProposal(
+  projectId: string,
+  artifact: ProposalArtifact,
+): Promise<void> {
+  try {
+    await apiFetch(`/api/proposal-engine/projects/${projectId}/proposal`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        refNumber: artifact.refNumber,
+        generatedAt: artifact.generatedAt,
+        bomComments: artifact.bomComments ?? null,
+        editedHtml: artifact.editedHtml ?? null,
+        textOverrides: artifact.textOverrides ?? null,
+        summary: artifact.summary ?? null,
+      }),
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to sync proposal artifact to CRM backend:', err);
+  }
+}
+
+// ─────────────────────────────────────────────
+// Read-back: fetch project + artifacts from CRM backend
+// Used to hydrate the PE UI when opening a project (e.g. from another device).
+// ─────────────────────────────────────────────
+
+/** Backend GET /api/proposal-engine/projects/:id response shape */
+export interface ProposalEngineProjectDetailResponse {
+  project: ProposalEngineProjectFromApi;
+  artifacts: {
+    costing: ApiCostingArtifact | null;
+    bom: ApiBomArtifact | null;
+    roi: ApiRoiArtifact | null;
+    proposal: ApiProposalArtifact | null;
+  };
+}
+
+interface ApiCostingArtifact {
+  sheetName: string;
+  items: unknown;
+  showGst: boolean;
+  marginPct: number;
+  grandTotal: number;
+  systemSizeKw: number;
+  savedAt: string;
+}
+
+interface ApiBomArtifact {
+  rows: unknown;
+  savedAt: string;
+}
+
+interface ApiRoiArtifact {
+  result: unknown;
+  savedAt: string;
+}
+
+interface ApiProposalArtifact {
+  refNumber: string;
+  generatedAt: string;
+  bomComments?: Record<string, string> | null;
+  editedHtml?: string | null;
+  textOverrides?: Record<string, string | undefined> | null;
+  summary?: string | null;
+  savedAt: string;
+}
+
+export async function fetchProjectWithArtifacts(
+  projectId: string,
+): Promise<ProposalEngineProjectDetailResponse> {
+  return apiFetch<ProposalEngineProjectDetailResponse>(
+    `/api/proposal-engine/projects/${projectId}`,
+  );
+}
+
+/** Map backend artifacts to frontend CustomerRecord artifact shape */
+export function mapApiArtifactsToRecord(artifacts: ProposalEngineProjectDetailResponse['artifacts']): {
+  costing: CostingArtifact | null;
+  bom: BomArtifact | null;
+  roi: RoiArtifact | null;
+  proposal: ProposalArtifact | null;
+} {
+  return {
+    costing: artifacts.costing
+      ? {
+          sheetName: artifacts.costing.sheetName,
+          savedAt: artifacts.costing.savedAt,
+          items: Array.isArray(artifacts.costing.items) ? artifacts.costing.items as CostingArtifact['items'] : [],
+          showGst: artifacts.costing.showGst,
+          marginPercent: artifacts.costing.marginPct,
+          grandTotal: artifacts.costing.grandTotal,
+          totalGst: 0,
+          systemSizeKw: artifacts.costing.systemSizeKw ?? 0,
+        }
+      : null,
+    bom: artifacts.bom
+      ? {
+          savedAt: artifacts.bom.savedAt,
+          rows: Array.isArray(artifacts.bom.rows) ? artifacts.bom.rows as BomArtifact['rows'] : [],
+        }
+      : null,
+    roi: artifacts.roi
+      ? {
+          savedAt: artifacts.roi.savedAt,
+          result: artifacts.roi.result as RoiArtifact['result'],
+        }
+      : null,
+    proposal: artifacts.proposal
+      ? {
+          refNumber: artifacts.proposal.refNumber,
+          generatedAt: typeof artifacts.proposal.generatedAt === 'string'
+            ? artifacts.proposal.generatedAt
+            : new Date(artifacts.proposal.generatedAt).toISOString(),
+          summary: artifacts.proposal.summary ?? '',
+          bomComments: artifacts.proposal.bomComments ?? undefined,
+          editedHtml: artifacts.proposal.editedHtml ?? undefined,
+          textOverrides: artifacts.proposal.textOverrides ?? undefined,
+        }
+      : null,
+  };
 }
 
