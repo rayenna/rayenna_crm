@@ -1,10 +1,21 @@
 import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { ProjectStatus, UserRole } from '@prisma/client';
+import * as Sentry from '@sentry/node';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
+
+/** Log in dev only; report to Sentry in prod when SENTRY_DSN is set. */
+function reportPeError(err: unknown, message?: string): void {
+  if (process.env.NODE_ENV === 'development') {
+    console.error(message ?? 'Proposal Engine error:', err);
+  }
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(err, { tags: { route: 'proposal-engine' } });
+  }
+}
 
 /** Roles that may view any project's proposal artifacts (not limited to own projects). */
 const ROLES_CAN_VIEW_ALL_PROPOSALS: UserRole[] = [
@@ -117,7 +128,7 @@ router.get('/projects', authenticate, async (req: Request, res: Response) => {
 
     res.json(payload);
   } catch (error: any) {
-    console.error('Error fetching proposal engine projects:', error);
+    reportPeError(error, 'Error fetching proposal engine projects');
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
@@ -161,7 +172,7 @@ router.get('/projects/eligible', authenticate, async (req: Request, res: Respons
 
     res.json(projects);
   } catch (error: any) {
-    console.error('Error fetching eligible CRM projects:', error);
+    reportPeError(error, 'Error fetching eligible CRM projects');
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
@@ -192,7 +203,7 @@ router.post('/projects/:id/select', authenticate, async (req: Request, res: Resp
 
     res.json({ message: 'Project selected' });
   } catch (error: any) {
-    console.error('Error selecting project:', error);
+    reportPeError(error, 'Error selecting project');
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
@@ -229,7 +240,7 @@ router.post('/admin/clear', authenticate, async (req: Request, res: Response) =>
       clearedProjects: projectIds.length,
     });
   } catch (error: any) {
-    console.error('Error clearing Proposal Engine list:', error);
+    reportPeError(error, 'Error clearing Proposal Engine list');
     return res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
@@ -250,7 +261,7 @@ router.post('/admin/unhide-all', authenticate, async (req: Request, res: Respons
       restoredProjects: result.count,
     });
   } catch (error: any) {
-    console.error('Error restoring hidden Proposal Engine projects:', error);
+    reportPeError(error, 'Error restoring hidden Proposal Engine projects');
     return res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
@@ -301,7 +312,7 @@ router.get('/projects/:id', authenticate, async (req: Request, res: Response) =>
       },
     });
   } catch (error: any) {
-    console.error('Error fetching proposal engine project details:', error);
+    reportPeError(error, 'Error fetching proposal engine project details');
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
@@ -323,7 +334,7 @@ router.get('/projects/:id/costing', authenticate, async (req: Request, res: Resp
 
     res.json(costing || null);
   } catch (error: any) {
-    console.error('Error fetching costing sheet:', error);
+    reportPeError(error, 'Error fetching costing sheet');
     res.status(500).json({ error: error.message || 'Failed to fetch costing sheet' });
   }
 });
@@ -392,7 +403,7 @@ router.put(
 
       res.json(costing);
     } catch (error: any) {
-      console.error('Error saving costing sheet:', error);
+      reportPeError(error, 'Error saving costing sheet');
       res.status(500).json({ error: error.message || 'Failed to save costing sheet' });
     }
   }
@@ -415,7 +426,7 @@ router.get('/projects/:id/bom', authenticate, async (req: Request, res: Response
 
     res.json(bom || null);
   } catch (error: any) {
-    console.error('Error fetching BOM sheet:', error);
+    reportPeError(error, 'Error fetching BOM sheet');
     res.status(500).json({ error: error.message || 'Failed to fetch BOM sheet' });
   }
 });
@@ -472,7 +483,7 @@ router.put(
 
       res.json(bom);
     } catch (error: any) {
-      console.error('Error saving BOM sheet:', error);
+      reportPeError(error, 'Error saving BOM sheet');
       res.status(500).json({ error: error.message || 'Failed to save BOM sheet' });
     }
   }
@@ -495,7 +506,7 @@ router.get('/projects/:id/roi', authenticate, async (req: Request, res: Response
 
     res.json(roi || null);
   } catch (error: any) {
-    console.error('Error fetching ROI result:', error);
+    reportPeError(error, 'Error fetching ROI result');
     res.status(500).json({ error: error.message || 'Failed to fetch ROI result' });
   }
 });
@@ -552,7 +563,7 @@ router.put(
 
       res.json(roi);
     } catch (error: any) {
-      console.error('Error saving ROI result:', error);
+      reportPeError(error, 'Error saving ROI result');
       res.status(500).json({ error: error.message || 'Failed to save ROI result' });
     }
   }
@@ -575,7 +586,7 @@ router.get('/projects/:id/proposal', authenticate, async (req: Request, res: Res
 
     res.json(proposal || null);
   } catch (error: any) {
-    console.error('Error fetching saved proposal:', error);
+    reportPeError(error, 'Error fetching saved proposal');
     res.status(500).json({ error: error.message || 'Failed to fetch saved proposal' });
   }
 });
@@ -640,7 +651,7 @@ router.put(
 
       res.json(proposal);
     } catch (error: any) {
-      console.error('Error saving proposal artifact:', error);
+      reportPeError(error, 'Error saving proposal artifact');
       res.status(500).json({ error: error.message || 'Failed to save proposal artifact' });
     }
   }
@@ -666,7 +677,7 @@ router.delete('/projects/:id/proposal', authenticate, async (req: Request, res: 
 
     res.status(200).json({ message: 'Proposal cleared', deletedCount: result.count });
   } catch (error: any) {
-    console.error('Error clearing proposal artifact:', error);
+    reportPeError(error, 'Error clearing proposal artifact');
     res.status(500).json({ error: error.message || 'Failed to clear proposal artifact' });
   }
 });
@@ -698,7 +709,7 @@ router.delete('/projects/:id', authenticate, async (req: Request, res: Response)
 
     res.status(200).json({ message: 'Project removed from Proposal Engine selection' });
   } catch (error: any) {
-    console.error('Error removing project from Proposal Engine:', error);
+    reportPeError(error, 'Error removing project from Proposal Engine');
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
