@@ -461,6 +461,8 @@ The Projects module enables seamless collaboration between Sales and Operations 
   - **Completion Report Submission Date**: Date completion report was submitted
   - **Net Meter Installation Date**: Date net meter was installed
   - **Total Project Cost**: Actual costs incurred in the project
+  - **Panel Type**: DCR or Non-DCR (often auto-set from Segment when creating a project)
+  - **Panel Capacity (W)**: Capacity per panel in watts (optional integer; useful for specs and BOM)
   - **Panel Brand**: Brand of solar panels used
   - **Inverter Brand**: Brand of inverters used
 
@@ -889,6 +891,7 @@ Projects can have multiple support tickets and documents linked to them. These r
 - Net Meter Installation Date
 - Subsidy Credited Date
 - Total Project Cost
+- Panel Type and Panel Capacity (W)
 - Panel Brand and Inverter Brand
 
 **Payment Tracking**:

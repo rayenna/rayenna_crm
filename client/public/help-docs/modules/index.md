@@ -251,7 +251,7 @@ If **Lead Source** is Referral, Channel Partner, or Other, the corresponding det
 ### Status and Lifecycle
 
 - Update **Project Status** as the project progresses. Keep it current so the rest of the team and reports reflect reality.
-- **Operations** use the **Project Lifecycle** section to record: MNRE Portal Registration Date, DISCOM Feasibility/Registration dates, Installation Completion Date, Completion Report Submission Date, Net Meter Installation Date, Total Project Cost, Panel and Inverter brands.
+- **Operations** use the **Project Lifecycle** section to record: MNRE Portal Registration Date, DISCOM Feasibility/Registration dates, Installation Completion Date, Completion Report Submission Date, Net Meter Installation Date, Total Project Cost, **Panel Type** (DCR/Non-DCR), **Panel Capacity (W)** (per-panel watts), and Panel and Inverter brands.
 
 ### Financial Tracking
 

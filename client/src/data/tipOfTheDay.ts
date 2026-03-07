@@ -34,6 +34,7 @@ export const TIPS: string[] = [
   'Projects Availing Loans by Bank chart shows how many projects use each financing bank (Sales, Finance, Management).',
   'Customer Profitability word cloud: larger names mean higher profit contribution – use it to spot your best customers.',
   // Projects page
+  'In Project Lifecycle you can record Panel Type (DCR/Non-DCR) and Panel Capacity (W) for accurate system specs.',
   'Use the Projects page filters to find projects by status, type, salesperson, or Availing Loan.',
   'Filter by Availing Loan on the Projects page to see only projects with customer financing.',
   'Sort by System Capacity or Order Value on Projects: blank values are treated as zero for consistent ordering.',
