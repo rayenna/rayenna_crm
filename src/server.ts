@@ -36,16 +36,7 @@ if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
 
 const app = express();
 
-// Health check FIRST — before any middleware, for Render deploy health checks (5s timeout).
-// Server calls listen() before loading Prisma/routes so this responds in <5s.
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Middleware (lightweight; no DB or heavy imports)
+// CORS origin check (defined early so health routes can use it)
 const allowedOrigins = [
   'http://localhost:5173', // Local Vite dev server (CRM)
   'http://localhost:5174', // Proposal Engine dev
@@ -73,6 +64,27 @@ function isOriginAllowed(origin: string | undefined): boolean {
   }
   return false;
 }
+
+function setCorsHeaders(req: express.Request, res: express.Response): void {
+  const origin = req.headers.origin as string | undefined;
+  if (origin && isOriginAllowed(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+}
+
+// Health check FIRST — before heavy middleware, for Render deploy health checks (5s timeout).
+// Must set CORS here because these routes run before the CORS middleware.
+app.get('/health', (req, res) => {
+  setCorsHeaders(req, res);
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+app.get('/api/health', (req, res) => {
+  setCorsHeaders(req, res);
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Middleware (lightweight; no DB or heavy imports)
 
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
