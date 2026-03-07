@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import * as Sentry from '@sentry/react';
 
 interface Props {
   children: ReactNode;
@@ -17,7 +18,10 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Proposal Engine error:', error, errorInfo);
+    Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
+    if (import.meta.env.DEV) {
+      console.error('Proposal Engine error:', error, errorInfo);
+    }
   }
 
   render() {

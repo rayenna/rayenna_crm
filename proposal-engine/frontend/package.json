@@ -10,6 +10,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@sentry/react": "^10.42.0",
     "docx": "^9.6.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.0",
