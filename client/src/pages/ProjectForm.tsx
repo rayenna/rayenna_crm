@@ -470,6 +470,13 @@ const ProjectForm = () => {
         data[field] = null;
       }
     });
+    // Integer field: Panel Capacity (W)
+    if (data.panelCapacityW !== undefined && data.panelCapacityW !== null && data.panelCapacityW !== '') {
+      const intVal = parseInt(String(data.panelCapacityW), 10);
+      data.panelCapacityW = Number.isInteger(intVal) && intVal >= 0 ? intVal : null;
+    } else {
+      data.panelCapacityW = null;
+    }
     
     // Remove customerId from update requests (customer cannot be changed after project creation)
     if (isEdit) {
@@ -1669,6 +1676,24 @@ const ProjectForm = () => {
                     <span className="text-sm text-gray-700">Non-DCR</span>
                   </label>
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Panel Capacity (W)</label>
+                <input
+                  type="number"
+                  step={1}
+                  min={0}
+                  placeholder="e.g. 550"
+                  {...register('panelCapacityW', {
+                    setValueAs: (v) => {
+                      if (v === '' || v == null) return undefined;
+                      const n = parseInt(String(v), 10);
+                      return Number.isNaN(n) ? undefined : n;
+                    },
+                    validate: (v) => v === undefined || v === null || (Number.isInteger(v) && v >= 0) || 'Must be a whole number ≥ 0',
+                  })}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Inverter Brand</label>

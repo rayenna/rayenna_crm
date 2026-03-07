@@ -256,6 +256,7 @@ model Project {
   systemType                SystemType? // On-grid, Off-grid, Hybrid
   panelBrand                String?
   panelType                 String? // DCR, Non-DCR
+  panelCapacityW            Int?    // Panel capacity in watts (e.g. 550)
   inverterBrand             String?
   roofType                  String? // Concrete-Flat, Concrete-Sloped, Tile, Thatched, Asbestos, Metal, Others
   projectStage              ProjectStage? // Survey, Proposal, Approved, Installation, Billing, Live, AMC, Lost

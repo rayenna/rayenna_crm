@@ -773,6 +773,7 @@ router.post(
         assignedOpsId,
         panelBrand,
         panelType,
+        panelCapacityW,
         inverterBrand,
         siteAddress,
         expectedCommissioningDate,
@@ -1010,6 +1011,7 @@ router.post(
           assignedOpsId: assignedOpsId || null,
           panelBrand: panelBrand || null,
           panelType: finalPanelType || null,
+          panelCapacityW: panelCapacityW != null && Number.isInteger(Number(panelCapacityW)) && Number(panelCapacityW) >= 0 ? Number(panelCapacityW) : null,
           inverterBrand: inverterBrand || null,
           siteAddress: siteAddress || null,
           expectedCommissioningDate: convertDate(expectedCommissioningDate),
@@ -1335,6 +1337,7 @@ router.put(
           'panelBrand', // Operations can update panel brand
           'inverterBrand', // Operations can update inverter brand
           'panelType', // Operations can update panel type
+          'panelCapacityW', // Operations can update panel capacity (W)
         ];
         for (const field of allowedFields) {
           if (req.body[field] !== undefined) {
@@ -1378,6 +1381,15 @@ router.put(
               updateData[field] = value !== null && value !== undefined && value !== '' && value !== 0
                 ? String(value)
                 : null;
+            } else if (field === 'panelCapacityW') {
+              // Handle integer field - panel capacity in watts
+              const value = req.body[field];
+              if (value !== null && value !== undefined && value !== '') {
+                const intVal = parseInt(String(value), 10);
+                updateData[field] = Number.isInteger(intVal) && intVal >= 0 ? intVal : null;
+              } else {
+                updateData[field] = null;
+              }
             } else if (field === 'panelBrand' || field === 'inverterBrand' || field === 'panelType') {
               // Handle string fields - convert to string or null
               const value = req.body[field];

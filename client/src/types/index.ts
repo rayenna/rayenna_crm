@@ -175,6 +175,7 @@ export interface Project {
   systemType?: SystemType
   panelBrand?: string
   panelType?: string
+  panelCapacityW?: number | null
   inverterBrand?: string
   roofType?: string
   siteAddress?: string
