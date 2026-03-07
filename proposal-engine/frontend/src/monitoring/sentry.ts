@@ -6,16 +6,20 @@ import * as Sentry from '@sentry/react';
 
 const DSN = import.meta.env.VITE_SENTRY_DSN;
 
+/** Injected at build time from package.json (see vite.config.ts). */
+declare const __APP_VERSION__: string | undefined;
+
 export function initSentry(): void {
   if (!DSN || typeof DSN !== 'string' || DSN.trim() === '') {
     return;
   }
+  const release = 'proposal-engine@' + (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0');
   Sentry.init({
     dsn: DSN,
     integrations: [Sentry.browserTracingIntegration()],
-    tracesSampleRate: 1.0,
+    tracesSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
     environment: import.meta.env.MODE,
-    release: 'proposal-engine@1.0.0',
+    release,
   });
   Sentry.setTag('module', 'proposal-engine');
 }

@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/react';
+
 const TOKEN_KEY = 'pe_jwt';
 const USER_ID_KEY = 'pe_user_id';
 const USER_ROLE_KEY = 'pe_user_role';
@@ -351,8 +353,11 @@ export async function syncProjectCosting(
       }),
     });
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to sync costing sheet to CRM backend:', err);
+    if (import.meta.env.DEV) {
+      console.error('Failed to sync costing sheet to CRM backend:', err);
+    } else {
+      Sentry.captureException(err, { tags: { sync: 'costing' } });
+    }
   }
 }
 
@@ -368,8 +373,11 @@ export async function syncProjectBom(
       }),
     });
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to sync BOM to CRM backend:', err);
+    if (import.meta.env.DEV) {
+      console.error('Failed to sync BOM to CRM backend:', err);
+    } else {
+      Sentry.captureException(err, { tags: { sync: 'bom' } });
+    }
   }
 }
 
@@ -385,8 +393,11 @@ export async function syncProjectRoi(
       }),
     });
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to sync ROI result to CRM backend:', err);
+    if (import.meta.env.DEV) {
+      console.error('Failed to sync ROI result to CRM backend:', err);
+    } else {
+      Sentry.captureException(err, { tags: { sync: 'roi' } });
+    }
   }
 }
 
@@ -421,8 +432,11 @@ export async function syncProjectProposal(
       }),
     });
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to sync proposal artifact to CRM backend:', err);
+    if (import.meta.env.DEV) {
+      console.error('Failed to sync proposal artifact to CRM backend:', err);
+    } else {
+      Sentry.captureException(err, { tags: { sync: 'proposal' } });
+    }
   }
 }
 

@@ -1210,9 +1210,10 @@ function parseFile(file: File): Promise<ImportRow[]> {
 
         if (headerRowIdx === -1) { resolve([]); return; }
 
-        // Debug: log what was found (visible in browser console)
-        console.log('[Import] headerRowIdx:', headerRowIdx, 'colMap:', colMap,
-          'sample row:', rows[headerRowIdx + 1]);
+        if (import.meta.env.DEV) {
+          console.log('[Import] headerRowIdx:', headerRowIdx, 'colMap:', colMap,
+            'sample row:', rows[headerRowIdx + 1]);
+        }
 
         const parsed: ImportRow[] = [];
         for (let r = headerRowIdx + 1; r < rows.length; r++) {
