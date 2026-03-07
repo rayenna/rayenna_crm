@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -120,6 +121,9 @@ app.options('*', cors(corsOptions));
 // Proposal Engine sync sends large proposal payloads (editedHtml); allow up to 10MB
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Compress responses when client sends Accept-Encoding: gzip (reduces payload size for dashboard, project list, etc.)
+app.use(compression());
 
 const uploadsPath = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsPath)) {

@@ -20,11 +20,16 @@ interface SalesDashboardProps {
   selectedFYs: string[]
   selectedQuarters: string[]
   selectedMonths: string[]
+  /** When filters are empty, parent already fetched this; skip second request */
+  initialDataWhenFiltersEmpty?: unknown
 }
 
-const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: SalesDashboardProps) => {
+const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths, initialDataWhenFiltersEmpty }: SalesDashboardProps) => {
+  const filtersEmpty = selectedFYs.length === 0 && selectedQuarters.length === 0 && selectedMonths.length === 0
+  const skipFetch = filtersEmpty && initialDataWhenFiltersEmpty != null
+
   // Single filtered query for tiles and all charts (same FY, Qtr, Month as dashboard filter)
-  const { data, isLoading, isError, error, refetch } = useQuery({
+  const { data: queryData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['dashboard', 'sales', selectedFYs, selectedQuarters, selectedMonths],
     queryFn: async () => {
       const params = new URLSearchParams()
@@ -34,7 +39,11 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Sales
       const res = await axiosInstance.get(`/api/dashboard/sales?${params.toString()}`)
       return res.data
     },
+    enabled: !skipFetch,
+    initialData: skipFetch ? (initialDataWhenFiltersEmpty as Record<string, unknown>) : undefined,
   })
+
+  const data = skipFetch ? (initialDataWhenFiltersEmpty as Record<string, unknown>) : queryData
 
   if (isError) {
     return (

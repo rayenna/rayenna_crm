@@ -36,18 +36,43 @@ const Dashboard = () => {
   const availableFYs =
     dashboardData?.projectValueProfitByFY?.map((item: any) => item.fy).filter(Boolean) || []
 
+  // Reuse first fetch when filters are empty to avoid double request (Management/Admin and Sales)
+  const filtersEmpty = selectedFYs.length === 0 && selectedQuarters.length === 0 && selectedMonths.length === 0
+  const initialDataWhenFiltersEmpty = filtersEmpty ? dashboardData : undefined
+
   const getDashboardComponent = () => {
     switch (user?.role) {
       case UserRole.SALES:
-        return <SalesDashboard selectedFYs={selectedFYs} selectedQuarters={selectedQuarters} selectedMonths={selectedMonths} />
+        return (
+          <SalesDashboard
+            selectedFYs={selectedFYs}
+            selectedQuarters={selectedQuarters}
+            selectedMonths={selectedMonths}
+            initialDataWhenFiltersEmpty={initialDataWhenFiltersEmpty}
+          />
+        )
       case UserRole.OPERATIONS:
         return <OperationsDashboard selectedFYs={selectedFYs} selectedQuarters={selectedQuarters} selectedMonths={selectedMonths} />
       case UserRole.FINANCE:
         return <FinanceDashboard selectedFYs={selectedFYs} selectedQuarters={selectedQuarters} selectedMonths={selectedMonths} />
       case UserRole.MANAGEMENT:
-        return <ManagementDashboard selectedFYs={selectedFYs} selectedQuarters={selectedQuarters} selectedMonths={selectedMonths} />
+        return (
+          <ManagementDashboard
+            selectedFYs={selectedFYs}
+            selectedQuarters={selectedQuarters}
+            selectedMonths={selectedMonths}
+            initialDataWhenFiltersEmpty={initialDataWhenFiltersEmpty}
+          />
+        )
       case UserRole.ADMIN:
-        return <ManagementDashboard selectedFYs={selectedFYs} selectedQuarters={selectedQuarters} selectedMonths={selectedMonths} />
+        return (
+          <ManagementDashboard
+            selectedFYs={selectedFYs}
+            selectedQuarters={selectedQuarters}
+            selectedMonths={selectedMonths}
+            initialDataWhenFiltersEmpty={initialDataWhenFiltersEmpty}
+          />
+        )
       default:
         return <div>No dashboard available</div>
     }
