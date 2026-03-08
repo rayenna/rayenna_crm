@@ -1169,33 +1169,38 @@ export default function Customers() {
     navigate('/dashboard');
   };
 
-  /** Open a project from the API list (Ops/Management/Finance/Admin). Ensures a local record exists, then opens. */
+  /** Open a project from the API list. Always fetches latest artifacts from backend and merges into
+   *  local record so Sales (and others) see server-backed data even if their local copy was empty/stale. */
   const handleOpenProjectFromApi = useCallback(
     async (project: ProjectOption) => {
-      const all = loadCustomers();
-      const existing = all.find((c) => c.master.crmProjectId === project.id);
-      if (existing) {
-        switchActiveCustomer(existing.id);
-        navigate('/dashboard');
-        return;
-      }
       setHydratingProjectId(project.id);
       try {
         const res = await fetchProjectWithArtifacts(project.id);
         const artifacts = mapApiArtifactsToRecord(res.artifacts);
         const now = new Date().toISOString();
-        const record: CustomerRecord = {
-          id: `crm_${project.id}`,
-          createdAt: now,
-          updatedAt: now,
-          status: 'draft',
-          proposalIndex: 1,
-          master: buildMasterFromProject(project),
-          costing: artifacts.costing,
-          bom: artifacts.bom,
-          roi: artifacts.roi,
-          proposal: artifacts.proposal,
-        };
+        const all = loadCustomers();
+        const existing = all.find((c) => c.master.crmProjectId === project.id);
+        const record: CustomerRecord = existing
+          ? {
+              ...existing,
+              updatedAt: now,
+              costing: artifacts.costing ?? existing.costing,
+              bom: artifacts.bom ?? existing.bom,
+              roi: artifacts.roi ?? existing.roi,
+              proposal: artifacts.proposal ?? existing.proposal,
+            }
+          : {
+              id: `crm_${project.id}`,
+              createdAt: now,
+              updatedAt: now,
+              status: 'draft',
+              proposalIndex: 1,
+              master: buildMasterFromProject(project),
+              costing: artifacts.costing,
+              bom: artifacts.bom,
+              roi: artifacts.roi,
+              proposal: artifacts.proposal,
+            };
         upsertCustomer(record);
         switchActiveCustomer(record.id);
         setCustomers(loadCustomers());
@@ -1234,6 +1239,7 @@ export default function Customers() {
   };
 
   // Deep link support: /customers?openProjectId=<CRM_PROJECT_ID>
+  // Always fetch artifacts from backend and merge so Sales see server-backed data (no stale/blank local copy).
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const projectId = params.get('openProjectId');
@@ -1241,38 +1247,39 @@ export default function Customers() {
 
     void (async () => {
       try {
-        // Best-effort: ensure the project is selected server-side so it appears in lists.
         try {
           await selectProposalEngineProject(projectId);
         } catch {
           // Ignore selection errors – user may not have access; we'll surface a generic error below.
         }
 
-        // If we already have a local record for this CRM project, just activate it.
-        const existing = loadCustomers().find((c) => c.master.crmProjectId === projectId);
-        if (existing) {
-          switchActiveCustomer(existing.id);
-          navigate('/dashboard');
-          return;
-        }
-
-        // Otherwise, fetch details + artifacts from the backend and create a local record.
         const detail = await fetchProjectWithArtifacts(projectId);
         const projectOption = mapApiProjectToProjectOption(detail.project);
         const artifacts = mapApiArtifactsToRecord(detail.artifacts);
         const now = new Date().toISOString();
-        const record: CustomerRecord = {
-          id: `crm_${projectId}`,
-          createdAt: now,
-          updatedAt: now,
-          status: 'draft',
-          proposalIndex: 1,
-          master: buildMasterFromProject(projectOption),
-          costing: artifacts.costing,
-          bom: artifacts.bom,
-          roi: artifacts.roi,
-          proposal: artifacts.proposal,
-        };
+        const existing = loadCustomers().find((c) => c.master.crmProjectId === projectId);
+        const record: CustomerRecord = existing
+          ? {
+              ...existing,
+              updatedAt: now,
+              master: buildMasterFromProject(projectOption),
+              costing: artifacts.costing ?? existing.costing,
+              bom: artifacts.bom ?? existing.bom,
+              roi: artifacts.roi ?? existing.roi,
+              proposal: artifacts.proposal ?? existing.proposal,
+            }
+          : {
+              id: `crm_${projectId}`,
+              createdAt: now,
+              updatedAt: now,
+              status: 'draft',
+              proposalIndex: 1,
+              master: buildMasterFromProject(projectOption),
+              costing: artifacts.costing,
+              bom: artifacts.bom,
+              roi: artifacts.roi,
+              proposal: artifacts.proposal,
+            };
         upsertCustomer(record);
         setCustomers(loadCustomers());
         switchActiveCustomer(record.id);
