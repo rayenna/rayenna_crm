@@ -281,15 +281,29 @@ const ProjectDetail = () => {
           {(hasRole([UserRole.SALES]) || hasRole([UserRole.OPERATIONS]) || hasRole([UserRole.MANAGEMENT]) || hasRole([UserRole.FINANCE]) || hasRole([UserRole.ADMIN])) &&
             (project.projectStatus === ProjectStatus.PROPOSAL || project.projectStatus === ProjectStatus.CONFIRMED) && (
               <button
-                onClick={() => {
+                onClick={async () => {
                   const base = import.meta.env.VITE_PROPOSAL_ENGINE_URL;
                   if (!base) {
-                    console.warn('VITE_PROPOSAL_ENGINE_URL is not set');
+                    toast.error('Proposal Engine URL is not configured.');
                     return;
                   }
                   const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
-                  const url = `${normalizedBase}/customers?openProjectId=${encodeURIComponent(id ?? '')}`;
-                  window.open(url, '_blank', 'noopener,noreferrer');
+                  try {
+                    const { data } = await axiosInstance.post<{ ticket: string }>('/api/auth/sso-ticket');
+                    const ticket = data?.ticket;
+                    if (ticket) {
+                      const url = `${normalizedBase}/customers?ticket=${encodeURIComponent(ticket)}&openProjectId=${encodeURIComponent(id ?? '')}`;
+                      window.open(url, '_blank', 'noopener,noreferrer');
+                    } else {
+                      const url = `${normalizedBase}/customers?openProjectId=${encodeURIComponent(id ?? '')}`;
+                      window.open(url, '_blank', 'noopener,noreferrer');
+                    }
+                  } catch (err: any) {
+                    const msg = getFriendlyApiErrorMessage(err) || 'Could not open Proposal Engine. Please try again or log in from Proposal Engine.';
+                    toast.error(msg);
+                    const url = `${normalizedBase}/customers?openProjectId=${encodeURIComponent(id ?? '')}`;
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                  }
                 }}
                 className="group relative overflow-hidden px-4 py-2 rounded-lg shadow-md hover:shadow-lg bg-gradient-to-r from-primary-700 via-primary-600 to-amber-400 text-white border border-primary-800/70 flex items-center gap-3 text-sm font-semibold"
               >

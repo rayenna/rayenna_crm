@@ -12,6 +12,26 @@ import { logAccess, logSecurityAudit } from '../utils/auditLogger';
 
 const router = express.Router();
 
+// ── SSO ticket store (one-time, short-lived; in-memory for single-instance) ──
+const SSO_TICKET_TTL_MS = 90_000; // 90 seconds
+const ssoTicketStore = new Map<string, { userId: string; expiresAt: number }>();
+
+function createSsoTicket(userId: string): string {
+  const ticket = crypto.randomBytes(32).toString('hex');
+  ssoTicketStore.set(ticket, {
+    userId,
+    expiresAt: Date.now() + SSO_TICKET_TTL_MS,
+  });
+  return ticket;
+}
+
+function consumeSsoTicket(ticket: string): { userId: string } | null {
+  const entry = ssoTicketStore.get(ticket);
+  ssoTicketStore.delete(ticket);
+  if (!entry || Date.now() > entry.expiresAt) return null;
+  return { userId: entry.userId };
+}
+
 // Login – rate limit by IP to reduce brute force
 router.post(
   '/login',
@@ -141,6 +161,65 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// ── SSO: issue one-time ticket for Proposal Engine (requires valid CRM JWT) ──
+router.post('/sso-ticket', authenticate, async (req: Request, res: Response) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const ticket = createSsoTicket(req.user.id);
+    logAccess({ userId: req.user.id, email: req.user.email, role: req.user.role, actionType: 'sso_ticket_issued', success: true, req });
+    res.json({ ticket });
+  } catch (error: any) {
+    console.error('SSO ticket issue error:', error?.message);
+    res.status(500).json({ error: error?.message || 'Failed to create SSO ticket' });
+  }
+});
+
+// ── SSO: exchange one-time ticket for JWT (public; no Bearer) ──
+router.post(
+  '/sso-ticket/exchange',
+  rateLimit(20, 60 * 1000), // 20 exchanges per minute per IP
+  [body('ticket').notEmpty().withMessage('ticket is required')],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+      const { ticket } = req.body as { ticket: string };
+      const parsed = consumeSsoTicket(String(ticket).trim());
+      if (!parsed) {
+        logAccess({ actionType: 'sso_ticket_exchanged', success: false, req });
+        return res.status(401).json({ error: 'Invalid or expired ticket' });
+      }
+      const user = await prisma.user.findUnique({
+        where: { id: parsed.userId },
+        select: { id: true, email: true, name: true, role: true },
+      });
+      if (!user) {
+        return res.status(401).json({ error: 'User not found' });
+      }
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret || jwtSecret.trim() === '') {
+        console.error('SSO exchange: JWT_SECRET is missing');
+        return res.status(500).json({ error: 'Server misconfiguration' });
+      }
+      const expiresIn: string = process.env.JWT_EXPIRES_IN || '7d';
+      const payload = { userId: user.id, email: user.email, role: user.role };
+      const token = (jwt.sign as any)(payload, jwtSecret, { expiresIn }) as string;
+      logAccess({ userId: user.id, email: user.email, role: user.role, actionType: 'sso_ticket_exchanged', success: true, req });
+      res.json({
+        token,
+        user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      });
+    } catch (error: any) {
+      console.error('SSO ticket exchange error:', error?.message);
+      res.status(500).json({ error: error?.message || 'Failed to exchange ticket' });
+    }
+  }
+);
 
 // Change password (authenticated users can change their own password)
 router.post(

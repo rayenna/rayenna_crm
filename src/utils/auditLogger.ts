@@ -28,7 +28,7 @@ export interface AccessLogPayload {
   userId?: string | null;
   email?: string | null;
   role?: string | null;
-  actionType: 'login_success' | 'login_failure' | 'auth_failure';
+  actionType: 'login_success' | 'login_failure' | 'auth_failure' | 'sso_ticket_issued' | 'sso_ticket_exchanged';
   success?: boolean;
   req?: Request;
 }
