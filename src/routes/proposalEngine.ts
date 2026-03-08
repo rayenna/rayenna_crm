@@ -148,17 +148,16 @@ router.get('/projects/eligible', authenticate, async (req: Request, res: Respons
       return;
     }
 
-    const [selected, removed] = await Promise.all([
-      prisma.pESelectedProject.findMany({ select: { projectId: true } }),
-      prisma.pERemovedProject.findMany({ select: { projectId: true } }),
-    ]);
-    const selectedIds = selected.map((s) => s.projectId);
+    // Exclude only projects that were explicitly removed from PE (hidden). Do not exclude
+    // already-selected projects so the list matches CRM: all Proposal/Confirmed projects
+    // assigned to the user appear in the picker; re-selecting an already-selected project
+    // just opens/switches to that customer in the frontend.
+    const removed = await prisma.pERemovedProject.findMany({ select: { projectId: true } });
     const removedIds = removed.map((r) => r.projectId);
-    const excludeIds = [...new Set([...selectedIds, ...removedIds])];
 
     const and: any[] = [
       { projectStatus: { in: [ProjectStatus.PROPOSAL, ProjectStatus.CONFIRMED] } },
-      ...(excludeIds.length > 0 ? [{ id: { notIn: excludeIds } }] : []),
+      ...(removedIds.length > 0 ? [{ id: { notIn: removedIds } }] : []),
     ];
     // Sales: only projects currently assigned to them (matches CRM – after reassignment, original creator must not see them).
     if (role === UserRole.SALES && userId) {
