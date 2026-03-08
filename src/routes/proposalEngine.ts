@@ -39,34 +39,32 @@ function ensureProjectAccess(project: any, req: Request, res: Response): boolean
     return true;
   }
 
-  // Sales: only the project's assigned salesperson or creator may view this project's proposals.
+  // Sales: only the project's currently assigned salesperson may view (matches CRM: after reassignment, original creator has no access).
   if (role === UserRole.SALES && userId) {
-    const isOwner =
-      project.salespersonId === userId || project.createdById === userId;
-    if (!isOwner) {
-      res.status(403).json({ error: 'Access denied. Proposals are visible only to the owning salesperson and to Operations, Management, Finance, and Admin.' });
+    if (project.salespersonId !== userId) {
+      res.status(403).json({ error: 'Access denied. Proposals are visible only to the assigned salesperson and to Operations, Management, Finance, and Admin.' });
       return false;
     }
     return true;
   }
 
   // Any other or unauthenticated: deny.
-  res.status(403).json({ error: 'Access denied. Proposals are visible only to the owning salesperson and to Operations, Management, Finance, and Admin.' });
+  res.status(403).json({ error: 'Access denied. Proposals are visible only to the assigned salesperson and to Operations, Management, Finance, and Admin.' });
   return false;
 }
 
-/** Only Admin (all projects) or Sales (own project) may create/update/delete artifacts. Operations, Management, Finance are read-only. */
+/** Only Admin (all projects) or Sales (assigned project only) may create/update/delete artifacts. Operations, Management, Finance are read-only. */
 function ensureProjectWriteAccess(project: any, req: Request, res: Response): boolean {
   if (!project) return false;
   const role = req.user?.role;
   const userId = req.user?.id;
   const roleStr = role != null ? String(role).toUpperCase() : '';
   if (roleStr === 'ADMIN') return true;
-  if (role === UserRole.SALES && userId && (project.salespersonId === userId || project.createdById === userId)) {
+  if (role === UserRole.SALES && userId && project.salespersonId === userId) {
     return true;
   }
   res.status(403).json({
-    error: 'Only the owning salesperson or Admin can edit or delete proposal artifacts. Your role has read-only access.',
+    error: 'Only the assigned salesperson or Admin can edit or delete proposal artifacts. Your role has read-only access.',
   });
   return false;
 }
@@ -116,7 +114,7 @@ router.get('/projects', authenticate, async (req: Request, res: Response) => {
       : [];
     const hasProposal = new Set(proposals.map((p) => p.projectId));
 
-    const payload = selections
+    let payload = selections
       .map((s) => ({
         ...s.project,
         peStatus: hasProposal.has(s.projectId) ? 'proposal-ready' : 'draft',
@@ -125,6 +123,11 @@ router.get('/projects', authenticate, async (req: Request, res: Response) => {
       }))
       // Only show Draft or Proposal Ready (per spec)
       .filter((p) => p.peStatus === 'draft' || p.peStatus === 'proposal-ready');
+
+    // Sales: only show projects still assigned to them (reassigned projects must not appear in their list).
+    if (role === UserRole.SALES && userId) {
+      payload = payload.filter((p) => p.salespersonId === userId);
+    }
 
     res.json(payload);
   } catch (error: any) {
@@ -145,19 +148,21 @@ router.get('/projects/eligible', authenticate, async (req: Request, res: Respons
       return;
     }
 
-    const selected = await prisma.pESelectedProject.findMany({
-      select: { projectId: true },
-    });
+    const [selected, removed] = await Promise.all([
+      prisma.pESelectedProject.findMany({ select: { projectId: true } }),
+      prisma.pERemovedProject.findMany({ select: { projectId: true } }),
+    ]);
     const selectedIds = selected.map((s) => s.projectId);
+    const removedIds = removed.map((r) => r.projectId);
+    const excludeIds = [...new Set([...selectedIds, ...removedIds])];
 
     const and: any[] = [
       { projectStatus: { in: [ProjectStatus.PROPOSAL, ProjectStatus.CONFIRMED] } },
-      ...(selectedIds.length > 0 ? [{ id: { notIn: selectedIds } }] : []),
+      ...(excludeIds.length > 0 ? [{ id: { notIn: excludeIds } }] : []),
     ];
+    // Sales: only projects currently assigned to them (matches CRM – after reassignment, original creator must not see them).
     if (role === UserRole.SALES && userId) {
-      and.push({
-        OR: [{ salespersonId: userId }, { createdById: userId }],
-      });
+      and.push({ salespersonId: userId });
     }
 
     const projects = await prisma.project.findMany({
@@ -674,6 +679,15 @@ router.delete('/projects/:id/proposal', authenticate, async (req: Request, res: 
     const result = await prisma.pEProposal.deleteMany({
       where: { projectId: req.params.id },
     });
+
+    // Remove project from everyone's list and mark as removed so it does not appear in eligible for any user.
+    await prisma.$transaction([
+      prisma.pESelectedProject.deleteMany({ where: { projectId: req.params.id } }),
+      prisma.pERemovedProject.deleteMany({ where: { projectId: req.params.id } }),
+      prisma.pERemovedProject.create({
+        data: { projectId: req.params.id, removedById: req.user!.id },
+      }),
+    ]);
 
     res.status(200).json({ message: 'Proposal cleared', deletedCount: result.count });
   } catch (error: any) {
