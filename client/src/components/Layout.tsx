@@ -131,9 +131,9 @@ const Layout = () => {
             <div className="flex items-center">
               <Link to="/dashboard" className="flex-shrink-0 flex items-center mr-2 lg:mr-3 xl:mr-4 hover:opacity-80 transition-opacity">
                 <img 
-                  src="/rayenna_logo.jpg" 
-                  alt="Rayenna Energy Logo" 
-                  className="h-12 xl:h-[3.6rem] w-auto"
+                  src="/CRM_Logo.jpg" 
+                  alt="Rayenna CRM" 
+                  className="h-14 sm:h-14 xl:h-16 2xl:h-[4.25rem] w-auto object-contain"
                 />
               </Link>
               {/* Desktop Navigation - lg and above; also visible in mobile landscape (left-side nav + Help) */}

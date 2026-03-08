@@ -95,7 +95,7 @@ const Login = () => {
         backgroundRepeat: 'no-repeat',
       }}
     >
-      <div className="max-w-md w-full space-y-8 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 border-2 border-white/20 border-l-4 border-l-primary-500">
+      <div className="max-w-md w-full space-y-6 sm:space-y-8 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-6 sm:p-8 border-2 border-white/20 border-l-4 border-l-primary-500">
         {apiNotConfigured && (
           <div className="mb-4 p-3 rounded-lg bg-amber-100 border border-amber-400 text-amber-900 text-sm">
             <strong>API not configured.</strong> Set <code className="bg-amber-200/60 px-1 rounded">VITE_API_BASE_URL</code> in your deployment (Render: Static Site → Environment; Vercel: Settings → Environment Variables) to your backend URL (e.g. <code className="bg-amber-200/60 px-1 rounded">https://rayenna-crm.onrender.com</code>), then <strong>redeploy</strong>. Login will not work until then.
@@ -126,16 +126,13 @@ const Login = () => {
           </div>
         )}
         <div className="text-center">
-          <div className="mb-6">
+          <div className="flex justify-center items-center py-4 sm:py-6 px-2">
             <img 
-              src="/rayenna_logo.jpg" 
-              alt="Rayenna Energy Logo" 
-              className="h-32 w-auto mx-auto mb-4 drop-shadow-lg"
+              src="/CRM_Logo.jpg" 
+              alt="Rayenna CRM" 
+              className="h-36 sm:h-40 md:h-44 w-auto max-w-[85vw] object-contain mx-auto drop-shadow-lg"
             />
           </div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            Rayenna CRM
-          </h2>
           <p className="mt-2 text-sm font-medium text-gray-600">
             Sign in to your account
           </p>
