@@ -13,6 +13,7 @@ import {
   STATUS_COLORS,
   artifactSummary,
   upsertCustomer,
+  formatEmailForDisplay,
 } from '../lib/customerStore';
 import type { CustomerRecord, CustomerMaster, ProposalStatus } from '../lib/customerStore';
 import { AlertCard } from '../components/AlertCard';
@@ -228,7 +229,7 @@ function mapApiProjectToProjectOption(p: ProposalEngineProjectFromApi): ProjectO
     city: (cust.city ?? '').trim(),
     contactPerson: (cust.contactPerson ?? '').trim(),
     phone: deriveContactNumber(p.customer),
-    email: (cust.email ?? '').trim(),
+    email: formatEmailForDisplay(cust.email ?? ''),
     siteAddress:
       (p.siteAddress ?? '').trim() ||
       [cust.addressLine1, cust.addressLine2, cust.city, cust.state, cust.pinCode]
@@ -653,7 +654,7 @@ function ProjectPickerModal({
                         <p className="text-[11px] text-secondary-400 truncate">
                           {p.contactPerson}
                           {p.phone ? ` · ${p.phone}` : ''}
-                          {p.email ? ` · ${p.email}` : ''}
+                          {p.email ? ` · ${formatEmailForDisplay(p.email)}` : ''}
                         </p>
                       )}
                     </div>

@@ -7,6 +7,7 @@ import {
   STATUS_LABELS,
   STATUS_COLORS,
   artifactSummary,
+  formatEmailForDisplay,
 } from '../lib/customerStore';
 import type { CustomerRecord } from '../lib/customerStore';
 import { getCurrentUserRole } from '../lib/apiClient';
@@ -173,7 +174,7 @@ export default function Dashboard() {
                   {activeCustomer.master.phone || activeCustomer.master.email ? (
                     <p className="mt-1 text-[11px] text-slate-200/80 flex flex-wrap gap-x-3 gap-y-0.5">
                       {activeCustomer.master.phone && <span>📞 {activeCustomer.master.phone}</span>}
-                      {activeCustomer.master.email && <span>✉ {activeCustomer.master.email}</span>}
+                      {activeCustomer.master.email && <span>✉ {formatEmailForDisplay(activeCustomer.master.email)}</span>}
                     </p>
                   ) : null}
                 </div>

@@ -11,6 +11,7 @@ import {
   getActiveCustomer,
   saveAllArtifacts,
   getWipKeysForCurrentUser,
+  formatEmailForDisplay,
 } from '../lib/customerStore';
 import { getCurrentUserRole, syncProjectProposal } from '../lib/apiClient';
 import type { CostingArtifact, BomArtifact, RoiArtifact, ProposalArtifact } from '../lib/customerStore';
@@ -616,7 +617,7 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
     ...(p.customer.contactPerson ? [new Paragraph({ children: [new TextRun({ text: `Attn: ${p.customer.contactPerson}`, size: 22, color: '374151' })], spacing: { after: 40 } })] : []),
     ...(p.customer.location     ? [new Paragraph({ children: [new TextRun({ text: p.customer.location, size: 22, color: '374151' })], spacing: { after: 40 } })] : []),
     ...(p.customer.phone        ? [new Paragraph({ children: [new TextRun({ text: `Ph: ${p.customer.phone}`, size: 22, color: '374151' })], spacing: { after: 40 } })] : []),
-    ...(p.customer.email        ? [new Paragraph({ children: [new TextRun({ text: `Email: ${p.customer.email}`, size: 22, color: '374151' })], spacing: { after: 200 } })] : []),
+    ...(p.customer.email        ? [new Paragraph({ children: [new TextRun({ text: `Email: ${formatEmailForDisplay(p.customer.email)}`, size: 22, color: '374151' })], spacing: { after: 200 } })] : []),
     new Paragraph({
       children: [
         new TextRun({ text: `Proposal For: ${p.systemSizeKw > 0 ? `${p.systemSizeKw} kW ` : ''}On-Grid Solar Power Plant`, bold: true, size: 28, color: navy }),
@@ -2687,7 +2688,7 @@ function CustomerForm({ onGenerate }: { onGenerate: (c: CustomerDetails) => void
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-wide text-secondary-500">Email ID</p>
-            <p className="font-semibold text-secondary-900 break-all">{ac?.email || '—'}</p>
+            <p className="font-semibold text-secondary-900 break-all">{ac?.email ? formatEmailForDisplay(ac.email) : '—'}</p>
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-wide text-secondary-500">Consumer Number</p>
@@ -3167,7 +3168,7 @@ export default function ProposalPreview() {
                     {proposal.customer.contactPerson && <p className="text-white/80 text-sm">Attn: {proposal.customer.contactPerson}</p>}
                     {proposal.customer.location && <p className="text-white/70 text-xs mt-0.5">{proposal.customer.location}</p>}
                     {proposal.customer.phone && <p className="text-white/70 text-xs">📞 {proposal.customer.phone}</p>}
-                    {proposal.customer.email && <p className="text-white/70 text-xs">✉ {proposal.customer.email}</p>}
+                    {proposal.customer.email && <p className="text-white/70 text-xs">✉ {formatEmailForDisplay(proposal.customer.email)}</p>}
                   </div>
                 )}
 

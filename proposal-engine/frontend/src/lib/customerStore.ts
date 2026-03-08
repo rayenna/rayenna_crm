@@ -214,6 +214,31 @@ export interface CustomerMaster {
   panelType?:       string;
 }
 
+/**
+ * Format email for display: strip JSON array brackets and quotes.
+ * Handles email stored as string, array of strings, or JSON-stringified array
+ * (e.g. ["a@b.com"], ["c@d.com"] or '["a@b.com","c@d.com"]').
+ */
+export function formatEmailForDisplay(value: string | string[] | null | undefined): string {
+  if (value == null) return '';
+  if (Array.isArray(value)) {
+    return value.filter(Boolean).map((s) => String(s).trim()).join(', ');
+  }
+  const s = String(value).trim();
+  if (!s) return '';
+  if (s.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(s) as unknown;
+      if (Array.isArray(parsed)) {
+        return parsed.filter(Boolean).map((x) => String(x).trim()).join(', ');
+      }
+    } catch {
+      // fall through
+    }
+  }
+  return s;
+}
+
 // ─────────────────────────────────────────────
 // Artifact snapshots
 // ─────────────────────────────────────────────
