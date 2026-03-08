@@ -13,7 +13,7 @@ import {
   getWipKeysForCurrentUser,
   formatEmailForDisplay,
 } from '../lib/customerStore';
-import { getCurrentUserRole, syncProjectProposal } from '../lib/apiClient';
+import { getCurrentUserRole, syncProjectProposal, syncProjectCosting, syncProjectBom, syncProjectRoi } from '../lib/apiClient';
 import type { CostingArtifact, BomArtifact, RoiArtifact, ProposalArtifact } from '../lib/customerStore';
 
 // ─────────────────────────────────────────────
@@ -2849,9 +2849,13 @@ export default function ProposalPreview() {
       saveAllArtifacts(activeCustomer.id, costingArtifact, bomArtifact, roiArtifact, proposalArtifact);
       setSavedToCustomer(activeCustomer.master.name);
 
-      // Best-effort sync of proposal artifact to CRM backend for CRM-linked projects.
-      if (activeCustomer.master.crmProjectId) {
-        void syncProjectProposal(activeCustomer.master.crmProjectId, proposalArtifact);
+      // Sync all four artifacts to CRM backend so Admin/Ops/Finance/Management see the same data.
+      const projectId = activeCustomer.master.crmProjectId;
+      if (projectId) {
+        if (costingArtifact) void syncProjectCosting(projectId, costingArtifact);
+        if (bomArtifact) void syncProjectBom(projectId, bomArtifact);
+        if (roiArtifact) void syncProjectRoi(projectId, roiArtifact);
+        void syncProjectProposal(projectId, proposalArtifact);
       }
     }
 
@@ -2969,6 +2973,15 @@ export default function ProposalPreview() {
 
       saveAllArtifacts(activeCustomer.id, costingArtifact, bomArtifact, roiArtifact, proposalArtifact);
       setSavedToCustomer(activeCustomer.master.name);
+
+      // Sync all four artifacts to CRM backend so Admin/Ops/Finance/Management see the same data.
+      const projectId = activeCustomer.master.crmProjectId;
+      if (projectId) {
+        if (costingArtifact) void syncProjectCosting(projectId, costingArtifact);
+        if (bomArtifact) void syncProjectBom(projectId, bomArtifact);
+        if (roiArtifact) void syncProjectRoi(projectId, roiArtifact);
+        void syncProjectProposal(projectId, proposalArtifact);
+      }
     }
   };
 
