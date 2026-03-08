@@ -5,12 +5,12 @@ alwaysApply: true
 
 # Dual frontend: Render + Vercel compatibility
 
-This project runs **two production frontends** in parallel for business continuity:
+This project runs **production frontends** on both Render and Vercel for business continuity:
 
-- **Render:** Static site from `render.yaml` (rootDir: `client`, build: `npm install && npm run build`, publish: `dist`). Env in Render dashboard.
-- **Vercel:** From same repo; Root Directory = `client` uses `client/vercel.json`; repo root uses root `vercel.json`. Env in Vercel project settings.
+- **CRM:** Render `render.yaml` (rootDir: `client`); Vercel project with Root Directory = `client` uses `client/vercel.json`. Root `vercel.json` is for building from repo root (CRM).
+- **Proposal Engine:** Render `render.yaml` (rootDir: `proposal-engine/frontend`); Vercel project with Root Directory = `proposal-engine/frontend` uses `proposal-engine/frontend/vercel.json`. See `PROPOSAL_ENGINE_VERCEL_DEPLOYMENT.md`.
 
-Any change to frontend build, config, or env must work on **both** platforms.
+Any change to a frontend's build, config, or env must work on **both** Render and Vercel for that app.
 
 ## Rules
 
@@ -24,9 +24,10 @@ Any change to frontend build, config, or env must work on **both** platforms.
    Do not branch on hostname, `vercel` vs `render`, or deploy target in client code. One codebase for both.
 
 4. **Config files**  
-   - `client/vercel.json`: used by Vercel when Root Directory = `client`. Keep `buildCommand`, `outputDirectory`, `framework`, rewrites, and headers.  
-   - Root `vercel.json`: used when Vercel builds from repo root. Keep build/install pointing at `client/` and output `client/dist`.  
-   - `render.yaml`: used only by Render. Do not remove or change the frontend service; keep `rootDir: client`, same build command, `staticPublishPath: dist`, and env vars (e.g. `VITE_API_BASE_URL`).
+   - `client/vercel.json`: used by Vercel when Root Directory = `client` (CRM). Keep `buildCommand`, `outputDirectory`, `framework`, rewrites, and headers.  
+   - `proposal-engine/frontend/vercel.json`: used by Vercel when Root Directory = `proposal-engine/frontend` (Proposal Engine). Same pattern: buildCommand, outputDirectory, framework, rewrites, headers.  
+   - Root `vercel.json`: used when Vercel builds from repo root (CRM). Keep build/install pointing at `client/` and output `client/dist`.  
+   - `render.yaml`: used only by Render. Do not remove or change either service; keep `rayenna-crm-frontend` (rootDir: `client`) and `rayenna-proposal-engine` (rootDir: `proposal-engine/frontend`), same build commands, `staticPublishPath: dist`, and env vars.
 
 5. **Backend CORS**  
    In `src/server.ts`, keep allowed origins for **both** Render (e.g. `rayenna-crm-frontend.onrender.com`, `render.com`) and Vercel (`*.vercel.app`). Any new frontend URL must be added so both platforms remain allowed.
@@ -36,7 +37,8 @@ Any change to frontend build, config, or env must work on **both** platforms.
 
 ## Quick check before committing
 
-- [ ] `cd client && npm run build` succeeds and produces `dist/` and `dist/404.html`.
-- [ ] No hardcoded API or app URLs in `client/src`.
+- [ ] `cd client && npm run build` succeeds and produces `dist/` and `dist/404.html` (CRM).
+- [ ] `cd proposal-engine/frontend && npm run build` succeeds and produces `dist/` and `dist/404.html` (Proposal Engine).
+- [ ] No hardcoded API or app URLs in `client/src` or `proposal-engine/frontend/src`.
 - [ ] No code that behaves differently on Render vs Vercel.
 - [ ] CORS still allows both Render and Vercel frontend origins.
