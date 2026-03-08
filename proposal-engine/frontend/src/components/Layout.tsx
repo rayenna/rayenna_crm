@@ -173,16 +173,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-2 flex-shrink-0">
               <Link
                 to="/"
-                className="flex items-center gap-2 hover:opacity-90 transition-opacity"
+                className="flex items-center hover:opacity-90 transition-opacity"
               >
                 <img
-                  src="/rayenna_logo.jpg"
-                  alt="Rayenna Energy Logo"
-                  className="h-14 landscape:h-12 md:h-16 lg:h-[4.6rem] w-auto"
+                  src="/Proposals_Logo.jpg"
+                  alt="Proposal Engine"
+                  className="h-14 landscape:h-12 md:h-16 lg:h-[4.5rem] xl:h-[4.75rem] w-auto object-contain"
                 />
-                <span className="text-white font-bold tracking-tight text-sm drop-shadow">
-                  Proposal Engine
-                </span>
               </Link>
             </div>
 

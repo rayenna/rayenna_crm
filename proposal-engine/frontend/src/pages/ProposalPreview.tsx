@@ -3116,13 +3116,13 @@ export default function ProposalPreview() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 pb-5 border-b border-white/20">
                   {/* Logo + company name */}
                   <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0 bg-white rounded-xl p-1.5 shadow-lg">
+                    <div className="flex-shrink-0 bg-white rounded-xl p-2 shadow-lg">
                       <img
                         data-docx-image="logo"
                         src="/rayenna_logo.jpg"
                         alt="Rayenna Energy"
-                        className="h-14 w-auto object-contain"
-                        style={{ maxWidth: '120px' }}
+                        className="h-16 sm:h-[4.5rem] w-auto object-contain"
+                        style={{ maxWidth: '160px' }}
                       />
                     </div>
                     <div>

@@ -353,9 +353,9 @@ export default function AboutPage() {
           <div className="mt-8 pt-8 border-t border-primary-100">
             <div className="flex flex-col items-center">
               <img
-                src="/rayenna_logo.jpg"
-                alt="Rayenna Energy Logo"
-                className="w-full max-w-[224px] sm:max-w-[288px] h-auto drop-shadow-2xl"
+                src="/Proposals_Logo.jpg"
+                alt="Proposal Engine"
+                className="w-full max-w-[260px] sm:max-w-[320px] h-auto object-contain drop-shadow-2xl"
               />
               <p className="mt-3 text-xs sm:text-sm text-gray-500 text-center">
                 ©2026 – Present. Rayenna Energy Private Limited<br />

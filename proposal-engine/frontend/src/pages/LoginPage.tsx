@@ -51,18 +51,15 @@ export default function LoginPage() {
         backgroundRepeat: 'no-repeat',
       }}
     >
-      <div className="w-full max-w-md bg-white/95 backdrop-blur rounded-2xl shadow-2xl border border-slate-200 px-6 py-8 space-y-6">
+      <div className="w-full max-w-md bg-white/95 backdrop-blur rounded-2xl shadow-2xl border border-slate-200 px-6 py-6 sm:py-8 space-y-6">
         <header className="space-y-3 text-center">
-          <div className="mb-4">
+          <div className="flex justify-center items-center py-4 sm:py-6 px-2">
             <img
-              src="/rayenna_logo.jpg"
-              alt="Rayenna Energy Logo"
-              className="h-32 w-auto mx-auto mb-2 drop-shadow-lg"
+              src="/Proposals_Logo.jpg"
+              alt="Proposal Engine"
+              className="h-36 sm:h-40 md:h-44 w-auto max-w-[85vw] object-contain mx-auto drop-shadow-lg"
             />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-            Proposal Engine
-          </h1>
           <p className="mt-2 text-sm font-medium text-slate-600">
             Sign in with your existing Rayenna CRM credentials.
           </p>
