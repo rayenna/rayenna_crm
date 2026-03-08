@@ -346,6 +346,14 @@ function ProjectCard({
             {project.salespersonName && (
               <p className="text-[10px] text-secondary-400 mt-0.5">Sales: {project.salespersonName}</p>
             )}
+            {/* Show PE status when no local record (otherwise CustomerCard shows record.status) */}
+            {!record && (project.peStatus === 'draft' || project.peStatus === 'proposal-ready') && (
+              <p className="mt-1.5">
+                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${STATUS_COLORS[project.peStatus as ProposalStatus] ?? 'bg-secondary-100 text-secondary-600 border-secondary-300'}`}>
+                  {STATUS_LABELS[project.peStatus as ProposalStatus] ?? project.peStatus}
+                </span>
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
             {onRemoveFromList && (
@@ -1307,13 +1315,28 @@ export default function Customers() {
       return db - da;
     });
 
+  // In viewAllMode, use effective status per project: local record status when present (matches card),
+  // otherwise API peStatus, so counts match what is shown on cards (Admin sees CustomerCard with record.status).
   const statCounts = viewAllMode
-    ? {
-        total:     projects.length,
-        draft:     projects.filter((p) => (p.peStatus || '').toString().toLowerCase() === 'draft').length,
-        ready:     projects.filter((p) => (p.peStatus || '').toString().toLowerCase() === 'proposal-ready').length,
-        confirmed: projects.filter((p) => (p.projectStage || '').toUpperCase() === 'CONFIRMED').length,
-      }
+    ? (() => {
+        const locals = loadCustomers();
+        const effectiveDraft = projects.filter((p) => {
+          const rec = locals.find((c) => c.master.crmProjectId === p.id);
+          const status = rec ? rec.status : (p.peStatus || '').toString().toLowerCase();
+          return status === 'draft';
+        }).length;
+        const effectiveReady = projects.filter((p) => {
+          const rec = locals.find((c) => c.master.crmProjectId === p.id);
+          const status = rec ? rec.status : (p.peStatus || '').toString().toLowerCase();
+          return status === 'proposal-ready';
+        }).length;
+        return {
+          total:     projects.length,
+          draft:     effectiveDraft,
+          ready:     effectiveReady,
+          confirmed: projects.filter((p) => (p.projectStage || '').toUpperCase() === 'CONFIRMED').length,
+        };
+      })()
     : {
         total:      customers.length,
         draft:      customers.filter((c) => c.status === 'draft').length,
