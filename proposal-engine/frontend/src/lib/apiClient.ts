@@ -16,6 +16,26 @@ export function getApiBaseUrl(): string {
   return API_BASE_URL;
 }
 
+/** Timeout for health check and cold-start tolerance (matches CRM). 90s for Render free-tier wake. */
+export const HEALTH_CHECK_TIMEOUT_MS = 90_000;
+
+/** Check if error is due to timeout or backend unreachable (e.g. cold start). Used for login pre-warm messaging. */
+export function isTimeoutOrNetworkError(error: unknown): boolean {
+  if (error == null) return false;
+  const err = error as { name?: string; code?: string; message?: string };
+  const msg = typeof err.message === 'string' ? err.message.toLowerCase() : '';
+  return (
+    err.name === 'AbortError' ||
+    err.code === 'ECONNABORTED' ||
+    err.code === 'ERR_NETWORK' ||
+    msg === 'network error' ||
+    msg.includes('failed to fetch') ||
+    msg.includes('networkerror') ||
+    msg.includes('cannot reach') ||
+    msg.includes('reachable')
+  );
+}
+
 export function getToken(): string | null {
   try {
     // Prefer sessionStorage so closing the tab/window logs the user out,
