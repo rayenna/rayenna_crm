@@ -70,23 +70,26 @@ function ensureProjectWriteAccess(project: any, req: Request, res: Response): bo
 }
 
 // List projects that have been explicitly selected in Proposal Engine.
-// This is the only list used across all roles (Sales sees only own selections).
+// Sales: projects assigned to them (so Admin-selected projects for Anoop appear for Anoop).
+// Operations/Management/Finance/Admin: all selections.
 router.get('/projects', authenticate, async (req: Request, res: Response) => {
   try {
     const role = req.user?.role;
     const userId = req.user?.id;
 
-    // Only Sales (own projects) and Operations/Management/Finance/Admin (all projects) may list.
+    // Only Sales (assigned projects) and Operations/Management/Finance/Admin (all projects) may list.
     if (!role || (!ROLES_CAN_VIEW_ALL_PROPOSALS.includes(role) && role !== UserRole.SALES)) {
       res.status(403).json({
-        error: 'Access denied. Proposal Engine projects are visible only to the owning salesperson and to Operations, Management, Finance, and Admin.',
+        error: 'Access denied. Proposal Engine projects are visible only to the assigned salesperson and to Operations, Management, Finance, and Admin.',
       });
       return;
     }
 
+    // Sales: include all PE selections for projects where this user is the assigned salesperson
+    // (so proposals created/selected by Admin for Anoop are visible to Anoop).
     const selectionWhere: any = {};
     if (role === UserRole.SALES && userId) {
-      selectionWhere.selectedById = userId;
+      selectionWhere.project = { salespersonId: userId };
     }
 
     const selections = await prisma.pESelectedProject.findMany({
