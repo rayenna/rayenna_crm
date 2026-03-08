@@ -1748,18 +1748,20 @@ function CostingGroupedTable({
                             ₹{fmt(catTotal)}
                           </span>
                         )}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            append({ ...EMPTY_ROW, category: cat.value, gstPercent: String(CATEGORY_GST[cat.value]) });
-                            setCollapsed((prev) => { const n = new Set(prev); n.delete(cat.value); return n; });
-                          }}
-                          className="text-xs font-semibold px-2.5 py-0.5 rounded-lg border"
-                          style={{ color: accent, borderColor: `${accent}60`, background: 'white' }}
-                        >
-                          + Add row
-                        </button>
+                        {canEdit && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              append({ ...EMPTY_ROW, category: cat.value, gstPercent: String(CATEGORY_GST[cat.value]) });
+                              setCollapsed((prev) => { const n = new Set(prev); n.delete(cat.value); return n; });
+                            }}
+                            className="text-xs font-semibold px-2.5 py-0.5 rounded-lg border"
+                            style={{ color: accent, borderColor: `${accent}60`, background: 'white' }}
+                          >
+                            + Add row
+                          </button>
+                        )}
                       </div>
                     </div>
                   </td>
