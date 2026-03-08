@@ -359,7 +359,7 @@ function ProjectCard({
             {onRemoveFromList && (
               <button
                 onClick={onRemoveFromList}
-                title="Remove from Proposal Engine for everyone (Admin only)"
+                title="Remove from Proposal Engine (assigned salesperson or Admin)"
                 className="p-2 rounded-lg text-secondary-400 hover:text-red-500 hover:bg-red-50 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
               >
                 🗑
@@ -983,16 +983,16 @@ function CustomerCard({
         </div>
       </div>
 
-      {/* Delete confirm */}
+      {/* Delete confirm — Yes/No for Admin and Sales */}
       {confirmDelete && (
         <div
           className="border-t border-red-100 bg-red-50/80 px-4 py-3 flex items-center justify-between gap-3"
           onClick={(e) => e.stopPropagation()}
         >
-          <p className="text-xs text-red-700 font-medium">Delete <strong>{record.master.name}</strong>? All artifacts will be lost.</p>
+          <p className="text-xs text-red-700 font-medium">Delete proposal for <strong>{record.master.name}</strong>? All artifacts will be removed from Proposal Engine.</p>
           <div className="flex gap-2">
-            <button onClick={() => setConfirmDelete(false)} className="text-xs text-secondary-500 px-3 py-1 rounded-lg border border-secondary-200 hover:bg-secondary-100 transition-colors">Cancel</button>
-            <button onClick={onDelete} className="text-xs text-white font-semibold px-3 py-1 rounded-lg bg-red-600 hover:bg-red-700 transition-colors">Delete</button>
+            <button onClick={() => setConfirmDelete(false)} className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-secondary-300 bg-white text-secondary-700 hover:bg-secondary-50 transition-colors">No</button>
+            <button onClick={onDelete} className="text-xs text-white font-semibold px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 transition-colors">Yes</button>
           </div>
         </div>
       )}
@@ -1022,6 +1022,9 @@ export default function Customers() {
   const [conflictExistingCount, setConflictExistingCount] = useState<number>(0);
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [hydratingProjectId, setHydratingProjectId] = useState<string | null>(null);
+
+  // Delete confirmation (ProjectCard trash): show Yes/No before removing from PE (Admin and Sales).
+  const [removeConfirmProject, setRemoveConfirmProject] = useState<ProjectOption | null>(null);
 
   const userRole = getCurrentUserRole();
   // Per clarified requirement: the list view is always API-driven (selected projects).
@@ -1438,6 +1441,38 @@ export default function Customers() {
         />
       )}
 
+      {/* Delete proposal confirmation — Yes/No for Admin and Sales (ProjectCard trash) */}
+      {removeConfirmProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-secondary-900/70 backdrop-blur-sm" onClick={() => setRemoveConfirmProject(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl border-2 border-red-200/80 max-w-md w-full p-6">
+            <p className="text-sm text-secondary-800 font-medium">
+              Remove proposal for <strong>{removeConfirmProject.customerName}</strong> from Proposal Engine? This will remove it for everyone. All artifacts (Costing, BOM, ROI, Proposal) will be deleted.
+            </p>
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setRemoveConfirmProject(null)}
+                className="px-4 py-2 rounded-lg text-sm font-semibold border border-secondary-300 bg-white text-secondary-700 hover:bg-secondary-50 transition-colors"
+              >
+                No
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const id = removeConfirmProject.id;
+                  setRemoveConfirmProject(null);
+                  await handleRemoveFromList(id);
+                }}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors"
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showPicker && (
         <ProjectPickerModal
           projects={eligibleProjects}
@@ -1557,7 +1592,7 @@ export default function Customers() {
                       isActive={activeId === effectiveId}
                       isReadOnly={isReadOnlyRole}
                       onOpen={() => void handleOpenProjectFromApi(p)}
-                      onRemoveFromList={canCreateProposal ? () => handleRemoveFromList(p.id) : undefined}
+                      onRemoveFromList={canCreateProposal ? () => setRemoveConfirmProject(p) : undefined}
                     />
                   );
                 })}
