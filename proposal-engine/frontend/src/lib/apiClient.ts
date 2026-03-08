@@ -106,6 +106,12 @@ export function getCurrentUserName(): string | null {
   }
 }
 
+/** True if the current user can edit Costing/BOM/ROI/Proposal artifacts (SALES, ADMIN only). Ops/Finance/Management are read-only. */
+export function canEditProposalArtifacts(): boolean {
+  const role = getCurrentUserRole();
+  return role != null && ['ADMIN', 'SALES'].includes(String(role).toUpperCase());
+}
+
 /** Current user role (SALES, ADMIN, OPERATIONS, MANAGEMENT, FINANCE) for access control. */
 export function getCurrentUserRole(): string | null {
   try {

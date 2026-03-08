@@ -12,7 +12,7 @@ import {
 import type {
   Category, LineItem, SavedSheet, StoredBom, RoiAutofill,
 } from '../lib/costingConstants';
-import { syncProjectCosting } from '../lib/apiClient';
+import { syncProjectCosting, canEditProposalArtifacts } from '../lib/apiClient';
 
 // ─────────────────────────────────────────────
 // Export helpers (Costing Sheet)
@@ -1497,6 +1497,7 @@ function CostRow({
   isOnly,
   showGst,
   marginPercent,
+  canEdit,
 }: {
   index: number;
   control: ReturnType<typeof useForm<FormValues>>['control'];
@@ -1506,6 +1507,7 @@ function CostRow({
   isOnly: boolean;
   showGst: boolean;
   marginPercent: number;
+  canEdit: boolean;
 }) {
   const qty        = useWatch({ control, name: `items.${index}.quantity` });
   const unitCost   = useWatch({ control, name: `items.${index}.unitCost` });
@@ -1531,7 +1533,8 @@ function CostRow({
         <select
           {...register(`items.${index}.category`)}
           onChange={handleCategoryChange}
-          className="w-full bg-transparent text-sm text-secondary-800 focus:outline-none cursor-pointer"
+          disabled={!canEdit}
+          className="w-full bg-transparent text-sm text-secondary-800 focus:outline-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
         >
           {CATEGORIES.map((c) => (
             <option key={c.value} value={c.value}>{c.label}</option>
@@ -1544,7 +1547,8 @@ function CostRow({
         <input
           {...register(`items.${index}.itemName`)}
           placeholder="e.g. Waaree 540W Mono PERC"
-          className="w-full bg-transparent text-sm text-secondary-800 placeholder-secondary-400 focus:outline-none"
+          readOnly={!canEdit}
+          className="w-full bg-transparent text-sm text-secondary-800 placeholder-secondary-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-70"
         />
       </td>
 
@@ -1553,7 +1557,8 @@ function CostRow({
         <input
           {...register(`items.${index}.specification`)}
           placeholder="e.g. 540W Mono PERC, 144-cell"
-          className="w-full bg-transparent text-sm text-secondary-600 placeholder-secondary-300 focus:outline-none italic"
+          readOnly={!canEdit}
+          className="w-full bg-transparent text-sm text-secondary-600 placeholder-secondary-300 focus:outline-none italic disabled:cursor-not-allowed disabled:opacity-70"
         />
       </td>
 
@@ -1562,7 +1567,8 @@ function CostRow({
         <input
           {...register(`items.${index}.quantity`)}
           type="number" min="0" step="any" placeholder="0"
-          className="w-full bg-transparent text-sm text-right text-secondary-800 placeholder-secondary-400 focus:outline-none tabular-nums"
+          readOnly={!canEdit}
+          className="w-full bg-transparent text-sm text-right text-secondary-800 placeholder-secondary-400 focus:outline-none tabular-nums disabled:cursor-not-allowed disabled:opacity-70"
         />
       </td>
 
@@ -1573,7 +1579,8 @@ function CostRow({
           <input
             {...register(`items.${index}.unitCost`)}
             type="number" min="0" step="any" placeholder="0.00"
-            className="w-full bg-transparent text-sm text-right text-secondary-800 placeholder-secondary-400 focus:outline-none tabular-nums"
+            readOnly={!canEdit}
+            className="w-full bg-transparent text-sm text-right text-secondary-800 placeholder-secondary-400 focus:outline-none tabular-nums disabled:cursor-not-allowed disabled:opacity-70"
           />
         </div>
       </td>
@@ -1585,7 +1592,8 @@ function CostRow({
             <input
               {...register(`items.${index}.gstPercent`)}
               type="number" min="0" max="28" step="1"
-              className="w-full bg-transparent text-sm text-right text-secondary-800 focus:outline-none tabular-nums"
+              readOnly={!canEdit}
+              className="w-full bg-transparent text-sm text-right text-secondary-800 focus:outline-none tabular-nums disabled:cursor-not-allowed disabled:opacity-70"
             />
             <span className="text-secondary-400 text-xs">%</span>
           </div>
@@ -1608,12 +1616,14 @@ function CostRow({
         )}
       </td>
 
-      {/* Remove */}
+      {/* Remove — hidden for read-only (Ops/Finance/Management) */}
       <td className="px-2 py-2 w-8 text-center">
+        {canEdit && (
         <button
           type="button" onClick={onRemove} disabled={isOnly} title="Remove row"
           className="opacity-0 group-hover:opacity-100 transition-opacity text-secondary-400 hover:text-red-500 disabled:opacity-0 disabled:cursor-not-allowed text-lg leading-none"
         >×</button>
+        )}
       </td>
     </tr>
   );
@@ -1627,7 +1637,7 @@ function CostRow({
 // by the parent — no useWatch/getValues inside, zero lag issues.
 function CostingGroupedTable({
   fields, control, register, setValue, remove, append,
-  showGst, marginPercent, itemCategories, liveItems, allCollapsed, resetSignal,
+  showGst, marginPercent, itemCategories, liveItems, allCollapsed, resetSignal, canEdit,
 }: {
   fields:         { id: string }[];
   control:        ReturnType<typeof useForm<FormValues>>['control'];
@@ -1641,6 +1651,7 @@ function CostingGroupedTable({
   liveItems:      LineItem[];
   allCollapsed:   boolean;    // true = collapse all, false = expand all
   resetSignal:    number;     // increment to clear collapsed state without remounting
+  canEdit:        boolean;    // false for Ops/Finance/Management (read-only)
 }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const toggle = (cat: string) =>
@@ -1766,6 +1777,7 @@ function CostingGroupedTable({
                     isOnly={fields.length === 1}
                     showGst={showGst}
                     marginPercent={marginPercent}
+                    canEdit={canEdit}
                   />
                 ))}
 
@@ -1968,6 +1980,8 @@ export default function CostingSheet() {
 
   // ── Expand / Collapse All ─────────────────
   const [allCollapsed, setAllCollapsed]         = useState(false);
+
+  const canEdit = canEditProposalArtifacts();
 
   const showToast = useCallback((msg: string) => {
     setTemplateToast(msg);
@@ -2275,7 +2289,8 @@ export default function CostingSheet() {
                 </div>
               </div>
 
-              {/* Header action buttons — two rows: primary | secondary/export */}
+              {/* Header action buttons — two rows: primary | secondary/export (hidden for read-only: Ops/Finance/Management) */}
+              {canEdit && (
               <div className="flex flex-col gap-2 w-full sm:w-auto flex-shrink-0">
 
                 {/* Row 1 — primary actions */}
@@ -2397,6 +2412,7 @@ export default function CostingSheet() {
                   </button>
                 </div>
               </div>
+              )}
             </div>
           </div>
 
@@ -2480,6 +2496,7 @@ export default function CostingSheet() {
                 liveItems={liveItems.length > 0 ? liveItems : initialItemsRef.current}
                 allCollapsed={allCollapsed}
                 resetSignal={resetKey}
+                canEdit={canEdit}
               />
 
               {/* Grand total summary */}
@@ -2491,7 +2508,8 @@ export default function CostingSheet() {
                 />
               )}
 
-              {/* Actions */}
+              {/* Actions — hidden for read-only (Ops/Finance/Management); only Expand/Collapse + View Dashboard remain */}
+              {canEdit && (
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2 flex-wrap">
                   {CATEGORIES.map((cat) => {
@@ -2552,6 +2570,7 @@ export default function CostingSheet() {
                   </div>
                 </div>
               </div>
+              )}
             </form>
 
             {/* Category breakdown */}

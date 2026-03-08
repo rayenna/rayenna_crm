@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import type { RoiAutofill } from '../lib/costingConstants';
 import { getActiveCustomer, upsertCustomer, getWipKeysForCurrentUser } from '../lib/customerStore';
 import type { RoiArtifact } from '../lib/customerStore';
-import { syncProjectRoi } from '../lib/apiClient';
+import { syncProjectRoi, canEditProposalArtifacts } from '../lib/apiClient';
 import { AlertCard } from '../components/AlertCard';
 
 // ─────────────────────────────────────────────
@@ -133,28 +133,37 @@ function fmtCr(n: number): string {
 // ─────────────────────────────────────────────
 
 function Field({
-  label, unit, hint, value, onChange, step = 'any', min,
+  label, unit, hint, value, onChange, step = 'any', min, disabled = false,
 }: {
   label: string; unit?: string; hint?: string;
   value: string; onChange: (v: string) => void;
-  step?: string; min?: string;
+  step?: string; min?: string; disabled?: boolean;
 }) {
   return (
-    <div>
+    <div className={disabled ? 'opacity-80' : ''}>
       <label className="block text-xs text-secondary-600 mb-1.5 font-semibold uppercase tracking-wide">
         {label}
       </label>
-      <div className="flex items-center bg-white border border-secondary-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:border-primary-500 transition-all">
+      <div className={`flex items-center border rounded-lg overflow-hidden transition-all ${
+        disabled
+          ? 'bg-secondary-100 border-secondary-200 cursor-not-allowed'
+          : 'bg-white border-secondary-300 focus-within:ring-2 focus-within:border-primary-500'
+      }`}>
         <input
           type="number"
           step={step}
           min={min}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="flex-1 bg-transparent px-3 py-2.5 text-sm text-secondary-900 placeholder-secondary-400 focus:outline-none tabular-nums"
+          disabled={disabled}
+          className={`flex-1 px-3 py-2.5 text-sm placeholder-secondary-400 focus:outline-none tabular-nums ${
+            disabled ? 'bg-transparent text-secondary-700 cursor-not-allowed' : 'bg-transparent text-secondary-900'
+          }`}
         />
         {unit && (
-          <span className="px-3 text-xs text-secondary-500 border-l border-secondary-200 py-2.5 bg-secondary-50 whitespace-nowrap font-medium">
+          <span className={`px-3 text-xs border-l py-2.5 whitespace-nowrap font-medium ${
+            disabled ? 'text-secondary-500 border-secondary-200 bg-secondary-100' : 'text-secondary-500 border-secondary-200 bg-secondary-50'
+          }`}>
             {unit}
           </span>
         )}
@@ -375,6 +384,8 @@ export default function ROICalculator() {
   const [saveStatus,  setSaveStatus]  = useState<'idle' | 'saved'>('idle');
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
+  const canEdit = canEditProposalArtifacts();
+
   // Stable reference used for the auto-fill banner and hints
   const autoFill = initialAutoFill;
 
@@ -477,6 +488,14 @@ export default function ROICalculator() {
       subsidyAmount: subsidyAmt > 0 ? subsidyAmt : undefined,
     });
     setResult(res);
+    // For read-only users: update local customer ROI so Proposal view can show this result (no backend sync)
+    if (!canEdit) {
+      const ac = getActiveCustomer();
+      if (ac) {
+        const now = new Date().toISOString();
+        upsertCustomer({ ...ac, roi: { savedAt: now, result: res }, updatedAt: now });
+      }
+    }
   };
 
   const handleSave = () => {
@@ -513,7 +532,7 @@ export default function ROICalculator() {
                 <p className="mt-0.5 text-white/90 text-sm">Calculate payback period, annual savings, and 25-year returns.</p>
               </div>
             </div>
-            {result && (
+            {canEdit && result && (
               <div className="flex items-center gap-2 flex-shrink-0">
                 {saveStatus === 'saved' && <span className="text-xs text-emerald-300 font-medium">✓ Saved</span>}
                 <button
@@ -593,6 +612,7 @@ export default function ROICalculator() {
                     onChange={setSystemSizeKw}
                     step="1"
                     min="1"
+                    disabled={!canEdit}
                   />
                   <Field
                     label="Electricity Tariff"
@@ -602,6 +622,7 @@ export default function ROICalculator() {
                     onChange={setTariff}
                     step="0.01"
                     min="0.01"
+                    disabled={!canEdit}
                   />
                   <Field
                     label="Generation Factor"
@@ -611,6 +632,7 @@ export default function ROICalculator() {
                     onChange={setGenerationFactor}
                     step="10"
                     min="100"
+                    disabled={!canEdit}
                   />
                   <Field
                     label="Tariff Escalation"
@@ -620,6 +642,7 @@ export default function ROICalculator() {
                     onChange={setEscalationPercent}
                     step="0.5"
                     min="0"
+                    disabled={!canEdit}
                   />
                   <Field
                     label="Project Cost"
@@ -629,15 +652,17 @@ export default function ROICalculator() {
                     onChange={setProjectCost}
                     step="1000"
                     min="0"
+                    disabled={!canEdit}
                   />
 
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
+                  <div className={`space-y-2 ${!canEdit ? 'opacity-80' : ''}`}>
+                    <label className={`flex items-center gap-2 ${canEdit ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
                       <input
                         type="checkbox"
                         checked={subsidyEligible}
                         onChange={(e) => setSubsidyEligible(e.target.checked)}
-                        className="rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
+                        disabled={!canEdit}
+                        className="rounded border-secondary-300 text-primary-600 focus:ring-primary-500 disabled:opacity-70 disabled:cursor-not-allowed"
                       />
                       <span className="text-xs font-semibold text-secondary-700 uppercase tracking-wide">
                         Eligible for Govt subsidy (PM-Surya Ghar / MNRE rooftop solar)
@@ -667,6 +692,7 @@ export default function ROICalculator() {
                                 onChange={setSubsidyOverride}
                                 step="1000"
                                 min="0"
+                                disabled={!canEdit}
                               />
                             </div>
                           );
@@ -687,7 +713,7 @@ export default function ROICalculator() {
                   <button
                     type="button"
                     onClick={handleCalculate}
-                    className="w-full text-white text-sm font-semibold py-3 sm:py-2.5 rounded-xl transition-all shadow-lg hover:shadow-xl min-h-[44px]"
+                    className="w-full text-white text-sm font-semibold py-3 sm:py-2.5 rounded-xl transition-all shadow-lg hover:shadow-xl min-h-[44px] disabled:opacity-60 disabled:cursor-not-allowed"
                     style={{ background: '#0d1b3a' }}
                     onMouseEnter={e => (e.currentTarget.style.background = '#0a1530')}
                     onMouseLeave={e => (e.currentTarget.style.background = '#0d1b3a')}
@@ -762,6 +788,7 @@ export default function ROICalculator() {
                     <YearlyTable rows={result.yearlyBreakdown} />
                   </div>
 
+                  {canEdit && (
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
                     {saveStatus === 'saved' && <span className="text-xs text-emerald-600 font-medium text-center sm:text-right">✓ Result saved</span>}
                     <button
@@ -774,6 +801,7 @@ export default function ROICalculator() {
                       💾 Save Result
                     </button>
                   </div>
+                  )}
                 </>
               )}
             </div>
