@@ -176,6 +176,141 @@ router.get('/projects', authenticate, async (req: Request, res: Response) => {
   }
 });
 
+// Shared Costing templates
+// - Visible to Sales and Admin (for loading).
+// - Any Sales/Admin can create templates.
+// - Only Admin may delete templates.
+router.get('/costing-templates', authenticate, async (req: Request, res: Response) => {
+  try {
+    const role = req.user?.role;
+    const roleStr = role != null ? String(role).toUpperCase() : '';
+    if (!roleStr || !['ADMIN', 'SALES'].includes(roleStr)) {
+      return res.status(403).json({ error: 'Only Sales and Admin can view costing templates.' });
+    }
+
+    const templates = await prisma.pECostingTemplate.findMany({
+      orderBy: { savedAt: 'desc' },
+      include: {
+        createdBy: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    res.json(
+      templates.map((t) => ({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        items: t.items,
+        savedAt: t.savedAt,
+        createdById: t.createdById,
+        createdByName: t.createdBy?.name ?? t.createdBy?.email ?? null,
+      })),
+    );
+  } catch (error: any) {
+    reportPeError(error, 'Error fetching PE costing templates');
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+router.post('/costing-templates', authenticate, async (req: Request, res: Response) => {
+  try {
+    const role = req.user?.role;
+    const roleStr = role != null ? String(role).toUpperCase() : '';
+    if (!roleStr || !['ADMIN', 'SALES'].includes(roleStr)) {
+      return res.status(403).json({ error: 'Only Sales and Admin can save costing templates.' });
+    }
+
+    const { name, description, items } = req.body as {
+      name?: string;
+      description?: string;
+      items?: unknown;
+    };
+
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'Template name is required.' });
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Template items are required.' });
+    }
+
+    const template = await prisma.pECostingTemplate.create({
+      data: {
+        name: name.trim(),
+        description: description?.trim() || null,
+        items,
+        createdById: req.user!.id,
+      },
+      include: {
+        createdBy: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    // Optional: log for audit (treated as generic security event).
+    logSecurityAudit({
+      userId: req.user!.id,
+      role: req.user!.role,
+      actionType: 'costing_template_saved',
+      entityType: 'PECOSTINGTEMPLATE',
+      entityId: template.id,
+      summary: `Saved costing template "${template.name}"`,
+      req,
+    });
+
+    res.status(201).json({
+      id: template.id,
+      name: template.name,
+      description: template.description,
+      items: template.items,
+      savedAt: template.savedAt,
+      createdById: template.createdById,
+      createdByName: template.createdBy?.name ?? template.createdBy?.email ?? null,
+    });
+  } catch (error: any) {
+    reportPeError(error, 'Error saving PE costing template');
+    res.status(500).json({ error: error.message || 'Failed to save costing template' });
+  }
+});
+
+router.delete('/costing-templates/:id', authenticate, async (req: Request, res: Response) => {
+  try {
+    const role = req.user?.role;
+    const roleStr = role != null ? String(role).toUpperCase() : '';
+    if (roleStr !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only Admin can delete costing templates.' });
+    }
+
+    const existing = await prisma.pECostingTemplate.findUnique({
+      where: { id: req.params.id },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'Template not found.' });
+    }
+
+    await prisma.pECostingTemplate.delete({
+      where: { id: req.params.id },
+    });
+
+    logSecurityAudit({
+      userId: req.user!.id,
+      role: req.user!.role,
+      actionType: 'costing_template_deleted',
+      entityType: 'PECOSTINGTEMPLATE',
+      entityId: existing.id,
+      summary: `Deleted costing template "${existing.name}"`,
+      req,
+    });
+
+    return res.status(204).end();
+  } catch (error: any) {
+    reportPeError(error, 'Error deleting PE costing template');
+    res.status(500).json({ error: error.message || 'Failed to delete costing template' });
+  }
+});
+
 // List eligible CRM projects that can be selected into Proposal Engine.
 router.get('/projects/eligible', authenticate, async (req: Request, res: Response) => {
   try {

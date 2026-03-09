@@ -164,6 +164,7 @@ model User {
   peProposals       PEProposal[]       @relation("PEProposalCreatedBy")
   peRemovedProjects PERemovedProject[] @relation("PERemovedProjectRemovedBy")
   peSelectedProjects PESelectedProject[] @relation("PESelectedProjectSelectedBy")
+  peCostingTemplates PECostingTemplate[] @relation("PECostingTemplateCreatedBy")
 
   @@index([resetToken])
   @@map("users")
@@ -617,6 +618,19 @@ model PECostingSheet {
   updatedAt    DateTime @updatedAt
 
   @@map("pe_costing_sheets")
+}
+
+model PECostingTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  items       Json
+  createdById String
+  createdBy   User     @relation("PECostingTemplateCreatedBy", fields: [createdById], references: [id])
+  savedAt     DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("pe_costing_templates")
 }
 
 model PEBomSheet {
