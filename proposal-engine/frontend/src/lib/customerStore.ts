@@ -599,14 +599,28 @@ export function saveAllArtifacts(
   const record = getCustomer(customerId);
   if (!record) return null;
 
+  const nextCosting  = costing  ?? record.costing;
+  const nextBom      = bom      ?? record.bom;
+  const nextRoi      = roi      ?? record.roi;
+  const nextProposal = proposal ?? record.proposal;
+
+  const hasAnyArtifact =
+    !!nextCosting || !!nextBom || !!nextRoi || !!nextProposal;
+
+  const allFour =
+    !!nextCosting && !!nextBom && !!nextRoi && !!nextProposal;
+
+  const nextStatus: ProposalStatus =
+    allFour ? 'proposal-ready' : hasAnyArtifact ? 'draft' : 'draft';
+
   const updated: CustomerRecord = {
     ...record,
     updatedAt: new Date().toISOString(),
-    status:    proposal ? 'proposal-ready' : record.status,
-    costing:   costing  ?? record.costing,
-    bom:       bom      ?? record.bom,
-    roi:       roi      ?? record.roi,
-    proposal:  proposal ?? record.proposal,
+    status:    nextStatus,
+    costing:   nextCosting,
+    bom:       nextBom,
+    roi:       nextRoi,
+    proposal:  nextProposal,
   };
   upsertCustomer(updated);
   return updated;
