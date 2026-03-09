@@ -4,6 +4,7 @@ import { ProjectStatus, UserRole } from '@prisma/client';
 import * as Sentry from '@sentry/node';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
+import { logSecurityAudit } from '../utils/auditLogger';
 
 const router = express.Router();
 
@@ -212,6 +213,45 @@ router.post('/projects/:id/select', authenticate, async (req: Request, res: Resp
   } catch (error: any) {
     reportPeError(error, 'Error selecting project');
     res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+// Log a Proposal Engine open event from CRM as a "proposal_generated" security audit entry.
+// This ensures Audit & Security shows Proposal → Proposal generated whenever the
+// Proposals (New) button is clicked on the Project Detail page in Rayenna CRM.
+router.post('/audit/proposal-click', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { projectId } = req.body as { projectId?: string };
+    if (!projectId) {
+      return res.status(400).json({ error: 'projectId is required' });
+    }
+
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { id: true, slNo: true },
+    });
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (req.user) {
+      logSecurityAudit({
+        userId: req.user.id,
+        role: req.user.role,
+        actionType: 'proposal_generated',
+        entityType: 'Proposal',
+        // We don't have a CRM Proposal record here, so we associate the event with the project id.
+        entityId: project.id,
+        summary: `Proposal Engine opened for project #${project.slNo}`,
+        req,
+      });
+    }
+
+    return res.status(204).end();
+  } catch (error: any) {
+    reportPeError(error, 'Error logging Proposal Engine click');
+    return res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 

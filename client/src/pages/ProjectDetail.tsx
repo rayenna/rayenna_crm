@@ -298,11 +298,23 @@ const ProjectDetail = () => {
                       const url = `${normalizedBase}/customers?openProjectId=${encodeURIComponent(id ?? '')}`;
                       window.open(url, '_blank', 'noopener,noreferrer');
                     }
+
+                    // Audit & Security: count this click as a "Proposal generated" action for the Proposal entity.
+                    if (id) {
+                      void axiosInstance.post('/api/proposal-engine/audit/proposal-click', { projectId: id }).catch(() => {
+                        // Non-blocking; ignore audit failures in the UI.
+                      });
+                    }
                   } catch (err: any) {
                     const msg = getFriendlyApiErrorMessage(err) || 'Could not open Proposal Engine. Please try again or log in from Proposal Engine.';
                     toast.error(msg);
                     const url = `${normalizedBase}/customers?openProjectId=${encodeURIComponent(id ?? '')}`;
                       window.open(url, '_blank', 'noopener,noreferrer');
+
+                    // Even if SSO ticket fails, still log the intention to generate/open a proposal.
+                    if (id) {
+                      void axiosInstance.post('/api/proposal-engine/audit/proposal-click', { projectId: id }).catch(() => {});
+                    }
                   }
                 }}
                 className="inline-flex items-center justify-center h-9 sm:h-10 min-w-0 sm:w-40 px-2 sm:px-4 py-2 rounded-lg shadow-sm hover:shadow bg-gradient-to-r from-primary-700 via-primary-600 to-amber-400 text-white border border-primary-800/70 text-xs sm:text-sm font-semibold transition-all"
