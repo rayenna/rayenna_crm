@@ -198,7 +198,7 @@ export default function LoginPage() {
             />
           </div>
           <p className="mt-2 text-sm font-medium text-gray-600">
-            Sign in to your account
+            Sign in to your account with your Rayenna CRM credentials
           </p>
         </div>
 
