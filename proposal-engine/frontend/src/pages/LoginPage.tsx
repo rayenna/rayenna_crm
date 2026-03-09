@@ -122,7 +122,7 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-900/70 bg-blend-multiply"
+      className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8"
       style={{
         backgroundImage: `url(${bgImageUrl})`,
         backgroundSize: 'cover',
@@ -130,7 +130,8 @@ export default function LoginPage() {
         backgroundRepeat: 'no-repeat',
       }}
     >
-      <div className="w-full max-w-md bg-white/95 backdrop-blur rounded-2xl shadow-2xl border border-slate-200 px-6 py-6 sm:py-8 space-y-6">
+      {/* Same card size and styling as CRM Login: max-w-md, p-6 sm:p-8, same borders */}
+      <div className="max-w-md w-full space-y-6 sm:space-y-8 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-6 sm:p-8 border-2 border-white/20 border-l-4 border-l-primary-500">
         {apiNotConfigured && (
           <div className="mb-4 p-3 rounded-lg bg-amber-100 border border-amber-400 text-amber-900 text-sm">
             <strong>API not configured.</strong> Set{' '}
@@ -188,7 +189,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <header className="space-y-3 text-center">
+        <div className="text-center">
           <div className="flex justify-center items-center py-4 sm:py-6 px-2">
             <img
               src="/Proposals_Logo.jpg"
@@ -196,58 +197,61 @@ export default function LoginPage() {
               className="h-36 sm:h-40 md:h-44 w-auto max-w-[85vw] object-contain mx-auto drop-shadow-lg"
             />
           </div>
-          <p className="mt-2 text-sm font-medium text-slate-600">
-            Sign in with your existing Rayenna CRM credentials.
+          <p className="mt-2 text-sm font-medium text-gray-600">
+            Sign in to your account
           </p>
-        </header>
+        </div>
 
         {error && (
           <AlertCard variant="error" title="Login failed" message={error} />
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <label htmlFor="email" className="block text-sm font-medium text-slate-700">
-              Work email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-400 focus:ring-offset-0 outline-none"
-              placeholder="you@rayenna.in"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-400 focus:ring-offset-0 outline-none"
-              placeholder="Enter your password"
-            />
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <label htmlFor="email" className="sr-only">
+                Email address
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-secondary-300 placeholder-secondary-400 text-secondary-900 rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm bg-white"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="sr-only">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-secondary-300 placeholder-secondary-400 text-secondary-900 rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm bg-white"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
           </div>
 
           <div>
             <button
               type="submit"
-              disabled={submitting || !email || !password || serverStatus === 'checking'}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-semibold text-slate-900 shadow-md hover:bg-amber-400 disabled:bg-amber-300 disabled:cursor-not-allowed transition-colors"
+              disabled={submitting || serverStatus === 'checking'}
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
               {submitting ? (
-                <>
+                <span className="flex items-center gap-2">
                   <svg
-                    className="animate-spin h-4 w-4 shrink-0"
+                    className="animate-spin h-4 w-4"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -262,8 +266,10 @@ export default function LoginPage() {
                     />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                   </svg>
-                  {elapsed > 10 ? `Waking server up… ${elapsed}s — please wait` : 'Signing in…'}
-                </>
+                  {elapsed > 10
+                    ? `Waking server up… ${elapsed}s — please wait`
+                    : 'Signing in…'}
+                </span>
               ) : serverStatus === 'checking' ? (
                 'Connecting to server…'
               ) : (
@@ -271,7 +277,7 @@ export default function LoginPage() {
               )}
             </button>
             {submitting && elapsed > 5 && (
-              <p className="mt-2 text-xs text-center text-slate-500">
+              <p className="mt-2 text-xs text-center text-gray-500">
                 The server may be waking from sleep.{' '}
                 <strong>Please do not press the button again</strong> — your request is in progress.
               </p>
@@ -280,13 +286,13 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-4 text-center">
-          <p className="text-xs text-slate-600">
+          <p className="text-xs text-gray-600">
             Forgot your Password? Contact your administrator
           </p>
         </div>
 
-        <div className="mt-6 pt-6 border-t border-slate-200">
-          <p className="text-xs text-slate-500 text-center leading-relaxed">
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <p className="text-xs text-gray-500 text-center leading-relaxed">
             By signing in, you acknowledge and agree to the Credits, Copyright, intellectual
             property and Terms of Usage of this product. Refer the About section to know more
           </p>
