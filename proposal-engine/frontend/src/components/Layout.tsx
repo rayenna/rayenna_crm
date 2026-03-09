@@ -362,6 +362,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </Link>
                 </div>
 
+                {/* Mobile user name (match CRM: visible in hamburger menu) */}
+                {hasToken && userName && (
+                  <div className="mt-2 pt-2 border-t border-white/20">
+                    <div
+                      className="px-3 py-2 rounded-lg text-sm text-white/90 font-medium bg-white/10 border border-white/20 truncate"
+                      title={userName}
+                    >
+                      {userName}
+                    </div>
+                  </div>
+                )}
+
                 {/* Mobile logout button */}
                 {hasToken && (
                   <button
