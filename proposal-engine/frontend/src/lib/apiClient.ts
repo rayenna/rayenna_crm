@@ -441,6 +441,41 @@ export async function clearProjectProposalArtifact(projectId: string): Promise<v
   });
 }
 
+// ─────────────────────────────────────────────
+// Proposal Engine – Shared Costing Templates
+// ─────────────────────────────────────────────
+
+export interface CostingTemplateDto {
+  id: string;
+  name: string;
+  description?: string | null;
+  items: any[];
+  savedAt: string;
+  createdById: string;
+  createdByName?: string | null;
+}
+
+export async function fetchCostingTemplates(): Promise<CostingTemplateDto[]> {
+  return apiFetch<CostingTemplateDto[]>('/api/proposal-engine/costing-templates');
+}
+
+export async function createCostingTemplate(payload: {
+  name: string;
+  description?: string;
+  items: any[];
+}): Promise<CostingTemplateDto> {
+  return apiFetch<CostingTemplateDto>('/api/proposal-engine/costing-templates', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteCostingTemplate(id: string): Promise<void> {
+  await apiFetch(`/api/proposal-engine/costing-templates/${id}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function syncProjectProposal(
   projectId: string,
   artifact: ProposalArtifact,

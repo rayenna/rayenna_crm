@@ -12,7 +12,14 @@ import {
 import type {
   Category, LineItem, SavedSheet, StoredBom, RoiAutofill,
 } from '../lib/costingConstants';
-import { syncProjectCosting, canEditProposalArtifacts, getCurrentUserRole } from '../lib/apiClient';
+import {
+  syncProjectCosting,
+  canEditProposalArtifacts,
+  getCurrentUserRole,
+  fetchCostingTemplates,
+  createCostingTemplate,
+  deleteCostingTemplate,
+} from '../lib/apiClient';
 
 // ─────────────────────────────────────────────
 // Export helpers (Costing Sheet)
@@ -138,12 +145,6 @@ const EMPTY_ROW: LineItem = {
   unitCost:      '',
   gstPercent:    String(CATEGORY_GST['pv-modules']),
 };
-
-// ─────────────────────────────────────────────
-// Template system — persisted in localStorage
-// ─────────────────────────────────────────────
-
-const STORAGE_KEY = 'rayenna_costing_templates_v1';
 
 interface CostingTemplate {
   id: string;
@@ -540,18 +541,9 @@ const BUILT_IN_TEMPLATES: CostingTemplate[] = [
 ];
 
 function loadTemplates(): CostingTemplate[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const saved: CostingTemplate[] = raw ? JSON.parse(raw) : [];
-    return [...BUILT_IN_TEMPLATES, ...saved];
-  } catch {
-    return [...BUILT_IN_TEMPLATES];
-  }
-}
-
-function saveTemplates(templates: CostingTemplate[]) {
-  const userTemplates = templates.filter((t) => !t.isBuiltIn);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(userTemplates));
+  // Initial in-memory templates: built-ins only.
+  // User-saved templates are loaded from the backend via fetchCostingTemplates.
+  return [...BUILT_IN_TEMPLATES];
 }
 
 function templateTotal(items: LineItem[]): number {
@@ -1993,25 +1985,81 @@ export default function CostingSheet() {
   const role = getCurrentUserRole();
   const canDeleteTemplates = role != null && String(role).toUpperCase() === 'ADMIN';
 
+  // Load shared templates from backend (Sales/Admin) and merge with built-ins.
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const dtos = await fetchCostingTemplates();
+        if (cancelled) return;
+        const shared: CostingTemplate[] = dtos.map((t) => ({
+          id: t.id,
+          name: t.name,
+          description: t.description ?? '',
+          savedAt: t.savedAt,
+          // Mark as non-built-in so they appear under "Your Saved Templates" and can be deleted (Admin only).
+          isBuiltIn: false,
+          // Items come from backend JSON; trust shape to match LineItem.
+          items: (t.items as any[]) ?? [],
+        }));
+        setTemplates([...BUILT_IN_TEMPLATES, ...shared]);
+      } catch (err) {
+        // Non-blocking: if backend fails, fall back to built-ins only.
+        if (import.meta.env.DEV) {
+          console.error('Failed to load costing templates from backend', err);
+        }
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const showToast = useCallback((msg: string) => {
     setTemplateToast(msg);
     setTimeout(() => setTemplateToast(null), 2500);
   }, []);
 
   const handleSaveTemplate = useCallback((name: string, description: string) => {
-    const newTemplate: CostingTemplate = {
-      id:          `tpl_${Date.now()}`,
-      name,
-      description,
-      savedAt:     new Date().toISOString(),
-      items:       liveItems.filter((r) => r.itemName.trim()),
-    };
-    const updated = [...templates, newTemplate];
-    setTemplates(updated);
-    saveTemplates(updated);
-    setShowSaveModal(false);
-    showToast(`Template "${name}" saved!`);
-  }, [liveItems, templates, showToast]);
+    const itemsToSave = liveItems.filter((r) => r.itemName.trim());
+    if (itemsToSave.length === 0) {
+      showToast('Cannot save an empty template.');
+      return;
+    }
+
+    // Persist in backend so templates are shared across Sales/Admin.
+    void (async () => {
+      try {
+        const dto = await createCostingTemplate({
+          name,
+          description,
+          items: itemsToSave,
+        });
+
+        const newTemplate: CostingTemplate = {
+          id: dto.id,
+          name: dto.name,
+          description: dto.description ?? '',
+          savedAt: dto.savedAt,
+          isBuiltIn: false,
+          items: (dto.items as any[]) ?? itemsToSave,
+        };
+
+        setTemplates((current) => {
+          const builtIns = current.filter((t) => t.isBuiltIn);
+          const userSaved = current.filter((t) => !t.isBuiltIn);
+          return [...builtIns, newTemplate, ...userSaved];
+        });
+
+        setShowSaveModal(false);
+        showToast(`Template "${name}" saved!`);
+      } catch (err) {
+        console.error('Failed to save costing template', err);
+        showToast('Could not save template. Please try again.');
+      }
+    })();
+  }, [liveItems, showToast]);
 
   const handleLoadTemplate = useCallback((t: CostingTemplate, mode: 'append' | 'replace') => {
     const migrated = _migrateItems(t.items);
@@ -2030,11 +2078,18 @@ export default function CostingSheet() {
   }, [liveItems, reset, remove, append, showToast]);
 
   const handleDeleteTemplate = useCallback((id: string) => {
-    const updated = templates.filter((t) => t.id !== id);
-    setTemplates(updated);
-    saveTemplates(updated);
-    showToast('Template deleted');
-  }, [templates, showToast]);
+    // Only Admin should reach here (UI hides delete for others), but backend also enforces.
+    void (async () => {
+      try {
+        await deleteCostingTemplate(id);
+        setTemplates((current) => current.filter((t) => t.id !== id));
+        showToast('Template deleted');
+      } catch (err) {
+        console.error('Failed to delete costing template', err);
+        showToast('Could not delete template. Please try again.');
+      }
+    })();
+  }, [showToast]);
 
   // Core save logic — called either directly (active customer) or from modal (no customer)
   const handleSaveSheet = useCallback((name: string, description: string) => {
