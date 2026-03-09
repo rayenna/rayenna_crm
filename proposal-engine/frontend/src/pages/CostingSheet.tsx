@@ -12,7 +12,7 @@ import {
 import type {
   Category, LineItem, SavedSheet, StoredBom, RoiAutofill,
 } from '../lib/costingConstants';
-import { syncProjectCosting, canEditProposalArtifacts } from '../lib/apiClient';
+import { syncProjectCosting, canEditProposalArtifacts, getCurrentUserRole } from '../lib/apiClient';
 
 // ─────────────────────────────────────────────
 // Export helpers (Costing Sheet)
@@ -927,11 +927,13 @@ function TemplatesPanel({
   onLoad,
   onDelete,
   onClose,
+  canDeleteTemplates,
 }: {
   templates: CostingTemplate[];
   onLoad: (t: CostingTemplate, mode: 'append' | 'replace') => void;
   onDelete: (id: string) => void;
   onClose: () => void;
+  canDeleteTemplates: boolean;
 }) {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [loadTarget, setLoadTarget]       = useState<CostingTemplate | null>(null);
@@ -972,6 +974,7 @@ function TemplatesPanel({
                     template={t}
                     onLoad={() => setLoadTarget(t)}
                     onDelete={() => setConfirmDelete(t.id)}
+                    canDeleteTemplates={canDeleteTemplates}
                   />
                 ))}
               </div>
@@ -999,6 +1002,7 @@ function TemplatesPanel({
                   template={t}
                   onLoad={() => setLoadTarget(t)}
                   onDelete={() => {}}
+                  canDeleteTemplates={false}
                 />
               ))}
             </div>
@@ -1060,10 +1064,12 @@ function TemplateCard({
   template,
   onLoad,
   onDelete,
+  canDeleteTemplates,
 }: {
   template: CostingTemplate;
   onLoad: () => void;
   onDelete: () => void;
+  canDeleteTemplates: boolean;
 }) {
   const total    = templateTotal(template.items);
   const date     = new Date(template.savedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -1103,7 +1109,7 @@ function TemplateCard({
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
-        {!template.isBuiltIn && (
+        {!template.isBuiltIn && canDeleteTemplates && (
           <button
             onClick={onDelete}
             title="Delete template"
@@ -1984,6 +1990,8 @@ export default function CostingSheet() {
   const [allCollapsed, setAllCollapsed]         = useState(false);
 
   const canEdit = canEditProposalArtifacts();
+  const role = getCurrentUserRole();
+  const canDeleteTemplates = role != null && String(role).toUpperCase() === 'ADMIN';
 
   const showToast = useCallback((msg: string) => {
     setTemplateToast(msg);
@@ -2261,6 +2269,7 @@ export default function CostingSheet() {
           onLoad={handleLoadTemplate}
           onDelete={handleDeleteTemplate}
           onClose={() => setShowTemplates(false)}
+          canDeleteTemplates={canDeleteTemplates}
         />
       )}
 
