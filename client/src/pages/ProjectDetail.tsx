@@ -59,11 +59,17 @@ const ProjectDetail = () => {
           }
         }
 
-        const hasAnyArtifact =
-          !!artifacts.costing || !!artifacts.bom || !!artifacts.roi || !!artifacts.proposal
+        const hasCosting  = !!artifacts.costing
+        const hasBom      = !!artifacts.bom
+        const hasRoi      = !!artifacts.roi
+        const hasProposal = !!artifacts.proposal
+
+        const hasAnyArtifact = hasCosting || hasBom || hasRoi || hasProposal
+
+        const allFour = hasCosting && hasBom && hasRoi && hasProposal
 
         const peStatus: 'none' | 'draft' | 'proposal-ready' =
-          artifacts.proposal
+          allFour
             ? 'proposal-ready'
             : hasAnyArtifact
             ? 'draft'

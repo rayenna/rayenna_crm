@@ -110,21 +110,57 @@ router.get('/projects', authenticate, async (req: Request, res: Response) => {
     });
 
     const projectIds = selections.map((s) => s.projectId);
-    const proposals = projectIds.length
-      ? await prisma.pEProposal.findMany({
-          where: { projectId: { in: projectIds } },
-          select: { projectId: true },
-        })
-      : [];
+
+    // Determine artifact completion per project so CRM/PE both agree:
+    // - "proposal-ready" only when all four artifacts (costing, BOM, ROI, proposal) exist.
+    // - "draft" when at least one artifact exists but the set is incomplete.
+    const [costings, boms, rois, proposals] = projectIds.length
+      ? await Promise.all([
+          prisma.pECostingSheet.findMany({
+            where: { projectId: { in: projectIds } },
+            select: { projectId: true },
+          }),
+          prisma.pEBomSheet.findMany({
+            where: { projectId: { in: projectIds } },
+            select: { projectId: true },
+          }),
+          prisma.pERoiResult.findMany({
+            where: { projectId: { in: projectIds } },
+            select: { projectId: true },
+          }),
+          prisma.pEProposal.findMany({
+            where: { projectId: { in: projectIds } },
+            select: { projectId: true },
+          }),
+        ])
+      : [[], [], [], []];
+
+    const hasCosting  = new Set(costings.map((p) => p.projectId));
+    const hasBom      = new Set(boms.map((p) => p.projectId));
+    const hasRoi      = new Set(rois.map((p) => p.projectId));
     const hasProposal = new Set(proposals.map((p) => p.projectId));
 
     let payload = selections
-      .map((s) => ({
-        ...s.project,
-        peStatus: hasProposal.has(s.projectId) ? 'proposal-ready' : 'draft',
-        peSelectedAt: s.selectedAt,
-        peSelectedById: s.selectedById,
-      }))
+      .map((s) => {
+        const hasAny =
+          hasCosting.has(s.projectId) ||
+          hasBom.has(s.projectId) ||
+          hasRoi.has(s.projectId) ||
+          hasProposal.has(s.projectId);
+
+        const allFour =
+          hasCosting.has(s.projectId) &&
+          hasBom.has(s.projectId) &&
+          hasRoi.has(s.projectId) &&
+          hasProposal.has(s.projectId);
+
+        return {
+          ...s.project,
+          peStatus: allFour ? 'proposal-ready' : hasAny ? 'draft' : 'draft',
+          peSelectedAt: s.selectedAt,
+          peSelectedById: s.selectedById,
+        };
+      })
       // Only show Draft or Proposal Ready (per spec)
       .filter((p) => p.peStatus === 'draft' || p.peStatus === 'proposal-ready');
 
