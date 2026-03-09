@@ -276,8 +276,8 @@ const ProjectDetail = () => {
             )}
           </div>
         </div>
-        <div className="flex flex-wrap gap-2 mt-6 pt-4 border-t border-gray-100">
-          {/* Open in Proposal Engine – flagship integration CTA */}
+        {/* Action buttons: 2x2 grid on mobile (half width each), row on desktop */}
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-2 mt-4 sm:mt-6 pt-4 border-t border-gray-100">
           {(hasRole([UserRole.SALES]) || hasRole([UserRole.OPERATIONS]) || hasRole([UserRole.MANAGEMENT]) || hasRole([UserRole.FINANCE]) || hasRole([UserRole.ADMIN])) &&
             (project.projectStatus === ProjectStatus.PROPOSAL || project.projectStatus === ProjectStatus.CONFIRMED) && (
               <button
@@ -302,32 +302,21 @@ const ProjectDetail = () => {
                     const msg = getFriendlyApiErrorMessage(err) || 'Could not open Proposal Engine. Please try again or log in from Proposal Engine.';
                     toast.error(msg);
                     const url = `${normalizedBase}/customers?openProjectId=${encodeURIComponent(id ?? '')}`;
-                    window.open(url, '_blank', 'noopener,noreferrer');
+                      window.open(url, '_blank', 'noopener,noreferrer');
                   }
                 }}
-                className="group relative overflow-hidden px-4 py-2 rounded-lg shadow-md hover:shadow-lg bg-gradient-to-r from-primary-700 via-primary-600 to-amber-400 text-white border border-primary-800/70 flex items-center gap-3 text-sm font-semibold"
+                className="inline-flex items-center justify-center h-9 sm:h-10 min-w-0 sm:w-40 px-2 sm:px-4 py-2 rounded-lg shadow-sm hover:shadow bg-gradient-to-r from-primary-700 via-primary-600 to-amber-400 text-white border border-primary-800/70 text-xs sm:text-sm font-semibold transition-all"
               >
-                {/* Glow accent */}
-                <span className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-amber-300/60 to-transparent opacity-80 group-hover:opacity-100 transition-opacity" />
-                <div className="relative flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 border border-white/40 shadow-sm">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6h8m0 0v8m0-8L9 15" />
-                    </svg>
-                  </div>
-                  <span className="inline-flex items-center gap-2">
-                    Open in Proposal Engine
-                    <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-300 text-primary-900 shadow-sm">
-                      New
-                    </span>
-                  </span>
-                </div>
+                <span className="inline-flex items-center gap-1 sm:gap-1.5 truncate">
+                  <span className="truncate">Proposals</span>
+                  <span className="shrink-0 text-[9px] sm:text-[10px] font-bold uppercase tracking-wide px-1 sm:px-1.5 py-0.5 rounded bg-amber-300 text-primary-900">New</span>
+                </span>
               </button>
           )}
           {canEdit && (
             <Link
               to={`/projects/${id}/edit`}
-              className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-3 py-2 sm:px-4 rounded-lg hover:from-primary-700 hover:to-primary-800 font-medium shadow-md transition-all text-sm sm:text-base text-center"
+              className="inline-flex items-center justify-center h-9 sm:h-10 min-w-0 sm:w-40 px-2 sm:px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 font-medium shadow-sm hover:shadow text-xs sm:text-sm transition-all"
             >
               Edit
             </Link>
@@ -335,18 +324,18 @@ const ProjectDetail = () => {
           {canDelete && (
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="bg-red-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:bg-red-700 font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base"
+              className="inline-flex items-center justify-center h-9 sm:h-10 min-w-0 sm:w-40 px-2 sm:px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 font-medium shadow-sm hover:shadow text-xs sm:text-sm transition-all gap-1 sm:gap-1.5"
             >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
               <span className="hidden sm:inline">Delete Project</span>
-              <span className="sm:hidden">Delete</span>
+              <span className="sm:hidden truncate">Delete</span>
             </button>
           )}
           <Link
             to="/projects"
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center justify-center h-9 sm:h-10 min-w-0 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-all sm:ml-auto sm:w-40"
           >
             Back
           </Link>

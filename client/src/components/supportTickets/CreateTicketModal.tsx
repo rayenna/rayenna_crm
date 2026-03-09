@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useMutation } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import toast from 'react-hot-toast'
@@ -12,6 +13,15 @@ interface CreateTicketModalProps {
 const CreateTicketModal = ({ projectId, onClose, onSuccess }: CreateTicketModalProps) => {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+
+  // Render in viewport: portal to body so modal is always centered on screen (laptop/desktop), not at top of page
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
 
   const createMutation = useMutation({
     mutationFn: async (data: { projectId: string; title: string; description?: string }) => {
@@ -44,12 +54,17 @@ const CreateTicketModal = ({ projectId, onClose, onSuccess }: CreateTicketModalP
   const labelCls = 'block text-sm text-gray-500 mb-1.5'
   const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all'
 
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+  const modalContent = (
+    <div
+      className="fixed inset-0 bg-black/40 flex items-center justify-center z-[9999] p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-ticket-title"
+    >
+      <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto my-auto">
         {/* Header – same style as New Customer modal */}
         <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-start gap-4 z-10">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
+          <h2 id="create-ticket-title" className="text-base sm:text-lg font-semibold text-gray-900 truncate">
             Create Support Ticket
           </h2>
           <button
@@ -121,6 +136,8 @@ const CreateTicketModal = ({ projectId, onClose, onSuccess }: CreateTicketModalP
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
 }
 
 export default CreateTicketModal
