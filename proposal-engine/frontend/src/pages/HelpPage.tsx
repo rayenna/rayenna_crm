@@ -815,7 +815,7 @@ export default function HelpPage() {
           </FaqItem>
 
           <FaqItem q="Will my data be lost if I close the browser?">
-            No — all data is saved in your browser's local storage and persists across sessions. However, data is specific to the browser and device you are using. Always export important proposals to PDF or DOCX as a backup.
+            No — once you click <strong>Save</strong> on Costing, BOM, ROI, or Proposal, your data is stored in the Rayenna CRM backend and is available when you log in again (even from another device). Unsaved changes and some local work-in-progress are kept in your browser only, so always save your work and export important proposals to PDF or DOCX as a backup.
           </FaqItem>
 
         </div>
