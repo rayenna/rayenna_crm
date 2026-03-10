@@ -98,7 +98,7 @@ Use the search bar available in most modules to search across relevant fields (e
 Administrators use the **Users** page (top menu) to create users (email, name, password, role), view all users, **Reset Password** (generates a 24-hour link to share with the user), and delete users. Only Admin can access this page.
 
 ### What is the Audit & Security page?
-**Audit & Security** (Admin only) shows login and audit activity: summary tiles (e.g. failed logins, successful logins), Security insights charts, recent failed logins, and an Activity timeline of audit logs. You can export logs as CSV, PDF, or signed PDF for compliance.
+**Audit & Security** (Admin only) shows login and audit activity: summary tiles (e.g. failed logins, successful logins), Security insights charts, recent failed logins, and an Activity timeline of audit logs (including key actions such as project changes, support ticket events, and proposal generation). You can export logs as CSV, PDF, or signed PDF for compliance.
 
 ### How do I export audit logs? (Admin)
 Go to **Audit & Security**, set the date range and filters in the **Activity timeline** section, then use **Export CSV**, **Export PDF**, or **Signed audit export**. The signed PDF includes a footer with date and exporter email for official use.
@@ -131,3 +131,34 @@ Go to **Audit & Security**, set the date range and filters in the **Activity tim
 - Check the Dashboard filters (FY, Quarter, Month); tile counts and charts use these
 - If you have one FY selected, try clearing filters to see all data, or ensure the correct period is selected
 - Refresh the page to load the latest data from the server
+
+## Proposal Engine & Proposals
+
+### What is the Proposal Engine?
+The Proposal Engine is a companion app that helps you create consistent, auditable proposals for CRM projects. It includes Costing Sheet, BOM Sheet, ROI Calculator, and Proposal, and is tightly integrated with the **Projects** module and **Audit & Security**.
+
+### How do I open the Proposal Engine for a project?
+From the **Project Detail** page in Rayenna CRM (for projects in **Proposal** or **Confirmed** stages), click **Proposals (New)**. This opens the Proposal Engine for that project using your existing login (single sign-on).
+
+### Who can use the Proposal Engine?
+Sales and Admin can work on Costing, BOM, ROI, and Proposal for eligible projects. Operations, Management, and Finance can open Proposal Engine from **Proposals (New)** to review artifacts in read-only mode.
+
+### When does a project show as Proposal Ready?
+A project is marked **Proposal Ready** only when **all four** artifacts are created and saved in Proposal Engine:
+- Costing Sheet
+- BOM Sheet
+- ROI
+- Proposal  
+If any of the four is missing, the project remains in **Draft** status for proposals in both Proposal Engine and the CRM Projects screens.
+
+### Why does my project still show Draft even though I see a proposal?
+You may have saved only some of the artifacts (for example, Proposal but not Costing/BOM/ROI). All four artifacts must be saved in Proposal Engine before the project is considered **Proposal Ready** in CRM.
+
+### How are Costing templates shared?
+When you click **Save as Template** on the Costing Sheet in Proposal Engine, the template is stored in the backend and becomes available to **all Sales and Admin users**. Templates are shared across devices and remain available after you log out and log back in.
+
+### Who can delete Costing templates in Proposal Engine?
+Only **Admin** can delete shared Costing templates. Sales users can create and use templates but cannot delete them. This keeps standard templates consistent while still making them easy to reuse.
+
+### Does clicking “Proposals (New)” affect audit logs?
+Yes. When you click **Proposals (New)** from Project Detail, the system logs a **Proposal generated** action for that project in **Audit & Security** under the **Proposal** entity. This helps track who opened the Proposal Engine for each project and when.

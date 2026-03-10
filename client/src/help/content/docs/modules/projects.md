@@ -393,6 +393,27 @@ Any stage → Lost (if project doesn't proceed)
 - Can delete Lost projects
 - Full access to all status changes
 
+### Proposal Engine Integration
+
+**Opening Proposal Engine**:
+- From **Project Detail**, use the **Proposals (New)** button (visible in Proposal and Confirmed stages) to open the Proposal Engine for that project.
+- This uses your CRM login (single sign-on) and logs a **Proposal generated** action in **Audit & Security**.
+
+**Artifacts in Proposal Engine**:
+- **Costing Sheet** – detailed cost breakdown, GST, and margins.
+- **BOM Sheet** – auto-generated Bill of Materials based on Costing.
+- **ROI Calculator** – financial returns and payback.
+- **Proposal** – customer-facing proposal content.
+
+**Proposal Ready rule**:
+- A project is marked **Proposal Ready** only when **all four artifacts** (Costing, BOM, ROI, and Proposal) are created and saved in Proposal Engine.
+- If any of the four is missing, the project remains in **Draft** status for proposals in both Proposal Engine and CRM (Projects list and Project Detail).
+
+**Costing templates (shared)**:
+- Sales and Admin can save frequently used Costing configurations as **templates** in Proposal Engine.
+- Templates are stored in the backend and are shared across all Sales and Admin users.
+- Only **Admin** can delete shared Costing templates; Sales can save and use them but not remove them.
+
 ### Status Best Practices
 
 **Regular Updates**:

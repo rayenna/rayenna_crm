@@ -65,6 +65,12 @@ export const TIPS: string[] = [
   'Year-on-Year tile on Management dashboard compares capacity, pipeline, revenue, and profit to the same period last year.',
   'Management role is read-only: you can view all dashboards, projects, and reports but cannot edit records.',
   'Use Revenue by Sales Team and Pipeline by Customer Segment on the Management dashboard to spot trends and gaps.',
+  // Proposal Engine
+  'Use the Proposals (New) button on Project Detail to open Proposal Engine with your CRM login and link proposals to that project.',
+  'A project is marked Proposal Ready only when all four artifacts are saved in Proposal Engine: Costing Sheet, BOM, ROI, and Proposal.',
+  'Save frequently used Costing configurations as templates in Proposal Engine – they are shared across all Sales and Admin users.',
+  'Only Admin can delete shared Costing templates in Proposal Engine; Sales can save and use them but not remove them.',
+  'Operations, Management, and Finance can open Proposal Engine from Proposals (New) to review Costing, BOM, ROI, and Proposal in read-only mode.',
 ]
 
 /**
