@@ -212,6 +212,15 @@ export interface CustomerMaster {
 
   /** Panel type from the CRM Project, e.g. DCR, Non-DCR, Mono PERC. */
   panelType?:       string;
+
+  /** Latitude for site (e.g. for AI Roof Layout or maps). Filled from CRM customer when available. */
+  latitude?:        number;
+
+  /** Longitude for site. Filled from CRM customer when available. */
+  longitude?:      number;
+
+  /** Panel wattage in W (e.g. for AI Roof Layout). Filled from CRM project when available. */
+  panelWattage?:   number;
 }
 
 /**

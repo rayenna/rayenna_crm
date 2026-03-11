@@ -5,13 +5,14 @@ import { clearToken, getCurrentUserName, getToken } from '../lib/apiClient';
 import TipOfTheDay from './TipOfTheDay';
 
 const NAV = [
-  { label: 'Customers',     to: '/customers' },
-  { label: 'Dashboard',     to: '/dashboard' },
-  { label: 'Costing Sheet', to: '/costing'   },
-  { label: 'BOM',           to: '/bom'       },
-  { label: 'ROI',           to: '/roi'       },
-  { label: 'Proposal',      to: '/proposal'  },
+  { label: 'Customers',             to: '/customers' },
+  { label: 'Dashboard',             to: '/dashboard' },
+  { label: 'Costing Sheet',         to: '/costing'   },
+  { label: 'BOM',                   to: '/bom'       },
+  { label: 'ROI',                   to: '/roi'       },
+  { label: 'Proposal',              to: '/proposal'  },
 ];
+const AI_LAYOUT_LINK = { label: 'AI Roof Layout (Beta)', to: '/ai-layout' };
 
 /* Exact gradient used by the CRM navbar */
 const NAV_GRADIENT = 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)';
@@ -157,6 +158,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Shared proposal view: read-only, no nav (link is public).
+  if (pathname.startsWith('/view/')) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50/80">
 
@@ -183,50 +189,61 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </Link>
             </div>
 
-            {/* Desktop nav (md and above) */}
-            <div className="hidden md:flex items-center gap-1.5 flex-1 justify-center flex-nowrap">
-              {NAV.map((n) => (
-                <Link
-                  key={n.to}
-                  to={n.to}
-                  className={`inline-flex items-center px-2.5 py-1.5 rounded-lg text-[11px] lg:text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
-                    pathname === n.to ? ACTIVE_LINK : IDLE_LINK
-                  }`}
-                >
-                  {n.label}
-                </Link>
-              ))}
+            {/* Desktop nav (md and above). Only NAV links scroll; Help dropdown stays visible (no overflow clip). */}
+            <div className="hidden md:flex items-center flex-1 justify-center min-w-0">
+              <div className="flex items-center gap-1.5 flex-nowrap overflow-x-auto">
+                {NAV.map((n) => (
+                  <Link
+                    key={n.to}
+                    to={n.to}
+                    className={`inline-flex items-center px-2.5 py-1.5 rounded-lg text-[11px] lg:text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
+                      pathname === n.to ? ACTIVE_LINK : IDLE_LINK
+                    }`}
+                  >
+                    {n.label}
+                  </Link>
+                ))}
+              </div>
 
-              {/* Help dropdown */}
-              <div ref={helpRef} className="relative">
+              {/* Help dropdown — outside scroll container so panel is not clipped */}
+              <div ref={helpRef} className="relative flex-shrink-0 ml-1.5">
                 <button
+                  type="button"
                   onClick={() => setHelpOpen((o) => !o)}
+                  aria-expanded={helpOpen}
+                  aria-haspopup="true"
                   className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] lg:text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
                     pathname === '/help' || pathname === '/about' ? ACTIVE_LINK : IDLE_LINK
                   }`}
                 >
                   <span>? Help</span>
-                  <span className={`text-[10px] transition-transform duration-150 ${helpOpen ? 'rotate-180' : ''}`}>▾</span>
+                  <span className={`text-[10px] transition-transform duration-150 ${helpOpen ? 'rotate-180' : ''}`} aria-hidden>▾</span>
                 </button>
                 {helpOpen && (
-                  <div className="absolute top-full left-0 mt-1.5 w-44 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-30">
+                  <div className="absolute top-full left-0 mt-1.5 w-44 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50" role="menu">
                     <Link
                       to="/help"
+                      role="menuitem"
                       className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                      onClick={() => setHelpOpen(false)}
                     >
                       <span>📘</span>
                       <span className="font-medium">User Guide</span>
                     </Link>
                     <button
+                      type="button"
+                      role="menuitem"
                       onClick={() => { setHelpOpen(false); navigate(`${pathname}?showTip=1`); }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors border-t border-gray-100"
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors border-t border-gray-100 text-left"
                     >
                       <span>💡</span>
                       <span className="font-medium">Tip of the Day</span>
                     </button>
                     <Link
                       to="/about"
+                      role="menuitem"
                       className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors border-t border-gray-100"
+                      onClick={() => setHelpOpen(false)}
                     >
                       <span>ℹ️</span>
                       <span className="font-medium">About</span>
@@ -234,6 +251,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </div>
                 )}
               </div>
+
+              {/* AI Roof Layout — after Help (Phase 2 later) */}
+              <Link
+                to={AI_LAYOUT_LINK.to}
+                className={`flex-shrink-0 ml-1.5 inline-flex items-center px-2.5 py-1.5 rounded-lg text-[11px] lg:text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
+                  pathname === AI_LAYOUT_LINK.to ? ACTIVE_LINK : IDLE_LINK
+                }`}
+              >
+                {AI_LAYOUT_LINK.label}
+              </Link>
             </div>
 
             <div className="flex items-center gap-2">
@@ -328,7 +355,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 ))}
               </div>
 
-              {/* Help group — 3-column grid in landscape */}
+              {/* Help group — 3-column grid in landscape; AI Roof Layout after */}
               <div className="mt-1 pt-1 border-t border-white/20">
                 <div className="grid grid-cols-1 landscape:grid-cols-3 gap-1">
                   <Link
@@ -361,6 +388,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     <span>About</span>
                   </Link>
                 </div>
+                <Link
+                  to={AI_LAYOUT_LINK.to}
+                  className={`mt-1 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                    pathname === AI_LAYOUT_LINK.to
+                      ? 'bg-white/30 text-white border border-white/40'
+                      : 'text-white/90 hover:bg-white/20 hover:text-white'
+                  }`}
+                >
+                  {AI_LAYOUT_LINK.label}
+                </Link>
 
                 {/* Mobile user name (match CRM: visible in hamburger menu) */}
                 {hasToken && userName && (

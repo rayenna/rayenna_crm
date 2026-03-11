@@ -275,6 +275,53 @@ export async function loginWithEmailPassword(email: string, password: string): P
   }
 }
 
+// ───────────────────────────────────────────────────────────────────────────────
+// AI Roof Segmentation & Layout
+// ───────────────────────────────────────────────────────────────────────────────
+
+export interface AiRoofLayoutResponse {
+  roof_area_m2: number;
+  usable_area_m2: number;
+  panel_count: number;
+  layout_image_url: string;
+}
+
+export async function generateAiRoofLayout(params: {
+  projectId: string;
+  latitude: number;
+  longitude: number;
+  systemSizeKw: number;
+  panelWattage: number;
+}): Promise<AiRoofLayoutResponse> {
+  return apiFetch<AiRoofLayoutResponse>('/api/roof/ai-layout', {
+    method: 'POST',
+    body: JSON.stringify({
+      projectId: params.projectId,
+      latitude: params.latitude,
+      longitude: params.longitude,
+      systemSizeKw: params.systemSizeKw,
+      panelWattage: params.panelWattage,
+    }),
+  });
+}
+
+// Minimal CRM project payload needed for AI layout
+export interface CrmProjectForAiLayout {
+  id: string;
+  systemCapacity?: number | null;
+  panelCapacityW?: number | null;
+  customer: {
+    id: string;
+    latitude?: number | null;
+    longitude?: number | null;
+  };
+}
+
+export async function fetchCrmProjectForAiLayout(projectId: string): Promise<CrmProjectForAiLayout> {
+  // Reuse existing authenticated /api/projects/:id endpoint
+  return apiFetch<CrmProjectForAiLayout>(`/api/projects/${projectId}`);
+}
+
 // ─────────────────────────────────────────────
 // Proposal Engine – CRM Projects
 // ─────────────────────────────────────────────
@@ -474,6 +521,45 @@ export async function deleteCostingTemplate(id: string): Promise<void> {
   await apiFetch(`/api/proposal-engine/costing-templates/${id}`, {
     method: 'DELETE',
   });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Share proposal as link
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CreateShareResponse {
+  token: string;
+  expiresAt: string;
+}
+
+export async function createProposalShare(payload: {
+  projectId: string;
+  proposalHtml: string;
+  refNumber?: string;
+  password?: string;
+  expiresAt?: string;
+}): Promise<CreateShareResponse> {
+  return apiFetch<CreateShareResponse>('/api/proposal-engine/share', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/** Fetch shared proposal by token (public; no auth). */
+export async function getSharedProposal(
+  token: string,
+  password?: string,
+): Promise<{ html: string; refNumber?: string; expiresAt: string }> {
+  const base = API_BASE_URL || '';
+  const url = password
+    ? `${base}/api/proposal-engine/share/${encodeURIComponent(token)}?password=${encodeURIComponent(password)}`
+    : `${base}/api/proposal-engine/share/${encodeURIComponent(token)}`;
+  const res = await fetch(url, { method: 'GET', credentials: 'include' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data?.error ?? res.statusText ?? 'Failed to load shared proposal');
+  }
+  return data;
 }
 
 export async function syncProjectProposal(

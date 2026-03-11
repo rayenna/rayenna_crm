@@ -191,6 +191,9 @@ export default function HelpPage() {
             <p className="text-white/70 mt-2 text-sm leading-relaxed">
               Everything you need to create a professional solar proposal — from costing to customer delivery — in one place.
             </p>
+            <p className="text-white/60 mt-2 text-xs leading-relaxed">
+              Use the top bar to move between pages. The <strong>? Help</strong> dropdown opens User Guide, Tip of the Day, and About; <strong>AI Roof Layout (Beta)</strong> is available after Help in the nav.
+            </p>
           </div>
         </div>
       </div>
@@ -249,7 +252,7 @@ export default function HelpPage() {
           </Step>
 
           <Step n={5} title="Generate and Export the Proposal">
-            Go to <Link to="/proposal" className="text-indigo-600 underline font-medium">Proposal</Link>. Click <strong>Generate Proposal</strong> to see the full document. Use the <strong>✏️ Edit</strong> button to make any inline changes directly on the proposal text. Add notes in the Bill of Quantities section, then click the <strong>💾 Save</strong> button (top-right or at the bottom) to lock everything in. Export as <strong>PDF</strong> or <strong>DOCX</strong> to share with your customer.
+            Go to <Link to="/proposal" className="text-indigo-600 underline font-medium">Proposal</Link>. Click <strong>Generate Proposal</strong> to see the full document. Use the <strong>✏️ Edit</strong> button to make any inline changes, then click <strong>💾 Save</strong> in the header to lock everything in. In the header or footer use <strong>⬇ PDF</strong> or <strong>⬇ DOCX</strong> to export, or <strong>🔗 Share</strong> to get a shareable link (optional password and validity).
           </Step>
         </div>
 
@@ -297,7 +300,7 @@ export default function HelpPage() {
                 <span key={s.label} className={`px-2 py-1.5 rounded-full border font-semibold ${s.color}`}>{s.label}</span>
               ))}
             </div>
-            <p className="text-sm text-gray-500 mt-2">Status is set to <em>Proposal Ready</em> automatically when you click <strong>💾 Save</strong> on the Proposal page.</p>
+            <p className="text-sm text-gray-500 mt-2">Status is set to <em>Proposal Ready</em> automatically when you click <strong>💾 Save</strong> in the proposal header.</p>
           </div>
 
           <div>
@@ -604,28 +607,28 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Editing the Proposal Inline</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Click the <strong>✏️ Edit</strong> button in the top-right of the proposal header. The entire proposal document becomes editable — click on any text (executive summary, scope of work, terms, any section) and type directly. An amber border and banner appear to confirm you are in edit mode. Click <strong>✏️ Editing…</strong> again to exit edit mode without saving, or click <strong>💾 Save</strong> at the bottom to save your changes.
+              Click the <strong>✏️ Edit</strong> button in the top-right of the proposal header. The entire proposal document becomes editable — click on any text (executive summary, scope of work, terms, any section) and type directly. An amber border and banner appear to confirm you are in edit mode. Click <strong>✏️ Editing…</strong> again to exit edit mode without saving, or click <strong>💾 Save</strong> in the header to save your changes.
             </p>
           </div>
 
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Adding BOM Comments</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              In the <strong>Bill of Quantities</strong> section of the proposal, each category has a comment field. Use this to add notes like <em>"Adani DCR modules as per MNRE approved list"</em> or <em>"Deye hybrid inverter with 5-year warranty"</em>. These are saved automatically when you click <strong>💾 Save</strong> and will be included in DOCX and PDF exports.
+              In the <strong>Bill of Quantities</strong> section of the proposal, each category has a comment field. Use this to add notes like <em>"Adani DCR modules as per MNRE approved list"</em> or <em>"Deye hybrid inverter with 5-year warranty"</em>. These are saved when you click <strong>💾 Save</strong> in the header and will be included in DOCX and PDF exports.
             </p>
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-800 mb-2">Saving Everything in One Shot</h3>
+            <h3 className="font-semibold text-gray-800 mb-2">Saving the Proposal</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Click <strong>💾 Save</strong> at the bottom of the proposal page. This single button saves everything together — BOM comments, any inline edits, and all four artifacts (Costing, BOM, ROI, Proposal) to the active customer record. The customer status is automatically updated to <em>Proposal Ready</em>.
+              Click <strong>💾 Save</strong> in the proposal header. This saves BOM comments, any inline edits, and all four artifacts (Costing, BOM, ROI, Proposal) to the active customer record. The customer status is automatically updated to <em>Proposal Ready</em>. The header and footer offer <strong>⬇ PDF</strong>, <strong>⬇ DOCX</strong>, and <strong>🔗 Share</strong> only — no separate Save button in the footer.
             </p>
           </div>
 
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Exporting to PDF</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Click <strong>⬇ PDF</strong>. A new browser tab opens with the proposal formatted for A4 printing. Your browser's print dialog will appear — choose <strong>Save as PDF</strong> as the destination. Make sure <strong>Background graphics</strong> is enabled in the print options for the best result.
+              Click <strong>⬇ PDF</strong> (in the header or footer). A new browser tab opens with the proposal formatted for A4 printing. Your browser's print dialog will appear — choose <strong>Save as PDF</strong> as the destination. Make sure <strong>Background graphics</strong> is enabled in the print options for the best result.
             </p>
             <div className="mt-2">
               <Tip>In Chrome: More settings → Background graphics → ON. In Edge: More settings → Print backgrounds → ON.</Tip>
@@ -635,7 +638,14 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Exporting to DOCX (Word)</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Click <strong>⬇ DOCX</strong>. A Word document is generated and downloaded directly to your device. It includes the Rayenna logo, all proposal sections, the BOM table, and the ROI summary. You can open it in Microsoft Word or Google Docs for any final edits before sending.
+              Click <strong>⬇ DOCX</strong> (in the header or footer). A Word document is generated and downloaded directly to your device. It includes the Rayenna logo, all proposal sections, the BOM table, and the ROI summary. You can open it in Microsoft Word or Google Docs for any final edits before sending.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Share as Link</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Click <strong>🔗 Share</strong> (next to PDF and DOCX in the header or footer) to open the Share modal. Optionally set a password and a custom expiry date (default is 48 hours). Click <strong>Generate link</strong>, then copy the proposal link and send it to your customer. Anyone with the link can open a read-only view of the proposal in their browser; the Export PDF / DOCX / Share row is hidden in that view so recipients only see the proposal content.
             </p>
           </div>
         </div>
@@ -651,6 +661,7 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-3">Keyboard Shortcuts</h3>
             <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-2 divide-y divide-gray-100">
+              <KbdRow keys={['?']}             desc="Open the Help page (when not typing in an input)" />
               <KbdRow keys={['Tab']}           desc="Move to the next input field in a row" />
               <KbdRow keys={['Shift', 'Tab']}  desc="Move to the previous input field" />
               <KbdRow keys={['Enter']}         desc="Confirm a modal or dialog" />
@@ -795,7 +806,7 @@ export default function HelpPage() {
           </FaqItem>
 
           <FaqItem q="How do I edit the text in a generated proposal?">
-            Click the <strong>✏️ Edit</strong> button in the proposal header. The document turns editable (amber border appears). Click on any text and type your changes. When done, click <strong>💾 Save</strong> at the bottom — this saves your edits, BOM comments, and all artifacts together. The PDF export will capture your inline edits automatically since it renders the live document.
+            Click the <strong>✏️ Edit</strong> button in the proposal header. The document turns editable (amber border appears). Click on any text and type your changes. When done, click <strong>💾 Save</strong> in the header — this saves your edits, BOM comments, and all artifacts together. The PDF export will capture your inline edits automatically since it renders the live document.
           </FaqItem>
 
           <FaqItem q="The PDF export is showing a blank page. What should I do?">

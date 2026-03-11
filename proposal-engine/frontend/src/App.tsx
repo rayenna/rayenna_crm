@@ -7,7 +7,9 @@ import CustomerWorkspace from './pages/CustomerWorkspace';
 import CostingSheet from './pages/CostingSheet';
 import BOMSheet from './pages/BOMSheet';
 import ROICalculator from './pages/ROICalculator';
+import AIRoofLayout from './pages/AIRoofLayout';
 import ProposalPreview from './pages/ProposalPreview';
+import SharedProposalViewer from './pages/SharedProposalViewer';
 import HelpPage from './pages/HelpPage';
 import AboutPage from './pages/AboutPage';
 import NotFound from './pages/NotFound';
@@ -108,6 +110,7 @@ export default function App() {
     <Layout>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/view/:token" element={<SharedProposalViewer />} />
         <Route
           path="/"
           element={
@@ -161,6 +164,14 @@ export default function App() {
           element={
             <RequireAuth>
               <ROICalculator />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/ai-layout"
+          element={
+            <RequireAuth>
+              <AIRoofLayout />
             </RequireAuth>
           }
         />

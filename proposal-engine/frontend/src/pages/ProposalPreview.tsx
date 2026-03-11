@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { CATEGORIES } from '../lib/costingConstants';
 import type { SavedSheet, StoredBom, BomRowGenerated, RoiAutofill, Category } from '../lib/costingConstants';
 import {
@@ -13,7 +13,7 @@ import {
   getWipKeysForCurrentUser,
   formatEmailForDisplay,
 } from '../lib/customerStore';
-import { getCurrentUserRole, syncProjectProposal, syncProjectCosting, syncProjectBom, syncProjectRoi } from '../lib/apiClient';
+import { getCurrentUserRole, syncProjectProposal, syncProjectCosting, syncProjectBom, syncProjectRoi, createProposalShare } from '../lib/apiClient';
 import type { CostingArtifact, BomArtifact, RoiArtifact, ProposalArtifact } from '../lib/customerStore';
 
 // ─────────────────────────────────────────────
@@ -2743,7 +2743,6 @@ function CustomerForm({ onGenerate }: { onGenerate: (c: CustomerDetails) => void
 
 // localStorage key for persisting the edited proposal HTML between sessions
 export default function ProposalPreview() {
-  const navigate = useNavigate();
   const [proposal, setProposal]               = useState<ProposalData | null>(null);
   const [exporting, setExporting]             = useState<'pdf' | 'docx' | null>(null);
   const [savedToCustomer, setSavedToCustomer] = useState<string | null>(null);
@@ -2753,6 +2752,16 @@ export default function ProposalPreview() {
   const printRef                              = useRef<HTMLDivElement>(null);
   // Ref to the contentEditable document body div so we can read its innerHTML on save
   const docBodyRef                            = useRef<HTMLDivElement>(null);
+
+  const [shareModalOpen, setShareModalOpen]         = useState(false);
+  const [shareLink, setShareLink]                   = useState<string | null>(null);
+  const [shareCreating, setShareCreating]           = useState(false);
+  const [shareError, setShareError]                = useState<string | null>(null);
+  const [shareUsePassword, setShareUsePassword]     = useState(false);
+  const [sharePassword, setSharePassword]          = useState('');
+  const [shareUseCustomValidity, setShareUseCustomValidity] = useState(false);
+  const [shareExpiryDate, setShareExpiryDate]      = useState('');
+  const [shareLinkCopied, setShareLinkCopied]      = useState(false);
 
   const role = getCurrentUserRole();
   const canWrite = role != null && ['ADMIN', 'SALES'].includes(String(role).toUpperCase());
@@ -2863,15 +2872,6 @@ export default function ProposalPreview() {
     setIsEditing(false);
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 3000);
-  };
-
-  const handleSaveAndClose = () => {
-    if (!proposal) return;
-    handleSave();
-    // Give a small delay so the saved banner can flash, then go back to Dashboard
-    setTimeout(() => {
-      navigate('/');
-    }, 300);
   };
 
   const handleGenerate = (customer: CustomerDetails) => {
@@ -3017,6 +3017,61 @@ export default function ProposalPreview() {
     }
   };
 
+  const handleOpenShareModal = () => {
+    setShareModalOpen(true);
+    setShareLink(null);
+    setShareError(null);
+    setShareLinkCopied(false);
+    setShareUsePassword(false);
+    setSharePassword('');
+    setShareUseCustomValidity(false);
+    setShareExpiryDate('');
+  };
+
+  const handleCreateShare = async () => {
+    const activeCustomer = getActiveCustomer();
+    const projectId = activeCustomer?.master?.crmProjectId;
+    if (!projectId) {
+      setShareError('Link this proposal to a CRM project first (open from Customers).');
+      return;
+    }
+    const proposalHtml = printRef.current?.innerHTML ?? '';
+    if (!proposalHtml.trim()) {
+      setShareError('No proposal content to share.');
+      return;
+    }
+    setShareCreating(true);
+    setShareError(null);
+    try {
+      let expiresAt: string | undefined;
+      if (shareUseCustomValidity && shareExpiryDate) {
+        const d = new Date(shareExpiryDate);
+        if (!Number.isNaN(d.getTime())) expiresAt = d.toISOString();
+      }
+      const data = await createProposalShare({
+        projectId,
+        proposalHtml,
+        refNumber: proposal?.refNumber,
+        password: shareUsePassword && sharePassword.trim() ? sharePassword.trim() : undefined,
+        expiresAt,
+      });
+      const url = `${window.location.origin}/view/${data.token}`;
+      setShareLink(url);
+    } catch (err: unknown) {
+      setShareError(err instanceof Error ? err.message : 'Failed to create share link');
+    } finally {
+      setShareCreating(false);
+    }
+  };
+
+  const handleCopyShareLink = () => {
+    if (!shareLink) return;
+    navigator.clipboard.writeText(shareLink).then(() => {
+      setShareLinkCopied(true);
+      setTimeout(() => setShareLinkCopied(false), 2000);
+    }).catch(() => {});
+  };
+
   return (
     <div>
       <div className="print-hide bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm">
@@ -3069,6 +3124,13 @@ export default function ProposalPreview() {
                       ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       : '⬇'}
                     DOCX
+                  </button>
+                  <button
+                    onClick={handleOpenShareModal}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 border border-white/40 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all min-h-[36px]"
+                    title="Share as link"
+                  >
+                    🔗 Share
                   </button>
                 </div>
                 <button
@@ -3312,40 +3374,17 @@ export default function ProposalPreview() {
                           : '⬇'}
                         Export DOCX
                       </button>
+                      <button
+                        onClick={handleOpenShareModal}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-xs font-semibold text-white px-4 py-2.5 rounded-xl shadow transition-all min-h-[44px] sm:min-h-0"
+                        style={{ background: '#374151' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = '#1f2937')}
+                        onMouseLeave={e => (e.currentTarget.style.background = '#374151')}
+                        title="Share as link"
+                      >
+                        🔗 Share
+                      </button>
                     </div>
-
-                    {/* Divider */}
-                    <span className="hidden sm:block w-px h-6 bg-gray-200" />
-
-                    {/* Primary Save + Save & Close buttons (Admin/Sales only) */}
-                    {canWrite && (
-                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
-                        <button
-                          onClick={handleSave}
-                          disabled={saveStatus === 'saving' || !!exporting}
-                          className="flex-1 sm:flex-none flex items-center justify-center gap-2 text-sm font-bold text-white px-6 py-2.5 rounded-xl shadow-lg transition-all disabled:opacity-60 min-h-[44px] sm:min-h-0"
-                          style={{ background: saveStatus === 'saved' ? '#16a34a' : '#0d1b3a' }}
-                          onMouseEnter={e => { if (saveStatus !== 'saved') e.currentTarget.style.background = '#0a1530'; }}
-                          onMouseLeave={e => { if (saveStatus !== 'saved') e.currentTarget.style.background = '#0d1b3a'; }}
-                        >
-                          {saveStatus === 'saving' && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                          {saveStatus === 'saved'  && '✓'}
-                          {saveStatus === 'idle'   && '💾'}
-                          {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved!' : 'Save'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleSaveAndClose}
-                          disabled={saveStatus === 'saving' || !!exporting}
-                          className="flex-1 sm:flex-none flex items-center justify-center gap-2 text-xs font-semibold text-white px-4 py-2.5 rounded-xl shadow transition-all disabled:opacity-60 min-h-[44px] sm:min-h-0"
-                          style={{ background: '#374151' }}
-                          onMouseEnter={e => (e.currentTarget.style.background = '#1f2937')}
-                          onMouseLeave={e => (e.currentTarget.style.background = '#374151')}
-                        >
-                          💾 Save &amp; Close
-                        </button>
-                      </div>
-                    )}
 
                   </div>
                 </div>
@@ -3354,6 +3393,79 @@ export default function ProposalPreview() {
           )}
         </div>
       </div>
+
+      {/* Share as Link modal — look and feel aligned with Activity Time-out modal */}
+      {shareModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50" onClick={() => setShareModalOpen(false)}>
+          <div className="rounded-xl bg-slate-900 text-white shadow-2xl border border-slate-700 max-w-md w-full px-4 py-4 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Share proposal as link</h2>
+              <button type="button" onClick={() => setShareModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">✕</button>
+            </div>
+            {shareLink ? (
+              <>
+                <p className="text-xs font-medium text-slate-300 uppercase tracking-wide">Proposal link</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={shareLink}
+                    className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCopyShareLink}
+                    className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${shareLinkCopied ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-slate-700 text-white hover:bg-slate-600 border border-slate-600'}`}
+                  >
+                    {shareLinkCopied ? '✓ Copied' : 'Copy link'}
+                  </button>
+                </div>
+                <p className="text-xs text-slate-200">Anyone with this link can view the proposal (read-only) until it expires.</p>
+              </>
+            ) : (
+              <>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={shareUsePassword} onChange={e => setShareUsePassword(e.target.checked)} className="rounded" />
+                  <span className="text-sm font-medium text-slate-200">Password</span>
+                </label>
+                {shareUsePassword && (
+                  <input
+                    type="password"
+                    value={sharePassword}
+                    onChange={e => setSharePassword(e.target.value)}
+                    placeholder="Set a password for this link"
+                    className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-400"
+                  />
+                )}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={shareUseCustomValidity} onChange={e => setShareUseCustomValidity(e.target.checked)} className="rounded" />
+                  <span className="text-sm font-medium text-slate-200">Custom validity</span>
+                </label>
+                {shareUseCustomValidity ? (
+                  <input
+                    type="date"
+                    value={shareExpiryDate}
+                    onChange={e => setShareExpiryDate(e.target.value)}
+                    min={new Date().toISOString().slice(0, 10)}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white"
+                  />
+                ) : (
+                  <p className="text-xs text-slate-300">Standard 48 hour expiry</p>
+                )}
+                {shareError && <p className="text-sm text-amber-300">{shareError}</p>}
+                <button
+                  type="button"
+                  onClick={handleCreateShare}
+                  disabled={shareCreating}
+                  className="w-full py-2.5 rounded-lg text-sm font-semibold bg-amber-400 text-slate-900 hover:bg-amber-300 border border-amber-300 disabled:opacity-60 transition-colors"
+                >
+                  {shareCreating ? 'Generating…' : 'Generate link'}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
