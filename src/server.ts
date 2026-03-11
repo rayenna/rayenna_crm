@@ -196,7 +196,8 @@ const server = app.listen(PORT, async () => {
     const remarksRoutes = (await import('./routes/remarks')).default;
     const adminAuditRoutes = (await import('./routes/adminAudit')).default;
     const proposalEngineRoutes = (await import('./routes/proposalEngine')).default;
-    const roofLayoutRoutes = (await import('./routes/roofLayout')).default;
+    const roofLayoutRoutes     = (await import('./routes/roofLayout')).default;
+    const pdfRoutes            = (await import('./routes/pdf')).default;
 
     apiRouter.use('/auth', authRoutes);
     apiRouter.use('/projects', projectRoutes);
@@ -220,6 +221,7 @@ const server = app.listen(PORT, async () => {
     apiRouter.use('/admin/audit', adminAuditRoutes);
     apiRouter.use('/proposal-engine', proposalEngineRoutes);
     apiRouter.use('/roof', roofLayoutRoutes);
+    apiRouter.use('/', pdfRoutes);
 
     routesLoaded = true;
     console.log('API routes ready');
