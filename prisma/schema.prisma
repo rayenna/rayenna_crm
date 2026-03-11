@@ -702,3 +702,19 @@ model PESelectedProject {
   @@index([selectedById])
   @@map("pe_selected_projects")
 }
+
+// Shareable proposal link (read-only view via /view/:token). No auth required to view; optional password, expiry.
+model PESharedProposal {
+  id           String    @id @default(cuid())
+  token        String    @unique
+  projectId    String
+  proposalHtml String    @db.Text
+  refNumber    String?
+  passwordHash String?
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+
+  @@index([token])
+  @@index([expiresAt])
+  @@map("pe_shared_proposals")
+}

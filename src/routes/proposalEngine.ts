@@ -2,9 +2,11 @@ import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { ProjectStatus, UserRole } from '@prisma/client';
 import * as Sentry from '@sentry/node';
+import bcrypt from 'bcryptjs';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
 import { logSecurityAudit } from '../utils/auditLogger';
+import crypto from 'crypto';
 
 const router = express.Router();
 
@@ -937,6 +939,131 @@ router.delete('/projects/:id', authenticate, async (req: Request, res: Response)
     res.status(200).json({ message: 'Project removed from Proposal Engine selection' });
   } catch (error: any) {
     reportPeError(error, 'Error removing project from Proposal Engine');
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Share proposal as link (read-only view). Create = auth; Get by token = public.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const DEFAULT_SHARE_EXPIRY_HOURS = 48;
+
+/** Create a shareable link. Optional password and custom expiry; default 48h. */
+router.post('/share', authenticate, async (req: Request, res: Response) => {
+  try {
+    const role = req.user?.role;
+    const userId = req.user?.id;
+    if (!role || (!ROLES_CAN_VIEW_ALL_PROPOSALS.includes(role) && role !== UserRole.SALES)) {
+      return res.status(403).json({ error: 'Access denied. Only Sales (own projects) and Ops/Management/Finance/Admin can share proposals.' });
+    }
+
+    const { projectId, proposalHtml, refNumber, password, expiresAt: expiresAtInput } = req.body as {
+      projectId?: string;
+      proposalHtml?: string;
+      refNumber?: string;
+      password?: string;
+      expiresAt?: string;
+    };
+
+    if (!projectId || typeof projectId !== 'string' || !proposalHtml || typeof proposalHtml !== 'string') {
+      return res.status(400).json({ error: 'projectId and proposalHtml are required.' });
+    }
+
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { id: true, salespersonId: true },
+    });
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found.' });
+    }
+    if (!ensureProjectAccess(project, req, res)) {
+      return;
+    }
+
+    let expiresAt: Date;
+    if (expiresAtInput && typeof expiresAtInput === 'string') {
+      const parsed = new Date(expiresAtInput);
+      if (Number.isNaN(parsed.getTime())) {
+        return res.status(400).json({ error: 'Invalid expiresAt date.' });
+      }
+      expiresAt = parsed;
+    } else {
+      const now = new Date();
+      expiresAt = new Date(now.getTime() + DEFAULT_SHARE_EXPIRY_HOURS * 60 * 60 * 1000);
+    }
+
+    if (expiresAt <= new Date()) {
+      return res.status(400).json({ error: 'Expiry must be in the future.' });
+    }
+
+    let passwordHash: string | null = null;
+    if (password != null && String(password).trim() !== '') {
+      passwordHash = await bcrypt.hash(String(password).trim(), 10);
+    }
+
+    const token = crypto.randomBytes(16).toString('hex');
+
+    await prisma.pESharedProposal.create({
+      data: {
+        token,
+        projectId,
+        proposalHtml,
+        refNumber: refNumber != null ? String(refNumber) : null,
+        passwordHash,
+        expiresAt,
+      },
+    });
+
+    res.status(201).json({
+      token,
+      expiresAt: expiresAt.toISOString(),
+    });
+  } catch (error: any) {
+    reportPeError(error, 'Error creating proposal share');
+    res.status(500).json({ error: error.message || 'Failed to create share link' });
+  }
+});
+
+/** Get shared proposal by token (public). Optional ?password= for protected links. */
+router.get('/share/:token', async (req: Request, res: Response) => {
+  try {
+    const token = req.params.token?.trim();
+    const password = typeof req.query.password === 'string' ? req.query.password : undefined;
+
+    if (!token) {
+      return res.status(404).json({ error: 'Not found.' });
+    }
+
+    const row = await prisma.pESharedProposal.findUnique({
+      where: { token },
+    });
+
+    if (!row) {
+      return res.status(404).json({ error: 'This link is invalid or has been removed.' });
+    }
+
+    if (row.expiresAt < new Date()) {
+      return res.status(403).json({ error: 'This link has expired.', code: 'EXPIRED' });
+    }
+
+    if (row.passwordHash) {
+      if (!password) {
+        return res.status(401).json({ error: 'This link is protected by a password.', requiresPassword: true });
+      }
+      const valid = await bcrypt.compare(password, row.passwordHash);
+      if (!valid) {
+        return res.status(401).json({ error: 'Incorrect password.', requiresPassword: true });
+      }
+    }
+
+    res.json({
+      html: row.proposalHtml,
+      refNumber: row.refNumber ?? undefined,
+      expiresAt: row.expiresAt.toISOString(),
+    });
+  } catch (error: any) {
+    reportPeError(error, 'Error fetching shared proposal');
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });

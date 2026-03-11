@@ -130,6 +130,15 @@ if (!fs.existsSync(uploadsPath)) {
   fs.mkdirSync(uploadsPath, { recursive: true });
 }
 
+// Static files for AI-generated layouts
+const generatedLayoutsDir = path.join(process.cwd(), 'generated_layouts');
+if (!fs.existsSync(generatedLayoutsDir)) {
+  fs.mkdirSync(generatedLayoutsDir, { recursive: true });
+}
+app.use('/generated_layouts', express.static(generatedLayoutsDir));
+// Also expose under /api so Vite dev proxy can forward correctly from Proposal Engine frontend.
+app.use('/api/generated_layouts', express.static(generatedLayoutsDir));
+
 // API router: routes are mounted here after listen (see below)
 const apiRouter = express.Router();
 app.use('/api', apiRouter);
@@ -187,6 +196,7 @@ const server = app.listen(PORT, async () => {
     const remarksRoutes = (await import('./routes/remarks')).default;
     const adminAuditRoutes = (await import('./routes/adminAudit')).default;
     const proposalEngineRoutes = (await import('./routes/proposalEngine')).default;
+    const roofLayoutRoutes = (await import('./routes/roofLayout')).default;
 
     apiRouter.use('/auth', authRoutes);
     apiRouter.use('/projects', projectRoutes);
@@ -209,6 +219,7 @@ const server = app.listen(PORT, async () => {
     apiRouter.use('/remarks', remarksRoutes);
     apiRouter.use('/admin/audit', adminAuditRoutes);
     apiRouter.use('/proposal-engine', proposalEngineRoutes);
+    apiRouter.use('/roof', roofLayoutRoutes);
 
     routesLoaded = true;
     console.log('API routes ready');
