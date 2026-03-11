@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import html2canvas from 'html2canvas';
-import { generateAiRoofLayout, AiRoofLayoutResponse, fetchCrmProjectForAiLayout } from '../lib/apiClient';
+import { generateAiRoofLayout, AiRoofLayoutResponse, fetchCrmProjectForAiLayout, getApiBaseUrl } from '../lib/apiClient';
 import { getActiveCustomer } from '../lib/customerStore';
 
 export default function AIRoofLayout() {
@@ -291,7 +291,12 @@ export default function AIRoofLayout() {
                 const panelCount = Math.max(1, Number.isFinite(result.panel_count) ? result.panel_count : 0);
                 const cols = Math.max(1, Math.ceil(Math.sqrt(panelCount)));
                 const panels = Array.from({ length: panelCount });
-                const imageUrl = result.layout_image_url && String(result.layout_image_url).trim() ? result.layout_image_url : null;
+                const rawUrl = result.layout_image_url && String(result.layout_image_url).trim() ? result.layout_image_url : null;
+                const imageUrl = rawUrl
+                  ? rawUrl.startsWith('http')
+                    ? rawUrl
+                    : `${getApiBaseUrl() || ''}${rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`}`
+                  : null;
 
                 return (
                   <div className="aspect-square sm:aspect-video rounded-2xl border border-gray-200 bg-gray-100 overflow-hidden">
