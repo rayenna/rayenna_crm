@@ -97,7 +97,12 @@ export default function SharedProposalViewer() {
   if (status === 'content' && html) {
     return (
       <div className="min-h-screen bg-gray-100 py-4 px-2 sm:px-4">
-        <style>{`.proposal-shared-content .print-hide { display: none !important; }`}</style>
+        <style>{`
+          /* Hide interactive-only elements (buttons, textareas, etc.) */
+          .proposal-shared-content .print-hide { display: none !important; }
+          /* Show BOM notes that were styled as hidden print-only in the original proposal */
+          .proposal-shared-content .hidden.print\\:block { display: block !important; }
+        `}</style>
         <div className="max-w-4xl mx-auto">
           {refNumber && (
             <p className="text-xs text-gray-500 mb-2 text-center">Ref: {refNumber} · Read-only shared view</p>

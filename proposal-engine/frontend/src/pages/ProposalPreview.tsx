@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { CATEGORIES } from '../lib/costingConstants';
 import type { SavedSheet, StoredBom, BomRowGenerated, RoiAutofill, Category } from '../lib/costingConstants';
 import {
@@ -452,12 +452,21 @@ function exportToPdf(printRootId: string): void {
   ${styleLinks}
   ${inlineStyles}
   <style>
-    @page { size: A4 portrait; margin: 12mm 14mm; }
-    body  { margin:0; padding:0; background:#fff; font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
-    * { -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; color-adjust:exact!important; }
-    table, tr, .rounded-xl, .grid > div { break-inside:avoid; page-break-inside:avoid; }
+    @page { size: A4 portrait; margin: 18mm 18mm; }
+    body  { margin:0; padding:0; background:#fff; font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:11px; }
+    * { -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; color-adjust:exact!important; color:inherit; }
+    /* Avoid ugly splits for small cards, but allow big sections to paginate */
+    table { width: 100%; }
+    tr, .rounded-xl, .grid > div { break-inside:avoid; page-break-inside:avoid; }
+    .pdf-section { break-inside:auto; page-break-inside:auto; }
+    tr[data-bom-header="true"] { page-break-after:avoid; }
+    thead { display: table-header-group; }
+    h1, h2, h3 { page-break-after:avoid; }
     svg { overflow:visible!important; }
     textarea { display:none!important; }
+    /* Ensure Our Process cards don't overflow page width when printed */
+    .pdf-process-steps { flex-wrap:wrap; }
+    .pdf-process-steps > div { min-width:220px; flex:1 1 45%; }
   </style>
 </head>
 <body>${clone.outerHTML}</body>
@@ -955,14 +964,26 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
     const grandRounded = Math.round(grandTotal);
     const subsidyAmt   = p.roi?.inputs?.subsidyAmount ?? 0;
     const showSubsidy  = !!p.roi?.inputs?.subsidyEligible && subsidyAmt > 0;
-    const hasSheetGst  = !!p.sheet && (p.sheet.totalGst ?? 0) > 0;
-    const gstAmount    = hasSheetGst ? Math.round(p.sheet!.totalGst) : (() => {
-      const pre = Math.round(grandRounded / 1.18);
-      return Math.round(grandRounded - pre);
-    })();
-    const preGst       = hasSheetGst ? Math.round(grandRounded - gstAmount) : Math.round(grandRounded / 1.18);
-    const gstLabel     = hasSheetGst ? 'GST (mixed: 5% & 18%)' : 'GST @ 18% (estimate)';
-    const sizeKw    = p.roiAutofill?.systemSizeKw ?? p.sheet?.systemSizeKw ?? 0;
+    const hasSheet     = !!p.sheet;
+    const sizeKw       = p.roiAutofill?.systemSizeKw ?? p.sheet?.systemSizeKw ?? 0;
+
+    let gstAmount: number;
+    let preGst: number;
+    let gstLabel: string;
+
+    if (hasSheet) {
+      const sheetGst = p.sheet!.totalGst ?? 0;
+      gstAmount = Math.round(sheetGst);
+      preGst = Math.round(grandRounded - gstAmount);
+      gstLabel = 'GST (mixed: 5% & 18%)';
+    } else {
+      gstAmount = (() => {
+        const pre = Math.round(grandRounded / 1.18);
+        return Math.round(grandRounded - pre);
+      })();
+      preGst = Math.round(grandRounded / 1.18);
+      gstLabel = 'GST @ 18% (estimate)';
+    }
     const commercialRows: TableRow[] = [
           new TableRow({
             children: [
@@ -1702,7 +1723,7 @@ function SectionBlock({ title, content }: { title: string; content: string }) {
   const meta = SECTION_META[title] ?? { icon: '📌', accent: '#0d1b3a' };
   const sectionKey = `section-${title.toLowerCase().replace(/\s+/g, '-')}`;
   return (
-    <div className="mb-8">
+    <div className="mb-8 pdf-section" data-pdf-section={sectionKey}>
       <div className="flex items-center gap-3 mb-4">
         <div
           className="w-1 rounded-full flex-shrink-0"
@@ -1912,8 +1933,8 @@ function OurProcessBlock() {
 
       <p data-docx-section="our-process-intro" className="text-sm text-secondary-700 leading-relaxed mb-5">{OUR_PROCESS_INTRO}</p>
 
-      {/* Process steps — horizontal timeline-style on desktop, stacked on mobile */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      {/* Process steps — horizontal on desktop, but constrained to printable width */}
+      <div className="flex flex-col sm:flex-row gap-3 pdf-process-steps">
         {OUR_PROCESS_STEPS.map((step, idx) => (
           <div
             key={step.title}
@@ -2259,21 +2280,23 @@ const BOM_CAT_ICONS: Record<Category, string> = {
   'others':             '📦',
 };
 
-function BOMGroupedTable({ items, comments, onCommentsChange }: {
+function BOMGroupedTable({
+  items,
+  comments,
+  onCommentsChange,
+  collapsed,
+  setCollapsed,
+  allCollapsed,
+  setAllCollapsed,
+}: {
   items: BomRowGenerated[];
   comments: Record<string, string>;
   onCommentsChange: (c: Record<string, string>) => void;
+  collapsed: Record<string, boolean>;
+  setCollapsed: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  allCollapsed: boolean;
+  setAllCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const [collapsed, setCollapsed]       = useState<Record<string, boolean>>({});
-  const [allCollapsed, setAllCollapsed] = useState(false);
-
-  // Whenever the BOM items array changes (e.g. after regenerating / loading
-  // a different customer), reset the collapse state so controls behave
-  // predictably and don't carry over from a previous proposal.
-  useEffect(() => {
-    setCollapsed({});
-    setAllCollapsed(false);
-  }, [items]);
 
   if (!items.length) return null;
 
@@ -2293,14 +2316,7 @@ function BOMGroupedTable({ items, comments, onCommentsChange }: {
   let serial = 0;
 
   return (
-    <div className="mb-8">
-      {/* Section heading */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#b45309', height: '28px' }} />
-        <span className="text-lg leading-none">📦</span>
-        <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#b45309' }}>Bill of Quantities</h2>
-      </div>
-
+    <div className="mb-8 pdf-section" data-pdf-section="bom">
       {/* Collapse-all toggle + summary */}
       <div className="flex items-center justify-between mb-3 px-1">
         <p className="text-xs text-secondary-400">
@@ -2317,9 +2333,15 @@ function BOMGroupedTable({ items, comments, onCommentsChange }: {
         </button>
       </div>
 
-      {/* Column header */}
+      {/* Column header + table */}
       <div className="overflow-x-auto rounded-xl border border-secondary-200 shadow-sm">
         <table className="w-full text-sm border-collapse min-w-[560px]">
+          <caption
+            className="text-left text-sm font-extrabold uppercase tracking-widest px-3 pt-3 pb-1"
+            style={{ color: '#b45309', captionSide: 'top' as any }}
+          >
+            Bill of Quantities
+          </caption>
           <thead>
             <tr style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #b45309)' }}>
               <th className="px-3 py-2.5 text-left text-xs text-white font-semibold uppercase tracking-wide w-8">#</th>
@@ -2342,6 +2364,9 @@ function BOMGroupedTable({ items, comments, onCommentsChange }: {
                     className="cursor-pointer select-none"
                     style={{ background: a.headerBg, borderTop: `2px solid ${a.border}` }}
                     onClick={() => setCollapsed((p) => ({ ...p, [cat]: !p[cat] }))}
+                    data-bom-cat={cat}
+                    data-bom-collapsed={(!isOpen).toString()}
+                    data-bom-header="true"
                   >
                     <td colSpan={5} className="px-3 py-2">
                       <div className="flex items-center justify-between">
@@ -2383,12 +2408,12 @@ function BOMGroupedTable({ items, comments, onCommentsChange }: {
                     );
                   })}
 
-                  {/* Comment row — always visible, hidden in print if empty */}
-                  {isOpen && (
+                  {/* Comment row — always visible on screen; exports can drop collapsed categories via data-bom-collapsed */}
                     <tr
                       key={`cmt-${cat}`}
-                      className={!comment ? 'print-hide' : ''}
                       style={{ background: a.bg, borderBottom: `2px solid ${a.border}` }}
+                      data-bom-note={cat}
+                      data-bom-collapsed={(!isOpen).toString()}
                     >
                       <td colSpan={5} className="px-3 py-2">
                         <div className="flex items-start gap-2">
@@ -2412,7 +2437,7 @@ function BOMGroupedTable({ items, comments, onCommentsChange }: {
                         </div>
                       </td>
                     </tr>
-                  )}
+                  
                 </React.Fragment>
               );
             })}
@@ -2423,25 +2448,95 @@ function BOMGroupedTable({ items, comments, onCommentsChange }: {
   );
 }
 
-function CommercialsBlock({ sheet, roi, roiAutofill }: { sheet: SavedSheet | null; roi: ROIResult | null; roiAutofill: RoiAutofill | null }) {
-  // Prefer the saved costing sheet total (it carries the correct mixed GST breakdown).
+function CommercialsBlock({
+  sheet,
+  roi,
+  roiAutofill,
+}: {
+  sheet: SavedSheet | null;
+  roi: ROIResult | null;
+  roiAutofill: RoiAutofill | null;
+}) {
+  // Prefer the saved costing sheet grand total + GST (must exactly match Excel).
   // Fall back to ROI inputs only when no costing sheet exists.
   const grandTotal = sheet?.grandTotal ?? roiAutofill?.grandTotal ?? roi?.inputs.projectCost ?? 0;
   if (!grandTotal) return null;
 
-  const grandRounded = Math.round(grandTotal);
   const subsidyAmount = roi?.inputs?.subsidyAmount ?? 0;
   const showSubsidy = !!roi?.inputs?.subsidyEligible && subsidyAmount > 0;
 
-  // If we have a saved sheet GST total, use it (matches Excel \"Revised Costing Sheet\").
-  // Otherwise fall back to a flat 18% breakdown.
-  const hasSheetGst = !!sheet && (sheet.totalGst ?? 0) > 0;
-  const gstAmount   = hasSheetGst ? Math.round(sheet!.totalGst) : (() => {
+  const grandRounded = Math.round(grandTotal);
+
+  // If a costing sheet exists, ALWAYS use its GST total. Do NOT recompute.
+  if (sheet) {
+    const sheetGst = sheet.totalGst ?? 0;
+    const gstAmount = Math.round(sheetGst);
+    const preGst = Math.round(grandRounded - gstAmount);
+    const gstLabel = 'GST (mixed: 5% & 18%)';
+
+  return (
+    <div className="mb-8 pdf-section">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#059669', height: '28px' }} />
+        <span className="text-lg leading-none">💰</span>
+        <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#059669' }}>Commercials</h2>
+      </div>
+      <div className="bg-white border rounded-xl overflow-x-auto shadow-sm" style={{ borderColor: '#a7f3d0' }}>
+        <table className="w-full text-sm min-w-[340px]">
+          <tbody>
+            <tr className="border-b border-primary-100">
+              <td className="px-5 py-3 text-secondary-600">
+                Design, Supply, Installation &amp; Commissioning of{' '}
+                {(() => {
+                  const sizeKw = (roiAutofill?.systemSizeKw ?? sheet?.systemSizeKw ?? 0) || 0;
+                  return sizeKw > 0
+                    ? <span className="font-semibold text-secondary-800">{sizeKw} kW</span>
+                    : 'the';
+                })()}{' '}
+                On-Grid Solar Power Plant including all electrical and structural work
+              </td>
+              <td className="px-5 py-3 text-right text-secondary-800 font-semibold tabular-nums w-44">
+                {fmtINRFull(preGst)}
+              </td>
+            </tr>
+            <tr className="border-b border-primary-100 bg-blue-50/40">
+              <td className="px-5 py-3 text-blue-700">{gstLabel}</td>
+              <td className="px-5 py-3 text-right text-blue-700 font-semibold tabular-nums">
+                {fmtINRFull(gstAmount)}
+              </td>
+            </tr>
+            <tr style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
+              <td className="px-5 py-3 text-white font-bold uppercase tracking-wide text-xs drop-shadow">
+                Total Project Cost (incl. GST)
+              </td>
+              <td className="px-5 py-3 text-right text-white font-extrabold text-base tabular-nums drop-shadow">
+                {fmtINRFull(grandRounded)}
+              </td>
+            </tr>
+            {showSubsidy && (
+              <tr className="border-b border-primary-100 bg-amber-50/60">
+                <td className="px-5 py-3 text-amber-800 font-medium">
+                  Subsidy Eligible – Rs. {subsidyAmount.toLocaleString('en-IN')}/-
+                </td>
+                <td className="px-5 py-3 text-right text-amber-800 font-semibold tabular-nums w-44">
+                  {fmtINRFull(subsidyAmount)}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+  }
+
+  // No costing sheet: fall back to a flat 18% estimate.
+  const gstAmount   = (() => {
     const pre = Math.round(grandRounded / 1.18);
     return Math.round(grandRounded - pre);
   })();
-  const preGst      = hasSheetGst ? Math.round(grandRounded - gstAmount) : Math.round(grandRounded / 1.18);
-  const gstLabel    = hasSheetGst ? 'GST (mixed: 5% & 18%)' : 'GST @ 18% (estimate)';
+  const preGst      = Math.round(grandRounded / 1.18);
+  const gstLabel    = 'GST @ 18% (estimate)';
 
   return (
     <div className="mb-8">
@@ -2455,11 +2550,8 @@ function CommercialsBlock({ sheet, roi, roiAutofill }: { sheet: SavedSheet | nul
           <tbody>
             <tr className="border-b border-primary-100">
               <td className="px-5 py-3 text-secondary-600">
-                Design, Supply, Installation &amp; Commissioning of{' '}
-                {(roiAutofill?.systemSizeKw ?? sheet?.systemSizeKw ?? 0) > 0
-                  ? <span className="font-semibold text-secondary-800">{roiAutofill?.systemSizeKw ?? sheet?.systemSizeKw} kW</span>
-                  : 'the'}{' '}
-                On-Grid Solar Power Plant including all electrical and structural work
+                Design, Supply, Installation &amp; Commissioning of the On-Grid Solar Power Plant
+                including all electrical and structural work
               </td>
               <td className="px-5 py-3 text-right text-secondary-800 font-semibold tabular-nums w-44">
                 {fmtINRFull(preGst)}
@@ -2509,7 +2601,7 @@ function ListBlock({ title, items }: { title: string; items: string[] }) {
   const meta = LIST_META[title] ?? { icon: '📌', accent: '#0d1b3a', bg: '#f8fafc', border: '#e2e8f0' };
   const sectionKey = `list-${title.toLowerCase().replace(/\s+/g, '-')}`;
   return (
-    <div className="mb-8">
+    <div className="mb-8 pdf-section">
       {/* Section header */}
       <div className="flex items-center gap-3 mb-4">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: meta.accent, height: '28px' }} />
@@ -2552,7 +2644,7 @@ function AccountDetailsBlock() {
     { label: 'IFSC Code',      value: 'UTIB0000827'                    },
   ];
   return (
-    <div className="mb-8">
+    <div className="mb-8 pdf-section">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0d1b3a', height: '28px' }} />
         <span className="text-lg leading-none">🏦</span>
@@ -2743,10 +2835,13 @@ function CustomerForm({ onGenerate }: { onGenerate: (c: CustomerDetails) => void
 
 // localStorage key for persisting the edited proposal HTML between sessions
 export default function ProposalPreview() {
+  const navigate = useNavigate();
   const [proposal, setProposal]               = useState<ProposalData | null>(null);
   const [exporting, setExporting]             = useState<'pdf' | 'docx' | null>(null);
   const [savedToCustomer, setSavedToCustomer] = useState<string | null>(null);
   const [bomComments, setBomComments]         = useState<Record<string, string>>({});
+  const [bomCollapsed, setBomCollapsed]       = useState<Record<string, boolean>>({});
+  const [bomAllCollapsed, setBomAllCollapsed] = useState(false);
   const [isEditing, setIsEditing]             = useState(false);
   const [saveStatus, setSaveStatus]           = useState<'idle' | 'saving' | 'saved'>('idle');
   const printRef                              = useRef<HTMLDivElement>(null);
@@ -2770,6 +2865,12 @@ export default function ProposalPreview() {
     if (!canWrite && isEditing) setIsEditing(false);
   }, [canWrite, isEditing]);
 
+  // Reset BOM collapse state whenever a new BOM is loaded
+  useEffect(() => {
+    setBomCollapsed({});
+    setBomAllCollapsed(false);
+  }, [proposal?.bom]);
+
   // Track the active customer ID so CustomerForm remounts when the customer changes.
   // This guarantees the form fields always reflect the correct customer.
   const [activeCustomerId, setActiveCustomerId] = useState<string | null>(
@@ -2782,12 +2883,8 @@ export default function ProposalPreview() {
     const sync = () => {
       const id = getActiveCustomer()?.id ?? null;
       setActiveCustomerId(id);
-      // If the customer changed while a proposal was already shown, reset it
-      // so the new customer's data is used on the next Generate.
-      setProposal((prev) => {
-        if (prev !== null && id !== null) return null;
-        return prev;
-      });
+      // We intentionally do NOT clear an already-rendered proposal on focus.
+      // This keeps the proposal open even when the user switches browser tabs.
     };
     window.addEventListener('focus', sync);
     return () => window.removeEventListener('focus', sync);
@@ -2872,6 +2969,15 @@ export default function ProposalPreview() {
     setIsEditing(false);
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 3000);
+  };
+
+  const handleSaveAndClose = () => {
+    if (!canWrite || !proposal) return;
+    handleSave();
+    // Give a small delay so the saved banner / state can update, then go back to Dashboard
+    setTimeout(() => {
+      navigate('/');
+    }, 400);
   };
 
   const handleGenerate = (customer: CustomerDetails) => {
@@ -3011,6 +3117,7 @@ export default function ProposalPreview() {
       const textOverrides = (liveOverrides && Object.keys(liveOverrides).length > 0)
         ? liveOverrides
         : savedOverrides;
+      // DOCX export always uses the full BOM; collapse state affects only the on-screen HTML/PDF/Share view.
       await exportToDocx(proposal, bomComments, textOverrides, printRef.current ?? undefined);
     } finally {
       setExporting(null);
@@ -3035,7 +3142,18 @@ export default function ProposalPreview() {
       setShareError('Link this proposal to a CRM project first (open from Customers).');
       return;
     }
-    const proposalHtml = printRef.current?.innerHTML ?? '';
+    // Clone the proposal DOM so we can strip collapsed BOM sections before saving HTML
+    let proposalHtml = '';
+    if (printRef.current) {
+      const clone = printRef.current.cloneNode(true) as HTMLElement;
+      // Remove elements marked for print/share hiding (buttons, edit-only controls)
+      clone.querySelectorAll('.print-hide').forEach((n) => n.remove());
+      // Ensure BOM notes are visible in the shared HTML (remove Tailwind's `hidden` utility on note paragraphs)
+      clone.querySelectorAll<HTMLElement>('tr[data-bom-note] p').forEach((p) => {
+        p.classList.remove('hidden');
+      });
+      proposalHtml = clone.innerHTML;
+    }
     if (!proposalHtml.trim()) {
       setShareError('No proposal content to share.');
       return;
@@ -3147,12 +3265,25 @@ export default function ProposalPreview() {
                   <button
                     onClick={handleSave}
                     disabled={saveStatus === 'saving' || !!exporting}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all min-h-[36px] disabled:opacity-60"
+                    className={`w-full sm:w-auto flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl transition-all min-h-[36px] disabled:opacity-60 ${
+                      saveStatus === 'saved'
+                        ? 'bg-emerald-500 border-2 border-emerald-300 text-white'
+                        : 'bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white'
+                    }`}
                   >
                     {saveStatus === 'saving' && (
                       <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     )}
-                    💾 Save
+                    {saveStatus === 'saved' ? '✓ Saved' : '💾 Save'}
+                  </button>
+                )}
+                {canWrite && proposal && (
+                  <button
+                    onClick={handleSaveAndClose}
+                    disabled={saveStatus === 'saving' || !!exporting}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-amber-300 hover:bg-amber-400 text-slate-900 text-sm font-semibold px-4 py-2 rounded-xl transition-all min-h-[36px] disabled:opacity-60"
+                  >
+                    Save &amp; Close
                   </button>
                 )}
               </div>
@@ -3311,6 +3442,10 @@ export default function ProposalPreview() {
                       onCommentsChange={(c) => {
                         setBomComments(c);
                       }}
+                      collapsed={bomCollapsed}
+                      setCollapsed={setBomCollapsed}
+                      allCollapsed={bomAllCollapsed}
+                      setAllCollapsed={setBomAllCollapsed}
                     />
                   </>
                 )}
@@ -3346,10 +3481,44 @@ export default function ProposalPreview() {
                   {/* Left: meta — desktop only */}
                   <p className="text-xs text-secondary-400 hidden sm:block">
                     Generated {new Date(proposal.generatedAt).toLocaleString('en-IN')} · {proposal.refNumber}
+                    {savedToCustomer && saveStatus === 'saved' && (
+                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700 border border-emerald-300">
+                        ✓ Saved to {savedToCustomer}
+                      </span>
+                    )}
                   </p>
 
                   {/* Right: actions — stack on mobile, row on sm+ */}
                   <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3">
+                    {/* Save button (bottom) */}
+                    {canWrite && (
+                      <button
+                        onClick={handleSave}
+                        disabled={saveStatus === 'saving' || !!exporting}
+                        className={`flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-xl shadow transition-all min-h-[44px] sm:min-h-0 ${
+                          saveStatus === 'saved'
+                            ? 'bg-emerald-500 text-white border border-emerald-400'
+                            : 'bg-white text-primary-800 border border-primary-200 hover:bg-primary-50'
+                        }`}
+                      >
+                        {saveStatus === 'saving' && (
+                          <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        )}
+                        {saveStatus === 'saved' ? '✓ Saved' : '💾 Save'}
+                      </button>
+                    )}
+
+                    {/* Save & Close (bottom) */}
+                    {canWrite && proposal && (
+                      <button
+                        onClick={handleSaveAndClose}
+                        disabled={saveStatus === 'saving' || !!exporting}
+                        className="flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-xl shadow transition-all min-h-[44px] sm:min-h-0 bg-amber-300 text-slate-900 border border-amber-400 hover:bg-amber-400"
+                      >
+                        Save &amp; Close
+                      </button>
+                    )}
+
                     {/* Export buttons row */}
                     <div className="flex items-center gap-2">
                       <button

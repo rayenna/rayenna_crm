@@ -2,12 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Print styles (used by the dedicated print window opened by exportToPdf) ── */
+/* ── Global print helpers ── */
+@page {
+  size: A4;
+  margin: 14mm 16mm;
+}
+
 @media print {
-  @page { size: A4 portrait; margin: 12mm 14mm; }
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  table, tr { break-inside: avoid; page-break-inside: avoid; }
-  svg { overflow: visible !important; }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  table,
+  tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  svg {
+    overflow: visible !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
 }
 
 @layer base {
