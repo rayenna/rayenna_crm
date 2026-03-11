@@ -228,17 +228,23 @@ export async function apiFetch<TResponse = unknown>(
   }
 
   const text = await response.text();
-  if (!text) {
-    // No body
-    return undefined as TResponse;
+  let parsed: TResponse;
+  try {
+    parsed = (text ? JSON.parse(text) : undefined) as TResponse;
+  } catch {
+    parsed = text as unknown as TResponse;
   }
 
-  try {
-    return JSON.parse(text) as TResponse;
-  } catch {
-    // Non-JSON response
-    return text as unknown as TResponse;
+  if (!response.ok) {
+    const errMsg =
+      (parsed as { error?: string })?.error ||
+      (parsed as { message?: string })?.message ||
+      response.statusText ||
+      `Request failed (${response.status})`;
+    throw new Error(errMsg);
   }
+
+  return parsed;
 }
 
 export interface LoginResponse {

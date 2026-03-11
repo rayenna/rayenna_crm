@@ -98,7 +98,20 @@ export default function AIRoofLayout() {
         systemSizeKw,
         panelWattage,
       });
-      setResult(data);
+      // Normalize and validate so we never render with undefined numbers (avoids "reading 'toFixed' of undefined")
+      const roof = data?.roof_area_m2;
+      const usable = data?.usable_area_m2;
+      const panels = data?.panel_count;
+      if (!Number.isFinite(roof) || !Number.isFinite(usable) || !Number.isFinite(panels)) {
+        setError('The layout service returned incomplete data. Please try again or check the backend.');
+        return;
+      }
+      setResult({
+        roof_area_m2: Number(roof),
+        usable_area_m2: Number(usable),
+        panel_count: Number(panels),
+        layout_image_url: data?.layout_image_url && String(data.layout_image_url).trim() ? data.layout_image_url : '',
+      });
     } catch (err: any) {
       setError(err?.message ?? 'Failed to generate AI layout');
     } finally {
@@ -228,7 +241,7 @@ export default function AIRoofLayout() {
                     Roof area
                   </dt>
                   <dd className="mt-1 text-base font-semibold text-gray-900">
-                    {result.roof_area_m2.toFixed(1)} m²
+                    {Number.isFinite(result.roof_area_m2) ? Number(result.roof_area_m2).toFixed(1) : '—'} m²
                   </dd>
                 </div>
                 <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
@@ -236,7 +249,7 @@ export default function AIRoofLayout() {
                     Usable area
                   </dt>
                   <dd className="mt-1 text-base font-semibold text-gray-900">
-                    {result.usable_area_m2.toFixed(1)} m²
+                    {Number.isFinite(result.usable_area_m2) ? Number(result.usable_area_m2).toFixed(1) : '—'} m²
                   </dd>
                 </div>
                 <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
@@ -244,7 +257,7 @@ export default function AIRoofLayout() {
                     Panel count
                   </dt>
                   <dd className="mt-1 text-base font-semibold text-gray-900">
-                    {result.panel_count}
+                    {Number.isFinite(result.panel_count) ? result.panel_count : '—'}
                   </dd>
                 </div>
               </dl>
@@ -278,6 +291,7 @@ export default function AIRoofLayout() {
                 const panelCount = Math.max(1, Number.isFinite(result.panel_count) ? result.panel_count : 0);
                 const cols = Math.max(1, Math.ceil(Math.sqrt(panelCount)));
                 const panels = Array.from({ length: panelCount });
+                const imageUrl = result.layout_image_url && String(result.layout_image_url).trim() ? result.layout_image_url : null;
 
                 return (
                   <div className="aspect-square sm:aspect-video rounded-2xl border border-gray-200 bg-gray-100 overflow-hidden">
@@ -286,12 +300,17 @@ export default function AIRoofLayout() {
                         className="relative w-full h-full origin-center"
                         style={{ transform: `scale(${zoom})` }}
                       >
+                        {imageUrl ? (
                         <img
-                          src={result.layout_image_url}
+                          src={imageUrl}
                           alt="AI generated solar layout"
                           className="w-full h-full object-cover"
                           crossOrigin="anonymous"
                         />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">No layout image returned</div>
+                        )}
+                        {imageUrl && (
                         <div
                           className="absolute inset-0 grid gap-[1px] pointer-events-none"
                           style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
@@ -304,6 +323,7 @@ export default function AIRoofLayout() {
                             />
                           ))}
                         </div>
+                        )}
                       </div>
                     </div>
                   </div>

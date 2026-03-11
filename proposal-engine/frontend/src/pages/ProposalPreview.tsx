@@ -3055,6 +3055,10 @@ export default function ProposalPreview() {
         password: shareUsePassword && sharePassword.trim() ? sharePassword.trim() : undefined,
         expiresAt,
       });
+      if (!data?.token) {
+        setShareError('Share created but no link was returned. Ensure the backend is deployed with the share API (VITE_API_BASE_URL must point to the CRM backend).');
+        return;
+      }
       const url = `${window.location.origin}/view/${data.token}`;
       setShareLink(url);
     } catch (err: unknown) {

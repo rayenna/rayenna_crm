@@ -169,7 +169,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* ── Navbar ── */}
       <nav
         style={{ background: NAV_GRADIENT }}
-        className="shadow-lg border-b-4 border-primary-400 sticky top-0 z-20"
+        className="shadow-lg border-b-4 border-amber-400 sticky top-0 z-20"
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
           {/* Navbar row — shorter in landscape (h-12) vs portrait (h-16) vs desktop (h-20) */}
