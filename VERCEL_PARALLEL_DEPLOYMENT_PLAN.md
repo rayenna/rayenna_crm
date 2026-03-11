@@ -33,6 +33,9 @@
 - **No hardcoded backend URLs** in `client/src`. All API usage goes through `axios` with `baseURL: import.meta.env.VITE_API_BASE_URL`.
 - **Action:** In Vercel project settings, set `VITE_API_BASE_URL` to the same Render backend URL as on Render. Optionally set `VITE_SENTRY_DSN` if you use Sentry.
 
+### Backend env (CRM on Render) – for Proposal Engine & AI Roof Layout
+- **GOOGLE_MAPS_API_KEY:** Required for **AI Roof Layout** (Proposal Engine). The CRM backend uses it to fetch satellite imagery via Google Static Maps API (`src/services/satelliteFetcher.ts`). If unset in production, the roof layout job throws and the frontend sees 500/errors. Set this in the **CRM backend** service env on Render (same place as `JWT_SECRET`, `DATABASE_URL`, etc.).
+
 ### STEP 3: Vercel config
 - **Current:** `client/vercel.json` exists with SPA rewrites and cache headers.
 - **Action:** Add explicit `buildCommand`, `outputDirectory`, and `framework` so behaviour is unambiguous when Root Directory = `client`. No removal of existing rewrites/headers.
