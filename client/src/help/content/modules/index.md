@@ -277,8 +277,8 @@ If **Lead Source** is Referral, Channel Partner, or Other, the corresponding det
 
 ### Sales & Commercial
 
-- **Sales** and **Admin** can **edit** the Sales & Commercial section: **Lead Source**, **Order Value**, **Confirmation Date**, **System Capacity**, **Availing Loan/Financing** (checkbox, financing bank, other bank name when Other), **Roof Type**, and **System Type**.
-- **Finance**, **Operations**, and **Management** can **view** Sales & Commercial but cannot edit it.
+- **Sales**, **Operations**, and **Admin** can **edit** the Sales & Commercial section: **Lead Source**, **Order Value**, **Confirmation Date**, **System Capacity**, **Availing Loan/Financing** (checkbox, financing bank, other bank name when Other), **Roof Type**, **System Type**, and related non-payment financial details (e.g. loan details, incentive eligibility).
+- **Finance** and **Management** can **view** Sales & Commercial but cannot edit it.
 - Use **Remarks** for internal notes and decisions. Remarks are versioned and visible to users with project access.
 
 ### Support Tickets and Documents
@@ -365,7 +365,7 @@ A quick reference for project-related access:
 ![Permission Matrix](/help/docs/overview/access_matrix.jpg)
 
 - **Sales**: Create projects (own customers), edit Sales & Commercial (including Availing Loan/Financing), update status through Confirmed, add remarks, create tickets, upload documents. Cannot edit Lifecycle or Payments.
-- **Operations**: View all projects, edit Project Lifecycle, update status from Installation onward, add remarks, create tickets, upload documents. Can view Sales & Commercial but cannot edit it or Payments.
+- **Operations**: View all projects, edit **Sales & Commercial** (non-payment fields) and **Project Lifecycle**, update status from Installation onward, add remarks, create tickets, upload documents. Cannot edit Payment Tracking.
 - **Finance**: View all projects, edit Payment Tracking only. Can view Sales & Commercial but cannot edit it or other sections.
 - **Management**: View all projects and all sections; cannot edit Sales & Commercial, Lifecycle, or Payments.
 - **Admin**: Full access; can delete Lost projects.

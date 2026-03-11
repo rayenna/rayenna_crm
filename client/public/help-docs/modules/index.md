@@ -261,7 +261,7 @@ If **Lead Source** is Referral, Channel Partner, or Other, the corresponding det
 
 ### Sales & Commercial
 
-- **Sales** and **Admin** maintain **Lead Source**, **Order Value**, **Confirmation Date**, **System Capacity**, **Roof Type**, and **System Type**.
+- **Sales**, **Operations**, and **Admin** maintain **Lead Source**, **Order Value**, **Confirmation Date**, **System Capacity**, **Roof Type**, **System Type**, and non-payment financial details (e.g. loan details, incentive eligibility, Availing Loan/Financing and bank when applicable).
 - Use **Remarks** for internal notes and decisions. Remarks are versioned and visible to users with project access.
 
 ### Support Tickets and Documents
@@ -326,7 +326,7 @@ A quick reference for project-related access:
 ![Permission Matrix](/help/docs/overview/access_matrix.jpg)
 
 - **Sales**: Create projects (own customers), edit Sales & Commercial, update status through Confirmed, add remarks, create tickets, upload documents. Cannot edit Lifecycle or Payments.
-- **Operations**: View all projects, edit Project Lifecycle, update status from Installation onward, add remarks, create tickets, upload documents. Cannot edit Sales & Commercial or Payments.
+- **Operations**: View all projects, edit **Sales & Commercial** (non-payment fields) and **Project Lifecycle**, update status from Installation onward, add remarks, create tickets, upload documents. Cannot edit Payment Tracking.
 - **Finance**: View all projects, edit Payment Tracking only. Cannot edit other sections or change status.
 - **Admin**: Full access; can delete Lost projects.
 

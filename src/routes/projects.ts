@@ -1322,8 +1322,9 @@ router.put(
         Object.assign(updateData, paymentCalculations);
         if (process.env.NODE_ENV === 'development') console.log('[FINANCE UPDATE] Final updateData before save:', JSON.stringify(updateData, null, 2));
       } else if (req.user?.role === UserRole.OPERATIONS) {
-        // Operations can only update execution fields
+        // Operations can update execution fields and Sales & Commercial (but not payment tracking)
         const allowedFields = [
+          // Execution / lifecycle fields
           'mnrePortalRegistrationDate',
           'feasibilityDate',
           'registrationDate',
@@ -1334,10 +1335,25 @@ router.put(
           'subsidyCreditedDate',
           'projectStatus',
           'totalProjectCost',
+          // Panel / equipment
           'panelBrand', // Operations can update panel brand
           'inverterBrand', // Operations can update inverter brand
           'panelType', // Operations can update panel type
           'panelCapacityW', // Operations can update panel capacity (W)
+          // Sales & Commercial block (non-payment financials)
+          'leadSource',
+          'leadSourceDetails',
+          'systemCapacity',
+          'projectCost',
+          'confirmationDate',
+          'year',
+          'roofType',
+          'systemType',
+          'incentiveEligible',
+          'loanDetails',
+          'availingLoan',
+          'financingBank',
+          'financingBankOther',
         ];
         for (const field of allowedFields) {
           if (req.body[field] !== undefined) {

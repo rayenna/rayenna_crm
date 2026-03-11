@@ -748,7 +748,8 @@ const ProjectForm = () => {
   const canEditPayments = hasRole([UserRole.ADMIN, UserRole.FINANCE])
   const canEditExecution = hasRole([UserRole.ADMIN, UserRole.OPERATIONS])
   const canEditSales = hasRole([UserRole.ADMIN, UserRole.SALES])
-  const canEditFinancing = canEditSales
+  // Financing / Sales & Commercial: Admin, Sales, and Operations users
+  const canEditFinancing = hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS])
   
   // Finance users can only edit payment tracking section
   // Projects in Lost status cannot be edited (except Admin can delete)
@@ -763,7 +764,9 @@ const ProjectForm = () => {
   const labelCls = 'block text-sm text-gray-500 mb-1.5'
   const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all'
   const selectCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all'
-  const canEditSalesCommercial = canEditSales && canEditOtherSections
+  // Sales & Commercial section: Admin, Sales, and Operations can edit
+  const canEditSalesCommercial =
+    hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS]) && canEditOtherSections
 
   return (
     <div className="px-0 py-6 sm:px-0 min-h-screen bg-gray-50/80">

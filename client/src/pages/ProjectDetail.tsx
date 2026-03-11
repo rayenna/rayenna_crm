@@ -491,6 +491,14 @@ const ProjectDetail = () => {
                 <dd className="text-sm font-bold text-orange-800 mt-0.5">{project.systemCapacity} kW</dd>
               </div>
             )}
+            {project.roofType && (
+              <div>
+                <dt className="text-xs text-gray-500 uppercase tracking-wide">Roof Type</dt>
+                <dd className="text-sm font-medium text-gray-900 mt-0.5">
+                  {project.roofType}
+                </dd>
+              </div>
+            )}
             {project.projectCost && (
               <div>
                 <dt className="text-xs text-gray-500 uppercase tracking-wide">Order Value</dt>
@@ -877,6 +885,42 @@ const ProjectDetail = () => {
                 </dd>
               </div>
             )}
+
+            {(() => {
+              const installments = [
+                { label: 'Payment 1', amount: project.payment1, date: project.payment1Date },
+                { label: 'Payment 2', amount: project.payment2, date: project.payment2Date },
+                { label: 'Payment 3', amount: project.payment3, date: project.payment3Date },
+                { label: 'Last Payment', amount: project.lastPayment, date: project.lastPaymentDate },
+              ].filter((p) => {
+                const hasAmount = p.amount != null && Number(p.amount) > 0;
+                const hasDate = !!p.date;
+                return hasAmount || hasDate;
+              });
+
+              if (!installments.length) return null;
+
+              return (
+                <div>
+                  <dt className="text-xs text-gray-500 uppercase tracking-wide">Installments Received</dt>
+                  <dd className="mt-1 text-sm text-gray-700 space-y-1">
+                    {installments.map((p) => {
+                      const hasAmount = p.amount != null && Number(p.amount) > 0;
+                      return (
+                        <div key={p.label} className="flex items-center justify-between gap-3">
+                          <span className="text-xs font-medium text-gray-500">{p.label}</span>
+                          <span className="text-sm font-medium text-gray-900">
+                            {hasAmount ? `₹${Number(p.amount).toLocaleString('en-IN')}` : '—'}
+                            {p.date &&
+                              ` (${format(new Date(p.date), 'MMM dd, yyyy')})`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </dd>
+                </div>
+              );
+            })()}
           </dl>
         </div>
       </div>
