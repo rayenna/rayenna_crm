@@ -252,12 +252,15 @@ export default function AIRoofLayout() {
       if (!dataUrl) return;
       const crmProjectId = activeProject?.master?.crmProjectId;
       if (crmProjectId) {
+        const r = result?.roof_area_m2;
+        const u = result?.usable_area_m2;
+        const p = result?.panel_count;
         const saved = await saveManualRoofLayoutImage({
           projectId: crmProjectId,
           dataUrl,
-          roof_area_m2: Number(result?.roof_area_m2),
-          usable_area_m2: Number(result?.usable_area_m2),
-          panel_count: Number(result?.panel_count),
+          ...(Number.isFinite(Number(r)) && { roof_area_m2: Number(r) }),
+          ...(Number.isFinite(Number(u)) && { usable_area_m2: Number(u) }),
+          ...(Number.isFinite(Number(p)) && { panel_count: Number(p) }),
         });
         if (saved?.layout_image_url) {
           setResult((prev) =>
@@ -435,8 +438,8 @@ export default function AIRoofLayout() {
   }, [polygon, panelSpacingMultiplier, panelOrientation]);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 sm:p-6 lg:p-8">
+    <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
           <div>
             <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">
@@ -501,8 +504,8 @@ export default function AIRoofLayout() {
         )}
 
         {result && (
-          <div className="mt-2 space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="mt-3 space-y-3">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] sm:text-xs">
               <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Layout actions</span>
               <button
                 type="button"
@@ -537,7 +540,10 @@ export default function AIRoofLayout() {
                     : 'Save for proposal'}
               </button>
             </div>
-            <div ref={exportRef} className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)] items-start bg-white p-4 rounded-xl border border-gray-100">
+            <div
+              ref={exportRef}
+              className="grid gap-4 lg:gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1.3fr)] items-start bg-white p-3 sm:p-4 rounded-xl border border-gray-100"
+            >
             <div className="space-y-3">
               <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
                 Layout summary
@@ -570,10 +576,10 @@ export default function AIRoofLayout() {
               </dl>
             </div>
 
-            <div>
+            <div className="space-y-2">
               <div className="flex flex-col gap-2 mb-2">
                 <div className="flex items-center justify-between gap-2">
-                  <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                  <h2 className="text-sm sm:text-base font-semibold text-gray-700 uppercase tracking-wide">
                     Layout preview
                   </h2>
                   <div className="flex items-center gap-1 text-[10px] text-gray-600">
@@ -671,11 +677,14 @@ export default function AIRoofLayout() {
                   </div>
                 </div>
               </div>
-              <div className="aspect-square sm:aspect-video rounded-2xl border border-gray-200 bg-white overflow-hidden">
+              <div className="aspect-[4/3] sm:aspect-video rounded-2xl border border-gray-200 bg-white overflow-hidden">
                 <div className="w-full h-full overflow-auto flex items-center justify-center">
                   <div
-                    className="relative origin-center inline-block"
-                    style={{ transform: `scale(${zoom})` }}
+                    className="relative origin-center inline-block touch-pan-y"
+                    style={{
+                      transform: `scale(${zoom})`,
+                      transformOrigin: 'center center',
+                    }}
                   >
                     {bgImage && imageSize ? (
                       <Stage

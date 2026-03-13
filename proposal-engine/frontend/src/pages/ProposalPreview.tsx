@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CATEGORIES } from '../lib/costingConstants';
+import { CATEGORIES, sheetTotalGst } from '../lib/costingConstants';
 import type { SavedSheet, StoredBom, BomRowGenerated, RoiAutofill, Category } from '../lib/costingConstants';
 import {
   Document, Packer, Paragraph, Table, TableRow, TableCell,
@@ -992,7 +992,10 @@ function buildDocx(
     let gstLabel: string;
 
     if (hasSheet) {
-      const sheetGst = p.sheet!.totalGst ?? 0;
+      const sheetGst =
+        (p.sheet!.totalGst != null && p.sheet!.totalGst > 0)
+          ? p.sheet!.totalGst
+          : (p.sheet!.items?.length ? sheetTotalGst(p.sheet!.items, p.sheet!.marginPercent ?? 15) : 0);
       gstAmount = Math.round(sheetGst);
       preGst = Math.round(grandRounded - gstAmount);
       gstLabel = 'GST (mixed: 5% & 18%)';
@@ -2449,6 +2452,7 @@ const BOM_CAT_ACCENTS: Record<Category, { bg: string; border: string; badge: str
   'ac-cable':           { bg: '#f7fee7', border: '#bbf7d0', badge: '#16a34a', text: '#14532d', headerBg: '#dcfce7' },
   'earthing':           { bg: '#f0fdf4', border: '#6ee7b7', badge: '#059669', text: '#064e3b', headerBg: '#d1fae5' },
   'meter':              { bg: '#faf5ff', border: '#ddd6fe', badge: '#7c3aed', text: '#4c1d95', headerBg: '#ede9fe' },
+  'electrical-items':   { bg: '#fff1f2', border: '#fecdd3', badge: '#be123c', text: '#9f1239', headerBg: '#ffe4e6' },
   'installation':       { bg: '#eff6ff', border: '#bfdbfe', badge: '#1d4ed8', text: '#1e3a8a', headerBg: '#dbeafe' },
   'others':             { bg: '#f9fafb', border: '#e5e7eb', badge: '#4b5563', text: '#111827', headerBg: '#f3f4f6' },
 };
@@ -2463,6 +2467,7 @@ const BOM_CAT_ICONS: Record<Category, string> = {
   'ac-cable':           '🟢',
   'earthing':           '🌱',
   'meter':              '🔮',
+  'electrical-items':   '🔌',
   'installation':       '🔧',
   'others':             '📦',
 };
@@ -2654,9 +2659,12 @@ function CommercialsBlock({
 
   const grandRounded = Math.round(grandTotal);
 
-  // If a costing sheet exists, ALWAYS use its GST total. Do NOT recompute.
+  // If a costing sheet exists, use its GST total. Recompute from items if stored total is 0 (legacy data).
   if (sheet) {
-    const sheetGst = sheet.totalGst ?? 0;
+    const sheetGst =
+      (sheet.totalGst != null && sheet.totalGst > 0)
+        ? sheet.totalGst
+        : (sheet.items?.length ? sheetTotalGst(sheet.items, sheet.marginPercent ?? 15) : 0);
     const gstAmount = Math.round(sheetGst);
     const preGst = Math.round(grandRounded - gstAmount);
     const gstLabel = 'GST (mixed: 5% & 18%)';
@@ -3256,7 +3264,6 @@ export default function ProposalPreview() {
     setProposal(p);
     setIncludeRoofLayout(options.includeRoofLayout);
     setRoofLayout(null);
-    // Keep activeCustomerId in sync so the key stays correct
     setActiveCustomerId(activeCustomer?.id ?? null);
 
     // ── Restore saved comments from customer record only ──

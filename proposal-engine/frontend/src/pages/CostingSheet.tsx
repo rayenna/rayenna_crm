@@ -7,7 +7,7 @@ import type { CostingArtifact } from '../lib/customerStore';
 import {
   CATEGORIES, CATEGORY_GST, CATEGORY_COLORS,
   DEFAULT_MARGIN,
-  snapCategory, catAccentColor, deriveSystemSizeKw, sheetGrandTotal, sheetTotalGst, costingToBom,
+  snapCategory, catAccentColor, deriveSystemSizeKw, sheetGrandTotal, sheetTotalGst, costingToBom, normalizeLineItemGst,
 } from '../lib/costingConstants';
 import type {
   Category, LineItem, SavedSheet, StoredBom, RoiAutofill,
@@ -2093,7 +2093,10 @@ export default function CostingSheet() {
 
   // Core save logic — called either directly (active customer) or from modal (no customer)
   const handleSaveSheet = useCallback((name: string, description: string) => {
-    const validItems  = liveItems.filter((r) => r.itemName.trim());
+    // Normalize GST: blank/missing → category default (5% or 18%) so labour etc. never show as 0%
+    const validItems  = liveItems
+      .filter((r) => r.itemName.trim())
+      .map((r) => ({ ...r, gstPercent: normalizeLineItemGst(r) }));
     const grand       = sheetGrandTotal(validItems, showGst, marginPercent);
     const totalGst    = showGst ? sheetTotalGst(validItems, marginPercent) : 0;
     const sizeKw      = deriveSystemSizeKw(validItems);
@@ -2135,7 +2138,10 @@ export default function CostingSheet() {
       rows:        bomRows,
     };
     const wip = getWipKeysForCurrentUser();
+    // Refresh BOM-from-costing and clear any previous BOM overrides so GST and items
+    // always match the latest costing sheet.
     localStorage.setItem(wip.bomCosting, JSON.stringify(storedBom));
+    localStorage.removeItem(wip.bomOverrides);
 
     // Write ROI autofill so ROI Calculator picks up the latest values
     const roiAutofill: RoiAutofill = {
