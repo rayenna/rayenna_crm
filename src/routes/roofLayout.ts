@@ -74,30 +74,27 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
     const filePath = path.join(generatedLayoutsDir, `${projectId}_manual_layout.${ext}`);
     fs.writeFileSync(filePath, Buffer.from(base64, 'base64'));
 
-    // If metrics were provided, persist them too so the Proposal can use the revised values.
-    const roof = Number(roof_area_m2);
-    const usable = Number(usable_area_m2);
-    const panels = Number(panel_count);
-    if (Number.isFinite(roof) && Number.isFinite(usable) && Number.isFinite(panels)) {
-      const metaPath = path.join(generatedLayoutsDir, `${projectId}_manual_layout.json`);
-      fs.writeFileSync(
-        metaPath,
-        JSON.stringify(
-          {
-            projectId,
-            roof_area_m2: roof,
-            usable_area_m2: usable,
-            panel_count: panels,
-            savedAt: new Date().toISOString(),
-            layout_image_url: `/api/generated_layouts/${projectId}_manual_layout.${ext}`,
-          },
-          null,
-          2,
-        ),
-      );
-    }
-
+    // Always persist metadata so GET /manual-layout/:projectId returns 200 and the Proposal can embed the layout.
+    const roof = Number.isFinite(Number(roof_area_m2)) ? Number(roof_area_m2) : 0;
+    const usable = Number.isFinite(Number(usable_area_m2)) ? Number(usable_area_m2) : 0;
+    const panels = Number.isFinite(Number(panel_count)) ? Number(panel_count) : 0;
     const publicUrlPath = `/api/generated_layouts/${projectId}_manual_layout.${ext}`;
+    const metaPath = path.join(generatedLayoutsDir, `${projectId}_manual_layout.json`);
+    fs.writeFileSync(
+      metaPath,
+      JSON.stringify(
+        {
+          projectId,
+          roof_area_m2: roof,
+          usable_area_m2: usable,
+          panel_count: panels,
+          savedAt: new Date().toISOString(),
+          layout_image_url: publicUrlPath,
+        },
+        null,
+        2,
+      ),
+    );
     return res.json({ layout_image_url: publicUrlPath });
   } catch (err) {
     // eslint-disable-next-line no-console
