@@ -36,7 +36,8 @@ export default function AIRoofLayout() {
   const [polygon, setPolygon] = useState<Point[] | null>(null);
   const [panels, setPanels] = useState<PanelRect[]>([]);
   const [bgImageUrl, setBgImageUrl] = useState<string | null>(null);
-  const [bgImage] = useImage(bgImageUrl ?? '');
+  // Use crossOrigin='anonymous' so we can safely export the canvas to a data URL in production
+  const [bgImage] = useImage(bgImageUrl ?? '', 'anonymous');
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
 
   // Geometry constants (approximate, tuned for visual realism)
