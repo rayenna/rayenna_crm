@@ -285,11 +285,25 @@ export async function loginWithEmailPassword(email: string, password: string): P
 // AI Roof Segmentation & Layout
 // ───────────────────────────────────────────────────────────────────────────────
 
+export interface AiRoofLayoutPolygonPoint {
+  x: number;
+  y: number;
+}
+
+export interface AiRoofLayoutPanelRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface AiRoofLayoutResponse {
   roof_area_m2: number;
   usable_area_m2: number;
   panel_count: number;
   layout_image_url: string;
+  roof_polygon_coordinates?: AiRoofLayoutPolygonPoint[];
+  panel_coordinates?: AiRoofLayoutPanelRect[];
 }
 
 export async function generateAiRoofLayout(params: {
@@ -309,6 +323,35 @@ export async function generateAiRoofLayout(params: {
       panelWattage: params.panelWattage,
     }),
   });
+}
+
+export async function saveManualRoofLayoutImage(params: {
+  projectId: string;
+  dataUrl: string;
+  roof_area_m2?: number;
+  usable_area_m2?: number;
+  panel_count?: number;
+}): Promise<{ layout_image_url: string }> {
+  return apiFetch<{ layout_image_url: string }>('/api/roof/save-layout-image', {
+    method: 'POST',
+    body: JSON.stringify({
+      projectId: params.projectId,
+      dataUrl: params.dataUrl,
+      roof_area_m2: params.roof_area_m2,
+      usable_area_m2: params.usable_area_m2,
+      panel_count: params.panel_count,
+    }),
+  });
+}
+
+export async function fetchManualRoofLayout(projectId: string): Promise<{
+  roof_area_m2: number;
+  usable_area_m2: number;
+  panel_count: number;
+  layout_image_url: string;
+  savedAt?: string;
+}> {
+  return apiFetch(`/api/roof/manual-layout/${encodeURIComponent(projectId)}`);
 }
 
 // Minimal CRM project payload needed for AI layout

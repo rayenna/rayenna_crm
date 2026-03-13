@@ -13,7 +13,19 @@ import {
   getWipKeysForCurrentUser,
   formatEmailForDisplay,
 } from '../lib/customerStore';
-import { getCurrentUserRole, syncProjectProposal, syncProjectCosting, syncProjectBom, syncProjectRoi, createProposalShare } from '../lib/apiClient';
+import {
+  getCurrentUserRole,
+  syncProjectProposal,
+  syncProjectCosting,
+  syncProjectBom,
+  syncProjectRoi,
+  createProposalShare,
+  generateAiRoofLayout,
+  fetchCrmProjectForAiLayout,
+  AiRoofLayoutResponse,
+  getApiBaseUrl,
+  fetchManualRoofLayout,
+} from '../lib/apiClient';
 import type { CostingArtifact, BomArtifact, RoiArtifact, ProposalArtifact } from '../lib/customerStore';
 
 // ─────────────────────────────────────────────
@@ -510,7 +522,15 @@ interface TextOverrides {
   [key: string]: string | undefined;
 }
 
-function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?: Record<string, string>, logoImageData?: ArrayBuffer, textOverrides?: TextOverrides): Document {
+function buildDocx(
+  p: ProposalData,
+  diagramImageData?: ArrayBuffer,
+  bomComments?: Record<string, string>,
+  logoImageData?: ArrayBuffer,
+  textOverrides?: TextOverrides,
+  roofLayout?: AiRoofLayoutResponse | null,
+  roofLayoutImageData?: ArrayBuffer,
+): Document {
   const navy  = '0d1b3a';
   const white = 'FFFFFF';
 
@@ -1385,6 +1405,79 @@ function buildDocx(p: ProposalData, diagramImageData?: ArrayBuffer, bomComments?
         new Paragraph({ text: '', spacing: { after: 80 } }),
       ];
     })(),
+    ...(roofLayout
+      ? [
+          heading('Proposed Rooftop Solar Layout'),
+          ...(roofLayoutImageData
+            ? [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [
+                    new ImageRun({
+                      data: roofLayoutImageData,
+                      transformation: { width: 420, height: 260 },
+                      type: 'jpg',
+                    }),
+                  ],
+                  spacing: { after: 120 },
+                }),
+              ]
+            : []),
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: 'The following values summarise the AI-assisted rooftop solar layout generated for this project.',
+                size: 22,
+                color: '374151',
+              }),
+            ],
+            spacing: { after: 160 },
+          }),
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              new TableRow({
+                children: ['Roof area (m²)', 'Usable area (m²)', 'Panel count'].map(
+                  (label) =>
+                    new TableCell({
+                      children: [
+                        new Paragraph({
+                          alignment: AlignmentType.CENTER,
+                          children: [new TextRun({ text: label, bold: true, size: 20, color: white })],
+                        }),
+                      ],
+                      shading: { type: ShadingType.SOLID, color: navy },
+                    }),
+                ),
+              }),
+              new TableRow({
+                children: [
+                  Number.isFinite(roofLayout.roof_area_m2)
+                    ? `${Number(roofLayout.roof_area_m2).toFixed(1)}`
+                    : '—',
+                  Number.isFinite(roofLayout.usable_area_m2)
+                    ? `${Number(roofLayout.usable_area_m2).toFixed(1)}`
+                    : '—',
+                  Number.isFinite(roofLayout.panel_count)
+                    ? String(roofLayout.panel_count)
+                    : '—',
+                ].map(
+                  (value) =>
+                    new TableCell({
+                      children: [
+                        new Paragraph({
+                          alignment: AlignmentType.CENTER,
+                          children: [new TextRun({ text: value, size: 20, color: '111827' })],
+                        }),
+                      ],
+                    }),
+                ),
+              }),
+            ],
+          }),
+          new Paragraph({ text: '', spacing: { after: 200 } }),
+        ]
+      : []),
     heading('Our Process for Seamless Solar Integration'),
     new Paragraph({
       children: [new TextRun({ text: OUR_PROCESS_INTRO, size: 22, color: '374151' })],
@@ -1639,10 +1732,12 @@ async function exportToDocx(
   p: ProposalData,
   bomComments?: Record<string, string>,
   textOverrides?: TextOverrides,
-  container?: HTMLElement | null
+  container?: HTMLElement | null,
+  roofLayout?: AiRoofLayoutResponse | null,
 ): Promise<void> {
   let diagramImageData: ArrayBuffer | undefined;
   let logoImageData: ArrayBuffer | undefined;
+   let roofLayoutImageData: ArrayBuffer | undefined;
 
   // 1) Prefer the already-rendered <img> elements inside the proposal.
   // This works consistently on both mobile and desktop and avoids any
@@ -1655,12 +1750,17 @@ async function exportToDocx(
       const logoImg =
         container.querySelector<HTMLImageElement>('[data-docx-image="logo"]')
         ?? container.querySelector<HTMLImageElement>('img[src*="rayenna_logo"]');
+      const roofImg =
+        container.querySelector<HTMLImageElement>('[data-docx-image="roof-layout"]') ?? null;
 
       if (diagramImg) {
         diagramImageData = await imageElementToArrayBuffer(diagramImg);
       }
       if (logoImg) {
         logoImageData = await imageElementToArrayBuffer(logoImg);
+      }
+      if (roofImg) {
+        roofLayoutImageData = await imageElementToArrayBuffer(roofImg);
       }
     } catch {
       // best-effort only; we will still try network fetch below
@@ -1685,7 +1785,15 @@ async function exportToDocx(
     }
   }
 
-  const doc = buildDocx(p, diagramImageData, bomComments, logoImageData, textOverrides);
+  const doc = buildDocx(
+    p,
+    diagramImageData,
+    bomComments,
+    logoImageData,
+    textOverrides,
+    roofLayout,
+    roofLayoutImageData,
+  );
   const blob = await Packer.toBlob(doc);
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1955,6 +2063,93 @@ function OurProcessBlock() {
             <p className="text-xs text-secondary-600 leading-relaxed">{step.desc}</p>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function RoofLayoutBlock({ layout }: { layout: AiRoofLayoutResponse }) {
+  const accent = '#0f766e';
+  const apiBase = getApiBaseUrl();
+  const activeCustomer = getActiveCustomer();
+  const crmProjectId = activeCustomer?.master?.crmProjectId;
+
+  // Prefer the server-saved manual layout image (if any), otherwise fall back to the AI backend image.
+  let src: string | null = null;
+
+  if (crmProjectId) {
+    const manualPath = `/api/generated_layouts/${crmProjectId}_manual_layout.png`;
+    src = `${apiBase}${manualPath}`;
+  }
+
+  if (!src && layout.layout_image_url) {
+    src =
+      layout.layout_image_url && layout.layout_image_url.startsWith('http')
+        ? layout.layout_image_url
+        : `${apiBase}${layout.layout_image_url ?? ''}`;
+  }
+
+  return (
+    <div className="mb-8 pdf-section">
+      {/* Section heading */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-1 rounded-full flex-shrink-0" style={{ background: accent, height: '28px' }} />
+        <span className="text-lg leading-none">🛰️</span>
+        <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: accent }}>
+          Proposed Rooftop Solar Layout
+        </h2>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-start">
+        <div className="space-y-3">
+          <p className="text-sm text-secondary-700 leading-relaxed">
+            This layout is generated automatically from satellite imagery and your project details. It is an
+            indicative, AI-assisted draft to support technical discussions and customer presentations.
+          </p>
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+              <dt className="font-semibold text-emerald-800 uppercase tracking-wide text-[10px]">Roof area</dt>
+              <dd className="mt-1 text-base font-semibold text-emerald-900">
+                {Number.isFinite(layout.roof_area_m2) ? Number(layout.roof_area_m2).toFixed(1) : '—'} m²
+              </dd>
+            </div>
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+              <dt className="font-semibold text-emerald-800 uppercase tracking-wide text-[10px]">Usable area</dt>
+              <dd className="mt-1 text-base font-semibold text-emerald-900">
+                {Number.isFinite(layout.usable_area_m2) ? Number(layout.usable_area_m2).toFixed(1) : '—'} m²
+              </dd>
+            </div>
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 sm:col-span-2">
+              <dt className="font-semibold text-emerald-800 uppercase tracking-wide text-[10px]">Panel count</dt>
+              <dd className="mt-1 text-base font-semibold text-emerald-900">
+                {Number.isFinite(layout.panel_count) ? layout.panel_count : '—'}
+              </dd>
+            </div>
+          </dl>
+        </div>
+
+        <div className="space-y-2">
+          <div className="rounded-xl border border-slate-200 bg-slate-900/5 overflow-hidden">
+            {src ? (
+              <img
+                data-docx-image="roof-layout"
+                src={src}
+                alt="Proposed rooftop solar layout"
+                crossOrigin="anonymous"
+                className="w-full h-auto"
+                style={{ maxHeight: '320px', objectFit: 'cover' }}
+              />
+            ) : (
+              <div className="h-48 flex items-center justify-center text-xs text-secondary-400">
+                Roof layout image not available.
+              </div>
+            )}
+          </div>
+          <p className="text-[10px] text-secondary-500">
+            This is an early, AI-assisted draft. Please verify all roof clearances, structural constraints, and final
+            module layout on site before execution.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -2670,7 +2865,11 @@ function AccountDetailsBlock() {
 // Customer details form
 // ─────────────────────────────────────────────
 
-function CustomerForm({ onGenerate }: { onGenerate: (c: CustomerDetails) => void }) {
+function CustomerForm({
+  onGenerate,
+}: {
+  onGenerate: (c: CustomerDetails, options: { includeRoofLayout: boolean }) => void;
+}) {
   // Pre-fill from active customer if available
   const activeCustomer = getActiveCustomer();
   const ac = activeCustomer?.master;
@@ -2678,6 +2877,8 @@ function CustomerForm({ onGenerate }: { onGenerate: (c: CustomerDetails) => void
   const sheet      = getLatestSheet();
   const bom        = getBom();
   const roi: ROIResult | null = readStorage(getWipKeysForCurrentUser().roiResult);
+
+  const [includeRoofLayout, setIncludeRoofLayout] = useState(false);
 
   const hasSheet = !!sheet;
   const hasBom   = bom.length > 0;
@@ -2692,7 +2893,7 @@ function CustomerForm({ onGenerate }: { onGenerate: (c: CustomerDetails) => void
       phone:        master?.phone ?? '',
       email:        master?.email ?? '',
     };
-    onGenerate(customer);
+    onGenerate(customer, { includeRoofLayout });
   };
 
   return (
@@ -2742,7 +2943,7 @@ function CustomerForm({ onGenerate }: { onGenerate: (c: CustomerDetails) => void
       )}
 
       {/* Project & Customer snapshot — read-only, from CRM */}
-      <div className="bg-white rounded-xl border border-primary-100 shadow-sm p-6 space-y-4">
+        <div className="bg-white rounded-xl border border-primary-100 shadow-sm p-6 space-y-4">
         <div className="flex items-center justify-between gap-3 mb-1">
           <h3 className="text-xs font-bold text-secondary-600 uppercase tracking-widest">Project &amp; Customer (CRM)</h3>
           {ac?.projectStage && (
@@ -2750,6 +2951,29 @@ function CustomerForm({ onGenerate }: { onGenerate: (c: CustomerDetails) => void
               Stage: {ac.projectStage}
             </span>
           )}
+        </div>
+
+        {/* Optional: include AI roof layout in generated proposal */}
+        <div className="mt-4 border-t border-dashed border-secondary-200 pt-3">
+          <label className="flex items-start gap-2 text-xs text-secondary-700">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-3.5 w-3.5 rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
+              checked={includeRoofLayout}
+              onChange={(e) => setIncludeRoofLayout(e.target.checked)}
+            />
+            <span>
+              <span className="font-semibold">Include AI Roof Layout (Beta) in proposal</span>
+              <br />
+              <span className="text-[10px] text-secondary-500">
+                When checked, the latest AI rooftop solar layout for this CRM project will be added as a section in the generated proposal.
+              </span>
+              <br />
+              <span className="text-[10px] text-secondary-500">
+                Note: The panel quantity calculated by the AI Service might be different from what you are quoting. Please cross-check and adjust the values before sending the final proposal.
+              </span>
+            </span>
+          </label>
         </div>
         <p className="text-[11px] text-secondary-400">
           These details are pulled from Rayenna CRM and are <span className="font-semibold">read-only</span>. To make changes, edit the Project in CRM.
@@ -2844,6 +3068,8 @@ export default function ProposalPreview() {
   const [bomAllCollapsed, setBomAllCollapsed] = useState(false);
   const [isEditing, setIsEditing]             = useState(false);
   const [saveStatus, setSaveStatus]           = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [includeRoofLayout, setIncludeRoofLayout] = useState(false);
+  const [roofLayout, setRoofLayout]               = useState<AiRoofLayoutResponse | null>(null);
   const printRef                              = useRef<HTMLDivElement>(null);
   // Ref to the contentEditable document body div so we can read its innerHTML on save
   const docBodyRef                            = useRef<HTMLDivElement>(null);
@@ -2980,7 +3206,10 @@ export default function ProposalPreview() {
     }, 400);
   };
 
-  const handleGenerate = (customer: CustomerDetails) => {
+  const handleGenerate = async (
+    customer: CustomerDetails,
+    options: { includeRoofLayout: boolean },
+  ) => {
     // Always read the active customer record first — this is the source of truth.
     // Global localStorage keys may still hold data from a previously active customer,
     // so we prefer the customer record and only fall back to globals when no record exists.
@@ -3033,6 +3262,8 @@ export default function ProposalPreview() {
 
     const p = buildProposal(customer, sheet, bom, roi, roiAutofill, meta);
     setProposal(p);
+    setIncludeRoofLayout(options.includeRoofLayout);
+    setRoofLayout(null);
     // Keep activeCustomerId in sync so the key stays correct
     setActiveCustomerId(activeCustomer?.id ?? null);
 
@@ -3089,6 +3320,104 @@ export default function ProposalPreview() {
         void syncProjectProposal(projectId, proposalArtifact);
       }
     }
+
+    // Optionally generate the AI roof layout for this proposal so it can be included
+    // as a section when requested.
+    if (options.includeRoofLayout && activeCustomer?.master?.crmProjectId) {
+      try {
+        const crmProjectId = activeCustomer.master.crmProjectId;
+
+        // If a manual layout was saved by the sales team, prefer it (image + corrected metrics).
+        try {
+          const manual = await fetchManualRoofLayout(crmProjectId);
+          if (
+            manual &&
+            Number.isFinite(manual.roof_area_m2) &&
+            Number.isFinite(manual.usable_area_m2) &&
+            Number.isFinite(manual.panel_count) &&
+            typeof manual.layout_image_url === 'string'
+          ) {
+            setRoofLayout({
+              roof_area_m2: Number(manual.roof_area_m2),
+              usable_area_m2: Number(manual.usable_area_m2),
+              panel_count: Number(manual.panel_count),
+              layout_image_url: manual.layout_image_url,
+            });
+            return;
+          }
+        } catch {
+          // ignore if no manual layout exists
+        }
+
+        const crmProject = await fetchCrmProjectForAiLayout(crmProjectId);
+
+        let latitude: number | null =
+          (crmProject.customer && (crmProject.customer as any).latitude != null
+            ? Number((crmProject.customer as any).latitude)
+            : activeCustomer.master.latitude ?? null);
+        let longitude: number | null =
+          (crmProject.customer && (crmProject.customer as any).longitude != null
+            ? Number((crmProject.customer as any).longitude)
+            : activeCustomer.master.longitude ?? null);
+        let systemSizeKw: number | null =
+          crmProject.systemCapacity != null
+            ? Number(crmProject.systemCapacity)
+            : activeCustomer.master.systemSizeKw ?? null;
+        let panelWattage: number | null =
+          crmProject.panelCapacityW != null
+            ? Number(crmProject.panelCapacityW)
+            : activeCustomer.master.panelWattage ?? null;
+
+        if (
+          latitude == null ||
+          Number.isNaN(latitude) ||
+          longitude == null ||
+          Number.isNaN(longitude) ||
+          systemSizeKw == null ||
+          Number.isNaN(systemSizeKw) ||
+          panelWattage == null ||
+          Number.isNaN(panelWattage)
+        ) {
+          if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.warn('AI roof layout skipped: missing required CRM data');
+          }
+          return;
+        }
+
+        const data = await generateAiRoofLayout({
+          projectId: crmProject.id,
+          latitude,
+          longitude,
+          systemSizeKw,
+          panelWattage,
+        });
+
+        const roof = data?.roof_area_m2;
+        const usable = data?.usable_area_m2;
+        const panels = data?.panel_count;
+        if (!Number.isFinite(roof) || !Number.isFinite(usable) || !Number.isFinite(panels)) {
+          if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.warn('AI roof layout response incomplete, skipping layout section');
+          }
+          return;
+        }
+
+        setRoofLayout({
+          roof_area_m2: Number(roof),
+          usable_area_m2: Number(usable),
+          panel_count: Number(panels),
+          layout_image_url:
+            data?.layout_image_url && String(data.layout_image_url).trim() ? data.layout_image_url : '',
+        });
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.error('Failed to generate AI roof layout for proposal:', err);
+        }
+      }
+    }
   };
 
   const handleRegenerate = () => {
@@ -3118,7 +3447,13 @@ export default function ProposalPreview() {
         ? liveOverrides
         : savedOverrides;
       // DOCX export always uses the full BOM; collapse state affects only the on-screen HTML/PDF/Share view.
-      await exportToDocx(proposal, bomComments, textOverrides, printRef.current ?? undefined);
+      await exportToDocx(
+        proposal,
+        bomComments,
+        textOverrides,
+        printRef.current ?? undefined,
+        includeRoofLayout ? roofLayout : null,
+      );
     } finally {
       setExporting(null);
     }
@@ -3429,6 +3764,12 @@ export default function ProposalPreview() {
                 <FinancialBenefitsBlock proposal={proposal} />
                 <Divider />
                 <EnvironmentalImpactBlock proposal={proposal} />
+                {includeRoofLayout && roofLayout && (
+                  <>
+                    <Divider />
+                    <RoofLayoutBlock layout={roofLayout} />
+                  </>
+                )}
                 <Divider />
                 <OurProcessBlock />
                 <Divider />
