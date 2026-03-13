@@ -26,6 +26,9 @@ export default function AIRoofLayout() {
 
   // Konva-based layout state (pure frontend, no native deps)
   const stageRef = useRef<any>(null);
+  const polygonDragRef = useRef<{ x: number; y: number } | null>(null);
+  const recomputeTimeoutRef = useRef<number | null>(null);
+  const isDraggingRef = useRef(false);
 
   type Point = { x: number; y: number };
   type PanelRect = { x: number; y: number; w: number; h: number };
@@ -234,7 +237,14 @@ export default function AIRoofLayout() {
   };
 
   const handleSaveForProposal = async () => {
-    if (!stageRef.current) return;
+    if (!stageRef.current) {
+      setError('Nothing to save yet. Generate a layout first.');
+      return;
+    }
+    if (!activeProject?.master?.crmProjectId) {
+      setError('This proposal is not linked to a Rayenna CRM project yet.');
+      return;
+    }
     setSavingToProposal(true);
     try {
       const dataUrl = await captureLayoutImage();
@@ -334,7 +344,7 @@ export default function AIRoofLayout() {
     const approxPanelArea = panelWidthPx * panelHeightPx;
     // Cap the number of panels we attempt to draw so the UI stays responsive.
     const maxPanelsRendered = Math.min(
-      200,
+      120,
       idealPanelCount || Math.max(1, Math.floor(areaPx / approxPanelArea)),
     );
 
@@ -393,22 +403,34 @@ export default function AIRoofLayout() {
     ]);
   }, [imageSize, panelSpacingMultiplier, polygon]);
 
-  // Recompute panels + metrics whenever polygon / density / orientation changes
+  // Recompute panels + metrics whenever polygon / density / orientation changes,
+  // but debounce and skip while actively dragging so interaction feels smooth.
   useEffect(() => {
     if (!polygon) return;
-    const { panels: nextPanels, roofAreaM2, usableAreaM2, panelCount } =
-      computePanelsForPolygon(polygon);
-    setPanels(nextPanels);
-    setResult((prev) =>
-      prev
-        ? {
-            ...prev,
-            roof_area_m2: roofAreaM2,
-            usable_area_m2: usableAreaM2,
-            panel_count: panelCount,
-          }
-        : prev,
-    );
+    if (isDraggingRef.current) return;
+    if (recomputeTimeoutRef.current != null) {
+      window.clearTimeout(recomputeTimeoutRef.current);
+    }
+    recomputeTimeoutRef.current = window.setTimeout(() => {
+      const { panels: nextPanels, roofAreaM2, usableAreaM2, panelCount } =
+        computePanelsForPolygon(polygon);
+      setPanels(nextPanels);
+      setResult((prev) =>
+        prev
+          ? {
+              ...prev,
+              roof_area_m2: roofAreaM2,
+              usable_area_m2: usableAreaM2,
+              panel_count: panelCount,
+            }
+          : prev,
+      );
+    }, 200);
+    return () => {
+      if (recomputeTimeoutRef.current != null) {
+        window.clearTimeout(recomputeTimeoutRef.current);
+      }
+    };
   }, [polygon, panelSpacingMultiplier, panelOrientation]);
 
   return (
@@ -669,7 +691,7 @@ export default function AIRoofLayout() {
                           />
                         </Layer>
 
-                        {/* Roof polygon boundary in green */}
+                        {/* Roof polygon boundary in green + drag-whole-roof helper */}
                         {polygon && (
                           <Layer>
                             <Line
@@ -679,6 +701,60 @@ export default function AIRoofLayout() {
                               strokeWidth={2}
                               fill="rgba(34,197,94,0.08)"
                             />
+                            {(() => {
+                              let minX = polygon[0]!.x;
+                              let maxX = polygon[0]!.x;
+                              let minY = polygon[0]!.y;
+                              let maxY = polygon[0]!.y;
+                              for (const p of polygon) {
+                                if (p.x < minX) minX = p.x;
+                                if (p.x > maxX) maxX = p.x;
+                                if (p.y < minY) minY = p.y;
+                                if (p.y > maxY) maxY = p.y;
+                              }
+                              const w = Math.max(10, maxX - minX);
+                              const h = Math.max(10, maxY - minY);
+                              return (
+                                <Rect
+                                  x={minX}
+                                  y={minY}
+                                  width={w}
+                                  height={h}
+                                  opacity={0}
+                                  draggable
+                                  strokeEnabled={false}
+                                  onDragStart={(e) => {
+                                    isDraggingRef.current = true;
+                                    polygonDragRef.current = {
+                                      x: e.target.x(),
+                                      y: e.target.y(),
+                                    };
+                                  }}
+                                  onDragMove={(e) => {
+                                    if (!polygonDragRef.current) return;
+                                    const prev = polygonDragRef.current;
+                                    const nx = e.target.x();
+                                    const ny = e.target.y();
+                                    const dx = nx - prev.x;
+                                    const dy = ny - prev.y;
+                                    if (!dx && !dy) return;
+                                    polygonDragRef.current = { x: nx, y: ny };
+                                    setPolygon((poly) =>
+                                      poly
+                                        ? poly.map((p) => ({
+                                            x: p.x + dx,
+                                            y: p.y + dy,
+                                          }))
+                                        : poly,
+                                    );
+                                  }}
+                                  onDragEnd={() => {
+                                    polygonDragRef.current = null;
+                                    isDraggingRef.current = false;
+                                  }}
+                                />
+                              );
+                            })()}
                           </Layer>
                         )}
 
@@ -715,7 +791,7 @@ export default function AIRoofLayout() {
                           </Layer>
                         )}
 
-                        {/* Draggable polygon control points */}
+                        {/* Draggable polygon control points (bigger hit areas for easier touch/trackpad use) */}
                         {polygon && (
                           <Layer>
                             {polygon.map((p, idx) => (
@@ -724,15 +800,29 @@ export default function AIRoofLayout() {
                                 key={idx}
                                 x={p.x}
                                 y={p.y}
-                                radius={7}
+                                radius={9}
                                 fill="#10b981"
                                 stroke="#047857"
                                 strokeWidth={1.5}
-                                hitStrokeWidth={24}
+                                hitStrokeWidth={32}
                                 draggable
+                                onDragStart={() => {
+                                  isDraggingRef.current = true;
+                                }}
                                 onDragMove={(e) => {
                                   const nx = e.target.x();
                                   const ny = e.target.y();
+                                  setPolygon((prev) => {
+                                    if (!prev) return prev;
+                                    const next = [...prev];
+                                    next[idx] = { x: nx, y: ny };
+                                    return next;
+                                  });
+                                }}
+                                onDragEnd={(e) => {
+                                  const nx = e.target.x();
+                                  const ny = e.target.y();
+                                  isDraggingRef.current = false;
                                   setPolygon((prev) => {
                                     if (!prev) return prev;
                                     const next = [...prev];

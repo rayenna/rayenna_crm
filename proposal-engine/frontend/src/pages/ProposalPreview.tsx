@@ -2071,22 +2071,14 @@ function OurProcessBlock() {
 function RoofLayoutBlock({ layout }: { layout: AiRoofLayoutResponse }) {
   const accent = '#0f766e';
   const apiBase = getApiBaseUrl();
-  const activeCustomer = getActiveCustomer();
-  const crmProjectId = activeCustomer?.master?.crmProjectId;
-
-  // Prefer the server-saved manual layout image (if any), otherwise fall back to the AI backend image.
+  // The layout image URL is already resolved by the server / AIRoofLayout save flow.
+  // Just normalise it against the API base URL when needed.
   let src: string | null = null;
-
-  if (crmProjectId) {
-    const manualPath = `/api/generated_layouts/${crmProjectId}_manual_layout.png`;
-    src = `${apiBase}${manualPath}`;
-  }
-
-  if (!src && layout.layout_image_url) {
+  if (layout.layout_image_url) {
     src =
-      layout.layout_image_url && layout.layout_image_url.startsWith('http')
+      layout.layout_image_url.startsWith('http')
         ? layout.layout_image_url
-        : `${apiBase}${layout.layout_image_url ?? ''}`;
+        : `${apiBase}${layout.layout_image_url}`;
   }
 
   return (
