@@ -9,6 +9,16 @@ export interface LayoutRenderInput {
   satelliteImagePath: string;
 }
 
+/**
+ * Backend layout renderer with **no native dependencies**.
+ *
+ * The backend's responsibility is only to:
+ * - fetch and cache the satellite image from Google Maps
+ * - copy it into the `generated_layouts` directory
+ *
+ * All visual overlays (roof polygon, panel rectangles, labels) are handled
+ * entirely on the frontend using React + Konva / canvas APIs.
+ */
 export async function renderLayoutImage(input: LayoutRenderInput): Promise<string> {
   const outputDir = path.join(process.cwd(), 'generated_layouts');
   if (!fs.existsSync(outputDir)) {
@@ -17,8 +27,6 @@ export async function renderLayoutImage(input: LayoutRenderInput): Promise<strin
 
   const filePath = path.join(outputDir, `${input.projectId}_ai_layout.png`);
 
-  // Interim implementation: reuse the downloaded satellite image as the layout preview.
-  // This gives a meaningful visual while we work towards a rich overlay renderer.
   try {
     fs.copyFileSync(input.satelliteImagePath, filePath);
   } catch {

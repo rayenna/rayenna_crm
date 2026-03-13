@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import fs from 'fs';
 import path from 'path';
 import { authenticate } from '../middleware/auth';
 import { generateRoofLayoutJob } from '../workers/layoutGenerationWorker';
@@ -41,6 +42,86 @@ router.post('/ai-layout', authenticate, async (req, res) => {
     // eslint-disable-next-line no-console
     console.error('Failed to generate AI roof layout:', err);
     return res.status(500).json({ error: 'Failed to generate AI roof layout' });
+  }
+});
+
+router.post('/save-layout-image', authenticate, async (req, res) => {
+  const { projectId, dataUrl, roof_area_m2, usable_area_m2, panel_count } = req.body as {
+    projectId?: string;
+    dataUrl?: string;
+    roof_area_m2?: number;
+    usable_area_m2?: number;
+    panel_count?: number;
+  };
+
+  if (!projectId || !dataUrl || typeof dataUrl !== 'string') {
+    return res.status(400).json({ error: 'projectId and dataUrl are required' });
+  }
+
+  try {
+    // Expect a data URL like "data:image/png;base64,AAAA..."
+    const match = dataUrl.match(/^data:image\/(png|jpeg);base64,(.+)$/);
+    if (!match) {
+      return res.status(400).json({ error: 'Invalid image data URL' });
+    }
+    const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
+    const base64 = match[2];
+
+    const generatedLayoutsDir = path.join(process.cwd(), 'generated_layouts');
+    if (!fs.existsSync(generatedLayoutsDir)) {
+      fs.mkdirSync(generatedLayoutsDir, { recursive: true });
+    }
+    const filePath = path.join(generatedLayoutsDir, `${projectId}_manual_layout.${ext}`);
+    fs.writeFileSync(filePath, Buffer.from(base64, 'base64'));
+
+    // If metrics were provided, persist them too so the Proposal can use the revised values.
+    const roof = Number(roof_area_m2);
+    const usable = Number(usable_area_m2);
+    const panels = Number(panel_count);
+    if (Number.isFinite(roof) && Number.isFinite(usable) && Number.isFinite(panels)) {
+      const metaPath = path.join(generatedLayoutsDir, `${projectId}_manual_layout.json`);
+      fs.writeFileSync(
+        metaPath,
+        JSON.stringify(
+          {
+            projectId,
+            roof_area_m2: roof,
+            usable_area_m2: usable,
+            panel_count: panels,
+            savedAt: new Date().toISOString(),
+            layout_image_url: `/api/generated_layouts/${projectId}_manual_layout.${ext}`,
+          },
+          null,
+          2,
+        ),
+      );
+    }
+
+    const publicUrlPath = `/api/generated_layouts/${projectId}_manual_layout.${ext}`;
+    return res.json({ layout_image_url: publicUrlPath });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to save manual roof layout image:', err);
+    return res.status(500).json({ error: 'Failed to save layout image' });
+  }
+});
+
+router.get('/manual-layout/:projectId', authenticate, async (req, res) => {
+  const projectId = String(req.params.projectId || '').trim();
+  if (!projectId) return res.status(400).json({ error: 'projectId is required' });
+  try {
+    const generatedLayoutsDir = path.join(process.cwd(), 'generated_layouts');
+    const metaPath = path.join(generatedLayoutsDir, `${projectId}_manual_layout.json`);
+    if (!fs.existsSync(metaPath)) {
+      return res.status(404).json({ error: 'No manual layout saved' });
+    }
+    const raw = fs.readFileSync(metaPath, 'utf8');
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return res.json(parsed);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to load manual roof layout meta:', err);
+    return res.status(500).json({ error: 'Failed to load manual layout' });
   }
 });
 

@@ -21,7 +21,8 @@ export async function fetchSatelliteImage(
   const url =
     'https://maps.googleapis.com/maps/api/staticmap' +
     `?center=${latitude},${longitude}` +
-    '&zoom=20&size=1024x1024&maptype=satellite' +
+    // High‑resolution imagery: zoom 20, scale 2 as requested
+    '&zoom=20&size=1024x1024&scale=2&maptype=satellite' +
     `&key=${apiKey}`;
 
   const res = await axios.get(url, { responseType: 'arraybuffer' });
