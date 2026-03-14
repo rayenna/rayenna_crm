@@ -1,3 +1,4 @@
+
 # AI Roof Detection & Solar Layout — Implementation Plan
 
 > **Status: PENDING — To be revisited later.** Plan is complete; implementation deferred.
@@ -225,3 +226,28 @@
 ---
 
 If you confirm this plan (and Phase 1 scope: no OpenCV, sync API, rectangular fallback), the next step is to implement Phase 1 in the order: backend services → route → static serve → frontend component → proposal integration.
+
+---
+
+## 10. 3D Solar Installation Simulation (DEFERRED — Revisit Later)
+
+> **Note (saved for later):** The following 3D simulation plan was agreed in chat and intentionally deferred. Revisit when ready to add the feature.
+
+**Goal:** Add an optional interactive 3D rooftop + solar panel view inside the AI Roof Layout module, with export to PNG for the proposal PDF.
+
+**Requirements (to implement when revisiting):**
+1. Use **Three.js** to render a 3D rooftop model.
+2. Convert the detected **roof polygon** (from current 2D Konva flow) into a 3D mesh (pixel→meter, triangulate, flat or thin extrusion).
+3. Render **solar panels** as thin rectangular meshes from existing **panelCoordinates** (from `computePanelsForPolygon`).
+4. **Configurable tilt angle** for panels (e.g. slider 0°–45°).
+5. **Directional sunlight** (DirectionalLight; optional azimuth/elevation).
+6. **Camera rotation** for interactive viewing (e.g. OrbitControls).
+7. **Export** the 3D view as PNG to embed in the proposal (same pattern as current layout image; optional second image slot or “2D vs 3D” choice).
+
+**Inputs (reuse existing):** `roofPolygon` (pixel coords), `panelCoordinates` (pixel rects), `imageSize`, `METERS_PER_PIXEL`.
+
+**Suggested placement:** Optional “View 3D simulation” (or 2D | 3D tab) in the AI Roof Layout page when polygon + panels exist.
+
+**Suggested implementation order:** Three.js dependency → minimal 3D scene → polygon→roof mesh → panel meshes → tilt slider → sunlight → OrbitControls → PNG export → proposal/PDF integration.
+
+**File ideas:** `Solar3DView.tsx`, helpers for polygon→mesh and panelCoords→3D; dynamic import to limit bundle size.

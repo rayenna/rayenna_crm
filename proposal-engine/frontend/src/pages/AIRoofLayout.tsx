@@ -26,9 +26,23 @@ export default function AIRoofLayout() {
 
   // Konva-based layout state (pure frontend, no native deps)
   const stageRef = useRef<any>(null);
+  const lineRef = useRef<any>(null);
   const polygonDragRef = useRef<{ x: number; y: number } | null>(null);
+  const polygonBaseRef = useRef<Point[] | null>(null); // polygon at drag start for imperative updates
   const recomputeTimeoutRef = useRef<number | null>(null);
   const isDraggingRef = useRef(false);
+  // When true, canvas captures touch (edit polygon); when false, touches pass through so map scroll works (mobile)
+  const [editMode, setEditMode] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(
+    typeof window !== 'undefined' && window.innerWidth < 768,
+  );
+
+  useEffect(() => {
+    const onResize = () => setIsMobileView(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   type Point = { x: number; y: number };
   type PanelRect = { x: number; y: number; w: number; h: number };
@@ -281,7 +295,10 @@ export default function AIRoofLayout() {
     }
   };
 
-  function computePanelsForPolygon(poly: Point[]): {
+  function computePanelsForPolygon(
+    poly: Point[],
+    maxPanelsCap: number = 120,
+  ): {
     panels: PanelRect[];
     roofAreaM2: number;
     usableAreaM2: number;
@@ -346,9 +363,8 @@ export default function AIRoofLayout() {
     };
 
     const approxPanelArea = panelWidthPx * panelHeightPx;
-    // Cap the number of panels we attempt to draw so the UI stays responsive.
     const maxPanelsRendered = Math.min(
-      120,
+      maxPanelsCap,
       idealPanelCount || Math.max(1, Math.floor(areaPx / approxPanelArea)),
     );
 
@@ -416,8 +432,9 @@ export default function AIRoofLayout() {
       window.clearTimeout(recomputeTimeoutRef.current);
     }
     recomputeTimeoutRef.current = window.setTimeout(() => {
+      const maxCap = typeof window !== 'undefined' && window.innerWidth < 768 ? 70 : 120;
       const { panels: nextPanels, roofAreaM2, usableAreaM2, panelCount } =
-        computePanelsForPolygon(polygon);
+        computePanelsForPolygon(polygon, maxCap);
       setPanels(nextPanels);
       setResult((prev) =>
         prev
@@ -679,7 +696,33 @@ export default function AIRoofLayout() {
 
                 {/* Photo / canvas — scrollable area is exactly the scaled image size (no blank space at any zoom) */}
                 <div className="min-h-[260px] sm:min-h-[320px] aspect-[4/3] sm:aspect-video rounded-2xl border border-gray-200 bg-white overflow-hidden">
-                  <div className="w-full h-full overflow-auto touch-pan-y">
+                  {/* Scroll vs Edit: when editMode is false, canvas doesn't capture touch so native scroll works on mobile */}
+                  {isMobileView && (
+                    <div className="mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-gray-600">Map:</span>
+                        <button
+                        type="button"
+                        onClick={() => setEditMode(false)}
+                        className={`min-h-[40px] px-3 rounded-lg text-xs font-semibold border touch-manipulation ${
+                          !editMode ? 'bg-indigo-100 border-indigo-400 text-indigo-800' : 'bg-white border-gray-300 text-gray-600'
+                        }`}
+                      >
+                        Scroll map
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditMode(true)}
+                        className={`min-h-[40px] px-3 rounded-lg text-xs font-semibold border touch-manipulation ${
+                          editMode ? 'bg-indigo-100 border-indigo-400 text-indigo-800' : 'bg-white border-gray-300 text-gray-600'
+                        }`}
+                      >
+                        Edit polygon
+                      </button>
+                    </div>
+                    </div>
+                  )}
+                  <div className="w-full h-full overflow-auto overflow-x-auto touch-pan-y overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
                     {bgImage && imageSize ? (
                       <div
                         className="relative flex-shrink-0 touch-pan-y"
@@ -695,6 +738,7 @@ export default function AIRoofLayout() {
                             transformOrigin: '0 0',
                             width: imageSize.width,
                             height: imageSize.height,
+                            pointerEvents: editMode || !isMobileView ? 'auto' : 'none',
                           }}
                         >
                           <Stage
@@ -715,11 +759,13 @@ export default function AIRoofLayout() {
                         {polygon && (
                           <Layer>
                             <Line
+                              ref={lineRef}
                               points={polygon.flatMap((p) => [p.x, p.y])}
                               closed
                               stroke="#16a34a"
                               strokeWidth={2}
                               fill="rgba(34,197,94,0.08)"
+                              listening={false}
                             />
                             {(() => {
                               let minX = polygon[0]!.x;
@@ -745,32 +791,35 @@ export default function AIRoofLayout() {
                                   strokeEnabled={false}
                                   onDragStart={(e) => {
                                     isDraggingRef.current = true;
+                                    setIsDragging(true);
+                                    polygonBaseRef.current = polygon ? polygon.map((p) => ({ ...p })) : null;
                                     polygonDragRef.current = {
                                       x: e.target.x(),
                                       y: e.target.y(),
                                     };
                                   }}
                                   onDragMove={(e) => {
-                                    if (!polygonDragRef.current) return;
-                                    const prev = polygonDragRef.current;
+                                    if (!polygonDragRef.current || !polygonBaseRef.current || !lineRef.current) return;
+                                    const start = polygonDragRef.current;
                                     const nx = e.target.x();
                                     const ny = e.target.y();
-                                    const dx = nx - prev.x;
-                                    const dy = ny - prev.y;
-                                    if (!dx && !dy) return;
-                                    polygonDragRef.current = { x: nx, y: ny };
-                                    setPolygon((poly) =>
-                                      poly
-                                        ? poly.map((p) => ({
-                                            x: p.x + dx,
-                                            y: p.y + dy,
-                                          }))
-                                        : poly,
-                                    );
+                                    const dx = nx - start.x;
+                                    const dy = ny - start.y;
+                                    const flat = polygonBaseRef.current.flatMap((p) => [p.x + dx, p.y + dy]);
+                                    lineRef.current.points(flat);
+                                    lineRef.current.getLayer()?.batchDraw();
                                   }}
                                   onDragEnd={() => {
                                     polygonDragRef.current = null;
                                     isDraggingRef.current = false;
+                                    setIsDragging(false);
+                                    if (lineRef.current) {
+                                      const flat = lineRef.current.points();
+                                      const next: Point[] = [];
+                                      for (let i = 0; i < flat.length; i += 2) next.push({ x: flat[i]!, y: flat[i + 1]! });
+                                      setPolygon(next.length ? next : null);
+                                    }
+                                    polygonBaseRef.current = null;
                                   }}
                                 />
                               );
@@ -778,8 +827,8 @@ export default function AIRoofLayout() {
                           </Layer>
                         )}
 
-                        {/* Panels clipped to polygon, with improved styling */}
-                        {polygon && panels.length > 0 && (
+                        {/* Panels clipped to polygon, with improved styling — hidden during drag for performance */}
+                        {polygon && panels.length > 0 && !isDragging && (
                           <Layer
                             clipFunc={(ctx) => {
                               if (!polygon.length) return;
@@ -828,27 +877,27 @@ export default function AIRoofLayout() {
                                 draggable
                                 onDragStart={() => {
                                   isDraggingRef.current = true;
+                                  setIsDragging(true);
                                 }}
                                 onDragMove={(e) => {
+                                  if (!lineRef.current || !polygon) return;
                                   const nx = e.target.x();
                                   const ny = e.target.y();
-                                  setPolygon((prev) => {
-                                    if (!prev) return prev;
-                                    const next = [...prev];
-                                    next[idx] = { x: nx, y: ny };
-                                    return next;
-                                  });
+                                  const flat = polygon.flatMap((pt, i) =>
+                                    i === idx ? [nx, ny] : [pt.x, pt.y],
+                                  );
+                                  lineRef.current.points(flat);
+                                  lineRef.current.getLayer()?.batchDraw();
                                 }}
-                                onDragEnd={(e) => {
-                                  const nx = e.target.x();
-                                  const ny = e.target.y();
+                                onDragEnd={() => {
                                   isDraggingRef.current = false;
-                                  setPolygon((prev) => {
-                                    if (!prev) return prev;
-                                    const next = [...prev];
-                                    next[idx] = { x: nx, y: ny };
-                                    return next;
-                                  });
+                                  setIsDragging(false);
+                                  if (lineRef.current) {
+                                    const flat = lineRef.current.points();
+                                    const next: Point[] = [];
+                                    for (let i = 0; i < flat.length; i += 2) next.push({ x: flat[i]!, y: flat[i + 1]! });
+                                    setPolygon(next.length ? next : null);
+                                  }
                                 }}
                               />
                             ))}
