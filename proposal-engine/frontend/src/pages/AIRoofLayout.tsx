@@ -722,13 +722,15 @@ export default function AIRoofLayout() {
                     </div>
                     </div>
                   )}
-                  <div className="w-full h-full overflow-auto overflow-x-auto touch-pan-y overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+                  <div className="w-full h-full overflow-auto overscroll-contain min-w-0 min-h-0" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}>
                     {bgImage && imageSize ? (
                       <div
-                        className="relative flex-shrink-0 touch-pan-y"
+                        className="relative flex-shrink-0"
                         style={{
                           width: imageSize.width * zoom,
                           height: imageSize.height * zoom,
+                          minWidth: imageSize.width * zoom,
+                          minHeight: imageSize.height * zoom,
                         }}
                       >
                         <div
