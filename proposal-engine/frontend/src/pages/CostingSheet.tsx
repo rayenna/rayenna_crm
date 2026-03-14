@@ -3,7 +3,7 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import * as XLSX from 'xlsx';
 import { Link } from 'react-router-dom';
 import { getActiveCustomer, upsertCustomer, getWipKeysForCurrentUser } from '../lib/customerStore';
-import type { CostingArtifact } from '../lib/customerStore';
+import type { CostingArtifact, BomArtifact } from '../lib/customerStore';
 import {
   CATEGORIES, CATEGORY_GST, CATEGORY_COLORS,
   DEFAULT_MARGIN,
@@ -14,6 +14,7 @@ import type {
 } from '../lib/costingConstants';
 import {
   syncProjectCosting,
+  syncProjectBom,
   canEditProposalArtifacts,
   getCurrentUserRole,
   fetchCostingTemplates,
@@ -2153,10 +2154,10 @@ export default function CostingSheet() {
     };
     localStorage.setItem(wip.roiAutofill, JSON.stringify(roiAutofill));
 
-    // Persist costing artifact to active customer record
+    // Persist costing artifact and BOM to active customer (single source of truth = Costing Sheet).
     const activeCustomer = getActiveCustomer();
     if (activeCustomer) {
-      const artifact: CostingArtifact = {
+      const costingArtifact: CostingArtifact = {
         sheetName:     name,
         savedAt:       now,
         items:         validItems,
@@ -2166,11 +2167,18 @@ export default function CostingSheet() {
         totalGst,
         systemSizeKw:  sizeKw,
       };
-      upsertCustomer({ ...activeCustomer, costing: artifact, updatedAt: now });
+      const bomArtifact: BomArtifact = { savedAt: now, rows: bomRows };
+      upsertCustomer({
+        ...activeCustomer,
+        costing: costingArtifact,
+        bom:     bomArtifact,
+        updatedAt: now,
+      });
 
-      // Best-effort sync to CRM backend when this customer is linked to a CRM Project.
+      // Sync both to CRM backend so BOM page and Proposal use the same values everywhere.
       if (activeCustomer.master.crmProjectId) {
-        void syncProjectCosting(activeCustomer.master.crmProjectId, artifact);
+        void syncProjectCosting(activeCustomer.master.crmProjectId, costingArtifact);
+        void syncProjectBom(activeCustomer.master.crmProjectId, bomArtifact);
       }
     }
 

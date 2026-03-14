@@ -438,7 +438,7 @@ export default function AIRoofLayout() {
   }, [polygon, panelSpacingMultiplier, panelOrientation]);
 
   return (
-    <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+    <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 overflow-x-hidden">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
           <div>
@@ -504,151 +504,153 @@ export default function AIRoofLayout() {
         )}
 
         {result && (
-          <div className="mt-3 space-y-3">
-            <div className="flex flex-wrap items-center gap-2 text-[11px] sm:text-xs">
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Layout actions</span>
-              <button
-                type="button"
-                onClick={() => handleExportLayoutImage('png')}
-                disabled={exporting}
-                className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60 border border-gray-300"
-              >
-                {exporting ? '…' : 'PNG'}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleExportLayoutImage('jpeg')}
-                disabled={exporting}
-                className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60 border border-gray-300"
-              >
-                {exporting ? '…' : 'JPG'}
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveForProposal}
-                disabled={savingToProposal}
-                className={`inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold border ${
-                  lastSavedProjectId && activeProject?.master?.crmProjectId != null
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-400'
-                    : 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700'
-                } disabled:opacity-60`}
-              >
-                {savingToProposal
-                  ? 'Saving…'
-                  : lastSavedProjectId && activeProject?.master?.crmProjectId != null
-                    ? 'Saved for proposal'
-                    : 'Save for proposal'}
-              </button>
-            </div>
-            <div
-              ref={exportRef}
-              className="grid gap-4 lg:gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1.3fr)] items-start bg-white p-3 sm:p-4 rounded-xl border border-gray-100"
-            >
-            <div className="space-y-3">
-              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                Layout summary
-              </h2>
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    Roof area
-                  </dt>
-                  <dd className="mt-1 text-base font-semibold text-gray-900">
-                    {Number.isFinite(result.roof_area_m2) ? Number(result.roof_area_m2).toFixed(1) : '—'} m²
-                  </dd>
-                </div>
-                <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    Usable area
-                  </dt>
-                  <dd className="mt-1 text-base font-semibold text-gray-900">
-                    {Number.isFinite(result.usable_area_m2) ? Number(result.usable_area_m2).toFixed(1) : '—'} m²
-                  </dd>
-                </div>
-                <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-                  <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    Panel count
-                  </dt>
-                  <dd className="mt-1 text-base font-semibold text-gray-900">
-                    {Number.isFinite(result.panel_count) ? result.panel_count : '—'}
-                  </dd>
-                </div>
-              </dl>
-            </div>
+          <div ref={exportRef} className="mt-3 space-y-4">
+            {/* Mobile: single column — Summary → Actions → Controls → Photo. Desktop: grid with summary left, preview right. */}
+            <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1.3fr)] lg:gap-6 lg:items-start">
+              {/* 1) Layout summary — first on mobile and desktop left column */}
+              <div className="space-y-3 order-1 lg:order-1">
+                <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                  Layout summary
+                </h2>
+                <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                    <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      Roof area
+                    </dt>
+                    <dd className="mt-1 text-base font-semibold text-gray-900">
+                      {Number.isFinite(result.roof_area_m2) ? Number(result.roof_area_m2).toFixed(1) : '—'} m²
+                    </dd>
+                  </div>
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                    <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      Usable area
+                    </dt>
+                    <dd className="mt-1 text-base font-semibold text-gray-900">
+                      {Number.isFinite(result.usable_area_m2) ? Number(result.usable_area_m2).toFixed(1) : '—'} m²
+                    </dd>
+                  </div>
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 col-span-2 sm:col-span-1">
+                    <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      Panel count
+                    </dt>
+                    <dd className="mt-1 text-base font-semibold text-gray-900">
+                      {Number.isFinite(result.panel_count) ? result.panel_count : '—'}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
 
-            <div className="space-y-2">
-              <div className="flex flex-col gap-2 mb-2">
-                <div className="flex items-center justify-between gap-2">
-                  <h2 className="text-sm sm:text-base font-semibold text-gray-700 uppercase tracking-wide">
+              {/* 2) Actions + Controls + Photo — second on mobile (right column on desktop) */}
+              <div className="space-y-4 order-2 lg:order-2 bg-white p-3 sm:p-4 rounded-xl border border-gray-100">
+                {/* Layout actions — touch-friendly on mobile */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide w-full sm:w-auto">Actions</span>
+                  <button
+                    type="button"
+                    onClick={() => handleExportLayoutImage('png')}
+                    disabled={exporting}
+                    className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 inline-flex items-center justify-center px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60 border border-gray-300"
+                  >
+                    {exporting ? '…' : 'PNG'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleExportLayoutImage('jpeg')}
+                    disabled={exporting}
+                    className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 inline-flex items-center justify-center px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60 border border-gray-300"
+                  >
+                    {exporting ? '…' : 'JPG'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveForProposal}
+                    disabled={savingToProposal}
+                    className={`min-h-[44px] sm:min-h-0 inline-flex items-center justify-center px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold border flex-1 sm:flex-initial ${
+                      lastSavedProjectId && activeProject?.master?.crmProjectId != null
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-400'
+                        : 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700'
+                    } disabled:opacity-60`}
+                  >
+                    {savingToProposal
+                      ? 'Saving…'
+                      : lastSavedProjectId && activeProject?.master?.crmProjectId != null
+                        ? 'Saved for proposal'
+                        : 'Save for proposal'}
+                  </button>
+                </div>
+
+                {/* All controls — stacked on mobile for easy tap, inline on desktop */}
+                <div className="space-y-3">
+                  <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
                     Layout preview
                   </h2>
-                  <div className="flex items-center gap-1 text-[10px] text-gray-600">
-                    <span className="hidden sm:inline">Zoom</span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setZoom((z) => Math.max(0.2, Math.round((z - 0.25) * 4) / 4))
-                      }
-                      className="h-6 w-6 flex items-center justify-center rounded-full border border-gray-300 bg-white text-xs font-semibold hover:bg-gray-50"
-                    >
-                      −
-                    </button>
-                    <span className="min-w-[3rem] text-center font-medium">
-                      {Math.round(zoom * 100)}%
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setZoom((z) => Math.min(10, Math.round((z + 0.25) * 4) / 4))
-                      }
-                      className="h-6 w-6 flex items-center justify-center rounded-full border border-gray-300 bg-white text-xs font-semibold hover:bg-gray-50"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-3 text-[10px] text-gray-600">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold uppercase tracking-wide">Panel density</span>
-                    <input
-                      type="range"
-                      min={0.8}
-                      max={2}
-                      step={0.2}
-                      value={panelSpacingMultiplier}
-                      onChange={(e) => setPanelSpacingMultiplier(Number(e.target.value))}
-                      className="w-32"
-                    />
-                    <span className="text-[10px]">
-                      {panelSpacingMultiplier < 1.2 ? 'Tighter' : panelSpacingMultiplier > 1.6 ? 'Looser' : 'Medium'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold uppercase tracking-wide">Orientation</span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setPanelOrientation((prev) =>
-                          prev === 'portrait' ? 'landscape' : 'portrait',
-                        )
-                      }
-                      className="px-2 py-1 rounded-full border border-gray-300 bg-white text-[10px] font-semibold hover:bg-gray-50"
-                    >
-                      {panelOrientation === 'portrait' ? 'Portrait' : 'Landscape'}
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
+                    <div className="flex items-center justify-between gap-3 sm:gap-2">
+                      <span className="text-xs font-medium text-gray-600 min-w-[4rem]">Zoom</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setZoom((z) => Math.max(0.2, Math.round((z - 0.25) * 4) / 4))
+                          }
+                          className="h-10 w-10 sm:h-8 sm:w-8 flex items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-semibold hover:bg-gray-50 touch-manipulation"
+                          aria-label="Zoom out"
+                        >
+                          −
+                        </button>
+                        <span className="min-w-[3.5rem] text-center text-sm font-medium tabular-nums">
+                          {Math.round(zoom * 100)}%
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setZoom((z) => Math.min(10, Math.round((z + 0.25) * 4) / 4))
+                          }
+                          className="h-10 w-10 sm:h-8 sm:w-8 flex items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-semibold hover:bg-gray-50 touch-manipulation"
+                          aria-label="Zoom in"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <span className="text-xs font-medium text-gray-600">Panel density</span>
+                      <input
+                        type="range"
+                        min={0.8}
+                        max={2}
+                        step={0.2}
+                        value={panelSpacingMultiplier}
+                        onChange={(e) => setPanelSpacingMultiplier(Number(e.target.value))}
+                        className="w-full sm:w-32 h-8 accent-indigo-600"
+                      />
+                      <span className="text-xs text-gray-500">
+                        {panelSpacingMultiplier < 1.2 ? 'Tighter' : panelSpacingMultiplier > 1.6 ? 'Looser' : 'Medium'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-gray-600">Orientation</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPanelOrientation((prev) =>
+                            prev === 'portrait' ? 'landscape' : 'portrait',
+                          )
+                        }
+                        className="min-h-[44px] sm:min-h-0 px-4 py-2 sm:px-2 sm:py-1 rounded-full border border-gray-300 bg-white text-xs font-semibold hover:bg-gray-50 touch-manipulation"
+                      >
+                        {panelOrientation === 'portrait' ? 'Portrait' : 'Landscape'}
+                      </button>
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
                         if (!imageSize) return;
-                        // Rebuild a clean rectangular polygon aligned to the current panel grid.
                         const margin = Math.min(imageSize.width, imageSize.height) * 0.3;
                         let minX = margin;
                         let maxX = imageSize.width - margin;
                         let minY = margin;
                         let maxY = imageSize.height - margin;
-
                         const panelWidthPx = PANEL_WIDTH_M / METERS_PER_PIXEL;
                         const panelHeightPx = PANEL_HEIGHT_M / METERS_PER_PIXEL;
                         const spacingPx =
@@ -657,12 +659,10 @@ export default function AIRoofLayout() {
                         const stepY = panelHeightPx + spacingPx;
                         const snap = (v: number, step: number) =>
                           Math.round(v / step) * step;
-
                         minX = snap(minX, stepX);
                         maxX = snap(maxX, stepX);
                         minY = snap(minY, stepY);
                         maxY = snap(maxY, stepY);
-
                         setPolygon([
                           { x: minX, y: minY },
                           { x: maxX, y: minY },
@@ -670,24 +670,34 @@ export default function AIRoofLayout() {
                           { x: minX, y: maxY },
                         ]);
                       }}
-                      className="px-2 py-1 rounded-full border border-gray-300 bg-white text-[10px] font-semibold hover:bg-gray-50"
+                      className="min-h-[44px] sm:min-h-0 px-4 py-2 sm:px-2 sm:py-1 rounded-full border border-gray-300 bg-white text-xs font-semibold hover:bg-gray-50 touch-manipulation w-full sm:w-auto"
                     >
                       Snap to grid
                     </button>
                   </div>
                 </div>
-              </div>
-              <div className="aspect-[4/3] sm:aspect-video rounded-2xl border border-gray-200 bg-white overflow-hidden">
-                <div className="w-full h-full overflow-auto flex items-center justify-center">
-                  <div
-                    className="relative origin-center inline-block touch-pan-y"
-                    style={{
-                      transform: `scale(${zoom})`,
-                      transformOrigin: 'center center',
-                    }}
-                  >
+
+                {/* Photo / canvas — scrollable area is exactly the scaled image size (no blank space at any zoom) */}
+                <div className="min-h-[260px] sm:min-h-[320px] aspect-[4/3] sm:aspect-video rounded-2xl border border-gray-200 bg-white overflow-hidden">
+                  <div className="w-full h-full overflow-auto touch-pan-y">
                     {bgImage && imageSize ? (
-                      <Stage
+                      <div
+                        className="relative flex-shrink-0 touch-pan-y"
+                        style={{
+                          width: imageSize.width * zoom,
+                          height: imageSize.height * zoom,
+                        }}
+                      >
+                        <div
+                          className="absolute top-0 left-0"
+                          style={{
+                            transform: `scale(${zoom})`,
+                            transformOrigin: '0 0',
+                            width: imageSize.width,
+                            height: imageSize.height,
+                          }}
+                        >
+                          <Stage
                         ref={stageRef}
                         width={imageSize.width}
                         height={imageSize.height}
@@ -844,32 +854,33 @@ export default function AIRoofLayout() {
                             ))}
                           </Layer>
                         )}
-                      </Stage>
+                          </Stage>
+                        </div>
+                      </div>
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">
+                      <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm min-h-[200px]">
                         No layout image returned
                       </div>
                     )}
                   </div>
                 </div>
-              </div>
-              <p className="mt-2 text-xs text-gray-500">
-                This is an early, AI-assisted draft. Please verify on-site measurements before finalizing proposals.
-              </p>
-              {lastLatitude != null && lastLongitude != null && (
-                <p className="mt-2 text-[11px] text-gray-500 break-all">
-                  Google Maps link:{' '}
-                  <a
-                    href={`https://www.google.com/maps?q=${lastLatitude},${lastLongitude}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-indigo-600 underline"
-                  >
-                    {`https://www.google.com/maps?q=${lastLatitude},${lastLongitude}`}
-                  </a>
+                <p className="mt-2 text-xs text-gray-500">
+                  This is an early, AI-assisted draft. Please verify on-site measurements before finalizing proposals.
                 </p>
-              )}
-            </div>
+                {lastLatitude != null && lastLongitude != null && (
+                  <p className="mt-2 text-[11px] text-gray-500 break-all">
+                    Google Maps link:{' '}
+                    <a
+                      href={`https://www.google.com/maps?q=${lastLatitude},${lastLongitude}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-indigo-600 underline"
+                    >
+                      {`https://www.google.com/maps?q=${lastLatitude},${lastLongitude}`}
+                    </a>
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         )}

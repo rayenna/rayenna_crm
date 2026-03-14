@@ -151,14 +151,6 @@ interface BomOverrides {
   savedAt: string;
 }
 
-function loadOverrides(): BomOverrides | null {
-  try {
-    const key = getWipKeysForCurrentUser().bomOverrides;
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-
 function persistOverrides(sheetId: string, rows: BomRow[]) {
   const wip = getWipKeysForCurrentUser();
   const data: BomOverrides = { sheetId, rows, savedAt: new Date().toISOString() };
@@ -541,18 +533,14 @@ function BomTable({
 // ─────────────────────────────────────────────
 
 export default function BOMSheet() {
-  // Resolve initial rows synchronously to avoid useEffect lag
+  // Single source of truth = Costing Sheet. Prefer BOM-from-costing over customer's saved BOM.
   const _initRows = (() => {
+    const stored = loadStoredBom();
+    if (stored?.rows && stored.rows.length > 0)
+      return (stored.rows as Partial<BomRow>[]).map(normalizeRow);
     const ac = getActiveCustomer();
     if (ac?.bom?.rows && ac.bom.rows.length > 0)
       return (ac.bom.rows as Partial<BomRow>[]).map(normalizeRow);
-    const stored = loadStoredBom();
-    if (stored) {
-      const overrides = loadOverrides();
-      if (overrides && overrides.sheetId === stored.sheetId)
-        return overrides.rows.map(normalizeRow);
-      return (stored.rows as Partial<BomRow>[]).map(normalizeRow);
-    }
     return [];
   })();
 
@@ -561,7 +549,7 @@ export default function BOMSheet() {
 
   const [loading, setLoading]       = useState(_initRows.length === 0);
   const [source, setSource]         = useState<'costing-sheet' | 'overrides' | 'api' | null>(
-    _initRows.length > 0 ? 'overrides' : null
+    _initRows.length > 0 ? 'costing-sheet' : null
   );
   const [storedBom, setStoredBom]   = useState<StoredBom | null>(loadStoredBom);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -579,7 +567,6 @@ export default function BOMSheet() {
   const liveRows = watchedRows ?? [];
 
   const loadBom = useCallback((force = false) => {
-    // If we already loaded synchronously on init, skip unless forced
     if (!force && _initRows.length > 0) {
       setLoading(false);
       return;
@@ -588,39 +575,29 @@ export default function BOMSheet() {
     setLoading(true);
     setFetchError(null);
 
-    // 1. Prefer active customer's saved BOM artifact
+    // 1. Prefer BOM-from-costing (single source of truth = Costing Sheet)
+    const stored = loadStoredBom();
+    setStoredBom(stored);
+    if (stored?.rows && stored.rows.length > 0) {
+      const rows = (stored.rows as Partial<BomRow>[]).map(normalizeRow);
+      initialRowsRef.current = rows;
+      reset({ rows });
+      setSource('costing-sheet');
+      setLoading(false);
+      return;
+    }
+
+    // 2. Fall back to active customer's saved BOM (e.g. after CRM sync or prior save)
     const ac = getActiveCustomer();
     if (ac?.bom?.rows && ac.bom.rows.length > 0) {
       const rows = (ac.bom.rows as Partial<BomRow>[]).map(normalizeRow);
       initialRowsRef.current = rows;
       reset({ rows });
-      setSource('overrides');
+      setSource('costing-sheet');
       setLoading(false);
       return;
     }
 
-    // 2. Fall back to localStorage costing-sheet-generated BOM
-    const stored = loadStoredBom();
-    setStoredBom(stored);
-
-    if (stored) {
-      const overrides = loadOverrides();
-      if (overrides && overrides.sheetId === stored.sheetId) {
-        const rows = overrides.rows.map(normalizeRow);
-        initialRowsRef.current = rows;
-        reset({ rows });
-        setSource('overrides');
-      } else {
-        const rows = (stored.rows as Partial<BomRow>[]).map(normalizeRow);
-        initialRowsRef.current = rows;
-        reset({ rows });
-        setSource('costing-sheet');
-      }
-      setLoading(false);
-      return;
-    }
-
-    // No localStorage data and no backend in production — start with empty BOM
     setSource('costing-sheet');
     setLoading(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -634,7 +611,7 @@ export default function BOMSheet() {
       const now     = new Date().toISOString();
       const sheetId = storedBom?.sheetId ?? 'manual';
       persistOverrides(sheetId, data.rows);
-      setSource('overrides');
+      setSource('costing-sheet');
 
       // Forward ROI autofill from the costing sheet (BOM doesn't have costs,
       // so we preserve whatever the costing sheet wrote — just update the source label)
@@ -799,20 +776,20 @@ export default function BOMSheet() {
                     {new Date(storedBom.generatedAt).toLocaleTimeString('en-IN', {
                       hour: '2-digit', minute: '2-digit',
                     })}
-                    {source === 'overrides' && (
-                      <span className="ml-2 text-emerald-700 font-medium">· Your edits are saved</span>
+                    {saveStatus === 'saved' && (
+                      <span className="ml-2 text-emerald-700 font-medium">· BOM saved</span>
                     )}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                {canEdit && source === 'overrides' && (
+                {canEdit && storedBom && (
                   <button
                     type="button"
                     onClick={handleRegenerateFromCosting}
                     className="text-xs text-yellow-700 hover:text-yellow-900 border border-yellow-300 hover:bg-yellow-100 px-3 py-1.5 rounded-lg transition-colors font-medium"
                   >
-                    ↺ Reset to generated
+                    ↺ Reload from Costing Sheet
                   </button>
                 )}
                 <span className="text-xs text-yellow-600 bg-yellow-100 border border-yellow-200 px-2.5 py-1 rounded-lg font-medium">
