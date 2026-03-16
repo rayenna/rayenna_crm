@@ -1280,6 +1280,9 @@ function downloadTemplate() {
     ['meter',    'Net Meter & DISCOM Charges',     'Bi-directional, DISCOM-approved',                       1, 15000],
     // ── Installation ──
     ['installation', 'Installation & Commissioning','EPC turnkey — civil, electrical & commissioning',      1, 85000],
+    // ── Electrical Items ──
+    ['electrical-items', 'Switches & Sockets',     'Distribution board switches, sockets, indicators',       30,   80],
+    ['electrical-items', 'Lugs & Cable Glands',    'Copper lugs, cable glands, junction boxes (lot)',        1,  5000],
     // ── Others ──
     ['others', 'SCADA / Monitoring System',        'Cloud-based, 4G/Wi-Fi, app + web dashboard',            1, 22000],
     ['others', 'Cable Tray & Conduit',             'GI perforated cable tray + PVC conduit (lot)',           1, 12000],
@@ -1315,6 +1318,7 @@ function downloadTemplate() {
     ['earthing',           'Earthing',            '18%', 'Earthing electrodes, lightning arrestors'],
     ['meter',              'Meter',               '18%', 'Net meter, energy meter, DISCOM charges'],
     ['installation',       'Installation',        '18%', 'Labour, civil work, commissioning, testing'],
+    ['electrical-items',   'Electrical Items',    '18%', 'Switches, sockets, lugs, glands, junction boxes'],
     ['others',             'Others',              '18%', 'SCADA, cable tray, miscellaneous items'],
     ['', '', '', ''],
     ['TIP: Column order in the Costing Sheet does not matter. Unrecognised category values default to "others".', '', '', ''],
