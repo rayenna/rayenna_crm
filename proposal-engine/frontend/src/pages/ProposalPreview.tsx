@@ -374,7 +374,7 @@ const CLIENT_SCOPE = [
   'A secured area for storage of supplied equipment till commissioning.',
   'Electricity – construction power/Water shall be arranged by the owner at its own cost.',
   'Customer need to provide internet connectivity for the system.',
-  'Feasibility Charges - Rs.1000 + 18% GST.',
+  'Feasibility Charges - Rs.1000/-',
   'Registration Charges - 5KW × Rs. 1000 (Rs.5000/-) + 18% GST.',
   'Bidirectional / Net Meter.',
 ];
