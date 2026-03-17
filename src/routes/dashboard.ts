@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { UserRole, ProjectStatus, LeadStatus, ProjectStage, LeadSource } from '@prisma/client';
+import { UserRole, ProjectStatus, LeadStatus, ProjectStage, LeadSource, PaymentStatus } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
 
@@ -889,43 +889,75 @@ router.get('/operations', authenticate, async (req: Request, res) => {
     );
 
     // Projects by payment status (for Quick Access tile – Operations scope)
-    const allProjectsForPayment = await prisma.project.findMany({
-      where: { ...where },
-      select: {
-        id: true,
-        paymentStatus: true,
-        projectCost: true,
-        projectStatus: true,
-        balanceAmount: true,
+    // Avoid loading all projects into Node. Compute buckets via groupBy + aggregates.
+    const earlyOrLostStatuses: ProjectStatus[] = [
+      ProjectStatus.LEAD,
+      ProjectStatus.SITE_SURVEY,
+      ProjectStatus.PROPOSAL,
+      ProjectStatus.LOST,
+    ];
+
+    const [naCount, naTotals, paidGroups, outstandingAgg] = await Promise.all([
+      prisma.project.count({
+        where: {
+          ...where,
+          OR: [
+            { projectCost: null },
+            { projectCost: 0 },
+            { projectStatus: { in: earlyOrLostStatuses } },
+          ],
+        },
+      }),
+      prisma.project.aggregate({
+        where: {
+          ...where,
+          OR: [
+            { projectCost: null },
+            { projectCost: 0 },
+            { projectStatus: { in: earlyOrLostStatuses } },
+          ],
+        },
+        _sum: { projectCost: true },
+      }),
+      prisma.project.groupBy({
+        by: ['paymentStatus'],
+        where: {
+          ...where,
+          projectCost: { gt: 0 },
+          projectStatus: { notIn: earlyOrLostStatuses },
+        },
+        _count: { _all: true },
+        _sum: { projectCost: true, balanceAmount: true },
+      }),
+      prisma.project.aggregate({
+        where: {
+          ...where,
+          projectCost: { gt: 0 },
+          projectStatus: { notIn: earlyOrLostStatuses },
+          paymentStatus: { in: [PaymentStatus.PENDING, PaymentStatus.PARTIAL] },
+        },
+        _sum: { balanceAmount: true },
+      }),
+    ]);
+
+    const projectsByPaymentStatus = [
+      {
+        status: 'N/A',
+        count: naCount,
+        totalValue: naTotals._sum.projectCost ?? 0,
+        outstanding: 0,
       },
-    });
-    const projectsByEffectiveStatusOps: Record<string, { count: number; totalValue: number; outstanding: number }> = {};
-    allProjectsForPayment.forEach((project) => {
-      const hasNoOrderValue = !project.projectCost || project.projectCost === 0;
-      const isEarlyOrLostStage =
-        project.projectStatus === ProjectStatus.LEAD ||
-        project.projectStatus === ProjectStatus.SITE_SURVEY ||
-        project.projectStatus === ProjectStatus.PROPOSAL ||
-        project.projectStatus === ProjectStatus.LOST;
-      const effectiveStatus =
-        hasNoOrderValue || isEarlyOrLostStage ? 'N/A' : (project.paymentStatus || 'PENDING');
-      if (!projectsByEffectiveStatusOps[effectiveStatus]) {
-        projectsByEffectiveStatusOps[effectiveStatus] = { count: 0, totalValue: 0, outstanding: 0 };
-      }
-      projectsByEffectiveStatusOps[effectiveStatus].count++;
-      projectsByEffectiveStatusOps[effectiveStatus].totalValue += project.projectCost || 0;
-      if (effectiveStatus === 'PENDING' || effectiveStatus === 'PARTIAL') {
-        projectsByEffectiveStatusOps[effectiveStatus].outstanding += project.balanceAmount || 0;
-      }
-    });
-    const projectsByPaymentStatus = Object.entries(projectsByEffectiveStatusOps).map(
-      ([status, data]) => ({
-        status,
-        count: data.count,
-        totalValue: data.totalValue,
-        outstanding: data.outstanding,
-      })
-    );
+      ...paidGroups.map((g) => ({
+        status: String(g.paymentStatus ?? 'PENDING'),
+        count: g._count._all,
+        totalValue: g._sum.projectCost ?? 0,
+        // Only treat PENDING/PARTIAL as outstanding; others report 0 for this field.
+        outstanding:
+          g.paymentStatus === PaymentStatus.PENDING || g.paymentStatus === PaymentStatus.PARTIAL
+            ? (g._sum.balanceAmount ?? 0)
+            : 0,
+      })),
+    ];
 
     res.json({
       pendingInstallation,
@@ -1007,74 +1039,76 @@ router.get('/finance', authenticate, async (req: Request, res) => {
       }),
     ]);
 
-    // Single findMany for both: same where and select (reuse result for outstanding + payment status)
-    const allProjects = await prisma.project.findMany({
-      where: { ...where },
-      select: {
-        id: true,
-        paymentStatus: true,
-        projectCost: true,
-        projectStatus: true,
-        balanceAmount: true,
+    // Compute payment status buckets + totalOutstanding without loading all projects into Node.
+    const earlyOrLostStatuses: ProjectStatus[] = [
+      ProjectStatus.LEAD,
+      ProjectStatus.SITE_SURVEY,
+      ProjectStatus.PROPOSAL,
+      ProjectStatus.LOST,
+    ];
+
+    const [naCount, naTotals, paidGroups, outstandingAgg] = await Promise.all([
+      prisma.project.count({
+        where: {
+          ...where,
+          OR: [
+            { projectCost: null },
+            { projectCost: 0 },
+            { projectStatus: { in: earlyOrLostStatuses } },
+          ],
+        },
+      }),
+      prisma.project.aggregate({
+        where: {
+          ...where,
+          OR: [
+            { projectCost: null },
+            { projectCost: 0 },
+            { projectStatus: { in: earlyOrLostStatuses } },
+          ],
+        },
+        _sum: { projectCost: true },
+      }),
+      prisma.project.groupBy({
+        by: ['paymentStatus'],
+        where: {
+          ...where,
+          projectCost: { gt: 0 },
+          projectStatus: { notIn: earlyOrLostStatuses },
+        },
+        _count: { _all: true },
+        _sum: { projectCost: true, balanceAmount: true },
+      }),
+      prisma.project.aggregate({
+        where: {
+          ...where,
+          projectCost: { gt: 0 },
+          projectStatus: { notIn: earlyOrLostStatuses },
+          paymentStatus: { in: [PaymentStatus.PENDING, PaymentStatus.PARTIAL] },
+        },
+        _sum: { balanceAmount: true },
+      }),
+    ]);
+
+    const totalOutstanding = outstandingAgg._sum.balanceAmount ?? 0;
+
+    const projectsByPaymentStatus = [
+      {
+        status: 'N/A',
+        count: naCount,
+        totalValue: naTotals._sum.projectCost ?? 0,
+        outstanding: 0,
       },
-    });
-
-    // Calculate total outstanding - only include PENDING and PARTIAL (exclude N/A and FULLY_PAID)
-    const totalOutstanding = allProjects
-      .filter((project) => {
-        // Check if project should show N/A
-        const hasNoOrderValue = !project.projectCost || project.projectCost === 0;
-        const isEarlyOrLostStage = 
-          project.projectStatus === ProjectStatus.LEAD ||
-          project.projectStatus === ProjectStatus.SITE_SURVEY ||
-          project.projectStatus === ProjectStatus.PROPOSAL ||
-          project.projectStatus === ProjectStatus.LOST;
-        
-        // Exclude N/A projects
-        if (hasNoOrderValue || isEarlyOrLostStage) return false;
-        
-        // Only include PENDING and PARTIAL
-        return project.paymentStatus === 'PENDING' || project.paymentStatus === 'PARTIAL';
-      })
-      .reduce((sum, project) => sum + (project.balanceAmount || 0), 0);
-
-    // Projects by payment status (same allProjects as for totalOutstanding above)
-    // Calculate effective payment status for each project
-    const projectsByEffectiveStatus: Record<string, { count: number; totalValue: number; outstanding: number }> = {};
-    
-    allProjects.forEach((project) => {
-      // Check if project should show N/A
-      const hasNoOrderValue = !project.projectCost || project.projectCost === 0;
-      const isEarlyOrLostStage = 
-        project.projectStatus === ProjectStatus.LEAD ||
-        project.projectStatus === ProjectStatus.SITE_SURVEY ||
-        project.projectStatus === ProjectStatus.PROPOSAL ||
-        project.projectStatus === ProjectStatus.LOST;
-      
-      const effectiveStatus = (hasNoOrderValue || isEarlyOrLostStage) ? 'N/A' : (project.paymentStatus || 'PENDING');
-      
-      if (!projectsByEffectiveStatus[effectiveStatus]) {
-        projectsByEffectiveStatus[effectiveStatus] = {
-          count: 0,
-          totalValue: 0,
-          outstanding: 0,
-        };
-      }
-      
-      projectsByEffectiveStatus[effectiveStatus].count++;
-      projectsByEffectiveStatus[effectiveStatus].totalValue += project.projectCost || 0;
-      // Only add outstanding for PENDING and PARTIAL (not N/A or FULLY_PAID)
-      if (effectiveStatus === 'PENDING' || effectiveStatus === 'PARTIAL') {
-        projectsByEffectiveStatus[effectiveStatus].outstanding += project.balanceAmount || 0;
-      }
-    });
-    
-    const projectsByPaymentStatus = Object.entries(projectsByEffectiveStatus).map(([status, data]) => ({
-      status,
-      count: data.count,
-      totalValue: data.totalValue,
-      outstanding: data.outstanding,
-    }));
+      ...paidGroups.map((g) => ({
+        status: String(g.paymentStatus ?? 'PENDING'),
+        count: g._count._all,
+        totalValue: g._sum.projectCost ?? 0,
+        outstanding:
+          g.paymentStatus === PaymentStatus.PENDING || g.paymentStatus === PaymentStatus.PARTIAL
+            ? (g._sum.balanceAmount ?? 0)
+            : 0,
+      })),
+    ];
 
     // Availing Loan count: active pipeline (all stages except Lost) with availingLoan = true (for Quick Access tile)
     const [availingLoanCount, projectsByStatusRawFinance, pendingInstallation, subsidyCredited] = await Promise.all([

@@ -68,11 +68,9 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
     const base64 = match[2];
 
     const generatedLayoutsDir = path.join(process.cwd(), 'generated_layouts');
-    if (!fs.existsSync(generatedLayoutsDir)) {
-      fs.mkdirSync(generatedLayoutsDir, { recursive: true });
-    }
+    await fs.promises.mkdir(generatedLayoutsDir, { recursive: true });
     const filePath = path.join(generatedLayoutsDir, `${projectId}_manual_layout.${ext}`);
-    fs.writeFileSync(filePath, Buffer.from(base64, 'base64'));
+    await fs.promises.writeFile(filePath, Buffer.from(base64, 'base64'));
 
     // Always persist metadata so GET /manual-layout/:projectId returns 200 and the Proposal can embed the layout.
     const roof = Number.isFinite(Number(roof_area_m2)) ? Number(roof_area_m2) : 0;
@@ -80,7 +78,7 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
     const panels = Number.isFinite(Number(panel_count)) ? Number(panel_count) : 0;
     const publicUrlPath = `/api/generated_layouts/${projectId}_manual_layout.${ext}`;
     const metaPath = path.join(generatedLayoutsDir, `${projectId}_manual_layout.json`);
-    fs.writeFileSync(
+    await fs.promises.writeFile(
       metaPath,
       JSON.stringify(
         {
@@ -94,6 +92,7 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
         null,
         2,
       ),
+      'utf8',
     );
     return res.json({ layout_image_url: publicUrlPath });
   } catch (err) {
@@ -112,7 +111,7 @@ router.get('/manual-layout/:projectId', authenticate, async (req, res) => {
     if (!fs.existsSync(metaPath)) {
       return res.status(404).json({ error: 'No manual layout saved' });
     }
-    const raw = fs.readFileSync(metaPath, 'utf8');
+    const raw = await fs.promises.readFile(metaPath, 'utf8');
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     return res.json(parsed);
   } catch (err) {

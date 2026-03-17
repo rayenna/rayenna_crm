@@ -92,18 +92,18 @@ const Layout = () => {
   // Prefetch route chunks when mobile menu opens so navigation feels instant when user taps a link
   useEffect(() => {
     if (!mobileMenuOpen) return
-    import('../pages/Dashboard').catch(() => {})
-    import('../pages/Projects').catch(() => {})
-    import('../pages/CustomerMaster').catch(() => {})
-    import('../pages/SupportTicketsDashboard').catch(() => {})
-    import('../pages/TallyExport').catch(() => {})
-    import('../pages/Users').catch(() => {})
-    import('../pages/AuditSecurity').catch(() => {})
-    import('../pages/ProjectForm').catch(() => {})
-    import('../pages/ProjectDetail').catch(() => {})
-    import('../pages/Help').catch(() => {})
-    import('../pages/About').catch(() => {})
-    import('../pages/ChangePassword').catch(() => {})
+    const run = () => {
+      // Prefetch only the most common next navigations to avoid a big JS parse/compile spike.
+      import('../pages/Projects').catch(() => {})
+      import('../pages/CustomerMaster').catch(() => {})
+    }
+    const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void) => void)
+    if (ric) {
+      ric(run)
+      return
+    }
+    const t = window.setTimeout(run, 250)
+    return () => window.clearTimeout(t)
   }, [mobileMenuOpen])
 
   // Close dropdown when clicking outside

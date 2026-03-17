@@ -6,7 +6,8 @@ import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { FaRupeeSign, FaCheckCircle, FaExclamationCircle, FaUniversity, FaCog, FaFileInvoice } from 'react-icons/fa'
 import { ProjectStatus } from '../../types'
 import ProjectValuePieChart from './ProjectValuePieChart'
-import ProfitabilityWordCloud from './ProfitabilityWordCloud'
+import { Suspense, lazy } from 'react'
+const ProfitabilityWordCloud = lazy(() => import('./ProfitabilityWordCloud'))
 import AvailingLoanByBankChart from './AvailingLoanByBankChart'
 import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
 import RevenueByLeadSourceChart from './RevenueByLeadSourceChart'
@@ -196,11 +197,13 @@ const FinanceDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Fin
       {/* Row 3: Customer Profitability Word Cloud, Availing Loan by Bank */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
-          <ProfitabilityWordCloud
-            wordCloudData={data?.wordCloudData}
-            availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
-            filterControlledByParent
-          />
+          <Suspense fallback={<div className="w-full min-h-[360px] rounded-2xl border border-primary-200/40 bg-white" />}>
+            <ProfitabilityWordCloud
+              wordCloudData={data?.wordCloudData}
+              availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
+              filterControlledByParent
+            />
+          </Suspense>
         </div>
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
           <AvailingLoanByBankChart data={data?.availingLoanByBank || []} />

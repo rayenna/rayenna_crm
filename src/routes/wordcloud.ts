@@ -5,6 +5,25 @@ import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 
+function monthDateRangesForFY(fy: string, months: string[]): { start: Date; end: Date }[] {
+  const fyMatch = String(fy).trim().match(/(\d{4})/);
+  if (!fyMatch) return [];
+  const startYear = parseInt(fyMatch[1], 10);
+  if (!Number.isFinite(startYear)) return [];
+
+  const uniqMonths = Array.from(new Set(months.map((m) => String(m).padStart(2, '0')))).filter((m) =>
+    ['01','02','03','04','05','06','07','08','09','10','11','12'].includes(m),
+  );
+
+  return uniqMonths.map((mm) => {
+    const monthNum = parseInt(mm, 10); // 1-12
+    const year = monthNum >= 1 && monthNum <= 3 ? startYear + 1 : startYear;
+    const start = new Date(year, monthNum - 1, 1, 0, 0, 0, 0);
+    const end = new Date(year, monthNum, 0, 23, 59, 59, 999);
+    return { start, end };
+  });
+}
+
 // Get word cloud data with filters
 router.get('/wordcloud', authenticate, async (req: Request, res: Response) => {
   try {
@@ -31,41 +50,42 @@ router.get('/wordcloud', authenticate, async (req: Request, res: Response) => {
       where.year = { in: fyFilter };
     }
 
-    // Get all projects matching FY filter
-    const allProjects = await prisma.project.findMany({
+    // Month filtering should be pushed to DB. Use confirmationDate when available, otherwise fall back to createdAt.
+    // We can express that as: (confirmationDate in range) OR (confirmationDate is null AND createdAt in range).
+    if (monthFilter.length > 0) {
+      // If multiple FYs are selected, month filter is ambiguous. In that case, we don't apply month filtering.
+      // This matches dashboard behavior where month filters are only meaningful with a single FY.
+      if (fyFilter.length === 1) {
+        const ranges = monthDateRangesForFY(fyFilter[0]!, monthFilter);
+        if (ranges.length > 0) {
+          where.AND = [
+            ...(where.AND || []),
+            {
+              OR: ranges.flatMap((r) => ([
+                { confirmationDate: { gte: r.start, lte: r.end } },
+                { AND: [{ confirmationDate: null }, { createdAt: { gte: r.start, lte: r.end } }] },
+              ])),
+            },
+          ];
+        }
+      }
+    }
+
+    // Query only the top 50 by profitability (avoid loading large datasets into Node)
+    const profitabilityData = await prisma.project.findMany({
       where,
       select: {
-        id: true,
-        profitability: true, // Profitability from Sales & Commercial section
-        year: true,
-        confirmationDate: true,
-        createdAt: true,
+        profitability: true,
         customer: {
           select: {
-            firstName: true, // First Name from Customer
-            customerName: true, // Fallback
+            firstName: true,
+            customerName: true,
           },
         },
       },
+      orderBy: { profitability: 'desc' },
+      take: 50,
     });
-
-    // Filter by month if provided
-    let filteredProjects = allProjects;
-    if (monthFilter.length > 0) {
-      filteredProjects = allProjects.filter((project) => {
-        const date = project.confirmationDate || project.createdAt;
-        if (!date) return false;
-        const month = new Date(date).getMonth() + 1; // 1-12
-        const monthStr = String(month).padStart(2, '0');
-        return monthFilter.includes(monthStr);
-      });
-    }
-
-    // Sort by profitability and take top 50
-    const profitabilityData = filteredProjects
-      .filter((p) => p.profitability !== null && p.profitability !== undefined)
-      .sort((a, b) => (b.profitability || 0) - (a.profitability || 0))
-      .slice(0, 50);
 
     // Map to word cloud data: First Name from Customer, Profitability from Sales & Commercial section
     const wordCloudData = profitabilityData
@@ -99,9 +119,10 @@ router.get('/wordcloud', authenticate, async (req: Request, res: Response) => {
       wordCloudData,
     });
   } catch (error: any) {
-    console.error('[WordCloud API] Error:', error);
-    console.error('[WordCloud API] Error stack:', error?.stack);
-    console.error('[WordCloud API] Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    console.error('[WordCloud API] Error:', error?.message ?? error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[WordCloud API] Error stack:', error?.stack);
+    }
     res.status(500).json({ 
       error: error?.message || 'Internal server error',
       ...(process.env.NODE_ENV === 'development' && { stack: error?.stack })
