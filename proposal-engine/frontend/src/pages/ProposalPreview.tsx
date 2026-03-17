@@ -3070,6 +3070,8 @@ export default function ProposalPreview() {
   const [saveStatus, setSaveStatus]           = useState<'idle' | 'saving' | 'saved'>('idle');
   const [includeRoofLayout, setIncludeRoofLayout] = useState(false);
   const [roofLayout, setRoofLayout]               = useState<AiRoofLayoutResponse | null>(null);
+  const [roofLayoutLoading, setRoofLayoutLoading] = useState(false);
+  const [roofLayoutError, setRoofLayoutError]     = useState<string | null>(null);
   const printRef                              = useRef<HTMLDivElement>(null);
   // Ref to the contentEditable document body div so we can read its innerHTML on save
   const docBodyRef                            = useRef<HTMLDivElement>(null);
@@ -3264,6 +3266,8 @@ export default function ProposalPreview() {
     setProposal(p);
     setIncludeRoofLayout(options.includeRoofLayout);
     setRoofLayout(null);
+    setRoofLayoutError(null);
+    setRoofLayoutLoading(false);
     setActiveCustomerId(activeCustomer?.id ?? null);
 
     // ── Restore saved comments from customer record only ──
@@ -3323,25 +3327,22 @@ export default function ProposalPreview() {
     // Optionally generate the AI roof layout for this proposal so it can be included
     // as a section when requested.
     if (options.includeRoofLayout && activeCustomer?.master?.crmProjectId) {
+      setRoofLayoutLoading(true);
+      setRoofLayoutError(null);
       try {
         const crmProjectId = activeCustomer.master.crmProjectId;
 
         // If a manual layout was saved by the sales team, prefer it (image + corrected metrics).
         try {
           const manual = await fetchManualRoofLayout(crmProjectId);
-          if (
-            manual &&
-            Number.isFinite(manual.roof_area_m2) &&
-            Number.isFinite(manual.usable_area_m2) &&
-            Number.isFinite(manual.panel_count) &&
-            typeof manual.layout_image_url === 'string'
-          ) {
+          if (manual && typeof manual.layout_image_url === 'string' && manual.layout_image_url.trim()) {
             setRoofLayout({
-              roof_area_m2: Number(manual.roof_area_m2),
-              usable_area_m2: Number(manual.usable_area_m2),
-              panel_count: Number(manual.panel_count),
-              layout_image_url: manual.layout_image_url,
+              roof_area_m2: Number.isFinite(Number((manual as any).roof_area_m2)) ? Number((manual as any).roof_area_m2) : 0,
+              usable_area_m2: Number.isFinite(Number((manual as any).usable_area_m2)) ? Number((manual as any).usable_area_m2) : 0,
+              panel_count: Number.isFinite(Number((manual as any).panel_count)) ? Number((manual as any).panel_count) : 0,
+              layout_image_url: String(manual.layout_image_url),
             });
+            setRoofLayoutLoading(false);
             return;
           }
         } catch {
@@ -3410,11 +3411,11 @@ export default function ProposalPreview() {
           layout_image_url:
             data?.layout_image_url && String(data.layout_image_url).trim() ? data.layout_image_url : '',
         });
+        setRoofLayoutLoading(false);
       } catch (err) {
-        if (import.meta.env.DEV) {
-          // eslint-disable-next-line no-console
-          console.error('Failed to generate AI roof layout for proposal:', err);
-        }
+        if (import.meta.env.DEV) console.error('Failed to generate AI roof layout for proposal:', err);
+        setRoofLayoutError('Roof layout could not be loaded. Please open AI Roof Layout and click “Save for proposal”, then regenerate the proposal.');
+        setRoofLayoutLoading(false);
       }
     }
   };
@@ -3763,10 +3764,51 @@ export default function ProposalPreview() {
                 <FinancialBenefitsBlock proposal={proposal} />
                 <Divider />
                 <EnvironmentalImpactBlock proposal={proposal} />
-                {includeRoofLayout && roofLayout && (
+                {includeRoofLayout && (
                   <>
                     <Divider />
-                    <RoofLayoutBlock layout={roofLayout} />
+                    {roofLayout ? (
+                      <RoofLayoutBlock layout={roofLayout} />
+                    ) : roofLayoutLoading ? (
+                      <div className="mb-8 pdf-section">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0f766e', height: '28px' }} />
+                          <span className="text-lg leading-none">🛰️</span>
+                          <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0f766e' }}>
+                            Proposed Rooftop Solar Layout
+                          </h2>
+                        </div>
+                        <div className="rounded-xl border border-secondary-200 bg-secondary-50 px-4 py-3 text-xs text-secondary-700">
+                          Loading roof layout…
+                        </div>
+                      </div>
+                    ) : roofLayoutError ? (
+                      <div className="mb-8 pdf-section">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0f766e', height: '28px' }} />
+                          <span className="text-lg leading-none">🛰️</span>
+                          <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0f766e' }}>
+                            Proposed Rooftop Solar Layout
+                          </h2>
+                        </div>
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+                          {roofLayoutError}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mb-8 pdf-section">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-1 rounded-full flex-shrink-0" style={{ background: '#0f766e', height: '28px' }} />
+                          <span className="text-lg leading-none">🛰️</span>
+                          <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0f766e' }}>
+                            Proposed Rooftop Solar Layout
+                          </h2>
+                        </div>
+                        <div className="rounded-xl border border-secondary-200 bg-secondary-50 px-4 py-3 text-xs text-secondary-700">
+                          No roof layout found for this project yet.
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
                 <Divider />
