@@ -176,6 +176,32 @@ const server = app.listen(PORT, async () => {
     const prisma = (await import('./prisma')).default;
     (global as any).__prisma = prisma;
 
+    // ─────────────────────────────────────────────────────────────────────────────
+    // PE Shared Proposal cleanup (C1): prevent DB bloat from expired share links.
+    // Runs once at startup and then periodically.
+    // ─────────────────────────────────────────────────────────────────────────────
+    const PE_SHARE_CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000; // every 6 hours
+    const PE_SHARE_EXPIRED_BUFFER_MS = 10 * 60 * 1000; // only delete shares expired >10 minutes ago
+
+    const purgeExpiredPESharedProposals = async () => {
+      try {
+        const threshold = new Date(Date.now() - PE_SHARE_EXPIRED_BUFFER_MS);
+        const r = await prisma.pESharedProposal.deleteMany({
+          where: { expiresAt: { lt: threshold } },
+        });
+        if (r.count > 0) {
+          console.log(`[cleanup] Deleted ${r.count} expired PE shared proposals (expiresAt < ${threshold.toISOString()})`);
+        }
+      } catch (e) {
+        console.warn('[cleanup] Failed to purge expired PE shared proposals:', (e as Error)?.message ?? e);
+      }
+    };
+
+    void purgeExpiredPESharedProposals();
+    setInterval(() => {
+      void purgeExpiredPESharedProposals();
+    }, PE_SHARE_CLEANUP_INTERVAL_MS).unref?.();
+
     const authRoutes = (await import('./routes/auth')).default;
     const projectRoutes = (await import('./routes/projects')).default;
     const documentRoutes = (await import('./routes/documents')).default;

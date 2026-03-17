@@ -948,6 +948,8 @@ router.delete('/projects/:id', authenticate, async (req: Request, res: Response)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const DEFAULT_SHARE_EXPIRY_HOURS = 48;
+const MAX_PE_SHARES_PER_PROJECT = 10;
+const MAX_SHARE_HTML_BYTES = 2_000_000; // 2 MB (utf8). Safety guard against accidental multi-MB shares.
 
 /** Create a shareable link. Optional password and custom expiry; default 48h. */
 router.post('/share', authenticate, async (req: Request, res: Response) => {
@@ -968,6 +970,16 @@ router.post('/share', authenticate, async (req: Request, res: Response) => {
 
     if (!projectId || typeof projectId !== 'string' || !proposalHtml || typeof proposalHtml !== 'string') {
       return res.status(400).json({ error: 'projectId and proposalHtml are required.' });
+    }
+
+    const htmlBytes = Buffer.byteLength(proposalHtml, 'utf8');
+    if (htmlBytes > MAX_SHARE_HTML_BYTES) {
+      return res.status(413).json({
+        error: `Proposal is too large to share. Please reduce content and try again. (Size: ${(htmlBytes / 1024 / 1024).toFixed(2)} MB, Limit: ${(MAX_SHARE_HTML_BYTES / 1024 / 1024).toFixed(2)} MB)`,
+        code: 'PAYLOAD_TOO_LARGE',
+        limitBytes: MAX_SHARE_HTML_BYTES,
+        sizeBytes: htmlBytes,
+      });
     }
 
     const project = await prisma.project.findUnique({
@@ -1014,6 +1026,27 @@ router.post('/share', authenticate, async (req: Request, res: Response) => {
         expiresAt,
       },
     });
+
+    // DB bloat safety: keep only the most recent N share links per project.
+    // (Old links will continue to expire naturally, but this prevents unbounded growth.)
+    try {
+      const old = await prisma.pESharedProposal.findMany({
+        where: { projectId },
+        orderBy: { createdAt: 'desc' },
+        skip: MAX_PE_SHARES_PER_PROJECT,
+        select: { token: true },
+      });
+      if (old.length > 0) {
+        const del = await prisma.pESharedProposal.deleteMany({
+          where: { token: { in: old.map((r) => r.token) } },
+        });
+        if (del.count > 0) {
+          console.log(`[cleanup] Share cap: deleted ${del.count} old PE share links for project ${projectId}`);
+        }
+      }
+    } catch {
+      // best-effort cleanup; never block share creation
+    }
 
     res.status(201).json({
       token,
