@@ -3118,6 +3118,60 @@ export default function ProposalPreview() {
     return () => window.removeEventListener('focus', sync);
   }, []);
 
+  // Restore roof layout inclusion state when reopening a saved customer/proposal.
+  // Also try to load the latest saved roof layout from backend for this CRM project so the
+  // user doesn't need to regenerate and adjust polygon every time.
+  useEffect(() => {
+    const ac = getActiveCustomer();
+    const savedInclude = !!ac?.proposal?.includeRoofLayout;
+    const savedLayout = ac?.proposal?.roofLayout ?? null;
+    setIncludeRoofLayout(savedInclude);
+    setRoofLayout(savedLayout as any);
+    setRoofLayoutError(null);
+
+    const crmProjectId = ac?.master?.crmProjectId;
+    if (!crmProjectId) return;
+
+    // If include is on (or we have a saved layout), fetch the latest manual layout (if any).
+    // This ensures the section remains available even if localStorage was cleared or the user changed devices.
+    if (!savedInclude && !savedLayout) return;
+
+    let cancelled = false;
+    setRoofLayoutLoading(true);
+    void (async () => {
+      try {
+        const manual = await fetchManualRoofLayout(crmProjectId);
+        if (cancelled) return;
+        if (manual && typeof (manual as any).layout_image_url === 'string' && String((manual as any).layout_image_url).trim()) {
+          const next: AiRoofLayoutResponse = {
+            roof_area_m2: Number.isFinite(Number((manual as any).roof_area_m2)) ? Number((manual as any).roof_area_m2) : 0,
+            usable_area_m2: Number.isFinite(Number((manual as any).usable_area_m2)) ? Number((manual as any).usable_area_m2) : 0,
+            panel_count: Number.isFinite(Number((manual as any).panel_count)) ? Number((manual as any).panel_count) : 0,
+            layout_image_url: String((manual as any).layout_image_url),
+          };
+          setRoofLayout(next);
+          // Persist the latest payload to local workspace so it’s instant next time.
+          if (ac?.id && ac.proposal) {
+            saveAllArtifacts(ac.id, null, null, null, {
+              ...ac.proposal,
+              includeRoofLayout: true,
+              roofLayout: next,
+            });
+          }
+        }
+        setRoofLayoutLoading(false);
+      } catch {
+        if (!cancelled) {
+          setRoofLayoutLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCustomerId]);
+
   // NOTE: We intentionally DO NOT re-inject previously saved editedHtml into
   // the DOM here. Doing so would replace the React-rendered proposal body
   // (including interactive components like the BOM Collapse All button) with
@@ -3178,6 +3232,8 @@ export default function ProposalPreview() {
         bomComments,
         editedHtml,
         textOverrides,
+        includeRoofLayout,
+        roofLayout: includeRoofLayout ? (roofLayout ?? null) : null,
       };
 
       saveAllArtifacts(activeCustomer.id, costingArtifact, bomArtifact, roiArtifact, proposalArtifact);
@@ -3309,6 +3365,8 @@ export default function ProposalPreview() {
         // Preserve any previously saved inline edits and text overrides — do NOT overwrite with undefined
         editedHtml:    activeCustomer.proposal?.editedHtml,
         textOverrides: activeCustomer.proposal?.textOverrides,
+        includeRoofLayout: activeCustomer.proposal?.includeRoofLayout,
+        roofLayout: activeCustomer.proposal?.roofLayout ?? null,
       };
 
       saveAllArtifacts(activeCustomer.id, costingArtifact, bomArtifact, roiArtifact, proposalArtifact);

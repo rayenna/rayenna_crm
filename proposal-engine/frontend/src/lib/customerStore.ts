@@ -285,6 +285,20 @@ export interface ProposalArtifact {
   /** Per-section text overrides extracted from the edited DOM — used for DOCX export */
   textOverrides?: Record<string, string | undefined>;
 
+  /**
+   * Roof layout inclusion state + cached layout metadata.
+   * The actual image is stored server-side via /api/roof/save-layout-image.
+   * We cache the latest resolved layout payload here so reopening the proposal
+   * page can immediately show the section without forcing regeneration.
+   */
+  includeRoofLayout?: boolean;
+  roofLayout?: {
+    roof_area_m2: number;
+    usable_area_m2: number;
+    panel_count: number;
+    layout_image_url: string;
+  } | null;
+
   // ── Future CRM integration fields ──────────────────────────────────────────
   /**
    * URL of the uploaded proposal document in the CRM Project's Documents tab.
