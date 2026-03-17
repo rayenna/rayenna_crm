@@ -195,11 +195,13 @@ export default function AIRoofLayout() {
     }
   };
 
-  async function captureLayoutImage(): Promise<string | null> {
+  async function captureLayoutImage(options?: { format?: 'png' | 'jpeg'; quality?: number; pixelRatio?: number }): Promise<string | null> {
     if (!stageRef.current) return null;
-    const mime = 'image/png';
-    // Use pixelRatio 2 for a good balance between quality and performance
-    return stageRef.current.toDataURL({ pixelRatio: 2, mimeType: mime });
+    const format = options?.format ?? 'png';
+    const pixelRatio = options?.pixelRatio ?? 2;
+    const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+    const quality = format === 'jpeg' ? (options?.quality ?? 0.82) : undefined;
+    return stageRef.current.toDataURL({ pixelRatio, mimeType: mime, quality });
   }
 
   const handleExportLayoutImage = async (format: 'png' | 'jpeg') => {
@@ -262,7 +264,8 @@ export default function AIRoofLayout() {
     }
     setSavingToProposal(true);
     try {
-      const dataUrl = await captureLayoutImage();
+      // Save a smaller JPEG to avoid 413 (Request Entity Too Large) in production.
+      const dataUrl = await captureLayoutImage({ format: 'jpeg', quality: 0.82, pixelRatio: 1.25 });
       if (!dataUrl) return;
       const crmProjectId = activeProject?.master?.crmProjectId;
       if (crmProjectId) {
