@@ -118,9 +118,10 @@ app.use((req, res, next) => {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
-// Proposal Engine sync sends large proposal payloads (editedHtml); allow up to 10MB
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Proposal Engine sync sends large proposal payloads (editedHtml) and roof layout saves can include base64 images.
+// Allow a higher limit to avoid 413 on legitimate operations.
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 // Compress responses when client sends Accept-Encoding: gzip (reduces payload size for dashboard, project list, etc.)
 app.use(compression());
