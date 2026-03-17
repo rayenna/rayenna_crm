@@ -118,7 +118,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const activityEvents: (keyof DocumentEventMap)[] = [
       'mousedown',
-      'mousemove',
       'keydown',
       'scroll',
       'touchstart',

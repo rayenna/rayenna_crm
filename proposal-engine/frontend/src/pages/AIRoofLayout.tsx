@@ -3,7 +3,7 @@ import { Stage, Layer, Image as KonvaImage, Line, Rect, Circle } from 'react-kon
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - use-image has ESM types that may not be picked up correctly here
 import useImage from 'use-image';
-import { generateAiRoofLayout, AiRoofLayoutResponse, fetchCrmProjectForAiLayout, getApiBaseUrl, saveManualRoofLayoutImage } from '../lib/apiClient';
+import { generateAiRoofLayout, AiRoofLayoutResponse, fetchCrmProjectForAiLayout, fetchManualRoofLayout, getApiBaseUrl, saveManualRoofLayoutImage } from '../lib/apiClient';
 import { getActiveCustomer } from '../lib/customerStore';
 
 export default function AIRoofLayout() {
@@ -20,6 +20,7 @@ export default function AIRoofLayout() {
   const [exporting, setExporting] = useState(false);
   const [savingToProposal, setSavingToProposal] = useState(false);
   const [lastSavedProjectId, setLastSavedProjectId] = useState<string | null>(null);
+  const [loadedSavedAt, setLoadedSavedAt] = useState<string | null>(null);
   const [panelSpacingMultiplier, setPanelSpacingMultiplier] = useState(1.5);
   const [panelOrientation, setPanelOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const exportRef = useRef<HTMLDivElement>(null);
@@ -53,6 +54,57 @@ export default function AIRoofLayout() {
   // Use crossOrigin='anonymous' so we can safely export the canvas to a data URL in production
   const [bgImage] = useImage(bgImageUrl ?? '', 'anonymous');
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
+
+  // On open, if the project already has a saved manual layout image, pre-load it
+  // so the user immediately sees what was previously saved.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrateFromSavedLayout() {
+      const crmProjectId = activeProject?.master?.crmProjectId;
+      if (!crmProjectId) return;
+
+      try {
+        const manual = await fetchManualRoofLayout(String(crmProjectId));
+        if (cancelled) return;
+        if (!manual?.layout_image_url || !String(manual.layout_image_url).trim()) return;
+
+        const next: AiRoofLayoutResponse = {
+          roof_area_m2: Number(manual.roof_area_m2),
+          usable_area_m2: Number(manual.usable_area_m2),
+          panel_count: Number(manual.panel_count),
+          layout_image_url: String(manual.layout_image_url),
+        };
+
+        setError(null);
+        setResult(next);
+        setLastSavedProjectId(String(crmProjectId));
+        setLoadedSavedAt(manual?.savedAt ? String(manual.savedAt) : null);
+
+        const rawUrl = next.layout_image_url && String(next.layout_image_url).trim()
+          ? next.layout_image_url
+          : null;
+        const imageUrl = rawUrl
+          ? rawUrl.startsWith('http')
+            ? rawUrl
+            : `${getApiBaseUrl() || ''}${rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`}`
+          : null;
+        setBgImageUrl(imageUrl);
+
+        // Reset canvas-derived state so it can be rebuilt for this image.
+        setPolygon(null);
+        setPanels([]);
+        setImageSize(null);
+      } catch {
+        // If no layout exists yet, backend may respond 404; ignore and let user generate.
+      }
+    }
+
+    hydrateFromSavedLayout();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProject?.master?.crmProjectId]);
 
   // Geometry constants (approximate, tuned for visual realism)
   // Use a stable value here so area + panel counts remain in a sensible range.
@@ -475,9 +527,18 @@ export default function AIRoofLayout() {
             disabled={loading}
             className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-amber-400 shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed transition-all"
           >
-            {loading ? 'Generating…' : 'Generate AI Layout'}
+            {loading ? 'Generating…' : result ? 'Regenerate AI Layout' : 'Generate AI Layout'}
           </button>
         </div>
+
+        {result && lastSavedProjectId && activeProject?.master?.crmProjectId && lastSavedProjectId === String(activeProject.master.crmProjectId) && (
+          <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            <div className="font-semibold">Saved layout loaded</div>
+            <div className="mt-0.5 text-xs text-emerald-800">
+              {loadedSavedAt ? `Last saved: ${new Date(loadedSavedAt).toLocaleString()}` : 'This project already has a saved roof layout.'}
+            </div>
+          </div>
+        )}
 
         {!activeProject && (
           <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -847,7 +908,6 @@ export default function AIRoofLayout() {
                           >
                             {panels.map((rect, idx) => (
                               <Rect
-                                // eslint-disable-next-line react/no-array-index-key
                                 key={idx}
                                 x={rect.x}
                                 y={rect.y}
@@ -870,7 +930,6 @@ export default function AIRoofLayout() {
                           <Layer>
                             {polygon.map((p, idx) => (
                               <Circle
-                                // eslint-disable-next-line react/no-array-index-key
                                 key={idx}
                                 x={p.x}
                                 y={p.y}

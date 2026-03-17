@@ -438,7 +438,6 @@ export default function ROICalculator() {
         }
       }
     } catch { /* ignore */ }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Re-populate fields if autofill key updates while page is open
@@ -453,7 +452,6 @@ export default function ROICalculator() {
     } catch {
       // ignore parse errors
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCalculate = () => {

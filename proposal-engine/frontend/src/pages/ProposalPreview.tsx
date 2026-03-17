@@ -3,11 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { CATEGORIES, sheetTotalGst } from '../lib/costingConstants';
 import type { SavedSheet, StoredBom, BomRowGenerated, RoiAutofill, Category } from '../lib/costingConstants';
 import {
-  Document, Packer, Paragraph, Table, TableRow, TableCell,
-  TextRun, HeadingLevel, AlignmentType, WidthType, BorderStyle,
-  ShadingType, ImageRun,
-} from 'docx';
-import {
   getActiveCustomer,
   saveAllArtifacts,
   getWipKeysForCurrentUser,
@@ -62,6 +57,9 @@ interface CustomerDetails {
   phone:        string;
   email:        string;
 }
+
+type DocxModule = typeof import('docx');
+type DocxTableRow = import('docx').TableRow;
 
 interface ProposalData {
   refNumber:      string;
@@ -530,7 +528,26 @@ function buildDocx(
   textOverrides?: TextOverrides,
   roofLayout?: AiRoofLayoutResponse | null,
   roofLayoutImageData?: ArrayBuffer,
-): Document {
+  docx?: DocxModule,
+): import('docx').Document {
+  if (!docx) {
+    throw new Error('DOCX export module not loaded.');
+  }
+  const {
+    Document,
+    Paragraph,
+    Table,
+    TableRow,
+    TableCell,
+    TextRun,
+    HeadingLevel,
+    AlignmentType,
+    WidthType,
+    BorderStyle,
+    ShadingType,
+    ImageRun,
+  } = docx;
+
   const navy  = '0d1b3a';
   const white = 'FFFFFF';
 
@@ -890,7 +907,7 @@ function buildDocx(
     };
 
     let serial = 0;
-    const tableRows: TableRow[] = [
+    const tableRows: DocxTableRow[] = [
       // Column headers
       new TableRow({
         children: ['#', 'Item', 'Specification', 'Qty', 'Brand'].map((h, ci) =>
@@ -1007,7 +1024,7 @@ function buildDocx(
       preGst = Math.round(grandRounded / 1.18);
       gstLabel = 'GST @ 18% (estimate)';
     }
-    const commercialRows: TableRow[] = [
+    const commercialRows: DocxTableRow[] = [
           new TableRow({
             children: [
               new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Design, Supply, Installation & Commissioning of ${sizeKw > 0 ? `${sizeKw} kW ` : ''}On-Grid Solar Power Plant including all electrical and structural work`, size: 20 })] })] }),
@@ -1738,6 +1755,8 @@ async function exportToDocx(
   container?: HTMLElement | null,
   roofLayout?: AiRoofLayoutResponse | null,
 ): Promise<void> {
+  const docx = await import('docx');
+
   let diagramImageData: ArrayBuffer | undefined;
   let logoImageData: ArrayBuffer | undefined;
    let roofLayoutImageData: ArrayBuffer | undefined;
@@ -1796,8 +1815,9 @@ async function exportToDocx(
     textOverrides,
     roofLayout,
     roofLayoutImageData,
+    docx,
   );
-  const blob = await Packer.toBlob(doc);
+  const blob = await docx.Packer.toBlob(doc);
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -2489,21 +2509,28 @@ function BOMGroupedTable({
   allCollapsed: boolean;
   setAllCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-
-  if (!items.length) return null;
-
   // Group items by category, preserving CATEGORIES order
-  const grouped: { cat: Category; label: string; rows: BomRowGenerated[] }[] = CATEGORIES
-    .map(({ value, label }) => ({ cat: value, label, rows: items.filter((r) => r.category === value) }))
-    .filter((g) => g.rows.length > 0);
+  const grouped: { cat: Category; label: string; rows: BomRowGenerated[] }[] = React.useMemo(
+    () =>
+      CATEGORIES
+        .map(({ value, label }) => ({
+          cat: value,
+          label,
+          rows: items.filter((r) => r.category === value),
+        }))
+        .filter((g) => g.rows.length > 0),
+    [items],
+  );
 
-  const toggleAll = () => {
+  const toggleAll = React.useCallback(() => {
     const next = !allCollapsed;
     setAllCollapsed(next);
     const map: Record<string, boolean> = {};
     grouped.forEach((g) => { map[g.cat] = next; });
     setCollapsed(map);
-  };
+  }, [allCollapsed, grouped, setAllCollapsed, setCollapsed]);
+
+  if (!items.length) return null;
 
   let serial = 0;
 
@@ -3222,7 +3249,6 @@ export default function ProposalPreview() {
       } : null;
 
       const bomArtifact: BomArtifact | null = bom.length > 0 ? { savedAt: now, rows: bom } : null;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const roiArtifact: RoiArtifact | null = roi ? { savedAt: now, result: roi as any } : null;
 
       const proposalArtifact: ProposalArtifact = {
@@ -3354,7 +3380,6 @@ export default function ProposalPreview() {
 
       // roi from localStorage includes yearlyBreakdown at runtime even though
       // the local ProposalPreview type omits it; cast to satisfy customerStore type
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const roiArtifact: RoiArtifact | null = roi ? { savedAt: now, result: roi as any } : null;
 
       const proposalArtifact: ProposalArtifact = {
@@ -3437,7 +3462,6 @@ export default function ProposalPreview() {
           Number.isNaN(panelWattage)
         ) {
           if (import.meta.env.DEV) {
-            // eslint-disable-next-line no-console
             console.warn('AI roof layout skipped: missing required CRM data');
           }
           return;
@@ -3456,7 +3480,6 @@ export default function ProposalPreview() {
         const panels = data?.panel_count;
         if (!Number.isFinite(roof) || !Number.isFinite(usable) || !Number.isFinite(panels)) {
           if (import.meta.env.DEV) {
-            // eslint-disable-next-line no-console
             console.warn('AI roof layout response incomplete, skipping layout section');
           }
           return;
@@ -3528,6 +3551,8 @@ export default function ProposalPreview() {
     setShareExpiryDate('');
   };
 
+  const shareHtmlCacheRef = useRef<{ at: number; html: string } | null>(null);
+
   const handleCreateShare = async () => {
     const activeCustomer = getActiveCustomer();
     const projectId = activeCustomer?.master?.crmProjectId;
@@ -3537,7 +3562,11 @@ export default function ProposalPreview() {
     }
     // Clone the proposal DOM so we can strip collapsed BOM sections before saving HTML
     let proposalHtml = '';
-    if (printRef.current) {
+    const cache = shareHtmlCacheRef.current;
+    const now = Date.now();
+    if (cache && now - cache.at < 3000) {
+      proposalHtml = cache.html;
+    } else if (printRef.current) {
       const clone = printRef.current.cloneNode(true) as HTMLElement;
       // Remove elements marked for print/share hiding (buttons, edit-only controls)
       clone.querySelectorAll('.print-hide').forEach((n) => n.remove());
@@ -3546,6 +3575,7 @@ export default function ProposalPreview() {
         p.classList.remove('hidden');
       });
       proposalHtml = clone.innerHTML;
+      shareHtmlCacheRef.current = { at: now, html: proposalHtml };
     }
     if (!proposalHtml.trim()) {
       setShareError('No proposal content to share.');

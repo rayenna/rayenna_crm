@@ -38,7 +38,6 @@ export default function SharedProposalViewer() {
 
   useEffect(() => {
     if (token) load();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const handlePasswordSubmit = (e: React.FormEvent) => {

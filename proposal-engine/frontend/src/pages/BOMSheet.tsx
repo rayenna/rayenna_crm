@@ -5,7 +5,6 @@ import {
   CATEGORIES, CATEGORY_COLORS, catAccentColor, snapCategory,
 } from '../lib/costingConstants';
 import type { StoredBom, RoiAutofill } from '../lib/costingConstants';
-import * as XLSX from 'xlsx';
 import { getActiveCustomer, upsertCustomer, getWipKeysForCurrentUser } from '../lib/customerStore';
 import type { BomArtifact } from '../lib/customerStore';
 import { syncProjectBom, canEditProposalArtifacts } from '../lib/apiClient';
@@ -15,7 +14,8 @@ import { AlertCard } from '../components/AlertCard';
 // Export helpers (BOM)
 // ─────────────────────────────────────────────
 
-function exportBomXlsx(rows: BomRow[], sheetName: string) {
+async function exportBomXlsx(rows: BomRow[], sheetName: string) {
+  const XLSX = await import('xlsx');
   const headerRow = ['#', 'Item / Description', 'Specification', 'Qty', 'Brand', 'GST %'];
   const dataRows  = rows
     .filter((r) => r.itemName.trim())
@@ -600,7 +600,6 @@ export default function BOMSheet() {
 
     setSource('costing-sheet');
     setLoading(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reset]);
 
   useEffect(() => { loadBom(); }, [loadBom]);
@@ -708,7 +707,7 @@ export default function BOMSheet() {
                 <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
                   <button
                     type="button"
-                    onClick={() => exportBomXlsx(liveRows, storedBom?.sheetName ?? 'BOM')}
+                    onClick={() => void exportBomXlsx(liveRows, storedBom?.sheetName ?? 'BOM')}
                     className="flex items-center gap-1.5 text-xs text-white font-semibold bg-white/20 hover:bg-white/30 border border-white/40 px-3 py-2 rounded-lg transition-colors min-h-[36px]"
                   >
                     📤 XLSX

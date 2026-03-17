@@ -6,7 +6,7 @@ import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
 
-initSentry();
+void initSentry();
 
 if (import.meta.env.DEV && typeof window !== 'undefined') {
   (window as unknown as { __triggerSentryTestError?: () => void }).__triggerSentryTestError = triggerSentryTestError;

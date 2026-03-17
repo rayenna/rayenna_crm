@@ -1,5 +1,3 @@
-import * as Sentry from '@sentry/react';
-
 const TOKEN_KEY = 'pe_jwt';
 const USER_ID_KEY = 'pe_user_id';
 const USER_ROLE_KEY = 'pe_user_role';
@@ -458,69 +456,133 @@ export async function adminRestoreProposalEngineHidden(): Promise<{ restoredProj
 // errors are logged but do not block local saves.
 // ─────────────────────────────────────────────
 
+async function captureSyncError(err: unknown, tags: Record<string, string>) {
+  try {
+    const DSN = import.meta.env.VITE_SENTRY_DSN;
+    if (!DSN || typeof DSN !== 'string' || DSN.trim() === '') return;
+    const Sentry = await import('@sentry/react');
+    Sentry.captureException(err, { tags });
+  } catch {
+    // ignore sentry failures
+  }
+}
+
+type DebounceEntry = {
+  timer: number | null;
+  resolvers: Array<() => void>;
+  rejecters: Array<(e: unknown) => void>;
+  run: (() => Promise<void>) | null;
+};
+
+const SYNC_DEBOUNCE_MS = 600;
+const syncDebounceMap = new Map<string, DebounceEntry>();
+
+function debounceSync(key: string, run: () => Promise<void>): Promise<void> {
+  const existing = syncDebounceMap.get(key) ?? {
+    timer: null,
+    resolvers: [],
+    rejecters: [],
+    run: null,
+  };
+  existing.run = run;
+
+  const p = new Promise<void>((resolve, reject) => {
+    existing.resolvers.push(resolve);
+    existing.rejecters.push(reject);
+  });
+
+  if (existing.timer != null) {
+    window.clearTimeout(existing.timer);
+  }
+  existing.timer = window.setTimeout(async () => {
+    const entry = syncDebounceMap.get(key);
+    if (!entry?.run) return;
+    const toResolve = entry.resolvers.slice();
+    const toReject = entry.rejecters.slice();
+    entry.resolvers = [];
+    entry.rejecters = [];
+    entry.timer = null;
+    try {
+      await entry.run();
+      toResolve.forEach((r) => r());
+    } catch (e) {
+      toReject.forEach((rej) => rej(e));
+    }
+  }, SYNC_DEBOUNCE_MS);
+
+  syncDebounceMap.set(key, existing);
+  return p;
+}
+
 export async function syncProjectCosting(
   projectId: string,
   artifact: CostingArtifact,
 ): Promise<void> {
-  try {
-    await apiFetch(`/api/proposal-engine/projects/${projectId}/costing`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        sheetName: artifact.sheetName,
-        items: artifact.items,
-        grandTotal: artifact.grandTotal,
-        showGst: artifact.showGst,
-        marginPct: artifact.marginPercent,
-        systemSizeKw: artifact.systemSizeKw,
-      }),
-    });
-  } catch (err) {
-    if (import.meta.env.DEV) {
-      console.error('Failed to sync costing sheet to CRM backend:', err);
-    } else {
-      Sentry.captureException(err, { tags: { sync: 'costing' } });
+  return debounceSync(`sync:costing:${projectId}`, async () => {
+    try {
+      await apiFetch(`/api/proposal-engine/projects/${projectId}/costing`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          sheetName: artifact.sheetName,
+          items: artifact.items,
+          grandTotal: artifact.grandTotal,
+          showGst: artifact.showGst,
+          marginPct: artifact.marginPercent,
+          systemSizeKw: artifact.systemSizeKw,
+        }),
+      });
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.error('Failed to sync costing sheet to CRM backend:', err);
+      } else {
+        void captureSyncError(err, { sync: 'costing' });
+      }
     }
-  }
+  });
 }
 
 export async function syncProjectBom(
   projectId: string,
   artifact: BomArtifact,
 ): Promise<void> {
-  try {
-    await apiFetch(`/api/proposal-engine/projects/${projectId}/bom`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        rows: artifact.rows,
-      }),
-    });
-  } catch (err) {
-    if (import.meta.env.DEV) {
-      console.error('Failed to sync BOM to CRM backend:', err);
-    } else {
-      Sentry.captureException(err, { tags: { sync: 'bom' } });
+  return debounceSync(`sync:bom:${projectId}`, async () => {
+    try {
+      await apiFetch(`/api/proposal-engine/projects/${projectId}/bom`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          rows: artifact.rows,
+        }),
+      });
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.error('Failed to sync BOM to CRM backend:', err);
+      } else {
+        void captureSyncError(err, { sync: 'bom' });
+      }
     }
-  }
+  });
 }
 
 export async function syncProjectRoi(
   projectId: string,
   artifact: RoiArtifact,
 ): Promise<void> {
-  try {
-    await apiFetch(`/api/proposal-engine/projects/${projectId}/roi`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        result: artifact.result,
-      }),
-    });
-  } catch (err) {
-    if (import.meta.env.DEV) {
-      console.error('Failed to sync ROI result to CRM backend:', err);
-    } else {
-      Sentry.captureException(err, { tags: { sync: 'roi' } });
+  return debounceSync(`sync:roi:${projectId}`, async () => {
+    try {
+      await apiFetch(`/api/proposal-engine/projects/${projectId}/roi`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          result: artifact.result,
+        }),
+      });
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.error('Failed to sync ROI result to CRM backend:', err);
+      } else {
+        void captureSyncError(err, { sync: 'roi' });
+      }
     }
-  }
+  });
 }
 
 /** Remove project from Proposal Engine for everyone (Admin or owning Sales). Deletes all PE artifacts server-side. */
@@ -615,25 +677,27 @@ export async function syncProjectProposal(
   projectId: string,
   artifact: ProposalArtifact,
 ): Promise<void> {
-  try {
-    await apiFetch(`/api/proposal-engine/projects/${projectId}/proposal`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        refNumber: artifact.refNumber,
-        generatedAt: artifact.generatedAt,
-        bomComments: artifact.bomComments ?? null,
-        editedHtml: artifact.editedHtml ?? null,
-        textOverrides: artifact.textOverrides ?? null,
-        summary: artifact.summary ?? null,
-      }),
-    });
-  } catch (err) {
-    if (import.meta.env.DEV) {
-      console.error('Failed to sync proposal artifact to CRM backend:', err);
-    } else {
-      Sentry.captureException(err, { tags: { sync: 'proposal' } });
+  return debounceSync(`sync:proposal:${projectId}`, async () => {
+    try {
+      await apiFetch(`/api/proposal-engine/projects/${projectId}/proposal`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          refNumber: artifact.refNumber,
+          generatedAt: artifact.generatedAt,
+          bomComments: artifact.bomComments ?? null,
+          editedHtml: artifact.editedHtml ?? null,
+          textOverrides: artifact.textOverrides ?? null,
+          summary: artifact.summary ?? null,
+        }),
+      });
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.error('Failed to sync proposal artifact to CRM backend:', err);
+      } else {
+        void captureSyncError(err, { sync: 'proposal' });
+      }
     }
-  }
+  });
 }
 
 // ─────────────────────────────────────────────

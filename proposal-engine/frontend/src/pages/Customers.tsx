@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   loadCustomers,
@@ -419,6 +419,7 @@ function ProjectPickerModal({
   selectionLoading?: boolean;
 }) {
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState<'systemCapacity' | 'orderValue' | 'confirmationDate' | 'createdAt' | 'customerName'>('confirmationDate');
@@ -428,52 +429,66 @@ function ProjectPickerModal({
 
   const PAGE_SIZE = 20;
 
-  const filtered = projects
-    .filter((p) => {
-      if (stageFilter === 'both') return true;
-      return p.projectStage === stageFilter;
-    })
-    .filter((p) => {
-      const q = search.toLowerCase();
-      return (
-        p.customerName.toLowerCase().includes(q) ||
-        p.city.toLowerCase().includes(q) ||
-        p.siteAddress.toLowerCase().includes(q)
-      );
-    })
-    .filter((p) => {
-      if (salesFilter === 'ALL') return true;
-      return (p.salespersonName || '').toLowerCase() === salesFilter.toLowerCase();
-    });
+  // Debounce search input to prevent re-filtering/re-sorting on every keystroke on large lists.
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 180);
+    return () => window.clearTimeout(t);
+  }, [search]);
 
-  const sorted = [...filtered].sort((a, b) => {
+  const filtered = useMemo(() => {
+    const q = debouncedSearch.toLowerCase();
+    const salesQ = salesFilter.toLowerCase();
+    return projects
+      .filter((p) => {
+        if (stageFilter === 'both') return true;
+        return p.projectStage === stageFilter;
+      })
+      .filter((p) => {
+        if (!q) return true;
+        return (
+          p.customerName.toLowerCase().includes(q) ||
+          p.city.toLowerCase().includes(q) ||
+          p.siteAddress.toLowerCase().includes(q)
+        );
+      })
+      .filter((p) => {
+        if (salesFilter === 'ALL') return true;
+        return (p.salespersonName || '').toLowerCase() === salesQ;
+      });
+  }, [projects, stageFilter, salesFilter, debouncedSearch]);
+
+  const sorted = useMemo(() => {
     const dir = sortDir === 'asc' ? 1 : -1;
     const safe = (n: number | null | undefined) => (Number.isFinite(n as number) ? (n as number) : 0);
     const dateVal = (s?: string) => (s ? new Date(s).getTime() || 0 : 0);
-    switch (sortBy) {
-      case 'systemCapacity':
-        return (safe(a.systemSizeKw) - safe(b.systemSizeKw)) * dir;
-      case 'orderValue':
-        return (safe(a.orderValue) - safe(b.orderValue)) * dir;
-      case 'confirmationDate':
-        return (dateVal(a.confirmationDate) - dateVal(b.confirmationDate)) * dir;
-      case 'createdAt':
-        return (dateVal(a.createdAt) - dateVal(b.createdAt)) * dir;
-      case 'customerName':
-      default: {
-        const an = a.customerName.toLowerCase();
-        const bn = b.customerName.toLowerCase();
-        if (an === bn) return 0;
-        return (an < bn ? -1 : 1) * dir;
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'systemCapacity':
+          return (safe(a.systemSizeKw) - safe(b.systemSizeKw)) * dir;
+        case 'orderValue':
+          return (safe(a.orderValue) - safe(b.orderValue)) * dir;
+        case 'confirmationDate':
+          return (dateVal(a.confirmationDate) - dateVal(b.confirmationDate)) * dir;
+        case 'createdAt':
+          return (dateVal(a.createdAt) - dateVal(b.createdAt)) * dir;
+        case 'customerName':
+        default: {
+          const an = a.customerName.toLowerCase();
+          const bn = b.customerName.toLowerCase();
+          if (an === bn) return 0;
+          return (an < bn ? -1 : 1) * dir;
+        }
       }
-    }
-  });
+    });
+  }, [filtered, sortBy, sortDir]);
 
   const total = sorted.length;
-  const totalPages = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
-  const startIndex = (page - 1) * PAGE_SIZE;
-  const endIndex = Math.min(startIndex + PAGE_SIZE, total);
-  const pageItems = sorted.slice(startIndex, endIndex);
+  const totalPages = useMemo(() => (total > 0 ? Math.ceil(total / PAGE_SIZE) : 1), [total]);
+  const startIndex = useMemo(() => (page - 1) * PAGE_SIZE, [page]);
+  const endIndex = useMemo(() => Math.min(startIndex + PAGE_SIZE, total), [startIndex, total]);
+  const pageItems = useMemo(() => sorted.slice(startIndex, endIndex), [sorted, startIndex, endIndex]);
 
   const handleChangeSearch = (value: string) => {
     setSearch(value);
@@ -483,12 +498,16 @@ function ProjectPickerModal({
   const selected = filtered.find((p) => p.id === selectedId) ?? projects.find((p) => p.id === selectedId) ?? null;
 
   // Unique salespersons – used to show Sales Person filter for non-sales roles.
-  const salespersonOptions = Array.from(
-    new Set(
-      projects
-        .map((p) => (p.salespersonName || '').trim())
-        .filter((name) => name.length > 0),
-    ),
+  const salespersonOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          projects
+            .map((p) => (p.salespersonName || '').trim())
+            .filter((name) => name.length > 0),
+        ),
+      ),
+    [projects],
   );
 
   const handleConfirm = () => {
@@ -1037,6 +1056,24 @@ export default function Customers() {
 
   const refresh = useCallback(() => setCustomers(loadCustomers()), []);
 
+  const customersByCrmProjectId = useMemo(() => {
+    const m = new Map<string, CustomerRecord>();
+    for (const c of customers) {
+      const pid = c?.master?.crmProjectId;
+      if (!pid) continue;
+      // If multiple proposals exist per CRM project, prefer the most recently updated record.
+      const existing = m.get(pid);
+      if (!existing) {
+        m.set(pid, c);
+        continue;
+      }
+      const a = new Date(existing.updatedAt).getTime();
+      const b = new Date(c.updatedAt).getTime();
+      if (b >= a) m.set(pid, c);
+    }
+    return m;
+  }, [customers]);
+
   const loadProjects = useCallback(async () => {
     setProjectsLoading(true);
     setProjectsError(null);
@@ -1053,16 +1090,15 @@ export default function Customers() {
       // If a CRM-linked local record exists for a project that is no longer selected,
       // remove it so Dashboard/Customers stay consistent (fixes "active project" stuck in Dashboard).
       const selectedIds = new Set(mapped.map((x) => x.id));
-      const locals = loadCustomers();
-      const stale = locals.filter((c) => c?.master?.crmProjectId && !selectedIds.has(c.master.crmProjectId));
+      const stale = customers.filter((c) => c?.master?.crmProjectId && !selectedIds.has(c.master.crmProjectId));
       stale.forEach((c) => deleteCustomer(c.id));
-      if (stale.length > 0) setCustomers(loadCustomers());
+      if (stale.length > 0) setCustomers((prev) => prev.filter((c) => !stale.some((s) => s.id === c.id)));
     } catch (err: any) {
       setProjectsError(err?.message || 'Failed to load projects.');
     } finally {
       setProjectsLoading(false);
     }
-  }, []);
+  }, [customers]);
 
   const loadEligibleProjects = useCallback(async () => {
     setProjectsLoading(true);
@@ -1087,14 +1123,14 @@ export default function Customers() {
       removeHiddenProjectId(projectId);
       setHiddenProjectIds(getHiddenProjectIds());
       // Remove any local records linked to this CRM project (so Dashboard + Customers are consistent).
-      const locals = loadCustomers().filter((c) => c?.master?.crmProjectId === projectId);
+      const locals = customers.filter((c) => c?.master?.crmProjectId === projectId);
       locals.forEach((c) => deleteCustomer(c.id));
-      setCustomers(loadCustomers());
+      setCustomers((prev) => prev.filter((c) => c?.master?.crmProjectId !== projectId));
       await loadProjects();
     } catch (err) {
       setProjectsError((err as Error)?.message ?? 'Failed to remove project');
     }
-  }, [loadProjects]);
+  }, [customers, loadProjects]);
 
   // Admin maintenance actions (restore/clear) are currently not exposed in the UI.
   // Keeping the functions commented-out here for possible future use.
@@ -1137,9 +1173,7 @@ export default function Customers() {
 
   const handleCreateFromProject = useCallback(
     async (project: ProjectOption) => {
-      const all = loadCustomers();
-      setCustomers(all);
-      const existingForProject = all.filter(
+      const existingForProject = customers.filter(
         (c) => c.master.crmProjectId === project.id,
       );
 
@@ -1164,7 +1198,7 @@ export default function Customers() {
         setHydratingProjectId(null);
       }
     },
-    [createFromProjectAndHydrate, navigate, loadProjects],
+    [createFromProjectAndHydrate, customers, navigate, loadProjects],
   );
 
   const handleOpen = (id: string) => {
@@ -1181,8 +1215,7 @@ export default function Customers() {
         const res = await fetchProjectWithArtifacts(project.id);
         const artifacts = mapApiArtifactsToRecord(res.artifacts);
         const now = new Date().toISOString();
-        const all = loadCustomers();
-        const existing = all.find((c) => c.master.crmProjectId === project.id);
+        const existing = customersByCrmProjectId.get(project.id) ?? null;
         const record: CustomerRecord = existing
           ? {
               ...existing,
@@ -1206,7 +1239,15 @@ export default function Customers() {
             };
         upsertCustomer(record);
         switchActiveCustomer(record.id);
-        setCustomers(loadCustomers());
+        setCustomers((prev) => {
+          const idx = prev.findIndex((c) => c.id === record.id);
+          if (idx >= 0) {
+            const next = prev.slice();
+            next[idx] = record;
+            return next;
+          }
+          return [...prev, record];
+        });
         navigate('/dashboard');
       } catch {
         setProjectsError('Failed to load project. You may not have access.');
@@ -1214,7 +1255,7 @@ export default function Customers() {
         setHydratingProjectId(null);
       }
     },
-    [navigate],
+    [customersByCrmProjectId, navigate],
   );
 
   const handleDelete = useCallback(async (record: CustomerRecord) => {
@@ -1260,7 +1301,7 @@ export default function Customers() {
         const projectOption = mapApiProjectToProjectOption(detail.project);
         const artifacts = mapApiArtifactsToRecord(detail.artifacts);
         const now = new Date().toISOString();
-        const existing = loadCustomers().find((c) => c.master.crmProjectId === projectId);
+        const existing = customersByCrmProjectId.get(projectId) ?? null;
         const record: CustomerRecord = existing
           ? {
               ...existing,
@@ -1284,7 +1325,15 @@ export default function Customers() {
               proposal: artifacts.proposal,
             };
         upsertCustomer(record);
-        setCustomers(loadCustomers());
+        setCustomers((prev) => {
+          const idx = prev.findIndex((c) => c.id === record.id);
+          if (idx >= 0) {
+            const next = prev.slice();
+            next[idx] = record;
+            return next;
+          }
+          return [...prev, record];
+        });
         switchActiveCustomer(record.id);
         navigate('/dashboard');
       } catch {
@@ -1292,8 +1341,7 @@ export default function Customers() {
       }
     })();
     // We intentionally do not include navigate/setters in deps so the effect only runs on initial search change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.search]);
+  }, [location.search, customersByCrmProjectId]);
 
   const filtered = customers.filter((c) => {
     const m = c?.master;
@@ -1329,14 +1377,13 @@ export default function Customers() {
   // otherwise API peStatus, so counts match what is shown on cards (Admin sees CustomerCard with record.status).
   const statCounts = viewAllMode
     ? (() => {
-        const locals = loadCustomers();
         const effectiveDraft = projects.filter((p) => {
-          const rec = locals.find((c) => c.master.crmProjectId === p.id);
+          const rec = customersByCrmProjectId.get(p.id) ?? null;
           const status = rec ? rec.status : (p.peStatus || '').toString().toLowerCase();
           return status === 'draft';
         }).length;
         const effectiveReady = projects.filter((p) => {
-          const rec = locals.find((c) => c.master.crmProjectId === p.id);
+          const rec = customersByCrmProjectId.get(p.id) ?? null;
           const status = rec ? rec.status : (p.peStatus || '').toString().toLowerCase();
           return status === 'proposal-ready';
         }).length;
@@ -1361,8 +1408,7 @@ export default function Customers() {
           project={conflictProject}
           existingCount={conflictExistingCount}
           onOverwrite={() => {
-            const all = loadCustomers();
-            const forProject = all.filter(
+            const forProject = customers.filter(
               (c) => c.master.crmProjectId === conflictProject.id,
             );
             if (forProject.length === 0) {
@@ -1402,8 +1448,7 @@ export default function Customers() {
             navigate('/dashboard');
           }}
           onAppend={async () => {
-            const all = loadCustomers();
-            const forProject = all.filter(
+            const forProject = customers.filter(
               (c) => c.master.crmProjectId === conflictProject.id,
             );
             const sorted = [...forProject].sort(
@@ -1570,7 +1615,7 @@ export default function Customers() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredProjects.map((p) => {
-                  const localRecord = loadCustomers().find((c) => c.master.crmProjectId === p.id);
+                  const localRecord = customersByCrmProjectId.get(p.id) ?? null;
                   const effectiveId = localRecord?.id ?? `crm_${p.id}`;
                   if (isAdmin && localRecord) {
                     return (
@@ -1588,7 +1633,7 @@ export default function Customers() {
                     <ProjectCard
                       key={p.id}
                       project={p}
-                      record={localRecord ?? null}
+                      record={localRecord}
                       isActive={activeId === effectiveId}
                       isReadOnly={isReadOnlyRole}
                       onOpen={() => void handleOpenProjectFromApi(p)}

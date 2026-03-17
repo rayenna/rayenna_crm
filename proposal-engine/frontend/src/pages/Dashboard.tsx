@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   loadCustomers,
   getActiveCustomer,
@@ -29,13 +29,18 @@ function fmtDate(iso: string): string {
 export default function Dashboard() {
   const navigate = useNavigate();
   const [activeCustomerId, setActiveCustomerId] = useState<string | null>(() => getActiveCustomer()?.id ?? null);
+  const [customers, setCustomers] = useState<CustomerRecord[]>(() => loadCustomers());
   const role = getCurrentUserRole();
   const canCreateOrEdit = role != null && ['ADMIN', 'SALES'].includes(String(role).toUpperCase());
 
-  const allCustomers    = loadCustomers()
-    .slice()
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-  const recentCustomers = allCustomers.slice(0, 3);
+  const allCustomers = useMemo(
+    () =>
+      customers
+        .slice()
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
+    [customers],
+  );
+  const recentCustomers = useMemo(() => allCustomers.slice(0, 3), [allCustomers]);
 
   const activeCustomer: CustomerRecord | null =
     allCustomers.find((c) => c.id === activeCustomerId) ?? null;
@@ -393,6 +398,7 @@ export default function Dashboard() {
                     onSelect={() => {
                       switchActiveCustomer(c.id);
                       setActiveCustomerId(c.id);
+                      setCustomers(loadCustomers());
                     }}
                   />
                 ))}

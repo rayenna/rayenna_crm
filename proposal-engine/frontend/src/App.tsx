@@ -1,19 +1,19 @@
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import Customers from './pages/Customers';
-import CustomerWorkspace from './pages/CustomerWorkspace';
-import CostingSheet from './pages/CostingSheet';
-import BOMSheet from './pages/BOMSheet';
-import ROICalculator from './pages/ROICalculator';
-import AIRoofLayout from './pages/AIRoofLayout';
-import ProposalPreview from './pages/ProposalPreview';
-import SharedProposalViewer from './pages/SharedProposalViewer';
-import HelpPage from './pages/HelpPage';
-import AboutPage from './pages/AboutPage';
-import NotFound from './pages/NotFound';
-import LoginPage from './pages/LoginPage';
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Customers = lazy(() => import('./pages/Customers'));
+const CustomerWorkspace = lazy(() => import('./pages/CustomerWorkspace'));
+const CostingSheet = lazy(() => import('./pages/CostingSheet'));
+const BOMSheet = lazy(() => import('./pages/BOMSheet'));
+const ROICalculator = lazy(() => import('./pages/ROICalculator'));
+const AIRoofLayout = lazy(() => import('./pages/AIRoofLayout'));
+const ProposalPreview = lazy(() => import('./pages/ProposalPreview'));
+const SharedProposalViewer = lazy(() => import('./pages/SharedProposalViewer'));
+const HelpPage = lazy(() => import('./pages/HelpPage'));
+const AboutPage = lazy(() => import('./pages/AboutPage'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
 import { getToken, getApiBaseUrl, setToken, setUserId, setUserRole, setUserName } from './lib/apiClient';
 
 function RequireAuth({ children }: { children: JSX.Element }) {
@@ -108,106 +108,117 @@ export default function App() {
 
   return (
     <Layout>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/view/:token" element={<SharedProposalViewer />} />
-        <Route
-          path="/"
-          element={
-            <RequireAuth>
-              <Customers />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <RequireAuth>
-              <Dashboard />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/customers"
-          element={
-            <RequireAuth>
-              <Customers />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/customers/:id"
-          element={
-            <RequireAuth>
-              <CustomerWorkspace />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/costing"
-          element={
-            <RequireAuth>
-              <CostingSheet />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/bom"
-          element={
-            <RequireAuth>
-              <BOMSheet />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/roi"
-          element={
-            <RequireAuth>
-              <ROICalculator />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/ai-layout"
-          element={
-            <RequireAuth>
-              <AIRoofLayout />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/proposal"
-          element={
-            <RequireAuth>
-              <ProposalPreview />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/help"
-          element={
-            <RequireAuth>
-              <HelpPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/about"
-          element={
-            <RequireAuth>
-              <AboutPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="*"
-          element={
-            <RequireAuth>
-              <NotFound />
-            </RequireAuth>
-          }
-        />
-      </Routes>
+      <Suspense
+        fallback={
+          <div className="min-h-[50vh] flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-10 h-10 border-2 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-secondary-600 font-medium">Loading…</p>
+            </div>
+          </div>
+        }
+      >
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/view/:token" element={<SharedProposalViewer />} />
+          <Route
+            path="/"
+            element={
+              <RequireAuth>
+                <Customers />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <RequireAuth>
+                <Dashboard />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/customers"
+            element={
+              <RequireAuth>
+                <Customers />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/customers/:id"
+            element={
+              <RequireAuth>
+                <CustomerWorkspace />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/costing"
+            element={
+              <RequireAuth>
+                <CostingSheet />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/bom"
+            element={
+              <RequireAuth>
+                <BOMSheet />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/roi"
+            element={
+              <RequireAuth>
+                <ROICalculator />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/ai-layout"
+            element={
+              <RequireAuth>
+                <AIRoofLayout />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/proposal"
+            element={
+              <RequireAuth>
+                <ProposalPreview />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/help"
+            element={
+              <RequireAuth>
+                <HelpPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/about"
+            element={
+              <RequireAuth>
+                <AboutPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="*"
+            element={
+              <RequireAuth>
+                <NotFound />
+              </RequireAuth>
+            }
+          />
+        </Routes>
+      </Suspense>
     </Layout>
   );
 }

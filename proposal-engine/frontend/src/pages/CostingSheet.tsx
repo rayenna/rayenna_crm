@@ -1,6 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
-import * as XLSX from 'xlsx';
 import { Link } from 'react-router-dom';
 import { getActiveCustomer, upsertCustomer, getWipKeysForCurrentUser } from '../lib/customerStore';
 import type { CostingArtifact, BomArtifact } from '../lib/customerStore';
@@ -26,7 +25,8 @@ import {
 // Export helpers (Costing Sheet)
 // ─────────────────────────────────────────────
 
-function exportCostingXlsx(items: LineItem[], sheetName: string, showGst: boolean, marginPercent: number) {
+async function exportCostingXlsx(items: LineItem[], sheetName: string, showGst: boolean, marginPercent: number) {
+  const XLSX = await import('xlsx');
   const m = 1 + marginPercent / 100;
   const headerRow = showGst
     ? ['Category', 'Item / Description', 'Specification', 'Qty', 'Unit Cost (₹)', 'GST %', 'GST Amount (₹)', 'Total (incl. GST) (₹)']
@@ -1173,7 +1173,8 @@ function mapHeader(raw: string): keyof ImportRow | null {
 }
 
 /** Parse an uploaded file (xlsx / xls / csv) into ImportRow[] */
-function parseFile(file: File): Promise<ImportRow[]> {
+async function parseFile(file: File): Promise<ImportRow[]> {
+  const XLSX = await import('xlsx');
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -1249,7 +1250,8 @@ function parseFile(file: File): Promise<ImportRow[]> {
 }
 
 /** Generate and download a blank template .xlsx */
-function downloadTemplate() {
+async function downloadTemplate() {
+  const XLSX = await import('xlsx');
   // ── Sheet 1: Costing Sheet ──────────────────────────────────────────────
   // Row 0 — instruction note (spans all 5 columns visually via merge)
   // Row 1 — column headers
@@ -1969,7 +1971,6 @@ export default function CostingSheet() {
       if (ac.costing.showGst !== undefined) setShowGst(ac.costing.showGst);
       if (ac.costing.marginPercent !== undefined) setMarginPercent(ac.costing.marginPercent);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [_initCustomer?.id]);
 
   // ── Template state ────────────────────────
@@ -2463,7 +2464,7 @@ export default function CostingSheet() {
                       const name = savedSheets.length > 0
                         ? savedSheets.slice().sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime())[0].name
                         : 'Costing_Sheet';
-                      exportCostingXlsx(liveItems.filter((r) => r.itemName.trim()), name, showGst, marginPercent);
+                      void exportCostingXlsx(liveItems.filter((r) => r.itemName.trim()), name, showGst, marginPercent);
                     }}
                     disabled={liveItems.filter((r) => r.itemName.trim()).length === 0}
                     className="flex items-center gap-1.5 text-xs text-white/90 hover:text-white bg-white/10 hover:bg-white/20 border border-white/30 px-3 py-1.5 rounded-lg transition-colors font-medium disabled:opacity-40 min-h-[32px]"
