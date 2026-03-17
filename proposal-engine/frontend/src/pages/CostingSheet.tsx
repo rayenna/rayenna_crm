@@ -1174,13 +1174,22 @@ function mapHeader(raw: string): keyof ImportRow | null {
 
 /** Parse an uploaded file (xlsx / xls / csv) into ImportRow[] */
 async function parseFile(file: File): Promise<ImportRow[]> {
+  // Guardrails: reduce risk from malformed/hostile spreadsheets and avoid UI hangs.
+  const MAX_IMPORT_BYTES = 3 * 1024 * 1024; // 3 MB
+  const MAX_IMPORTED_ROWS = 5000;
+  if (file.size > MAX_IMPORT_BYTES) {
+    throw new Error(
+      `File is too large to import. Please use a smaller file (max ${(MAX_IMPORT_BYTES / 1024 / 1024).toFixed(0)} MB).`,
+    );
+  }
+
   const XLSX = await import('xlsx');
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target!.result as ArrayBuffer);
-        const wb   = XLSX.read(data, { type: 'array' });
+        const wb   = XLSX.read(data, { type: 'array', cellFormula: false });
         const ws   = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, {
           header: 1,
@@ -1189,6 +1198,10 @@ async function parseFile(file: File): Promise<ImportRow[]> {
         });
 
         if (rows.length < 1) { resolve([]); return; }
+        if (rows.length > MAX_IMPORTED_ROWS) {
+          reject(new Error(`Too many rows to import (${rows.length}). Please limit to ${MAX_IMPORTED_ROWS} rows.`));
+          return;
+        }
 
         // Find the header row — skip any leading instruction/note rows.
         // A valid header row must map at least one recognised column key.
