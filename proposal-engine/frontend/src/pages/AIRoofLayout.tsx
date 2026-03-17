@@ -21,6 +21,7 @@ export default function AIRoofLayout() {
   const [savingToProposal, setSavingToProposal] = useState(false);
   const [lastSavedProjectId, setLastSavedProjectId] = useState<string | null>(null);
   const [loadedSavedAt, setLoadedSavedAt] = useState<string | null>(null);
+  const [layoutMode, setLayoutMode] = useState<'saved' | 'editing'>('editing');
   const [panelSpacingMultiplier, setPanelSpacingMultiplier] = useState(1.5);
   const [panelOrientation, setPanelOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const exportRef = useRef<HTMLDivElement>(null);
@@ -80,6 +81,7 @@ export default function AIRoofLayout() {
         setResult(next);
         setLastSavedProjectId(String(crmProjectId));
         setLoadedSavedAt(manual?.savedAt ? String(manual.savedAt) : null);
+        setLayoutMode('saved');
 
         const rawUrl = next.layout_image_url && String(next.layout_image_url).trim()
           ? next.layout_image_url
@@ -91,7 +93,7 @@ export default function AIRoofLayout() {
           : null;
         setBgImageUrl(imageUrl);
 
-        // Reset canvas-derived state so it can be rebuilt for this image.
+        // In saved mode, we do NOT show the editable polygon/panels overlay.
         setPolygon(null);
         setPanels([]);
         setImageSize(null);
@@ -139,6 +141,10 @@ export default function AIRoofLayout() {
 
     setLoading(true);
     setError(null);
+    // Regenerate = switch to editing mode (show polygon + recompute metrics from polygon).
+    setLayoutMode('editing');
+    setPolygon(null);
+    setPanels([]);
 
     try {
       const crmProject = await fetchCrmProjectForAiLayout(crmProjectId);
@@ -447,6 +453,7 @@ export default function AIRoofLayout() {
 
   // Initialise default polygon once we know the image size
   useEffect(() => {
+    if (layoutMode !== 'editing') return;
     if (!imageSize || polygon) return;
     // Start with a smaller default polygon so it matches the main roof more closely,
     // and align its edges to the underlying panel grid so rows/columns line up nicely.
@@ -476,11 +483,12 @@ export default function AIRoofLayout() {
       { x: maxX, y: maxY },
       { x: minX, y: maxY },
     ]);
-  }, [imageSize, panelSpacingMultiplier, polygon]);
+  }, [imageSize, panelSpacingMultiplier, polygon, layoutMode]);
 
   // Recompute panels + metrics whenever polygon / density / orientation changes,
   // but debounce and skip while actively dragging so interaction feels smooth.
   useEffect(() => {
+    if (layoutMode !== 'editing') return;
     if (!polygon) return;
     if (isDraggingRef.current) return;
     if (recomputeTimeoutRef.current != null) {
@@ -507,7 +515,7 @@ export default function AIRoofLayout() {
         window.clearTimeout(recomputeTimeoutRef.current);
       }
     };
-  }, [polygon, panelSpacingMultiplier, panelOrientation]);
+  }, [polygon, panelSpacingMultiplier, panelOrientation, layoutMode]);
 
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 overflow-x-hidden">
@@ -821,8 +829,8 @@ export default function AIRoofLayout() {
                           />
                         </Layer>
 
-                        {/* Roof polygon boundary in green + drag-whole-roof helper */}
-                        {polygon && (
+                        {/* Roof polygon boundary in green + drag-whole-roof helper (editing only) */}
+                        {layoutMode === 'editing' && polygon && (
                           <Layer>
                             <Line
                               ref={lineRef}
@@ -894,7 +902,7 @@ export default function AIRoofLayout() {
                         )}
 
                         {/* Panels clipped to polygon, with improved styling — hidden during drag for performance */}
-                        {polygon && panels.length > 0 && !isDragging && (
+                        {layoutMode === 'editing' && polygon && panels.length > 0 && !isDragging && (
                           <Layer
                             clipFunc={(ctx) => {
                               if (!polygon.length) return;
@@ -926,7 +934,7 @@ export default function AIRoofLayout() {
                         )}
 
                         {/* Draggable polygon control points (bigger hit areas for easier touch/trackpad use) */}
-                        {polygon && (
+                        {layoutMode === 'editing' && polygon && (
                           <Layer>
                             {polygon.map((p, idx) => (
                               <Circle
