@@ -5,9 +5,12 @@ import { setAuthErrorCallback } from '../utils/authErrorHandler'
 import { User, UserRole } from '../types'
 import { ErrorModal } from '@/components/common/ErrorModal'
 
-// Inactivity timeout configuration
-const IDLE_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
-const WARNING_BEFORE_MS = 60 * 1000 // Show warning 1 minute before logout
+// Auto-logout time (no activity): 10 minutes
+const IDLE_TIMEOUT_MS = 10 * 60 * 1000
+// When the warning timer message pops up: 9 minutes
+const WARNING_BEFORE_MS = 60 * 1000
+// Warning starts at 10m - 1m = 9m
+// Countdown details: Warning shows and counts down from 60 seconds to 0, then it logs out.
 
 interface AuthContextType {
   user: User | null
