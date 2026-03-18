@@ -33,9 +33,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const hasToken       = !!getToken();
   const userName       = getCurrentUserName();
 
-  // Inactivity timeout configuration – match CRM behaviour
-  const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
-  const WARNING_BEFORE_MS = 60 * 1000;   // 1 minute before logout
+  // Auto-logout time (no activity): 10 minutes
+  const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
+  // When the warning timer message pops up: 9 minutes
+  const WARNING_BEFORE_MS = 60 * 1000;
+  // Warning starts at 10m - 1m = 9m
+  // Countdown details: Warning shows and counts down from 60 seconds to 0, then it logs out.
 
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
