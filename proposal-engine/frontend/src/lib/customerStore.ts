@@ -426,6 +426,78 @@ export function saveCustomers(customers: CustomerRecord[]): void {
   localStorage.setItem(getCustomersKey(), JSON.stringify(customers));
 }
 
+// ─────────────────────────────────────────────
+// Cache pruning: keep full artifacts only for active + recent N
+// ─────────────────────────────────────────────
+
+const MAX_FULL_ARTIFACT_RECORDS = 5;
+
+function pruneCustomerArtifacts(activeId: string | null): void {
+  const all = loadCustomers();
+  if (all.length <= MAX_FULL_ARTIFACT_RECORDS + 1) return;
+
+  const sorted = [...all].sort(
+    (a, b) =>
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+  );
+
+  const keepIds = new Set<string>();
+  // Always keep the most recently updated N records at full fidelity
+  sorted.slice(0, MAX_FULL_ARTIFACT_RECORDS).forEach((c) => keepIds.add(c.id));
+  // And always keep the active customer (if any)
+  if (activeId) keepIds.add(activeId);
+
+  const pruned = all.map((c) => {
+    if (keepIds.has(c.id)) return c;
+    let next: CustomerRecord = { ...c };
+
+    // Costing: drop heavy items array, keep summary fields
+    if (next.costing) {
+      next = {
+        ...next,
+        costing: {
+          ...next.costing,
+          items: [],
+        },
+      };
+    }
+
+    // BOM: drop rows, keep savedAt
+    if (next.bom) {
+      next = {
+        ...next,
+        bom: {
+          ...next.bom,
+          rows: [],
+        },
+      };
+    }
+
+    // Proposal: keep only lightweight fields; drop HTML and text overrides
+    if (next.proposal) {
+      next = {
+        ...next,
+        proposal: {
+          refNumber: next.proposal.refNumber,
+          generatedAt: next.proposal.generatedAt,
+          summary: next.proposal.summary,
+          bomComments: undefined,
+          editedHtml: undefined,
+          textOverrides: undefined,
+          includeRoofLayout: next.proposal.includeRoofLayout,
+          roofLayout: next.proposal.roofLayout ?? null,
+          crmDocumentUrl: next.proposal.crmDocumentUrl,
+          crmArtifactId: next.proposal.crmArtifactId,
+        },
+      };
+    }
+
+    return next;
+  });
+
+  saveCustomers(pruned);
+}
+
 export function getCustomer(id: string): CustomerRecord | null {
   return loadCustomers().find((c) => c.id === id) ?? null;
 }
@@ -439,6 +511,7 @@ export function upsertCustomer(record: CustomerRecord): void {
     all.push(record);
   }
   saveCustomers(all);
+  pruneCustomerArtifacts(getActiveCustomerId());
 }
 
 export function deleteCustomer(id: string): void {
@@ -588,6 +661,9 @@ export function switchActiveCustomer(id: string): void {
   if (record.proposal?.editedHtml) {
     localStorage.setItem(wip.proposalHtml, record.proposal.editedHtml);
   }
+
+  // After switching, prune cache so only active + recent customers keep full artifacts
+  pruneCustomerArtifacts(id);
 }
 
 // ─────────────────────────────────────────────

@@ -2522,6 +2522,24 @@ function BOMGroupedTable({
     [items],
   );
 
+  // Keep per-category collapsed map in sync with the global allCollapsed mode,
+  // especially on first render and whenever BOM categories change.
+  React.useEffect(() => {
+    if (grouped.length === 0) return;
+    setCollapsed((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      grouped.forEach((g) => {
+        const desired = allCollapsed;
+        if (next[g.cat] !== desired) {
+          next[g.cat] = desired;
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [grouped, allCollapsed, setCollapsed]);
+
   const toggleAll = React.useCallback(() => {
     const next = !allCollapsed;
     setAllCollapsed(next);
@@ -2539,7 +2557,8 @@ function BOMGroupedTable({
       {/* Collapse-all toggle + summary */}
       <div className="flex items-center justify-between mb-3 px-1">
         <p className="text-xs text-secondary-400">
-          {grouped.length} categories · {items.length} items
+          {grouped.length} categories
+          {!allCollapsed && <> · {items.length} items</>}
         </p>
         <button
           type="button"
@@ -2599,12 +2618,14 @@ function BOMGroupedTable({
                           <span className="text-sm">{icon}</span>
                           <span className="text-xs font-extrabold uppercase tracking-wide" style={{ color: a.text }}>{label}</span>
                         </div>
-                        <span
-                          className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                          style={{ background: a.badge, color: '#fff' }}
-                        >
-                          {rows.length} item{rows.length !== 1 ? 's' : ''}
-                        </span>
+                        {isOpen && (
+                          <span
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                            style={{ background: a.badge, color: '#fff' }}
+                          >
+                            {rows.length} item{rows.length !== 1 ? 's' : ''}
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -3092,7 +3113,7 @@ export default function ProposalPreview() {
   const [savedToCustomer, setSavedToCustomer] = useState<string | null>(null);
   const [bomComments, setBomComments]         = useState<Record<string, string>>({});
   const [bomCollapsed, setBomCollapsed]       = useState<Record<string, boolean>>({});
-  const [bomAllCollapsed, setBomAllCollapsed] = useState(false);
+  const [bomAllCollapsed, setBomAllCollapsed] = useState(true);
   const [isEditing, setIsEditing]             = useState(false);
   const [saveStatus, setSaveStatus]           = useState<'idle' | 'saving' | 'saved'>('idle');
   const [includeRoofLayout, setIncludeRoofLayout] = useState(false);
@@ -3123,7 +3144,7 @@ export default function ProposalPreview() {
   // Reset BOM collapse state whenever a new BOM is loaded
   useEffect(() => {
     setBomCollapsed({});
-    setBomAllCollapsed(false);
+    setBomAllCollapsed(true);
   }, [proposal?.bom]);
 
   // Track the active customer ID so CustomerForm remounts when the customer changes.

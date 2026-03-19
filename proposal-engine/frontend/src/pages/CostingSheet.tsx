@@ -1671,7 +1671,9 @@ function CostingGroupedTable({
   resetSignal:    number;     // increment to clear collapsed state without remounting
   canEdit:        boolean;    // false for Ops/Finance/Management (read-only)
 }) {
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [collapsed, setCollapsed] = useState<Set<string>>(
+    () => (allCollapsed ? new Set(CATEGORIES.map((c) => c.value)) : new Set()),
+  );
   const toggle = (cat: string) =>
     setCollapsed((prev) => { const n = new Set(prev); n.has(cat) ? n.delete(cat) : n.add(cat); return n; });
 
@@ -1680,8 +1682,8 @@ function CostingGroupedTable({
   useEffect(() => {
     if (prevResetSignal.current === resetSignal) return;
     prevResetSignal.current = resetSignal;
-    setCollapsed(new Set());
-  }, [resetSignal]);
+    setCollapsed(allCollapsed ? new Set(CATEGORIES.map((c) => c.value)) : new Set());
+  }, [resetSignal, allCollapsed]);
 
   // Sync to parent's expand/collapse-all signal
   const prevAllCollapsed = React.useRef(allCollapsed);
@@ -1998,7 +2000,7 @@ export default function CostingSheet() {
   const [showSaveSheetModal, setShowSaveSheetModal] = useState(false);
 
   // ── Expand / Collapse All ─────────────────
-  const [allCollapsed, setAllCollapsed]         = useState(false);
+  const [allCollapsed, setAllCollapsed]         = useState(true);
 
   const canEdit = canEditProposalArtifacts();
   const role = getCurrentUserRole();

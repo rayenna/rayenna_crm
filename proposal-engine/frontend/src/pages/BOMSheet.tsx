@@ -392,7 +392,9 @@ function BomTable({
   allCollapsed: boolean;
   canEdit:      boolean;
 }) {
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [collapsed, setCollapsed] = useState<Set<string>>(
+    () => (allCollapsed ? new Set(CATEGORIES.map((c) => c.value)) : new Set()),
+  );
   const toggle = (cat: string) =>
     setCollapsed((prev) => { const n = new Set(prev); n.has(cat) ? n.delete(cat) : n.add(cat); return n; });
 
@@ -554,7 +556,7 @@ export default function BOMSheet() {
   const [storedBom, setStoredBom]   = useState<StoredBom | null>(loadStoredBom);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [allCollapsed, setAllCollapsed] = useState(false);
+  const [allCollapsed, setAllCollapsed] = useState(true);
 
   const canEdit = canEditProposalArtifacts();
 

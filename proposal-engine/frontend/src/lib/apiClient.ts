@@ -421,8 +421,11 @@ export interface ProposalEngineProjectFromApi {
 }
 
 /** Selected projects list (Sales: own selections; Ops/Finance/Management/Admin: all selections). */
-export async function fetchProposalEngineProjects(): Promise<ProposalEngineProjectFromApi[]> {
-  return apiFetch<ProposalEngineProjectFromApi[]>('/api/proposal-engine/projects');
+export async function fetchProposalEngineProjects(limit?: number): Promise<ProposalEngineProjectFromApi[]> {
+  const qs = typeof limit === 'number' && Number.isFinite(limit)
+    ? `?limit=${Math.max(1, Math.floor(limit))}`
+    : '';
+  return apiFetch<ProposalEngineProjectFromApi[]>(`/api/proposal-engine/projects${qs}`);
 }
 
 /** Eligible CRM projects that can be selected into Proposal Engine. */
