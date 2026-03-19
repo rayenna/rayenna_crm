@@ -626,6 +626,8 @@ model PECostingSheet {
   savedAt      DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  @@index([projectId])
+  @@index([savedAt])
   @@map("pe_costing_sheets")
 }
 
@@ -652,6 +654,8 @@ model PEBomSheet {
   savedAt     DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@index([projectId])
+  @@index([savedAt])
   @@map("pe_bom_sheets")
 }
 
@@ -665,6 +669,8 @@ model PERoiResult {
   savedAt     DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@index([projectId])
+  @@index([savedAt])
   @@map("pe_roi_results")
 }
 
@@ -683,6 +689,8 @@ model PEProposal {
   savedAt       DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  @@index([projectId])
+  @@index([savedAt])
   @@map("pe_proposals")
 }
 

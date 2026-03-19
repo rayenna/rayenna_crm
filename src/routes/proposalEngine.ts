@@ -95,6 +95,13 @@ router.get('/projects', authenticate, async (req: Request, res: Response) => {
       selectionWhere.project = { salespersonId: userId };
     }
 
+    // Optional limit query param for future tuning; default remains 200 for backward compatibility.
+    const limitRaw = req.query.limit;
+    const limit =
+      typeof limitRaw === 'string'
+        ? Math.min(Math.max(parseInt(limitRaw, 10) || 1, 1), 200)
+        : 200;
+
     const selections = await prisma.pESelectedProject.findMany({
       where: selectionWhere,
       include: {
@@ -108,7 +115,7 @@ router.get('/projects', authenticate, async (req: Request, res: Response) => {
         },
       },
       orderBy: { updatedAt: 'desc' },
-      take: 200,
+      take: limit,
     });
 
     const projectIds = selections.map((s) => s.projectId);
@@ -596,6 +603,29 @@ router.put(
         orderBy: { savedAt: 'desc' },
       });
 
+      if (Array.isArray(req.body.items) && req.body.items.length > MAX_COSTING_ROWS) {
+        console.warn(
+          `[pe][limit] COSTING_TOO_LARGE project=${req.params.id} user=${req.user?.id ?? 'unknown'} rows=${req.body.items.length} limit=${MAX_COSTING_ROWS}`,
+        );
+        if (req.user) {
+          logSecurityAudit({
+            userId: req.user.id,
+            role: req.user.role,
+            actionType: 'pe_limit_costing_too_large',
+            entityType: 'Project',
+            entityId: req.params.id,
+            summary: `Costing rows=${req.body.items.length}, limit=${MAX_COSTING_ROWS}`,
+            req,
+          });
+        }
+        return res.status(413).json({
+          error: `Costing sheet has too many rows. Please split into smaller templates or sheets.`,
+          code: 'COSTING_TOO_LARGE',
+          limitRows: MAX_COSTING_ROWS,
+          rowCount: req.body.items.length,
+        });
+      }
+
       const data = {
         projectId: req.params.id,
         sheetName: req.body.sheetName,
@@ -680,6 +710,29 @@ router.put(
         where: { projectId: req.params.id },
         orderBy: { savedAt: 'desc' },
       });
+
+      if (Array.isArray(req.body.rows) && req.body.rows.length > MAX_BOM_ROWS) {
+        console.warn(
+          `[pe][limit] BOM_TOO_LARGE project=${req.params.id} user=${req.user?.id ?? 'unknown'} rows=${req.body.rows.length} limit=${MAX_BOM_ROWS}`,
+        );
+        if (req.user) {
+          logSecurityAudit({
+            userId: req.user.id,
+            role: req.user.role,
+            actionType: 'pe_limit_bom_too_large',
+            entityType: 'Project',
+            entityId: req.params.id,
+            summary: `BOM rows=${req.body.rows.length}, limit=${MAX_BOM_ROWS}`,
+            req,
+          });
+        }
+        return res.status(413).json({
+          error: `BOM has too many rows. Please split or simplify the BOM before saving.`,
+          code: 'BOM_TOO_LARGE',
+          limitRows: MAX_BOM_ROWS,
+          rowCount: req.body.rows.length,
+        });
+      }
 
       const data = {
         projectId: req.params.id,
@@ -844,12 +897,40 @@ router.put(
         orderBy: { savedAt: 'desc' },
       });
 
+      const editedHtml: string | null =
+        typeof req.body.editedHtml === 'string' ? req.body.editedHtml : null;
+      if (editedHtml) {
+        const htmlBytes = Buffer.byteLength(editedHtml, 'utf8');
+        if (htmlBytes > MAX_PROPOSAL_HTML_BYTES) {
+          console.warn(
+            `[pe][limit] PROPOSAL_TOO_LARGE project=${req.params.id} user=${req.user?.id ?? 'unknown'} sizeBytes=${htmlBytes} limitBytes=${MAX_PROPOSAL_HTML_BYTES}`,
+          );
+          if (req.user) {
+            logSecurityAudit({
+              userId: req.user.id,
+              role: req.user.role,
+              actionType: 'pe_limit_proposal_too_large',
+              entityType: 'Project',
+              entityId: req.params.id,
+              summary: `Proposal HTML bytes=${htmlBytes}, limit=${MAX_PROPOSAL_HTML_BYTES}`,
+              req,
+            });
+          }
+          return res.status(413).json({
+            error: `Proposal content is too large to save. Please trim content (or split into multiple proposals) and try again.`,
+            code: 'PROPOSAL_TOO_LARGE',
+            limitBytes: MAX_PROPOSAL_HTML_BYTES,
+            sizeBytes: htmlBytes,
+          });
+        }
+      }
+
       const data = {
         projectId: req.params.id,
         refNumber: req.body.refNumber,
         generatedAt: new Date(req.body.generatedAt),
         bomComments: req.body.bomComments ?? null,
-        editedHtml: req.body.editedHtml ?? null,
+        editedHtml,
         textOverrides: req.body.textOverrides ?? null,
         summary: req.body.summary ?? null,
       };
@@ -950,6 +1031,9 @@ router.delete('/projects/:id', authenticate, async (req: Request, res: Response)
 const DEFAULT_SHARE_EXPIRY_HOURS = 48;
 const MAX_PE_SHARES_PER_PROJECT = 10;
 const MAX_SHARE_HTML_BYTES = 2_000_000; // 2 MB (utf8). Safety guard against accidental multi-MB shares.
+const MAX_PROPOSAL_HTML_BYTES = 2_000_000; // 2 MB limit for stored proposal HTML as well.
+const MAX_COSTING_ROWS = 5000; // Very generous guard against accidental huge uploads.
+const MAX_BOM_ROWS = 8000; // Very generous guard.
 
 /** Create a shareable link. Optional password and custom expiry; default 48h. */
 router.post('/share', authenticate, async (req: Request, res: Response) => {
@@ -974,6 +1058,20 @@ router.post('/share', authenticate, async (req: Request, res: Response) => {
 
     const htmlBytes = Buffer.byteLength(proposalHtml, 'utf8');
     if (htmlBytes > MAX_SHARE_HTML_BYTES) {
+      console.warn(
+        `[pe][limit] SHARE_PAYLOAD_TOO_LARGE project=${projectId} user=${req.user?.id ?? 'unknown'} sizeBytes=${htmlBytes} limitBytes=${MAX_SHARE_HTML_BYTES}`,
+      );
+      if (req.user) {
+        logSecurityAudit({
+          userId: req.user.id,
+          role: req.user.role,
+          actionType: 'pe_limit_share_payload_too_large',
+          entityType: 'Project',
+          entityId: projectId,
+          summary: `Share HTML bytes=${htmlBytes}, limit=${MAX_SHARE_HTML_BYTES}`,
+          req,
+        });
+      }
       return res.status(413).json({
         error: `Proposal is too large to share. Please reduce content and try again. (Size: ${(htmlBytes / 1024 / 1024).toFixed(2)} MB, Limit: ${(MAX_SHARE_HTML_BYTES / 1024 / 1024).toFixed(2)} MB)`,
         code: 'PAYLOAD_TOO_LARGE',
@@ -1098,6 +1196,56 @@ router.get('/share/:token', async (req: Request, res: Response) => {
   } catch (error: any) {
     reportPeError(error, 'Error fetching shared proposal');
     res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+// Admin-only: quick metrics endpoint for PE payload/size-limit rejections.
+// Useful for monitoring if users are hitting guardrails in production.
+router.get('/admin/limits-stats', authenticate, async (req: Request, res: Response) => {
+  try {
+    const roleStr = req.user?.role != null ? String(req.user.role).toUpperCase() : '';
+    if (roleStr !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only Admin can view Proposal Engine limit stats.' });
+    }
+
+    const daysRaw = typeof req.query.days === 'string' ? parseInt(req.query.days, 10) : NaN;
+    const days = Number.isFinite(daysRaw) ? Math.min(Math.max(daysRaw, 1), 90) : 7;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const actionTypes = [
+      'pe_limit_costing_too_large',
+      'pe_limit_bom_too_large',
+      'pe_limit_proposal_too_large',
+      'pe_limit_share_payload_too_large',
+    ] as const;
+
+    const [costingTooLarge, bomTooLarge, proposalTooLarge, shareTooLarge] = await Promise.all(
+      actionTypes.map((actionType) =>
+        prisma.securityAuditLog.count({
+          where: {
+            actionType,
+            createdAt: { gte: since },
+          },
+        }),
+      ),
+    );
+
+    const byType = {
+      costingTooLarge,
+      bomTooLarge,
+      proposalTooLarge,
+      shareTooLarge,
+    };
+
+    return res.json({
+      windowDays: days,
+      since: since.toISOString(),
+      byType,
+      total: costingTooLarge + bomTooLarge + proposalTooLarge + shareTooLarge,
+    });
+  } catch (error: any) {
+    reportPeError(error, 'Error fetching Proposal Engine limit stats');
+    return res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 

@@ -496,7 +496,7 @@ const Projects = () => {
     queryKey: ['proposal-engine-projects'],
     queryFn: async () => {
       try {
-        const res = await axiosInstance.get('/api/proposal-engine/projects')
+        const res = await axiosInstance.get('/api/proposal-engine/projects?limit=100')
         return res.data as Array<{ id: string; peStatus?: string }>
       } catch (error) {
         if (import.meta.env.DEV) {
