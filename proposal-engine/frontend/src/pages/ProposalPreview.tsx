@@ -2593,7 +2593,10 @@ function BOMGroupedTable({
             {grouped.map(({ cat, label, rows }) => {
               const a       = BOM_CAT_ACCENTS[cat];
               const icon    = BOM_CAT_ICONS[cat];
-              const isOpen  = !collapsed[cat];
+              // `collapsed[cat]` is a per-category override. When it's missing (initial paint),
+              // inherit from the global `allCollapsed` so the UI doesn't flash expanded.
+              const isCollapsed = collapsed[cat] ?? allCollapsed;
+              const isOpen  = !isCollapsed;
               const comment = comments[cat] ?? '';
               return (
                 <React.Fragment key={cat}>
@@ -2601,7 +2604,12 @@ function BOMGroupedTable({
                   <tr
                     className="cursor-pointer select-none"
                     style={{ background: a.headerBg, borderTop: `2px solid ${a.border}` }}
-                    onClick={() => setCollapsed((p) => ({ ...p, [cat]: !p[cat] }))}
+                    onClick={() =>
+                      setCollapsed((p) => {
+                        const currentlyCollapsed = p[cat] ?? allCollapsed;
+                        return { ...p, [cat]: !currentlyCollapsed };
+                      })
+                    }
                     data-bom-cat={cat}
                     data-bom-collapsed={(!isOpen).toString()}
                     data-bom-header="true"
