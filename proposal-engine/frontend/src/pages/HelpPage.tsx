@@ -144,7 +144,7 @@ const TIP_CATEGORIES: { label: string; icon: string; accent: string; bg: string;
 ];
 
 // Tip count per category (matches order in tipOfTheDay.ts)
-const TIP_COUNTS = [5, 7, 5, 5, 8, 4, 1];
+const TIP_COUNTS = [5, 7, 5, 5, 9, 4, 1];
 
 /* ─── Table of Contents ─────────────────────────────────────────────────── */
 const TOC = [
@@ -154,6 +154,7 @@ const TOC = [
   { id: 'bom',            icon: '📦', label: 'Bill of Materials'     },
   { id: 'roi',            icon: '📈', label: 'ROI Calculator'        },
   { id: 'proposal',       icon: '📄', label: 'Proposal'              },
+  { id: 'ai-roof-layout', icon: '🏠', label: 'AI Roof Layout (Beta)' },
   { id: 'tips',           icon: '✨', label: 'Tips & Shortcuts'      },
   { id: 'tip-of-the-day', icon: '💡', label: 'Tip of the Day'        },
   { id: 'faq',            icon: '❓', label: 'FAQ'                   },
@@ -646,6 +647,56 @@ export default function HelpPage() {
             <h3 className="font-semibold text-gray-800 mb-2">Share as Link</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
               Click <strong>🔗 Share</strong> (next to PDF and DOCX in the header or footer) to open the Share modal. Optionally set a password and a custom expiry date (default is 48 hours). Click <strong>Generate link</strong>, then copy the proposal link and send it to your customer. Anyone with the link can open a read-only view of the proposal in their browser; the Export PDF / DOCX / Share row is hidden in that view so recipients only see the proposal content.
+            </p>
+          </div>
+        </div>
+      </Section>
+
+      {/* ══════════════════════════════════════════════════════════════════ */}
+      {/* 6.5. AI ROOF LAYOUT (BETA)                                        */}
+      {/* ══════════════════════════════════════════════════════════════════ */}
+      <Section
+        id="ai-roof-layout"
+        icon="🏠"
+        title="AI Roof Layout (Beta) — How it Integrates with Proposal"
+        accent="bg-indigo-100 text-indigo-700"
+        defaultOpen={false}
+      >
+        <div className="space-y-5">
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">What AI Roof Layout does</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              AI Roof Layout helps you draft a rooftop polygon and an initial solar panel arrangement on top of a satellite image.
+              It is designed to speed up proposal drafting (you can still verify on-site measurements).
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Start from a CRM-linked project</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              AI Roof Layout works on the <strong>active project</strong> (your current selection from <strong>Customers / Projects</strong>).
+              Make sure the project is linked to Rayenna CRM so latitude/longitude and system inputs are available.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Generate, edit, and save</h3>
+            <ul className="mt-2 space-y-1 text-sm text-gray-600 list-disc list-inside">
+              <li>Go to <strong>AI Roof Layout (Beta)</strong>.</li>
+              <li>Click <strong>Generate AI Layout</strong> for an initial rooftop + panel draft.</li>
+              <li>Use <strong>Edit polygon</strong> (and tools like <strong>Snap to grid</strong>) to adjust the rooftop boundary.</li>
+              <li>When ready, click <strong>Save for proposal</strong>.</li>
+            </ul>
+            <p className="text-sm text-gray-600 leading-relaxed mt-2">
+              This saves the layout image + layout metrics in the Rayenna CRM backend <strong>per CRM project</strong>.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Enable the layout inside the Proposal</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Open <strong>Proposal</strong> and toggle <strong>Include AI Roof Layout (Beta) in proposal</strong>.
+              Then click <strong>Generate Proposal</strong> (or <strong>Save</strong> after any edits) so the Roof Layout section appears and is locked in with the proposal artifacts.
             </p>
           </div>
         </div>

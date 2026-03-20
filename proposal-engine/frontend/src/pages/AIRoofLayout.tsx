@@ -26,6 +26,13 @@ export default function AIRoofLayout() {
   const [panelOrientation, setPanelOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const exportRef = useRef<HTMLDivElement>(null);
 
+  // Konva shapes are rendered inside a container that's scaled via CSS `transform: scale(${zoom})`.
+  // To keep the polygon outline and draggable points visible on mobile (especially when zoomed out),
+  // we scale their visual sizes inversely to `zoom`.
+  const polygonStrokeWidth = Math.max(1.5, 2 / zoom);
+  const controlPointRadius = Math.max(6, 9 / zoom);
+  const controlPointHitStrokeWidth = Math.max(24, 32 / zoom);
+
   // Konva-based layout state (pure frontend, no native deps)
   const stageRef = useRef<any>(null);
   const lineRef = useRef<any>(null);
@@ -837,7 +844,7 @@ export default function AIRoofLayout() {
                               points={polygon.flatMap((p) => [p.x, p.y])}
                               closed
                               stroke="#16a34a"
-                              strokeWidth={2}
+                              strokeWidth={polygonStrokeWidth}
                               fill="rgba(34,197,94,0.08)"
                               listening={false}
                             />
@@ -941,11 +948,11 @@ export default function AIRoofLayout() {
                                 key={idx}
                                 x={p.x}
                                 y={p.y}
-                                radius={9}
+                                  radius={controlPointRadius}
                                 fill="#10b981"
                                 stroke="#047857"
                                 strokeWidth={1.5}
-                                hitStrokeWidth={32}
+                                  hitStrokeWidth={controlPointHitStrokeWidth}
                                 draggable
                                 onDragStart={() => {
                                   isDraggingRef.current = true;

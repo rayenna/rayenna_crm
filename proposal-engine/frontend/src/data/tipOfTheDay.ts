@@ -57,6 +57,7 @@ export const TIPS: string[] = [
   'An amber border around the proposal confirms you are in Edit mode — click the Edit button again to exit without saving.',
   'Use the main Save action (top-right or at the bottom) to save everything in one shot: inline edits, BOM comments, and all four artifacts.',
   'Add per-category notes in the Bill of Quantities section to specify brands or special conditions (e.g. "Adani DCR modules as per MNRE list").',
+  'For AI Roof Layout (Beta): click “Save for proposal”, then enable “Include AI Roof Layout (Beta) in proposal” and Save — it persists per CRM project.',
   'PDF export captures your inline edits automatically because it renders the live document — always save before exporting.',
   'DOCX export also reflects your inline edits — the saved text overrides are applied to every section of the Word document.',
   'The proposal reference number (REY/YYYY/MM/XXXXX) is generated automatically — it is unique to each generation.',
