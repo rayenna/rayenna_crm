@@ -691,6 +691,7 @@ export async function syncProjectProposal(
           editedHtml: artifact.editedHtml ?? null,
           textOverrides: artifact.textOverrides ?? null,
           summary: artifact.summary ?? null,
+          includeRoofLayout: artifact.includeRoofLayout ?? false,
         }),
       });
     } catch (err) {
@@ -746,6 +747,14 @@ interface ApiProposalArtifact {
   editedHtml?: string | null;
   textOverrides?: Record<string, string | undefined> | null;
   summary?: string | null;
+  includeRoofLayout?: boolean | null;
+  roofLayout?: {
+    roof_area_m2: number;
+    usable_area_m2: number;
+    panel_count: number;
+    layout_image_url: string;
+    savedAt?: string;
+  } | null;
   savedAt: string;
 }
 
@@ -799,6 +808,15 @@ export function mapApiArtifactsToRecord(artifacts: ProposalEngineProjectDetailRe
           bomComments: artifacts.proposal.bomComments ?? undefined,
           editedHtml: artifacts.proposal.editedHtml ?? undefined,
           textOverrides: artifacts.proposal.textOverrides ?? undefined,
+          includeRoofLayout: !!artifacts.proposal.includeRoofLayout,
+          roofLayout: artifacts.proposal.roofLayout
+            ? {
+                roof_area_m2: artifacts.proposal.roofLayout.roof_area_m2,
+                usable_area_m2: artifacts.proposal.roofLayout.usable_area_m2,
+                panel_count: artifacts.proposal.roofLayout.panel_count,
+                layout_image_url: artifacts.proposal.roofLayout.layout_image_url,
+              }
+            : null,
         }
       : null,
   };
