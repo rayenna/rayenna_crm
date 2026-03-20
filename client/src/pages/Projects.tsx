@@ -501,7 +501,6 @@ const Projects = () => {
       } catch (error) {
         if (import.meta.env.DEV) {
           // Non-fatal: lack of access or network issues just mean no PE status badges
-          // eslint-disable-next-line no-console
           console.warn('Unable to load Proposal Engine project status', error)
         }
         return [] as Array<{ id: string; peStatus?: string }>

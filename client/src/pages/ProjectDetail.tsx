@@ -79,7 +79,6 @@ const ProjectDetail = () => {
       } catch (err: any) {
         // If user has no access or project isn't in Proposal Engine yet, treat as "none"
         if (import.meta.env.DEV) {
-          // eslint-disable-next-line no-console
           console.warn('Unable to load Proposal Engine summary for project', id, err)
         }
         return { peStatus: 'none' as const, lastUpdated: undefined as string | undefined }

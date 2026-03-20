@@ -674,6 +674,70 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       }
     }
 
+    // Projects by payment status (for Sales Quick Access tile)
+    // Bucket logic matches Management/Operations dashboards:
+    // - "N/A" includes early/lost stages and projects with no/zero order value
+    // - "PENDING"/"PARTIAL" report outstanding (balanceAmount); "FULLY_PAID" reports 0 outstanding
+    const earlyOrLostStatuses: ProjectStatus[] = [
+      ProjectStatus.LEAD,
+      ProjectStatus.SITE_SURVEY,
+      ProjectStatus.PROPOSAL,
+      ProjectStatus.LOST,
+    ];
+
+    const [naCount, naTotals, paidGroups] = await Promise.all([
+      prisma.project.count({
+        where: {
+          ...where,
+          OR: [
+            { projectCost: null },
+            { projectCost: 0 },
+            { projectStatus: { in: earlyOrLostStatuses } },
+          ],
+        },
+      }),
+      prisma.project.aggregate({
+        where: {
+          ...where,
+          OR: [
+            { projectCost: null },
+            { projectCost: 0 },
+            { projectStatus: { in: earlyOrLostStatuses } },
+          ],
+        },
+        _sum: { projectCost: true },
+      }),
+      prisma.project.groupBy({
+        by: ['paymentStatus'],
+        where: {
+          ...where,
+          projectCost: { gt: 0 },
+          projectStatus: { notIn: earlyOrLostStatuses },
+        },
+        _count: { _all: true },
+        _sum: { projectCost: true, balanceAmount: true },
+      }),
+    ]);
+
+    const projectsByPaymentStatus = [
+      {
+        status: 'N/A',
+        count: naCount,
+        totalValue: naTotals._sum.projectCost ?? 0,
+        outstanding: 0,
+      },
+      ...paidGroups.map((g) => {
+        const paymentStatus = (g.paymentStatus ?? PaymentStatus.PENDING) as PaymentStatus;
+        return {
+          status: String(paymentStatus),
+          count: g._count._all,
+          totalValue: g._sum.projectCost ?? 0,
+          outstanding:
+            paymentStatus === PaymentStatus.PENDING || paymentStatus === PaymentStatus.PARTIAL ? (g._sum.balanceAmount ?? 0) : 0,
+        };
+      }),
+    ];
+
     res.json({
       leads: {
         total: totalLeadsCount,
@@ -704,6 +768,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       pipelineByLeadSource,
       pipelineByType: pipelineByTypeWithPercentage,
       projectsByStatus,
+      projectsByPaymentStatus,
       availingLoanByBank,
     });
   } catch (error: any) {

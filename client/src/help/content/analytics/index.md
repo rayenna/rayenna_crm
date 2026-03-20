@@ -27,7 +27,7 @@ Each role sees a different dashboard layout and set of metrics.
 
 ### Sales
 - Leads, pipeline value, revenue, capacity, profit (in Year-on-Year tile)
-- Quick Access: My Leads, Site Survey Stage, Proposal Stage, My Open Deals, My Confirmed Orders
+- Quick Access (2 rows): My Leads, Site Survey Stage, Proposal Stage, My Open Deals; My Confirmed Orders, Under Installation (Installation stage only), Completed Installation, Payment Status
 
 ### Operations
 - Quick Access: Pending Installation, Completed Installation, Subsidy Credited, Payment Status (Pending, Partial, Fully Paid, N/A)

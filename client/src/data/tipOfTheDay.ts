@@ -44,13 +44,14 @@ export const TIPS: string[] = [
   // Quick Access & dashboard behaviour
   'Click any Quick Access tile on your dashboard to open Projects with matching filters already applied.',
   'Set FY, Quarter, and Month on the dashboard – tile counts and Quick Access links respect these filters.',
-  'The Payment Status tile on Management dashboard shows Pending, Partial, and Fully Paid counts.',
+  'The Payment Status tile on Sales/Management dashboards shows Pending, Partial, and Fully Paid counts.',
   'Operations: Completed Installation tile shows both Completed and Subsidy Credited projects.',
   // Sales-focused
   'Your Sales dashboard shows only your projects – use it to track your pipeline at a glance.',
   'Total Leads counts projects in the Lead stage only. Move leads to Site Survey or Proposal to grow Open Deals.',
   'Open Deals = Lead + Site Survey + Proposal. Focus on moving these to Confirmed for better conversion.',
   'My Confirmed Orders tile on the Sales dashboard links to your confirmed projects – click to open the filtered list.',
+  'Sales Quick Access includes Under Installation, Completed Installation, and Payment Status tiles; Under Installation counts installation-stage projects only.',
   'Use the Revenue by Lead Source chart to see which channels bring in the most confirmed business.',
   'Pipeline by Lead Source helps you prioritize follow-up on high-value lead sources.',
   'Add customers in Customer Master first, then create projects linked to them for a clean workflow.',
