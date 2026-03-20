@@ -134,6 +134,11 @@ enum PaymentMode {
   CHEQUE
 }
 
+enum RoofLayoutSource {
+  AI
+  MANUAL
+}
+
 model User {
   id               String    @id @default(cuid())
   email            String    @unique
@@ -345,6 +350,7 @@ model Project {
   peRoiResults    PERoiResult[]
   peProposals     PEProposal[]
   peSelection     PESelectedProject?
+  roofLayout      ProjectRoofLayout?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -686,12 +692,34 @@ model PEProposal {
   editedHtml    String?  @db.Text
   textOverrides Json?
   summary       String?
+  includeRoofLayout Boolean @default(false)
   savedAt       DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@index([projectId])
   @@index([savedAt])
   @@map("pe_proposals")
+}
+
+// Persisted rooftop layout (manual saves and AI-generated saves) so it is
+// accessible cross-browser/cross-machine via Cloudinary + DB metadata.
+model ProjectRoofLayout {
+  id             String          @id @default(cuid())
+  projectId     String          @unique
+  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  roofAreaM2     Float
+  usableAreaM2   Float
+  panelCount     Int
+
+  layoutImageUrl String
+  source         RoofLayoutSource @default(AI)
+
+  savedAt        DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([projectId])
+  @@map("project_roof_layouts")
 }
 
 // When Admin or owning Sales removes a project from Proposal Engine, it disappears from all users' lists.

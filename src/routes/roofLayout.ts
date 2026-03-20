@@ -3,8 +3,96 @@ import fs from 'fs';
 import path from 'path';
 import { authenticate } from '../middleware/auth';
 import { generateRoofLayoutJob } from '../workers/layoutGenerationWorker';
+import prisma from '../prisma';
+import { v2 as cloudinary } from 'cloudinary';
+import { UserRole } from '@prisma/client';
 
 const router = Router();
+
+// Cloudinary configuration (optional - only if env vars are set)
+const useCloudinary = !!(
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET
+);
+
+if (useCloudinary) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('✅ Cloudinary configured for roof layouts');
+  }
+}
+
+function getGeneratedLayoutsDir(): string {
+  return path.join(process.cwd(), 'generated_layouts');
+}
+
+async function uploadRoofLayoutToCloudinary(opts: {
+  projectId: string;
+  filePath: string;
+}): Promise<string> {
+  // Use deterministic public_id so the final "latest" layout URL remains stable.
+  const publicId = `roof-layout-${opts.projectId}`;
+
+  const uploadResult = await cloudinary.uploader.upload(opts.filePath, {
+    folder: 'rayenna_crm',
+    public_id: publicId,
+    resource_type: 'image',
+  });
+
+  return uploadResult.secure_url;
+}
+
+async function ensureProjectWriteAccess(projectId: string, reqUserId: string, reqUserRole: UserRole) {
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!project) return { ok: false, status: 404 as const };
+
+  const roleStr = String(reqUserRole).toUpperCase();
+
+  // Only Admin (all) or assigned Sales can write.
+  if (roleStr === 'ADMIN') return { ok: true as const };
+
+  if (reqUserRole === UserRole.SALES) {
+    if (project.salespersonId !== reqUserId) {
+      return { ok: false, status: 403 as const };
+    }
+    return { ok: true as const };
+  }
+
+  return {
+    ok: false,
+    status: 403 as const,
+  };
+}
+
+async function ensureProjectReadAccess(projectId: string, reqUserId: string, reqUserRole: UserRole) {
+  const project = await prisma.project.findUnique({ where: { id: projectId } });
+  if (!project) return { ok: false, status: 404 as const };
+
+  // Ops/Management/Finance/Admin can view any.
+  const role = reqUserRole;
+  if (
+    role === UserRole.OPERATIONS ||
+    role === UserRole.MANAGEMENT ||
+    role === UserRole.FINANCE ||
+    role === UserRole.ADMIN
+  ) {
+    return { ok: true as const };
+  }
+
+  // Sales can view only their own.
+  if (role === UserRole.SALES) {
+    if (project.salespersonId !== reqUserId) return { ok: false, status: 403 as const };
+    return { ok: true as const };
+  }
+
+  return { ok: false, status: 403 as const };
+}
 
 interface AiLayoutRequestBody {
   projectId: string;
@@ -22,6 +110,13 @@ router.post('/ai-layout', authenticate, async (req, res) => {
   }
 
   try {
+    const access = await ensureProjectWriteAccess(
+      projectId,
+      req.user!.id,
+      req.user!.role as UserRole,
+    );
+    if (!access.ok) return res.status(access.status).json({ error: 'No access to this project' });
+
     const result = await generateRoofLayoutJob({
       projectId,
       latitude: Number(latitude),
@@ -32,11 +127,39 @@ router.post('/ai-layout', authenticate, async (req, res) => {
 
     const publicUrlPath = `/api/generated_layouts/${projectId}_ai_layout.png`;
 
+    // Persist AI layout image + metrics.
+    let layoutImageUrl = publicUrlPath;
+    if (useCloudinary) {
+      layoutImageUrl = await uploadRoofLayoutToCloudinary({
+        projectId,
+        filePath: result.layoutImagePath,
+      });
+    }
+
+    await prisma.projectRoofLayout.upsert({
+      where: { projectId },
+      create: {
+        projectId,
+        roofAreaM2: result.roofAreaM2,
+        usableAreaM2: result.usableAreaM2,
+        panelCount: result.panelCount,
+        layoutImageUrl,
+        source: 'AI',
+      },
+      update: {
+        roofAreaM2: result.roofAreaM2,
+        usableAreaM2: result.usableAreaM2,
+        panelCount: result.panelCount,
+        layoutImageUrl,
+        source: 'AI',
+      },
+    });
+
     return res.json({
       roof_area_m2: result.roofAreaM2,
       usable_area_m2: result.usableAreaM2,
       panel_count: result.panelCount,
-      layout_image_url: publicUrlPath,
+      layout_image_url: layoutImageUrl,
     });
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -59,6 +182,13 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
   }
 
   try {
+    const access = await ensureProjectWriteAccess(
+      projectId,
+      req.user!.id,
+      req.user!.role as UserRole,
+    );
+    if (!access.ok) return res.status(access.status).json({ error: 'No access to this project' });
+
     // Expect a data URL like "data:image/png;base64,AAAA..."
     const match = dataUrl.match(/^data:image\/(png|jpeg);base64,(.+)$/);
     if (!match) {
@@ -67,7 +197,7 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
     const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
     const base64 = match[2];
 
-    const generatedLayoutsDir = path.join(process.cwd(), 'generated_layouts');
+    const generatedLayoutsDir = getGeneratedLayoutsDir();
     await fs.promises.mkdir(generatedLayoutsDir, { recursive: true });
     const filePath = path.join(generatedLayoutsDir, `${projectId}_manual_layout.${ext}`);
     await fs.promises.writeFile(filePath, Buffer.from(base64, 'base64'));
@@ -77,6 +207,13 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
     const usable = Number.isFinite(Number(usable_area_m2)) ? Number(usable_area_m2) : 0;
     const panels = Number.isFinite(Number(panel_count)) ? Number(panel_count) : 0;
     const publicUrlPath = `/api/generated_layouts/${projectId}_manual_layout.${ext}`;
+
+    // Persist image + metrics.
+    let layoutImageUrl = publicUrlPath;
+    if (useCloudinary) {
+      layoutImageUrl = await uploadRoofLayoutToCloudinary({ projectId, filePath });
+    }
+
     const metaPath = path.join(generatedLayoutsDir, `${projectId}_manual_layout.json`);
     await fs.promises.writeFile(
       metaPath,
@@ -87,14 +224,34 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
           usable_area_m2: usable,
           panel_count: panels,
           savedAt: new Date().toISOString(),
-          layout_image_url: publicUrlPath,
+          layout_image_url: layoutImageUrl,
         },
         null,
         2,
       ),
       'utf8',
     );
-    return res.json({ layout_image_url: publicUrlPath });
+
+    await prisma.projectRoofLayout.upsert({
+      where: { projectId },
+      create: {
+        projectId,
+        roofAreaM2: roof,
+        usableAreaM2: usable,
+        panelCount: panels,
+        layoutImageUrl,
+        source: 'MANUAL',
+      },
+      update: {
+        roofAreaM2: roof,
+        usableAreaM2: usable,
+        panelCount: panels,
+        layoutImageUrl,
+        source: 'MANUAL',
+      },
+    });
+
+    return res.json({ layout_image_url: layoutImageUrl });
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Failed to save manual roof layout image:', err);
@@ -106,13 +263,73 @@ router.get('/manual-layout/:projectId', authenticate, async (req, res) => {
   const projectId = String(req.params.projectId || '').trim();
   if (!projectId) return res.status(400).json({ error: 'projectId is required' });
   try {
-    const generatedLayoutsDir = path.join(process.cwd(), 'generated_layouts');
-    const metaPath = path.join(generatedLayoutsDir, `${projectId}_manual_layout.json`);
-    if (!fs.existsSync(metaPath)) {
-      return res.status(404).json({ error: 'No manual layout saved' });
+    const readAccess = await ensureProjectReadAccess(projectId, req.user!.id, req.user!.role as UserRole);
+    if (!readAccess.ok) return res.status(readAccess.status).json({ error: 'Access denied' });
+
+    // Prefer DB record so the layout is available cross-machine.
+    const record = await prisma.projectRoofLayout.findUnique({ where: { projectId } });
+    if (record) {
+      return res.json({
+        roof_area_m2: record.roofAreaM2,
+        usable_area_m2: record.usableAreaM2,
+        panel_count: record.panelCount,
+        layout_image_url: record.layoutImageUrl,
+        savedAt: record.savedAt.toISOString(),
+        projectId: record.projectId,
+      });
     }
+
+    // Backwards-compatible filesystem fallback (pre-Cloudinary persistence).
+    const generatedLayoutsDir = getGeneratedLayoutsDir();
+    const metaPath = path.join(generatedLayoutsDir, `${projectId}_manual_layout.json`);
+    if (!fs.existsSync(metaPath)) return res.status(404).json({ error: 'No manual layout saved' });
+
     const raw = await fs.promises.readFile(metaPath, 'utf8');
     const parsed = JSON.parse(raw) as Record<string, unknown>;
+
+    // If Cloudinary is enabled, backfill DB so other machines can read too.
+    if (useCloudinary && typeof parsed.layout_image_url === 'string') {
+      const layoutUrl = parsed.layout_image_url;
+      const extMatch = layoutUrl.match(/\.(png|jpe?g)(?:\?|#|$)/i);
+      const ext = extMatch?.[1]?.toLowerCase().replace('jpeg', 'jpg') || 'png';
+      const imageFilePath = path.join(generatedLayoutsDir, `${projectId}_manual_layout.${ext}`);
+
+      if (fs.existsSync(imageFilePath)) {
+        const layoutImageUrl = await uploadRoofLayoutToCloudinary({ projectId, filePath: imageFilePath });
+        const roof = Number.isFinite(Number(parsed.roof_area_m2)) ? Number(parsed.roof_area_m2) : 0;
+        const usable = Number.isFinite(Number(parsed.usable_area_m2)) ? Number(parsed.usable_area_m2) : 0;
+        const panels = Number.isFinite(Number(parsed.panel_count)) ? Number(parsed.panel_count) : 0;
+
+        await prisma.projectRoofLayout.upsert({
+          where: { projectId },
+          create: {
+            projectId,
+            roofAreaM2: roof,
+            usableAreaM2: usable,
+            panelCount: panels,
+            layoutImageUrl,
+            source: 'MANUAL',
+          },
+          update: {
+            roofAreaM2: roof,
+            usableAreaM2: usable,
+            panelCount: panels,
+            layoutImageUrl,
+            source: 'MANUAL',
+          },
+        });
+
+        return res.json({
+          roof_area_m2: roof,
+          usable_area_m2: usable,
+          panel_count: panels,
+          layout_image_url: layoutImageUrl,
+          savedAt: new Date().toISOString(),
+          projectId,
+        });
+      }
+    }
+
     return res.json(parsed);
   } catch (err) {
     // eslint-disable-next-line no-console

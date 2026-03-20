@@ -510,7 +510,7 @@ router.get('/projects/:id', authenticate, async (req: Request, res: Response) =>
       return;
     }
 
-    const [costing, bom, roi, proposal] = await Promise.all([
+    const [costing, bom, roi, proposal, roofLayout] = await Promise.all([
       prisma.pECostingSheet.findFirst({
         where: { projectId: req.params.id },
         orderBy: { savedAt: 'desc' },
@@ -527,7 +527,25 @@ router.get('/projects/:id', authenticate, async (req: Request, res: Response) =>
         where: { projectId: req.params.id },
         orderBy: { savedAt: 'desc' },
       }),
+      prisma.projectRoofLayout.findFirst({
+        where: { projectId: req.params.id },
+      }),
     ]);
+
+    const proposalWithRoofLayout = proposal
+      ? {
+          ...proposal,
+          roofLayout: roofLayout
+            ? {
+                roof_area_m2: roofLayout.roofAreaM2,
+                usable_area_m2: roofLayout.usableAreaM2,
+                panel_count: roofLayout.panelCount,
+                layout_image_url: roofLayout.layoutImageUrl,
+                savedAt: roofLayout.savedAt?.toISOString?.() ?? undefined,
+              }
+            : null,
+        }
+      : null;
 
     res.json({
       project,
@@ -535,7 +553,7 @@ router.get('/projects/:id', authenticate, async (req: Request, res: Response) =>
         costing,
         bom,
         roi,
-        proposal,
+        proposal: proposalWithRoofLayout,
       },
     });
   } catch (error: any) {
@@ -870,6 +888,7 @@ router.put(
   [
     body('refNumber').isString().notEmpty(),
     body('generatedAt').isISO8601(),
+    body('includeRoofLayout').optional().isBoolean(),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -925,6 +944,11 @@ router.put(
         }
       }
 
+      const includeRoofLayout: boolean =
+        typeof req.body.includeRoofLayout === 'boolean'
+          ? req.body.includeRoofLayout
+          : existing?.includeRoofLayout ?? false;
+
       const data = {
         projectId: req.params.id,
         refNumber: req.body.refNumber,
@@ -933,6 +957,7 @@ router.put(
         editedHtml,
         textOverrides: req.body.textOverrides ?? null,
         summary: req.body.summary ?? null,
+        includeRoofLayout,
       };
 
       let proposal;
