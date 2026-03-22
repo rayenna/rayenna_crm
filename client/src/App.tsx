@@ -1,6 +1,10 @@
 import { useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { Toaster } from 'react-hot-toast'
+import { Toaster, toast } from 'react-hot-toast'
+import {
+  RAYENNA_BROWSER_STORAGE_ERROR_EVENT,
+  type BrowserStorageErrorDetail,
+} from './lib/safeLocalStorage'
 import { AuthProvider } from './contexts/AuthContext'
 import PrivateRoute from './components/PrivateRoute'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -23,6 +27,17 @@ const SupportTicketsDashboard = lazy(() => import('./pages/SupportTicketsDashboa
 const Help = lazy(() => import('./pages/Help'))
 
 function App() {
+  useEffect(() => {
+    const onStorageError = (e: Event) => {
+      const ce = e as CustomEvent<BrowserStorageErrorDetail>
+      const msg = ce.detail?.message
+      if (msg) toast.error(msg, { duration: 8000 })
+    }
+    window.addEventListener(RAYENNA_BROWSER_STORAGE_ERROR_EVENT, onStorageError as EventListener)
+    return () =>
+      window.removeEventListener(RAYENNA_BROWSER_STORAGE_ERROR_EVENT, onStorageError as EventListener)
+  }, [])
+
   useEffect(() => {
     const isEditable = (el: EventTarget | null): boolean => {
       if (!el || !(el instanceof HTMLElement)) return false

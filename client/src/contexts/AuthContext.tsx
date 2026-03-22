@@ -4,6 +4,7 @@ import axiosInstance from '../utils/axios'
 import { setAuthErrorCallback } from '../utils/authErrorHandler'
 import { User, UserRole } from '../types'
 import { ErrorModal } from '@/components/common/ErrorModal'
+import { setSessionStorageItem } from '../lib/safeLocalStorage'
 
 // Auto-logout time (no activity): 10 minutes
 const IDLE_TIMEOUT_MS = 10 * 60 * 1000
@@ -154,7 +155,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { token: newToken, user: newUser } = response.data
     setToken(newToken)
     setUser(newUser)
-    sessionStorage.setItem('token', newToken)
+    setSessionStorageItem('token', newToken)
     axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
     // Start inactivity timer after login
     resetIdleTimer()

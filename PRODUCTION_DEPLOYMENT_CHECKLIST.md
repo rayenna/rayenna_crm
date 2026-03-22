@@ -15,7 +15,7 @@
 
 2. **Production console usage**
    - Gated `console.error` / `console.log` with `import.meta.env.DEV` in:
-     - `RemarksSection.tsx`, `Projects.tsx`, `TallyExport.tsx`, `SupportTicketsDashboard.tsx`, `ProposalPreview.tsx`, `fromt end upload code.tsx`.
+     - `RemarksSection.tsx`, `Projects.tsx`, `TallyExport.tsx`, `SupportTicketsDashboard.tsx`, `ProposalPreview.tsx`.
    - Avoids console noise and minor overhead in production; ErrorBoundary and axios warn were already correct.
 
 3. **Build**

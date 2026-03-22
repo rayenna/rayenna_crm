@@ -120,9 +120,10 @@ router.get('/projects', authenticate, async (req: Request, res: Response) => {
 
     const projectIds = selections.map((s) => s.projectId);
 
-    // Determine artifact completion per project so CRM/PE both agree:
-    // - "proposal-ready" only when all four artifacts (costing, BOM, ROI, proposal) exist.
-    // - "draft" when at least one artifact exists but the set is incomplete.
+    // Determine artifact completion per project so CRM/PE both agree (labels in CRM: Not Yet Created, PE Draft, PE Ready):
+    // - "proposal-ready" (PE Ready) when all four artifacts exist.
+    // - "draft" (PE Draft) when at least one artifact exists but the set is incomplete.
+    // - "not-started" (Not Yet Created) when the project is selected in PE but no artifacts yet.
     const [costings, boms, rois, proposals] = projectIds.length
       ? await Promise.all([
           prisma.pECostingSheet.findMany({
@@ -165,13 +166,15 @@ router.get('/projects', authenticate, async (req: Request, res: Response) => {
 
         return {
           ...s.project,
-          peStatus: allFour ? 'proposal-ready' : hasAny ? 'draft' : 'draft',
+          peStatus: allFour ? 'proposal-ready' : hasAny ? 'draft' : 'not-started',
           peSelectedAt: s.selectedAt,
           peSelectedById: s.selectedById,
         };
       })
-      // Only show Draft or Proposal Ready (per spec)
-      .filter((p) => p.peStatus === 'draft' || p.peStatus === 'proposal-ready');
+      // All selected projects (including Not Yet Created / no artifacts yet)
+      .filter((p) =>
+        ['not-started', 'draft', 'proposal-ready'].includes(String(p.peStatus)),
+      );
 
     // Sales: only show projects still assigned to them (reassigned projects must not appear in their list).
     if (role === UserRole.SALES && userId) {

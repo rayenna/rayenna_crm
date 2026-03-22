@@ -259,17 +259,17 @@ const ProjectDetail = () => {
                 <span className="text-[11px] font-semibold uppercase tracking-wide text-primary-700">Proposal Engine</span>
                 {peSummary?.peStatus === 'proposal-ready' && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300">
-                    Proposal Ready
+                    PE Ready
                   </span>
                 )}
                 {peSummary?.peStatus === 'draft' && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-300">
-                    Draft in PE
+                    PE Draft
                   </span>
                 )}
                 {(!peSummary || peSummary.peStatus === 'none') && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-gray-50 text-gray-600 border border-gray-200">
-                    Not yet created
+                    Not Yet Created
                   </span>
                 )}
                 {peSummary?.lastUpdated && (

@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import TipOfTheDay from './TipOfTheDay'
 import { getHelpSectionForRoute, helpSections } from '../help/sections'
+import { setSessionStorageItem } from '../lib/safeLocalStorage'
 
 const Layout = () => {
   const { user, logout, hasRole } = useAuth()
@@ -50,7 +51,7 @@ const Layout = () => {
   }
 
   const openHelp = () => {
-    sessionStorage.setItem('helpReferrer', location.pathname)
+    setSessionStorageItem('helpReferrer', location.pathname)
     navigate(getHelpPath())
     setHelpDropdownOpen(false)
   }
@@ -71,7 +72,7 @@ const Layout = () => {
       if (isQuestionMark && !isInputFocused && !event.ctrlKey && !event.metaKey && !event.altKey) {
         if (!location.pathname.startsWith('/help')) {
           event.preventDefault()
-          sessionStorage.setItem('helpReferrer', location.pathname)
+          setSessionStorageItem('helpReferrer', location.pathname)
           navigate(getHelpPath())
         }
       }

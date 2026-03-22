@@ -49,7 +49,7 @@ Rayenna CRM is a **CRM and project operations system** for Rayenna Energy, a sol
 |-------|----------|
 | **Entry** | `server.ts` – Express app, CORS, JSON/urlencoded, route mount, health (`/health`, `/api/health`), global error handler, Prisma disconnect on exit. Validates `JWT_SECRET`, `DATABASE_URL`; warns if `FRONTEND_URL` missing in production. |
 | **Auth** | `middleware/auth.ts` – JWT verify, load user, `authenticate` and `authorize(roles)`. `middleware/rateLimit.ts` – in-memory rate limit by path + IP/user. |
-| **Routes** | `auth`, `users`, `customers`, `projects`, `documents`, `remarks`, `dashboard`, `dashboard-enhanced`, `wordcloud`, `salesTeamPerformance`, `tally`, `leads`, `siteSurveys`, `proposals`, `installations`, `invoices`, `amc`, `serviceTickets`, `supportTickets`, `adminAudit`, plus `back end upload handler` for project uploads. APIs under `/api/*`. |
+| **Routes** | `auth`, `users`, `customers`, `projects`, `documents` (incl. uploads), `remarks`, `dashboard`, `dashboard-enhanced`, `wordcloud`, `salesTeamPerformance`, `tally`, `leads`, `siteSurveys`, `proposals`, `installations`, `invoices`, `amc`, `serviceTickets`, `supportTickets`, `adminAudit`, `proposal-engine`, `roof`, `pdf`. APIs under `/api/*`. |
 | **Data** | Prisma schema in `/prisma/schema.prisma` – User, Customer, Project, Lead, Document, ProjectRemark, audit/password-reset tables, enums (UserRole, ProjectStatus, PaymentStatus, etc.). Migrations in `/prisma/migrations`. |
 | **Utils** | `prisma.ts` (singleton client), `audit`, `auditLogger`, `passwordResetAudit`, `calculations` (payments), `customerId`, `projectLifecycle`, `proposalGenerator`, `pdfGenerator`, `ai` (OpenAI), etc. |
 

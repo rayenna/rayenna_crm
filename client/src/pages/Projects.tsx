@@ -8,6 +8,7 @@ import { format } from 'date-fns'
 import MultiSelect from '../components/MultiSelect'
 import { useDebounce } from '../hooks/useDebounce'
 import toast from 'react-hot-toast'
+import { setSessionStorageItem } from '../lib/safeLocalStorage'
 import { getSalesTeamColor } from '../components/dashboard/salesTeamColors'
 import DashboardFilters from '../components/dashboard/DashboardFilters'
 import { FiPaperclip } from 'react-icons/fi'
@@ -314,18 +315,17 @@ const Projects = () => {
       isFirstMount.current = false
       return
     }
-    try {
-      sessionStorage.setItem(PROJECTS_FILTERS_STORAGE_KEY, JSON.stringify({
+    setSessionStorageItem(
+      PROJECTS_FILTERS_STORAGE_KEY,
+      JSON.stringify({
         filters,
         page,
         searchInput,
         selectedFYs,
         selectedQuarters,
         selectedMonths,
-      }))
-    } catch {
-      // ignore quota or other storage errors
-    }
+      }),
+    )
   }, [filters, page, searchInput, selectedFYs, selectedQuarters, selectedMonths])
 
   // Track when user manually changes status filter
@@ -511,10 +511,14 @@ const Projects = () => {
   })
 
   const peStatusByProjectId = useMemo(() => {
-    const map = new Map<string, 'draft' | 'proposal-ready'>()
+    const map = new Map<string, 'not-started' | 'draft' | 'proposal-ready'>()
     ;(proposalEngineProjects ?? []).forEach((p) => {
       if (!p || typeof p.id !== 'string') return
-      if (p.peStatus === 'draft' || p.peStatus === 'proposal-ready') {
+      if (
+        p.peStatus === 'not-started' ||
+        p.peStatus === 'draft' ||
+        p.peStatus === 'proposal-ready'
+      ) {
         map.set(p.id, p.peStatus)
       }
     })
@@ -1015,6 +1019,11 @@ Do you want to continue?`}
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${getStagePillClasses(project.projectStatus)}`}>
                         {project.projectStatus.replace(/_/g, ' ')}
                       </span>
+                      {peStatusByProjectId.get(project.id) === 'not-started' && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gray-50 text-gray-700 border border-gray-200">
+                          Not Yet Created
+                        </span>
+                      )}
                       {peStatusByProjectId.get(project.id) === 'draft' && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-300">
                           PE Draft

@@ -1,3 +1,5 @@
+import { setLocalStorageItem } from '../lib/safeLocalStorage'
+
 /**
  * Tip of the Day – Client-side implementation (Option 1)
  * Add this file and a small UI component to show one tip per day.
@@ -106,7 +108,7 @@ export function shouldShowTip(): boolean {
  */
 export function markTipShown(): void {
   if (typeof window === 'undefined') return
-  localStorage.setItem(STORAGE_KEY_LAST_SHOWN, new Date().toDateString())
+  setLocalStorageItem(STORAGE_KEY_LAST_SHOWN, new Date().toDateString())
 }
 
 /**
@@ -114,7 +116,7 @@ export function markTipShown(): void {
  */
 export function markDontShowAgain(): void {
   if (typeof window === 'undefined') return
-  localStorage.setItem(STORAGE_KEY_DONT_SHOW, '1')
+  setLocalStorageItem(STORAGE_KEY_DONT_SHOW, '1')
 }
 
 /**
