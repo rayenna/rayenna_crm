@@ -5,7 +5,13 @@ import {
   CATEGORIES, CATEGORY_COLORS, catAccentColor, snapCategory,
 } from '../lib/costingConstants';
 import type { StoredBom, RoiAutofill } from '../lib/costingConstants';
-import { getActiveCustomer, upsertCustomer, getWipKeysForCurrentUser } from '../lib/customerStore';
+import {
+  getActiveCustomer,
+  upsertCustomer,
+  getWipKeysForCurrentUser,
+  deriveProposalStatusFromArtifacts,
+} from '../lib/customerStore';
+import { setLocalStorageItem } from '../lib/safeLocalStorage';
 import type { BomArtifact } from '../lib/customerStore';
 import { syncProjectBom, canEditProposalArtifacts } from '../lib/apiClient';
 import { AlertCard } from '../components/AlertCard';
@@ -154,7 +160,7 @@ interface BomOverrides {
 function persistOverrides(sheetId: string, rows: BomRow[]) {
   const wip = getWipKeysForCurrentUser();
   const data: BomOverrides = { sheetId, rows, savedAt: new Date().toISOString() };
-  localStorage.setItem(wip.bomOverrides, JSON.stringify(data));
+  setLocalStorageItem(wip.bomOverrides, JSON.stringify(data));
 }
 
 function loadStoredBom(): StoredBom | null {
@@ -627,7 +633,7 @@ export default function BOMSheet() {
             sourceName: storedBom?.sheetName ?? prev.sourceName,
             savedAt:    now,
           };
-          localStorage.setItem(wip.roiAutofill, JSON.stringify(updated));
+          setLocalStorageItem(wip.roiAutofill, JSON.stringify(updated));
         }
       } catch { /* ignore */ }
 
@@ -635,7 +641,11 @@ export default function BOMSheet() {
       const activeCustomer = getActiveCustomer();
       if (activeCustomer) {
         const artifact: BomArtifact = { savedAt: now, rows: data.rows };
-        upsertCustomer({ ...activeCustomer, bom: artifact, updatedAt: now });
+        const nextRecord = { ...activeCustomer, bom: artifact, updatedAt: now };
+        upsertCustomer({
+          ...nextRecord,
+          status: deriveProposalStatusFromArtifacts(nextRecord),
+        });
 
         // Best-effort sync to CRM backend for CRM-linked projects.
         if (activeCustomer.master.crmProjectId) {

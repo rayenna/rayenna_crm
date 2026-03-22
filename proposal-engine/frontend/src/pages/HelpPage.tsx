@@ -153,8 +153,8 @@ const TOC = [
   { id: 'costing',        icon: '📊', label: 'Costing Sheet'         },
   { id: 'bom',            icon: '📦', label: 'Bill of Materials'     },
   { id: 'roi',            icon: '📈', label: 'ROI Calculator'        },
+  { id: 'ai-roof-layout', icon: '📐', label: 'AI Roof Layout (Beta)' },
   { id: 'proposal',       icon: '📄', label: 'Proposal'              },
-  { id: 'ai-roof-layout', icon: '🏠', label: 'AI Roof Layout (Beta)' },
   { id: 'tips',           icon: '✨', label: 'Tips & Shortcuts'      },
   { id: 'tip-of-the-day', icon: '💡', label: 'Tip of the Day'        },
   { id: 'faq',            icon: '❓', label: 'FAQ'                   },
@@ -173,32 +173,33 @@ export default function HelpPage() {
   });
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-12">
-
-      {/* ── Hero ── */}
-      <div
-        className="rounded-2xl p-6 sm:p-8 text-white shadow-lg"
-        style={{ background: 'linear-gradient(135deg, #0d1b3a 0%, #1e2848 60%, #eab308 100%)' }}
-      >
-        <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center text-3xl flex-shrink-0 shadow-lg">
-            📘
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">User Guide</h1>
-            <p className="text-white/80 mt-1 text-sm sm:text-base">
-              Rayenna Proposal Engine · Sales Team Edition
-            </p>
-            <p className="text-white/70 mt-2 text-sm leading-relaxed">
-              Everything you need to create a professional solar proposal — from costing to customer delivery — in one place.
-            </p>
-            <p className="text-white/60 mt-2 text-xs leading-relaxed">
-              Use the top bar to move between pages. The <strong>? Help</strong> dropdown opens User Guide, Tip of the Day, and About; <strong>AI Roof Layout (Beta)</strong> is available after Help in the nav.
-            </p>
+    <div className="space-y-6 pb-12 w-full">
+      {/* Same outer page card + horizontal padding as Dashboard / Customers / About (full width within Layout main). */}
+      <div className="bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm">
+        <div
+          className="px-6 py-5 sm:px-8 sm:py-6"
+          style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}
+        >
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 rounded-xl bg-white/25 border border-white/40 shadow-lg backdrop-blur-md text-2xl leading-none flex-shrink-0">
+              📘
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow">User Guide</h1>
+              <p className="mt-0.5 text-white/90 text-sm">Rayenna Proposal Engine · Sales Team Edition</p>
+              <p className="mt-1 text-white/80 text-sm leading-relaxed">
+                Everything you need to create a professional solar proposal — from costing to customer delivery — in one place.
+              </p>
+              <p className="mt-2 text-white/70 text-xs leading-relaxed">
+                Use the top bar to move between pages. Main links run{' '}
+                <strong className="text-white/90">Customers → Dashboard → Costing → BOM → ROI → AI Roof Layout (Beta) → Proposal</strong>. The{' '}
+                <strong className="text-white/90">? Help</strong> dropdown opens User Guide, Tip of the Day, and About.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
+        <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8 space-y-6">
       {/* ── Table of Contents ── */}
       <div id="toc" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 scroll-mt-24">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Jump to section</p>
@@ -234,10 +235,13 @@ export default function HelpPage() {
             </Fragment>
           ))}
         </div>
+        <p className="text-xs text-gray-500 mb-6 -mt-4">
+          Optional: use <strong>AI Roof Layout (Beta)</strong> (nav link between ROI and Proposal) after ROI when you want a satellite layout in the proposal — see the AI Roof Layout section below.
+        </p>
 
         <div className="space-y-5">
           <Step n={1} title="Pick a CRM Project">
-            Go to <Link to="/customers" className="text-indigo-600 underline font-medium">Customers / Projects</Link> and click <strong>+ Select Project</strong>. Use the filters to find a Rayenna CRM project in <em>Proposal</em> or <em>Confirmed</em> stage, then click <strong>Select</strong> in the picker. This creates a Proposal Engine record linked to that CRM project and makes it the <strong>active project</strong> on your Dashboard and in all four workflow pages.
+            Go to <Link to="/customers" className="text-indigo-600 underline font-medium">Customers / Projects</Link> and click <strong>+ Select Project</strong>. Use the filters to find a Rayenna CRM project in <em>Proposal</em> or <em>Confirmed</em> stage, then click <strong>Select</strong> in the picker. This creates a Proposal Engine record linked to that CRM project and makes it the <strong>active project</strong> on your Dashboard and across all workflow pages (Costing, BOM, ROI, AI Roof Layout, Proposal).
           </Step>
 
           <Step n={2} title="Build the Costing Sheet">
@@ -286,28 +290,40 @@ export default function HelpPage() {
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-800 mb-2">Tracking Proposal Status</h3>
+            <h3 className="font-semibold text-gray-800 mb-2">Project status (CRM) — Dashboard &amp; workspace</h3>
             <p className="text-sm text-gray-600 leading-relaxed mb-2">
-              Each customer has a status that you can update by clicking the coloured pills on the Customers / Projects page:
+              For CRM-linked projects, <strong>project lifecycle</strong> is owned by <strong>Rayenna CRM</strong>. The Proposal Engine <strong>shows</strong> the same stage on your <Link to="/dashboard" className="text-indigo-600 underline font-medium">Dashboard</Link> (active project area) and on the customer workspace page: a <strong>Project Status:</strong> label, a compact badge with the current stage, and a full <strong>pipeline</strong> of stages below it. The stage that matches CRM is <strong>highlighted</strong> (blue ring); other stages appear muted. This is a <strong>read-only mirror</strong> in the UI — advance or change the project stage in <strong>CRM</strong>, not by clicking these pills here.
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs text-center">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">CRM pipeline (order)</p>
+            <div className="flex flex-wrap gap-1.5">
               {[
-                { label: 'Draft',          color: 'bg-gray-100 text-gray-600 border-gray-200' },
-                { label: 'Proposal Ready', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-                { label: 'Sent',           color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
-                { label: 'Won',            color: 'bg-green-100 text-green-700 border-green-200' },
-                { label: 'Lost',           color: 'bg-red-100 text-red-700 border-red-200' },
-              ].map((s) => (
-                <span key={s.label} className={`px-2 py-1.5 rounded-full border font-semibold ${s.color}`}>{s.label}</span>
+                'Lead',
+                'Site Survey',
+                'Proposal',
+                'Confirmed Order',
+                'Under Installation',
+                'Submitted for Subsidy',
+                'Completed',
+                'Completed – Subsidy Credited',
+                'Lost',
+              ].map((label) => (
+                <span
+                  key={label}
+                  className="text-[10px] px-2.5 py-1 rounded-full border font-semibold bg-secondary-50 text-secondary-500 border-secondary-200"
+                >
+                  {label}
+                </span>
               ))}
             </div>
-            <p className="text-sm text-gray-500 mt-2">Status is set to <em>Proposal Ready</em> automatically when you click <strong>💾 Save</strong> in the proposal header.</p>
+            <p className="text-sm text-gray-500 mt-2">
+              If <strong>Project Status</strong> does not appear, the record may not have CRM project stage data synced yet — ensure the project is selected from CRM and refreshed.
+            </p>
           </div>
 
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Proposal Progress</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              The Dashboard shows a <strong>Proposal Progress</strong> bar for the active project (0–4 artifacts complete). Each of the four large tiles (Costing Sheet, BOM, ROI, Proposal) shows a green <strong>✓ Saved</strong> badge and a short summary once it has been saved — click any tile to jump directly to that page with the project\'s data pre-loaded.
+              The Dashboard shows a <strong>Proposal Progress</strong> bar for the active project (<strong>0–4</strong> core artifacts: Costing, BOM, ROI, and Proposal). Below that, <strong>five</strong> tiles match the main workflow — Costing Sheet, BOM, ROI Calculator, <strong>Roof Layout</strong> (opens AI Roof Layout), and Proposal — each with a <strong>✓ Saved</strong> or <strong>Pending</strong> badge, summary, and an <strong>Open &amp; edit</strong> link. The active project banner also includes shortcut buttons (including <strong>Roof Layout</strong> between ROI and Proposal). The Roof Layout tile reflects a saved AI layout or a layout stored with the proposal; it does not change the 0–4 progress count. On <Link to="/customers" className="text-indigo-600 underline font-medium">Customers / Projects</Link>, a read-only badge matches CRM: <strong>Not Yet Created</strong>, <strong>PE Draft</strong>, or <strong>PE Ready</strong> — based on saved artifacts. Deal stages and sales tracking stay in <strong>CRM</strong> (see <em>Project status (CRM)</em> above).
             </p>
           </div>
         </div>
@@ -585,6 +601,7 @@ export default function HelpPage() {
                 ['Our Process',             '5-step journey from consultation to ongoing support'],
                 ['Scope of Work',           'Site survey, equipment supply, installation, documentation'],
                 ['Bill of Quantities',      'Grouped equipment list with per-category comment fields'],
+                ['Proposed Rooftop Solar Layout (optional)', 'When enabled: satellite-based draft and metrics; intro text states the layout is conceptual and refers readers to the Bill of Quantities for accurate scope and deliverables'],
                 ['Commercials',             'Project cost breakdown and ROI summary'],
                 ['Client Scope',            'Customer responsibilities and charges'],
                 ['Terms & Conditions',      '10 standard clauses including validity and jurisdiction'],
@@ -622,7 +639,7 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Saving the Proposal</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Click <strong>💾 Save</strong> in the proposal header. This saves BOM comments, any inline edits, and all four artifacts (Costing, BOM, ROI, Proposal) to the active customer record. The customer status is automatically updated to <em>Proposal Ready</em>. The header and footer offer <strong>⬇ PDF</strong>, <strong>⬇ DOCX</strong>, and <strong>🔗 Share</strong> only — no separate Save button in the footer.
+              Click <strong>💾 Save</strong> in the proposal header. This saves BOM comments, any inline edits, and all four core artifacts (Costing, BOM, ROI, Proposal) to the active customer record. A roof layout included in the proposal is stored with the proposal artifact. When all four artifacts are present, document readiness shows as <em>PE Ready</em> (same label as in CRM; still separate from the <strong>CRM project stage</strong>). Track the sales pipeline only in CRM. The header and footer offer <strong>⬇ PDF</strong>, <strong>⬇ DOCX</strong>, and <strong>🔗 Share</strong> only — no separate Save button in the footer.
             </p>
           </div>
 
@@ -657,7 +674,7 @@ export default function HelpPage() {
       {/* ══════════════════════════════════════════════════════════════════ */}
       <Section
         id="ai-roof-layout"
-        icon="🏠"
+        icon="📐"
         title="AI Roof Layout (Beta) — How it Integrates with Proposal"
         accent="bg-indigo-100 text-indigo-700"
         defaultOpen={false}
@@ -672,6 +689,13 @@ export default function HelpPage() {
           </div>
 
           <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Same page chrome as other modules</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              The <strong>AI Roof Layout</strong> page uses the same blue-to-gold heading strip as Costing, BOM, ROI, and Proposal. Under the heading, a light <strong>Active customer</strong> bar shows the current project name, roof-layout saved status when applicable, and a <strong>View Dashboard →</strong> link (same pattern as BOM and ROI). If no project is active, you&apos;ll see a prompt to select a customer.
+            </p>
+          </div>
+
+          <div>
             <h3 className="font-semibold text-gray-800 mb-2">Start from a CRM-linked project</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
               AI Roof Layout works on the <strong>active project</strong> (your current selection from <strong>Customers / Projects</strong>).
@@ -680,15 +704,77 @@ export default function HelpPage() {
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-800 mb-2">Generate, edit, and save</h3>
+            <h3 className="font-semibold text-gray-800 mb-2">Generate, edit, export, and save</h3>
             <ul className="mt-2 space-y-1 text-sm text-gray-600 list-disc list-inside">
-              <li>Go to <strong>AI Roof Layout (Beta)</strong>.</li>
-              <li>Click <strong>Generate AI Layout</strong> for an initial rooftop + panel draft.</li>
-              <li>Use <strong>Edit polygon</strong> (and tools like <strong>Snap to grid</strong>) to adjust the rooftop boundary.</li>
-              <li>When ready, click <strong>Save for proposal</strong>.</li>
+              <li>Open <strong>AI Roof Layout (Beta)</strong> from the top navigation.</li>
+              <li>Click <strong>Generate AI Layout</strong> to fetch satellite imagery and draw an initial green <strong>roof polygon</strong> with a blue <strong>panel grid</strong> inside it.</li>
+              <li>Adjust the polygon and tools (see below), then use <strong>PNG</strong> / <strong>JPG</strong> to download a copy if needed.</li>
+              <li>Click <strong>Save for proposal</strong> when the preview matches what you want in the document.</li>
             </ul>
             <p className="text-sm text-gray-600 leading-relaxed mt-2">
-              This saves the layout image + layout metrics in the Rayenna CRM backend <strong>per CRM project</strong>.
+              Saving stores the layout image and metrics in the Rayenna CRM backend <strong>per CRM project</strong>.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Using the polygon to match roof size and panel count</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              The <strong>Layout summary</strong> (left on desktop, above the preview on small screens) shows <strong>Roof area</strong>, <strong>Usable area</strong>, and <strong>Panel count</strong>. Those numbers update as you edit — use them as your guide.
+            </p>
+            <ul className="mt-2 space-y-1.5 text-sm text-gray-600 list-disc list-inside">
+              <li>
+                <strong>Polygon shape &amp; size:</strong> Drag the <strong>green corner handles</strong> to change the roof outline. Drag anywhere <strong>inside</strong> the polygon to move the whole roof without resizing. A <strong>larger</strong> polygon (covering more of the satellite roof) increases usable area and usually <strong>increases</strong> the reported panel count; a <strong>smaller</strong> or tighter polygon <strong>reduces</strong> it. Fit the outline to the actual flat roof you intend to use.
+              </li>
+              <li>
+                <strong>Panel density (slider):</strong> Controls how tightly panels are packed — <strong>Tighter</strong> fits more panels in the same polygon; <strong>Looser</strong> spreads them out (fewer panels for the same outline). Use this to fine-tune count after the polygon is roughly right.
+              </li>
+              <li>
+                <strong>Orientation:</strong> Toggle <strong>Portrait</strong> / <strong>Landscape</strong> to swap how rectangles sit on the roof; panel count may change slightly because the grid geometry changes.
+              </li>
+              <li>
+                <strong>Snap to grid:</strong> Re-aligns the polygon to the internal panel grid so edges line up cleanly with rows and columns — useful after manual tweaks.
+              </li>
+              <li>
+                <strong>Zoom (− / +):</strong> Scales the preview so you can see the whole roof or work on detail. Zoom does not change panel maths; it only changes how large the image appears inside the scrollable preview.
+              </li>
+            </ul>
+            <p className="text-sm text-gray-600 leading-relaxed mt-2">
+              The panel count is a <strong>geometry-based estimate</strong> from the polygon and density settings — always confirm final module count and setbacks on site.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Laptop / desktop vs phone — what&apos;s different</h3>
+            <p className="text-sm text-gray-600 leading-relaxed mb-3">
+              The same tools exist on both, but <strong>mobile adds a mode switch</strong> so you can pan a large map without accidentally dragging the roof.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-600 mb-2">💻 Laptop / desktop</p>
+                <ul className="space-y-1.5 text-sm text-gray-600 list-disc list-inside">
+                  <li>The canvas is always ready to edit: drag <strong>corner handles</strong> or the <strong>whole polygon</strong> with your mouse or trackpad.</li>
+                  <li>Pan the preview by scrolling inside the <strong>layout preview</strong> area (scrollbars or trackpad) while zoomed in.</li>
+                  <li>No separate &quot;Scroll map&quot; toggle — editing and scrolling share the same view naturally.</li>
+                  <li>The app may draw a fuller panel grid on screen for preview (higher cap) while you work.</li>
+                </ul>
+              </div>
+              <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-amber-900 mb-2">📱 Mobile (narrow screen)</p>
+                <ul className="space-y-1.5 text-sm text-gray-700 list-disc list-inside">
+                  <li>
+                    Under <strong>Layout preview</strong> you will see <strong>Map: Scroll map</strong> and <strong>Edit polygon</strong>. Use <strong>Scroll map</strong> when you need to <strong>drag the map with one finger</strong> to look around the satellite image (touches pass through the canvas so the page scrolls/pans).
+                  </li>
+                  <li>
+                    Switch to <strong>Edit polygon</strong> when you want to <strong>move green handles or the roof</strong> — the canvas then captures touches for editing.
+                  </li>
+                  <li>
+                    Controls (zoom, density, orientation, snap) use larger tap targets; you may see a slightly <strong>simplified on-screen panel grid</strong> while dragging for performance, but <strong>Roof / Usable / Panel count</strong> in the summary still follow the same rules.
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 leading-relaxed mt-3">
+              <strong>Tip:</strong> On a phone, start in <strong>Scroll map</strong> to frame the building, then switch to <strong>Edit polygon</strong> to adjust the roof and panel count.
             </p>
           </div>
 
@@ -696,7 +782,10 @@ export default function HelpPage() {
             <h3 className="font-semibold text-gray-800 mb-2">Enable the layout inside the Proposal</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
               Open <strong>Proposal</strong> and toggle <strong>Include AI Roof Layout (Beta) in proposal</strong>.
-              Then click <strong>Generate Proposal</strong> (or <strong>Save</strong> after any edits) so the Roof Layout section appears and is locked in with the proposal artifacts.
+              Then click <strong>Generate Proposal</strong> (or <strong>Save</strong> after any edits) so the <strong>Proposed Rooftop Solar Layout</strong> section appears and is locked in with the proposal artifacts.
+            </p>
+            <p className="text-sm text-gray-600 leading-relaxed mt-2">
+              That section includes a short introduction explaining that the image is a rough, preliminary visualization based on satellite imagery and project inputs, and that the <strong>Bill of Quantities</strong> below is the source of truth for accurate scope, specifications, and deliverables.
             </p>
           </div>
         </div>
@@ -744,7 +833,7 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Switching Customers Mid-Work</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              To work on a different project, either click one of the <strong>Recent customers</strong> on the Dashboard or go to <Link to="/customers" className="text-indigo-600 underline">Customers / Projects</Link> and click <strong>Open</strong> on the desired tile. The Dashboard\'s active project banner, Proposal Progress bar, and all four pages will immediately switch to that project.
+              To work on a different project, either click one of the <strong>Recent customers</strong> on the Dashboard or go to <Link to="/customers" className="text-indigo-600 underline">Customers / Projects</Link> and click <strong>Open</strong> on the desired tile. The Dashboard\'s active project banner, Proposal Progress bar, and all workflow pages (including AI Roof Layout) will immediately switch to that project.
             </p>
           </div>
 
@@ -888,6 +977,8 @@ export default function HelpPage() {
         Rayenna Proposal Engine · v1.0 · For support contact the Rayenna tech team
       </div>
 
+        </div>
+      </div>
     </div>
   );
 }

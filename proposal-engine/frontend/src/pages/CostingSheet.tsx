@@ -1,7 +1,12 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { Link } from 'react-router-dom';
-import { getActiveCustomer, upsertCustomer, getWipKeysForCurrentUser } from '../lib/customerStore';
+import {
+  getActiveCustomer,
+  upsertCustomer,
+  getWipKeysForCurrentUser,
+  deriveProposalStatusFromArtifacts,
+} from '../lib/customerStore';
 import type { CostingArtifact, BomArtifact } from '../lib/customerStore';
 import {
   CATEGORIES, CATEGORY_GST, CATEGORY_COLORS,
@@ -11,6 +16,7 @@ import {
 import type {
   Category, LineItem, SavedSheet, StoredBom, RoiAutofill,
 } from '../lib/costingConstants';
+import { removeLocalStorageItem, setLocalStorageItem } from '../lib/safeLocalStorage';
 import {
   syncProjectCosting,
   syncProjectBom,
@@ -566,7 +572,7 @@ function loadSheets(): SavedSheet[] {
 }
 
 function persistSheets(sheets: SavedSheet[]) {
-  localStorage.setItem(getWipKeysForCurrentUser().sheets, JSON.stringify(sheets));
+  setLocalStorageItem(getWipKeysForCurrentUser().sheets, JSON.stringify(sheets));
 }
 
 // ─────────────────────────────────────────────
@@ -2161,8 +2167,8 @@ export default function CostingSheet() {
     const wip = getWipKeysForCurrentUser();
     // Refresh BOM-from-costing and clear any previous BOM overrides so GST and items
     // always match the latest costing sheet.
-    localStorage.setItem(wip.bomCosting, JSON.stringify(storedBom));
-    localStorage.removeItem(wip.bomOverrides);
+    setLocalStorageItem(wip.bomCosting, JSON.stringify(storedBom));
+    removeLocalStorageItem(wip.bomOverrides);
 
     // Write ROI autofill so ROI Calculator picks up the latest values
     const roiAutofill: RoiAutofill = {
@@ -2172,7 +2178,7 @@ export default function CostingSheet() {
       grandTotal:   grand,
       systemSizeKw: sizeKw,
     };
-    localStorage.setItem(wip.roiAutofill, JSON.stringify(roiAutofill));
+    setLocalStorageItem(wip.roiAutofill, JSON.stringify(roiAutofill));
 
     // Persist costing artifact and BOM to active customer (single source of truth = Costing Sheet).
     const activeCustomer = getActiveCustomer();
@@ -2188,11 +2194,15 @@ export default function CostingSheet() {
         systemSizeKw:  sizeKw,
       };
       const bomArtifact: BomArtifact = { savedAt: now, rows: bomRows };
-      upsertCustomer({
+      const nextRecord = {
         ...activeCustomer,
         costing: costingArtifact,
         bom:     bomArtifact,
         updatedAt: now,
+      };
+      upsertCustomer({
+        ...nextRecord,
+        status: deriveProposalStatusFromArtifacts(nextRecord),
       });
 
       // Sync both to CRM backend so BOM page and Proposal use the same values everywhere.

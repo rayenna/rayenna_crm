@@ -2118,8 +2118,10 @@ function RoofLayoutBlock({ layout }: { layout: AiRoofLayoutResponse }) {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-start">
         <div className="space-y-3">
           <p className="text-sm text-secondary-700 leading-relaxed">
-            This layout is generated automatically from satellite imagery and your project details. It is an
-            indicative, AI-assisted draft to support technical discussions and customer presentations.
+            This layout has been automatically generated using satellite imagery and project-specific inputs. It is
+            merely a rough conceptual representation intended for preliminary visualization purposes only. For accurate
+            project scope, specifications and deliverables; please refer to the detailed Bill of Quantities provided
+            below.
           </p>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
@@ -2160,10 +2162,6 @@ function RoofLayoutBlock({ layout }: { layout: AiRoofLayoutResponse }) {
               </div>
             )}
           </div>
-          <p className="text-[10px] text-secondary-500">
-            This is an early, AI-assisted draft. Please verify all roof clearances, structural constraints, and final
-            module layout on site before execution.
-          </p>
         </div>
       </div>
     </div>

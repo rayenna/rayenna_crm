@@ -1,3 +1,5 @@
+import { reportStorageFailure } from './safeLocalStorage';
+
 const TOKEN_KEY = 'pe_jwt';
 const USER_ID_KEY = 'pe_user_id';
 const USER_ROLE_KEY = 'pe_user_role';
@@ -44,8 +46,12 @@ export function getToken(): string | null {
     // Backwards compatibility: if an old token exists in localStorage, migrate it.
     const legacyToken = window.localStorage.getItem(TOKEN_KEY);
     if (legacyToken) {
-      window.sessionStorage.setItem(TOKEN_KEY, legacyToken);
-      window.localStorage.removeItem(TOKEN_KEY);
+      try {
+        window.sessionStorage.setItem(TOKEN_KEY, legacyToken);
+        window.localStorage.removeItem(TOKEN_KEY);
+      } catch (e) {
+        reportStorageFailure(TOKEN_KEY, e);
+      }
       return legacyToken;
     }
 
@@ -60,8 +66,8 @@ export function setToken(token: string): void {
     window.sessionStorage.setItem(TOKEN_KEY, token);
     // Ensure any legacy localStorage value is cleared.
     window.localStorage.removeItem(TOKEN_KEY);
-  } catch {
-    // ignore quota / storage errors
+  } catch (e) {
+    reportStorageFailure(TOKEN_KEY, e);
   }
 }
 
@@ -80,24 +86,24 @@ export function clearToken(): void {
 export function setUserId(userId: string): void {
   try {
     window.sessionStorage.setItem(USER_ID_KEY, userId);
-  } catch {
-    // ignore
+  } catch (e) {
+    reportStorageFailure(USER_ID_KEY, e);
   }
 }
 
 export function setUserRole(role: string): void {
   try {
     window.sessionStorage.setItem(USER_ROLE_KEY, role);
-  } catch {
-    // ignore
+  } catch (e) {
+    reportStorageFailure(USER_ROLE_KEY, e);
   }
 }
 
 export function setUserName(name: string): void {
   try {
     window.sessionStorage.setItem(USER_NAME_KEY, name);
-  } catch {
-    // ignore
+  } catch (e) {
+    reportStorageFailure(USER_NAME_KEY, e);
   }
 }
 
@@ -386,7 +392,7 @@ export interface ProposalEngineProjectFromApi {
   projectStatus?: string | null;
   projectStage?: string | null;
   /** Proposal Engine status computed by backend for selected projects. */
-  peStatus?: 'draft' | 'proposal-ready' | string;
+  peStatus?: 'not-started' | 'draft' | 'proposal-ready' | string;
   peSelectedAt?: string | null;
   peSelectedById?: string | null;
   systemCapacity?: number | null;

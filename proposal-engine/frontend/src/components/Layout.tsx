@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getActiveCustomer } from '../lib/customerStore';
 import { clearToken, getCurrentUserName, getToken } from '../lib/apiClient';
+import {
+  RAYENNA_BROWSER_STORAGE_ERROR_EVENT,
+  type BrowserStorageErrorDetail,
+} from '../lib/safeLocalStorage';
 import TipOfTheDay from './TipOfTheDay';
 
 const NAV = [
@@ -10,9 +14,9 @@ const NAV = [
   { label: 'Costing Sheet',         to: '/costing'   },
   { label: 'BOM',                   to: '/bom'       },
   { label: 'ROI',                   to: '/roi'       },
+  { label: 'AI Roof Layout (Beta)', to: '/ai-layout' },
   { label: 'Proposal',              to: '/proposal'  },
 ];
-const AI_LAYOUT_LINK = { label: 'AI Roof Layout (Beta)', to: '/ai-layout' };
 
 /* Exact gradient used by the CRM navbar */
 const NAV_GRADIENT = 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)';
@@ -117,6 +121,37 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     navigate('/login', { replace: true });
   };
 
+  const [storageErrorMsg, setStorageErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent<BrowserStorageErrorDetail>;
+      if (ce.detail?.message) setStorageErrorMsg(ce.detail.message);
+    };
+    window.addEventListener(RAYENNA_BROWSER_STORAGE_ERROR_EVENT, handler as EventListener);
+    return () =>
+      window.removeEventListener(RAYENNA_BROWSER_STORAGE_ERROR_EVENT, handler as EventListener);
+  }, []);
+
+  const storageAlert =
+    storageErrorMsg && (
+      <div
+        className="fixed top-3 left-3 right-3 z-[100] px-0 sm:px-2"
+        role="alert"
+      >
+        <div className="max-w-4xl mx-auto rounded-xl bg-amber-950 text-amber-50 border border-amber-600 px-4 py-3 flex flex-col sm:flex-row gap-3 sm:items-center shadow-xl text-sm">
+          <p className="flex-1 font-medium leading-snug">{storageErrorMsg}</p>
+          <button
+            type="button"
+            onClick={() => setStorageErrorMsg(null)}
+            className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-400 text-amber-950 hover:bg-amber-300 transition-colors"
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+    );
+
   // Set up global activity listeners to reset inactivity timer
   useEffect(() => {
     const activityEvents: (keyof DocumentEventMap)[] = [
@@ -155,6 +190,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   if (pathname === '/login') {
     return (
       <div className="min-h-screen bg-gray-50">
+        {storageAlert}
         {children}
       </div>
     );
@@ -162,11 +198,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   // Shared proposal view: read-only, no nav (link is public).
   if (pathname.startsWith('/view/')) {
-    return <>{children}</>;
+    return (
+      <>
+        {storageAlert}
+        {children}
+      </>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-50/80">
+      {storageAlert}
 
       {/* ── Navbar ── */}
       <nav
@@ -253,16 +295,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </div>
                 )}
               </div>
-
-              {/* AI Roof Layout — after Help (Phase 2 later) */}
-              <Link
-                to={AI_LAYOUT_LINK.to}
-                className={`flex-shrink-0 ml-1.5 inline-flex items-center px-2.5 py-1.5 rounded-lg text-[11px] lg:text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
-                  pathname === AI_LAYOUT_LINK.to ? ACTIVE_LINK : IDLE_LINK
-                }`}
-              >
-                {AI_LAYOUT_LINK.label}
-              </Link>
             </div>
 
             <div className="flex items-center gap-2">
@@ -357,7 +389,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 ))}
               </div>
 
-              {/* Help group — 3-column grid in landscape; AI Roof Layout after */}
+              {/* Help group — 3-column grid in landscape */}
               <div className="mt-1 pt-1 border-t border-white/20">
                 <div className="grid grid-cols-1 landscape:grid-cols-3 gap-1">
                   <Link
@@ -390,16 +422,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     <span>About</span>
                   </Link>
                 </div>
-                <Link
-                  to={AI_LAYOUT_LINK.to}
-                  className={`mt-1 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                    pathname === AI_LAYOUT_LINK.to
-                      ? 'bg-white/30 text-white border border-white/40'
-                      : 'text-white/90 hover:bg-white/20 hover:text-white'
-                  }`}
-                >
-                  {AI_LAYOUT_LINK.label}
-                </Link>
 
                 {/* Mobile user name (match CRM: visible in hamburger menu) */}
                 {hasToken && userName && (

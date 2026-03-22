@@ -1,10 +1,123 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { Stage, Layer, Image as KonvaImage, Line, Rect, Circle } from 'react-konva';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - use-image has ESM types that may not be picked up correctly here
 import useImage from 'use-image';
-import { generateAiRoofLayout, AiRoofLayoutResponse, fetchCrmProjectForAiLayout, fetchManualRoofLayout, getApiBaseUrl, saveManualRoofLayoutImage } from '../lib/apiClient';
-import { getActiveCustomer } from '../lib/customerStore';
+import {
+  generateAiRoofLayout,
+  AiRoofLayoutResponse,
+  fetchCrmProjectForAiLayout,
+  fetchManualRoofLayout,
+  getApiBaseUrl,
+  saveManualRoofLayoutImage,
+} from '../lib/apiClient';
+
+/** Focal point in image pixel space for centering the scroll viewport (saved view: API geometry or image centre). */
+function focalPointForSavedView(
+  imageSize: { width: number; height: number },
+  result: AiRoofLayoutResponse | null,
+): { x: number; y: number } {
+  const poly = result?.roof_polygon_coordinates;
+  if (poly && poly.length >= 2) {
+    let sx = 0;
+    let sy = 0;
+    for (const p of poly) {
+      sx += p.x;
+      sy += p.y;
+    }
+    const x = sx / poly.length;
+    const y = sy / poly.length;
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      return {
+        x: Math.max(0, Math.min(imageSize.width, x)),
+        y: Math.max(0, Math.min(imageSize.height, y)),
+      };
+    }
+  }
+  const panels = result?.panel_coordinates;
+  if (panels && panels.length) {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const r of panels) {
+      const x2 = r.x + r.width;
+      const y2 = r.y + r.height;
+      minX = Math.min(minX, r.x);
+      minY = Math.min(minY, r.y);
+      maxX = Math.max(maxX, x2);
+      maxY = Math.max(maxY, y2);
+    }
+    if (Number.isFinite(minX) && Number.isFinite(maxX)) {
+      const x = (minX + maxX) / 2;
+      const y = (minY + maxY) / 2;
+      return {
+        x: Math.max(0, Math.min(imageSize.width, x)),
+        y: Math.max(0, Math.min(imageSize.height, y)),
+      };
+    }
+  }
+  return { x: imageSize.width / 2, y: imageSize.height / 2 };
+}
+
+function focalPointForEditingPolygon(
+  imageSize: { width: number; height: number },
+  polygon: { x: number; y: number }[],
+): { x: number; y: number } {
+  let sx = 0;
+  let sy = 0;
+  for (const p of polygon) {
+    sx += p.x;
+    sy += p.y;
+  }
+  const x = sx / polygon.length;
+  const y = sy / polygon.length;
+  return {
+    x: Math.max(0, Math.min(imageSize.width, x)),
+    y: Math.max(0, Math.min(imageSize.height, y)),
+  };
+}
+
+function scrollLayoutPreviewToFocal(
+  el: HTMLDivElement,
+  focalImageX: number,
+  focalImageY: number,
+  zoom: number,
+) {
+  const cw = el.clientWidth;
+  const ch = el.clientHeight;
+  const sw = el.scrollWidth;
+  const sh = el.scrollHeight;
+  const cx = focalImageX * zoom;
+  const cy = focalImageY * zoom;
+  el.scrollLeft = Math.max(0, Math.min(Math.max(0, sw - cw), cx - cw / 2));
+  el.scrollTop = Math.max(0, Math.min(Math.max(0, sh - ch), cy - ch / 2));
+}
+import { Link } from 'react-router-dom';
+import { getActiveCustomer, getCustomer, getResolvedRoofLayout, upsertCustomer } from '../lib/customerStore';
+
+function persistRoofLayoutToActiveCustomer(params: {
+  roof_area_m2: number;
+  usable_area_m2: number;
+  panel_count: number;
+  layout_image_url: string;
+  savedAt?: string;
+}) {
+  const ac = getActiveCustomer();
+  if (!ac?.id) return;
+  const fresh = getCustomer(ac.id);
+  if (!fresh) return;
+  upsertCustomer({
+    ...fresh,
+    roofLayout: {
+      savedAt: params.savedAt ?? new Date().toISOString(),
+      roof_area_m2: Number(params.roof_area_m2),
+      usable_area_m2: Number(params.usable_area_m2),
+      panel_count: Number(params.panel_count),
+      layout_image_url: String(params.layout_image_url),
+    },
+  });
+}
 
 export default function AIRoofLayout() {
   const activeProject = getActiveCustomer();
@@ -25,6 +138,13 @@ export default function AIRoofLayout() {
   const [panelSpacingMultiplier, setPanelSpacingMultiplier] = useState(1.5);
   const [panelOrientation, setPanelOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const exportRef = useRef<HTMLDivElement>(null);
+  const layoutScrollRef = useRef<HTMLDivElement>(null);
+  /** Per-image URL: centre saved view once, editing polygon once (don’t fight user scroll / drag). */
+  const scrollCenterMetaRef = useRef<{ url: string; savedDone: boolean; editingDone: boolean }>({
+    url: '',
+    savedDone: false,
+    editingDone: false,
+  });
 
   // Konva shapes are rendered inside a container that's scaled via CSS `transform: scale(${zoom})`.
   // To keep the polygon outline and draggable points visible on mobile (especially when zoomed out),
@@ -90,6 +210,14 @@ export default function AIRoofLayout() {
         setLoadedSavedAt(manual?.savedAt ? String(manual.savedAt) : null);
         setLayoutMode('saved');
 
+        persistRoofLayoutToActiveCustomer({
+          roof_area_m2: next.roof_area_m2,
+          usable_area_m2: next.usable_area_m2,
+          panel_count: next.panel_count,
+          layout_image_url: next.layout_image_url,
+          savedAt: manual?.savedAt ? String(manual.savedAt) : undefined,
+        });
+
         const rawUrl = next.layout_image_url && String(next.layout_image_url).trim()
           ? next.layout_image_url
           : null;
@@ -131,6 +259,42 @@ export default function AIRoofLayout() {
       setImageSize({ width: bgImage.width, height: bgImage.height });
     }
   }, [bgImage, imageSize]);
+
+  // Saved view: centre the scroll viewport on roof/panels (API coords) or image centre.
+  // Editing view: centre once per image on the polygon when it first exists (so the roof isn’t stuck top-left).
+  useLayoutEffect(() => {
+    if (!imageSize || !bgImage) return;
+
+    const urlKey = bgImageUrl ?? '';
+    if (scrollCenterMetaRef.current.url !== urlKey) {
+      scrollCenterMetaRef.current = { url: urlKey, savedDone: false, editingDone: false };
+    }
+
+    if (layoutMode === 'saved') {
+      if (scrollCenterMetaRef.current.savedDone) return;
+      const focal = focalPointForSavedView(imageSize, result);
+      const run = () => {
+        const el = layoutScrollRef.current;
+        if (!el) return;
+        scrollLayoutPreviewToFocal(el, focal.x, focal.y, zoom);
+        scrollCenterMetaRef.current.savedDone = true;
+      };
+      requestAnimationFrame(() => requestAnimationFrame(run));
+      return;
+    }
+
+    if (layoutMode === 'editing' && polygon && polygon.length >= 2) {
+      if (scrollCenterMetaRef.current.editingDone) return;
+      const focal = focalPointForEditingPolygon(imageSize, polygon);
+      const run = () => {
+        const el = layoutScrollRef.current;
+        if (!el) return;
+        scrollLayoutPreviewToFocal(el, focal.x, focal.y, zoom);
+        scrollCenterMetaRef.current.editingDone = true;
+      };
+      requestAnimationFrame(() => requestAnimationFrame(run));
+    }
+  }, [layoutMode, imageSize, bgImage, bgImageUrl, result, polygon, zoom]);
 
   const handleGenerate = async () => {
     if (!activeProject) {
@@ -305,8 +469,16 @@ export default function AIRoofLayout() {
       try {
         const crmProjectId = activeProject?.master?.crmProjectId;
         if (crmProjectId) {
-          await saveManualRoofLayoutImage({ projectId: crmProjectId, dataUrl: finalUrl });
+          const resp = await saveManualRoofLayoutImage({ projectId: crmProjectId, dataUrl: finalUrl });
           setLastSavedProjectId(String(crmProjectId));
+          if (resp?.layout_image_url && result) {
+            persistRoofLayoutToActiveCustomer({
+              roof_area_m2: result.roof_area_m2,
+              usable_area_m2: result.usable_area_m2,
+              panel_count: result.panel_count,
+              layout_image_url: resp.layout_image_url,
+            });
+          }
         }
       } catch {
         // ignore backend save errors here; download already succeeded
@@ -354,6 +526,14 @@ export default function AIRoofLayout() {
               : prev,
           );
           setLastSavedProjectId(String(crmProjectId));
+          if (result) {
+            persistRoofLayoutToActiveCustomer({
+              roof_area_m2: result.roof_area_m2,
+              usable_area_m2: result.usable_area_m2,
+              panel_count: result.panel_count,
+              layout_image_url: saved.layout_image_url,
+            });
+          }
         }
       }
     } catch (e) {
@@ -525,39 +705,101 @@ export default function AIRoofLayout() {
   }, [polygon, panelSpacingMultiplier, panelOrientation, layoutMode]);
 
   return (
-    <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 overflow-x-hidden">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">
-              AI Roof Segmentation & Solar Layout
-            </h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Uses project coordinates and system size to generate a draft solar panel layout for proposals.
-            </p>
+    <div className="overflow-x-hidden">
+      {/* Page card — matches Costing / BOM / ROI heading pattern */}
+      <div className="bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm">
+        {/* Header strip */}
+        <div
+          className="px-6 py-5 sm:px-8 sm:py-6"
+          style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-white/25 border border-white/40 shadow-lg backdrop-blur-md text-xl leading-none">
+                📐
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow">
+                  AI Roof Layout
+                </h1>
+                <p className="mt-0.5 text-white/90 text-sm">
+                  Uses project coordinates and system size to generate a draft solar panel layout for proposals.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 w-full sm:w-auto flex-shrink-0">
+              {layoutMode === 'saved' && (
+                <div className="flex justify-start sm:justify-end">
+                  <span className="text-xs px-3 py-1.5 rounded-full border font-semibold bg-yellow-50 text-yellow-700 border-yellow-200">
+                    ✓ Saved layout loaded
+                  </span>
+                </div>
+              )}
+              {layoutMode === 'editing' && result && (
+                <div className="flex justify-start sm:justify-end">
+                  <span className="text-xs px-3 py-1.5 rounded-full border font-semibold bg-white/20 text-white border-white/40">
+                    ⚡ Layout draft
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-start sm:justify-end">
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={loading}
+                  className="inline-flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl transition-all min-h-[40px] disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Generating…' : result ? 'Regenerate AI Layout' : 'Generate AI Layout'}
+                </button>
+              </div>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={loading}
-            className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-amber-400 shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed transition-all"
-          >
-            {loading ? 'Generating…' : result ? 'Regenerate AI Layout' : 'Generate AI Layout'}
-          </button>
         </div>
 
+        {/* Content */}
+        <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
+          {/* Active customer banner — same pattern as BOM / Costing */}
+          {(() => {
+            const ac = getActiveCustomer();
+            const roofSaved = ac ? !!getResolvedRoofLayout(ac) : false;
+            return ac ? (
+              <div className="mb-5 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 flex items-center justify-between gap-3">
+                <p className="text-xs text-sky-700">
+                  <span className="font-semibold">Active customer:</span> {ac.master.name}
+                  {roofSaved && (
+                    <span className="ml-2 text-emerald-600 font-medium">· Roof layout saved ✓</span>
+                  )}
+                </p>
+                <Link
+                  to="/"
+                  className="text-xs text-sky-600 hover:text-sky-800 font-medium whitespace-nowrap transition-colors"
+                >
+                  View Dashboard →
+                </Link>
+              </div>
+            ) : (
+              <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 flex items-center justify-between gap-3">
+                <p className="text-xs text-amber-700">
+                  No active customer. Open a project from Customers or Dashboard to use AI roof layout.
+                </p>
+                <Link
+                  to="/customers"
+                  className="text-xs text-amber-700 hover:text-amber-900 font-semibold border border-amber-300 hover:bg-amber-100 px-3 py-1 rounded-lg transition-colors whitespace-nowrap"
+                >
+                  Select Customer →
+                </Link>
+              </div>
+            );
+          })()}
+
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6 lg:p-8">
         {result && lastSavedProjectId && activeProject?.master?.crmProjectId && lastSavedProjectId === String(activeProject.master.crmProjectId) && (
           <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
             <div className="font-semibold">Saved layout loaded</div>
             <div className="mt-0.5 text-xs text-emerald-800">
               {loadedSavedAt ? `Last saved: ${new Date(loadedSavedAt).toLocaleString()}` : 'This project already has a saved roof layout.'}
             </div>
-          </div>
-        )}
-
-        {!activeProject && (
-          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Open a project from <span className="font-semibold">Customers → Dashboard</span> to use AI layout.
           </div>
         )}
 
@@ -801,7 +1043,11 @@ export default function AIRoofLayout() {
                     </div>
                     </div>
                   )}
-                  <div className="w-full h-full overflow-auto overscroll-contain min-w-0 min-h-0" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}>
+                  <div
+                    ref={layoutScrollRef}
+                    className="w-full h-full overflow-auto overscroll-contain min-w-0 min-h-0"
+                    style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}
+                  >
                     {bgImage && imageSize ? (
                       <div
                         className="relative flex-shrink-0"
@@ -1018,6 +1264,8 @@ export default function AIRoofLayout() {
             Once generated, the AI layout summary and preview image will appear here for inclusion in your proposal.
           </div>
         )}
+          </div>
+        </div>
       </div>
     </div>
   );

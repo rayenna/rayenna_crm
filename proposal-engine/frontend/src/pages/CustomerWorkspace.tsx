@@ -9,8 +9,9 @@ import {
   getWipKeysForCurrentUser,
   STATUS_LABELS,
   STATUS_COLORS,
+  deriveProposalStatusFromArtifacts,
 } from '../lib/customerStore';
-import type { CustomerRecord, CustomerMaster, ProposalStatus } from '../lib/customerStore';
+import type { CustomerRecord, CustomerMaster } from '../lib/customerStore';
 import {
   fetchProjectWithArtifacts,
   mapApiArtifactsToRecord,
@@ -228,8 +229,12 @@ export default function CustomerWorkspace() {
           roi:      fromApi.roi      ?? rec.roi,
           proposal: fromApi.proposal ?? rec.proposal,
         };
-        upsertCustomer(merged);
-        switchActiveCustomer(merged.id);
+        const withStatus: CustomerRecord = {
+          ...merged,
+          status: deriveProposalStatusFromArtifacts(merged),
+        };
+        upsertCustomer(withStatus);
+        switchActiveCustomer(withStatus.id);
         setRecord(getCustomer(id)!);
       } catch {
         // Network or auth error — keep local data
@@ -256,13 +261,6 @@ export default function CustomerWorkspace() {
     switchActiveCustomer(record.id);
     refresh();
   };
-
-  const handleStatusChange = (status: ProposalStatus) => {
-    const updated = { ...record, status, updatedAt: new Date().toISOString() };
-    upsertCustomer(updated);
-    setRecord(updated);
-  };
-  void handleStatusChange; // reserved for status dropdown
 
   // Navigate to a work page and ensure this customer is active,
   // flushing stale work-in-progress data from any previous customer.

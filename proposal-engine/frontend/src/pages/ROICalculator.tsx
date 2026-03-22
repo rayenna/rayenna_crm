@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import type { RoiAutofill } from '../lib/costingConstants';
-import { getActiveCustomer, upsertCustomer, getWipKeysForCurrentUser } from '../lib/customerStore';
+import {
+  getActiveCustomer,
+  upsertCustomer,
+  getWipKeysForCurrentUser,
+  deriveProposalStatusFromArtifacts,
+} from '../lib/customerStore';
+import { setLocalStorageItem } from '../lib/safeLocalStorage';
 import type { RoiArtifact } from '../lib/customerStore';
 import { syncProjectRoi, canEditProposalArtifacts } from '../lib/apiClient';
 import { AlertCard } from '../components/AlertCard';
@@ -499,13 +505,17 @@ export default function ROICalculator() {
   const handleSave = () => {
     if (!result) return;
     const now = new Date().toISOString();
-    localStorage.setItem(getWipKeysForCurrentUser().roiResult, JSON.stringify(result));
+    setLocalStorageItem(getWipKeysForCurrentUser().roiResult, JSON.stringify(result));
 
     // Persist ROI artifact to active customer record
     const activeCustomer = getActiveCustomer();
     if (activeCustomer) {
       const artifact: RoiArtifact = { savedAt: now, result };
-      upsertCustomer({ ...activeCustomer, roi: artifact, updatedAt: now });
+      const nextRecord = { ...activeCustomer, roi: artifact, updatedAt: now };
+      upsertCustomer({
+        ...nextRecord,
+        status: deriveProposalStatusFromArtifacts(nextRecord),
+      });
 
       // Best-effort sync to CRM backend for CRM-linked projects.
       if (activeCustomer.master.crmProjectId) {

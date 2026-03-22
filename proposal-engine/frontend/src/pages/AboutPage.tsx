@@ -250,8 +250,8 @@ function renderBlock(b: Block, idx: number) {
 /* ─── Page component ─────────────────────────────────────────────────────── */
 export default function AboutPage() {
   return (
-    <div className="px-0 py-6 sm:px-0">
-      {/* Outer card — matches CRM's PageCard gradient header */}
+    <div className="px-0">
+      {/* Outer card — matches CRM's PageCard gradient header; no extra vertical padding here so gap under global nav matches Dashboard / Customers (Layout main supplies py-4 sm:py-6). */}
       <div className="bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm">
 
         {/* Header */}

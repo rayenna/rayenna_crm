@@ -8,6 +8,7 @@ import {
   STATUS_COLORS,
   artifactSummary,
   formatEmailForDisplay,
+  getResolvedRoofLayout,
 } from '../lib/customerStore';
 import type { CustomerRecord } from '../lib/customerStore';
 import { getCurrentUserRole } from '../lib/apiClient';
@@ -44,6 +45,8 @@ export default function Dashboard() {
 
   const activeCustomer: CustomerRecord | null =
     allCustomers.find((c) => c.id === activeCustomerId) ?? null;
+
+  const resolvedRoofLayout = getResolvedRoofLayout(activeCustomer);
 
   const artifactTiles = [
     {
@@ -82,6 +85,18 @@ export default function Dashboard() {
       savedAt: activeCustomer?.roi?.savedAt,
       summary: activeCustomer?.roi?.result
         ? `Payback ${activeCustomer.roi.result.paybackYears.toFixed(1)} yrs · 25-yr savings ${fmtINR(activeCustomer.roi.result.totalSavings25Years)} · ROI ${activeCustomer.roi.result.roiPercent.toFixed(1)}%`
+        : undefined,
+    },
+    {
+      icon: '📐',
+      title: 'Roof Layout',
+      description: 'Roof segmentation and solar panel placement for proposals',
+      accentColor: '#f97316',
+      to: '/ai-layout',
+      saved: !!resolvedRoofLayout,
+      savedAt: resolvedRoofLayout?.savedAt,
+      summary: resolvedRoofLayout
+        ? `Roof ${Number(resolvedRoofLayout.roof_area_m2).toFixed(1)} m² · ${Number(resolvedRoofLayout.usable_area_m2).toFixed(1)} m² usable · ${resolvedRoofLayout.panel_count} panels`
         : undefined,
     },
     {
@@ -218,14 +233,8 @@ export default function Dashboard() {
                       case 'draft':
                         theme = 'bg-slate-200 text-slate-800 border-slate-300';
                         break;
-                      case 'sent':
-                        theme = 'bg-sky-500 text-white border-sky-300';
-                        break;
-                      case 'won':
-                        theme = 'bg-emerald-500 text-white border-emerald-300';
-                        break;
-                      case 'lost':
-                        theme = 'bg-rose-500 text-white border-rose-300';
+                      case 'not-started':
+                        theme = 'bg-slate-300/90 text-slate-800 border-slate-400';
                         break;
                       default:
                         theme = STATUS_COLORS[status];
@@ -279,6 +288,9 @@ export default function Dashboard() {
                 </Link>
                 <Link to="/roi" className="text-[11px] font-medium px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-300/60 transition-colors">
                   ROI
+                </Link>
+                <Link to="/ai-layout" className="text-[11px] font-medium px-3 py-1.5 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 border border-orange-300/60 transition-colors">
+                  Roof Layout
                 </Link>
                 <Link to="/proposal" className="text-[11px] font-medium px-3 py-1.5 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 border border-violet-300/60 transition-colors">
                   Proposal

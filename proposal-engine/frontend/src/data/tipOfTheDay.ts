@@ -16,6 +16,8 @@
  * 4. On "Don't show again" click: markDontShowAgain(); setShowTip(false)
  */
 
+import { setLocalStorageItem } from '../lib/safeLocalStorage'
+
 const STORAGE_KEY_LAST_SHOWN = 'rayenna_pe_tip_last_shown'
 const STORAGE_KEY_DONT_SHOW  = 'rayenna_pe_tip_dont_show'
 
@@ -25,7 +27,7 @@ export const TIPS: string[] = [
   'Use the Dashboard (Proposal Command Center) active project banner or the Customers / Projects page to choose which project is active — all four pages always work on the active project.',
   'Use the "+ Select Project" button on the Customers / Projects page to pull projects from Rayenna CRM — customer name, address, contacts and system size are filled in automatically.',
   'The pulsing blue dot in the navbar shows which customer is currently active. Check it before saving any work.',
-  'Customer status updates to "Proposal Ready" automatically when you click Save on the Proposal page.',
+  'Document readiness shows as PE Ready when all four artifacts are saved (same labels as CRM: Not Yet Created, PE Draft, PE Ready).',
   'Use the search bar on the Customers page to quickly find a customer by name or location.',
 
   // ── Costing Sheet ───────────────────────────────────────────────────────────
@@ -104,7 +106,7 @@ export function shouldShowTip(): boolean {
  */
 export function markTipShown(): void {
   if (typeof window === 'undefined') return
-  localStorage.setItem(STORAGE_KEY_LAST_SHOWN, new Date().toDateString())
+  setLocalStorageItem(STORAGE_KEY_LAST_SHOWN, new Date().toDateString())
 }
 
 /**
@@ -112,7 +114,7 @@ export function markTipShown(): void {
  */
 export function markDontShowAgain(): void {
   if (typeof window === 'undefined') return
-  localStorage.setItem(STORAGE_KEY_DONT_SHOW, '1')
+  setLocalStorageItem(STORAGE_KEY_DONT_SHOW, '1')
 }
 
 /**

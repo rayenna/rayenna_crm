@@ -85,13 +85,10 @@
  *      - canViewROI         : show/hide ROI Calculator page
  *    These can be checked via a shared usePermissions() hook from the CRM shell.
  *
- * 7. STATUS SYNC
- *    CustomerRecord.status maps to CRM Project.stage:
- *      draft           →  Project.stage = "Prospecting"
- *      proposal-ready  →  Project.stage = "Proposal Sent" (trigger on save)
- *      sent            →  Project.stage = "Negotiation"
- *      won             →  Project.stage = "Closed Won"
- *      lost            →  Project.stage = "Closed Lost"
+ * 7. PROPOSAL DOCUMENT READINESS (Proposal Engine only)
+ *    CustomerRecord.status reflects saved artifacts in this app — not CRM sales stages.
+ *    Values (internal): not-started, draft, proposal-ready — same semantics as CRM labels:
+ *    Not Yet Created, PE Draft, PE Ready. Project lifecycle / deal tracking is done in CRM only.
  *
  * 8. MIGRATION
  *    Existing localStorage data can be migrated to CRM on first login by
@@ -105,6 +102,7 @@
 // ─────────────────────────────────────────────
 
 import type { Category, LineItem } from './costingConstants';
+import { removeLocalStorageItem, setLocalStorageItem } from './safeLocalStorage';
 export type { Category, LineItem };
 
 export interface BomRow {
@@ -273,6 +271,15 @@ export interface RoiArtifact {
   result:   ROIResult;
 }
 
+/** Snapshot when the user saves from AI Roof Layout (server-backed image + metrics). */
+export interface RoofLayoutArtifact {
+  savedAt: string;
+  roof_area_m2: number;
+  usable_area_m2: number;
+  panel_count: number;
+  layout_image_url: string;
+}
+
 export interface ProposalArtifact {
   refNumber:   string;
   generatedAt: string;
@@ -318,7 +325,53 @@ export interface ProposalArtifact {
 // Customer record
 // ─────────────────────────────────────────────
 
-export type ProposalStatus = 'draft' | 'proposal-ready' | 'sent' | 'won' | 'lost';
+export type ProposalStatus = 'not-started' | 'draft' | 'proposal-ready';
+
+/** Map legacy or API strings to the current three Proposal Engine readiness states. */
+export function normalizeProposalStatus(raw: string | undefined | null): ProposalStatus {
+  const s = String(raw ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-');
+  if (
+    s === 'not-started' ||
+    s === 'notstarted' ||
+    s === 'none' ||
+    s === 'not-yet-created' ||
+    s === 'notyetcreated'
+  ) {
+    return 'not-started';
+  }
+  if (s === 'draft' || s === 'pe-draft' || s === 'pedraft') return 'draft';
+  if (
+    s === 'proposal-ready' ||
+    s === 'proposalready' ||
+    s === 'pe-ready' ||
+    s === 'peready'
+  ) {
+    return 'proposal-ready';
+  }
+  // Legacy PE statuses — sales tracking now lives in CRM only
+  if (s === 'sent' || s === 'won') return 'proposal-ready';
+  if (s === 'lost') return 'draft';
+  return 'not-started';
+}
+
+/** Derive readiness from which core artifacts exist on the record. */
+export function deriveProposalStatusFromArtifacts(r: {
+  costing: unknown | null;
+  bom: unknown | null;
+  roi: unknown | null;
+  proposal: unknown | null;
+}): ProposalStatus {
+  const hasAny =
+    !!r.costing || !!r.bom || !!r.roi || !!r.proposal;
+  const allFour =
+    !!r.costing && !!r.bom && !!r.roi && !!r.proposal;
+  if (allFour) return 'proposal-ready';
+  if (hasAny) return 'draft';
+  return 'not-started';
+}
 
 export interface CustomerRecord {
   id:        string;           // e.g. "cust_1717000000000"
@@ -339,6 +392,11 @@ export interface CustomerRecord {
   costing:  CostingArtifact  | null;
   bom:      BomArtifact      | null;
   roi:      RoiArtifact      | null;
+  /**
+   * Roof layout saved from the AI Roof Layout page (or hydrated from the server).
+   * Also see {@link getResolvedRoofLayout} — dashboard tiles fall back to `proposal.roofLayout`.
+   */
+  roofLayout: RoofLayoutArtifact | null;
   proposal: ProposalArtifact | null;
 }
 
@@ -397,16 +455,16 @@ export function getHiddenProjectIds(): string[] {
 export function addHiddenProjectId(projectId: string): void {
   const ids = getHiddenProjectIds();
   if (ids.includes(projectId)) return;
-  localStorage.setItem(getHiddenProjectsKey(), JSON.stringify([...ids, projectId]));
+  setLocalStorageItem(getHiddenProjectsKey(), JSON.stringify([...ids, projectId]));
 }
 
 export function removeHiddenProjectId(projectId: string): void {
   const ids = getHiddenProjectIds().filter((id) => id !== projectId);
-  localStorage.setItem(getHiddenProjectsKey(), JSON.stringify(ids));
+  setLocalStorageItem(getHiddenProjectsKey(), JSON.stringify(ids));
 }
 
 export function clearHiddenProjectIds(): void {
-  localStorage.removeItem(getHiddenProjectsKey());
+  removeLocalStorageItem(getHiddenProjectsKey());
 }
 
 // ─────────────────────────────────────────────
@@ -416,14 +474,22 @@ export function clearHiddenProjectIds(): void {
 export function loadCustomers(): CustomerRecord[] {
   try {
     const raw = localStorage.getItem(getCustomersKey());
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as CustomerRecord[];
+    if (!Array.isArray(parsed)) return [];
+    // Migrate older records before `roofLayout` existed on CustomerRecord
+    return parsed.map((c) => ({
+      ...c,
+      roofLayout: c.roofLayout ?? null,
+      status: normalizeProposalStatus((c as { status?: string }).status),
+    }));
   } catch {
     return [];
   }
 }
 
 export function saveCustomers(customers: CustomerRecord[]): void {
-  localStorage.setItem(getCustomersKey(), JSON.stringify(customers));
+  setLocalStorageItem(getCustomersKey(), JSON.stringify(customers));
 }
 
 // ─────────────────────────────────────────────
@@ -521,7 +587,7 @@ export function deleteCustomer(id: string): void {
     clearActiveCustomer();
     // When the active customer is deleted, clear all work-in-progress data so
     // Costing Sheet, BOM, ROI, and Proposal views reset to a blank state.
-    getWipKeysList().forEach((key) => localStorage.removeItem(key));
+    getWipKeysList().forEach((key) => removeLocalStorageItem(key));
   }
 }
 
@@ -531,12 +597,13 @@ export function createCustomer(master: CustomerMaster): CustomerRecord {
     id:        `cust_${Date.now()}`,
     createdAt: now,
     updatedAt: now,
-    status:    'draft',
+    status:    'not-started',
     master,
-    costing:  null,
-    bom:      null,
-    roi:      null,
-    proposal: null,
+    costing:    null,
+    bom:        null,
+    roi:        null,
+    roofLayout: null,
+    proposal:   null,
   };
   upsertCustomer(record);
   return record;
@@ -556,11 +623,11 @@ export function getActiveCustomer(): CustomerRecord | null {
 }
 
 export function setActiveCustomer(id: string): void {
-  localStorage.setItem(getActiveCustomerKey(), id);
+  setLocalStorageItem(getActiveCustomerKey(), id);
 }
 
 export function clearActiveCustomer(): void {
-  localStorage.removeItem(getActiveCustomerKey());
+  removeLocalStorageItem(getActiveCustomerKey());
 }
 
 // ─────────────────────────────────────────────
@@ -610,10 +677,10 @@ export function getWipKeysForCurrentUser(): Record<keyof typeof WIP_KEY_PREFIXES
  * switches to a different customer.
  */
 export function switchActiveCustomer(id: string): void {
-  localStorage.setItem(getActiveCustomerKey(), id);
+  setLocalStorageItem(getActiveCustomerKey(), id);
 
   const wip = getWipKeys();
-  getWipKeysList().forEach((key) => localStorage.removeItem(key));
+  getWipKeysList().forEach((key) => removeLocalStorageItem(key));
 
   const record = getCustomer(id);
   if (!record) return;
@@ -631,35 +698,35 @@ export function switchActiveCustomer(id: string): void {
       totalGst:      record.costing.totalGst ?? 0,
       systemSizeKw:  record.costing.systemSizeKw,
     };
-    localStorage.setItem(wip.sheets, JSON.stringify([sheet]));
+    setLocalStorageItem(wip.sheets, JSON.stringify([sheet]));
 
     // Restore ROI autofill from costing data
     const roiAutofill = {
       systemSizeKw: record.costing.systemSizeKw,
       grandTotal:   record.costing.grandTotal,
     };
-    localStorage.setItem(wip.roiAutofill, JSON.stringify(roiAutofill));
+    setLocalStorageItem(wip.roiAutofill, JSON.stringify(roiAutofill));
   }
 
   // Restore BOM from saved artifact
   if (record.bom) {
     const storedBom = { rows: record.bom.rows };
-    localStorage.setItem(wip.bomCosting, JSON.stringify(storedBom));
+    setLocalStorageItem(wip.bomCosting, JSON.stringify(storedBom));
   }
 
   // Restore ROI result from saved artifact
   if (record.roi) {
-    localStorage.setItem(wip.roiResult, JSON.stringify(record.roi.result));
+    setLocalStorageItem(wip.roiResult, JSON.stringify(record.roi.result));
   }
 
   // Restore BOM comments from saved proposal artifact
   if (record.proposal?.bomComments) {
-    localStorage.setItem(wip.bomComments, JSON.stringify(record.proposal.bomComments));
+    setLocalStorageItem(wip.bomComments, JSON.stringify(record.proposal.bomComments));
   }
 
   // Restore edited proposal HTML from saved proposal artifact
   if (record.proposal?.editedHtml) {
-    localStorage.setItem(wip.proposalHtml, record.proposal.editedHtml);
+    setLocalStorageItem(wip.proposalHtml, record.proposal.editedHtml);
   }
 
   // After switching, prune cache so only active + recent customers keep full artifacts
@@ -703,19 +770,15 @@ export function saveAllArtifacts(
   const nextRoi      = roi      ?? record.roi;
   const nextProposal = proposal ?? record.proposal;
 
-  const hasAnyArtifact =
-    !!nextCosting || !!nextBom || !!nextRoi || !!nextProposal;
-
-  const allFour =
-    !!nextCosting && !!nextBom && !!nextRoi && !!nextProposal;
-
-  const nextStatus: ProposalStatus =
-    allFour ? 'proposal-ready' : hasAnyArtifact ? 'draft' : 'draft';
-
   const updated: CustomerRecord = {
     ...record,
     updatedAt: new Date().toISOString(),
-    status:    nextStatus,
+    status: deriveProposalStatusFromArtifacts({
+      costing: nextCosting,
+      bom: nextBom,
+      roi: nextRoi,
+      proposal: nextProposal,
+    }),
     costing:   nextCosting,
     bom:       nextBom,
     roi:       nextRoi,
@@ -730,13 +793,15 @@ export function clearProposalArtifact(customerId: string): CustomerRecord | null
   const record = getCustomer(customerId);
   if (!record) return null;
 
-  const nextStatus: ProposalStatus =
-    record.status === 'proposal-ready' ? 'draft' : record.status;
-
   const updated: CustomerRecord = {
     ...record,
     updatedAt: new Date().toISOString(),
-    status: nextStatus,
+    status: deriveProposalStatusFromArtifacts({
+      costing: record.costing,
+      bom: record.bom,
+      roi: record.roi,
+      proposal: null,
+    }),
     proposal: null,
   };
   upsertCustomer(updated);
@@ -748,23 +813,42 @@ export function clearProposalArtifact(customerId: string): CustomerRecord | null
 // ─────────────────────────────────────────────
 
 export const STATUS_LABELS: Record<ProposalStatus, string> = {
-  'draft':           'Draft',
-  'proposal-ready':  'Proposal Ready',
-  'sent':            'Sent',
-  'won':             'Won',
-  'lost':            'Lost',
+  'not-started':    'Not Yet Created',
+  'draft':          'PE Draft',
+  'proposal-ready': 'PE Ready',
 };
 
 export const STATUS_COLORS: Record<ProposalStatus, string> = {
-  'draft':           'bg-secondary-100 text-secondary-600 border-secondary-300',
-  'proposal-ready':  'bg-blue-50 text-blue-700 border-blue-200',
-  'sent':            'bg-yellow-50 text-yellow-700 border-yellow-200',
-  'won':             'bg-emerald-50 text-emerald-700 border-emerald-200',
-  'lost':            'bg-red-50 text-red-600 border-red-200',
+  'not-started':    'bg-slate-100 text-slate-600 border-slate-200',
+  'draft':          'bg-secondary-100 text-secondary-600 border-secondary-300',
+  'proposal-ready': 'bg-blue-50 text-blue-700 border-blue-200',
 };
 
 /** Returns a compact artifact completion summary, e.g. "3 / 4 artifacts" */
 export function artifactSummary(r: CustomerRecord): string {
   const count = [r.costing, r.bom, r.roi, r.proposal].filter(Boolean).length;
   return `${count} / 4 artifacts`;
+}
+
+/**
+ * Roof layout for dashboard / tiles: prefers dedicated `record.roofLayout`, else
+ * a layout embedded on the saved proposal artifact.
+ */
+export function getResolvedRoofLayout(r: CustomerRecord | null): RoofLayoutArtifact | null {
+  if (!r) return null;
+  const direct = r.roofLayout;
+  if (direct && String(direct.layout_image_url || '').trim()) {
+    return direct;
+  }
+  const pr = r.proposal?.roofLayout;
+  if (pr && String(pr.layout_image_url || '').trim()) {
+    return {
+      savedAt: r.proposal!.generatedAt,
+      roof_area_m2: Number(pr.roof_area_m2),
+      usable_area_m2: Number(pr.usable_area_m2),
+      panel_count: Number(pr.panel_count),
+      layout_image_url: String(pr.layout_image_url),
+    };
+  }
+  return null;
 }

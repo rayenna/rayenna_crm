@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   loadCustomers,
@@ -14,8 +14,10 @@ import {
   artifactSummary,
   upsertCustomer,
   formatEmailForDisplay,
+  deriveProposalStatusFromArtifacts,
+  normalizeProposalStatus,
 } from '../lib/customerStore';
-import type { CustomerRecord, CustomerMaster, ProposalStatus } from '../lib/customerStore';
+import type { CustomerRecord, CustomerMaster } from '../lib/customerStore';
 import { AlertCard } from '../components/AlertCard';
 import {
   fetchProposalEngineProjects,
@@ -168,7 +170,7 @@ export function NewCustomerModal({
 interface ProjectOption {
   id: string;
   projectStage: string;
-  peStatus?: 'draft' | 'proposal-ready' | string;
+  peStatus?: 'not-started' | 'draft' | 'proposal-ready' | string;
   systemSizeKw?: number;
   customerName: string;
   city: string;
@@ -269,6 +271,24 @@ function buildMasterFromProject(project: ProjectOption): CustomerMaster {
   };
 }
 
+/** When multiple Proposal Engine records share one CRM project, use the most recently updated (matches customersByCrmProjectId). */
+function getLatestLocalRecordForCrmProject(
+  projectId: string,
+  list: CustomerRecord[],
+): CustomerRecord | null {
+  let best: CustomerRecord | null = null;
+  for (const c of list) {
+    if (c?.master?.crmProjectId !== projectId) continue;
+    if (
+      !best ||
+      new Date(c.updatedAt).getTime() >= new Date(best.updatedAt).getTime()
+    ) {
+      best = c;
+    }
+  }
+  return best;
+}
+
 /** Operations, Management, Finance, Admin see all project proposals; Sales see only their own. */
 const ROLES_VIEW_ALL_PROJECTS = new Set(['OPERATIONS', 'MANAGEMENT', 'FINANCE', 'ADMIN']);
 /** Only Sales (own) and Admin can create/edit/delete proposals. */
@@ -346,12 +366,19 @@ function ProjectCard({
             {project.salespersonName && (
               <p className="text-[10px] text-secondary-400 mt-0.5">Sales: {project.salespersonName}</p>
             )}
-            {/* Show PE status when no local record (otherwise CustomerCard shows record.status) */}
-            {!record && (project.peStatus === 'draft' || project.peStatus === 'proposal-ready') && (
+            {/* Show PE document readiness when no local record (otherwise CustomerCard shows record.status) */}
+            {!record && (
               <p className="mt-1.5">
-                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${STATUS_COLORS[project.peStatus as ProposalStatus] ?? 'bg-secondary-100 text-secondary-600 border-secondary-300'}`}>
-                  {STATUS_LABELS[project.peStatus as ProposalStatus] ?? project.peStatus}
-                </span>
+                {(() => {
+                  const st = normalizeProposalStatus(project.peStatus);
+                  return (
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${STATUS_COLORS[st]}`}
+                    >
+                      {STATUS_LABELS[st]}
+                    </span>
+                  );
+                })()}
               </p>
             )}
           </div>
@@ -847,35 +874,17 @@ function ProjectConflictModal({
 }
 
 // ─────────────────────────────────────────────
-// Status change dropdown
+// Proposal Engine document readiness (read-only — derived from artifacts; CRM owns sales stages)
 // ─────────────────────────────────────────────
 
-const STATUSES: ProposalStatus[] = ['draft', 'proposal-ready', 'sent', 'won', 'lost'];
-
-function StatusBadge({ record, onChange }: { record: CustomerRecord; onChange: (s: ProposalStatus) => void }) {
-  const [open, setOpen] = useState(false);
+function ProposalReadinessBadge({ record }: { record: CustomerRecord }) {
   return (
-    <div className="relative">
-      <button
-        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-        className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold cursor-pointer hover:opacity-80 transition-opacity ${STATUS_COLORS[record.status]}`}
-      >
-        {STATUS_LABELS[record.status]} ▾
-      </button>
-      {open && (
-        <div className="absolute top-full mt-1 left-0 z-30 bg-white border border-secondary-200 rounded-xl shadow-xl overflow-hidden min-w-[140px]">
-          {STATUSES.map((s) => (
-            <button
-              key={s}
-              onClick={(e) => { e.stopPropagation(); onChange(s); setOpen(false); }}
-              className={`w-full text-left px-3 py-2 text-xs font-medium hover:bg-secondary-50 transition-colors ${record.status === s ? 'bg-primary-50 text-primary-700' : 'text-secondary-700'}`}
-            >
-              {STATUS_LABELS[s]}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+    <span
+      className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${STATUS_COLORS[record.status]}`}
+      title="Not Yet Created, PE Draft, or PE Ready — same as CRM; based on saved Costing, BOM, ROI, and Proposal. Track deal stages in CRM."
+    >
+      {STATUS_LABELS[record.status]}
+    </span>
   );
 }
 
@@ -918,13 +927,11 @@ function CustomerCard({
   isActive,
   onOpen,
   onDelete,
-  onStatusChange,
 }: {
-  record:         CustomerRecord;
-  isActive:       boolean;
-  onOpen:         () => void;
-  onDelete:       () => void;
-  onStatusChange: (s: ProposalStatus) => void;
+  record:   CustomerRecord;
+  isActive: boolean;
+  onOpen:   () => void;
+  onDelete: () => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const date = new Date(record.updatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -952,7 +959,7 @@ function CustomerCard({
                   Active
                 </span>
               )}
-              <StatusBadge record={record} onChange={onStatusChange} />
+              <ProposalReadinessBadge record={record} />
             </div>
             {record.master.location && (
               <p className="text-xs text-secondary-500 truncate">📍 {record.master.location}</p>
@@ -1056,6 +1063,10 @@ export default function Customers() {
 
   const refresh = useCallback(() => setCustomers(loadCustomers()), []);
 
+  /** Always read the latest customers inside async callbacks without putting `customers` in deps (P1). */
+  const customersRef = useRef(customers);
+  customersRef.current = customers;
+
   const customersByCrmProjectId = useMemo(() => {
     const m = new Map<string, CustomerRecord>();
     for (const c of customers) {
@@ -1090,15 +1101,20 @@ export default function Customers() {
       // If a CRM-linked local record exists for a project that is no longer selected,
       // remove it so Dashboard/Customers stay consistent (fixes "active project" stuck in Dashboard).
       const selectedIds = new Set(mapped.map((x) => x.id));
-      const stale = customers.filter((c) => c?.master?.crmProjectId && !selectedIds.has(c.master.crmProjectId));
+      const latestCustomers = customersRef.current;
+      const stale = latestCustomers.filter(
+        (c) => c?.master?.crmProjectId && !selectedIds.has(c.master.crmProjectId),
+      );
       stale.forEach((c) => deleteCustomer(c.id));
-      if (stale.length > 0) setCustomers((prev) => prev.filter((c) => !stale.some((s) => s.id === c.id)));
+      if (stale.length > 0) {
+        setCustomers((prev) => prev.filter((c) => !stale.some((s) => s.id === c.id)));
+      }
     } catch (err: any) {
       setProjectsError(err?.message || 'Failed to load projects.');
     } finally {
       setProjectsLoading(false);
     }
-  }, [customers]);
+  }, []);
 
   const loadEligibleProjects = useCallback(async () => {
     setProjectsLoading(true);
@@ -1165,8 +1181,12 @@ export default function Customers() {
       const record = createCustomer(master);
       const indexed: CustomerRecord = { ...record, proposalIndex };
       const merged: CustomerRecord = { ...indexed, ...artifacts };
-      upsertCustomer(merged);
-      return merged;
+      const final: CustomerRecord = {
+        ...merged,
+        status: deriveProposalStatusFromArtifacts(merged),
+      };
+      upsertCustomer(final);
+      return final;
     },
     [],
   );
@@ -1217,26 +1237,39 @@ export default function Customers() {
         const now = new Date().toISOString();
         const existing = customersByCrmProjectId.get(project.id) ?? null;
         const record: CustomerRecord = existing
-          ? {
-              ...existing,
-              updatedAt: now,
-              costing: artifacts.costing ?? existing.costing,
-              bom: artifacts.bom ?? existing.bom,
-              roi: artifacts.roi ?? existing.roi,
-              proposal: artifacts.proposal ?? existing.proposal,
-            }
-          : {
-              id: `crm_${project.id}`,
-              createdAt: now,
-              updatedAt: now,
-              status: 'draft',
-              proposalIndex: 1,
-              master: buildMasterFromProject(project),
-              costing: artifacts.costing,
-              bom: artifacts.bom,
-              roi: artifacts.roi,
-              proposal: artifacts.proposal,
-            };
+          ? (() => {
+              const next: CustomerRecord = {
+                ...existing,
+                updatedAt: now,
+                costing: artifacts.costing ?? existing.costing,
+                bom: artifacts.bom ?? existing.bom,
+                roi: artifacts.roi ?? existing.roi,
+                proposal: artifacts.proposal ?? existing.proposal,
+              };
+              return {
+                ...next,
+                status: deriveProposalStatusFromArtifacts(next),
+              };
+            })()
+          : (() => {
+              const next: CustomerRecord = {
+                id: `crm_${project.id}`,
+                createdAt: now,
+                updatedAt: now,
+                status: 'not-started',
+                proposalIndex: 1,
+                master: buildMasterFromProject(project),
+                costing: artifacts.costing,
+                bom: artifacts.bom,
+                roi: artifacts.roi,
+                roofLayout: null,
+                proposal: artifacts.proposal,
+              };
+              return {
+                ...next,
+                status: deriveProposalStatusFromArtifacts(next),
+              };
+            })();
         upsertCustomer(record);
         switchActiveCustomer(record.id);
         setCustomers((prev) => {
@@ -1277,17 +1310,14 @@ export default function Customers() {
     }
   }, [loadProjects]);
 
-  const handleStatusChange = (record: CustomerRecord, status: ProposalStatus) => {
-    upsertCustomer({ ...record, status, updatedAt: new Date().toISOString() });
-    refresh();
-  };
-
   // Deep link support: /customers?openProjectId=<CRM_PROJECT_ID>
-  // Always fetch artifacts from backend and merge so Sales see server-backed data (no stale/blank local copy).
+  // Runs only when the query string changes; merges using fresh loadCustomers() so we do not re-run on every customer edit (P1).
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const projectId = params.get('openProjectId');
     if (!projectId) return;
+
+    let cancelled = false;
 
     void (async () => {
       try {
@@ -1296,34 +1326,53 @@ export default function Customers() {
         } catch {
           // Ignore selection errors – user may not have access; we'll surface a generic error below.
         }
+        if (cancelled) return;
 
         const detail = await fetchProjectWithArtifacts(projectId);
+        if (cancelled) return;
+
         const projectOption = mapApiProjectToProjectOption(detail.project);
         const artifacts = mapApiArtifactsToRecord(detail.artifacts);
         const now = new Date().toISOString();
-        const existing = customersByCrmProjectId.get(projectId) ?? null;
+        const existing =
+          getLatestLocalRecordForCrmProject(projectId, loadCustomers()) ?? null;
         const record: CustomerRecord = existing
-          ? {
-              ...existing,
-              updatedAt: now,
-              master: buildMasterFromProject(projectOption),
-              costing: artifacts.costing ?? existing.costing,
-              bom: artifacts.bom ?? existing.bom,
-              roi: artifacts.roi ?? existing.roi,
-              proposal: artifacts.proposal ?? existing.proposal,
-            }
-          : {
-              id: `crm_${projectId}`,
-              createdAt: now,
-              updatedAt: now,
-              status: 'draft',
-              proposalIndex: 1,
-              master: buildMasterFromProject(projectOption),
-              costing: artifacts.costing,
-              bom: artifacts.bom,
-              roi: artifacts.roi,
-              proposal: artifacts.proposal,
-            };
+          ? (() => {
+              const next: CustomerRecord = {
+                ...existing,
+                updatedAt: now,
+                master: buildMasterFromProject(projectOption),
+                costing: artifacts.costing ?? existing.costing,
+                bom: artifacts.bom ?? existing.bom,
+                roi: artifacts.roi ?? existing.roi,
+                proposal: artifacts.proposal ?? existing.proposal,
+              };
+              return {
+                ...next,
+                status: deriveProposalStatusFromArtifacts(next),
+              };
+            })()
+          : (() => {
+              const next: CustomerRecord = {
+                id: `crm_${projectId}`,
+                createdAt: now,
+                updatedAt: now,
+                status: 'not-started',
+                proposalIndex: 1,
+                master: buildMasterFromProject(projectOption),
+                costing: artifacts.costing,
+                bom: artifacts.bom,
+                roi: artifacts.roi,
+                roofLayout: null,
+                proposal: artifacts.proposal,
+              };
+              return {
+                ...next,
+                status: deriveProposalStatusFromArtifacts(next),
+              };
+            })();
+        if (cancelled) return;
+
         upsertCustomer(record);
         setCustomers((prev) => {
           const idx = prev.findIndex((c) => c.id === record.id);
@@ -1337,11 +1386,18 @@ export default function Customers() {
         switchActiveCustomer(record.id);
         navigate('/dashboard');
       } catch {
-        setProjectsError('Unable to open this project in Proposal Engine. It might not be in Proposal/Confirmed stage or you may not have access.');
+        if (!cancelled) {
+          setProjectsError(
+            'Unable to open this project in Proposal Engine. It might not be in Proposal/Confirmed stage or you may not have access.',
+          );
+        }
       }
     })();
-    // We intentionally do not include navigate/setters in deps so the effect only runs on initial search change.
-  }, [location.search, customersByCrmProjectId]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [location.search, navigate]);
 
   const filtered = customers.filter((c) => {
     const m = c?.master;
@@ -1374,31 +1430,27 @@ export default function Customers() {
     });
 
   // In viewAllMode, use effective status per project: local record status when present (matches card),
-  // otherwise API peStatus, so counts match what is shown on cards (Admin sees CustomerCard with record.status).
+  // otherwise normalized API peStatus, so counts match what is shown on cards.
   const statCounts = viewAllMode
     ? (() => {
-        const effectiveDraft = projects.filter((p) => {
+        const effectiveStatus = (p: (typeof projects)[0]) => {
           const rec = customersByCrmProjectId.get(p.id) ?? null;
-          const status = rec ? rec.status : (p.peStatus || '').toString().toLowerCase();
-          return status === 'draft';
-        }).length;
-        const effectiveReady = projects.filter((p) => {
-          const rec = customersByCrmProjectId.get(p.id) ?? null;
-          const status = rec ? rec.status : (p.peStatus || '').toString().toLowerCase();
-          return status === 'proposal-ready';
-        }).length;
+          return rec ? rec.status : normalizeProposalStatus(p.peStatus);
+        };
         return {
-          total:     projects.length,
-          draft:     effectiveDraft,
-          ready:     effectiveReady,
-          confirmed: projects.filter((p) => (p.projectStage || '').toUpperCase() === 'CONFIRMED').length,
+          total:       projects.length,
+          notStarted:  projects.filter((p) => effectiveStatus(p) === 'not-started').length,
+          draft:       projects.filter((p) => effectiveStatus(p) === 'draft').length,
+          ready:       projects.filter((p) => effectiveStatus(p) === 'proposal-ready').length,
+          confirmed:   projects.filter((p) => (p.projectStage || '').toUpperCase() === 'CONFIRMED').length,
         };
       })()
     : {
-        total:      customers.length,
-        draft:      customers.filter((c) => c.status === 'draft').length,
-        ready:      customers.filter((c) => c.status === 'proposal-ready').length,
-        confirmed:  customers.filter((c) => (c.master.projectStage || '').toUpperCase() === 'CONFIRMED').length,
+        total:       customers.length,
+        notStarted:  customers.filter((c) => c.status === 'not-started').length,
+        draft:       customers.filter((c) => c.status === 'draft').length,
+        ready:       customers.filter((c) => c.status === 'proposal-ready').length,
+        confirmed:   customers.filter((c) => (c.master.projectStage || '').toUpperCase() === 'CONFIRMED').length,
       };
 
   return (
@@ -1434,10 +1486,11 @@ export default function Customers() {
             const target = sorted[sorted.length - 1]!;
             const reset: CustomerRecord = {
               ...target,
-              status: 'draft',
+              status: 'not-started',
               costing: null,
               bom: null,
               roi: null,
+              roofLayout: null,
               proposal: null,
             };
             upsertCustomer(reset);
@@ -1560,11 +1613,12 @@ export default function Customers() {
         <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
 
           {/* Stats strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
             {[
-              { label: 'Total',           value: statCounts.total,  color: 'text-secondary-700 bg-secondary-50 border-secondary-200' },
-              { label: 'Drafts',          value: statCounts.draft,  color: 'text-secondary-600 bg-secondary-50 border-secondary-200' },
-              { label: 'Proposal Ready',  value: statCounts.ready,  color: 'text-blue-700 bg-blue-50 border-blue-200' },
+              { label: 'Total',             value: statCounts.total,        color: 'text-secondary-700 bg-secondary-50 border-secondary-200' },
+              { label: 'Not Yet Created',   value: statCounts.notStarted,   color: 'text-slate-700 bg-slate-50 border-slate-200' },
+              { label: 'PE Draft',          value: statCounts.draft,        color: 'text-secondary-600 bg-secondary-50 border-secondary-200' },
+              { label: 'PE Ready',            value: statCounts.ready,       color: 'text-blue-700 bg-blue-50 border-blue-200' },
               { label: 'Confirmed',       value: statCounts.confirmed,    color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
             ].map((s) => (
               <div key={s.label} className={`rounded-xl border p-3 text-center ${s.color}`}>
@@ -1625,7 +1679,6 @@ export default function Customers() {
                         isActive={activeId === localRecord.id}
                         onOpen={() => handleOpen(localRecord.id)}
                         onDelete={() => void handleDelete(localRecord)}
-                        onStatusChange={(s) => handleStatusChange(localRecord, s)}
                       />
                     );
                   }
@@ -1664,7 +1717,6 @@ export default function Customers() {
                   isActive={c.id === activeId}
                   onOpen={() => handleOpen(c.id)}
                   onDelete={() => void handleDelete(c)}
-                  onStatusChange={(s) => handleStatusChange(c, s)}
                 />
               ))}
             </div>
