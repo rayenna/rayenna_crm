@@ -136,6 +136,12 @@ export function canEditProposalArtifacts(): boolean {
   return role != null && ['ADMIN', 'SALES'].includes(String(role).toUpperCase());
 }
 
+/** Admin-only: remove saved proposal / full PE kit on the server. */
+export function canDeleteProposalEngineArtifacts(): boolean {
+  const role = getCurrentUserRole();
+  return role != null && String(role).toUpperCase() === 'ADMIN';
+}
+
 /** Current user role (SALES, ADMIN, OPERATIONS, MANAGEMENT, FINANCE) for access control. */
 export function getCurrentUserRole(): string | null {
   try {
@@ -696,6 +702,7 @@ export async function syncProjectProposal(
           bomComments: artifact.bomComments ?? null,
           editedHtml: artifact.editedHtml ?? null,
           textOverrides: artifact.textOverrides ?? null,
+          proposalView: artifact.proposalView ?? null,
           summary: artifact.summary ?? null,
           includeRoofLayout: artifact.includeRoofLayout ?? false,
         }),
@@ -752,6 +759,7 @@ interface ApiProposalArtifact {
   bomComments?: Record<string, string> | null;
   editedHtml?: string | null;
   textOverrides?: Record<string, string | undefined> | null;
+  proposalView?: unknown;
   summary?: string | null;
   includeRoofLayout?: boolean | null;
   roofLayout?: {
@@ -814,6 +822,7 @@ export function mapApiArtifactsToRecord(artifacts: ProposalEngineProjectDetailRe
           bomComments: artifacts.proposal.bomComments ?? undefined,
           editedHtml: artifacts.proposal.editedHtml ?? undefined,
           textOverrides: artifacts.proposal.textOverrides ?? undefined,
+          proposalView: artifacts.proposal.proposalView ?? undefined,
           includeRoofLayout: !!artifacts.proposal.includeRoofLayout,
           roofLayout: artifacts.proposal.roofLayout
             ? {

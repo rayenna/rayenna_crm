@@ -293,6 +293,12 @@ export interface ProposalArtifact {
   textOverrides?: Record<string, string | undefined>;
 
   /**
+   * Full in-memory proposal view model (JSON snapshot) so the Proposal page can reopen
+   * without clicking Generate again. Not synced to CRM in the current API payload.
+   */
+  proposalView?: unknown;
+
+  /**
    * Roof layout inclusion state + cached layout metadata.
    * The actual image is stored server-side via /api/roof/save-layout-image.
    * We cache the latest resolved layout payload here so reopening the proposal
@@ -539,7 +545,7 @@ function pruneCustomerArtifacts(activeId: string | null): void {
       };
     }
 
-    // Proposal: keep only lightweight fields; drop HTML and text overrides
+    // Proposal: keep only lightweight fields; drop HTML, overrides, and heavy view snapshot
     if (next.proposal) {
       next = {
         ...next,
@@ -550,6 +556,7 @@ function pruneCustomerArtifacts(activeId: string | null): void {
           bomComments: undefined,
           editedHtml: undefined,
           textOverrides: undefined,
+          proposalView: undefined,
           includeRoofLayout: next.proposal.includeRoofLayout,
           roofLayout: next.proposal.roofLayout ?? null,
           crmDocumentUrl: next.proposal.crmDocumentUrl,

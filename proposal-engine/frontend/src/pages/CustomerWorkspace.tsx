@@ -16,6 +16,7 @@ import {
   fetchProjectWithArtifacts,
   mapApiArtifactsToRecord,
   getCurrentUserRole,
+  canDeleteProposalEngineArtifacts,
   clearProjectProposalArtifact,
 } from '../lib/apiClient';
 
@@ -271,9 +272,10 @@ export default function CustomerWorkspace() {
 
   const role = getCurrentUserRole();
   const canWrite = role != null && ['ADMIN', 'SALES'].includes(String(role).toUpperCase());
+  const canDeleteOnServer = canDeleteProposalEngineArtifacts();
 
   const handleClearProposal = async () => {
-    if (!canWrite) return;
+    if (!canDeleteOnServer) return;
     const ok = window.confirm('Clear the saved proposal for this project? This cannot be undone.');
     if (!ok) return;
 
@@ -312,7 +314,7 @@ export default function CustomerWorkspace() {
     {
       icon:        '🔩',
       title:       'Bill of Materials',
-      description: 'Equipment list with brand & specification',
+      description: 'Equipment list with specifications',
       accentColor: '#eab308',
       to:          '/bom',
       saved:       !!record.bom,
@@ -354,13 +356,15 @@ export default function CustomerWorkspace() {
           >
             Edit
           </button>
-          <button
-            type="button"
-            onClick={() => void handleClearProposal()}
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
-          >
-            Delete
-          </button>
+          {canDeleteOnServer && (
+            <button
+              type="button"
+              onClick={() => void handleClearProposal()}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+            >
+              Delete
+            </button>
+          )}
         </div>
       ) : undefined,
     },

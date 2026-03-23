@@ -41,7 +41,7 @@ export const TIPS: string[] = [
 
   // ── BOM ─────────────────────────────────────────────────────────────────────
   'The BOM is auto-generated when you save the Costing Sheet — you do not need to build it manually.',
-  'The most important thing to add in the BOM is the Brand name for each item — this appears in the proposal.',
+  'Put make, model, and technical detail in each BOM Specification — that text appears in the proposal Bill of Quantities.',
   'Use the Expand All / Collapse All toggle in the BOM to quickly review all items or focus on one category.',
   'Add manual rows inside any category group using the "+ Add Row" button for items not in the costing sheet.',
   'Auto-generated rows are tagged with an "auto" badge; rows you add manually show "manual" — easy to distinguish.',
@@ -68,7 +68,7 @@ export const TIPS: string[] = [
   'Enable "Background graphics" in your browser\'s print settings for the best PDF output — logos and colour headers will print correctly.',
   'Proposals and artifacts are stored in the Rayenna CRM backend; your browser workspace is used only for WIP and templates.',
   'Use XLSX export on the Costing Sheet to get a formatted Excel file with subtotals, GST rows, margin, and grand total.',
-  'The BOM XLSX export includes Item Name, Specification, Quantity, Brand, and GST % — useful for procurement teams.',
+  'The BOM XLSX export includes Item Name, Specification, Quantity, and GST % — useful for procurement teams.',
 
   // ── Workflow ─────────────────────────────────────────────────────────────────
   'Press ? from any page to open the User Guide instantly.',

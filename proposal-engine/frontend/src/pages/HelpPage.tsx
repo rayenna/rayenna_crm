@@ -249,7 +249,7 @@ export default function HelpPage() {
           </Step>
 
           <Step n={3} title="Review the Bill of Materials">
-            Go to <Link to="/bom" className="text-indigo-600 underline font-medium">BOM</Link>. The equipment list is already generated from your costing sheet. Add brand names, adjust specifications if needed, and click <strong>💾 Save BOM</strong>.
+            Go to <Link to="/bom" className="text-indigo-600 underline font-medium">BOM</Link>. The equipment list is already generated from your costing sheet. Adjust specifications (include make/model there if needed) and click <strong>💾 Save BOM</strong>.
           </Step>
 
           <Step n={4} title="Calculate ROI">
@@ -458,7 +458,7 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Editing the BOM</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              The main thing to add is <strong>Brand</strong> names for each item (e.g. Polycab, Havells, Adani). You can also edit specifications and quantities. Click <strong>+ Add Row</strong> inside any category group to add a manual item.
+              Use the <strong>Specification</strong> column for make, model, and technical detail (e.g. Polycab cable, Adani Mono PERC 540W). You can also edit quantities. Click <strong>+ Add Row</strong> inside any category group to add a manual item.
             </p>
           </div>
 
@@ -479,14 +479,14 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Saving the BOM</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Click <strong>💾 Save BOM</strong>. Your edits (brand names, specifications, manual rows) are saved against the active customer. The BOM will appear in the Proposal's Bill of Quantities section.
+              Click <strong>💾 Save BOM</strong>. Your edits (specifications, manual rows) are saved against the active customer. The BOM will appear in the Proposal's Bill of Quantities section.
             </p>
           </div>
 
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Exporting</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Use <strong>⬇ XLSX</strong> or <strong>⬇ CSV</strong> to export the BOM. The export includes: Item #, Item Name, Specification, Quantity, Brand, and GST %.
+              Use <strong>⬇ XLSX</strong> or <strong>⬇ CSV</strong> to export the BOM. The export includes: Item #, Item Name, Specification, Quantity, and GST %.
             </p>
           </div>
         </div>
@@ -957,8 +957,8 @@ export default function HelpPage() {
             Yes. Built-in templates can be loaded for any customer at any time. You can also save your own custom templates from the Save Sheet modal. Templates are separate from saved sheets — loading a template does not overwrite a saved sheet until you click Save Sheet.
           </FaqItem>
 
-          <FaqItem q="How do I add a brand name to a BOM item?">
-            Go to the <Link to="/bom" className="text-indigo-600 underline">BOM page</Link>, find the item in the grouped table, and type the brand name in the <strong>Brand</strong> column. Click <strong>💾 Save BOM</strong> to persist your changes.
+          <FaqItem q="How do I show make or brand for a BOM line?">
+            Go to the <Link to="/bom" className="text-indigo-600 underline">BOM page</Link> and enter it in the <strong>Specification</strong> column (e.g. &quot;Waaree Mono PERC 540W&quot;). That text appears in the proposal Bill of Quantities. Click <strong>💾 Save BOM</strong> to persist your changes.
           </FaqItem>
 
           <FaqItem q="The proposal is showing 0 kW in the Financial Benefits section. How do I fix it?">

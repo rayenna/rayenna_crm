@@ -7,7 +7,9 @@ import {
   saveAllArtifacts,
   getWipKeysForCurrentUser,
   formatEmailForDisplay,
+  clearProposalArtifact,
 } from '../lib/customerStore';
+import type { CustomerRecord } from '../lib/customerStore';
 import {
   getCurrentUserRole,
   syncProjectProposal,
@@ -140,6 +142,67 @@ function getBom(): BomRowGenerated[] {
   return [];
 }
 
+/** Sheet / BOM / ROI / meta for building or restoring a proposal from the active customer record. */
+function collectProposalAssembly(activeCustomer: CustomerRecord | null): {
+  customer: CustomerDetails;
+  sheet: SavedSheet | null;
+  bom: BomRowGenerated[];
+  roi: ROIResult | null;
+  roiAutofill: RoiAutofill | null;
+  meta: ProposalMeta | undefined;
+} | null {
+  if (!activeCustomer) return null;
+
+  const sheet: SavedSheet | null = activeCustomer.costing
+    ? {
+        id:            `sheet_${activeCustomer.id}`,
+        name:          activeCustomer.costing.sheetName,
+        description:   '',
+        savedAt:       activeCustomer.costing.savedAt,
+        items:         activeCustomer.costing.items,
+        showGst:       activeCustomer.costing.showGst,
+        marginPercent: activeCustomer.costing.marginPercent,
+        grandTotal:    activeCustomer.costing.grandTotal,
+        totalGst:      activeCustomer.costing.totalGst,
+        systemSizeKw:  activeCustomer.costing.systemSizeKw,
+      }
+    : getLatestSheet();
+
+  const bom: BomRowGenerated[] =
+    activeCustomer.bom?.rows && activeCustomer.bom.rows.length > 0
+      ? (activeCustomer.bom.rows as unknown as BomRowGenerated[])
+      : getBom();
+
+  const wip = getWipKeysForCurrentUser();
+  const roi: ROIResult | null =
+    (activeCustomer.roi?.result as ROIResult | null) ?? readStorage(wip.roiResult);
+
+  const roiAutofill: RoiAutofill | null = activeCustomer.costing
+    ? {
+        source:       'costing-sheet',
+        sourceName:   activeCustomer.costing.sheetName,
+        savedAt:      activeCustomer.costing.savedAt,
+        systemSizeKw: activeCustomer.costing.systemSizeKw,
+        grandTotal:   activeCustomer.costing.grandTotal,
+      }
+    : readStorage(wip.roiAutofill);
+
+  const meta: ProposalMeta | undefined = {
+    customerNumber: activeCustomer.master.customerNumber ?? undefined,
+    projectNumber:  activeCustomer.master.projectNumber ?? undefined,
+  };
+
+  const customer: CustomerDetails = {
+    customerName:  activeCustomer.master.name ?? '',
+    location:      activeCustomer.master.location ?? '',
+    contactPerson: activeCustomer.master.contactPerson ?? '',
+    phone:         activeCustomer.master.phone ?? '',
+    email:         activeCustomer.master.email ?? '',
+  };
+
+  return { customer, sheet, bom, roi, roiAutofill, meta };
+}
+
 // ─────────────────────────────────────────────
 // Template text generator
 // ─────────────────────────────────────────────
@@ -165,6 +228,42 @@ function buildProposal(
     customerNumber: meta?.customerNumber ?? null,
     projectNumber:  meta?.projectNumber ?? null,
   };
+}
+
+/** Restore ref/timestamp from a saved proposal artifact (after Generate was run at least once). */
+function rehydrateProposalData(
+  saved: { refNumber: string; generatedAt: string },
+  customer: CustomerDetails,
+  sheet: SavedSheet | null,
+  bom: BomRowGenerated[],
+  roi: ROIResult | null,
+  roiAutofill: RoiAutofill | null,
+  meta?: ProposalMeta,
+): ProposalData {
+  const sizeKw = roiAutofill?.systemSizeKw ?? sheet?.systemSizeKw ?? 0;
+  return {
+    refNumber:      saved.refNumber,
+    generatedAt:    saved.generatedAt,
+    customer,
+    systemSizeKw:   sizeKw,
+    sheet,
+    bom,
+    roi,
+    roiAutofill,
+    customerNumber: meta?.customerNumber ?? null,
+    projectNumber:  meta?.projectNumber ?? null,
+  };
+}
+
+function cloneProposalForStorage(p: ProposalData): ProposalData {
+  return JSON.parse(JSON.stringify(p)) as ProposalData;
+}
+
+function parseStoredProposalView(raw: unknown): ProposalData | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Partial<ProposalData>;
+  if (typeof r.refNumber !== 'string' || typeof r.generatedAt !== 'string') return null;
+  return r as ProposalData;
 }
 
 function execSummary(p: ProposalData): string {
@@ -910,11 +1009,10 @@ function buildDocx(
     const tableRows: DocxTableRow[] = [
       // Column headers
       new TableRow({
-        children: ['#', 'Item', 'Specification', 'Qty', 'Brand'].map((h, ci) =>
+        children: ['#', 'Item', 'Specification', 'Qty'].map((h, ci) =>
           new TableCell({
             width: ci === 0 ? { size: 5, type: WidthType.PERCENTAGE }
-                 : ci === 3 ? { size: 8, type: WidthType.PERCENTAGE }
-                 : ci === 4 ? { size: 18, type: WidthType.PERCENTAGE }
+                 : ci === 3 ? { size: 10, type: WidthType.PERCENTAGE }
                  : undefined,
             shading: { type: ShadingType.SOLID, color: navy },
             children: [new Paragraph({ children: [new TextRun({ text: h, bold: true, size: 18, color: white })], alignment: ci >= 3 ? AlignmentType.RIGHT : AlignmentType.LEFT })],
@@ -933,7 +1031,7 @@ function buildDocx(
         new TableRow({
           children: [
             new TableCell({
-              columnSpan: 5,
+              columnSpan: 4,
               shading: { type: ShadingType.SOLID, color: bg },
               children: [
                 new Paragraph({
@@ -958,7 +1056,6 @@ function buildDocx(
               new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.itemName, size: 20, bold: true })] })] }),
               new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.specification || '—', size: 18, color: '6B7280' })] })] }),
               new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.quantity, size: 20 })], alignment: AlignmentType.RIGHT })] }),
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: item.brand || '—', size: 18, color: '6B7280' })] })] }),
             ],
           }),
         );
@@ -971,7 +1068,7 @@ function buildDocx(
           new TableRow({
             children: [
               new TableCell({
-                columnSpan: 5,
+                columnSpan: 4,
                 shading: { type: ShadingType.SOLID, color: bg },
                 children: [
                   new Paragraph({
@@ -1708,6 +1805,45 @@ function extractTextOverrides(root: HTMLElement): Record<string, string> {
   return overrides;
 }
 
+/** Saved inline edits (per data-docx-section) — applied through React so they survive re-renders. */
+const ProposalTextOverridesContext = React.createContext<Record<string, string | undefined>>({});
+
+function OverriddenParagraph({
+  sectionKey,
+  className,
+  children,
+}: {
+  sectionKey: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const map = React.useContext(ProposalTextOverridesContext);
+  const o = map[sectionKey];
+  return (
+    <p data-docx-section={sectionKey} className={className}>
+      {o != null && o !== '' ? o : children}
+    </p>
+  );
+}
+
+function OverriddenDiv({
+  sectionKey,
+  className,
+  children,
+}: {
+  sectionKey: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const map = React.useContext(ProposalTextOverridesContext);
+  const o = map[sectionKey];
+  return (
+    <div data-docx-section={sectionKey} className={className}>
+      {o != null && o !== '' ? o : children}
+    </div>
+  );
+}
+
 /** Get image as ArrayBuffer from an already-rendered img element (for mobile DOCX export when fetch fails). */
 async function imageElementToArrayBuffer(img: HTMLImageElement): Promise<ArrayBuffer> {
   // Ensure the image has finished loading before drawing
@@ -1853,6 +1989,9 @@ const SECTION_META: Record<string, { icon: string; accent: string }> = {
 function SectionBlock({ title, content }: { title: string; content: string }) {
   const meta = SECTION_META[title] ?? { icon: '📌', accent: '#0d1b3a' };
   const sectionKey = `section-${title.toLowerCase().replace(/\s+/g, '-')}`;
+  const map = React.useContext(ProposalTextOverridesContext);
+  const o = map[sectionKey];
+  const body = o != null && o !== '' ? o : content;
   return (
     <div className="mb-8 pdf-section" data-pdf-section={sectionKey}>
       <div className="flex items-center gap-3 mb-4">
@@ -1865,7 +2004,7 @@ function SectionBlock({ title, content }: { title: string; content: string }) {
           {title}
         </h2>
       </div>
-      <div data-docx-section={sectionKey} className="text-secondary-700 text-sm leading-relaxed whitespace-pre-line pl-7">{content}</div>
+      <div data-docx-section={sectionKey} className="text-secondary-700 text-sm leading-relaxed whitespace-pre-line pl-7">{body}</div>
     </div>
   );
 }
@@ -1910,17 +2049,17 @@ function ExecutiveSummaryBlock({ proposal }: { proposal: ProposalData }) {
       </div>
 
       {/* Body text */}
-      <p data-docx-section="exec-summary-p1" className="text-sm text-secondary-700 leading-relaxed mb-4">
+      <OverriddenParagraph sectionKey="exec-summary-p1" className="text-sm text-secondary-700 leading-relaxed mb-4">
         Rayenna Energy Private Limited is pleased to present this techno-commercial proposal for the
         design, supply, installation, and commissioning of
         {sz > 0 ? <> a <span className="font-bold text-secondary-800">{sz} kW</span></> : ' an'} On-Grid
         Solar Photovoltaic Power Plant at your premises{loc ? <> in <span className="font-semibold text-secondary-800">{loc}</span></> : ''}.
-      </p>
-      <p data-docx-section="exec-summary-p2" className="text-sm text-secondary-700 leading-relaxed mb-5">
+      </OverriddenParagraph>
+      <OverriddenParagraph sectionKey="exec-summary-p2" className="text-sm text-secondary-700 leading-relaxed mb-5">
         This proposal has been prepared based on a detailed assessment of your energy requirements and
         site conditions. The proposed solar system will significantly reduce your electricity costs,
         provide energy independence, and contribute to a cleaner environment.
-      </p>
+      </OverriddenParagraph>
 
       {/* Key metrics strip — only shown when data is available */}
       {highlights.length > 0 && (
@@ -1957,17 +2096,17 @@ function AboutRayennaBlock() {
       </div>
 
       {/* Intro paragraphs */}
-      <p data-docx-section="about-p1" className="text-sm text-secondary-700 leading-relaxed mb-2">
+      <OverriddenParagraph sectionKey="about-p1" className="text-sm text-secondary-700 leading-relaxed mb-2">
         <span className="font-bold text-secondary-800">Rayenna Energy Private Limited</span> is a leading
         solar energy solutions provider based in Kochi, Kerala. We specialise in the design, supply,
         installation, and commissioning of On-Grid, Off-Grid, and Hybrid Solar Power Plants for
         residential, commercial, and industrial clients across India.
-      </p>
-      <p data-docx-section="about-p2" className="text-sm text-secondary-700 leading-relaxed mb-5">
+      </OverriddenParagraph>
+      <OverriddenParagraph sectionKey="about-p2" className="text-sm text-secondary-700 leading-relaxed mb-5">
         Our team of experienced engineers and technicians ensures that every installation meets the
         highest standards of quality, safety, and performance. We are committed to delivering reliable,
         cost-effective solar solutions that provide long-term value to our customers.
-      </p>
+      </OverriddenParagraph>
 
       {/* Key highlights — 2-col bullet cards */}
       <div className="rounded-xl border border-sky-100 overflow-hidden">
@@ -2010,11 +2149,11 @@ function WhatWeOfferBlock() {
       <div className="flex flex-col lg:flex-row gap-6 mb-6">
         {/* Left: intro text */}
         <div className="flex-1 min-w-0">
-          <p data-docx-section="what-we-offer-intro" className="text-sm text-secondary-700 leading-relaxed mb-4">
+          <OverriddenDiv sectionKey="what-we-offer-intro" className="text-sm text-secondary-700 leading-relaxed mb-4">
             {WHAT_WE_OFFER_INTRO.split('\n\n').map((para, i) => (
               <span key={i}>{i > 0 && <><br /><br /></>}{para}</span>
             ))}
-          </p>
+          </OverriddenDiv>
         </div>
         {/* Right: diagram image */}
         <div className="lg:w-[42%] flex-shrink-0 flex items-center justify-center">
@@ -2062,7 +2201,9 @@ function OurProcessBlock() {
         </h2>
       </div>
 
-      <p data-docx-section="our-process-intro" className="text-sm text-secondary-700 leading-relaxed mb-5">{OUR_PROCESS_INTRO}</p>
+      <OverriddenParagraph sectionKey="our-process-intro" className="text-sm text-secondary-700 leading-relaxed mb-5">
+        {OUR_PROCESS_INTRO}
+      </OverriddenParagraph>
 
       {/* Process steps — horizontal on desktop, but constrained to printable width */}
       <div className="flex flex-col sm:flex-row gap-3 pdf-process-steps">
@@ -2180,9 +2321,9 @@ function ScopeOfWorkBlock({ proposal }: { proposal: ProposalData }) {
         <span className="text-lg leading-none">🔩</span>
         <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: '#0369a1' }}>Scope of Work</h2>
       </div>
-      <p data-docx-section="scope-intro" className="text-sm text-secondary-500 mb-5 pl-7">
+      <OverriddenParagraph sectionKey="scope-intro" className="text-sm text-secondary-500 mb-5 pl-7">
         The scope of work for the {sz > 0 ? `${sz} kW ` : ''}On-Grid Solar Power Plant covers four key areas:
-      </p>
+      </OverriddenParagraph>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {SCOPE_SECTIONS.map((s) => (
           <div
@@ -2300,30 +2441,30 @@ function FinancialBenefitsBlock({ proposal }: { proposal: ProposalData }) {
 
             {/* Supporting paragraphs */}
             <div className="space-y-2.5 pl-1">
-              <p data-docx-section="financial-p1" className="text-sm text-secondary-600 leading-relaxed">
+              <OverriddenParagraph sectionKey="financial-p1" className="text-sm text-secondary-600 leading-relaxed">
                 <span className="font-semibold text-secondary-800">Levelised Cost of Energy (LCOE):</span>{' '}
                 At <span className="font-bold text-primary-700">₹{roi.lcoe.toFixed(4)}/kWh</span>, this system generates electricity
                 at a fraction of the current grid tariff of ₹{roi.inputs.tariff}/kWh — locking in energy cost savings
                 that grow every year as tariffs escalate.
-              </p>
-              <p data-docx-section="financial-p2" className="text-sm text-secondary-600 leading-relaxed">
+              </OverriddenParagraph>
+              <OverriddenParagraph sectionKey="financial-p2" className="text-sm text-secondary-600 leading-relaxed">
                 <span className="font-semibold text-secondary-800">Tariff escalation advantage:</span>{' '}
                 With an assumed annual tariff escalation of{' '}
                 <span className="font-bold text-primary-700">{roi.inputs.escalationPercent}%</span>,
                 your savings increase every year — making solar an inflation-proof investment that delivers
                 compounding returns over its 25-year operational life.
-              </p>
+              </OverriddenParagraph>
             </div>
           </div>
         );
       })() : (
         <div className="mb-6 rounded-xl border border-emerald-100 bg-emerald-50/40 px-5 py-4">
-          <p data-docx-section="financial-no-roi" className="text-sm text-secondary-700 leading-relaxed">
+          <OverriddenParagraph sectionKey="financial-no-roi" className="text-sm text-secondary-700 leading-relaxed">
             The proposed solar system will generate clean electricity from sunlight, directly offsetting
             your grid electricity consumption and reducing your monthly electricity bills substantially.
             With rising electricity tariffs in India (historically escalating at 5–7% per year), the
             financial benefits of solar energy grow significantly over the system's 25-year lifetime.
-          </p>
+          </OverriddenParagraph>
         </div>
       )}
 
@@ -2498,6 +2639,7 @@ function BOMGroupedTable({
   setCollapsed,
   allCollapsed,
   setAllCollapsed,
+  notesEditable,
 }: {
   items: BomRowGenerated[];
   comments: Record<string, string>;
@@ -2506,6 +2648,8 @@ function BOMGroupedTable({
   setCollapsed: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   allCollapsed: boolean;
   setAllCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  /** BOQ per-category notes: editable only after ✏️ Edit (same as proposal body). */
+  notesEditable: boolean;
 }) {
   // Group items by category, preserving CATEGORIES order
   const grouped: { cat: Category; label: string; rows: BomRowGenerated[] }[] = React.useMemo(
@@ -2584,7 +2728,6 @@ function BOMGroupedTable({
               <th className="px-3 py-2.5 text-left text-xs text-white font-semibold uppercase tracking-wide">Item</th>
               <th className="px-3 py-2.5 text-left text-xs text-white font-semibold uppercase tracking-wide">Specification</th>
               <th className="px-3 py-2.5 text-right text-xs text-white font-semibold uppercase tracking-wide w-16">Qty</th>
-              <th className="px-3 py-2.5 text-left text-xs text-white font-semibold uppercase tracking-wide w-28">Brand</th>
             </tr>
           </thead>
           <tbody>
@@ -2612,7 +2755,7 @@ function BOMGroupedTable({
                     data-bom-collapsed={(!isOpen).toString()}
                     data-bom-header="true"
                   >
-                    <td colSpan={5} className="px-3 py-2">
+                    <td colSpan={4} className="px-3 py-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span
@@ -2649,7 +2792,6 @@ function BOMGroupedTable({
                         <td className="px-3 py-2.5 text-secondary-800 font-semibold text-xs">{item.itemName}</td>
                         <td className="px-3 py-2.5 text-secondary-500 text-xs">{item.specification || '—'}</td>
                         <td className="px-3 py-2.5 text-secondary-800 text-right tabular-nums font-medium text-xs">{item.quantity}</td>
-                        <td className="px-3 py-2.5 text-secondary-600 text-xs">{item.brand || '—'}</td>
                       </tr>
                     );
                   })}
@@ -2661,24 +2803,35 @@ function BOMGroupedTable({
                       data-bom-note={cat}
                       data-bom-collapsed={(!isOpen).toString()}
                     >
-                      <td colSpan={5} className="px-3 py-2">
+                      <td colSpan={4} className="px-3 py-2">
                         <div className="flex items-start gap-2">
                           <span className="text-xs font-semibold mt-0.5 flex-shrink-0" style={{ color: a.badge }}>📝 Note:</span>
-                          <textarea
-                            value={comment}
-                            onChange={(e) => onCommentsChange({ ...comments, [cat]: e.target.value })}
-                            placeholder={`Add a note for ${label}…`}
-                            rows={1}
-                            className="print-hide flex-1 text-xs border rounded-lg px-2 py-1 resize-none focus:outline-none focus:ring-1 bg-white/70"
-                            style={{ borderColor: a.border, color: a.text, minHeight: '28px' }}
-                            onInput={(e) => {
-                              const t = e.currentTarget;
-                              t.style.height = 'auto';
-                              t.style.height = `${t.scrollHeight}px`;
-                            }}
-                          />
-                          {comment && (
-                            <p className="hidden print:block text-xs italic flex-1" style={{ color: a.text }}>{comment}</p>
+                          {notesEditable ? (
+                            <>
+                              <textarea
+                                value={comment}
+                                onChange={(e) => onCommentsChange({ ...comments, [cat]: e.target.value })}
+                                placeholder={`Add a note for ${label}…`}
+                                rows={1}
+                                className="print-hide flex-1 text-xs border rounded-lg px-2 py-1 resize-none focus:outline-none focus:ring-1 bg-white/70"
+                                style={{ borderColor: a.border, color: a.text, minHeight: '28px' }}
+                                onInput={(e) => {
+                                  const t = e.currentTarget;
+                                  t.style.height = 'auto';
+                                  t.style.height = `${t.scrollHeight}px`;
+                                }}
+                              />
+                              {comment ? (
+                                <p className="hidden print:block text-xs italic flex-1" style={{ color: a.text }}>{comment}</p>
+                              ) : null}
+                            </>
+                          ) : (
+                            <p
+                              className={`flex-1 text-xs rounded-lg px-2 py-1 min-h-[28px] border border-transparent bg-white/40 ${comment ? '' : 'italic text-secondary-400'}`}
+                              style={{ color: comment ? a.text : undefined }}
+                            >
+                              {comment || '—'}
+                            </p>
                           )}
                         </div>
                       </td>
@@ -2849,6 +3002,10 @@ const LIST_META: Record<string, { icon: string; accent: string; bg: string; bord
 function ListBlock({ title, items }: { title: string; items: string[] }) {
   const meta = LIST_META[title] ?? { icon: '📌', accent: '#0d1b3a', bg: '#f8fafc', border: '#e2e8f0' };
   const sectionKey = `list-${title.toLowerCase().replace(/\s+/g, '-')}`;
+  const map = React.useContext(ProposalTextOverridesContext);
+  const o = map[sectionKey];
+  const lines = o != null && o.trim() !== '' ? o.split('\n').map((s) => s.trim()).filter(Boolean) : null;
+  const displayItems = lines && lines.length > 0 ? lines : items;
   return (
     <div className="mb-8 pdf-section">
       {/* Section header */}
@@ -2863,7 +3020,7 @@ function ListBlock({ title, items }: { title: string; items: string[] }) {
         className="rounded-xl border overflow-hidden"
         style={{ borderColor: meta.border, background: meta.bg }}
       >
-        {items.map((item, i) => (
+        {displayItems.map((item, i) => (
           <div
             key={i}
             data-docx-list-item={i}
@@ -2921,8 +3078,11 @@ function AccountDetailsBlock() {
 
 function CustomerForm({
   onGenerate,
+  canGenerate = true,
 }: {
   onGenerate: (c: CustomerDetails, options: { includeRoofLayout: boolean }) => void;
+  /** False for Operations / Management / Finance (view-only). */
+  canGenerate?: boolean;
 }) {
   // Pre-fill from active customer if available
   const activeCustomer = getActiveCustomer();
@@ -2939,6 +3099,7 @@ function CustomerForm({
   const hasRoi   = !!roi;
 
   const handleSubmit = () => {
+    if (!canGenerate) return;
     const master = getActiveCustomer()?.master;
     const customer: CustomerDetails = {
       customerName: master?.name ?? '',
@@ -3014,6 +3175,7 @@ function CustomerForm({
               type="checkbox"
               className="mt-0.5 h-3.5 w-3.5 rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
               checked={includeRoofLayout}
+              disabled={!canGenerate}
               onChange={(e) => setIncludeRoofLayout(e.target.checked)}
             />
             <span>
@@ -3088,6 +3250,14 @@ function CustomerForm({
           </div>
         </div>
 
+        {!canGenerate && (
+          <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 text-xs">
+            <p className="font-semibold">View only</p>
+            <p className="mt-1 text-secondary-600">
+              Your role can open and export proposals but cannot generate new ones or save changes. Ask Sales or Admin to update this project.
+            </p>
+          </div>
+        )}
         <div className="pt-3">
           <button
             type="button"
@@ -3096,10 +3266,14 @@ function CustomerForm({
             style={{ background: '#0d1b3a' }}
             onMouseEnter={e => (e.currentTarget.style.background = '#0a1530')}
             onMouseLeave={e => (e.currentTarget.style.background = '#0d1b3a')}
-            disabled={!activeCustomer}
+            disabled={!activeCustomer || !canGenerate}
           >
             <span className="text-base">✦</span>
-            {activeCustomer ? 'Generate Proposal from CRM Data' : 'Select Customer in CRM to Generate'}
+            {!canGenerate
+              ? 'Generate not available for your role'
+              : activeCustomer
+                ? 'Generate Proposal from CRM Data'
+                : 'Select Customer in CRM to Generate'}
           </button>
         </div>
       </div>
@@ -3139,6 +3313,7 @@ export default function ProposalPreview() {
   const [shareUseCustomValidity, setShareUseCustomValidity] = useState(false);
   const [shareExpiryDate, setShareExpiryDate]      = useState('');
   const [shareLinkCopied, setShareLinkCopied]      = useState(false);
+  const [displayTextOverrides, setDisplayTextOverrides] = useState<Record<string, string | undefined>>({});
 
   const role = getCurrentUserRole();
   const canWrite = role != null && ['ADMIN', 'SALES'].includes(String(role).toUpperCase());
@@ -3171,6 +3346,53 @@ export default function ProposalPreview() {
     window.addEventListener('focus', sync);
     return () => window.removeEventListener('focus', sync);
   }, []);
+
+  // Restore generated proposal + BOQ notes + saved text overrides when opening this page or switching customers.
+  useEffect(() => {
+    const ac = getActiveCustomer();
+    if (!ac) {
+      setProposal(null);
+      setDisplayTextOverrides({});
+      setBomComments({});
+      return;
+    }
+    const saved = ac.proposal;
+    if (!saved?.refNumber?.trim() || !saved.generatedAt?.trim()) {
+      setProposal(null);
+      setDisplayTextOverrides({});
+      setBomComments({});
+      return;
+    }
+
+    const fromView = parseStoredProposalView(saved.proposalView);
+    if (fromView) {
+      setProposal(fromView);
+    } else {
+      const asm = collectProposalAssembly(ac);
+      if (!asm) {
+        setProposal(null);
+        setDisplayTextOverrides({});
+        setBomComments({});
+        return;
+      }
+      setProposal(
+        rehydrateProposalData(
+          { refNumber: saved.refNumber, generatedAt: saved.generatedAt },
+          asm.customer,
+          asm.sheet,
+          asm.bom,
+          asm.roi,
+          asm.roiAutofill,
+          asm.meta,
+        ),
+      );
+    }
+
+    setBomComments(saved.bomComments ?? {});
+    setDisplayTextOverrides(saved.textOverrides ?? {});
+    setIsEditing(false);
+    setIncludeRoofLayout(!!saved.includeRoofLayout);
+  }, [activeCustomerId]);
 
   // Restore roof layout inclusion state when reopening a saved customer/proposal.
   // Also try to load the latest saved roof layout from backend for this CRM project so the
@@ -3226,11 +3448,7 @@ export default function ProposalPreview() {
     };
   }, [activeCustomerId]);
 
-  // NOTE: We intentionally DO NOT re-inject previously saved editedHtml into
-  // the DOM here. Doing so would replace the React-rendered proposal body
-  // (including interactive components like the BOM Collapse All button) with
-  // static HTML, breaking interactivity for existing customers. Text edits are
-  // still captured via extractTextOverrides() on save and used for DOCX.
+  // Saved inline edits: textOverrides + ProposalTextOverridesContext (not full editedHtml) so BOQ stays interactive.
 
   // ── Save comments to active customer record ──
   const persistComments = (comments: Record<string, string>) => {
@@ -3285,6 +3503,7 @@ export default function ProposalPreview() {
         bomComments,
         editedHtml,
         textOverrides,
+        proposalView: cloneProposalForStorage(proposal),
         includeRoofLayout,
         roofLayout: includeRoofLayout ? (roofLayout ?? null) : null,
       };
@@ -3304,6 +3523,7 @@ export default function ProposalPreview() {
 
     // 4. Exit edit mode
     setIsEditing(false);
+    setDisplayTextOverrides(textOverrides ?? {});
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 3000);
   };
@@ -3318,61 +3538,17 @@ export default function ProposalPreview() {
   };
 
   const handleGenerate = async (
-    customer: CustomerDetails,
+    _customer: CustomerDetails,
     options: { includeRoofLayout: boolean },
   ) => {
-    // Always read the active customer record first — this is the source of truth.
-    // Global localStorage keys may still hold data from a previously active customer,
-    // so we prefer the customer record and only fall back to globals when no record exists.
     const activeCustomer = getActiveCustomer();
+    const asm = collectProposalAssembly(activeCustomer);
+    if (!asm) return;
 
-    // Costing: prefer customer record, fall back to global key
-    const sheet: SavedSheet | null = activeCustomer?.costing
-      ? {
-          id:            `sheet_${activeCustomer.id}`,
-          name:          activeCustomer.costing.sheetName,
-          description:   '',
-          savedAt:       activeCustomer.costing.savedAt,
-          items:         activeCustomer.costing.items,
-          showGst:       activeCustomer.costing.showGst,
-          marginPercent: activeCustomer.costing.marginPercent,
-          grandTotal:    activeCustomer.costing.grandTotal,
-          totalGst:      activeCustomer.costing.totalGst,
-          systemSizeKw:  activeCustomer.costing.systemSizeKw,
-        }
-      : getLatestSheet();
-
-    // BOM: prefer customer record, fall back to global key.
-    // BomArtifact rows are BomRow (customerStore type); cast to BomRowGenerated
-    // which is structurally compatible for the fields buildProposal actually uses.
-    const bom: BomRowGenerated[] = (activeCustomer?.bom?.rows && activeCustomer.bom.rows.length > 0)
-      ? (activeCustomer.bom.rows as unknown as BomRowGenerated[])
-      : getBom();
-
-    // ROI: prefer customer record, fall back to per-user localStorage
-    const wip = getWipKeysForCurrentUser();
-    const roi: ROIResult | null = (activeCustomer?.roi?.result as ROIResult | null)
-      ?? readStorage(wip.roiResult);
-
-    // ROI autofill: derive from customer costing if available, fall back to per-user key
-    const roiAutofill: RoiAutofill | null = activeCustomer?.costing
-      ? {
-          source:       'costing-sheet',
-          sourceName:   activeCustomer.costing.sheetName,
-          savedAt:      activeCustomer.costing.savedAt,
-          systemSizeKw: activeCustomer.costing.systemSizeKw,
-          grandTotal:   activeCustomer.costing.grandTotal,
-        }
-      : readStorage(wip.roiAutofill);
-    const meta: ProposalMeta | undefined = activeCustomer?.master
-      ? {
-          customerNumber: activeCustomer.master.customerNumber ?? undefined,
-          projectNumber:  activeCustomer.master.projectNumber ?? undefined,
-        }
-      : undefined;
-
+    const { customer, sheet, bom, roi, roiAutofill, meta } = asm;
     const p = buildProposal(customer, sheet, bom, roi, roiAutofill, meta);
     setProposal(p);
+    setDisplayTextOverrides({});
     setIncludeRoofLayout(options.includeRoofLayout);
     setRoofLayout(null);
     setRoofLayoutError(null);
@@ -3414,11 +3590,11 @@ export default function ProposalPreview() {
         generatedAt: p.generatedAt,
         summary:     execSummary(p).slice(0, 200),
         bomComments: savedComments,
-        // Preserve any previously saved inline edits and text overrides — do NOT overwrite with undefined
-        editedHtml:    activeCustomer.proposal?.editedHtml,
-        textOverrides: activeCustomer.proposal?.textOverrides,
-        includeRoofLayout: activeCustomer.proposal?.includeRoofLayout,
-        roofLayout: activeCustomer.proposal?.roofLayout ?? null,
+        editedHtml:    undefined,
+        textOverrides: undefined,
+        proposalView: cloneProposalForStorage(p),
+        includeRoofLayout: options.includeRoofLayout,
+        roofLayout: options.includeRoofLayout ? (activeCustomer.proposal?.roofLayout ?? null) : null,
       };
 
       saveAllArtifacts(activeCustomer.id, costingArtifact, bomArtifact, roiArtifact, proposalArtifact);
@@ -3529,9 +3705,17 @@ export default function ProposalPreview() {
   };
 
   const handleRegenerate = () => {
+    if (!canWrite) return;
+    const ac = getActiveCustomer();
+    if (ac) clearProposalArtifact(ac.id);
     setProposal(null);
+    setDisplayTextOverrides({});
     setSavedToCustomer(null);
     setBomComments({});
+    setIncludeRoofLayout(false);
+    setRoofLayout(null);
+    setRoofLayoutError(null);
+    setRoofLayoutLoading(false);
     setIsEditing(false);
     setSaveStatus('idle');
   };
@@ -3581,6 +3765,7 @@ export default function ProposalPreview() {
   const shareHtmlCacheRef = useRef<{ at: number; html: string } | null>(null);
 
   const handleCreateShare = async () => {
+    if (!canWrite) return;
     const activeCustomer = getActiveCustomer();
     const projectId = activeCustomer?.master?.crmProjectId;
     if (!projectId) {
@@ -3697,20 +3882,24 @@ export default function ProposalPreview() {
                       : '⬇'}
                     DOCX
                   </button>
-                  <button
-                    onClick={handleOpenShareModal}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 border border-white/40 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all min-h-[36px]"
-                    title="Share as link"
-                  >
-                    🔗 Share
-                  </button>
+                  {canWrite && (
+                    <button
+                      onClick={handleOpenShareModal}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 border border-white/40 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all min-h-[36px]"
+                      title="Share as link"
+                    >
+                      🔗 Share
+                    </button>
+                  )}
                 </div>
-                <button
-                  onClick={handleRegenerate}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all min-h-[36px]"
-                >
-                  ← New Proposal
-                </button>
+                {canWrite && (
+                  <button
+                    onClick={handleRegenerate}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all min-h-[36px]"
+                  >
+                    ← New Proposal
+                  </button>
+                )}
                 {canWrite && (
                   <button
                     onClick={handleSave}
@@ -3745,7 +3934,11 @@ export default function ProposalPreview() {
           {!proposal ? (
             // key = activeCustomerId forces a full remount whenever the active
             // customer changes, ensuring useState initialises from the new customer.
-            <CustomerForm key={activeCustomerId ?? 'no-customer'} onGenerate={handleGenerate} />
+            <CustomerForm
+              key={activeCustomerId ?? 'no-customer'}
+              onGenerate={handleGenerate}
+              canGenerate={canWrite}
+            />
           ) : (
             <div
               ref={printRef}
@@ -3762,7 +3955,7 @@ export default function ProposalPreview() {
                   <div className="flex items-center gap-2">
                     <span>✏️</span>
                     <span>
-                      Edit mode — click on any text in the proposal to edit it directly. Click <strong>Save</strong> at the bottom when done.
+                      Edit mode — click proposal text to edit inline, and use the <strong>Bill of Quantities</strong> note fields below. Click <strong>Save</strong> when done (notes and body save together).
                     </span>
                   </div>
                   <p className="sm:ml-6 text-[10px] sm:text-[11px] text-amber-700">
@@ -3852,6 +4045,7 @@ export default function ProposalPreview() {
                 spellCheck={canWrite && isEditing}
                 style={canWrite && isEditing ? { outline: 'none', cursor: 'text' } : undefined}
               >
+                <ProposalTextOverridesContext.Provider value={displayTextOverrides}>
                 {/* Saved-to-customer confirmation */}
                 {savedToCustomer && (
                   <div className="print-hide mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-center justify-between gap-3">
@@ -3943,6 +4137,7 @@ export default function ProposalPreview() {
                       setCollapsed={setBomCollapsed}
                       allCollapsed={bomAllCollapsed}
                       setAllCollapsed={setBomAllCollapsed}
+                      notesEditable={canWrite && isEditing}
                     />
                   </>
                 )}
@@ -3966,6 +4161,7 @@ export default function ProposalPreview() {
                 <SectionBlock title="Closing Note" content={closingText(proposal)} />
                 <Divider />
                 <SectionBlock title="Subsidy Disclaimer and Payment Terms" content={SUBSIDY_DISCLAIMER_TEXT} />
+                </ProposalTextOverridesContext.Provider>
               </div>
 
               {/* Footer — Save + Export */}
@@ -4044,16 +4240,18 @@ export default function ProposalPreview() {
                           : '⬇'}
                         Export DOCX
                       </button>
-                      <button
-                        onClick={handleOpenShareModal}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-xs font-semibold text-white px-4 py-2.5 rounded-xl shadow transition-all min-h-[44px] sm:min-h-0"
-                        style={{ background: '#374151' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = '#1f2937')}
-                        onMouseLeave={e => (e.currentTarget.style.background = '#374151')}
-                        title="Share as link"
-                      >
-                        🔗 Share
-                      </button>
+                      {canWrite && (
+                        <button
+                          onClick={handleOpenShareModal}
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-xs font-semibold text-white px-4 py-2.5 rounded-xl shadow transition-all min-h-[44px] sm:min-h-0"
+                          style={{ background: '#374151' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = '#1f2937')}
+                          onMouseLeave={e => (e.currentTarget.style.background = '#374151')}
+                          title="Share as link"
+                        >
+                          🔗 Share
+                        </button>
+                      )}
                     </div>
 
                   </div>

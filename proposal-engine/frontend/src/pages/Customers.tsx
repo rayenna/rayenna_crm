@@ -271,6 +271,31 @@ function buildMasterFromProject(project: ProjectOption): CustomerMaster {
   };
 }
 
+/**
+ * Empty local record when the detail API fails (e.g. server 500 / DB not migrated).
+ * Dashboard still works because it never calls GET /projects/:id; Customers + CRM deep link do.
+ */
+function buildShellCustomerRecordFromProject(project: ProjectOption): CustomerRecord {
+  const now = new Date().toISOString();
+  const next: CustomerRecord = {
+    id: `crm_${project.id}`,
+    createdAt: now,
+    updatedAt: now,
+    status: 'not-started',
+    proposalIndex: 1,
+    master: buildMasterFromProject(project),
+    costing: null,
+    bom: null,
+    roi: null,
+    roofLayout: null,
+    proposal: null,
+  };
+  return {
+    ...next,
+    status: deriveProposalStatusFromArtifacts(next),
+  };
+}
+
 /** When multiple Proposal Engine records share one CRM project, use the most recently updated (matches customersByCrmProjectId). */
 function getLatestLocalRecordForCrmProject(
   projectId: string,
@@ -291,8 +316,10 @@ function getLatestLocalRecordForCrmProject(
 
 /** Operations, Management, Finance, Admin see all project proposals; Sales see only their own. */
 const ROLES_VIEW_ALL_PROJECTS = new Set(['OPERATIONS', 'MANAGEMENT', 'FINANCE', 'ADMIN']);
-/** Only Sales (own) and Admin can create/edit/delete proposals. */
+/** Sales (assigned) and Admin can create/edit proposals; only Admin can remove PE data from the server. */
 const ROLES_CAN_EDIT = new Set(['SALES', 'ADMIN']);
+/** Operations, Management, Finance: view proposals only (no edit, no share, no generate). */
+const ROLES_VIEW_ONLY_PE = new Set(['OPERATIONS', 'MANAGEMENT', 'FINANCE']);
 
 function canViewAllProjects(role: string | null): boolean {
   return role != null && ROLES_VIEW_ALL_PROJECTS.has(role.toUpperCase());
@@ -386,7 +413,7 @@ function ProjectCard({
             {onRemoveFromList && (
               <button
                 onClick={onRemoveFromList}
-                title="Remove from Proposal Engine (assigned salesperson or Admin)"
+                title="Remove from Proposal Engine (Admin only)"
                 className="p-2 rounded-lg text-secondary-400 hover:text-red-500 hover:bg-red-50 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
               >
                 🗑
@@ -928,10 +955,11 @@ function CustomerCard({
   onOpen,
   onDelete,
 }: {
-  record:   CustomerRecord;
-  isActive: boolean;
-  onOpen:   () => void;
-  onDelete: () => void;
+  record:    CustomerRecord;
+  isActive:  boolean;
+  onOpen:    () => void;
+  /** When omitted, trash control is hidden (e.g. Sales — only Admin may delete PE data server-side). */
+  onDelete?: () => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const date = new Date(record.updatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -988,13 +1016,15 @@ function CustomerCard({
             >
               Open
             </button>
-            <button
-              onClick={() => setConfirmDelete(true)}
-              title="Delete customer"
-              className="p-2 rounded-lg text-secondary-400 hover:text-red-500 hover:bg-red-50 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
-            >
-              🗑
-            </button>
+            {onDelete && (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                title="Remove from Proposal Engine (Admin only)"
+                className="p-2 rounded-lg text-secondary-400 hover:text-red-500 hover:bg-red-50 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
+              >
+                🗑
+              </button>
+            )}
           </div>
         </div>
 
@@ -1009,8 +1039,8 @@ function CustomerCard({
         </div>
       </div>
 
-      {/* Delete confirm — Yes/No for Admin and Sales */}
-      {confirmDelete && (
+      {/* Delete confirm — Admin only */}
+      {confirmDelete && onDelete && (
         <div
           className="border-t border-red-100 bg-red-50/80 px-4 py-3 flex items-center justify-between gap-3"
           onClick={(e) => e.stopPropagation()}
@@ -1018,7 +1048,7 @@ function CustomerCard({
           <p className="text-xs text-red-700 font-medium">Delete proposal for <strong>{record.master.name}</strong>? All artifacts will be removed from Proposal Engine.</p>
           <div className="flex gap-2">
             <button onClick={() => setConfirmDelete(false)} className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-secondary-300 bg-white text-secondary-700 hover:bg-secondary-50 transition-colors">No</button>
-            <button onClick={onDelete} className="text-xs text-white font-semibold px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 transition-colors">Yes</button>
+            <button onClick={() => { onDelete(); setConfirmDelete(false); }} className="text-xs text-white font-semibold px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 transition-colors">Yes</button>
           </div>
         </div>
       )}
@@ -1049,14 +1079,15 @@ export default function Customers() {
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [hydratingProjectId, setHydratingProjectId] = useState<string | null>(null);
 
-  // Delete confirmation (ProjectCard trash): show Yes/No before removing from PE (Admin and Sales).
+  // Delete confirmation (ProjectCard trash): Admin only (server enforces).
   const [removeConfirmProject, setRemoveConfirmProject] = useState<ProjectOption | null>(null);
 
   const userRole = getCurrentUserRole();
   // Per clarified requirement: the list view is always API-driven (selected projects).
   const viewAllMode = true;
   const canCreateProposal = canCreateOrEditProposals(userRole);
-  const isReadOnlyRole = viewAllMode && userRole !== null && userRole.toUpperCase() !== 'ADMIN';
+  const isReadOnlyRole =
+    userRole != null && ROLES_VIEW_ONLY_PE.has(userRole.toUpperCase());
   const isAdmin = userRole != null && userRole.toUpperCase() === 'ADMIN';
 
   const [hiddenProjectIds, setHiddenProjectIds] = useState<string[]>(() => getHiddenProjectIds());
@@ -1283,7 +1314,29 @@ export default function Customers() {
         });
         navigate('/dashboard');
       } catch {
-        setProjectsError('Failed to load project. You may not have access.');
+        // Same resilience as Dashboard: detail API can 500 (e.g. missing DB columns) while list API still works.
+        const existing = customersByCrmProjectId.get(project.id) ?? null;
+        const now = new Date().toISOString();
+        const record: CustomerRecord = existing
+          ? {
+              ...existing,
+              updatedAt: now,
+              master: buildMasterFromProject(project),
+            }
+          : buildShellCustomerRecordFromProject(project);
+        upsertCustomer(record);
+        switchActiveCustomer(record.id);
+        setCustomers((prev) => {
+          const idx = prev.findIndex((c) => c.id === record.id);
+          if (idx >= 0) {
+            const next = prev.slice();
+            next[idx] = record;
+            return next;
+          }
+          return [...prev, record];
+        });
+        setProjectsError(null);
+        navigate('/dashboard');
       } finally {
         setHydratingProjectId(null);
       }
@@ -1386,11 +1439,54 @@ export default function Customers() {
         switchActiveCustomer(record.id);
         navigate('/dashboard');
       } catch {
-        if (!cancelled) {
-          setProjectsError(
-            'Unable to open this project in Proposal Engine. It might not be in Proposal/Confirmed stage or you may not have access.',
-          );
+        if (cancelled) return;
+        // Detail API often fails when DB is behind schema (e.g. missing pe_proposals.proposalView) while
+        // GET /projects list still works — mirror Dashboard by using local data or list metadata.
+        const now = new Date().toISOString();
+        const existing =
+          getLatestLocalRecordForCrmProject(projectId, loadCustomers()) ?? null;
+
+        let projectOption: ProjectOption | null = null;
+        try {
+          const list = await fetchProposalEngineProjects();
+          if (!cancelled) {
+            const row = list.find((x) => x.id === projectId);
+            if (row) projectOption = mapApiProjectToProjectOption(row);
+          }
+        } catch {
+          // ignore
         }
+        if (cancelled) return;
+
+        let record: CustomerRecord | null = null;
+        if (existing) {
+          record = projectOption
+            ? { ...existing, updatedAt: now, master: buildMasterFromProject(projectOption) }
+            : existing;
+        } else if (projectOption) {
+          record = buildShellCustomerRecordFromProject(projectOption);
+        }
+
+        if (record) {
+          upsertCustomer(record);
+          setCustomers((prev) => {
+            const idx = prev.findIndex((c) => c.id === record.id);
+            if (idx >= 0) {
+              const next = prev.slice();
+              next[idx] = record;
+              return next;
+            }
+            return [...prev, record];
+          });
+          switchActiveCustomer(record.id);
+          setProjectsError(null);
+          navigate('/dashboard');
+          return;
+        }
+
+        setProjectsError(
+          'Unable to open this project in Proposal Engine. Check access and project stage, and ensure the CRM backend database is migrated (npx prisma migrate deploy on the server).',
+        );
       }
     })();
 
@@ -1539,7 +1635,7 @@ export default function Customers() {
         />
       )}
 
-      {/* Delete proposal confirmation — Yes/No for Admin and Sales (ProjectCard trash) */}
+      {/* Delete proposal confirmation — Admin only (ProjectCard trash) */}
       {removeConfirmProject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-secondary-900/70 backdrop-blur-sm" onClick={() => setRemoveConfirmProject(null)} />
@@ -1690,7 +1786,7 @@ export default function Customers() {
                       isActive={activeId === effectiveId}
                       isReadOnly={isReadOnlyRole}
                       onOpen={() => void handleOpenProjectFromApi(p)}
-                      onRemoveFromList={canCreateProposal ? () => setRemoveConfirmProject(p) : undefined}
+                      onRemoveFromList={isAdmin ? () => setRemoveConfirmProject(p) : undefined}
                     />
                   );
                 })}
@@ -1716,7 +1812,7 @@ export default function Customers() {
                   record={c}
                   isActive={c.id === activeId}
                   onOpen={() => handleOpen(c.id)}
-                  onDelete={() => void handleDelete(c)}
+                  onDelete={isAdmin ? () => void handleDelete(c) : undefined}
                 />
               ))}
             </div>

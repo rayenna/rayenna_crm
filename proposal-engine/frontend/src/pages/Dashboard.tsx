@@ -66,7 +66,7 @@ export default function Dashboard() {
     {
       icon: '🔩',
       title: 'Bill of Materials',
-      description: 'Equipment list with brand & specification',
+      description: 'Equipment list with specifications',
       accentColor: '#eab308',
       to: '/bom',
       saved: !!activeCustomer?.bom,

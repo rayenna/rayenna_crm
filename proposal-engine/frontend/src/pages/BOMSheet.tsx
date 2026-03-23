@@ -22,7 +22,7 @@ import { AlertCard } from '../components/AlertCard';
 
 async function exportBomXlsx(rows: BomRow[], sheetName: string) {
   const XLSX = await import('xlsx');
-  const headerRow = ['#', 'Item / Description', 'Specification', 'Qty', 'Brand', 'GST %'];
+  const headerRow = ['#', 'Item / Description', 'Specification', 'Qty', 'GST %'];
   const dataRows  = rows
     .filter((r) => r.itemName.trim())
     .map((r, i) => [
@@ -30,19 +30,18 @@ async function exportBomXlsx(rows: BomRow[], sheetName: string) {
       r.itemName,
       r.specification,
       parseFloat(r.quantity) || 0,
-      r.brand || '',
       r.gstPercent != null ? (parseFloat(r.gstPercent) || 0) : deriveGstRate(r.itemName),
     ]);
 
   const totalQty = rows.reduce((s, r) => s + (parseFloat(r.quantity) || 0), 0);
-  const blankRow = ['', '', '', '', '', ''];
-  const totalRow = ['', 'TOTAL LINE ITEMS', '', totalQty, '', ''];
-  const countRow = ['', 'TOTAL ITEMS IN BOM', '', `${rows.filter((r) => r.itemName.trim()).length} line items`, '', ''];
+  const blankRow = ['', '', '', '', ''];
+  const totalRow = ['', 'TOTAL LINE ITEMS', '', totalQty, ''];
+  const countRow = ['', 'TOTAL ITEMS IN BOM', '', `${rows.filter((r) => r.itemName.trim()).length} line items`, ''];
 
   const allRows = [headerRow, ...dataRows, blankRow, totalRow, countRow];
 
   const ws = XLSX.utils.aoa_to_sheet(allRows);
-  ws['!cols'] = [{ wch: 4 }, { wch: 36 }, { wch: 24 }, { wch: 8 }, { wch: 20 }, { wch: 8 }];
+  ws['!cols'] = [{ wch: 4 }, { wch: 36 }, { wch: 24 }, { wch: 8 }, { wch: 8 }];
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Bill of Materials');
@@ -50,7 +49,7 @@ async function exportBomXlsx(rows: BomRow[], sheetName: string) {
 }
 
 function exportBomCsv(rows: BomRow[], sheetName: string) {
-  const header = '#,Item / Description,Specification,Qty,Brand,GST %';
+  const header = '#,Item / Description,Specification,Qty,GST %';
 
   const escape = (v: string | number) => {
     const s = String(v);
@@ -65,7 +64,6 @@ function exportBomCsv(rows: BomRow[], sheetName: string) {
         r.itemName,
         r.specification,
         parseFloat(r.quantity) || 0,
-        r.brand || '',
         r.gstPercent != null ? (parseFloat(r.gstPercent) || 0) : deriveGstRate(r.itemName),
       ].map(escape).join(','),
     );
@@ -347,15 +345,8 @@ function BomRowInput({
         />
       </td>
 
-      {/* Brand */}
-      <td className="px-3 py-2 w-36">
-        <input
-          {...register(`rows.${index}.brand`)}
-          placeholder="Brand"
-          readOnly={!canEdit}
-          className="w-full bg-transparent text-sm text-secondary-600 placeholder-secondary-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-70"
-        />
-      </td>
+      {/* Legacy field — kept for saved/sync payloads; brand lives in Specification in the UI */}
+      <input type="hidden" {...register(`rows.${index}.brand`)} />
 
       {/* GST % — carried from costing sheet when available, otherwise derived from item name (read-only) */}
       <td className="px-3 py-2 w-20 text-center">
@@ -435,7 +426,7 @@ function BomTable({
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-primary-100 overflow-x-auto">
-      <table className="w-full border-collapse min-w-[920px]">
+      <table className="w-full border-collapse min-w-[800px]">
         <thead>
           <tr className="border-b-2 border-primary-200 bg-primary-50/80">
             <th className="px-3 py-3 text-left text-xs font-semibold text-secondary-500 uppercase tracking-wide w-36">Category</th>
@@ -443,7 +434,6 @@ function BomTable({
             <th className="px-3 py-3 text-left text-xs font-semibold text-secondary-500 uppercase tracking-wide">Item / Description</th>
             <th className="px-3 py-3 text-left text-xs font-semibold text-secondary-500 uppercase tracking-wide">Specification</th>
             <th className="px-3 py-3 text-right text-xs font-semibold text-secondary-500 uppercase tracking-wide w-20">Qty</th>
-            <th className="px-3 py-3 text-left text-xs font-semibold text-secondary-500 uppercase tracking-wide w-36">Brand</th>
             <th className="px-3 py-3 text-center text-xs font-semibold text-blue-600 uppercase tracking-wide w-20">GST %</th>
             <th className="w-8" />
           </tr>
@@ -463,7 +453,7 @@ function BomTable({
                   style={{ background: `${accent}18`, borderTop: `2px solid ${accent}40` }}
                   onClick={() => toggle(cat.value)}
                 >
-                  <td colSpan={9} className="px-3 py-2">
+                  <td colSpan={8} className="px-3 py-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
                         <span
@@ -524,7 +514,7 @@ function BomTable({
                     <td className="px-3 py-1.5 text-right text-sm font-bold tabular-nums" style={{ color: accent }}>
                       {totalQty.toLocaleString('en-IN')}
                     </td>
-                    <td colSpan={4} />
+                    <td colSpan={3} />
                   </tr>
                 )}
               </React.Fragment>
@@ -688,7 +678,7 @@ export default function BOMSheet() {
                   Bill of Materials
                 </h1>
                 <p className="mt-0.5 text-white/90 text-sm">
-                  Auto-generated from costing items. Edit brand and specs as needed.
+                  Auto-generated from costing items. Edit specifications as needed (include make/model there).
                 </p>
               </div>
             </div>
@@ -956,7 +946,7 @@ export default function BOMSheet() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-primary-600 text-white shadow-sm flex-shrink-0">2</span>
-                  Default brand and specification are filled from solar-industry standards per category.
+                  Default specifications (including typical makes/models) are filled from solar-industry standards per category.
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-primary-600 text-white shadow-sm flex-shrink-0">3</span>
