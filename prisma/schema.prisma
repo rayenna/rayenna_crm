@@ -691,6 +691,8 @@ model PEProposal {
   bomComments   Json?
   editedHtml    String?  @db.Text
   textOverrides Json?
+  /// Full Proposal Engine view snapshot (costing/BOM/ROI-backed) for reopening on any device
+  proposalView  Json?
   summary       String?
   includeRoofLayout Boolean @default(false)
   savedAt       DateTime @default(now())

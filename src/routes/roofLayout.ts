@@ -48,6 +48,19 @@ async function uploadRoofLayoutToCloudinary(opts: {
   return uploadResult.secure_url;
 }
 
+/** Sales: project assignee OR customer's assigned salesperson (matches Proposal Engine access). */
+async function salesUserHasProjectAccess(
+  project: { salespersonId: string | null; customerId: string },
+  userId: string,
+): Promise<boolean> {
+  if (project.salespersonId === userId) return true;
+  const cust = await prisma.customer.findUnique({
+    where: { id: project.customerId },
+    select: { salespersonId: true },
+  });
+  return cust?.salespersonId === userId;
+}
+
 async function ensureProjectWriteAccess(projectId: string, reqUserId: string, reqUserRole: UserRole) {
   const project = await prisma.project.findUnique({ where: { id: projectId } });
   if (!project) return { ok: false, status: 404 as const };
@@ -58,9 +71,8 @@ async function ensureProjectWriteAccess(projectId: string, reqUserId: string, re
   if (roleStr === 'ADMIN') return { ok: true as const };
 
   if (reqUserRole === UserRole.SALES) {
-    if (project.salespersonId !== reqUserId) {
-      return { ok: false, status: 403 as const };
-    }
+    const allowed = await salesUserHasProjectAccess(project, reqUserId);
+    if (!allowed) return { ok: false, status: 403 as const };
     return { ok: true as const };
   }
 
@@ -85,9 +97,9 @@ async function ensureProjectReadAccess(projectId: string, reqUserId: string, req
     return { ok: true as const };
   }
 
-  // Sales can view only their own.
   if (role === UserRole.SALES) {
-    if (project.salespersonId !== reqUserId) return { ok: false, status: 403 as const };
+    const allowed = await salesUserHasProjectAccess(project, reqUserId);
+    if (!allowed) return { ok: false, status: 403 as const };
     return { ok: true as const };
   }
 

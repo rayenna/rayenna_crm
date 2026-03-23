@@ -28,7 +28,33 @@ const ROLES_CAN_VIEW_ALL_PROPOSALS: UserRole[] = [
   UserRole.ADMIN,
 ];
 
-function ensureProjectAccess(project: any, req: Request, res: Response): boolean {
+const PE_ACCESS_DENIED_VIEW =
+  'Access denied. Proposals are visible only to the salesperson assigned on the project or customer, and to Operations, Management, Finance, and Admin.';
+const PE_ACCESS_DENIED_EDIT =
+  'Only the salesperson assigned on the project or customer, or Admin, can create or edit proposal artifacts. Operations, Management, and Finance have read-only access.';
+const PE_ACCESS_DENIED_DELETE =
+  'Only Admin can delete saved proposals or remove all Proposal Engine artifacts for a project.';
+
+/**
+ * Sales may use Proposal Engine for a project when they are the project's assigned salesperson
+ * OR the customer's assigned salesperson (CRM often tags the customer; project.salespersonId may be unset).
+ */
+async function salesUserHasPeAccess(
+  project: { salespersonId?: string | null; customerId: string; customer?: { salespersonId?: string | null } | null },
+  userId: string,
+): Promise<boolean> {
+  if (project.salespersonId === userId) return true;
+  const fromJoin = project.customer?.salespersonId;
+  if (fromJoin === userId) return true;
+  if (fromJoin != null && fromJoin !== userId) return false;
+  const cust = await prisma.customer.findUnique({
+    where: { id: project.customerId },
+    select: { salespersonId: true },
+  });
+  return cust?.salespersonId === userId;
+}
+
+async function ensureProjectAccess(project: any, req: Request, res: Response): Promise<boolean> {
   if (!project) {
     res.status(404).json({ error: 'Project not found' });
     return false;
@@ -42,33 +68,79 @@ function ensureProjectAccess(project: any, req: Request, res: Response): boolean
     return true;
   }
 
-  // Sales: only the project's currently assigned salesperson may view (matches CRM: after reassignment, original creator has no access).
   if (role === UserRole.SALES && userId) {
-    if (project.salespersonId !== userId) {
-      res.status(403).json({ error: 'Access denied. Proposals are visible only to the assigned salesperson and to Operations, Management, Finance, and Admin.' });
+    const allowed = await salesUserHasPeAccess(project, userId);
+    if (!allowed) {
+      res.status(403).json({ error: PE_ACCESS_DENIED_VIEW });
       return false;
     }
     return true;
   }
 
-  // Any other or unauthenticated: deny.
-  res.status(403).json({ error: 'Access denied. Proposals are visible only to the assigned salesperson and to Operations, Management, Finance, and Admin.' });
+  res.status(403).json({ error: PE_ACCESS_DENIED_VIEW });
   return false;
 }
 
-/** Only Admin (all projects) or Sales (assigned project only) may create/update/delete artifacts. Operations, Management, Finance are read-only. */
-function ensureProjectWriteAccess(project: any, req: Request, res: Response): boolean {
+/**
+ * Latest saved PE proposal row. If the DB was not migrated with `proposalView` on `pe_proposals`,
+ * a full-model read throws P2022; we retry without that column so list/detail APIs keep working.
+ */
+async function findLatestPeProposal(projectId: string) {
+  try {
+    return await prisma.pEProposal.findFirst({
+      where: { projectId },
+      orderBy: { savedAt: 'desc' },
+    });
+  } catch (e: unknown) {
+    const err = e as { code?: string; meta?: { column?: string } };
+    if (err?.code === 'P2022' && String(err?.meta?.column ?? '').includes('proposalView')) {
+      return prisma.pEProposal.findFirst({
+        where: { projectId },
+        orderBy: { savedAt: 'desc' },
+        select: {
+          id: true,
+          projectId: true,
+          createdById: true,
+          refNumber: true,
+          generatedAt: true,
+          bomComments: true,
+          editedHtml: true,
+          textOverrides: true,
+          summary: true,
+          includeRoofLayout: true,
+          savedAt: true,
+          updatedAt: true,
+        },
+      });
+    }
+    throw e;
+  }
+}
+
+/** Only Admin may delete PE data (single proposal artifact or full kit). */
+function ensurePeDeleteAccess(req: Request, res: Response): boolean {
+  const roleStr = req.user?.role != null ? String(req.user.role).toUpperCase() : '';
+  if (roleStr === 'ADMIN') return true;
+  res.status(403).json({ error: PE_ACCESS_DENIED_DELETE });
+  return false;
+}
+
+/** Only Admin (all projects) or Sales (project or customer assignee) may create/update artifacts. Operations, Management, Finance are read-only. */
+async function ensureProjectWriteAccess(project: any, req: Request, res: Response): Promise<boolean> {
   if (!project) return false;
   const role = req.user?.role;
   const userId = req.user?.id;
   const roleStr = role != null ? String(role).toUpperCase() : '';
   if (roleStr === 'ADMIN') return true;
-  if (role === UserRole.SALES && userId && project.salespersonId === userId) {
+  if (role === UserRole.SALES && userId) {
+    const allowed = await salesUserHasPeAccess(project, userId);
+    if (!allowed) {
+      res.status(403).json({ error: PE_ACCESS_DENIED_EDIT });
+      return false;
+    }
     return true;
   }
-  res.status(403).json({
-    error: 'Only the assigned salesperson or Admin can edit or delete proposal artifacts. Your role has read-only access.',
-  });
+  res.status(403).json({ error: PE_ACCESS_DENIED_EDIT });
   return false;
 }
 
@@ -92,7 +164,9 @@ router.get('/projects', authenticate, async (req: Request, res: Response) => {
     // (so proposals created/selected by Admin for Anoop are visible to Anoop).
     const selectionWhere: any = {};
     if (role === UserRole.SALES && userId) {
-      selectionWhere.project = { salespersonId: userId };
+      selectionWhere.project = {
+        OR: [{ salespersonId: userId }, { customer: { salespersonId: userId } }],
+      };
     }
 
     // Optional limit query param for future tuning; default remains 200 for backward compatibility.
@@ -176,9 +250,11 @@ router.get('/projects', authenticate, async (req: Request, res: Response) => {
         ['not-started', 'draft', 'proposal-ready'].includes(String(p.peStatus)),
       );
 
-    // Sales: only show projects still assigned to them (reassigned projects must not appear in their list).
+    // Sales: project assignee OR customer's assigned salesperson (reassignment on either side drops access).
     if (role === UserRole.SALES && userId) {
-      payload = payload.filter((p) => p.salespersonId === userId);
+      payload = payload.filter(
+        (p) => p.salespersonId === userId || p.customer?.salespersonId === userId,
+      );
     }
 
     res.json(payload);
@@ -346,9 +422,11 @@ router.get('/projects/eligible', authenticate, async (req: Request, res: Respons
       { projectStatus: { in: [ProjectStatus.PROPOSAL, ProjectStatus.CONFIRMED] } },
       ...(removedIds.length > 0 ? [{ id: { notIn: removedIds } }] : []),
     ];
-    // Sales: only projects currently assigned to them (matches CRM – after reassignment, original creator must not see them).
+    // Sales: project assignee OR customer's assigned salesperson.
     if (role === UserRole.SALES && userId) {
-      and.push({ salespersonId: userId });
+      and.push({
+        OR: [{ salespersonId: userId }, { customer: { salespersonId: userId } }],
+      });
     }
 
     const projects = await prisma.project.findMany({
@@ -375,8 +453,8 @@ router.post('/projects/:id/select', authenticate, async (req: Request, res: Resp
       where: { id: req.params.id },
     });
 
-    if (!ensureProjectAccess(project, req, res)) return;
-    if (!ensureProjectWriteAccess(project, req, res)) return;
+    if (!(await ensureProjectAccess(project, req, res))) return;
+    if (!(await ensureProjectWriteAccess(project, req, res))) return;
 
     await prisma.pESelectedProject.upsert({
       where: { projectId: req.params.id },
@@ -509,7 +587,7 @@ router.get('/projects/:id', authenticate, async (req: Request, res: Response) =>
       },
     });
 
-    if (!ensureProjectAccess(project, req, res)) {
+    if (!(await ensureProjectAccess(project, req, res))) {
       return;
     }
 
@@ -526,10 +604,7 @@ router.get('/projects/:id', authenticate, async (req: Request, res: Response) =>
         where: { projectId: req.params.id },
         orderBy: { savedAt: 'desc' },
       }),
-      prisma.pEProposal.findFirst({
-        where: { projectId: req.params.id },
-        orderBy: { savedAt: 'desc' },
-      }),
+      findLatestPeProposal(req.params.id),
       prisma.projectRoofLayout.findFirst({
         where: { projectId: req.params.id },
       }),
@@ -571,7 +646,7 @@ router.get('/projects/:id/costing', authenticate, async (req: Request, res: Resp
       where: { id: req.params.id },
     });
 
-    if (!ensureProjectAccess(project, req, res)) {
+    if (!(await ensureProjectAccess(project, req, res))) {
       return;
     }
 
@@ -609,10 +684,10 @@ router.put(
         where: { id: req.params.id },
       });
 
-      if (!ensureProjectAccess(project, req, res)) {
+      if (!(await ensureProjectAccess(project, req, res))) {
         return;
       }
-      if (!ensureProjectWriteAccess(project, req, res)) {
+      if (!(await ensureProjectWriteAccess(project, req, res))) {
         return;
       }
 
@@ -686,7 +761,7 @@ router.get('/projects/:id/bom', authenticate, async (req: Request, res: Response
       where: { id: req.params.id },
     });
 
-    if (!ensureProjectAccess(project, req, res)) {
+    if (!(await ensureProjectAccess(project, req, res))) {
       return;
     }
 
@@ -717,10 +792,10 @@ router.put(
         where: { id: req.params.id },
       });
 
-      if (!ensureProjectAccess(project, req, res)) {
+      if (!(await ensureProjectAccess(project, req, res))) {
         return;
       }
-      if (!ensureProjectWriteAccess(project, req, res)) {
+      if (!(await ensureProjectWriteAccess(project, req, res))) {
         return;
       }
 
@@ -789,7 +864,7 @@ router.get('/projects/:id/roi', authenticate, async (req: Request, res: Response
       where: { id: req.params.id },
     });
 
-    if (!ensureProjectAccess(project, req, res)) {
+    if (!(await ensureProjectAccess(project, req, res))) {
       return;
     }
 
@@ -820,10 +895,10 @@ router.put(
         where: { id: req.params.id },
       });
 
-      if (!ensureProjectAccess(project, req, res)) {
+      if (!(await ensureProjectAccess(project, req, res))) {
         return;
       }
-      if (!ensureProjectWriteAccess(project, req, res)) {
+      if (!(await ensureProjectWriteAccess(project, req, res))) {
         return;
       }
 
@@ -869,14 +944,11 @@ router.get('/projects/:id/proposal', authenticate, async (req: Request, res: Res
       where: { id: req.params.id },
     });
 
-    if (!ensureProjectAccess(project, req, res)) {
+    if (!(await ensureProjectAccess(project, req, res))) {
       return;
     }
 
-    const proposal = await prisma.pEProposal.findFirst({
-      where: { projectId: req.params.id },
-      orderBy: { savedAt: 'desc' },
-    });
+    const proposal = await findLatestPeProposal(req.params.id);
 
     res.json(proposal || null);
   } catch (error: any) {
@@ -904,20 +976,17 @@ router.put(
         where: { id: req.params.id },
       });
 
-      if (!ensureProjectAccess(project, req, res)) {
+      if (!(await ensureProjectAccess(project, req, res))) {
         return;
       }
-      if (!ensureProjectWriteAccess(project, req, res)) {
+      if (!(await ensureProjectWriteAccess(project, req, res))) {
         return;
       }
 
       // If this project was previously "removed from list", writing a new artifact should make it visible again.
       await prisma.pERemovedProject.deleteMany({ where: { projectId: req.params.id } });
 
-      const existing = await prisma.pEProposal.findFirst({
-        where: { projectId: req.params.id },
-        orderBy: { savedAt: 'desc' },
-      });
+      const existing = await findLatestPeProposal(req.params.id);
 
       const editedHtml: string | null =
         typeof req.body.editedHtml === 'string' ? req.body.editedHtml : null;
@@ -947,6 +1016,25 @@ router.put(
         }
       }
 
+      if (Object.prototype.hasOwnProperty.call(req.body, 'proposalView')) {
+        const proposalView = req.body.proposalView;
+        if (proposalView != null && typeof proposalView === 'object') {
+          const viewBytes = Buffer.byteLength(JSON.stringify(proposalView), 'utf8');
+          if (viewBytes > MAX_PROPOSAL_VIEW_JSON_BYTES) {
+            console.warn(
+              `[pe][limit] PROPOSAL_VIEW_TOO_LARGE project=${req.params.id} user=${req.user?.id ?? 'unknown'} sizeBytes=${viewBytes}`,
+            );
+            return res.status(413).json({
+              error:
+                'Proposal data snapshot is too large to save. Try reducing the costing sheet size or contact support.',
+              code: 'PROPOSAL_VIEW_TOO_LARGE',
+              limitBytes: MAX_PROPOSAL_VIEW_JSON_BYTES,
+              sizeBytes: viewBytes,
+            });
+          }
+        }
+      }
+
       const includeRoofLayout: boolean =
         typeof req.body.includeRoofLayout === 'boolean'
           ? req.body.includeRoofLayout
@@ -961,6 +1049,9 @@ router.put(
         textOverrides: req.body.textOverrides ?? null,
         summary: req.body.summary ?? null,
         includeRoofLayout,
+        ...(Object.prototype.hasOwnProperty.call(req.body, 'proposalView')
+          ? { proposalView: req.body.proposalView }
+          : {}),
       };
 
       let proposal;
@@ -986,17 +1077,17 @@ router.put(
   }
 );
 
-// Delete only the saved proposal artifact for a project (Admin or owning Sales).
+// Delete only the saved proposal artifact for a project (Admin only).
 router.delete('/projects/:id/proposal', authenticate, async (req: Request, res: Response) => {
   try {
     const project = await prisma.project.findUnique({
       where: { id: req.params.id },
     });
 
-    if (!ensureProjectAccess(project, req, res)) {
+    if (!(await ensureProjectAccess(project, req, res))) {
       return;
     }
-    if (!ensureProjectWriteAccess(project, req, res)) {
+    if (!ensurePeDeleteAccess(req, res)) {
       return;
     }
 
@@ -1020,17 +1111,17 @@ router.delete('/projects/:id/proposal', authenticate, async (req: Request, res: 
   }
 });
 
-// Remove project from Proposal Engine for everyone (Admin or owning Sales only). Deletes all PE artifacts and marks project as removed.
+// Remove project from Proposal Engine for everyone (Admin only). Deletes all PE artifacts.
 router.delete('/projects/:id', authenticate, async (req: Request, res: Response) => {
   try {
     const project = await prisma.project.findUnique({
       where: { id: req.params.id },
     });
 
-    if (!ensureProjectAccess(project, req, res)) {
+    if (!(await ensureProjectAccess(project, req, res))) {
       return;
     }
-    if (!ensureProjectWriteAccess(project, req, res)) {
+    if (!ensurePeDeleteAccess(req, res)) {
       return;
     }
 
@@ -1060,6 +1151,7 @@ const DEFAULT_SHARE_EXPIRY_HOURS = 48;
 const MAX_PE_SHARES_PER_PROJECT = 10;
 const MAX_SHARE_HTML_BYTES = 2_000_000; // 2 MB (utf8). Safety guard against accidental multi-MB shares.
 const MAX_PROPOSAL_HTML_BYTES = 2_000_000; // 2 MB limit for stored proposal HTML as well.
+const MAX_PROPOSAL_VIEW_JSON_BYTES = 2_000_000; // 2 MB for serialized proposalView (sheet + BOM + ROI snapshot)
 const MAX_COSTING_ROWS = 5000; // Very generous guard against accidental huge uploads.
 const MAX_BOM_ROWS = 8000; // Very generous guard.
 
@@ -1067,9 +1159,12 @@ const MAX_BOM_ROWS = 8000; // Very generous guard.
 router.post('/share', authenticate, async (req: Request, res: Response) => {
   try {
     const role = req.user?.role;
-    const userId = req.user?.id;
-    if (!role || (!ROLES_CAN_VIEW_ALL_PROPOSALS.includes(role) && role !== UserRole.SALES)) {
-      return res.status(403).json({ error: 'Access denied. Only Sales (own projects) and Ops/Management/Finance/Admin can share proposals.' });
+    const roleStr = role != null ? String(role).toUpperCase() : '';
+    // View-only roles (Ops/Management/Finance) must not create shares; same as edit access.
+    if (!role || (role !== UserRole.SALES && roleStr !== 'ADMIN')) {
+      return res.status(403).json({
+        error: 'Access denied. Only Sales (assigned project or customer) and Admin can create proposal share links.',
+      });
     }
 
     const { projectId, proposalHtml, refNumber, password, expiresAt: expiresAtInput } = req.body as {
@@ -1110,12 +1205,12 @@ router.post('/share', authenticate, async (req: Request, res: Response) => {
 
     const project = await prisma.project.findUnique({
       where: { id: projectId },
-      select: { id: true, salespersonId: true },
+      select: { id: true, salespersonId: true, customerId: true },
     });
     if (!project) {
       return res.status(404).json({ error: 'Project not found.' });
     }
-    if (!ensureProjectAccess(project, req, res)) {
+    if (!(await ensureProjectWriteAccess(project, req, res))) {
       return;
     }
 

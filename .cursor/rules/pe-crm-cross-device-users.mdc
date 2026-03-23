@@ -1,0 +1,21 @@
+---
+description: Rayenna PE/CRM users are not tied to one device — design for cross-browser and cross-machine continuity.
+alwaysApply: true
+---
+
+# Proposal Engine & CRM: cross-device users
+
+The main users of **Rayenna Proposal Engine** and **Rayenna CRM** do **not** have dedicated machines. They may switch laptops, use shared PCs, clear browser data, or log in from home and office.
+
+## Implications for any change
+
+1. **Authoritative data** for CRM-linked work should live on the **server** (CRM API / Prisma), not only in `localStorage` or a single browser profile.
+2. **localStorage / session** may be used for UX (drafts, WIP, cache) but must be **rehydrated** from the backend when opening a linked project so another device sees the same truth.
+3. When adding new artifacts or fields (e.g. proposal snapshots, edits, layouts), **extend sync + GET merge** paths (e.g. `syncProject*`, `fetchProjectWithArtifacts`, `mapApiArtifactsToRecord`) so a fresh login elsewhere still loads them.
+4. Call out in code or PR description when something is **intentionally local-only** (e.g. no `crmProjectId`) so we do not assume continuity across devices.
+5. Avoid designs that assume a stable browser fingerprint, long-lived uncleared storage, or “this machine only” without documenting the limitation.
+
+## Quick check before shipping PE + CRM features
+
+- [ ] If the user saves on machine A, can machine B see it after normal **login + open project** (no manual export)?
+- [ ] Does clearing site data on one machine still allow recovery from **CRM** for linked projects?
