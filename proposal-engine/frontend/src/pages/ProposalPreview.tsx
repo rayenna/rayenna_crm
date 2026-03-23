@@ -706,7 +706,7 @@ function buildDocx(
                   spacing: { before: 120, after: 60 },
                 }),
                 new Paragraph({
-                  children: [new TextRun({ text: 'Door No 3324/52, Ray Bhavan, NH Bypass, Thykoodam, Kochi - 682019', size: 17, color: 'C7D2FE' })],
+                  children: [new TextRun({ text: 'Door No. 3329/52, Ray Bhavan, NH Bypass, Thykoodam, Kochi - 682019', size: 17, color: 'C7D2FE' })],
                   spacing: { after: 40 },
                 }),
                 new Paragraph({
@@ -3980,7 +3980,7 @@ export default function ProposalPreview() {
                     </div>
                     <div>
                       <p className="text-white font-extrabold text-base sm:text-lg tracking-tight drop-shadow leading-tight">Rayenna Energy Private Limited</p>
-                      <p className="text-white/75 text-xs leading-relaxed mt-0.5">Door No 3324/52, Ray Bhavan, NH Bypass, Thykoodam, Kochi - 682019</p>
+                      <p className="text-white/75 text-xs leading-relaxed mt-0.5">Door No. 3329/52, Ray Bhavan, NH Bypass, Thykoodam, Kochi - 682019</p>
                       <p className="text-white/60 text-[10px] leading-relaxed mt-0.5">
                         Tel: +91 7907 369 304 · sales@rayenna.energy · www.rayennaenergy.com · GST: 32AANCR8677A1Z6
                       </p>

@@ -235,7 +235,7 @@ GANESH VENKITACHALAM
 MANAGING DIRECTOR
 
 Rayenna Energy Private Limited
-Door No 3324/52, Ray Bhavan, NH Bypass, Thykoodam, Kochi - 682019
+Door No. 3329/52, Ray Bhavan, NH Bypass, Thykoodam, Kochi - 682019
 Tel: +91 7907 369 304 | E-mail: sales@rayenna.energy | www.rayennaenergy.com
 GST No: 32AANCR8677A1Z6`;
 }
