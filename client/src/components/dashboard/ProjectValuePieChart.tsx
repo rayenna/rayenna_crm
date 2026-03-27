@@ -77,15 +77,15 @@ const ProjectValuePieChart = memo(({ data: initialData, availableFYs = [], dashb
 
   if (!chartData || chartData.length === 0) {
     return (
-      <div className="w-full min-h-[360px] flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
+      <div className="w-full min-h-[360px] flex flex-col bg-white shadow-sm rounded-2xl border border-slate-200 p-4 sm:p-5">
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500">
+          <div className="p-2 rounded-lg bg-emerald-600">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900">
             Revenue by Customer Segment
           </h2>
         </div>
@@ -100,16 +100,16 @@ const ProjectValuePieChart = memo(({ data: initialData, availableFYs = [], dashb
   const displayData = chartData
 
   return (
-    <div className="w-full min-h-[360px] flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
+    <div className="w-full min-h-[360px] flex flex-col bg-white shadow-sm rounded-2xl border border-slate-200 p-4 sm:p-5">
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500">
+          <div className="p-2 rounded-lg bg-emerald-600">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900">
             Revenue by Customer Segment
           </h2>
         </div>

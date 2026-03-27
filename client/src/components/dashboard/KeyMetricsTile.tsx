@@ -171,7 +171,6 @@ const KeyMetricsTile = ({
     yoY: { value: number | null; label: string }
     icon: React.ReactNode
     gradient: string
-    bgLight: string
   }> = [
     {
       key: 'capacity',
@@ -180,7 +179,6 @@ const KeyMetricsTile = ({
       yoY: capacityYoY,
       icon: <FaBolt className="w-5 h-5 sm:w-6 sm:h-6" />,
       gradient: 'from-amber-500 to-orange-500',
-      bgLight: 'bg-amber-50',
     },
     {
       key: 'pipeline',
@@ -189,7 +187,6 @@ const KeyMetricsTile = ({
       yoY: pipelineYoY,
       icon: <FaChartLine className="w-5 h-5 sm:w-6 sm:h-6" />,
       gradient: 'from-violet-500 to-purple-600',
-      bgLight: 'bg-violet-50',
     },
     {
       key: 'revenue',
@@ -198,7 +195,6 @@ const KeyMetricsTile = ({
       yoY: revenueYoY,
       icon: <FaRupeeSign className="w-5 h-5 sm:w-6 sm:h-6" />,
       gradient: 'from-emerald-500 to-teal-600',
-      bgLight: 'bg-emerald-50',
     },
     {
       key: 'profit',
@@ -207,7 +203,6 @@ const KeyMetricsTile = ({
       yoY: profitYoY,
       icon: <FaRupeeSign className="w-5 h-5 sm:w-6 sm:h-6" />,
       gradient: 'from-rose-500 to-pink-600',
-      bgLight: 'bg-rose-50',
     },
     {
       key: 'conversion',
@@ -219,18 +214,17 @@ const KeyMetricsTile = ({
       yoY: conversionYoY,
       icon: <FaPercent className="w-5 h-5 sm:w-6 sm:h-6" />,
       gradient: 'from-indigo-500 to-blue-600',
-      bgLight: 'bg-indigo-50',
     },
   ]
 
   return (
-    <div className="w-full rounded-2xl border-2 border-primary-200/60 bg-gradient-to-br from-white via-primary-50/30 to-white shadow-xl overflow-hidden hover:shadow-2xl transition-shadow duration-300 min-h-0">
+    <div className="w-full rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 min-h-0">
       <div className="p-4 sm:p-6 lg:px-4 lg:py-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_1.65fr_1.65fr_1.65fr_minmax(0,1fr)] gap-4 sm:gap-5 lg:gap-3">
           {metrics.map((m) => (
             <div
               key={m.key}
-              className={`relative flex flex-col rounded-xl ${m.bgLight} p-4 sm:p-6 lg:p-4 border border-white/80 shadow-sm hover:shadow-md transition-shadow min-w-0 overflow-hidden`}
+              className="relative flex flex-col rounded-xl bg-slate-50/70 p-4 sm:p-6 lg:p-4 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow min-w-0 overflow-hidden"
             >
               {/* YoY badge – top right */}
               <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
@@ -238,7 +232,7 @@ const KeyMetricsTile = ({
               </div>
               {/* Icon – top left */}
               <div
-                className={`flex-shrink-0 flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br ${m.gradient} text-white shadow-md mb-3 sm:mb-4`}
+                className={`flex-shrink-0 flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br ${m.gradient} text-white shadow-sm mb-3 sm:mb-4`}
               >
                 {m.icon}
               </div>

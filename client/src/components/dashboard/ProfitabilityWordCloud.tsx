@@ -234,24 +234,24 @@ const ProfitabilityWordCloud = memo(({ availableFYs = [], wordCloudData: wordClo
   }
 
   return (
-    <div className="w-full min-h-[360px] flex flex-col bg-gradient-to-br from-white via-primary-50/30 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 p-4 sm:p-5 backdrop-blur-sm">
+    <div className="w-full min-h-[360px] flex flex-col bg-white shadow-sm rounded-2xl border border-slate-200 p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
+          <div className="p-2 rounded-lg bg-purple-600">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900">
             Customer Projects Profitability
           </h2>
         </div>
-        <div className="flex rounded-lg border border-primary-200/60 bg-primary-50/30 p-0.5">
+        <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
           <button
             type="button"
             onClick={() => setView('cloud')}
             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              view === 'cloud' ? 'bg-white text-primary-700 shadow-sm' : 'text-gray-600 hover:text-primary-600'
+              view === 'cloud' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-primary-600'
             }`}
           >
             Word Cloud
@@ -260,7 +260,7 @@ const ProfitabilityWordCloud = memo(({ availableFYs = [], wordCloudData: wordClo
             type="button"
             onClick={() => setView('top10')}
             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              view === 'top10' ? 'bg-white text-primary-700 shadow-sm' : 'text-gray-600 hover:text-primary-600'
+              view === 'top10' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-primary-600'
             }`}
           >
             Top 10

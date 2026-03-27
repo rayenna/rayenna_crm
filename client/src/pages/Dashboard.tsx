@@ -145,8 +145,8 @@ const Dashboard = () => {
       )}
       {!isFyError && getDashboardComponent()}
 
-      {/* Footnote for Operations view */}
-      {user?.role === UserRole.OPERATIONS && (
+      {/* Footnote for Operations and Finance views (both include Pending Installation quick tile) */}
+      {(user?.role === UserRole.OPERATIONS || user?.role === UserRole.FINANCE) && (
         <footer className="mt-8 pt-6 border-t border-primary-100 min-w-0 max-w-full bg-gradient-to-br from-primary-50/30 to-transparent rounded-xl p-4">
           <p className="text-[11px] sm:text-xs text-gray-500 leading-relaxed break-words">
             <span className="font-semibold text-gray-600">Note:</span>

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { FaFileInvoice } from 'react-icons/fa'
 import axiosInstance from '../../utils/axios'
 import { getFriendlyApiErrorMessage } from '../../utils/axios'
 
@@ -46,9 +47,9 @@ const ProposalEngineStatusCard = ({
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl border border-primary-200/60 bg-gradient-to-br from-white via-primary-50/30 to-white p-4 sm:p-5 shadow-sm">
-        <div className="h-6 w-52 rounded bg-gray-200 animate-pulse mb-4" />
-        <div className="h-40 rounded-xl bg-gray-100 animate-pulse" />
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
+        <div className="h-6 w-52 rounded bg-slate-200 animate-pulse mb-4" />
+        <div className="h-40 rounded-xl bg-slate-100 animate-pulse" />
       </div>
     )
   }
@@ -81,12 +82,19 @@ const ProposalEngineStatusCard = ({
   )
 
   return (
-    <section className="rounded-2xl border border-primary-200/60 bg-gradient-to-br from-white via-primary-50/30 to-white shadow-sm overflow-hidden">
-      <div className="px-4 sm:px-5 py-3 border-b border-primary-100 bg-gradient-to-r from-primary-700 via-primary-600 to-amber-400 text-white">
-        <h3 className="text-sm sm:text-base font-bold tracking-wide">Proposal Engine Dashboard</h3>
-        <p className="text-[11px] sm:text-xs text-white/90 mt-0.5">
-          Status-wise count, CRM order value, and PE proposal value (excl. GST)
-        </p>
+    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="px-4 sm:px-5 py-3 border-b border-slate-200 bg-slate-50/80">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-600 text-white shadow-sm">
+            <FaFileInvoice className="w-4 h-4" aria-hidden />
+          </div>
+          <div>
+            <h3 className="text-base sm:text-lg font-bold text-slate-900">Proposal Engine Dashboard</h3>
+            <p className="text-xs text-slate-500">
+              Status-wise count, CRM order value, and PE proposal value (excl. GST)
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="p-3 sm:p-4 overflow-x-auto">
@@ -112,9 +120,9 @@ const ProposalEngineStatusCard = ({
                 <td className="px-3 py-2.5 text-right font-semibold text-indigo-800">{formatInr(row.peOrderValueExGst)}</td>
               </tr>
             ))}
-            <tr className="bg-primary-50/70 border-t-2 border-primary-200">
-              <td className="px-3 py-2.5 text-xs font-bold uppercase tracking-wide text-primary-800">Total</td>
-              <td className="px-3 py-2.5 text-right font-extrabold text-primary-900">{totals.count.toLocaleString('en-IN')}</td>
+            <tr className="bg-slate-50 border-t border-slate-200">
+              <td className="px-3 py-2.5 text-xs font-bold uppercase tracking-wide text-slate-800">Total</td>
+              <td className="px-3 py-2.5 text-right font-extrabold text-slate-900">{totals.count.toLocaleString('en-IN')}</td>
               <td className="px-3 py-2.5 text-right font-extrabold text-emerald-900">{formatInr(totals.crm)}</td>
               <td className="px-3 py-2.5 text-right font-extrabold text-indigo-900">{formatInr(totals.pe)}</td>
             </tr>
