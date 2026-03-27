@@ -17,6 +17,7 @@ import PipelineByCustomerSegmentPieChart from './PipelineByCustomerSegmentPieCha
 import MetricCard from './MetricCard'
 import QuickAccessSection from './QuickAccessSection'
 import KeyMetricsTile from './KeyMetricsTile'
+import ProposalEngineStatusCard from './ProposalEngineStatusCard'
 
 interface SalesDashboardProps {
   selectedFYs: string[]
@@ -198,6 +199,12 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths, initial
           </div>
         </div>
       </QuickAccessSection>
+
+      <ProposalEngineStatusCard
+        selectedFYs={selectedFYs}
+        selectedQuarters={selectedQuarters}
+        selectedMonths={selectedMonths}
+      />
 
       {/* Row 1: Projects by Stage / Execution Status, Revenue & Profit by Financial Year – side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">

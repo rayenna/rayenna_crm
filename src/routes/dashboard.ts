@@ -234,6 +234,57 @@ function buildAvailingLoanByBank(
     })
 }
 
+type PeBucketKey = 'proposal-ready' | 'draft' | 'not-started' | 'rest';
+
+function toPositiveNumber(value: unknown): number {
+  const n = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function normalizeGstPercent(raw: unknown, fallback = 18): number {
+  const n = Number(raw);
+  if (Number.isFinite(n) && n >= 0) return n;
+  return fallback;
+}
+
+/**
+ * PE order value excluding GST from saved Costing Sheet payload.
+ * Mirrors Proposal Engine costing logic (margin first, then GST per row).
+ */
+function computePeOrderValueExGstFromCosting(costing: {
+  items: unknown;
+  marginPct: number;
+  grandTotal: number;
+  showGst: boolean;
+}): number {
+  const grandTotal = toPositiveNumber(costing.grandTotal);
+  if (grandTotal <= 0) return 0;
+  if (!costing.showGst) return grandTotal;
+  if (!Array.isArray(costing.items)) return Math.round(grandTotal / 1.18);
+
+  const marginMultiplier = 1 + (Number.isFinite(costing.marginPct) ? costing.marginPct : 0) / 100;
+  let gstTotal = 0;
+  let baseTotal = 0;
+
+  for (const row of costing.items as Array<Record<string, unknown>>) {
+    const qty = toPositiveNumber(row?.quantity);
+    const unitCost = toPositiveNumber(row?.unitCost);
+    if (qty <= 0 || unitCost <= 0) continue;
+
+    const category = String(row?.category ?? '').toLowerCase();
+    const defaultGst = category === 'pv-modules' ? 5 : 18;
+    const gstPct = normalizeGstPercent(row?.gstPercent, defaultGst);
+    const rowBase = qty * unitCost * marginMultiplier;
+    baseTotal += rowBase;
+    gstTotal += rowBase * (gstPct / 100);
+  }
+
+  // If no usable rows, fallback to reverse GST from grand total.
+  if (baseTotal <= 0) return Math.round(grandTotal / 1.18);
+  const exGst = grandTotal - gstTotal;
+  return exGst > 0 ? exGst : 0;
+}
+
 // Sales Dashboard
 router.get('/sales', authenticate, async (req: Request, res) => {
   try {
@@ -1794,6 +1845,156 @@ router.get('/management', authenticate, async (req: Request, res) => {
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Proposal Engine status dashboard summary
+// Accessible only to Sales (own projects), Management, and Admin.
+router.get('/proposal-engine-status', authenticate, async (req: Request, res: Response) => {
+  try {
+    const role = req.user?.role;
+    const userId = req.user?.id;
+    const allowedRoles: UserRole[] = [UserRole.SALES, UserRole.MANAGEMENT, UserRole.ADMIN];
+    if (!role || !allowedRoles.includes(role)) {
+      return res.status(403).json({
+        error: 'Access denied. This dashboard is available only to Sales, Management, and Admin roles.',
+      });
+    }
+
+    const fyFilters = req.query.fy ? (Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[] : [];
+    const monthFilters = req.query.month ? (Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[] : [];
+    const quarterFilters = req.query.quarter ? (Array.isArray(req.query.quarter) ? req.query.quarter : [req.query.quarter]) as string[] : [];
+
+    const baseWhere: any = {};
+    if (role === UserRole.SALES) {
+      baseWhere.salespersonId = userId;
+    }
+    const where = applyDateFilters(baseWhere, fyFilters, monthFilters, quarterFilters);
+
+    const projects = await prisma.project.findMany({
+      where,
+      select: {
+        id: true,
+        projectCost: true,
+        projectStatus: true,
+      },
+    });
+
+    if (projects.length === 0) {
+      return res.json({
+        rows: [
+          { key: 'proposal-ready', label: 'PE Ready', count: 0, crmOrderValue: 0, peOrderValueExGst: 0 },
+          { key: 'draft', label: 'PE Draft', count: 0, crmOrderValue: 0, peOrderValueExGst: 0 },
+          { key: 'not-started', label: 'PE Not Yet Created', count: 0, crmOrderValue: 0, peOrderValueExGst: 0 },
+          { key: 'rest', label: 'Rest', count: 0, crmOrderValue: 0, peOrderValueExGst: 0 },
+        ],
+      });
+    }
+
+    const projectIds = projects.map((p) => p.id);
+    const crmOrderValueByProjectId = new Map(
+      projects.map((p) => [p.id, toPositiveNumber(p.projectCost)])
+    );
+
+    const [selections, costings, boms, rois, proposals, costingSheets] = await Promise.all([
+      prisma.pESelectedProject.findMany({
+        where: { projectId: { in: projectIds } },
+        select: { projectId: true },
+      }),
+      prisma.pECostingSheet.findMany({
+        where: { projectId: { in: projectIds } },
+        select: { projectId: true },
+      }),
+      prisma.pEBomSheet.findMany({
+        where: { projectId: { in: projectIds } },
+        select: { projectId: true },
+      }),
+      prisma.pERoiResult.findMany({
+        where: { projectId: { in: projectIds } },
+        select: { projectId: true },
+      }),
+      prisma.pEProposal.findMany({
+        where: { projectId: { in: projectIds } },
+        select: { projectId: true },
+      }),
+      prisma.pECostingSheet.findMany({
+        where: { projectId: { in: projectIds } },
+        select: { projectId: true, items: true, marginPct: true, grandTotal: true, showGst: true, savedAt: true },
+        orderBy: { savedAt: 'desc' },
+      }),
+    ]);
+
+    const selectedSet = new Set(selections.map((s) => s.projectId));
+    const hasCosting = new Set(costings.map((r) => r.projectId));
+    const hasBom = new Set(boms.map((r) => r.projectId));
+    const hasRoi = new Set(rois.map((r) => r.projectId));
+    const hasProposal = new Set(proposals.map((r) => r.projectId));
+
+    const latestCostingByProjectId = new Map<string, typeof costingSheets[number]>();
+    for (const row of costingSheets) {
+      if (!latestCostingByProjectId.has(row.projectId)) {
+        latestCostingByProjectId.set(row.projectId, row);
+      }
+    }
+
+    const metrics: Record<PeBucketKey, { count: number; crmOrderValue: number; peOrderValueExGst: number }> = {
+      'proposal-ready': { count: 0, crmOrderValue: 0, peOrderValueExGst: 0 },
+      draft: { count: 0, crmOrderValue: 0, peOrderValueExGst: 0 },
+      'not-started': { count: 0, crmOrderValue: 0, peOrderValueExGst: 0 },
+      rest: { count: 0, crmOrderValue: 0, peOrderValueExGst: 0 },
+    };
+
+    for (const project of projects) {
+      const projectId = project.id;
+      let bucket: PeBucketKey | null = null;
+
+      if (selectedSet.has(projectId)) {
+        const hasAny =
+          hasCosting.has(projectId) ||
+          hasBom.has(projectId) ||
+          hasRoi.has(projectId) ||
+          hasProposal.has(projectId);
+        const allFour =
+          hasCosting.has(projectId) &&
+          hasBom.has(projectId) &&
+          hasRoi.has(projectId) &&
+          hasProposal.has(projectId);
+
+        bucket = allFour ? 'proposal-ready' : hasAny ? 'draft' : 'not-started';
+      } else {
+        const isEligibleForProposalCreation =
+          project.projectStatus === ProjectStatus.PROPOSAL ||
+          project.projectStatus === ProjectStatus.CONFIRMED;
+        // "Rest" should include only eligible candidates for proposal creation.
+        bucket = isEligibleForProposalCreation ? 'rest' : null;
+      }
+
+      if (!bucket) continue;
+      metrics[bucket].count += 1;
+      metrics[bucket].crmOrderValue += crmOrderValueByProjectId.get(projectId) ?? 0;
+
+      const latestCosting = latestCostingByProjectId.get(projectId);
+      if (latestCosting && bucket !== 'rest') {
+        metrics[bucket].peOrderValueExGst += computePeOrderValueExGstFromCosting({
+          items: latestCosting.items,
+          marginPct: latestCosting.marginPct,
+          grandTotal: latestCosting.grandTotal,
+          showGst: latestCosting.showGst,
+        });
+      }
+    }
+
+    return res.json({
+      rows: [
+        { key: 'proposal-ready', label: 'PE Ready', ...metrics['proposal-ready'] },
+        { key: 'draft', label: 'PE Draft', ...metrics.draft },
+        { key: 'not-started', label: 'PE Not Yet Created', ...metrics['not-started'] },
+        { key: 'rest', label: 'Rest', ...metrics.rest },
+      ],
+    });
+  } catch (error: any) {
+    console.error('[PE dashboard] Error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch Proposal Engine dashboard data' });
   }
 });
 
