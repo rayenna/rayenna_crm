@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -55,9 +56,35 @@ export interface Solar3DViewProps {
   persistentLayoutKeyRef?: React.MutableRefObject<string>;
   /** When set, the control panel is portaled here (outside the WebGL frame) instead of floating over the canvas. */
   controlsPortalHost?: HTMLElement | null;
+  /**
+   * Multiplies WebGL buffer size vs CSS size (supersampling). Use on narrow viewports instead of a scrollable
+   * oversized wrapper so touch orbit works and layout does not fight scrollbars. Clamped internally.
+   */
+  resolutionScale?: number;
 }
 
 const roofDepthM = 0.6; // panel base height above satellite (legacy “slab” depth; modules sit on metal rack)
+
+/** Viewport px for floating controls (`position: fixed`); keep a grab strip on-screen. */
+function clampFloatingControlsToViewport(
+  x: number,
+  y: number,
+  shellW: number,
+  shellH: number,
+): { x: number; y: number } {
+  if (typeof window === 'undefined') return { x, y };
+  const minKeep = 72;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const minX = -shellW + minKeep;
+  const maxX = vw - minKeep;
+  const minY = -shellH + minKeep;
+  const maxY = vh - minKeep;
+  return {
+    x: Math.max(minX, Math.min(x, maxX)),
+    y: Math.max(minY, Math.min(y, maxY)),
+  };
+}
 
 const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Solar3DView(
   {
@@ -72,10 +99,14 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
     orbitStateRef,
     persistentLayoutKeyRef,
     controlsPortalHost = null,
+    resolutionScale: resolutionScaleProp = 1,
   },
   ref,
 ) {
   const isDockedControls = !!controlsPortalHost;
+  const resolutionScale = Math.min(4, Math.max(0.25, Number.isFinite(resolutionScaleProp) ? resolutionScaleProp : 1));
+  const resolutionScaleRef = useRef(resolutionScale);
+  resolutionScaleRef.current = resolutionScale;
   const mountRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -126,11 +157,12 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
   const [controlsCollapsed, setControlsCollapsed] = useState(true);
   /** When true, orbit camera is not reset when tilt, sun sliders, texture load, or parent layout zoom resize rebuild geometry. */
   const [lockCameraView, setLockCameraView] = useState(true);
-  /** Top-left offset inside the 3D mount (px); default placed top-right after layout. */
+  /** Viewport offset (px) when floating controls use `position: fixed`. */
   const [controlsFloat, setControlsFloat] = useState({ x: 12, y: 12 });
   const controlsShellRef = useRef<HTMLDivElement | null>(null);
   const controlsFloatInitRef = useRef(false);
   const userDraggedControlsRef = useRef(false);
+  const prevDockedControlsRef = useRef(isDockedControls);
   const controlsDragRef = useRef<{
     pointerId: number;
     startClientX: number;
@@ -222,9 +254,64 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
     controlsFloatRef.current = controlsFloat;
   }, [controlsFloat]);
 
+  useEffect(() => {
+    if (prevDockedControlsRef.current && !isDockedControls) {
+      controlsFloatInitRef.current = false;
+    }
+    prevDockedControlsRef.current = isDockedControls;
+  }, [isDockedControls]);
+
   // Important for satellite UV mapping: use the full original image size,
   // otherwise the roof UVs won't line up with the texture loaded from `roofImageUrl`.
   const effectiveImageSize = useMemo(() => imageSize, [imageSize]);
+
+  const sunAzimuthDegRef = useRef(sunAzimuthDeg);
+  const sunElevationDegRef = useRef(sunElevationDeg);
+  useEffect(() => {
+    sunAzimuthDegRef.current = sunAzimuthDeg;
+  }, [sunAzimuthDeg]);
+  useEffect(() => {
+    sunElevationDegRef.current = sunElevationDeg;
+  }, [sunElevationDeg]);
+
+  /**
+   * Sun direction from roof center (Z-up). Takes explicit angles so slider updates never rely on ref timing.
+   * Shadow ortho frustum stays symmetric in light space (Three.js); do not use world X/Y as left/right/top/bottom.
+   */
+  const applySunLightPositionsFromAngles = useCallback((azDeg: number, elDeg: number) => {
+    const directionalLight = directionalLightRef.current;
+    const directionalLightBack = directionalLightBackRef.current;
+    if (!directionalLight) return;
+    const roofCenter = roofCenterRef.current;
+    if (!roofCenter) return;
+
+    const azRad = THREE.MathUtils.degToRad(azDeg);
+    const elRad = THREE.MathUtils.degToRad(elDeg);
+    const sunDist = 50;
+    const sx = Math.cos(elRad) * Math.sin(azRad) * sunDist;
+    const sy = Math.cos(elRad) * Math.cos(azRad) * sunDist;
+    const sz = Math.sin(elRad) * sunDist;
+
+    directionalLight.position.set(roofCenter.x + sx, roofCenter.y + sy, roofCenter.z + sz);
+    directionalLight.target.position.copy(roofCenter);
+    directionalLight.target.updateMatrixWorld(true);
+    directionalLight.updateMatrixWorld(true);
+
+    if (directionalLightBack) {
+      directionalLightBack.position.set(roofCenter.x - sx, roofCenter.y - sy, roofCenter.z + sz);
+      directionalLightBack.target.position.copy(roofCenter);
+      directionalLightBack.target.updateMatrixWorld(true);
+      directionalLightBack.updateMatrixWorld(true);
+    }
+
+    if (sunSphereRef.current) {
+      sunSphereRef.current.position.copy(directionalLight.position);
+    }
+
+    const cam = directionalLight.shadow.camera as THREE.OrthographicCamera;
+    cam.updateProjectionMatrix();
+    directionalLight.shadow.needsUpdate = true;
+  }, []);
 
   useEffect(() => {
     if (!mountRef.current || !canvasRef.current) return;
@@ -233,21 +320,21 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
     const canvasEl = canvasRef.current;
 
     const width = Math.max(1, mountEl.clientWidth);
-    const height = Math.max(1, mountEl.clientHeight);
+    const height = Math.max(520, Math.max(1, mountEl.clientHeight));
+    const s0 = resolutionScaleRef.current;
+    const rw = Math.max(1, Math.round(width * s0));
+    const rh = Math.max(1, Math.round(height * s0));
 
     const scene = new THREE.Scene();
     scene.background = null;
     // Soft sky (interactive view only; export path temporarily forces white).
-    scene.background = new THREE.Color('#d8e8f4');
+    scene.background = new THREE.Color(0xf0f4f8);
     // Use Z-up to match how roof/panel geometry is built.
     scene.up = new THREE.Vector3(0, 0, 1);
 
-    const camera = new THREE.PerspectiveCamera(
-      45,
-      mountRef.current.clientWidth / mountRef.current.clientHeight,
-      0.1,
-      1000,
-    );
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    // Must match Z-up scene; default camera.up is Y-up and inverts orbit / lookAt vs roof geometry.
+    camera.up.set(0, 0, 1);
     camera.position.set(0, 20, 20);
     camera.lookAt(0, 0, 0);
 
@@ -270,7 +357,8 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
     setWebglUnavailable(false);
     // Render to renderer-owned canvas; hide React canvas so it doesn't cover it.
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.setSize(width, height, false);
+    renderer.setSize(rw, rh, false);
+    renderer.setClearColor(0xf0f4f8, 1);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -289,7 +377,7 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
     const controls = new OrbitControls(camera, renderer.domElement);
     controlsRef.current = controls;
     // Avoid over-restricting polar angles; Z-up framing can change with roof size.
-    controls.maxPolarAngle = Math.PI;
+    controls.maxPolarAngle = Math.PI / 3;
     controls.minDistance = 3;
     controls.maxDistance = 40;
     controls.enableDamping = true;
@@ -365,12 +453,22 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
                 group.add(rackGroup);
                 rackGroupRef.current = rackGroup;
 
-    const resizeObserver = new ResizeObserver(() => {
+    let resizeRaf: number | null = null;
+    const applyRendererSize = () => {
+      if (!renderer) return;
       const w = Math.max(1, mountEl.clientWidth);
-      const h = Math.max(1, mountEl.clientHeight);
-      renderer.setSize(w, h, false);
+      const h = Math.max(520, Math.max(1, mountEl.clientHeight));
+      const s = resolutionScaleRef.current;
+      renderer.setSize(Math.max(1, Math.round(w * s)), Math.max(1, Math.round(h * s)), false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+    };
+    const resizeObserver = new ResizeObserver(() => {
+      if (resizeRaf != null) return;
+      resizeRaf = requestAnimationFrame(() => {
+        resizeRaf = null;
+        applyRendererSize();
+      });
     });
     resizeObserver.observe(mountEl);
 
@@ -393,6 +491,7 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
 
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      if (resizeRaf != null) cancelAnimationFrame(resizeRaf);
       resizeObserver.disconnect();
 
       scene.environment = null;
@@ -447,6 +546,19 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
       controlsRef.current = null;
     };
   }, [orbitStateRef]);
+
+  useEffect(() => {
+    const renderer = rendererRef.current;
+    const camera = cameraRef.current;
+    const mountEl = mountRef.current;
+    if (!renderer || !camera || !mountEl) return;
+    const w = Math.max(1, mountEl.clientWidth);
+    const h = Math.max(520, Math.max(1, mountEl.clientHeight));
+    const s = resolutionScaleRef.current;
+    renderer.setSize(Math.max(1, Math.round(w * s)), Math.max(1, Math.round(h * s)), false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }, [resolutionScale]);
 
   useEffect(() => {
     const group = groupRef.current;
@@ -730,17 +842,6 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
     const roofCenterAligned = roofBoxAligned.getCenter(new THREE.Vector3());
     roofCenterRef.current = roofCenterAligned;
 
-    // Keep light focus and sun marker aligned to the current roof.
-    if (directionalLightRef.current) {
-      directionalLightRef.current.target.position.copy(roofCenterAligned);
-    }
-    if (directionalLightBackRef.current) {
-      directionalLightBackRef.current.target.position.copy(roofCenterAligned);
-    }
-    if (sunSphereRef.current && directionalLightRef.current) {
-      sunSphereRef.current.position.copy(directionalLightRef.current.position);
-    }
-
     // Step 3: ground plane + subtle grid.
     if (groundPlaneRef.current) {
       sceneRef.current?.remove(groundPlaneRef.current);
@@ -774,14 +875,17 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
     directionalLight.shadow.bias = -0.00022;
     directionalLight.shadow.normalBias = 0.032;
     const roofSize = roofBoxAligned.getSize(new THREE.Vector3());
-    const roofRadius = Math.max(roofSize.x, roofSize.y, roofSize.z, 1e-6);
-    const shadowHalf = roofRadius * 0.9;
-    directionalLight.shadow.camera.left = roofCenterAligned.x - shadowHalf;
-    directionalLight.shadow.camera.right = roofCenterAligned.x + shadowHalf;
-    directionalLight.shadow.camera.top = roofCenterAligned.y + shadowHalf;
-    directionalLight.shadow.camera.bottom = roofCenterAligned.y - shadowHalf;
-    directionalLight.shadow.camera.near = 0.1;
-    directionalLight.shadow.camera.far = 120;
+    const roofSpan = Math.max(roofSize.x, roofSize.y, 4);
+    const shadowHalf = roofSpan * 0.55;
+    const cam = directionalLight.shadow.camera as THREE.OrthographicCamera;
+    cam.left = -shadowHalf;
+    cam.right = shadowHalf;
+    cam.top = shadowHalf;
+    cam.bottom = -shadowHalf;
+    cam.near = 0.1;
+    cam.far = 120;
+
+    applySunLightPositionsFromAngles(sunAzimuthDegRef.current, sunElevationDegRef.current);
 
     // Panels
     for (const old of panelsRef.current) {
@@ -850,10 +954,31 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
       ].join('|');
 
       const applyDefaultCamera = () => {
-        camera.position.set(200, -200, 150);
-        camera.lookAt(0, 0, 0);
-        controls.target.set(0, 0, 0);
-        controls.update();
+        group.updateMatrixWorld(true);
+        const bbox = new THREE.Box3().setFromObject(group);
+        const center = new THREE.Vector3();
+        bbox.getCenter(center);
+        const size = new THREE.Vector3();
+        bbox.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z, 1e-6);
+        // Bird's eye: mostly above the roof (+Z), tiny XY shift so lookAt stays stable (not parallel to up).
+        const lift = maxDim * 5.5;
+        const shift = maxDim * 0.28;
+        camera.position.set(center.x + shift, center.y + shift, center.z + lift);
+        camera.lookAt(center);
+
+        if (controlsRef.current) {
+          controlsRef.current.target.copy(center);
+          controlsRef.current.minDistance = maxDim * 0.8;
+          controlsRef.current.maxDistance = maxDim * 8;
+          controlsRef.current.maxPolarAngle = Math.PI / 2.2;
+          controlsRef.current.update();
+        }
+        const renderer = rendererRef.current;
+        const scene = sceneRef.current;
+        if (renderer && scene) {
+          renderer.render(scene, camera);
+        }
       };
 
       if (persistentLayoutKeyRef) {
@@ -892,6 +1017,7 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
     roofProceduralTexture,
     roofTexture,
     tiltDeg,
+    applySunLightPositionsFromAngles,
   ]);
 
   // Swap satellite texture onto the roof TOP cap when it finishes loading.
@@ -938,66 +1064,40 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
     }
   }, [tiltDeg]);
 
-  useEffect(() => {
-    const directionalLight = directionalLightRef.current;
-    const directionalLightBack = directionalLightBackRef.current;
-    if (!directionalLight) return;
-
-    const roofCenter = roofCenterRef.current ?? new THREE.Vector3(0, 0, 0);
-    const azRad = THREE.MathUtils.degToRad(sunAzimuthDeg);
-    const elRad = THREE.MathUtils.degToRad(sunElevationDeg);
-
-    // With Z-up, z is derived from elevation, and x/y are derived from azimuth in the XY plane.
-    const x = Math.cos(elRad) * Math.sin(azRad) * 15;
-    const y = Math.cos(elRad) * Math.cos(azRad) * 15;
-    const z = Math.sin(elRad) * 15;
-
-    directionalLight.position.set(x, y, z);
-    directionalLight.target.position.copy(roofCenter);
-
-    if (directionalLightBack) {
-      directionalLightBack.position.set(-x, -y, z);
-      directionalLightBack.target.position.copy(roofCenter);
-    }
-
-    if (sunSphereRef.current) {
-      sunSphereRef.current.position.copy(directionalLight.position);
-    }
-  }, [sunElevationDeg, sunAzimuthDeg]);
+  useLayoutEffect(() => {
+    applySunLightPositionsFromAngles(sunAzimuthDeg, sunElevationDeg);
+  }, [sunAzimuthDeg, sunElevationDeg, applySunLightPositionsFromAngles]);
 
   const resetView = useCallback(() => {
     const camera = cameraRef.current;
     const controls = controlsRef.current;
-    const roofCenter = roofCenterRef.current;
-    if (!camera || !controls || !roofCenter) return;
+    const group = groupRef.current;
+    if (!camera || !controls || !group) return;
 
     if (resetAnimFrameRef.current != null) {
       cancelAnimationFrame(resetAnimFrameRef.current);
+      resetAnimFrameRef.current = null;
     }
 
-    const durationMs = 500;
-    const start = camera.position.clone();
-    // With Z-up, "height" is on Z.
-    const end = new THREE.Vector3(roofCenter.x + 0, roofCenter.y - 5, roofCenter.z + 8);
-    const startTime = performance.now();
+    group.updateMatrixWorld(true);
+    const bbox = new THREE.Box3().setFromObject(group);
+    const center = new THREE.Vector3();
+    bbox.getCenter(center);
+    const size = new THREE.Vector3();
+    bbox.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z, 1e-6);
+    const lift = maxDim * 5.5;
+    const shift = maxDim * 0.28;
+    camera.position.set(center.x + shift, center.y + shift, center.z + lift);
+    camera.lookAt(center);
 
-    controls.target.copy(roofCenter);
-    controls.update();
-
-    const animate = () => {
-      const now = performance.now();
-      const t = Math.min(1, (now - startTime) / durationMs);
-      camera.position.lerpVectors(start, end, t);
-      controls.update();
-
-      if (t < 1) {
-        resetAnimFrameRef.current = requestAnimationFrame(animate);
-      } else {
-        resetAnimFrameRef.current = null;
-      }
-    };
-
-    resetAnimFrameRef.current = requestAnimationFrame(animate);
+    if (controlsRef.current) {
+      controlsRef.current.target.copy(center);
+      controlsRef.current.minDistance = maxDim * 0.8;
+      controlsRef.current.maxDistance = maxDim * 8;
+      controlsRef.current.maxPolarAngle = Math.PI / 2.2;
+      controlsRef.current.update();
+    }
   }, []);
 
   /** WYSIWYG: keeps current orbit/zoom; export resolution matches on-screen aspect (long edge up to 1920px). */
@@ -1172,7 +1272,7 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
     onExportPNG?.(dataUrl);
   }, [buildExportDataUrl, onExportPNG]);
 
-  // Default float position: top-right inside mount; clamp on resize. After user drags, only clamp.
+  // Default float position: top-right of the 3D mount in viewport coords; clamp on resize / window.
   useEffect(() => {
     if (controlsPortalHost) return;
     const m = mountRef.current;
@@ -1181,34 +1281,33 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
     const fit = () => {
       const shell = controlsShellRef.current;
       const cw = m.clientWidth;
-      const ch = m.clientHeight;
       if (cw < 32) return;
       const sw = shell?.offsetWidth || 268;
       const sh = shell?.offsetHeight || 44;
+      const r = m.getBoundingClientRect();
 
       if (!userDraggedControlsRef.current && !controlsFloatInitRef.current) {
         controlsFloatInitRef.current = true;
-        setControlsFloat({
-          x: Math.max(0, cw - sw - 12),
-          y: 10,
-        });
+        const nx = r.right - sw - 12;
+        const ny = r.top + 10;
+        setControlsFloat(clampFloatingControlsToViewport(nx, ny, sw, sh));
         return;
       }
-      const maxX = Math.max(0, cw - sw);
-      const maxY = Math.max(0, ch - sh);
-      setControlsFloat((p) => ({
-        x: Math.max(0, Math.min(p.x, maxX)),
-        y: Math.max(0, Math.min(p.y, maxY)),
-      }));
+      setControlsFloat((p) => clampFloatingControlsToViewport(p.x, p.y, sw, sh));
     };
 
     const ro = new ResizeObserver(() => requestAnimationFrame(fit));
     ro.observe(m);
+    const onWin = () => requestAnimationFrame(fit);
+    window.addEventListener('resize', onWin);
     requestAnimationFrame(fit);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', onWin);
+    };
   }, [controlsPortalHost]);
 
-  // Expand/collapse changes panel height — keep it inside the viewport.
+  // Expand/collapse changes panel height — re-clamp in the viewport.
   useEffect(() => {
     if (controlsPortalHost) return;
     const m = mountRef.current;
@@ -1217,12 +1316,9 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
     const raf = requestAnimationFrame(() => {
       const sh = controlsShellRef.current;
       if (!m || !sh) return;
-      const maxX = Math.max(0, m.clientWidth - sh.offsetWidth);
-      const maxY = Math.max(0, m.clientHeight - sh.offsetHeight);
-      setControlsFloat((p) => ({
-        x: Math.max(0, Math.min(p.x, maxX)),
-        y: Math.max(0, Math.min(p.y, maxY)),
-      }));
+      const sw = sh.offsetWidth;
+      const shh = sh.offsetHeight;
+      setControlsFloat((p) => clampFloatingControlsToViewport(p.x, p.y, sw, shh));
     });
     return () => cancelAnimationFrame(raf);
   }, [controlsCollapsed, controlsPortalHost]);
@@ -1244,18 +1340,14 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
 
   const onControlsDragPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     const d = controlsDragRef.current;
-    if (!d || d.pointerId !== e.pointerId || !mountRef.current || !controlsShellRef.current) return;
-    const mountEl = mountRef.current;
+    if (!d || d.pointerId !== e.pointerId || !controlsShellRef.current) return;
     const shell = controlsShellRef.current;
     const dx = e.clientX - d.startClientX;
     const dy = e.clientY - d.startClientY;
-    let nx = d.startX + dx;
-    let ny = d.startY + dy;
-    const maxX = Math.max(0, mountEl.clientWidth - shell.offsetWidth);
-    const maxY = Math.max(0, mountEl.clientHeight - shell.offsetHeight);
-    nx = Math.max(0, Math.min(nx, maxX));
-    ny = Math.max(0, Math.min(ny, maxY));
-    setControlsFloat({ x: nx, y: ny });
+    const nx = d.startX + dx;
+    const ny = d.startY + dy;
+    const c = clampFloatingControlsToViewport(nx, ny, shell.offsetWidth, shell.offsetHeight);
+    setControlsFloat({ x: c.x, y: c.y });
   }, []);
 
   const onControlsDragPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -1399,12 +1491,14 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
           </svg>
         </div>
         )}
-        {!isDockedControls && (
-          <div
-            ref={controlsShellRef}
-            className="absolute z-10 pointer-events-auto w-[min(288px,calc(100%-16px))] max-w-[calc(100%-16px)] rounded-xl shadow-2xl shadow-black/45 ring-1 ring-white/10"
-            style={{ left: controlsFloat.x, top: controlsFloat.y }}
-          >
+        {!isDockedControls &&
+          typeof document !== 'undefined' &&
+          createPortal(
+            <div
+              ref={controlsShellRef}
+              className="fixed z-[100] pointer-events-auto w-[min(288px,calc(100vw-24px))] max-w-[min(288px,calc(100vw-24px))] rounded-xl shadow-2xl shadow-black/45 ring-1 ring-white/10"
+              style={{ left: controlsFloat.x, top: controlsFloat.y }}
+            >
             <div className="bg-black/55 text-white rounded-xl text-xs border border-white/10 backdrop-blur-md overflow-hidden">
               <div
                 className="flex items-stretch gap-1 px-2 py-1.5 select-none touch-none"
@@ -1476,6 +1570,7 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
                     min={0}
                     max={45}
                     value={tiltDeg}
+                    onInput={(e) => setTiltDeg(Number((e.target as HTMLInputElement).value))}
                     onChange={(e) => setTiltDeg(Number(e.target.value))}
                   />
 
@@ -1491,6 +1586,7 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
                     min={10}
                     max={80}
                     value={sunElevationDeg}
+                    onInput={(e) => setSunElevationDeg(Number((e.target as HTMLInputElement).value))}
                     onChange={(e) => setSunElevationDeg(Number(e.target.value))}
                   />
 
@@ -1504,6 +1600,7 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
                     min={0}
                     max={360}
                     value={sunAzimuthDeg}
+                    onInput={(e) => setSunAzimuthDeg(Number((e.target as HTMLInputElement).value))}
                     onChange={(e) => setSunAzimuthDeg(Number(e.target.value))}
                   />
 
@@ -1528,8 +1625,9 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
                 </div>
               )}
             </div>
-          </div>
-        )}
+          </div>,
+            document.body,
+          )}
       </div>
 
       {isDockedControls &&
@@ -1591,6 +1689,7 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
                     min={0}
                     max={45}
                     value={tiltDeg}
+                    onInput={(e) => setTiltDeg(Number((e.target as HTMLInputElement).value))}
                     onChange={(e) => setTiltDeg(Number(e.target.value))}
                   />
 
@@ -1606,6 +1705,7 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
                     min={10}
                     max={80}
                     value={sunElevationDeg}
+                    onInput={(e) => setSunElevationDeg(Number((e.target as HTMLInputElement).value))}
                     onChange={(e) => setSunElevationDeg(Number(e.target.value))}
                   />
 
@@ -1619,6 +1719,7 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
                     min={0}
                     max={360}
                     value={sunAzimuthDeg}
+                    onInput={(e) => setSunAzimuthDeg(Number((e.target as HTMLInputElement).value))}
                     onChange={(e) => setSunAzimuthDeg(Number(e.target.value))}
                   />
 

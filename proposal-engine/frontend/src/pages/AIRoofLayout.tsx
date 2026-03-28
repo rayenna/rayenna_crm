@@ -192,26 +192,16 @@ export default function AIRoofLayout() {
   const [isPolygonSummaryReady, setIsPolygonSummaryReady] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const layoutScrollRef = useRef<HTMLDivElement>(null);
+  /** 2D / saved-3D preview: stable width without inner scrollbars. */
+  const layoutPreviewMeasureRef = useRef<HTMLDivElement>(null);
+  /** Live 3D: canvas column only (excludes docked control column). */
+  const layout3dCanvasMeasureRef = useRef<HTMLDivElement>(null);
   const solar3dRef = useRef<Solar3DViewHandle | null>(null);
   /** Survives 3D unmount during Save (brief 2D tab) so orbit is restored and layout key matches. */
   const solar3dPersistentLayoutKeyRef = useRef('');
   const solar3dOrbitRef = useRef<Solar3DOrbitSnapshot | null>(null);
   /** Mount node for 3D control panel (outside scroll canvas, like 2D toolbars). */
   const [solar3dControlsHost, setSolar3dControlsHost] = useState<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const el = layoutScrollRef.current;
-    if (!el) return;
-    const measure = () => {
-      const w = el.clientWidth;
-      const h = el.clientHeight;
-      if (w > 0 && h > 0) setLayoutScrollViewport({ w, h });
-    };
-    measure();
-    const ro = new ResizeObserver(() => measure());
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [roofViewTab, layoutMode]);
 
   /** Per-image URL: centre saved view once, editing polygon once (don’t fight user scroll / drag). */
   const scrollCenterMetaRef = useRef<{ url: string; savedDone: boolean; editingDone: boolean }>({
@@ -247,6 +237,16 @@ export default function AIRoofLayout() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  /** Phones + tablets (iPad portrait): 3D uses full-width viewport + resolutionScale instead of scroll-zoom. */
+  const [isNarrowViewport, setIsNarrowViewport] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 1024 : false,
+  );
+  useEffect(() => {
+    const onResize = () => setIsNarrowViewport(window.innerWidth < 1024);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   type Point = { x: number; y: number };
   type PanelRect = { x: number; y: number; w: number; h: number };
 
@@ -256,14 +256,6 @@ export default function AIRoofLayout() {
   // Use crossOrigin='anonymous' so we can safely export the canvas to a data URL in production
   const [bgImage] = useImage(bgImageUrl ?? '', 'anonymous');
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
-
-  useEffect(() => {
-    const r = layoutScrollRef.current;
-    if (!r) return;
-    const w = r.clientWidth;
-    const h = r.clientHeight;
-    if (w > 0 && h > 0) setLayoutScrollViewport({ w, h });
-  }, [bgImageUrl, imageSize?.width, imageSize?.height, roofViewTab]);
 
   // DevTools open/close can cause viewport reflow (scrollbars/layout changes).
   // Konva sometimes needs an explicit redraw after such changes to keep shapes visible.
@@ -279,6 +271,49 @@ export default function AIRoofLayout() {
 
   const has3DRoofData =
     polygon != null && polygon.length >= 3 && panels.length > 0 && imageSize != null;
+
+  useLayoutEffect(() => {
+    const el =
+      roofViewTab === '3d' && has3DRoofData
+        ? layoutScrollRef.current ?? layout3dCanvasMeasureRef.current
+        : layoutPreviewMeasureRef.current;
+    if (!el) return;
+
+    let roRaf: number | null = null;
+    const HYST_PX = 3;
+
+    const apply = (w: number, h: number) => {
+      if (w <= 0 || h <= 0) return;
+      setLayoutScrollViewport((prev) => {
+        if (Math.abs(prev.w - w) < HYST_PX && Math.abs(prev.h - h) < HYST_PX) return prev;
+        return { w, h };
+      });
+    };
+
+    apply(el.clientWidth, el.clientHeight);
+
+    const schedule = () => {
+      if (roRaf != null) return;
+      roRaf = requestAnimationFrame(() => {
+        roRaf = null;
+        apply(el.clientWidth, el.clientHeight);
+      });
+    };
+
+    const ro = new ResizeObserver(() => schedule());
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      if (roRaf != null) cancelAnimationFrame(roRaf);
+    };
+  }, [roofViewTab, layoutMode, has3DRoofData]);
+
+  const narrow3dLive = isNarrowViewport && roofViewTab === '3d' && has3DRoofData;
+
+  // Narrow live 3D: layout zoom (>100%) caused ResizeObserver/WebGL thrash; orbit pinch-zoom is stable.
+  useEffect(() => {
+    if (narrow3dLive) setZoom3d(1);
+  }, [narrow3dLive]);
 
   /** URL for showing a saved 3D PNG (server or in-memory data URL) when polygon/panels are not loaded (saved layout mode). */
   const saved3dDisplayUrl = (() => {
@@ -990,7 +1025,7 @@ export default function AIRoofLayout() {
         </div>
 
         {/* Content */}
-        <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8">
+        <div className="px-2 sm:px-6 md:px-8 py-4 sm:py-8">
           {/* Active customer banner — same pattern as BOM / Costing */}
           {(() => {
             const ac = getActiveCustomer();
@@ -1025,7 +1060,7 @@ export default function AIRoofLayout() {
             );
           })()}
 
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6 lg:p-8">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-2 sm:p-6 lg:p-8 max-md:rounded-lg">
         {result && lastSavedProjectId && activeProject?.master?.crmProjectId && lastSavedProjectId === String(activeProject.master.crmProjectId) && (
           <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
             <div className="font-semibold">Saved layout loaded</div>
@@ -1117,7 +1152,7 @@ export default function AIRoofLayout() {
               </div>
 
               {/* 2) Actions + Controls + Photo — second on mobile (right column on desktop) */}
-              <div className="space-y-4 order-2 lg:order-2 bg-white p-3 sm:p-4 rounded-xl border border-gray-100">
+              <div className="flex flex-col gap-4 order-2 lg:order-2 bg-white p-2 sm:p-4 rounded-xl border border-gray-100">
                 {/* Layout actions — touch-friendly on mobile */}
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wide w-full sm:w-auto">Actions</span>
@@ -1207,42 +1242,51 @@ export default function AIRoofLayout() {
                     </div>
                   )}
                   <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
-                    {(roofViewTab === '2d' || roofViewTab === '3d') && (
-                      <div className="flex items-center justify-between gap-3 sm:gap-2 w-full sm:w-auto">
-                        <span className="text-xs font-medium text-gray-600 min-w-[4rem]">
-                          Zoom{roofViewTab === '3d' ? ' (3D)' : ''}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setLayoutZoom((z) =>
-                                Math.max(layoutZoomMin, Math.round((z - 0.25) * 4) / 4),
-                              )
-                            }
-                            className="h-10 w-10 sm:h-8 sm:w-8 flex items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-semibold hover:bg-gray-50 touch-manipulation"
-                            aria-label="Zoom out"
-                          >
-                            −
-                          </button>
-                          <span className="min-w-[3.5rem] text-center text-sm font-medium tabular-nums">
-                            {Math.round(layoutZoomValue * 100)}%
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setLayoutZoom((z) =>
-                                Math.min(10, Math.round((z + 0.25) * 4) / 4),
-                              )
-                            }
-                            className="h-10 w-10 sm:h-8 sm:w-8 flex items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-semibold hover:bg-gray-50 touch-manipulation"
-                            aria-label="Zoom in"
-                          >
-                            +
-                          </button>
+                    {(roofViewTab === '2d' || roofViewTab === '3d') &&
+                      (narrow3dLive ? (
+                        <div className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                          <p className="text-xs font-medium text-gray-700">3D scene (phone / tablet)</p>
+                          <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
+                            Pinch with two fingers to zoom the camera. Drag to orbit. Layout zoom is disabled here to
+                            avoid glitches.
+                          </p>
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="flex items-center justify-between gap-3 sm:gap-2 w-full sm:w-auto">
+                          <span className="text-xs font-medium text-gray-600 min-w-[4rem]">
+                            Zoom{roofViewTab === '3d' ? ' (3D)' : ''}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setLayoutZoom((z) =>
+                                  Math.max(layoutZoomMin, Math.round((z - 0.25) * 4) / 4),
+                                )
+                              }
+                              className="h-10 w-10 sm:h-8 sm:w-8 flex items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-semibold hover:bg-gray-50 touch-manipulation"
+                              aria-label="Zoom out"
+                            >
+                              −
+                            </button>
+                            <span className="min-w-[3.5rem] text-center text-sm font-medium tabular-nums">
+                              {Math.round(layoutZoomValue * 100)}%
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setLayoutZoom((z) =>
+                                  Math.min(10, Math.round((z + 0.25) * 4) / 4),
+                                )
+                              }
+                              className="h-10 w-10 sm:h-8 sm:w-8 flex items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-semibold hover:bg-gray-50 touch-manipulation"
+                              aria-label="Zoom in"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                       <span className="text-xs font-medium text-gray-600">Panel density</span>
                       <input
@@ -1312,7 +1356,8 @@ export default function AIRoofLayout() {
                 <div
                   className={`min-h-[260px] sm:min-h-[320px] rounded-2xl border border-gray-200 flex flex-col min-h-0 overflow-hidden ${
                     roofViewTab === '3d'
-                      ? 'bg-slate-200 lg:min-h-[360px]'
+                      ? // Fixed viewport on lg+: avoid flex-1 + stretch (was blowing out height, half-empty canvas + resize flicker).
+                        'bg-slate-200 lg:min-h-[360px] lg:h-[min(72vh,720px)] lg:max-h-[min(72vh,720px)] lg:shrink-0'
                       : 'aspect-[4/3] sm:aspect-video bg-white'
                   }`}
                 >
@@ -1343,126 +1388,251 @@ export default function AIRoofLayout() {
                     </div>
                   )}
                   {roofViewTab === '3d' && has3DRoofData ? (
-                    <div className="flex flex-col lg:flex-row flex-1 min-h-0 min-w-0 gap-3 p-2 sm:p-3">
+                    <div
+                      className={`flex flex-1 min-h-0 min-w-0 gap-2 sm:gap-3 p-0 sm:p-2 lg:p-3 ${
+                        narrow3dLive ? 'flex-col lg:flex-row' : 'flex-col'
+                      }`}
+                    >
+                      {narrow3dLive && (
+                        <div
+                          ref={setSolar3dControlsHost}
+                          className="w-full lg:w-[min(18rem,100%)] xl:w-80 shrink-0 order-2 lg:order-1 max-h-[min(44vh,22rem)] sm:max-h-[min(48vh,24rem)] lg:max-h-none overflow-y-auto overflow-x-hidden min-h-0"
+                          aria-label="3D scene controls"
+                        />
+                      )}
                       <div
-                        ref={setSolar3dControlsHost}
-                        className="w-full lg:w-[min(18rem,100%)] xl:w-80 shrink-0 order-2 lg:order-1 max-h-[min(48vh,24rem)] sm:max-h-[min(50vh,26rem)] lg:max-h-none overflow-y-auto overflow-x-hidden min-h-0"
-                        aria-label="3D scene controls"
-                      />
-                      <div
-                        ref={layoutScrollRef}
-                        className="w-full flex-1 min-h-[200px] sm:min-h-[240px] min-w-0 order-1 lg:order-2 overscroll-contain layout-preview-scroll-3d overflow-x-scroll overflow-y-scroll bg-slate-200"
-                        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}
-                      >
-                      <div
-                        className="inline-block align-top min-w-full box-border bg-slate-200"
-                        style={{
-                          width: layout3dBaseW * zoom3d,
-                          minHeight: layout3dBaseH * zoom3d,
-                        }}
-                      >
-                      <Suspense
-                        fallback={
-                          <div
-                            className="flex items-center justify-center text-gray-500 text-sm bg-slate-200"
-                            style={{
-                              width: layout3dBaseW * zoom3d,
-                              height: layout3dBaseH * zoom3d,
-                            }}
-                          >
-                            Loading 3D...
-                          </div>
-                        }
+                        ref={layout3dCanvasMeasureRef}
+                        className={`w-full min-h-0 min-w-0 flex flex-col overflow-hidden flex-1 ${
+                          narrow3dLive ? 'order-1 lg:order-2' : ''
+                        }`}
                       >
                         <div
-                          className="bg-slate-200"
+                          ref={layoutScrollRef}
+                          className={`w-full flex-1 min-h-0 min-w-0 overscroll-contain bg-slate-200 ${
+                            narrow3dLive
+                              ? 'overflow-y-auto overflow-x-hidden'
+                              : 'layout-preview-scroll-3d overflow-x-scroll overflow-y-scroll'
+                          }`}
                           style={{
-                            width: layout3dBaseW * zoom3d,
-                            height: layout3dBaseH * zoom3d,
+                            WebkitOverflowScrolling: 'touch',
+                            // Narrow live 3D: let the WebGL canvas receive pinch-zoom (OrbitControls); avoid pan-x/pan-y on the wrapper.
+                            ...(narrow3dLive ? {} : { touchAction: 'pan-x pan-y' as const }),
                           }}
                         >
-                        <LazySolar3DView
-                          ref={solar3dRef}
-                          orbitStateRef={solar3dOrbitRef}
-                          persistentLayoutKeyRef={solar3dPersistentLayoutKeyRef}
-                          controlsPortalHost={solar3dControlsHost}
-                          fillParent
-                          roofPolygon={polygon!}
-                          panelCoordinates={panels.map((p) => ({
-                            x: p.x,
-                            y: p.y,
-                            width: p.w,
-                            height: p.h,
-                          }))}
-                          imageSize={imageSize!}
-                          roofImageUrl={bgImageUrl ?? undefined}
-                          metersPerPixel={METERS_PER_PIXEL}
-                          panelCount={result?.panel_count}
-                          onExportPNG={async (dataUrl) => {
-                            setLast3dPngDataUrl(dataUrl);
-                            setProposalImageSource('3d');
-                            const crmId = activeProject?.master?.crmProjectId;
-                            if (!crmId || !dataUrl.startsWith('data:')) return;
-                            try {
-                              const out = await saveRoofLayout3dImage({
-                                projectId: String(crmId),
-                                dataUrl,
-                                setPreferForProposal: false,
-                                ...(Number.isFinite(Number(result?.roof_area_m2)) && {
-                                  roof_area_m2: Number(result!.roof_area_m2),
-                                }),
-                                ...(Number.isFinite(Number(result?.usable_area_m2)) && {
-                                  usable_area_m2: Number(result!.usable_area_m2),
-                                }),
-                                ...(Number.isFinite(Number(result?.panel_count)) && {
-                                  panel_count: Number(result!.panel_count),
-                                }),
-                              });
-                              const abs = absolutizeLayoutImageUrl(out.layout_image_3d_url);
-                              if (abs) setLast3dPngDataUrl(abs);
-                              setResult((prev) => {
-                                if (!prev) return prev;
-                                const next = {
-                                  ...prev,
-                                  layout_image_3d_url: out.layout_image_3d_url,
-                                  prefer_3d_for_proposal: out.prefer_3d_for_proposal,
-                                };
-                                persistRoofLayoutToActiveCustomer({
-                                  roof_area_m2: next.roof_area_m2,
-                                  usable_area_m2: next.usable_area_m2,
-                                  panel_count: next.panel_count,
-                                  layout_image_url: next.layout_image_url,
-                                  layout_image_3d_url: out.layout_image_3d_url,
-                                  prefer_3d_for_proposal: out.prefer_3d_for_proposal,
-                                });
-                                return next;
-                              });
-                            } catch (err) {
-                              setError(
-                                '3D image could not be saved to the server. It may not appear on other devices until saved.',
-                              );
-                              if (import.meta.env.DEV) console.error(err);
-                            }
-                          }}
-                        />
+                          {narrow3dLive ? (
+                            <div className="flex flex-col w-full min-w-0 items-stretch">
+                              <div
+                                className="w-full shrink-0 bg-slate-200"
+                                style={{
+                                  height: 'min(56vh, 480px)',
+                                  minHeight: 220,
+                                }}
+                              >
+                                <Suspense
+                                  fallback={
+                                    <div className="w-full h-full min-h-[220px] flex items-center justify-center text-gray-500 text-sm bg-slate-200">
+                                      Loading 3D…
+                                    </div>
+                                  }
+                                >
+                                  <LazySolar3DView
+                                    ref={solar3dRef}
+                                    orbitStateRef={solar3dOrbitRef}
+                                    persistentLayoutKeyRef={solar3dPersistentLayoutKeyRef}
+                                    controlsPortalHost={solar3dControlsHost}
+                                    fillParent
+                                    resolutionScale={1}
+                                    roofPolygon={polygon!}
+                                    panelCoordinates={panels.map((p) => ({
+                                      x: p.x,
+                                      y: p.y,
+                                      width: p.w,
+                                      height: p.h,
+                                    }))}
+                                    imageSize={imageSize!}
+                                    roofImageUrl={bgImageUrl ?? undefined}
+                                    metersPerPixel={METERS_PER_PIXEL}
+                                    panelCount={result?.panel_count}
+                                    onExportPNG={async (dataUrl) => {
+                                      setLast3dPngDataUrl(dataUrl);
+                                      setProposalImageSource('3d');
+                                      const crmId = activeProject?.master?.crmProjectId;
+                                      if (!crmId || !dataUrl.startsWith('data:')) return;
+                                      try {
+                                        const out = await saveRoofLayout3dImage({
+                                          projectId: String(crmId),
+                                          dataUrl,
+                                          setPreferForProposal: false,
+                                          ...(Number.isFinite(Number(result?.roof_area_m2)) && {
+                                            roof_area_m2: Number(result!.roof_area_m2),
+                                          }),
+                                          ...(Number.isFinite(Number(result?.usable_area_m2)) && {
+                                            usable_area_m2: Number(result!.usable_area_m2),
+                                          }),
+                                          ...(Number.isFinite(Number(result?.panel_count)) && {
+                                            panel_count: Number(result!.panel_count),
+                                          }),
+                                        });
+                                        const abs = absolutizeLayoutImageUrl(out.layout_image_3d_url);
+                                        if (abs) setLast3dPngDataUrl(abs);
+                                        setResult((prev) => {
+                                          if (!prev) return prev;
+                                          const next = {
+                                            ...prev,
+                                            layout_image_3d_url: out.layout_image_3d_url,
+                                            prefer_3d_for_proposal: out.prefer_3d_for_proposal,
+                                          };
+                                          persistRoofLayoutToActiveCustomer({
+                                            roof_area_m2: next.roof_area_m2,
+                                            usable_area_m2: next.usable_area_m2,
+                                            panel_count: next.panel_count,
+                                            layout_image_url: next.layout_image_url,
+                                            layout_image_3d_url: out.layout_image_3d_url,
+                                            prefer_3d_for_proposal: out.prefer_3d_for_proposal,
+                                          });
+                                          return next;
+                                        });
+                                      } catch (err) {
+                                        setError(
+                                          '3D image could not be saved to the server. It may not appear on other devices until saved.',
+                                        );
+                                        if (import.meta.env.DEV) console.error(err);
+                                      }
+                                    }}
+                                  />
+                                </Suspense>
+                              </div>
+                              {last3dPngDataUrl && (
+                                <div className="mt-2 px-1 pb-2 shrink-0">
+                                  <div className="text-xs font-medium text-gray-600 mb-1">
+                                    3D Render (last exported)
+                                  </div>
+                                  <img
+                                    src={last3dPngDataUrl}
+                                    alt="3D render preview"
+                                    className="w-full rounded-lg border border-gray-200 bg-white"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="min-w-full min-h-full flex justify-center items-start bg-slate-200">
+                            <div
+                              className="inline-block align-top box-border bg-slate-200"
+                              style={{
+                                width: layout3dBaseW * zoom3d,
+                                minHeight: layout3dBaseH * zoom3d,
+                              }}
+                            >
+                              <Suspense
+                                fallback={
+                                  <div
+                                    className="flex items-center justify-center text-gray-500 text-sm bg-slate-200"
+                                    style={{
+                                      width: layout3dBaseW * zoom3d,
+                                      height: layout3dBaseH * zoom3d,
+                                    }}
+                                  >
+                                    Loading 3D...
+                                  </div>
+                                }
+                              >
+                                <div
+                                  className="bg-slate-200"
+                                  style={{
+                                    width: layout3dBaseW * zoom3d,
+                                    height: layout3dBaseH * zoom3d,
+                                  }}
+                                >
+                                  <LazySolar3DView
+                                    ref={solar3dRef}
+                                    orbitStateRef={solar3dOrbitRef}
+                                    persistentLayoutKeyRef={solar3dPersistentLayoutKeyRef}
+                                    controlsPortalHost={narrow3dLive ? solar3dControlsHost : null}
+                                    fillParent
+                                    roofPolygon={polygon!}
+                                    panelCoordinates={panels.map((p) => ({
+                                      x: p.x,
+                                      y: p.y,
+                                      width: p.w,
+                                      height: p.h,
+                                    }))}
+                                    imageSize={imageSize!}
+                                    roofImageUrl={bgImageUrl ?? undefined}
+                                    metersPerPixel={METERS_PER_PIXEL}
+                                    panelCount={result?.panel_count}
+                                    onExportPNG={async (dataUrl) => {
+                                      setLast3dPngDataUrl(dataUrl);
+                                      setProposalImageSource('3d');
+                                      const crmId = activeProject?.master?.crmProjectId;
+                                      if (!crmId || !dataUrl.startsWith('data:')) return;
+                                      try {
+                                        const out = await saveRoofLayout3dImage({
+                                          projectId: String(crmId),
+                                          dataUrl,
+                                          setPreferForProposal: false,
+                                          ...(Number.isFinite(Number(result?.roof_area_m2)) && {
+                                            roof_area_m2: Number(result!.roof_area_m2),
+                                          }),
+                                          ...(Number.isFinite(Number(result?.usable_area_m2)) && {
+                                            usable_area_m2: Number(result!.usable_area_m2),
+                                          }),
+                                          ...(Number.isFinite(Number(result?.panel_count)) && {
+                                            panel_count: Number(result!.panel_count),
+                                          }),
+                                        });
+                                        const abs = absolutizeLayoutImageUrl(out.layout_image_3d_url);
+                                        if (abs) setLast3dPngDataUrl(abs);
+                                        setResult((prev) => {
+                                          if (!prev) return prev;
+                                          const next = {
+                                            ...prev,
+                                            layout_image_3d_url: out.layout_image_3d_url,
+                                            prefer_3d_for_proposal: out.prefer_3d_for_proposal,
+                                          };
+                                          persistRoofLayoutToActiveCustomer({
+                                            roof_area_m2: next.roof_area_m2,
+                                            usable_area_m2: next.usable_area_m2,
+                                            panel_count: next.panel_count,
+                                            layout_image_url: next.layout_image_url,
+                                            layout_image_3d_url: out.layout_image_3d_url,
+                                            prefer_3d_for_proposal: out.prefer_3d_for_proposal,
+                                          });
+                                          return next;
+                                        });
+                                      } catch (err) {
+                                        setError(
+                                          '3D image could not be saved to the server. It may not appear on other devices until saved.',
+                                        );
+                                        if (import.meta.env.DEV) console.error(err);
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              </Suspense>
+                              {last3dPngDataUrl && (
+                                <div className="mt-3 px-2 pb-2">
+                                  <div className="text-xs font-medium text-gray-600 mb-2">
+                                    3D Render (last exported)
+                                  </div>
+                                  <img
+                                    src={last3dPngDataUrl}
+                                    alt="3D render preview"
+                                    className="w-full rounded-lg border border-gray-200 bg-white"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            </div>
+                          )}
                         </div>
-                      </Suspense>
-                      {last3dPngDataUrl && (
-                        <div className="mt-3 px-2 pb-2">
-                          <div className="text-xs font-medium text-gray-600 mb-2">
-                            3D Render (last exported)
-                          </div>
-                          <img
-                            src={last3dPngDataUrl}
-                            alt="3D render preview"
-                            className="w-full rounded-lg border border-gray-200 bg-white"
-                          />
-                        </div>
-                      )}
-                      </div>
                       </div>
                     </div>
                   ) : (
+                    <div
+                      ref={layoutPreviewMeasureRef}
+                      className="flex flex-1 flex-col min-h-0 min-w-0 overflow-hidden w-full"
+                    >
                     <div
                       ref={layoutScrollRef}
                       className={`w-full flex-1 min-h-0 min-w-0 overscroll-contain ${
@@ -1682,6 +1852,7 @@ export default function AIRoofLayout() {
                         No layout image returned
                       </div>
                     )}
+                  </div>
                   </div>
                 )}
                 </div>

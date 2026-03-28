@@ -65,6 +65,7 @@
  * the thumb/track fail to paint and scrollbars vanish entirely.
  */
 .layout-preview-scroll-3d {
+  scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: rgb(30 64 175) rgb(226 232 240);
 }
