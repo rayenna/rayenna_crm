@@ -8,9 +8,9 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import {
   createSolarPanelTexture,
+  metalRackLegCount,
   PANEL_MESH_THICKNESS_M,
   panelToMesh,
-  polygonToShape,
   type Solar3DPanel,
 } from '../lib/solar3DHelpers';
 
@@ -27,9 +27,11 @@ export interface Solar3DViewProps {
   panelCount?: number;
   // called when user clicks Export
   onExportPNG?: (dataUrl: string) => void;
+  /** Fill explicit parent size (scroll/zoom wrapper). Keeps WebGL resolution in sync — no CSS-only scale blur. */
+  fillParent?: boolean;
 }
 
-const roofDepthM = 0.6; // visible slab thickness for rooftop realism
+const roofDepthM = 0.6; // panel base height above satellite (legacy “slab” depth; modules sit on metal rack)
 
 export default function Solar3DView({
   roofPolygon,
@@ -39,6 +41,7 @@ export default function Solar3DView({
   metersPerPixel,
   panelCount,
   onExportPNG,
+  fillParent = false,
 }: Solar3DViewProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -55,6 +58,7 @@ export default function Solar3DView({
   const rackGroupRef = useRef<THREE.Group | null>(null);
   const roofSidesMeshRef = useRef<THREE.Mesh | null>(null);
   const roofTopMeshRef = useRef<THREE.Mesh | null>(null);
+  const metalRackGroupRef = useRef<THREE.Group | null>(null);
   const gridRef = useRef<THREE.GridHelper | null>(null);
   const groundPlaneRef = useRef<THREE.Mesh | null>(null);
   const groundGridRef = useRef<THREE.GridHelper | null>(null);
@@ -64,6 +68,8 @@ export default function Solar3DView({
   const controlsRef = useRef<OrbitControls | null>(null);
   const tiltDegRef = useRef(10);
   const roofCenterRef = useRef<THREE.Vector3 | null>(null);
+  /** When `lockCameraView` is on, default framing runs only if this key changes (not on tilt/texture rebuilds). */
+  const lastCameraLayoutKeyRef = useRef<string>('');
   const satellitePlaneRef = useRef<THREE.Mesh | null>(null);
   const revealStartTimeRef = useRef<number | null>(null);
   const revealFromRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 20, 0));
@@ -75,6 +81,9 @@ export default function Solar3DView({
   const [sunElevationDeg, setSunElevationDeg] = useState(45);
   const [sunAzimuthDeg, setSunAzimuthDeg] = useState(180);
   const [webglUnavailable, setWebglUnavailable] = useState(false);
+  /** True while capturing PNG so HTML overlays can hide (e.g. screen capture). */
+  const [exportingSnapshot, setExportingSnapshot] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const [badgeScale, setBadgeScale] = useState(1);
   const resetAnimFrameRef = useRef<number | null>(null);
@@ -82,6 +91,8 @@ export default function Solar3DView({
 
   // Minimized by default so it never blocks the roof view.
   const [controlsCollapsed, setControlsCollapsed] = useState(true);
+  /** When true, orbit camera is not reset when tilt, sun sliders, texture load, or parent layout zoom resize rebuild geometry. */
+  const [lockCameraView, setLockCameraView] = useState(true);
   /** Top-left offset inside the 3D mount (px); default placed top-right after layout. */
   const [controlsFloat, setControlsFloat] = useState({ x: 12, y: 12 });
   const controlsShellRef = useRef<HTMLDivElement | null>(null);
@@ -183,15 +194,6 @@ export default function Solar3DView({
   const effectiveImageSize = useMemo(() => imageSize, [imageSize]);
 
   useEffect(() => {
-    if (!import.meta.env?.DEV) return;
-    // Step 2 diagnostics: confirm panelCoordinates are present.
-    console.log('[Solar3DView] metersPerPixel:', metersPerPixel);
-    console.log('[Solar3DView] panelCoordinates.length:', panelCoordinates?.length);
-    console.log('[Solar3DView] panelCount (ideal):', panelCount);
-    console.log('[Solar3DView] panelCoordinates sample:', panelCoordinates?.[0]);
-  }, []);
-
-  useEffect(() => {
     if (!mountRef.current || !canvasRef.current) return;
 
     const mountEl = mountRef.current;
@@ -220,6 +222,9 @@ export default function Solar3DView({
     try {
       renderer = new THREE.WebGLRenderer({
         antialias: true,
+        alpha: false,
+        // Required so readback / drawImage after render is reliable across GPUs (blank exports otherwise).
+        preserveDrawingBuffer: true,
         powerPreference: 'high-performance',
       });
     } catch {
@@ -386,6 +391,7 @@ export default function Solar3DView({
       rackGroupRef.current = null;
       roofSidesMeshRef.current = null;
       roofTopMeshRef.current = null;
+      metalRackGroupRef.current = null;
       gridRef.current = null;
       groundPlaneRef.current = null;
       groundGridRef.current = null;
@@ -441,13 +447,11 @@ export default function Solar3DView({
       roofTopMeshRef.current = null;
     }
 
-    const roofShape = polygonToShape(roofPolygon, effectiveImageSize, metersPerPixel);
     // 1) Satellite image as a flat base plane (NOT mapped to the polygon).
     const imgWm = effectiveImageSize.width * metersPerPixel;
     const imgHm = effectiveImageSize.height * metersPerPixel;
     const baseTex = roofTexture ?? roofProceduralTexture ?? null;
     if (baseTex) {
-      // With Y flipped in geometry conversion, keep base texture oriented naturally.
       baseTex.flipY = false;
       baseTex.needsUpdate = true;
     }
@@ -464,95 +468,222 @@ export default function Solar3DView({
     sceneRef.current?.add(satellitePlane);
     satellitePlaneRef.current = satellitePlane;
 
-    // 2) Roof polygon slab placed above the satellite plane.
-    const roofBaseZ = 2; // meters above the satellite plane
-    const roofSidesGeometry = new THREE.ExtrudeGeometry(roofShape, {
-      depth: roofDepthM,
-      bevelEnabled: false,
-    });
-    roofSidesGeometry.translate(0, 0, roofBaseZ);
+    const roofBaseZ = 2; // meters above satellite — panel & racking reference
+    const deckZ = roofBaseZ + roofDepthM - 0.03; // tilted rail plane under modules
 
-    const roofSidesMaterial = new THREE.MeshStandardMaterial({
-      color: 0x8b7355,
-      roughness: 0.88,
-      metalness: 0.06,
-      envMapIntensity: 0.75,
-    });
-    // Ensure the roof remains visible regardless of current camera angle.
-    roofSidesMaterial.side = THREE.DoubleSide;
-
-    const roofSidesMesh = new THREE.Mesh(roofSidesGeometry, roofSidesMaterial);
-    roofSidesMesh.castShadow = true;
-    roofSidesMesh.receiveShadow = true;
-    group.add(roofSidesMesh);
-    roofSidesMeshRef.current = roofSidesMesh;
-
-    // Roof sides remain aligned with the Z-up geometry (no additional rotation).
-
-    // Subtle roof outline for a more professional look.
-    const roofEdges = new THREE.EdgesGeometry(roofSidesGeometry);
-    const roofEdgeLines = new THREE.LineSegments(
-      roofEdges,
-      new THREE.LineBasicMaterial({ color: 0x333333 }),
-    );
-    roofSidesMesh.add(roofEdgeLines);
-
-    // Roof TOP surface: simple cap (no satellite mapping).
-    const roofTopGeometry = new THREE.ShapeGeometry(roofShape);
-    const roofTopZ = roofBaseZ + roofDepthM + 0.01;
-    roofTopGeometry.translate(0, 0, roofTopZ);
-
-    if (roofProceduralTexture) {
-      const posAttr = roofTopGeometry.attributes.position as THREE.BufferAttribute;
-
-      // Compute UV normalization from the actual geometry vertices.
-      // This is more robust than re-deriving min/max from `roofPolygon`.
-      let minXM = Infinity;
-      let maxXM = -Infinity;
-      let minYM = Infinity;
-      let maxYM = -Infinity;
-
-      for (let i = 0; i < posAttr.count; i++) {
-        const x = posAttr.getX(i);
-        const y = posAttr.getY(i);
-        if (x < minXM) minXM = x;
-        if (x > maxXM) maxXM = x;
-        if (y < minYM) minYM = y;
-        if (y > maxYM) maxYM = y;
-      }
-
-      const denomX = Math.max(1e-9, maxXM - minXM);
-      const denomY = Math.max(1e-9, maxYM - minYM);
-
-      const uvs = new Float32Array(posAttr.count * 2);
-      for (let i = 0; i < posAttr.count; i++) {
-        const x = posAttr.getX(i);
-        const y = posAttr.getY(i);
-        const u = (x - minXM) / denomX;
-        const vRaw = (y - minYM) / denomY;
-        uvs[i * 2] = u;
-        // No manual V-flip: texture upload conventions already align orientation.
-        uvs[i * 2 + 1] = 1 - vRaw;
-      }
-      roofTopGeometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+    if (metalRackGroupRef.current) {
+      const mats = new Set<THREE.Material>();
+      metalRackGroupRef.current.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (mesh.geometry) mesh.geometry.dispose();
+        const material = (mesh as any).material as THREE.Material | undefined;
+        if (material) mats.add(material);
+      });
+      group.remove(metalRackGroupRef.current);
+      for (const m of mats) m.dispose();
+      metalRackGroupRef.current = null;
     }
 
-    const roofTopMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      roughness: 0.9,
-      metalness: 0.02,
-      transparent: true,
-      opacity: 0.12,
+    const tiltNow = tiltDegRef.current;
+    const tiltNowRad = THREE.MathUtils.degToRad(tiltNow);
+    const desiredPanelCount =
+      panelCount != null ? Math.max(0, Math.floor(panelCount)) : panelCoordinates.length;
+    const candidatePanels =
+      desiredPanelCount < panelCoordinates.length
+        ? panelCoordinates.slice(0, desiredPanelCount)
+        : panelCoordinates;
+    const panelsToRender = candidatePanels;
+
+    type PanelInst = { centerX: number; centerY: number; widthM: number; heightM: number };
+    const panelInsts: PanelInst[] = panelsToRender.map((p) => {
+      const centerX = (p.x + p.width / 2 - effectiveImageSize.width / 2) * metersPerPixel;
+      const centerY = -((p.y + p.height / 2 - effectiveImageSize.height / 2) * metersPerPixel);
+      const isPortrait = p.width <= p.height;
+      const panelWidthM = isPortrait ? 1.0 : 1.65;
+      const panelHeightM = isPortrait ? 1.65 : 1.0;
+      return { centerX, centerY, widthM: panelWidthM, heightM: panelHeightM };
     });
-    roofTopMaterial.side = THREE.DoubleSide;
 
-    const roofTopMesh = new THREE.Mesh(roofTopGeometry, roofTopMaterial);
-    roofTopMesh.castShadow = false;
-    roofTopMesh.receiveShadow = true;
-    group.add(roofTopMesh);
-    roofTopMeshRef.current = roofTopMesh;
+    let minPx = Infinity;
+    let maxPx = -Infinity;
+    let minPy = Infinity;
+    let maxPy = -Infinity;
+    for (const inst of panelInsts) {
+      const hw = inst.widthM / 2;
+      const hh = inst.heightM / 2;
+      minPx = Math.min(minPx, inst.centerX - hw);
+      maxPx = Math.max(maxPx, inst.centerX + hw);
+      minPy = Math.min(minPy, inst.centerY - hh);
+      maxPy = Math.max(maxPy, inst.centerY + hh);
+    }
+    const margin = 0.16;
+    if (panelInsts.length === 0) {
+      minPx = -0.5;
+      maxPx = 0.5;
+      minPy = -0.5;
+      maxPy = 0.5;
+    } else {
+      minPx -= margin;
+      maxPx += margin;
+      minPy -= margin;
+      maxPy += margin;
+    }
+    const midX = (minPx + maxPx) / 2;
+    const midY = (minPy + maxPy) / 2;
+    const spanX = Math.max(0.45, maxPx - minPx);
+    const spanY = Math.max(0.45, maxPy - minPy);
 
-    const roofBoxAligned = new THREE.Box3().setFromObject(roofSidesMesh);
+    const frameMat = new THREE.MeshStandardMaterial({
+      color: 0x3a3d42,
+      metalness: 0.72,
+      roughness: 0.42,
+      envMapIntensity: 1.02,
+    });
+    const footMat = new THREE.MeshStandardMaterial({
+      color: 0x5c6068,
+      metalness: 0.42,
+      roughness: 0.7,
+      envMapIntensity: 0.62,
+    });
+
+    const rackRoot = new THREE.Group();
+    const tiltedRack = new THREE.Group();
+    tiltedRack.position.set(midX, midY, deckZ);
+    tiltedRack.rotation.x = tiltNowRad;
+
+    const beamT = 0.043;
+    const beamD = 0.074;
+    const sx = spanX;
+    const sy = spanY;
+
+    const addRailAlongX = (localY: number) => {
+      const g = new THREE.BoxGeometry(sx, beamT, beamD);
+      const m = new THREE.Mesh(g, frameMat);
+      m.castShadow = true;
+      m.receiveShadow = true;
+      m.position.set(0, localY, 0);
+      tiltedRack.add(m);
+    };
+    const addRailAlongY = (localX: number) => {
+      const g = new THREE.BoxGeometry(beamT, sy, beamD);
+      const m = new THREE.Mesh(g, frameMat);
+      m.castShadow = true;
+      m.receiveShadow = true;
+      m.position.set(localX, 0, 0);
+      tiltedRack.add(m);
+    };
+
+    addRailAlongX(-sy / 2);
+    addRailAlongX(sy / 2);
+    addRailAlongY(-sx / 2);
+    addRailAlongY(sx / 2);
+
+    const innerPurlins = Math.min(5, Math.max(1, Math.ceil(panelsToRender.length / 5)));
+    for (let i = 1; i < innerPurlins; i++) {
+      const fy = -sy / 2 + (sy * i) / innerPurlins;
+      if (Math.abs(fy + sy / 2) < 0.07 || Math.abs(fy - sy / 2) < 0.07) continue;
+      addRailAlongX(fy);
+    }
+
+    // Diagonal + cross bracing (same material as rails; sits slightly below deck).
+    const braceT = 0.024;
+    const addPlanarBrace = (x1: number, y1: number, x2: number, y2: number) => {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.max(0.12, Math.hypot(dx, dy));
+      const cx = (x1 + x2) / 2;
+      const cy = (y1 + y2) / 2;
+      const angle = Math.atan2(dy, dx);
+      const g = new THREE.BoxGeometry(len, braceT, braceT);
+      const m = new THREE.Mesh(g, frameMat);
+      m.position.set(cx, cy, -beamD * 0.44);
+      m.rotation.z = angle;
+      m.castShadow = true;
+      m.receiveShadow = true;
+      tiltedRack.add(m);
+    };
+    if (sx > 0.95 && sy > 0.5) {
+      const ix = Math.min(0.11, sx * 0.08);
+      const iy = Math.min(0.1, sy * 0.08);
+      addPlanarBrace(-sx / 2 + ix, -sy / 2 + iy, -sx / 2 + ix + sx * 0.42, sy / 2 - iy);
+      addPlanarBrace(sx / 2 - ix, -sy / 2 + iy, sx / 2 - ix - sx * 0.42, sy / 2 - iy);
+      // Wide bay (~2.5 m+ along X): mid-span horizontal cross-tie so the frame reads clearly stiffened.
+      if (sx >= 2.52) {
+        addPlanarBrace(-sx / 2 + ix, 0, sx / 2 - ix, 0);
+      }
+    }
+
+    rackRoot.add(tiltedRack);
+
+    // Leg Y positions follow panel row lines (front / back of array) when possible.
+    let rowFrontY = minPy;
+    let rowBackY = maxPy;
+    if (panelInsts.length > 0) {
+      const ysSorted = [...new Set(panelInsts.map((i) => Math.round(i.centerY * 4) / 4))].sort(
+        (a, b) => a - b,
+      );
+      if (ysSorted.length >= 2) {
+        rowFrontY = ysSorted[0]!;
+        rowBackY = ysSorted[ysSorted.length - 1]!;
+      } else if (ysSorted.length === 1) {
+        const y0 = ysSorted[0]!;
+        const pad = Math.min(0.42, Math.max(0.2, spanY * 0.24));
+        rowFrontY = y0 - pad;
+        rowBackY = y0 + pad;
+      }
+    }
+
+    const nLegs = metalRackLegCount(panelsToRender.length);
+    const legW = 0.056;
+    const legTopZ = roofBaseZ + roofDepthM - 0.04;
+    const legBottomZ = roofBaseZ - 1.15;
+    const legLen = Math.max(0.45, legTopZ - legBottomZ);
+    const legZCenter = legBottomZ + legLen / 2;
+
+    const legXY: { x: number; y: number }[] = [];
+    if (nLegs === 4) {
+      legXY.push(
+        { x: minPx, y: rowFrontY },
+        { x: maxPx, y: rowFrontY },
+        { x: maxPx, y: rowBackY },
+        { x: minPx, y: rowBackY },
+      );
+    } else if (nLegs === 6) {
+      const xs = [minPx, (minPx + maxPx) / 2, maxPx];
+      for (const x of xs) {
+        legXY.push({ x, y: rowFrontY }, { x, y: rowBackY });
+      }
+    } else {
+      const xs = [minPx, minPx + spanX / 3, minPx + (2 * spanX) / 3, maxPx];
+      for (const x of xs) {
+        legXY.push({ x, y: rowFrontY }, { x, y: rowBackY });
+      }
+    }
+
+    for (const { x, y } of legXY) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(legW, legW, legLen), frameMat);
+      leg.position.set(x, y, legZCenter);
+      leg.castShadow = true;
+      leg.receiveShadow = true;
+      rackRoot.add(leg);
+
+      const pad = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.13, 0.035), footMat);
+      pad.position.set(x, y, legBottomZ - 0.022);
+      pad.castShadow = true;
+      pad.receiveShadow = true;
+      rackRoot.add(pad);
+    }
+
+    group.add(rackRoot);
+    metalRackGroupRef.current = rackRoot;
+
+    roofSidesMeshRef.current = null;
+    roofTopMeshRef.current = null;
+
+    const roofBoxAligned = new THREE.Box3(
+      new THREE.Vector3(minPx - 0.08, minPy - 0.08, legBottomZ - 0.1),
+      new THREE.Vector3(maxPx + 0.08, maxPy + 0.08, roofBaseZ + roofDepthM + 0.45),
+    );
     const roofCenterAligned = roofBoxAligned.getCenter(new THREE.Vector3());
     roofCenterRef.current = roofCenterAligned;
 
@@ -615,19 +746,6 @@ export default function Solar3DView({
       disposeMesh(old);
     }
     const panels: THREE.Mesh[] = [];
-    const tiltNow = tiltDegRef.current;
-    const tiltNowRad = THREE.MathUtils.degToRad(tiltNow);
-    const desiredPanelCount =
-      panelCount != null ? Math.max(0, Math.floor(panelCount)) : panelCoordinates.length;
-    const candidatePanels =
-      desiredPanelCount < panelCoordinates.length
-        ? panelCoordinates.slice(0, desiredPanelCount)
-        : panelCoordinates;
-
-    // Render the same count the 2D layout expects.
-    // (We intentionally do not clip by corners here; corner-clipping was causing
-    // fewer visible panels than the calculated ideal.)
-    const panelsToRender = candidatePanels;
 
     for (const panel of panelsToRender) {
       const mesh = panelToMesh(panel, effectiveImageSize, metersPerPixel, panelTopTexture);
@@ -665,9 +783,7 @@ export default function Solar3DView({
     }
     panelsRef.current = panels;
 
-    // Create simplified racking rails + standoffs (replaces per-panel spike cylinders).
     if (rackGroupRef.current) {
-      // Remove any previous rack meshes.
       rackGroupRef.current.children.slice().forEach((child) => {
         const mesh = child as unknown as THREE.Mesh;
         rackGroupRef.current?.remove(mesh);
@@ -675,138 +791,39 @@ export default function Solar3DView({
       });
       rackRailsRef.current = [];
       rackStandoffsRef.current = [];
-
-      // Disable rack overlays for now: they produce distracting edge artifacts in proposal view.
-      const showRackNow = false;
-      const baseZ = roofDepthM / 2 + PANEL_MESH_THICKNESS_M / 2 + 0.001;
-        const railThicknessM = 0.04;
-        const railDepthM = 0.04;
-        const aluminumColor = 0xaaaaaa;
-
-        type PanelInst = {
-          centerX: number;
-          centerY: number;
-          widthM: number;
-          heightM: number;
-        };
-
-        const panelInsts: PanelInst[] = panelsToRender.map((p) => {
-          const centerX =
-            (p.x + p.width / 2 - effectiveImageSize.width / 2) * metersPerPixel;
-          const centerY =
-            (p.y + p.height / 2 - effectiveImageSize.height / 2) * metersPerPixel;
-          // Keep rack sizing consistent with actual 3D panel mesh dimensions.
-          const isPortrait = p.width <= p.height;
-          const panelWidthM = isPortrait ? 1.0 : 1.65;
-          const panelHeightM = isPortrait ? 1.65 : 1.0;
-          return {
-            centerX,
-            centerY,
-            widthM: panelWidthM,
-            heightM: panelHeightM,
-          };
-        });
-
-        // Group into rows using quantized Y-center (in meters).
-        const rowMap = new Map<number, PanelInst[]>();
-        for (const inst of panelInsts) {
-          const key = Math.round(inst.centerY * 2) / 2; // ~0.5m bins
-          const list = rowMap.get(key) ?? [];
-          list.push(inst);
-          rowMap.set(key, list);
-        }
-
-        const factor = Math.max(
-          0,
-          Math.min(1, Math.sin(tiltNowRad) / Math.sin(THREE.MathUtils.degToRad(45))),
-        );
-
-        const railMaterial = new THREE.MeshStandardMaterial({
-          color: aluminumColor,
-          roughness: 0.9,
-          metalness: 0.2,
-        });
-        const standoffMaterial = railMaterial;
-        const standoffRadius = 0.02;
-
-        for (const rowPanels of rowMap.values()) {
-          if (rowPanels.length < 2) continue;
-          rowPanels.sort((a, b) => a.centerX - b.centerX);
-
-          const minX = rowPanels[0]!.centerX;
-          const maxX = rowPanels[rowPanels.length - 1]!.centerX;
-          const widthM = rowPanels[0]!.widthM;
-          // Slight inset so rails do not visually protrude beyond panel edges.
-          const rowWidth = Math.max(0.2, (maxX - minX) + widthM - 0.08);
-          const rowCenterX = (minX + maxX) / 2;
-
-          const heightM = rowPanels[0]!.heightM;
-          const centerY = rowPanels[0]!.centerY;
-          const bottomRailY = centerY - heightM / 2;
-          const topRailY = centerY + heightM / 2;
-
-          const bottomRail = new THREE.Mesh(
-            new THREE.BoxGeometry(rowWidth, railThicknessM, railDepthM),
-            railMaterial,
-          );
-          bottomRail.position.set(rowCenterX, bottomRailY, baseZ);
-          bottomRail.rotation.x = tiltNowRad;
-          bottomRail.visible = showRackNow;
-
-          const topRail = new THREE.Mesh(
-            new THREE.BoxGeometry(rowWidth, railThicknessM, railDepthM),
-            railMaterial,
-          );
-          topRail.position.set(rowCenterX, topRailY, baseZ);
-          topRail.rotation.x = tiltNowRad;
-          topRail.visible = showRackNow;
-
-          rackGroupRef.current.add(bottomRail);
-          rackGroupRef.current.add(topRail);
-          rackRailsRef.current.push(bottomRail, topRail);
-
-          // Standoffs at every 2 panels.
-          const maxHeightM = Math.min(0.2, Math.max(0.03, heightM * 0.08));
-          for (let i = 0; i < rowPanels.length; i += 2) {
-            const x = rowPanels[i]!.centerX;
-
-            const standoff = new THREE.Mesh(
-              new THREE.CylinderGeometry(standoffRadius, standoffRadius, maxHeightM, 10),
-              standoffMaterial,
-            );
-            standoff.rotation.x = tiltNowRad;
-            standoff.visible = showRackNow;
-
-            standoff.userData.bottomRailY = bottomRailY;
-            standoff.userData.maxHeightM = maxHeightM;
-
-            const hNow = Math.max(0.0001, maxHeightM * factor);
-            standoff.scale.set(1, Math.max(0.0001, factor), 1);
-            standoff.position.set(x, bottomRailY + hNow / 2, baseZ);
-
-            rackGroupRef.current.add(standoff);
-            rackStandoffsRef.current.push(standoff);
-          }
-        }
     }
 
-    // Fixed camera + target for a stable, realistic view.
+    // Default camera only when layout scale/count changes, or when user turned off "Keep camera position".
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     if (camera && controls) {
-      camera.position.set(200, -200, 150);
-      camera.lookAt(0, 0, 0);
-      controls.target.set(0, 0, 0);
-      controls.update();
+      const layoutKey = [
+        effectiveImageSize.width,
+        effectiveImageSize.height,
+        Number(metersPerPixel.toFixed(8)),
+        panelCount ?? panelCoordinates.length,
+        roofPolygon.length,
+        panelCoordinates.length,
+      ].join('|');
+      const layoutChanged = lastCameraLayoutKeyRef.current !== layoutKey;
+      if (!lockCameraView || layoutChanged) {
+        lastCameraLayoutKeyRef.current = layoutKey;
+        camera.position.set(200, -200, 150);
+        camera.lookAt(0, 0, 0);
+        controls.target.set(0, 0, 0);
+        controls.update();
+      }
     }
   }, [
     effectiveImageSize,
+    lockCameraView,
     metersPerPixel,
     panelCoordinates,
     panelCount,
     roofPolygon,
     roofProceduralTexture,
     roofTexture,
+    tiltDeg,
   ]);
 
   // Swap satellite texture onto the roof TOP cap when it finishes loading.
@@ -914,6 +931,172 @@ export default function Solar3DView({
 
     resetAnimFrameRef.current = requestAnimationFrame(animate);
   }, []);
+
+  const handleExport = useCallback(async () => {
+    const renderer = rendererRef.current;
+    const scene = sceneRef.current;
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    if (!renderer || !scene || !camera || !controls) return;
+
+    setExportError(null);
+
+    const roofCenter = roofCenterRef.current ?? new THREE.Vector3(0, 0, 0);
+    const oldBg = scene.background ? (scene.background as THREE.Color).clone() : null;
+    const oldCamPos = camera.position.clone();
+    const oldTarget = controls.target.clone();
+    const oldSize = renderer.getSize(new THREE.Vector2());
+    const oldPixelRatio = renderer.getPixelRatio();
+    const oldAspect = camera.aspect;
+    const oldNear = camera.near;
+    const oldFar = camera.far;
+
+    const sun = sunSphereRef.current;
+    const oldSunVis = sun ? sun.visible : true;
+
+    setExportingSnapshot(true);
+    if (sun) sun.visible = false;
+
+    let dataUrl = '';
+    try {
+      const group = groupRef.current;
+      if (group && group.children.length > 0) {
+        const box = new THREE.Box3().setFromObject(group);
+        if (!box.isEmpty()) {
+          const sphere = box.getBoundingSphere(new THREE.Sphere());
+          const c = sphere.center;
+          const r = Math.max(sphere.radius, 0.35);
+          const vFovRad = (camera.fov * Math.PI) / 180;
+          const dist = (r / Math.sin(vFovRad / 2)) * 1.32;
+          const offset = new THREE.Vector3(0.45, -0.78, 0.42).normalize();
+          camera.position.copy(c).addScaledVector(offset, dist);
+          controls.target.copy(c);
+          camera.near = Math.max(0.05, dist / 200);
+          camera.far = Math.max(120, dist * 24);
+          camera.updateProjectionMatrix();
+          controls.update();
+        } else {
+          camera.position.set(roofCenter.x, roofCenter.y - 5, roofCenter.z + 10);
+          controls.target.copy(roofCenter);
+          controls.update();
+        }
+      } else {
+        camera.position.set(roofCenter.x, roofCenter.y - 5, roofCenter.z + 10);
+        controls.target.copy(roofCenter);
+        controls.update();
+      }
+
+      scene.background = new THREE.Color('#ffffff');
+
+      const exportW = 1600;
+      const exportH = 900;
+      renderer.setPixelRatio(2);
+      camera.aspect = exportW / exportH;
+      camera.updateProjectionMatrix();
+      renderer.setSize(exportW, exportH, false);
+
+      const renderExportFrame = () => {
+        controls.update();
+        renderer.render(scene, camera);
+      };
+      await new Promise<void>((r) => requestAnimationFrame(() => r()));
+      renderExportFrame();
+      await new Promise<void>((r) => requestAnimationFrame(() => r()));
+      renderExportFrame();
+
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = exportW;
+      exportCanvas.height = exportH;
+      const ctx = exportCanvas.getContext('2d', { willReadFrequently: false });
+      if (!ctx) {
+        setExportError('Could not create canvas for export.');
+      } else {
+        const src = renderer.domElement;
+        ctx.drawImage(src, 0, 0, src.width, src.height, 0, 0, exportW, exportH);
+
+        const cx = exportW / 2;
+        const cy = exportH / 2;
+        const maxR = Math.sqrt(cx * cx + cy * cy);
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR);
+        grad.addColorStop(0, 'rgba(0,0,0,0)');
+        grad.addColorStop(1, 'rgba(0,0,0,0.18)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, exportW, exportH);
+
+        const dateStr = new Date().toLocaleDateString();
+        const lines = ['Rayenna', 'Solar Installation Plan', dateStr];
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
+        ctx.font = '700 18px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        const padding = 22;
+        const baseY = exportH - padding;
+        const lineGap = 22;
+        lines.forEach((text, idx) => {
+          const y = baseY - (lines.length - 1 - idx) * lineGap;
+          ctx.fillText(text, exportW - padding, y);
+        });
+
+        try {
+          dataUrl = exportCanvas.toDataURL('image/png');
+        } catch (capErr: unknown) {
+          if (capErr instanceof DOMException && capErr.name === 'SecurityError') {
+            setExportError(
+              'PNG export is blocked because the roof photo is not CORS-safe (browser security). Use a satellite image URL that allows cross-origin use, or save from a roof image hosted on your CRM/Cloudinary.',
+            );
+          } else {
+            setExportError(capErr instanceof Error ? capErr.message : 'Could not read image from canvas.');
+          }
+        }
+      }
+    } catch (err: unknown) {
+      setExportError(err instanceof Error ? err.message : 'Export failed.');
+    } finally {
+      if (sun) sun.visible = oldSunVis;
+      camera.position.copy(oldCamPos);
+      controls.target.copy(oldTarget);
+      controls.update();
+      camera.aspect = oldAspect;
+      camera.near = oldNear;
+      camera.far = oldFar;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(oldPixelRatio);
+      renderer.setSize(oldSize.x, oldSize.y, false);
+      scene.background = oldBg;
+      setExportingSnapshot(false);
+    }
+
+    if (!dataUrl) return;
+
+    const stamp = new Date().toISOString().slice(0, 10);
+    const baseName = `rayenna-roof-3d-${stamp}`;
+    try {
+      const blob = await fetch(dataUrl).then((r) => r.blob());
+      const objUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objUrl;
+      a.download = `${baseName}.png`;
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objUrl);
+    } catch {
+      try {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `${baseName}.png`;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch {
+        // download is best-effort; parent still receives dataUrl
+      }
+    }
+
+    onExportPNG?.(dataUrl);
+  }, [onExportPNG]);
 
   // Default float position: top-right inside mount; clamp on resize. After user drags, only clamp.
   useEffect(() => {
@@ -1042,108 +1225,26 @@ export default function Solar3DView({
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [resetView]);
-
-  async function handleExport() {
-    if (!onExportPNG) return;
-    const renderer = rendererRef.current;
-    const scene = sceneRef.current;
-    const camera = cameraRef.current;
-    const controls = controlsRef.current;
-    if (!renderer || !scene || !camera || !controls) return;
-
-    const roofCenter = roofCenterRef.current ?? new THREE.Vector3(0, 0, 0);
-
-    const oldBg = scene.background ? (scene.background as THREE.Color).clone() : null;
-    const oldCamPos = camera.position.clone();
-    const oldTarget = controls.target.clone();
-    const oldSize = renderer.getSize(new THREE.Vector2());
-    const oldPixelRatio = renderer.getPixelRatio();
-    const oldAspect = camera.aspect;
-
-    // Proposal-ready export angle and framing.
-    camera.position.set(roofCenter.x + 0, roofCenter.y - 5, roofCenter.z + 10);
-    controls.target.copy(roofCenter);
-    controls.update();
-
-    // Render on white background for cleaner proposal embedding.
-    scene.background = new THREE.Color('#ffffff');
-
-    // Render at higher pixel ratio, then downscale to 1600x900.
-    const exportW = 1600;
-    const exportH = 900;
-    renderer.setPixelRatio(2);
-    camera.aspect = exportW / exportH;
-    camera.updateProjectionMatrix();
-    renderer.setSize(exportW, exportH, false);
-
-    renderer.render(scene, camera);
-
-    const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = exportW;
-    exportCanvas.height = exportH;
-    const ctx = exportCanvas.getContext('2d');
-
-    if (ctx) {
-      ctx.drawImage(renderer.domElement, 0, 0, exportW, exportH);
-
-      // Subtle vignette.
-      const cx = exportW / 2;
-      const cy = exportH / 2;
-      const maxR = Math.sqrt(cx * cx + cy * cy);
-      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR);
-      grad.addColorStop(0, 'rgba(0,0,0,0)');
-      grad.addColorStop(1, 'rgba(0,0,0,0.22)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, exportW, exportH);
-
-      // Watermark (bottom-right).
-      const dateStr = new Date().toLocaleDateString();
-      const lines = ['Rayenna', 'Solar Installation Plan', dateStr];
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'bottom';
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
-      ctx.font = '700 18px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-      const padding = 22;
-      // Stagger lines.
-      const baseY = exportH - padding;
-      const lineGap = 22;
-      ctx.font = '700 18px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-      lines.forEach((text, idx) => {
-        const y = baseY - (lines.length - 1 - idx) * lineGap;
-        ctx.fillText(text, exportW - padding, y);
-      });
-    }
-
-    const dataUrl = exportCanvas.toDataURL('image/png');
-
-    // Restore previous interactive state.
-    camera.position.copy(oldCamPos);
-    controls.target.copy(oldTarget);
-    controls.update();
-    camera.aspect = oldAspect;
-    camera.updateProjectionMatrix();
-    renderer.setPixelRatio(oldPixelRatio);
-    renderer.setSize(oldSize.x, oldSize.y, false);
-    scene.background = oldBg;
-
-    onExportPNG(dataUrl);
-  }
-
-  // Note: Export wiring is implemented later (Step 4) when the parent/tab integration provides the data flow.
+  }, [resetView, handleExport]);
   return (
-    <div className="w-full">
+    <div className={fillParent ? 'w-full h-full min-h-0 flex flex-col' : 'w-full'}>
       <div
         ref={mountRef}
-        className="relative w-full overflow-hidden"
-        style={{ height: 440 }}
+        className="relative w-full overflow-hidden rounded-lg bg-slate-200/80"
+        style={
+          fillParent
+            ? { height: '100%', minHeight: 280, flex: '1 1 auto' }
+            : { height: 'min(58vh, 620px)', minHeight: 320 }
+        }
       >
-        <div
-          className="absolute top-2 left-2 text-xs font-semibold text-white drop-shadow transition-transform"
-          style={{ transform: `scale(${badgeScale})`, transformOrigin: 'left top' }}
-        >
-          {panelCount ?? panelCoordinates.length} Panels
-        </div>
+        {!exportingSnapshot && (
+          <div
+            className="absolute top-2 left-2 z-[5] text-xs font-semibold text-white drop-shadow transition-transform pointer-events-none"
+            style={{ transform: `scale(${badgeScale})`, transformOrigin: 'left top' }}
+          >
+            {panelCount ?? panelCoordinates.length} Panels
+          </div>
+        )}
 
         <canvas ref={canvasRef} className="block w-full h-full" />
         {webglUnavailable && (
@@ -1152,7 +1253,21 @@ export default function Solar3DView({
           </div>
         )}
 
-        <div className="absolute bottom-4 left-4 w-[60px] h-[60px] bg-black/35 rounded-full flex items-center justify-center pointer-events-none">
+        {exportError && (
+          <div className="absolute bottom-[4.5rem] left-2 right-2 z-20 pointer-events-auto rounded-lg bg-red-950/90 text-red-50 text-[11px] leading-snug px-3 py-2 border border-red-800/80 shadow-lg flex gap-2 items-start max-h-28 overflow-y-auto">
+            <span className="flex-1 min-w-0">{exportError}</span>
+            <button
+              type="button"
+              className="shrink-0 text-red-200 hover:text-white font-semibold underline touch-manipulation"
+              onClick={() => setExportError(null)}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {!exportingSnapshot && (
+        <div className="absolute bottom-4 left-4 z-[5] w-[60px] h-[60px] bg-black/35 rounded-full flex items-center justify-center pointer-events-none">
           <svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
             <circle
               cx="28"
@@ -1207,6 +1322,7 @@ export default function Solar3DView({
             </text>
           </svg>
         </div>
+        )}
         {/* Draggable floating controls (collapsed by default; drag header, +/− toggles body) */}
         <div
           ref={controlsShellRef}
@@ -1256,6 +1372,23 @@ export default function Solar3DView({
             {!controlsCollapsed && (
               <div className="px-4 pb-4 space-y-3">
                 <div className="h-px bg-white/10" />
+
+                <label className="flex items-start gap-2.5 cursor-pointer select-none touch-manipulation">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 rounded border-white/30 accent-[#22c55e]"
+                    checked={lockCameraView}
+                    onChange={(e) => setLockCameraView(e.target.checked)}
+                    aria-describedby="solar3d-lock-camera-hint"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-white/90 font-medium">Keep camera position</span>
+                    <span id="solar3d-lock-camera-hint" className="block text-white/55 text-[11px] leading-snug mt-0.5">
+                      Orbit view stays when you change tilt, sun, or page zoom. Turn off to snap to default framing on each
+                      scene rebuild.
+                    </span>
+                  </span>
+                </label>
 
                 <div className="flex items-center justify-between gap-3">
                   <label className="whitespace-nowrap text-white/90">Panel Tilt</label>

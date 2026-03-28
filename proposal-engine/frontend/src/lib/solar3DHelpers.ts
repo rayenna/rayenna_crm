@@ -127,6 +127,14 @@ export function createSolarPanelTexture(): THREE.CanvasTexture {
 /** Box depth in `panelToMesh`; viewer uses this for Z stacking only (same value, no layout math change). */
 export const PANEL_MESH_THICKNESS_M = 0.055;
 
+/** 4 / 6 / 8 vertical posts for grey metal racking (by array size). */
+export function metalRackLegCount(panelCount: number): 4 | 6 | 8 {
+  const n = Math.max(0, Math.floor(panelCount));
+  if (n <= 8) return 4;
+  if (n <= 18) return 6;
+  return 8;
+}
+
 export function polygonToShape(
   polygon: Solar3DRoofPolygonPoint[],
   imageSize: { width: number; height: number },

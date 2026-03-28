@@ -58,3 +58,48 @@
     border-radius: 3px;
   }
 }
+
+/*
+ * AI Roof Layout — 3D preview scrollport.
+ * Never use -webkit-appearance: none on ::-webkit-scrollbar here: on many mobile WebKit builds
+ * the thumb/track fail to paint and scrollbars vanish entirely.
+ */
+.layout-preview-scroll-3d {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(30 64 175) rgb(226 232 240);
+}
+
+.layout-preview-scroll-3d::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.layout-preview-scroll-3d::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #1e40af, #2563eb, #fbbf24);
+  border-radius: 5px;
+}
+
+.layout-preview-scroll-3d::-webkit-scrollbar-track {
+  background: #e2e8f0;
+}
+
+/* Mobile landscape: larger hit area — both axes */
+@media (max-width: 767px) and (orientation: landscape) {
+  .layout-preview-scroll-3d::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+/* Mobile portrait: slightly taller horizontal bar; same global thumb (no inset shadows — those interfered with bars) */
+@media (max-width: 767px) and (orientation: portrait) {
+  .layout-preview-scroll-3d {
+    scrollbar-width: auto;
+    scrollbar-color: rgb(30 64 175) rgb(226 232 240);
+  }
+
+  .layout-preview-scroll-3d::-webkit-scrollbar {
+    width: 10px;
+    height: 12px;
+  }
+}

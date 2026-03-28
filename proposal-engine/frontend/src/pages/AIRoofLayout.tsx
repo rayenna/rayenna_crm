@@ -169,6 +169,9 @@ export default function AIRoofLayout() {
   const [panelWOverride, setPanelWOverride] = useState('');
   // Start at 50% zoom for an easier overview of the roof + layout
   const [zoom, setZoom] = useState(0.5);
+  /** 3D layout preview zoom (separate from 2D Konva zoom). Scales scroll content so WebGL resizes — stays sharp. */
+  const [zoom3d, setZoom3d] = useState(1);
+  const [layoutScrollViewport, setLayoutScrollViewport] = useState({ w: 0, h: 0 });
   const [savingToProposal, setSavingToProposal] = useState(false);
   const [lastSavedProjectId, setLastSavedProjectId] = useState<string | null>(null);
   const [loadedSavedAt, setLoadedSavedAt] = useState<string | null>(null);
@@ -188,6 +191,21 @@ export default function AIRoofLayout() {
   const [isPolygonSummaryReady, setIsPolygonSummaryReady] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const layoutScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = layoutScrollRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      if (w > 0 && h > 0) setLayoutScrollViewport({ w, h });
+    };
+    measure();
+    const ro = new ResizeObserver(() => measure());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [roofViewTab, layoutMode]);
+
   /** Per-image URL: centre saved view once, editing polygon once (don’t fight user scroll / drag). */
   const scrollCenterMetaRef = useRef<{ url: string; savedDone: boolean; editingDone: boolean }>({
     url: '',
@@ -232,6 +250,14 @@ export default function AIRoofLayout() {
   const [bgImage] = useImage(bgImageUrl ?? '', 'anonymous');
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
 
+  useEffect(() => {
+    const r = layoutScrollRef.current;
+    if (!r) return;
+    const w = r.clientWidth;
+    const h = r.clientHeight;
+    if (w > 0 && h > 0) setLayoutScrollViewport({ w, h });
+  }, [bgImageUrl, imageSize?.width, imageSize?.height, roofViewTab]);
+
   // DevTools open/close can cause viewport reflow (scrollbars/layout changes).
   // Konva sometimes needs an explicit redraw after such changes to keep shapes visible.
   useEffect(() => {
@@ -272,6 +298,13 @@ export default function AIRoofLayout() {
     setProposalImageSource('3d');
     if (canToggle2d3dPreview) setRoofViewTab('3d');
   }
+
+  const layout3dBaseW = Math.max(layoutScrollViewport.w, 360);
+  const layout3dBaseH = Math.max(layoutScrollViewport.h, 280);
+  const layoutZoom3dActive = roofViewTab === '3d';
+  const layoutZoomValue = layoutZoom3dActive ? zoom3d : zoom;
+  const layoutZoomMin = layoutZoom3dActive ? 0.25 : 0.2;
+  const setLayoutZoom = layoutZoom3dActive ? setZoom3d : setZoom;
 
   useEffect(() => {
     // Without live geometry, only keep 3D tab if we have a persisted 3D image to show.
@@ -1150,14 +1183,18 @@ export default function AIRoofLayout() {
                     </div>
                   )}
                   <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
-                    {roofViewTab !== '3d' && (
-                      <div className="flex items-center justify-between gap-3 sm:gap-2">
-                        <span className="text-xs font-medium text-gray-600 min-w-[4rem]">Zoom</span>
+                    {(roofViewTab === '2d' || roofViewTab === '3d') && (
+                      <div className="flex items-center justify-between gap-3 sm:gap-2 w-full sm:w-auto">
+                        <span className="text-xs font-medium text-gray-600 min-w-[4rem]">
+                          Zoom{roofViewTab === '3d' ? ' (3D)' : ''}
+                        </span>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() =>
-                              setZoom((z) => Math.max(0.2, Math.round((z - 0.25) * 4) / 4))
+                              setLayoutZoom((z) =>
+                                Math.max(layoutZoomMin, Math.round((z - 0.25) * 4) / 4),
+                              )
                             }
                             className="h-10 w-10 sm:h-8 sm:w-8 flex items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-semibold hover:bg-gray-50 touch-manipulation"
                             aria-label="Zoom out"
@@ -1165,12 +1202,14 @@ export default function AIRoofLayout() {
                             −
                           </button>
                           <span className="min-w-[3.5rem] text-center text-sm font-medium tabular-nums">
-                            {Math.round(zoom * 100)}%
+                            {Math.round(layoutZoomValue * 100)}%
                           </span>
                           <button
                             type="button"
                             onClick={() =>
-                              setZoom((z) => Math.min(10, Math.round((z + 0.25) * 4) / 4))
+                              setLayoutZoom((z) =>
+                                Math.min(10, Math.round((z + 0.25) * 4) / 4),
+                              )
                             }
                             className="h-10 w-10 sm:h-8 sm:w-8 flex items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-semibold hover:bg-gray-50 touch-manipulation"
                             aria-label="Zoom in"
@@ -1245,8 +1284,12 @@ export default function AIRoofLayout() {
                   </div>
                 </div>
 
-                {/* Photo / canvas — scrollable area is exactly the scaled image size (no blank space at any zoom) */}
-                <div className="min-h-[260px] sm:min-h-[320px] aspect-[4/3] sm:aspect-video rounded-2xl border border-gray-200 bg-white overflow-hidden">
+                {/* Photo / canvas — 2D: content-sized scroll; 3D: stable slate gutter + scrollbars (no white flash) */}
+                <div
+                  className={`min-h-[260px] sm:min-h-[320px] aspect-[4/3] sm:aspect-video rounded-2xl border border-gray-200 flex flex-col min-h-0 overflow-hidden ${
+                    roofViewTab === '3d' ? 'bg-slate-200' : 'bg-white'
+                  }`}
+                >
                   {/* Scroll vs Edit: when editMode is false, canvas doesn't capture touch so native scroll works on mobile */}
                   {isMobileView && roofViewTab !== '3d' && (
                     <div className="mb-2">
@@ -1275,19 +1318,44 @@ export default function AIRoofLayout() {
                   )}
                   <div
                     ref={layoutScrollRef}
-                    className="w-full h-full overflow-auto overscroll-contain min-w-0 min-h-0"
+                    className={`w-full flex-1 min-h-0 min-w-0 overscroll-contain ${
+                      roofViewTab === '3d'
+                        ? 'layout-preview-scroll-3d overflow-x-scroll overflow-y-scroll bg-slate-200'
+                        : 'overflow-auto'
+                    }`}
                     style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}
                   >
                     {roofViewTab === '3d' && has3DRoofData ? (
                       <>
+                      <div
+                        className="inline-block align-top min-w-full box-border bg-slate-200"
+                        style={{
+                          width: layout3dBaseW * zoom3d,
+                          minHeight: layout3dBaseH * zoom3d,
+                        }}
+                      >
                       <Suspense
                         fallback={
-                          <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">
+                          <div
+                            className="flex items-center justify-center text-gray-500 text-sm bg-slate-200"
+                            style={{
+                              width: layout3dBaseW * zoom3d,
+                              height: layout3dBaseH * zoom3d,
+                            }}
+                          >
                             Loading 3D...
                           </div>
                         }
                       >
+                        <div
+                          className="bg-slate-200"
+                          style={{
+                            width: layout3dBaseW * zoom3d,
+                            height: layout3dBaseH * zoom3d,
+                          }}
+                        >
                         <LazySolar3DView
+                          fillParent
                           roofPolygon={polygon!}
                           panelCoordinates={panels.map((p) => ({
                             x: p.x,
@@ -1346,9 +1414,10 @@ export default function AIRoofLayout() {
                             }
                           }}
                         />
+                        </div>
                       </Suspense>
                       {last3dPngDataUrl && (
-                        <div className="mt-3 px-2">
+                        <div className="mt-3 px-2 pb-2">
                           <div className="text-xs font-medium text-gray-600 mb-2">
                             3D Render (last exported)
                           </div>
@@ -1359,19 +1428,29 @@ export default function AIRoofLayout() {
                           />
                         </div>
                       )}
+                      </div>
                       </>
                     ) : roofViewTab === '3d' && saved3dDisplayUrl ? (
-                      <div className="w-full min-h-[200px] h-full flex flex-col items-center justify-center p-3 bg-slate-50">
+                      <div
+                        className="inline-block align-top min-w-full box-border bg-slate-200 p-2"
+                        style={{
+                          width: layout3dBaseW * zoom3d,
+                          minHeight: layout3dBaseH * zoom3d,
+                        }}
+                      >
+                        <div className="w-full h-full min-h-[200px] flex flex-col items-center justify-center">
                         <img
                           src={saved3dDisplayUrl}
                           alt="Saved 3D roof layout"
-                          className="max-w-full max-h-[min(70vh,520px)] w-auto h-auto object-contain rounded-lg border border-gray-200 bg-white shadow-sm"
+                          className="max-w-full max-h-full w-auto h-auto object-contain rounded-lg border border-slate-300 bg-white shadow-sm"
+                          style={{ maxHeight: layout3dBaseH * zoom3d - 24 }}
                         />
                         {layoutMode === 'saved' && (
-                          <p className="mt-3 text-xs text-gray-500 text-center max-w-md">
+                          <p className="mt-3 text-xs text-gray-600 text-center max-w-md px-1">
                             Saved 3D render from your project. Regenerate the layout if you need to edit roof geometry or the live 3D scene.
                           </p>
                         )}
+                        </div>
                       </div>
                     ) : bgImage && imageSize ? (
                       <div
