@@ -326,12 +326,14 @@ router.post('/save-3d-layout-image', authenticate, async (req, res) => {
       });
     }
 
-    const match = dataUrl.match(/^data:image\/(png|jpeg);base64,(.+)$/);
+    const trimmedUrl = String(dataUrl).trim();
+    const match = trimmedUrl.match(/^data:image\/(png|jpeg|jpg);base64,([\s\S]+)$/i);
     if (!match) {
       return res.status(400).json({ error: 'Invalid image data URL (use PNG or JPEG)' });
     }
-    const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
-    const base64 = match[2];
+    const mimeExt = match[1]!.toLowerCase();
+    const ext = mimeExt === 'png' ? 'png' : 'jpg';
+    const base64 = match[2]!.replace(/\s/g, '');
 
     const generatedLayoutsDir = getGeneratedLayoutsDir();
     await fs.promises.mkdir(generatedLayoutsDir, { recursive: true });
