@@ -2235,14 +2235,15 @@ function OurProcessBlock() {
 function RoofLayoutBlock({ layout }: { layout: AiRoofLayoutResponse }) {
   const accent = '#0f766e';
   const apiBase = getApiBaseUrl();
-  // The layout image URL is already resolved by the server / AIRoofLayout save flow.
-  // Just normalise it against the API base URL when needed.
+  // Prefer persisted 3D render for proposal when the project flag says so.
+  const rawMain = layout.layout_image_url;
+  const raw3d = layout.layout_image_3d_url;
+  const use3d =
+    layout.prefer_3d_for_proposal === true && raw3d != null && String(raw3d).trim().length > 0;
+  const chosen = use3d ? String(raw3d).trim() : rawMain;
   let src: string | null = null;
-  if (layout.layout_image_url) {
-    src =
-      layout.layout_image_url.startsWith('http')
-        ? layout.layout_image_url
-        : `${apiBase}${layout.layout_image_url}`;
+  if (chosen) {
+    src = chosen.startsWith('http') ? chosen : `${apiBase}${chosen.startsWith('/') ? chosen : `/${chosen}`}`;
   }
 
   return (
@@ -3425,6 +3426,12 @@ export default function ProposalPreview() {
             panel_count: Number.isFinite(Number((manual as any).panel_count)) ? Number((manual as any).panel_count) : 0,
             layout_image_url: String((manual as any).layout_image_url),
           };
+          if ((manual as any).layout_image_3d_url != null && String((manual as any).layout_image_3d_url).trim()) {
+            next.layout_image_3d_url = String((manual as any).layout_image_3d_url);
+          }
+          if (typeof (manual as any).prefer_3d_for_proposal === 'boolean') {
+            next.prefer_3d_for_proposal = (manual as any).prefer_3d_for_proposal;
+          }
           setRoofLayout(next);
           // Persist the latest payload to local workspace so it’s instant next time.
           if (ac?.id && ac.proposal) {
@@ -3622,12 +3629,19 @@ export default function ProposalPreview() {
         try {
           const manual = await fetchManualRoofLayout(crmProjectId);
           if (manual && typeof manual.layout_image_url === 'string' && manual.layout_image_url.trim()) {
-            setRoofLayout({
+            const rl: AiRoofLayoutResponse = {
               roof_area_m2: Number.isFinite(Number((manual as any).roof_area_m2)) ? Number((manual as any).roof_area_m2) : 0,
               usable_area_m2: Number.isFinite(Number((manual as any).usable_area_m2)) ? Number((manual as any).usable_area_m2) : 0,
               panel_count: Number.isFinite(Number((manual as any).panel_count)) ? Number((manual as any).panel_count) : 0,
               layout_image_url: String(manual.layout_image_url),
-            });
+            };
+            if ((manual as any).layout_image_3d_url != null && String((manual as any).layout_image_3d_url).trim()) {
+              rl.layout_image_3d_url = String((manual as any).layout_image_3d_url);
+            }
+            if (typeof (manual as any).prefer_3d_for_proposal === 'boolean') {
+              rl.prefer_3d_for_proposal = (manual as any).prefer_3d_for_proposal;
+            }
+            setRoofLayout(rl);
             setRoofLayoutLoading(false);
             return;
           }

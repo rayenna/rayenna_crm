@@ -312,6 +312,10 @@ export interface AiRoofLayoutResponse {
   usable_area_m2: number;
   panel_count: number;
   layout_image_url: string;
+  /** Server-persisted 3D simulation image (when saved). */
+  layout_image_3d_url?: string;
+  /** Proposal embed uses 3D URL when true and `layout_image_3d_url` is set. */
+  prefer_3d_for_proposal?: boolean;
   roof_polygon_coordinates?: AiRoofLayoutPolygonPoint[];
   panel_coordinates?: AiRoofLayoutPanelRect[];
 }
@@ -354,14 +358,52 @@ export async function saveManualRoofLayoutImage(params: {
   });
 }
 
+/** Persist 3D export to CRM; does not replace the 2D layout URL. */
+export async function saveRoofLayout3dImage(params: {
+  projectId: string;
+  dataUrl: string;
+  /** When true (e.g. Save to Proposal with 3D), proposal PDF uses the 3D image. */
+  setPreferForProposal?: boolean;
+  roof_area_m2?: number;
+  usable_area_m2?: number;
+  panel_count?: number;
+}): Promise<{ layout_image_3d_url: string; prefer_3d_for_proposal: boolean }> {
+  return apiFetch<{ layout_image_3d_url: string; prefer_3d_for_proposal: boolean }>(
+    '/api/roof/save-3d-layout-image',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        projectId: params.projectId,
+        dataUrl: params.dataUrl,
+        set_prefer_for_proposal: params.setPreferForProposal === true,
+        roof_area_m2: params.roof_area_m2,
+        usable_area_m2: params.usable_area_m2,
+        panel_count: params.panel_count,
+      }),
+    },
+  );
+}
+
 export async function fetchManualRoofLayout(projectId: string): Promise<{
   roof_area_m2: number;
   usable_area_m2: number;
   panel_count: number;
   layout_image_url: string;
+  layout_image_3d_url?: string;
+  prefer_3d_for_proposal?: boolean;
   savedAt?: string;
 }> {
   return apiFetch(`/api/roof/manual-layout/${encodeURIComponent(projectId)}`);
+}
+
+export async function setRoofLayoutEmbedPreference(
+  projectId: string,
+  prefer3d: boolean,
+): Promise<{ ok: boolean; prefer_3d_for_proposal: boolean }> {
+  return apiFetch('/api/roof/set-layout-embed-preference', {
+    method: 'POST',
+    body: JSON.stringify({ projectId, prefer_3d_for_proposal: prefer3d }),
+  });
 }
 
 // Minimal CRM project payload needed for AI layout
@@ -767,6 +809,8 @@ interface ApiProposalArtifact {
     usable_area_m2: number;
     panel_count: number;
     layout_image_url: string;
+    layout_image_3d_url?: string;
+    prefer_3d_for_proposal?: boolean;
     savedAt?: string;
   } | null;
   savedAt: string;
@@ -830,6 +874,8 @@ export function mapApiArtifactsToRecord(artifacts: ProposalEngineProjectDetailRe
                 usable_area_m2: artifacts.proposal.roofLayout.usable_area_m2,
                 panel_count: artifacts.proposal.roofLayout.panel_count,
                 layout_image_url: artifacts.proposal.roofLayout.layout_image_url,
+                layout_image_3d_url: artifacts.proposal.roofLayout.layout_image_3d_url,
+                prefer_3d_for_proposal: artifacts.proposal.roofLayout.prefer_3d_for_proposal,
               }
             : null,
         }

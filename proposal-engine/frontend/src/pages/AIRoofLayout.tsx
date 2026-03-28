@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { Suspense, lazy, useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { Stage, Layer, Image as KonvaImage, Line, Rect, Circle } from 'react-konva';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - use-image has ESM types that may not be picked up correctly here
@@ -10,6 +11,8 @@ import {
   fetchManualRoofLayout,
   getApiBaseUrl,
   saveManualRoofLayoutImage,
+  saveRoofLayout3dImage,
+  setRoofLayoutEmbedPreference,
 } from '../lib/apiClient';
 
 /** Focal point in image pixel space for centering the scroll viewport (saved view: API geometry or image centre). */
@@ -96,28 +99,64 @@ function scrollLayoutPreviewToFocal(
 import { Link } from 'react-router-dom';
 import { getActiveCustomer, getCustomer, getResolvedRoofLayout, upsertCustomer } from '../lib/customerStore';
 
+function absolutizeLayoutImageUrl(raw: string | null | undefined): string | null {
+  if (!raw || !String(raw).trim()) return null;
+  const s = String(raw).trim();
+  if (s.startsWith('http')) return s;
+  const base = getApiBaseUrl() || '';
+  return `${base}${s.startsWith('/') ? s : `/${s}`}`;
+}
+
 function persistRoofLayoutToActiveCustomer(params: {
   roof_area_m2: number;
   usable_area_m2: number;
   panel_count: number;
   layout_image_url: string;
+  layout_image_3d_url?: string;
+  prefer_3d_for_proposal?: boolean;
   savedAt?: string;
 }) {
   const ac = getActiveCustomer();
   if (!ac?.id) return;
   const fresh = getCustomer(ac.id);
   if (!fresh) return;
+  const roofLayout = {
+    savedAt: params.savedAt ?? new Date().toISOString(),
+    roof_area_m2: Number(params.roof_area_m2),
+    usable_area_m2: Number(params.usable_area_m2),
+    panel_count: Number(params.panel_count),
+    layout_image_url: String(params.layout_image_url),
+    ...(params.layout_image_3d_url != null && String(params.layout_image_3d_url).trim()
+      ? { layout_image_3d_url: String(params.layout_image_3d_url) }
+      : {}),
+    ...(typeof params.prefer_3d_for_proposal === 'boolean'
+      ? { prefer_3d_for_proposal: params.prefer_3d_for_proposal }
+      : {}),
+  };
   upsertCustomer({
     ...fresh,
-    roofLayout: {
-      savedAt: params.savedAt ?? new Date().toISOString(),
-      roof_area_m2: Number(params.roof_area_m2),
-      usable_area_m2: Number(params.usable_area_m2),
-      panel_count: Number(params.panel_count),
-      layout_image_url: String(params.layout_image_url),
-    },
+    roofLayout,
+    proposal: fresh.proposal
+      ? {
+          ...fresh.proposal,
+          roofLayout:
+            fresh.proposal.roofLayout || fresh.proposal.includeRoofLayout
+              ? {
+                  ...(fresh.proposal.roofLayout ?? {
+                    roof_area_m2: roofLayout.roof_area_m2,
+                    usable_area_m2: roofLayout.usable_area_m2,
+                    panel_count: roofLayout.panel_count,
+                    layout_image_url: roofLayout.layout_image_url,
+                  }),
+                  ...roofLayout,
+                }
+              : fresh.proposal.roofLayout,
+        }
+      : fresh.proposal,
   });
 }
+
+const LazySolar3DView = lazy(() => import('../components/Solar3DView'));
 
 export default function AIRoofLayout() {
   const activeProject = getActiveCustomer();
@@ -130,13 +169,23 @@ export default function AIRoofLayout() {
   const [panelWOverride, setPanelWOverride] = useState('');
   // Start at 50% zoom for an easier overview of the roof + layout
   const [zoom, setZoom] = useState(0.5);
-  const [exporting, setExporting] = useState(false);
   const [savingToProposal, setSavingToProposal] = useState(false);
   const [lastSavedProjectId, setLastSavedProjectId] = useState<string | null>(null);
   const [loadedSavedAt, setLoadedSavedAt] = useState<string | null>(null);
   const [layoutMode, setLayoutMode] = useState<'saved' | 'editing'>('editing');
   const [panelSpacingMultiplier, setPanelSpacingMultiplier] = useState(1.5);
   const [panelOrientation, setPanelOrientation] = useState<'portrait' | 'landscape'>('portrait');
+  const [roofViewTab, setRoofViewTab] = useState<'2d' | '3d'>('2d');
+  const [last3dPngDataUrl, setLast3dPngDataUrl] = useState<string | null>(null);
+  // Controls which image we embed when the user clicks "Save for proposal".
+  // Defaults to 2D; gets set to 3D whenever the 3D view exports a PNG.
+  const [proposalImageSource, setProposalImageSource] = useState<'2d' | '3d'>('2d');
+
+  // Summary (roof area / usable area / panel count) is recomputed from the polygon.
+  // Immediately after regeneration, we temporarily have AI values in `result` but polygon-based
+  // recompute hasn't run yet. To avoid showing ridiculous temporary numbers, we blank the UI
+  // until the polygon-based recompute completes at least once.
+  const [isPolygonSummaryReady, setIsPolygonSummaryReady] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const layoutScrollRef = useRef<HTMLDivElement>(null);
   /** Per-image URL: centre saved view once, editing polygon once (don’t fight user scroll / drag). */
@@ -183,6 +232,52 @@ export default function AIRoofLayout() {
   const [bgImage] = useImage(bgImageUrl ?? '', 'anonymous');
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
 
+  // DevTools open/close can cause viewport reflow (scrollbars/layout changes).
+  // Konva sometimes needs an explicit redraw after such changes to keep shapes visible.
+  useEffect(() => {
+    if (!stageRef.current) return;
+    try {
+      stageRef.current.batchDraw?.();
+      stageRef.current.draw?.();
+    } catch {
+      // No-op: stageRef may not be ready during initial render.
+    }
+  }, [isMobileView, zoom, roofViewTab, imageSize]);
+
+  const has3DRoofData =
+    polygon != null && polygon.length >= 3 && panels.length > 0 && imageSize != null;
+
+  /** URL for showing a saved 3D PNG (server or in-memory data URL) when polygon/panels are not loaded (saved layout mode). */
+  const saved3dDisplayUrl = (() => {
+    const last = last3dPngDataUrl;
+    if (last && last.startsWith('data:')) return last;
+    return absolutizeLayoutImageUrl(last ?? result?.layout_image_3d_url);
+  })();
+
+  const canToggle2d3dPreview = has3DRoofData || !!saved3dDisplayUrl;
+
+  /** Proposal can use 3D when the live 3D scene exists or a 3D PNG is in memory / on the server. */
+  const canChoose3dForProposal =
+    has3DRoofData ||
+    !!(last3dPngDataUrl && String(last3dPngDataUrl).trim()) ||
+    !!(result?.layout_image_3d_url && String(result.layout_image_3d_url).trim());
+
+  function handleChooseProposalLayout2d() {
+    setProposalImageSource('2d');
+    setRoofViewTab('2d');
+  }
+
+  function handleChooseProposalLayout3d() {
+    if (!canChoose3dForProposal) return;
+    setProposalImageSource('3d');
+    if (canToggle2d3dPreview) setRoofViewTab('3d');
+  }
+
+  useEffect(() => {
+    // Without live geometry, only keep 3D tab if we have a persisted 3D image to show.
+    if (roofViewTab === '3d' && !has3DRoofData && !saved3dDisplayUrl) setRoofViewTab('2d');
+  }, [has3DRoofData, roofViewTab, saved3dDisplayUrl]);
+
   // On open, if the project already has a saved manual layout image, pre-load it
   // so the user immediately sees what was previously saved.
   useEffect(() => {
@@ -203,18 +298,34 @@ export default function AIRoofLayout() {
           panel_count: Number(manual.panel_count),
           layout_image_url: String(manual.layout_image_url),
         };
+        if (manual.layout_image_3d_url != null && String(manual.layout_image_3d_url).trim()) {
+          next.layout_image_3d_url = String(manual.layout_image_3d_url);
+        }
+        if (typeof manual.prefer_3d_for_proposal === 'boolean') {
+          next.prefer_3d_for_proposal = manual.prefer_3d_for_proposal;
+        }
 
         setError(null);
         setResult(next);
         setLastSavedProjectId(String(crmProjectId));
         setLoadedSavedAt(manual?.savedAt ? String(manual.savedAt) : null);
         setLayoutMode('saved');
+        setIsPolygonSummaryReady(true);
+
+        const u3 = absolutizeLayoutImageUrl(manual.layout_image_3d_url);
+        if (u3) setLast3dPngDataUrl(u3);
+        else setLast3dPngDataUrl(null);
+        setProposalImageSource(manual.prefer_3d_for_proposal === true ? '3d' : '2d');
+        if (u3 && manual.prefer_3d_for_proposal === true) setRoofViewTab('3d');
+        else setRoofViewTab('2d');
 
         persistRoofLayoutToActiveCustomer({
           roof_area_m2: next.roof_area_m2,
           usable_area_m2: next.usable_area_m2,
           panel_count: next.panel_count,
           layout_image_url: next.layout_image_url,
+          layout_image_3d_url: next.layout_image_3d_url,
+          prefer_3d_for_proposal: next.prefer_3d_for_proposal,
           savedAt: manual?.savedAt ? String(manual.savedAt) : undefined,
         });
 
@@ -312,10 +423,23 @@ export default function AIRoofLayout() {
 
     setLoading(true);
     setError(null);
+    // Regenerate starts a new draft: clear prior "saved" visual state.
+    setLastSavedProjectId(null);
     // Regenerate = switch to editing mode (show polygon + recompute metrics from polygon).
     setLayoutMode('editing');
+    setIsPolygonSummaryReady(false);
+    // Ensure the recompute effect doesn't early-return because we're stuck in a "dragging" state
+    // from a previous interaction.
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    polygonDragRef.current = null;
+    polygonBaseRef.current = null;
     setPolygon(null);
     setPanels([]);
+    // Prevent the default polygon from initializing using the *previous* background image size
+    // while the new AI layout is still loading (otherwise we get a brief "old AI" flash).
+    setBgImageUrl(null);
+    setImageSize(null);
 
     try {
       const crmProject = await fetchCrmProjectForAiLayout(crmProjectId);
@@ -404,6 +528,8 @@ export default function AIRoofLayout() {
         layout_image_url: data?.layout_image_url && String(data.layout_image_url).trim() ? data.layout_image_url : '',
       };
       setResult(nextResult);
+      setLast3dPngDataUrl(null);
+      setProposalImageSource('2d');
 
       // Initialise frontend polygon + panel layout based on the latest image
       const rawUrl = nextResult.layout_image_url && String(nextResult.layout_image_url).trim()
@@ -433,112 +559,134 @@ export default function AIRoofLayout() {
     return stageRef.current.toDataURL({ pixelRatio, mimeType: mime, quality });
   }
 
-  const handleExportLayoutImage = async (format: 'png' | 'jpeg') => {
-    if (!stageRef.current) return;
-    setExporting(true);
-    try {
-      const dataUrl = await captureLayoutImage();
-      if (!dataUrl) return;
-      const mime = format === 'png' ? 'image/png' : 'image/jpeg';
-      const ext = format === 'png' ? 'png' : 'jpg';
-
-      // If the user chose JPG, convert the PNG data URL using a temporary canvas.
-      let finalUrl = dataUrl;
-      if (mime === 'image/jpeg') {
-        const img = new Image();
-        img.src = dataUrl;
-        await new Promise((resolve) => {
-          img.onload = resolve;
-        });
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
-          finalUrl = canvas.toDataURL('image/jpeg', 0.9);
-        }
-      }
-
-      const a = document.createElement('a');
-      a.href = finalUrl;
-      a.download = `ai-roof-layout.${ext}`;
-      a.click();
-
-      // Also persist this layout image for use in the proposal section (per‑project).
-      try {
-        const crmProjectId = activeProject?.master?.crmProjectId;
-        if (crmProjectId) {
-          const resp = await saveManualRoofLayoutImage({ projectId: crmProjectId, dataUrl: finalUrl });
-          setLastSavedProjectId(String(crmProjectId));
-          if (resp?.layout_image_url && result) {
-            persistRoofLayoutToActiveCustomer({
-              roof_area_m2: result.roof_area_m2,
-              usable_area_m2: result.usable_area_m2,
-              panel_count: result.panel_count,
-              layout_image_url: resp.layout_image_url,
-            });
-          }
-        }
-      } catch {
-        // ignore backend save errors here; download already succeeded
-      }
-    } catch (e) {
-      if (import.meta.env.DEV) console.error('Export failed:', e);
-    } finally {
-      setExporting(false);
-    }
-  };
-
   const handleSaveForProposal = async () => {
-    if (!stageRef.current) {
-      setError('Nothing to save yet. Generate a layout first.');
-      return;
-    }
     if (!activeProject?.master?.crmProjectId) {
       setError('This proposal is not linked to a Rayenna CRM project yet.');
       return;
     }
+    if (!bgImage || !imageSize) {
+      setError('Nothing to save yet. Generate a layout first.');
+      return;
+    }
+
+    const crmProjectId = activeProject.master.crmProjectId;
+    const prevViewTab = roofViewTab;
+    // 3D tab never mounts the Konva Stage (interactive 3D or static PNG) — switch to 2D briefly to capture.
+    const needTemp2d = prevViewTab === '3d';
+
     setSavingToProposal(true);
-    try {
-      // Save a smaller JPEG to avoid 413 (Request Entity Too Large) in production.
-      const dataUrl = await captureLayoutImage({ format: 'jpeg', quality: 0.82, pixelRatio: 1.25 });
-      if (!dataUrl) return;
-      const crmProjectId = activeProject?.master?.crmProjectId;
-      if (crmProjectId) {
-        const r = result?.roof_area_m2;
-        const u = result?.usable_area_m2;
-        const p = result?.panel_count;
-        const saved = await saveManualRoofLayoutImage({
-          projectId: crmProjectId,
-          dataUrl,
-          ...(Number.isFinite(Number(r)) && { roof_area_m2: Number(r) }),
-          ...(Number.isFinite(Number(u)) && { usable_area_m2: Number(u) }),
-          ...(Number.isFinite(Number(p)) && { panel_count: Number(p) }),
-        });
-        if (saved?.layout_image_url) {
-          setResult((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  layout_image_url: saved.layout_image_url,
-                }
-              : prev,
+    setError(null);
+
+    async function waitForStageAfterSwitch(): Promise<boolean> {
+      const deadline = Date.now() + 900;
+      while (Date.now() < deadline) {
+        if (stageRef.current) {
+          await new Promise<void>((r) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => r())),
           );
-          setLastSavedProjectId(String(crmProjectId));
-          if (result) {
-            persistRoofLayoutToActiveCustomer({
-              roof_area_m2: result.roof_area_m2,
-              usable_area_m2: result.usable_area_m2,
-              panel_count: result.panel_count,
-              layout_image_url: saved.layout_image_url,
-            });
+          try {
+            stageRef.current.batchDraw?.();
+          } catch {
+            /* ignore */
           }
+          return true;
+        }
+        await new Promise((r) => setTimeout(r, 20));
+      }
+      return false;
+    }
+
+    try {
+      if (needTemp2d) {
+        flushSync(() => setRoofViewTab('2d'));
+        const ok = await waitForStageAfterSwitch();
+        if (!ok) {
+          setError('Could not prepare the 2D view for capture. Open the 2D tab, then save again.');
+          return;
         }
       }
+
+      const r = result?.roof_area_m2;
+      const u = result?.usable_area_m2;
+      const p = result?.panel_count;
+      const metrics = {
+        ...(Number.isFinite(Number(r)) && { roof_area_m2: Number(r) }),
+        ...(Number.isFinite(Number(u)) && { usable_area_m2: Number(u) }),
+        ...(Number.isFinite(Number(p)) && { panel_count: Number(p) }),
+      };
+
+      const dataUrl = await captureLayoutImage({
+        format: 'jpeg',
+        quality: 0.82,
+        pixelRatio: 1.25,
+      });
+      if (!dataUrl) {
+        setError('Could not capture the 2D layout. Open the 2D tab, then save again.');
+        return;
+      }
+
+      const saved2d = await saveManualRoofLayoutImage({
+        projectId: crmProjectId,
+        dataUrl,
+        ...metrics,
+      });
+      if (!saved2d?.layout_image_url) {
+        setError('Server did not return a 2D layout URL.');
+        return;
+      }
+
+      const src3d =
+        last3dPngDataUrl ||
+        absolutizeLayoutImageUrl(result?.layout_image_3d_url) ||
+        '';
+
+      let next3dUrl: string | undefined;
+      let nextPrefer3d = false;
+
+      if (src3d.startsWith('data:')) {
+        const saved3d = await saveRoofLayout3dImage({
+          projectId: crmProjectId,
+          dataUrl: src3d,
+          setPreferForProposal: proposalImageSource === '3d',
+          ...metrics,
+        });
+        next3dUrl = saved3d.layout_image_3d_url;
+        nextPrefer3d = saved3d.prefer_3d_for_proposal;
+        const abs = absolutizeLayoutImageUrl(saved3d.layout_image_3d_url);
+        if (abs) setLast3dPngDataUrl(abs);
+      } else if (src3d.startsWith('http')) {
+        await setRoofLayoutEmbedPreference(String(crmProjectId), proposalImageSource === '3d');
+        nextPrefer3d = proposalImageSource === '3d';
+      } else if (proposalImageSource === '3d') {
+        setError(
+          '2D layout was saved. Open 3D view, export a PNG, then save again to store the 3D image for proposals.',
+        );
+      }
+
+      setResult((prev) => {
+        if (!prev) return prev;
+        const next = {
+          ...prev,
+          layout_image_url: saved2d.layout_image_url,
+          ...(next3dUrl != null && { layout_image_3d_url: next3dUrl }),
+          prefer_3d_for_proposal: nextPrefer3d,
+        };
+        persistRoofLayoutToActiveCustomer({
+          roof_area_m2: next.roof_area_m2,
+          usable_area_m2: next.usable_area_m2,
+          panel_count: next.panel_count,
+          layout_image_url: next.layout_image_url,
+          layout_image_3d_url: next.layout_image_3d_url,
+          prefer_3d_for_proposal: next.prefer_3d_for_proposal,
+        });
+        return next;
+      });
+      setLastSavedProjectId(String(crmProjectId));
     } catch (e) {
+      setError('Could not save to the server. Check your connection and try again.');
       if (import.meta.env.DEV) console.error('Save for proposal failed:', e);
     } finally {
+      if (needTemp2d) setRoofViewTab(prevViewTab);
       setSavingToProposal(false);
     }
   };
@@ -685,17 +833,44 @@ export default function AIRoofLayout() {
       const maxCap = typeof window !== 'undefined' && window.innerWidth < 768 ? 70 : 120;
       const { panels: nextPanels, roofAreaM2, usableAreaM2, panelCount } =
         computePanelsForPolygon(polygon, maxCap);
+
+      // DEV diagnostics for debugging panel/area mismatches.
+      if (import.meta.env.DEV) {
+        const minX = polygon.reduce((m, p) => Math.min(m, p.x), Infinity);
+        const maxX = polygon.reduce((m, p) => Math.max(m, p.x), -Infinity);
+        const minY = polygon.reduce((m, p) => Math.min(m, p.y), Infinity);
+        const maxY = polygon.reduce((m, p) => Math.max(m, p.y), -Infinity);
+        console.log('[AIRoofLayout] recompute polygon px bounds:', { minX, maxX, minY, maxY });
+        console.log(
+          '[AIRoofLayout] METERS_PER_PIXEL:',
+          METERS_PER_PIXEL,
+          'area m2:',
+          roofAreaM2,
+          'usable m2:',
+          usableAreaM2,
+        );
+        console.log(
+          '[AIRoofLayout] panelCount ideal:',
+          panelCount,
+          'panels rendered (capped):',
+          nextPanels.length,
+          'panelOrientation:',
+          panelOrientation,
+        );
+      }
+
       setPanels(nextPanels);
-      setResult((prev) =>
-        prev
+      setIsPolygonSummaryReady(true);
+      setResult((prev) => {
+        return prev
           ? {
               ...prev,
               roof_area_m2: roofAreaM2,
               usable_area_m2: usableAreaM2,
               panel_count: panelCount,
             }
-          : prev,
-      );
+          : prev;
+      });
     }, 200);
     return () => {
       if (recomputeTimeoutRef.current != null) {
@@ -856,7 +1031,9 @@ export default function AIRoofLayout() {
                       Roof area
                     </dt>
                     <dd className="mt-1 text-base font-semibold text-gray-900">
-                      {Number.isFinite(result.roof_area_m2) ? Number(result.roof_area_m2).toFixed(1) : '—'} m²
+                      {(layoutMode === 'editing' && !isPolygonSummaryReady)
+                        ? '—'
+                        : (Number.isFinite(result.roof_area_m2) ? Number(result.roof_area_m2).toFixed(1) : '—')} m²
                     </dd>
                   </div>
                   <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
@@ -864,7 +1041,9 @@ export default function AIRoofLayout() {
                       Usable area
                     </dt>
                     <dd className="mt-1 text-base font-semibold text-gray-900">
-                      {Number.isFinite(result.usable_area_m2) ? Number(result.usable_area_m2).toFixed(1) : '—'} m²
+                      {(layoutMode === 'editing' && !isPolygonSummaryReady)
+                        ? '—'
+                        : (Number.isFinite(result.usable_area_m2) ? Number(result.usable_area_m2).toFixed(1) : '—')} m²
                     </dd>
                   </div>
                   <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 col-span-2 sm:col-span-1">
@@ -872,7 +1051,9 @@ export default function AIRoofLayout() {
                       Panel count
                     </dt>
                     <dd className="mt-1 text-base font-semibold text-gray-900">
-                      {Number.isFinite(result.panel_count) ? result.panel_count : '—'}
+                      {(layoutMode === 'editing' && !isPolygonSummaryReady)
+                        ? '—'
+                        : (Number.isFinite(result.panel_count) ? result.panel_count : '—')}
                     </dd>
                   </div>
                 </dl>
@@ -883,22 +1064,31 @@ export default function AIRoofLayout() {
                 {/* Layout actions — touch-friendly on mobile */}
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wide w-full sm:w-auto">Actions</span>
-                  <button
-                    type="button"
-                    onClick={() => handleExportLayoutImage('png')}
-                    disabled={exporting}
-                    className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 inline-flex items-center justify-center px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60 border border-gray-300"
-                  >
-                    {exporting ? '…' : 'PNG'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleExportLayoutImage('jpeg')}
-                    disabled={exporting}
-                    className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 inline-flex items-center justify-center px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60 border border-gray-300"
-                  >
-                    {exporting ? '…' : 'JPG'}
-                  </button>
+                  <div className="w-full flex items-center gap-2 mt-1">
+                    <button
+                      type="button"
+                      onClick={handleChooseProposalLayout2d}
+                      className={`min-h-[44px] px-4 py-2 rounded-lg text-xs font-semibold border flex-1 ${
+                        proposalImageSource === '2d'
+                          ? 'bg-indigo-100 border-indigo-400 text-indigo-800'
+                          : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      Use 2D Layout
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleChooseProposalLayout3d}
+                      disabled={!canChoose3dForProposal}
+                      className={`min-h-[44px] px-4 py-2 rounded-lg text-xs font-semibold border flex-1 ${
+                        proposalImageSource === '3d'
+                          ? 'bg-indigo-100 border-indigo-400 text-indigo-800'
+                          : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                      Use 3D Render
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={handleSaveForProposal}
@@ -912,9 +1102,12 @@ export default function AIRoofLayout() {
                     {savingToProposal
                       ? 'Saving…'
                       : lastSavedProjectId && activeProject?.master?.crmProjectId != null
-                        ? 'Saved for proposal'
-                        : 'Save for proposal'}
+                        ? 'Saved for Proposal'
+                        : 'Save to Proposal'}
                   </button>
+                  <p className="w-full text-[11px] text-gray-500 leading-snug">
+                    These buttons switch the preview and set which image the proposal uses. Save stores both 2D and 3D when you have exported a 3D PNG (or it is already on the server).
+                  </p>
                 </div>
 
                 {/* All controls — stacked on mobile for easy tap, inline on desktop */}
@@ -922,35 +1115,71 @@ export default function AIRoofLayout() {
                   <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
                     Layout preview
                   </h2>
-                  <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
-                    <div className="flex items-center justify-between gap-3 sm:gap-2">
-                      <span className="text-xs font-medium text-gray-600 min-w-[4rem]">Zoom</span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setZoom((z) => Math.max(0.2, Math.round((z - 0.25) * 4) / 4))
-                          }
-                          className="h-10 w-10 sm:h-8 sm:w-8 flex items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-semibold hover:bg-gray-50 touch-manipulation"
-                          aria-label="Zoom out"
-                        >
-                          −
-                        </button>
-                        <span className="min-w-[3.5rem] text-center text-sm font-medium tabular-nums">
-                          {Math.round(zoom * 100)}%
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setZoom((z) => Math.min(10, Math.round((z + 0.25) * 4) / 4))
-                          }
-                          className="h-10 w-10 sm:h-8 sm:w-8 flex items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-semibold hover:bg-gray-50 touch-manipulation"
-                          aria-label="Zoom in"
-                        >
-                          +
-                        </button>
-                      </div>
+                  {canToggle2d3dPreview && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRoofViewTab('2d');
+                          setProposalImageSource('2d');
+                        }}
+                        className={`min-h-[44px] px-4 py-2 rounded-full border text-xs font-semibold touch-manipulation ${
+                          roofViewTab === '2d'
+                            ? 'bg-indigo-100 border-indigo-400 text-indigo-800'
+                            : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        2D Layout
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!canChoose3dForProposal) return;
+                          setRoofViewTab('3d');
+                          setProposalImageSource('3d');
+                        }}
+                        disabled={!canChoose3dForProposal}
+                        className={`min-h-[44px] px-4 py-2 rounded-full border text-xs font-semibold touch-manipulation ${
+                          roofViewTab === '3d'
+                            ? 'bg-indigo-100 border-indigo-400 text-indigo-800'
+                            : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        3D View
+                      </button>
                     </div>
+                  )}
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
+                    {roofViewTab !== '3d' && (
+                      <div className="flex items-center justify-between gap-3 sm:gap-2">
+                        <span className="text-xs font-medium text-gray-600 min-w-[4rem]">Zoom</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setZoom((z) => Math.max(0.2, Math.round((z - 0.25) * 4) / 4))
+                            }
+                            className="h-10 w-10 sm:h-8 sm:w-8 flex items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-semibold hover:bg-gray-50 touch-manipulation"
+                            aria-label="Zoom out"
+                          >
+                            −
+                          </button>
+                          <span className="min-w-[3.5rem] text-center text-sm font-medium tabular-nums">
+                            {Math.round(zoom * 100)}%
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setZoom((z) => Math.min(10, Math.round((z + 0.25) * 4) / 4))
+                            }
+                            className="h-10 w-10 sm:h-8 sm:w-8 flex items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-semibold hover:bg-gray-50 touch-manipulation"
+                            aria-label="Zoom in"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                       <span className="text-xs font-medium text-gray-600">Panel density</span>
                       <input
@@ -980,45 +1209,46 @@ export default function AIRoofLayout() {
                         {panelOrientation === 'portrait' ? 'Portrait' : 'Landscape'}
                       </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!imageSize) return;
-                        const margin = Math.min(imageSize.width, imageSize.height) * 0.3;
-                        let minX = margin;
-                        let maxX = imageSize.width - margin;
-                        let minY = margin;
-                        let maxY = imageSize.height - margin;
-                        const panelWidthPx = PANEL_WIDTH_M / METERS_PER_PIXEL;
-                        const panelHeightPx = PANEL_HEIGHT_M / METERS_PER_PIXEL;
-                        const spacingPx =
-                          (PANEL_SPACING_M / METERS_PER_PIXEL) * panelSpacingMultiplier;
-                        const stepX = panelWidthPx + spacingPx;
-                        const stepY = panelHeightPx + spacingPx;
-                        const snap = (v: number, step: number) =>
-                          Math.round(v / step) * step;
-                        minX = snap(minX, stepX);
-                        maxX = snap(maxX, stepX);
-                        minY = snap(minY, stepY);
-                        maxY = snap(maxY, stepY);
-                        setPolygon([
-                          { x: minX, y: minY },
-                          { x: maxX, y: minY },
-                          { x: maxX, y: maxY },
-                          { x: minX, y: maxY },
-                        ]);
-                      }}
-                      className="min-h-[44px] sm:min-h-0 px-4 py-2 sm:px-2 sm:py-1 rounded-full border border-gray-300 bg-white text-xs font-semibold hover:bg-gray-50 touch-manipulation w-full sm:w-auto"
-                    >
-                      Snap to grid
-                    </button>
+                    {roofViewTab !== '3d' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!imageSize) return;
+                          const margin = Math.min(imageSize.width, imageSize.height) * 0.3;
+                          let minX = margin;
+                          let maxX = imageSize.width - margin;
+                          let minY = margin;
+                          let maxY = imageSize.height - margin;
+                          const panelWidthPx = PANEL_WIDTH_M / METERS_PER_PIXEL;
+                          const panelHeightPx = PANEL_HEIGHT_M / METERS_PER_PIXEL;
+                          const spacingPx =
+                            (PANEL_SPACING_M / METERS_PER_PIXEL) * panelSpacingMultiplier;
+                          const stepX = panelWidthPx + spacingPx;
+                          const stepY = panelHeightPx + spacingPx;
+                          const snap = (v: number, step: number) => Math.round(v / step) * step;
+                          minX = snap(minX, stepX);
+                          maxX = snap(maxX, stepX);
+                          minY = snap(minY, stepY);
+                          maxY = snap(maxY, stepY);
+                          setPolygon([
+                            { x: minX, y: minY },
+                            { x: maxX, y: minY },
+                            { x: maxX, y: maxY },
+                            { x: minX, y: maxY },
+                          ]);
+                        }}
+                        className="min-h-[44px] sm:min-h-0 px-4 py-2 sm:px-2 sm:py-1 rounded-full border border-gray-300 bg-white text-xs font-semibold hover:bg-gray-50 touch-manipulation w-full sm:w-auto"
+                      >
+                        Snap to grid
+                      </button>
+                    )}
                   </div>
                 </div>
 
                 {/* Photo / canvas — scrollable area is exactly the scaled image size (no blank space at any zoom) */}
                 <div className="min-h-[260px] sm:min-h-[320px] aspect-[4/3] sm:aspect-video rounded-2xl border border-gray-200 bg-white overflow-hidden">
                   {/* Scroll vs Edit: when editMode is false, canvas doesn't capture touch so native scroll works on mobile */}
-                  {isMobileView && (
+                  {isMobileView && roofViewTab !== '3d' && (
                     <div className="mb-2">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-gray-600">Map:</span>
@@ -1048,7 +1278,102 @@ export default function AIRoofLayout() {
                     className="w-full h-full overflow-auto overscroll-contain min-w-0 min-h-0"
                     style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}
                   >
-                    {bgImage && imageSize ? (
+                    {roofViewTab === '3d' && has3DRoofData ? (
+                      <>
+                      <Suspense
+                        fallback={
+                          <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">
+                            Loading 3D...
+                          </div>
+                        }
+                      >
+                        <LazySolar3DView
+                          roofPolygon={polygon!}
+                          panelCoordinates={panels.map((p) => ({
+                            x: p.x,
+                            y: p.y,
+                            width: p.w,
+                            height: p.h,
+                          }))}
+                          imageSize={imageSize!}
+                          roofImageUrl={bgImageUrl ?? undefined}
+                          metersPerPixel={METERS_PER_PIXEL}
+                          panelCount={result?.panel_count}
+                          onExportPNG={async (dataUrl) => {
+                            setLast3dPngDataUrl(dataUrl);
+                            setProposalImageSource('3d');
+                            const crmId = activeProject?.master?.crmProjectId;
+                            if (!crmId || !dataUrl.startsWith('data:')) return;
+                            try {
+                              const out = await saveRoofLayout3dImage({
+                                projectId: String(crmId),
+                                dataUrl,
+                                setPreferForProposal: false,
+                                ...(Number.isFinite(Number(result?.roof_area_m2)) && {
+                                  roof_area_m2: Number(result!.roof_area_m2),
+                                }),
+                                ...(Number.isFinite(Number(result?.usable_area_m2)) && {
+                                  usable_area_m2: Number(result!.usable_area_m2),
+                                }),
+                                ...(Number.isFinite(Number(result?.panel_count)) && {
+                                  panel_count: Number(result!.panel_count),
+                                }),
+                              });
+                              const abs = absolutizeLayoutImageUrl(out.layout_image_3d_url);
+                              if (abs) setLast3dPngDataUrl(abs);
+                              setResult((prev) => {
+                                if (!prev) return prev;
+                                const next = {
+                                  ...prev,
+                                  layout_image_3d_url: out.layout_image_3d_url,
+                                  prefer_3d_for_proposal: out.prefer_3d_for_proposal,
+                                };
+                                persistRoofLayoutToActiveCustomer({
+                                  roof_area_m2: next.roof_area_m2,
+                                  usable_area_m2: next.usable_area_m2,
+                                  panel_count: next.panel_count,
+                                  layout_image_url: next.layout_image_url,
+                                  layout_image_3d_url: out.layout_image_3d_url,
+                                  prefer_3d_for_proposal: out.prefer_3d_for_proposal,
+                                });
+                                return next;
+                              });
+                            } catch (err) {
+                              setError(
+                                '3D image could not be saved to the server. It may not appear on other devices until saved.',
+                              );
+                              if (import.meta.env.DEV) console.error(err);
+                            }
+                          }}
+                        />
+                      </Suspense>
+                      {last3dPngDataUrl && (
+                        <div className="mt-3 px-2">
+                          <div className="text-xs font-medium text-gray-600 mb-2">
+                            3D Render (last exported)
+                          </div>
+                          <img
+                            src={last3dPngDataUrl}
+                            alt="3D render preview"
+                            className="w-full rounded-lg border border-gray-200 bg-white"
+                          />
+                        </div>
+                      )}
+                      </>
+                    ) : roofViewTab === '3d' && saved3dDisplayUrl ? (
+                      <div className="w-full min-h-[200px] h-full flex flex-col items-center justify-center p-3 bg-slate-50">
+                        <img
+                          src={saved3dDisplayUrl}
+                          alt="Saved 3D roof layout"
+                          className="max-w-full max-h-[min(70vh,520px)] w-auto h-auto object-contain rounded-lg border border-gray-200 bg-white shadow-sm"
+                        />
+                        {layoutMode === 'saved' && (
+                          <p className="mt-3 text-xs text-gray-500 text-center max-w-md">
+                            Saved 3D render from your project. Regenerate the layout if you need to edit roof geometry or the live 3D scene.
+                          </p>
+                        )}
+                      </div>
+                    ) : bgImage && imageSize ? (
                       <div
                         className="relative flex-shrink-0"
                         style={{

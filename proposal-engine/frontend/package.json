@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@sentry/react": "^10.42.0",
+    "@types/three": "^0.183.1",
     "docx": "^9.6.0",
     "konva": "^8.4.3",
     "react": "^18.3.1",
@@ -18,6 +19,7 @@
     "react-hook-form": "^7.71.2",
     "react-konva": "^18.2.1",
     "react-router-dom": "^6.28.1",
+    "three": "^0.183.2",
     "use-image": "^1.1.4",
     "xlsx": "^0.18.5"
   },

@@ -278,6 +278,8 @@ export interface RoofLayoutArtifact {
   usable_area_m2: number;
   panel_count: number;
   layout_image_url: string;
+  layout_image_3d_url?: string;
+  prefer_3d_for_proposal?: boolean;
 }
 
 export interface ProposalArtifact {
@@ -310,6 +312,8 @@ export interface ProposalArtifact {
     usable_area_m2: number;
     panel_count: number;
     layout_image_url: string;
+    layout_image_3d_url?: string;
+    prefer_3d_for_proposal?: boolean;
   } | null;
 
   // ── Future CRM integration fields ──────────────────────────────────────────
@@ -855,6 +859,8 @@ export function getResolvedRoofLayout(r: CustomerRecord | null): RoofLayoutArtif
       usable_area_m2: Number(pr.usable_area_m2),
       panel_count: Number(pr.panel_count),
       layout_image_url: String(pr.layout_image_url),
+      layout_image_3d_url: pr.layout_image_3d_url,
+      prefer_3d_for_proposal: pr.prefer_3d_for_proposal,
     };
   }
   return null;
