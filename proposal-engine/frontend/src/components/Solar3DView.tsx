@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { createPortal } from 'react-dom';
 import * as THREE from 'three';
 import { PMREMGenerator } from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -13,6 +22,17 @@ import {
   panelToMesh,
   type Solar3DPanel,
 } from '../lib/solar3DHelpers';
+
+/** Orbit snapshot written on every OrbitControls change; parent ref survives 3D unmount (e.g. Save → 2D tab). */
+export type Solar3DOrbitSnapshot = {
+  position: [number, number, number];
+  target: [number, number, number];
+};
+
+export type Solar3DViewHandle = {
+  /** Renders the current camera/zoom (what you see) to PNG; does not change orbit or trigger download. */
+  captureCurrentViewPng: () => Promise<string | null>;
+};
 
 export interface Solar3DViewProps {
   roofPolygon: { x: number; y: number }[];
@@ -29,20 +49,33 @@ export interface Solar3DViewProps {
   onExportPNG?: (dataUrl: string) => void;
   /** Fill explicit parent size (scroll/zoom wrapper). Keeps WebGL resolution in sync — no CSS-only scale blur. */
   fillParent?: boolean;
+  /** Parent-owned; updated every orbit change. Used with `persistentLayoutKeyRef` after remount. */
+  orbitStateRef?: React.MutableRefObject<Solar3DOrbitSnapshot | null>;
+  /** Parent-owned last `layoutKey`; same as current key ⇒ restore `orbitStateRef` instead of default camera. */
+  persistentLayoutKeyRef?: React.MutableRefObject<string>;
+  /** When set, the control panel is portaled here (outside the WebGL frame) instead of floating over the canvas. */
+  controlsPortalHost?: HTMLElement | null;
 }
 
 const roofDepthM = 0.6; // panel base height above satellite (legacy “slab” depth; modules sit on metal rack)
 
-export default function Solar3DView({
-  roofPolygon,
-  panelCoordinates,
-  imageSize,
-  roofImageUrl,
-  metersPerPixel,
-  panelCount,
-  onExportPNG,
-  fillParent = false,
-}: Solar3DViewProps) {
+const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Solar3DView(
+  {
+    roofPolygon,
+    panelCoordinates,
+    imageSize,
+    roofImageUrl,
+    metersPerPixel,
+    panelCount,
+    onExportPNG,
+    fillParent = false,
+    orbitStateRef,
+    persistentLayoutKeyRef,
+    controlsPortalHost = null,
+  },
+  ref,
+) {
+  const isDockedControls = !!controlsPortalHost;
   const mountRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -266,6 +299,15 @@ export default function Solar3DView({
     controls.zoomSpeed = 1.1;
     controls.target.set(0, 0, 0);
 
+    const onControlsChangeForOrbit = () => {
+      if (!orbitStateRef) return;
+      orbitStateRef.current = {
+        position: [camera.position.x, camera.position.y, camera.position.z],
+        target: [controls.target.x, controls.target.y, controls.target.z],
+      };
+    };
+    controls.addEventListener('change', onControlsChangeForOrbit);
+
     // Prevent the parent scroll container from eating wheel zoom.
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
@@ -373,6 +415,7 @@ export default function Solar3DView({
         });
       }
 
+      controls.removeEventListener('change', onControlsChangeForOrbit);
       controls.dispose();
       renderer.domElement.removeEventListener('wheel', onWheel as any);
       renderer.dispose();
@@ -403,7 +446,7 @@ export default function Solar3DView({
       revealFinishedRef.current = false;
       controlsRef.current = null;
     };
-  }, []);
+  }, [orbitStateRef]);
 
   useEffect(() => {
     const group = groupRef.current;
@@ -793,7 +836,7 @@ export default function Solar3DView({
       rackStandoffsRef.current = [];
     }
 
-    // Default camera only when layout scale/count changes, or when user turned off "Keep camera position".
+    // Default camera when layout identity changes; with parent refs, same key after remount restores orbit.
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     if (camera && controls) {
@@ -805,21 +848,46 @@ export default function Solar3DView({
         roofPolygon.length,
         panelCoordinates.length,
       ].join('|');
-      const layoutChanged = lastCameraLayoutKeyRef.current !== layoutKey;
-      if (!lockCameraView || layoutChanged) {
-        lastCameraLayoutKeyRef.current = layoutKey;
+
+      const applyDefaultCamera = () => {
         camera.position.set(200, -200, 150);
         camera.lookAt(0, 0, 0);
         controls.target.set(0, 0, 0);
         controls.update();
+      };
+
+      if (persistentLayoutKeyRef) {
+        const sameLayout = persistentLayoutKeyRef.current === layoutKey;
+        if (!lockCameraView || !sameLayout) {
+          applyDefaultCamera();
+          persistentLayoutKeyRef.current = layoutKey;
+          lastCameraLayoutKeyRef.current = layoutKey;
+        } else if (orbitStateRef?.current) {
+          const o = orbitStateRef.current;
+          camera.position.set(o.position[0], o.position[1], o.position[2]);
+          controls.target.set(o.target[0], o.target[1], o.target[2]);
+          controls.update();
+        } else {
+          applyDefaultCamera();
+          persistentLayoutKeyRef.current = layoutKey;
+          lastCameraLayoutKeyRef.current = layoutKey;
+        }
+      } else {
+        const layoutChanged = lastCameraLayoutKeyRef.current !== layoutKey;
+        if (!lockCameraView || layoutChanged) {
+          lastCameraLayoutKeyRef.current = layoutKey;
+          applyDefaultCamera();
+        }
       }
     }
   }, [
     effectiveImageSize,
     lockCameraView,
     metersPerPixel,
+    orbitStateRef,
     panelCoordinates,
     panelCount,
+    persistentLayoutKeyRef,
     roofPolygon,
     roofProceduralTexture,
     roofTexture,
@@ -932,16 +1000,14 @@ export default function Solar3DView({
     resetAnimFrameRef.current = requestAnimationFrame(animate);
   }, []);
 
-  const handleExport = useCallback(async () => {
+  /** WYSIWYG: keeps current orbit/zoom; export resolution matches on-screen aspect (long edge up to 1920px). */
+  const buildExportDataUrl = useCallback(async (): Promise<string> => {
     const renderer = rendererRef.current;
     const scene = sceneRef.current;
     const camera = cameraRef.current;
     const controls = controlsRef.current;
-    if (!renderer || !scene || !camera || !controls) return;
+    if (!renderer || !scene || !camera || !controls) return '';
 
-    setExportError(null);
-
-    const roofCenter = roofCenterRef.current ?? new THREE.Vector3(0, 0, 0);
     const oldBg = scene.background ? (scene.background as THREE.Color).clone() : null;
     const oldCamPos = camera.position.clone();
     const oldTarget = controls.target.clone();
@@ -954,42 +1020,27 @@ export default function Solar3DView({
     const sun = sunSphereRef.current;
     const oldSunVis = sun ? sun.visible : true;
 
-    setExportingSnapshot(true);
     if (sun) sun.visible = false;
 
     let dataUrl = '';
     try {
-      const group = groupRef.current;
-      if (group && group.children.length > 0) {
-        const box = new THREE.Box3().setFromObject(group);
-        if (!box.isEmpty()) {
-          const sphere = box.getBoundingSphere(new THREE.Sphere());
-          const c = sphere.center;
-          const r = Math.max(sphere.radius, 0.35);
-          const vFovRad = (camera.fov * Math.PI) / 180;
-          const dist = (r / Math.sin(vFovRad / 2)) * 1.32;
-          const offset = new THREE.Vector3(0.45, -0.78, 0.42).normalize();
-          camera.position.copy(c).addScaledVector(offset, dist);
-          controls.target.copy(c);
-          camera.near = Math.max(0.05, dist / 200);
-          camera.far = Math.max(120, dist * 24);
-          camera.updateProjectionMatrix();
-          controls.update();
-        } else {
-          camera.position.set(roofCenter.x, roofCenter.y - 5, roofCenter.z + 10);
-          controls.target.copy(roofCenter);
-          controls.update();
-        }
-      } else {
-        camera.position.set(roofCenter.x, roofCenter.y - 5, roofCenter.z + 10);
-        controls.target.copy(roofCenter);
-        controls.update();
-      }
-
       scene.background = new THREE.Color('#ffffff');
 
-      const exportW = 1600;
-      const exportH = 900;
+      const mountEl = mountRef.current;
+      const vw = Math.max(64, mountEl?.clientWidth ?? 800);
+      const vh = Math.max(64, mountEl?.clientHeight ?? 600);
+      const viewAspect = vw / vh;
+      const maxLong = 1920;
+      let exportW: number;
+      let exportH: number;
+      if (viewAspect >= 1) {
+        exportW = maxLong;
+        exportH = Math.max(2, Math.round(maxLong / viewAspect));
+      } else {
+        exportH = maxLong;
+        exportW = Math.max(2, Math.round(maxLong * viewAspect));
+      }
+
       renderer.setPixelRatio(2);
       camera.aspect = exportW / exportH;
       camera.updateProjectionMatrix();
@@ -1063,6 +1114,29 @@ export default function Solar3DView({
       renderer.setPixelRatio(oldPixelRatio);
       renderer.setSize(oldSize.x, oldSize.y, false);
       scene.background = oldBg;
+    }
+    return dataUrl;
+  }, []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      captureCurrentViewPng: async () => {
+        setExportError(null);
+        const url = await buildExportDataUrl();
+        return url || null;
+      },
+    }),
+    [buildExportDataUrl],
+  );
+
+  const handleExport = useCallback(async () => {
+    setExportError(null);
+    setExportingSnapshot(true);
+    let dataUrl = '';
+    try {
+      dataUrl = await buildExportDataUrl();
+    } finally {
       setExportingSnapshot(false);
     }
 
@@ -1096,10 +1170,11 @@ export default function Solar3DView({
     }
 
     onExportPNG?.(dataUrl);
-  }, [onExportPNG]);
+  }, [buildExportDataUrl, onExportPNG]);
 
   // Default float position: top-right inside mount; clamp on resize. After user drags, only clamp.
   useEffect(() => {
+    if (controlsPortalHost) return;
     const m = mountRef.current;
     if (!m) return;
 
@@ -1131,10 +1206,11 @@ export default function Solar3DView({
     ro.observe(m);
     requestAnimationFrame(fit);
     return () => ro.disconnect();
-  }, []);
+  }, [controlsPortalHost]);
 
   // Expand/collapse changes panel height — keep it inside the viewport.
   useEffect(() => {
+    if (controlsPortalHost) return;
     const m = mountRef.current;
     const shell = controlsShellRef.current;
     if (!m || !shell) return;
@@ -1149,7 +1225,7 @@ export default function Solar3DView({
       }));
     });
     return () => cancelAnimationFrame(raf);
-  }, [controlsCollapsed]);
+  }, [controlsCollapsed, controlsPortalHost]);
 
   const onControlsDragPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest('[data-collapse-control]')) return;
@@ -1323,138 +1399,255 @@ export default function Solar3DView({
           </svg>
         </div>
         )}
-        {/* Draggable floating controls (collapsed by default; drag header, +/− toggles body) */}
-        <div
-          ref={controlsShellRef}
-          className="absolute z-10 pointer-events-auto w-[min(288px,calc(100%-16px))] max-w-[calc(100%-16px)] rounded-xl shadow-2xl shadow-black/45 ring-1 ring-white/10"
-          style={{ left: controlsFloat.x, top: controlsFloat.y }}
-        >
-          <div className="bg-black/55 text-white rounded-xl text-xs border border-white/10 backdrop-blur-md overflow-hidden">
-            <div
-              className="flex items-stretch gap-1 px-2 py-1.5 select-none touch-none"
-              role="toolbar"
-              aria-label="3D view controls"
-              title="Drag header to move. Use + or − to show or hide sliders."
-            >
+        {!isDockedControls && (
+          <div
+            ref={controlsShellRef}
+            className="absolute z-10 pointer-events-auto w-[min(288px,calc(100%-16px))] max-w-[calc(100%-16px)] rounded-xl shadow-2xl shadow-black/45 ring-1 ring-white/10"
+            style={{ left: controlsFloat.x, top: controlsFloat.y }}
+          >
+            <div className="bg-black/55 text-white rounded-xl text-xs border border-white/10 backdrop-blur-md overflow-hidden">
               <div
-                className="flex flex-1 items-center gap-2 min-w-0 cursor-grab active:cursor-grabbing rounded-lg px-1 py-1"
-                onPointerDown={onControlsDragPointerDown}
-                onPointerMove={onControlsDragPointerMove}
-                onPointerUp={onControlsDragPointerUp}
-                onPointerCancel={onControlsDragPointerUp}
+                className="flex items-stretch gap-1 px-2 py-1.5 select-none touch-none"
+                role="toolbar"
+                aria-label="3D view controls"
+                title="Drag header to move. Use + or − to show or hide sliders."
               >
-                <span className="shrink-0 text-white/40" aria-hidden>
-                  <svg width="12" height="16" viewBox="0 0 12 16">
-                    <circle cx="3" cy="3" r="1.4" fill="currentColor" />
-                    <circle cx="9" cy="3" r="1.4" fill="currentColor" />
-                    <circle cx="3" cy="8" r="1.4" fill="currentColor" />
-                    <circle cx="9" cy="8" r="1.4" fill="currentColor" />
-                    <circle cx="3" cy="13" r="1.4" fill="currentColor" />
-                    <circle cx="9" cy="13" r="1.4" fill="currentColor" />
-                  </svg>
-                </span>
-                <div className="text-sm font-semibold text-white/90 truncate">
-                  ☀️ {panelCount ?? panelCoordinates.length} Panels
+                <div
+                  className="flex flex-1 items-center gap-2 min-w-0 cursor-grab active:cursor-grabbing rounded-lg px-1 py-1"
+                  onPointerDown={onControlsDragPointerDown}
+                  onPointerMove={onControlsDragPointerMove}
+                  onPointerUp={onControlsDragPointerUp}
+                  onPointerCancel={onControlsDragPointerUp}
+                >
+                  <span className="shrink-0 text-white/40" aria-hidden>
+                    <svg width="12" height="16" viewBox="0 0 12 16">
+                      <circle cx="3" cy="3" r="1.4" fill="currentColor" />
+                      <circle cx="9" cy="3" r="1.4" fill="currentColor" />
+                      <circle cx="3" cy="8" r="1.4" fill="currentColor" />
+                      <circle cx="9" cy="8" r="1.4" fill="currentColor" />
+                      <circle cx="3" cy="13" r="1.4" fill="currentColor" />
+                      <circle cx="9" cy="13" r="1.4" fill="currentColor" />
+                    </svg>
+                  </span>
+                  <div className="text-sm font-semibold text-white/90 truncate">
+                    ☀️ {panelCount ?? panelCoordinates.length} Panels
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  data-collapse-control
+                  className="shrink-0 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-lg text-lg font-bold text-white/90 hover:bg-white/10 touch-manipulation"
+                  onClick={() => setControlsCollapsed((v) => !v)}
+                  aria-expanded={!controlsCollapsed}
+                  aria-label={controlsCollapsed ? 'Expand controls' : 'Collapse controls'}
+                >
+                  {controlsCollapsed ? '+' : '−'}
+                </button>
               </div>
-              <button
-                type="button"
-                data-collapse-control
-                className="shrink-0 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-lg text-lg font-bold text-white/90 hover:bg-white/10 touch-manipulation"
-                onClick={() => setControlsCollapsed((v) => !v)}
-                aria-expanded={!controlsCollapsed}
-                aria-label={controlsCollapsed ? 'Expand controls' : 'Collapse controls'}
-              >
-                {controlsCollapsed ? '+' : '−'}
-              </button>
-            </div>
 
-            {!controlsCollapsed && (
-              <div className="px-4 pb-4 space-y-3">
-                <div className="h-px bg-white/10" />
+              {!controlsCollapsed && (
+                <div className="px-4 pb-4 space-y-3">
+                  <div className="h-px bg-white/10" />
 
-                <label className="flex items-start gap-2.5 cursor-pointer select-none touch-manipulation">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 rounded border-white/30 accent-[#22c55e]"
-                    checked={lockCameraView}
-                    onChange={(e) => setLockCameraView(e.target.checked)}
-                    aria-describedby="solar3d-lock-camera-hint"
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-white/90 font-medium">Keep camera position</span>
-                    <span id="solar3d-lock-camera-hint" className="block text-white/55 text-[11px] leading-snug mt-0.5">
-                      Orbit view stays when you change tilt, sun, or page zoom. Turn off to snap to default framing on each
-                      scene rebuild.
+                  <label className="flex items-start gap-2.5 cursor-pointer select-none touch-manipulation">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 rounded border-white/30 accent-[#22c55e]"
+                      checked={lockCameraView}
+                      onChange={(e) => setLockCameraView(e.target.checked)}
+                      aria-describedby="solar3d-lock-camera-hint"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-white/90 font-medium">Keep camera position</span>
+                      <span id="solar3d-lock-camera-hint" className="block text-white/55 text-[11px] leading-snug mt-0.5">
+                        Orbit view stays when you change tilt, sun, or page zoom. Turn off to snap to default framing on each
+                        scene rebuild.
+                      </span>
                     </span>
-                  </span>
-                </label>
+                  </label>
 
-                <div className="flex items-center justify-between gap-3">
-                  <label className="whitespace-nowrap text-white/90">Panel Tilt</label>
-                  <span className="w-14 text-right tabular-nums font-semibold">{tiltDeg}°</span>
-                </div>
-                <input
-                  className="accent-[#22c55e] w-full"
-                  type="range"
-                  min={0}
-                  max={45}
-                  value={tiltDeg}
-                  onChange={(e) => setTiltDeg(Number(e.target.value))}
-                />
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="whitespace-nowrap text-white/90">Panel Tilt</label>
+                    <span className="w-14 text-right tabular-nums font-semibold">{tiltDeg}°</span>
+                  </div>
+                  <input
+                    className="accent-[#22c55e] w-full min-h-[44px] sm:min-h-0"
+                    type="range"
+                    min={0}
+                    max={45}
+                    value={tiltDeg}
+                    onChange={(e) => setTiltDeg(Number(e.target.value))}
+                  />
 
-                <div className="flex items-center justify-between gap-3">
-                  <label className="whitespace-nowrap text-white/90">Sun Elevation</label>
-                  <span className="w-14 text-right tabular-nums font-semibold">
-                    {sunElevationDeg}°
-                  </span>
-                </div>
-                <input
-                  className="accent-[#22c55e] w-full"
-                  type="range"
-                  min={10}
-                  max={80}
-                  value={sunElevationDeg}
-                  onChange={(e) => setSunElevationDeg(Number(e.target.value))}
-                />
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="whitespace-nowrap text-white/90">Sun Elevation</label>
+                    <span className="w-14 text-right tabular-nums font-semibold">
+                      {sunElevationDeg}°
+                    </span>
+                  </div>
+                  <input
+                    className="accent-[#22c55e] w-full min-h-[44px] sm:min-h-0"
+                    type="range"
+                    min={10}
+                    max={80}
+                    value={sunElevationDeg}
+                    onChange={(e) => setSunElevationDeg(Number(e.target.value))}
+                  />
 
-                <div className="flex items-center justify-between gap-3">
-                  <label className="whitespace-nowrap text-white/90">Sun Azimuth</label>
-                  <span className="w-14 text-right tabular-nums font-semibold">{sunAzimuthDeg}°</span>
-                </div>
-                <input
-                  className="accent-[#22c55e] w-full"
-                  type="range"
-                  min={0}
-                  max={360}
-                  value={sunAzimuthDeg}
-                  onChange={(e) => setSunAzimuthDeg(Number(e.target.value))}
-                />
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="whitespace-nowrap text-white/90">Sun Azimuth</label>
+                    <span className="w-14 text-right tabular-nums font-semibold">{sunAzimuthDeg}°</span>
+                  </div>
+                  <input
+                    className="accent-[#22c55e] w-full min-h-[44px] sm:min-h-0"
+                    type="range"
+                    min={0}
+                    max={360}
+                    value={sunAzimuthDeg}
+                    onChange={(e) => setSunAzimuthDeg(Number(e.target.value))}
+                  />
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="flex-1 bg-[#22c55e] hover:bg-[#1fb45a] text-white rounded-lg px-3 py-2 font-semibold"
-                    onClick={() => void handleExport()}
-                  >
-                    Export PNG
-                  </button>
-                  <button
-                    type="button"
-                    className="bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-lg px-3 py-2 font-semibold"
-                    onClick={resetView}
-                    aria-label="Reset view (R)"
-                    title="Reset view (R)"
-                  >
-                    Reset
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                      type="button"
+                      className="flex-1 min-h-[44px] bg-[#22c55e] hover:bg-[#1fb45a] text-white rounded-lg px-3 py-2 font-semibold touch-manipulation"
+                      onClick={() => void handleExport()}
+                    >
+                      Export PNG
+                    </button>
+                    <button
+                      type="button"
+                      className="min-h-[44px] bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-lg px-3 py-2 font-semibold touch-manipulation"
+                      onClick={resetView}
+                      aria-label="Reset view (R)"
+                      title="Reset view (R)"
+                    >
+                      Reset
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
+
+      {isDockedControls &&
+        controlsPortalHost &&
+        createPortal(
+          <div ref={controlsShellRef} className="w-full max-w-full pointer-events-auto">
+            <div className="rounded-xl border border-gray-200 bg-white text-gray-800 text-xs shadow-sm overflow-hidden">
+              <div
+                className="flex items-stretch gap-1 px-3 py-2 bg-slate-50 border-b border-gray-200"
+                role="toolbar"
+                aria-label="3D scene controls"
+              >
+                <div className="flex flex-1 items-center gap-2 min-w-0">
+                  <span className="text-base" aria-hidden>
+                    ☀️
+                  </span>
+                  <div className="text-sm font-semibold text-gray-800 truncate">
+                    {panelCount ?? panelCoordinates.length} panels · 3D scene
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  data-collapse-control
+                  className="shrink-0 min-h-[44px] min-w-[44px] sm:min-h-[40px] sm:min-w-[40px] flex items-center justify-center rounded-lg text-lg font-bold text-gray-700 hover:bg-gray-100 touch-manipulation"
+                  onClick={() => setControlsCollapsed((v) => !v)}
+                  aria-expanded={!controlsCollapsed}
+                  aria-label={controlsCollapsed ? 'Expand 3D controls' : 'Collapse 3D controls'}
+                >
+                  {controlsCollapsed ? '+' : '−'}
+                </button>
+              </div>
+
+              {!controlsCollapsed && (
+                <div className="px-3 sm:px-4 pb-4 pt-3 space-y-3">
+                  <label className="flex items-start gap-2.5 cursor-pointer select-none touch-manipulation">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 rounded border-gray-300 accent-indigo-600"
+                      checked={lockCameraView}
+                      onChange={(e) => setLockCameraView(e.target.checked)}
+                      aria-describedby="solar3d-lock-camera-hint-dock"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-gray-800 font-medium text-sm">Keep camera position</span>
+                      <span id="solar3d-lock-camera-hint-dock" className="block text-gray-500 text-[11px] leading-snug mt-0.5">
+                        Orbit view stays when you change tilt, sun, or page zoom. Turn off to snap to default framing when the
+                        scene rebuilds.
+                      </span>
+                    </span>
+                  </label>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="whitespace-nowrap text-gray-700 font-medium">Panel tilt</label>
+                    <span className="w-14 text-right tabular-nums font-semibold text-gray-900">{tiltDeg}°</span>
+                  </div>
+                  <input
+                    className="accent-indigo-600 w-full min-h-[44px] sm:min-h-0"
+                    type="range"
+                    min={0}
+                    max={45}
+                    value={tiltDeg}
+                    onChange={(e) => setTiltDeg(Number(e.target.value))}
+                  />
+
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="whitespace-nowrap text-gray-700 font-medium">Sun elevation</label>
+                    <span className="w-14 text-right tabular-nums font-semibold text-gray-900">
+                      {sunElevationDeg}°
+                    </span>
+                  </div>
+                  <input
+                    className="accent-indigo-600 w-full min-h-[44px] sm:min-h-0"
+                    type="range"
+                    min={10}
+                    max={80}
+                    value={sunElevationDeg}
+                    onChange={(e) => setSunElevationDeg(Number(e.target.value))}
+                  />
+
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="whitespace-nowrap text-gray-700 font-medium">Sun azimuth</label>
+                    <span className="w-14 text-right tabular-nums font-semibold text-gray-900">{sunAzimuthDeg}°</span>
+                  </div>
+                  <input
+                    className="accent-indigo-600 w-full min-h-[44px] sm:min-h-0"
+                    type="range"
+                    min={0}
+                    max={360}
+                    value={sunAzimuthDeg}
+                    onChange={(e) => setSunAzimuthDeg(Number(e.target.value))}
+                  />
+
+                  <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                    <button
+                      type="button"
+                      className="flex-1 min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-3 py-2 font-semibold touch-manipulation"
+                      onClick={() => void handleExport()}
+                    >
+                      Export PNG
+                    </button>
+                    <button
+                      type="button"
+                      className="min-h-[44px] bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg px-3 py-2 font-semibold touch-manipulation"
+                      onClick={resetView}
+                      aria-label="Reset view (R)"
+                      title="Reset view (R)"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>,
+          controlsPortalHost,
+        )}
     </div>
   );
-}
+});
 
+export default Solar3DView;

@@ -98,6 +98,7 @@ function scrollLayoutPreviewToFocal(
 }
 import { Link } from 'react-router-dom';
 import { getActiveCustomer, getCustomer, getResolvedRoofLayout, upsertCustomer } from '../lib/customerStore';
+import type { Solar3DOrbitSnapshot, Solar3DViewHandle } from '../components/Solar3DView';
 
 function absolutizeLayoutImageUrl(raw: string | null | undefined): string | null {
   if (!raw || !String(raw).trim()) return null;
@@ -191,6 +192,12 @@ export default function AIRoofLayout() {
   const [isPolygonSummaryReady, setIsPolygonSummaryReady] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const layoutScrollRef = useRef<HTMLDivElement>(null);
+  const solar3dRef = useRef<Solar3DViewHandle | null>(null);
+  /** Survives 3D unmount during Save (brief 2D tab) so orbit is restored and layout key matches. */
+  const solar3dPersistentLayoutKeyRef = useRef('');
+  const solar3dOrbitRef = useRef<Solar3DOrbitSnapshot | null>(null);
+  /** Mount node for 3D control panel (outside scroll canvas, like 2D toolbars). */
+  const [solar3dControlsHost, setSolar3dControlsHost] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const el = layoutScrollRef.current;
@@ -456,6 +463,8 @@ export default function AIRoofLayout() {
 
     setLoading(true);
     setError(null);
+    solar3dPersistentLayoutKeyRef.current = '';
+    solar3dOrbitRef.current = null;
     // Regenerate starts a new draft: clear prior "saved" visual state.
     setLastSavedProjectId(null);
     // Regenerate = switch to editing mode (show polygon + recompute metrics from polygon).
@@ -561,6 +570,8 @@ export default function AIRoofLayout() {
         layout_image_url: data?.layout_image_url && String(data.layout_image_url).trim() ? data.layout_image_url : '',
       };
       setResult(nextResult);
+      solar3dPersistentLayoutKeyRef.current = '';
+      solar3dOrbitRef.current = null;
       setLast3dPngDataUrl(null);
       setProposalImageSource('2d');
 
@@ -629,7 +640,19 @@ export default function AIRoofLayout() {
       return false;
     }
 
+    /** Fresh capture from live WebGL (state updates are async; use this in src3d for the same tick). */
+    let captured3dForSave: string | null = null;
+
     try {
+      if (prevViewTab === '3d' && proposalImageSource === '3d') {
+        try {
+          captured3dForSave = (await solar3dRef.current?.captureCurrentViewPng()) ?? null;
+          if (captured3dForSave) setLast3dPngDataUrl(captured3dForSave);
+        } catch {
+          /* keep existing last3dPngDataUrl */
+        }
+      }
+
       if (needTemp2d) {
         flushSync(() => setRoofViewTab('2d'));
         const ok = await waitForStageAfterSwitch();
@@ -669,6 +692,7 @@ export default function AIRoofLayout() {
       }
 
       const src3d =
+        captured3dForSave ||
         last3dPngDataUrl ||
         absolutizeLayoutImageUrl(result?.layout_image_3d_url) ||
         '';
@@ -1286,8 +1310,10 @@ export default function AIRoofLayout() {
 
                 {/* Photo / canvas — 2D: content-sized scroll; 3D: stable slate gutter + scrollbars (no white flash) */}
                 <div
-                  className={`min-h-[260px] sm:min-h-[320px] aspect-[4/3] sm:aspect-video rounded-2xl border border-gray-200 flex flex-col min-h-0 overflow-hidden ${
-                    roofViewTab === '3d' ? 'bg-slate-200' : 'bg-white'
+                  className={`min-h-[260px] sm:min-h-[320px] rounded-2xl border border-gray-200 flex flex-col min-h-0 overflow-hidden ${
+                    roofViewTab === '3d'
+                      ? 'bg-slate-200 lg:min-h-[360px]'
+                      : 'aspect-[4/3] sm:aspect-video bg-white'
                   }`}
                 >
                   {/* Scroll vs Edit: when editMode is false, canvas doesn't capture touch so native scroll works on mobile */}
@@ -1316,17 +1342,18 @@ export default function AIRoofLayout() {
                     </div>
                     </div>
                   )}
-                  <div
-                    ref={layoutScrollRef}
-                    className={`w-full flex-1 min-h-0 min-w-0 overscroll-contain ${
-                      roofViewTab === '3d'
-                        ? 'layout-preview-scroll-3d overflow-x-scroll overflow-y-scroll bg-slate-200'
-                        : 'overflow-auto'
-                    }`}
-                    style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}
-                  >
-                    {roofViewTab === '3d' && has3DRoofData ? (
-                      <>
+                  {roofViewTab === '3d' && has3DRoofData ? (
+                    <div className="flex flex-col lg:flex-row flex-1 min-h-0 min-w-0 gap-3 p-2 sm:p-3">
+                      <div
+                        ref={setSolar3dControlsHost}
+                        className="w-full lg:w-[min(18rem,100%)] xl:w-80 shrink-0 order-2 lg:order-1 max-h-[min(48vh,24rem)] sm:max-h-[min(50vh,26rem)] lg:max-h-none overflow-y-auto overflow-x-hidden min-h-0"
+                        aria-label="3D scene controls"
+                      />
+                      <div
+                        ref={layoutScrollRef}
+                        className="w-full flex-1 min-h-[200px] sm:min-h-[240px] min-w-0 order-1 lg:order-2 overscroll-contain layout-preview-scroll-3d overflow-x-scroll overflow-y-scroll bg-slate-200"
+                        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}
+                      >
                       <div
                         className="inline-block align-top min-w-full box-border bg-slate-200"
                         style={{
@@ -1355,6 +1382,10 @@ export default function AIRoofLayout() {
                           }}
                         >
                         <LazySolar3DView
+                          ref={solar3dRef}
+                          orbitStateRef={solar3dOrbitRef}
+                          persistentLayoutKeyRef={solar3dPersistentLayoutKeyRef}
+                          controlsPortalHost={solar3dControlsHost}
                           fillParent
                           roofPolygon={polygon!}
                           panelCoordinates={panels.map((p) => ({
@@ -1429,8 +1460,19 @@ export default function AIRoofLayout() {
                         </div>
                       )}
                       </div>
-                      </>
-                    ) : roofViewTab === '3d' && saved3dDisplayUrl ? (
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      ref={layoutScrollRef}
+                      className={`w-full flex-1 min-h-0 min-w-0 overscroll-contain ${
+                        roofViewTab === '3d'
+                          ? 'layout-preview-scroll-3d overflow-x-scroll overflow-y-scroll bg-slate-200'
+                          : 'overflow-auto'
+                      }`}
+                      style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}
+                    >
+                    {roofViewTab === '3d' && saved3dDisplayUrl ? (
                       <div
                         className="inline-block align-top min-w-full box-border bg-slate-200 p-2"
                         style={{
@@ -1641,6 +1683,7 @@ export default function AIRoofLayout() {
                       </div>
                     )}
                   </div>
+                )}
                 </div>
                 <p className="mt-2 text-xs text-gray-500">
                   This is an early, AI-assisted draft. Please verify on-site measurements before finalizing proposals.
