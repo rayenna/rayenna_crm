@@ -557,10 +557,11 @@ function exportToPdf(printRootId: string): void {
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Rayenna Proposal</title>
+  <title></title>
   ${styleLinks}
   ${inlineStyles}
   <style>
+    /* Proposal letterhead stays in the document. Browser date/title lines in the PDF are from the print dialog — turn off “Headers and footers” (Chrome) or equivalent to remove them; they cannot be removed by CSS alone. */
     @page { size: A4 portrait; margin: 18mm 18mm; }
     body  { margin:0; padding:0; background:#fff; font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:11px; }
     * { -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; color-adjust:exact!important; color:inherit; }
@@ -569,6 +570,8 @@ function exportToPdf(printRootId: string): void {
     tr, .rounded-xl, .grid > div { break-inside:avoid; page-break-inside:avoid; }
     .pdf-section { break-inside:auto; page-break-inside:auto; }
     tr[data-bom-header="true"] { page-break-after:avoid; }
+    /* Keep “N categories” + Bill of Quantities title on the same page as the table header */
+    caption.bom-boq-caption { break-inside:avoid; page-break-inside:avoid; break-after:avoid; page-break-after:avoid; }
     thead { display: table-header-group; }
     h1, h2, h3 { page-break-after:avoid; }
     svg { overflow:visible!important; }
@@ -589,6 +592,7 @@ function exportToPdf(printRootId: string): void {
 
   // Wait for styles + images to load, then print
   printWin.onload = () => {
+    printWin.document.title = '';
     setTimeout(() => {
       printWin.focus();
       printWin.print();
@@ -2697,16 +2701,12 @@ function BOMGroupedTable({
 
   return (
     <div className="mb-8 pdf-section" data-pdf-section="bom">
-      {/* Collapse-all toggle + summary */}
-      <div className="flex items-center justify-between mb-3 px-1">
-        <p className="text-xs text-secondary-400">
-          {grouped.length} categories
-          {!allCollapsed && <> · {items.length} items</>}
-        </p>
+      {/* Collapse-all only (category summary lives in <caption> so PDF pagination keeps it with the BOQ title) */}
+      <div className="flex items-center justify-end mb-3 px-1 print-hide">
         <button
           type="button"
           onClick={toggleAll}
-          className="print-hide flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2.5 min-h-[44px] min-w-[44px] rounded-lg border transition-colors touch-manipulation"
+          className="flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2.5 min-h-[44px] min-w-[44px] rounded-lg border transition-colors touch-manipulation"
           style={{ borderColor: '#b45309', color: '#b45309', background: '#fff7ed', touchAction: 'manipulation' }}
           aria-label={allCollapsed ? 'Expand all categories' : 'Collapse all categories'}
         >
@@ -2718,10 +2718,16 @@ function BOMGroupedTable({
       <div className="overflow-x-auto rounded-xl border border-secondary-200 shadow-sm">
         <table className="w-full text-sm border-collapse min-w-[560px]">
           <caption
-            className="text-left text-sm font-extrabold uppercase tracking-widest px-3 pt-3 pb-1"
-            style={{ color: '#b45309', captionSide: 'top' as any }}
+            className="bom-boq-caption text-left px-3 pt-3 pb-1"
+            style={{ captionSide: 'top' as any }}
           >
-            Bill of Quantities
+            <p className="text-xs text-secondary-400 mb-1 font-normal normal-case tracking-normal">
+              {grouped.length} categories
+              {!allCollapsed && <> · {items.length} items</>}
+            </p>
+            <span className="text-sm font-extrabold uppercase tracking-widest" style={{ color: '#b45309' }}>
+              Bill of Quantities
+            </span>
           </caption>
           <thead>
             <tr style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #b45309)' }}>
