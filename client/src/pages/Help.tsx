@@ -8,6 +8,7 @@ import HelpSidebar from '../components/help/HelpSidebar'
 import ErrorBoundary from '../components/ErrorBoundary'
 import PageCard from '../components/PageCard'
 import { FaBook } from 'react-icons/fa'
+import { slugifyHeadingLabel, textFromChildren } from '../help/markdownHeadingUtils'
 
 /** Normalize markdown string for safe rendering; avoids formatting/crash on hard refresh. */
 function normalizeHelpMarkdown(raw: string | undefined): string {
@@ -91,6 +92,17 @@ const Help = () => {
     : ''
   const markdownContent = useMemo(() => normalizeHelpMarkdown(rawContent), [rawContent])
 
+  // Deep-link to heading within a section (e.g. shared /help/analytics#proposal-engine-card)
+  useEffect(() => {
+    const raw = window.location.hash?.slice(1)
+    if (!raw || !markdownContent.trim()) return
+    const id = decodeURIComponent(raw)
+    const timer = window.setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 80)
+    return () => window.clearTimeout(timer)
+  }, [section, selectedSection?.id, markdownContent])
+
   const [searchQuery, setSearchQuery] = useState('')
   const allContent = useMemo(
     () =>
@@ -144,7 +156,7 @@ const Help = () => {
           {/* Left Sidebar */}
           <div className="lg:col-span-1 min-h-0 space-y-4">
             {/* Search */}
-            <div className="rounded-xl border border-primary-100 bg-white shadow-sm overflow-hidden flex-shrink-0">
+            <div className="rounded-2xl border border-primary-100/90 bg-white shadow-md overflow-hidden flex-shrink-0 ring-1 ring-primary-50/80">
               <label htmlFor="help-search" className="sr-only">
                 Search help
               </label>
@@ -192,15 +204,17 @@ const Help = () => {
           </div>
 
           {/* Right Content Area – clear separation from sidebar on portrait */}
-          <div className="lg:col-span-3 pt-6 lg:pt-0 border-t border-primary-100 lg:border-t-0">
-            <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 p-6 lg:p-8">
+          <div className="lg:col-span-3 pt-6 lg:pt-0 border-t border-primary-100 lg:border-t-0 lg:pl-1">
+            <div className="rounded-2xl border-2 border-primary-200/45 bg-white shadow-lg shadow-primary-900/5 overflow-hidden backdrop-blur-sm">
+              <div className="h-1.5 bg-gradient-to-r from-primary-600 via-indigo-500 to-amber-500" aria-hidden />
+              <div className="bg-gradient-to-br from-white via-primary-50/20 to-indigo-50/15 px-5 py-6 sm:px-7 sm:py-8 lg:px-9 lg:py-9">
               {contextLabel && (
-                <div className="mb-4 rounded-lg border border-primary-200 bg-primary-50/80 px-4 py-2.5 text-sm text-primary-800">
-                  <span className="font-medium">Help for:</span>{' '}
-                  <span className="font-semibold">{contextLabel}</span>
+                <div className="mb-6 rounded-xl border border-sky-200/90 bg-gradient-to-r from-sky-50/95 to-indigo-50/50 px-4 py-3 text-sm text-sky-950 shadow-sm">
+                  <span className="font-semibold text-indigo-900">Help for:</span>{' '}
+                  <span className="font-bold text-gray-900">{contextLabel}</span>
                   {selectedSection && (
-                    <span className="ml-1 text-primary-600">
-                      {' '}— you're in the <strong>{selectedSection.title}</strong> section
+                    <span className="ml-1 text-indigo-800/90">
+                      {' '}— <strong>{selectedSection.title}</strong> section
                     </span>
                   )}
                 </div>
@@ -228,55 +242,119 @@ const Help = () => {
                           <ReactMarkdown
                             key={selectedSection?.id ?? 'help'}
                             components={{
-                      h1: ({ ...props }) => (
-                        <h1 className="text-3xl font-bold text-gray-900 mb-4 mt-6 first:mt-0" {...props} />
+                      h1: ({ children, ...props }) => (
+                        <h1
+                          className="text-2xl sm:text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary-700 via-primary-600 to-indigo-600 mb-6 mt-0 pb-4 border-b-2 border-primary-100/90"
+                          {...props}
+                        >
+                          {children}
+                        </h1>
                       ),
-                      h2: ({ ...props }) => (
-                        <h2 className="text-2xl font-semibold text-gray-800 mb-3 mt-6" {...props} />
-                      ),
-                      h3: ({ ...props }) => (
-                        <h3 className="text-xl font-semibold text-gray-700 mb-2 mt-4" {...props} />
-                      ),
-                      h4: ({ ...props }) => (
-                        <h4 className="text-lg font-medium text-gray-700 mb-2 mt-3" {...props} />
-                      ),
+                      h2: ({ children, ...props }) => {
+                        const id = slugifyHeadingLabel(textFromChildren(children))
+                        return (
+                          <h2
+                            id={id}
+                            className="scroll-mt-28 text-lg sm:text-xl font-bold text-gray-800 mb-4 mt-10 flex flex-wrap items-center gap-2 rounded-xl border border-gray-200/90 bg-gradient-to-r from-white via-primary-50/45 to-indigo-50/35 px-4 py-3 shadow-sm ring-1 ring-gray-100/90"
+                            {...props}
+                          >
+                            {children}
+                          </h2>
+                        )
+                      },
+                      h3: ({ children, ...props }) => {
+                        const id = slugifyHeadingLabel(textFromChildren(children))
+                        return (
+                          <h3
+                            id={id}
+                            className="scroll-mt-24 text-base sm:text-lg font-semibold text-indigo-950 mb-2 mt-7 border-l-4 border-indigo-400 pl-3"
+                            {...props}
+                          >
+                            {children}
+                          </h3>
+                        )
+                      },
+                      h4: ({ children, ...props }) => {
+                        const id = slugifyHeadingLabel(textFromChildren(children))
+                        return (
+                          <h4
+                            id={id}
+                            className="scroll-mt-20 text-base font-semibold text-gray-800 mb-2 mt-5"
+                            {...props}
+                          >
+                            {children}
+                          </h4>
+                        )
+                      },
                       p: ({ ...props }) => (
-                        <p className="text-gray-700 mb-4 leading-relaxed" {...props} />
+                        <p className="text-gray-700 mb-4 leading-relaxed text-[15px]" {...props} />
                       ),
                       ul: ({ ...props }) => (
-                        <ul className="list-disc list-inside mb-4 space-y-2 text-gray-700" {...props} />
+                        <ul
+                          className="list-disc list-outside mb-5 space-y-2.5 text-gray-700 pl-5 text-[15px]"
+                          {...props}
+                        />
                       ),
                       ol: ({ ...props }) => (
-                        <ol className="list-decimal list-inside mb-4 space-y-2 text-gray-700" {...props} />
+                        <ol
+                          className="list-decimal list-outside mb-5 space-y-2.5 text-gray-700 pl-5 text-[15px]"
+                          {...props}
+                        />
                       ),
                       li: ({ ...props }) => (
-                        <li className="ml-4" {...props} />
+                        <li className="leading-relaxed pl-1 marker:text-primary-600" {...props} />
+                      ),
+                      strong: ({ ...props }) => <strong className="font-semibold text-gray-900" {...props} />,
+                      hr: () => (
+                        <hr className="my-8 border-0 h-px max-w-lg bg-gradient-to-r from-transparent via-primary-200 to-transparent mx-auto rounded-full" />
                       ),
                       code: ({ inline, ...props }: React.ComponentProps<'code'> & { inline?: boolean }) => {
                         if (inline) {
                           return (
-                            <code className="bg-gray-100 text-primary-600 px-1.5 py-0.5 rounded text-sm font-mono" {...props} />
+                            <code
+                              className="bg-indigo-50 text-indigo-800 px-1.5 py-0.5 rounded-md text-sm font-mono border border-indigo-100/80"
+                              {...props}
+                            />
                           )
                         }
                         return (
-                          <code className="block bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono mb-4" {...props} />
+                          <code
+                            className="block bg-slate-900 text-gray-100 p-4 rounded-xl overflow-x-auto text-sm font-mono mb-4 border border-slate-700 shadow-inner"
+                            {...props}
+                          />
                         )
                       },
                       pre: ({ ...props }) => (
-                        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4" {...props} />
+                        <pre className="bg-slate-900 text-gray-100 p-4 rounded-xl overflow-x-auto mb-4 border border-slate-700 shadow-inner" {...props} />
                       ),
                       a: (props: React.ComponentProps<'a'>) => {
-                        const href = props.href
-                        // Intercept help links and navigate within the Help component
-                        if (href && href.startsWith('/help/')) {
+                        const href = props.href ?? ''
+                        const linkClass =
+                          'text-primary-600 hover:text-primary-800 font-medium underline decoration-primary-300 underline-offset-2 transition-colors'
+                        if (href.startsWith('#') && href.length > 1) {
+                          const rawId = href.slice(1)
+                          return (
+                            <a
+                              {...props}
+                              href={href}
+                              className={linkClass}
+                              onClick={(e) => {
+                                e.preventDefault()
+                                const id = decodeURIComponent(rawId)
+                                document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                                const base = `${window.location.pathname}${window.location.search}`
+                                window.history.replaceState(null, '', `${base}#${encodeURIComponent(id)}`)
+                              }}
+                            />
+                          )
+                        }
+                        if (href.startsWith('/help/')) {
                           const sectionKey = href
                             .replace('/help/', '')
                             .split('?')[0]
                             .split('#')[0]
                             .replace(/\/$/, '')
-                          
-                          const targetSection = helpSections.find(s => s.routeKey === sectionKey)
-                          
+                          const targetSection = helpSections.find((s) => s.routeKey === sectionKey)
                           if (targetSection) {
                             return (
                               <a
@@ -286,43 +364,64 @@ const Help = () => {
                                   e.preventDefault()
                                   handleSectionSelect(targetSection)
                                 }}
-                                className="text-primary-600 hover:text-primary-700 underline cursor-pointer"
+                                className={`${linkClass} cursor-pointer`}
                               />
                             )
                           }
                         }
-                        // External links open in new tab
-                        if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
+                        if (href.startsWith('http://') || href.startsWith('https://')) {
                           return (
                             <a
                               {...props}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-primary-600 hover:text-primary-700 underline"
+                              className={linkClass}
                             />
                           )
                         }
-                        // Regular links
+                        return <a className={linkClass} {...props} />
+                      },
+                      blockquote: ({ children, ...props }) => {
+                        const t = textFromChildren(children).trim()
+                        const isTip = /^(\*\*)?tip(\*\*)?:/i.test(t)
+                        const isNote = /^(\*\*)?note(\*\*)?:/i.test(t)
+                        const box = isTip
+                          ? 'bg-amber-50/95 border-amber-200 text-amber-950'
+                          : isNote
+                            ? 'bg-sky-50/95 border-sky-200 text-sky-950'
+                            : 'bg-gray-50/95 border-gray-200 text-gray-800'
                         return (
-                          <a className="text-primary-600 hover:text-primary-700 underline" {...props} />
+                          <blockquote
+                            className={`rounded-xl border px-4 py-3 my-6 text-sm leading-relaxed not-italic border-l-4 shadow-sm [&_p]:mb-2 [&_p:last-child]:mb-0 ${box}`}
+                            {...props}
+                          >
+                            {children}
+                          </blockquote>
                         )
                       },
-                      blockquote: ({ ...props }) => (
-                        <blockquote className="border-l-4 border-primary-500 pl-4 italic text-gray-600 my-4" {...props} />
-                      ),
                       table: ({ ...props }) => (
-                        <div className="overflow-x-auto mb-4">
-                          <table className="min-w-full divide-y divide-gray-200 border border-gray-300" {...props} />
+                        <div className="overflow-x-auto mb-6 rounded-xl border-2 border-indigo-100/90 shadow-md ring-1 ring-indigo-50/60 bg-white">
+                          <table
+                            className="min-w-full border-collapse text-[13px] sm:text-sm"
+                            {...props}
+                          />
                         </div>
                       ),
                       thead: ({ ...props }) => (
-                        <thead className="bg-gray-50" {...props} />
+                        <thead className="bg-gradient-to-r from-indigo-600 to-primary-600 text-white" {...props} />
                       ),
                       th: ({ ...props }) => (
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border-b border-gray-300" {...props} />
+                        <th
+                          className="px-3 sm:px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-white border-b border-white/20"
+                          {...props}
+                        />
+                      ),
+                      tbody: ({ ...props }) => <tbody className="divide-y divide-gray-200 bg-white" {...props} />,
+                      tr: ({ ...props }) => (
+                        <tr className="even:bg-slate-50/80 hover:bg-primary-50/50 transition-colors" {...props} />
                       ),
                       td: ({ ...props }) => (
-                        <td className="px-4 py-3 text-sm text-gray-700 border-b border-gray-200" {...props} />
+                        <td className="px-3 sm:px-4 py-3 text-gray-800 align-top leading-relaxed border-b border-gray-100 last:border-b-0" {...props} />
                       ),
                       img: (props: React.ComponentProps<'img'>) => {
                         let src = props.src || ''
@@ -367,6 +466,7 @@ const Help = () => {
                   No content available
                 </div>
               )}
+            </div>
             </div>
           </div>
         </div>

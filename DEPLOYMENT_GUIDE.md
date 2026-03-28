@@ -80,7 +80,8 @@ rayenna-crm/
      - **Instance Type**: Free
 3. **Environment Variables** (in Render Dashboard):
    ```
-   DATABASE_URL=<Your Neon connection string>
+   DATABASE_URL=<Neon pooled URL recommended — hostname with “-pooler”; add &pgbouncer=true&connect_timeout=15>
+   DIRECT_URL=<Neon direct URL — same database, hostname *without* “-pooler”; required for Prisma migrations>
    JWT_SECRET=<Generate a secure random string>
    NODE_ENV=production
    PORT=10000

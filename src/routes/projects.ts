@@ -87,6 +87,7 @@ router.get(
     query('limit').optional().isInt({ min: 1, max: 100 }),
     query('sortBy').optional().isIn(['systemCapacity', 'projectCost', 'confirmationDate', 'creationDate', 'profitability', 'customerName']),
     query('sortOrder').optional().isIn(['asc', 'desc']),
+    query('peBucket').optional().isIn(['proposal-ready', 'draft', 'not-started', 'rest']),
   ],
   async (req: Request, res: Response) => {
     let where: any = {};
@@ -115,6 +116,7 @@ router.get(
         limit = '25',
         sortBy,
         sortOrder = 'desc',
+        peBucket,
       } = req.query;
 
       const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
@@ -427,6 +429,83 @@ router.get(
             }
           }
         }
+      }
+
+      // Proposal Engine dashboard bucket — same semantics as GET /dashboard/proposal-engine-status (Sales / Management / Admin only)
+      const peBucketStr =
+        typeof peBucket === 'string' && ['proposal-ready', 'draft', 'not-started', 'rest'].includes(peBucket)
+          ? peBucket
+          : null;
+      if (peBucketStr) {
+        const allowedPeRoles: UserRole[] = [UserRole.SALES, UserRole.MANAGEMENT, UserRole.ADMIN];
+        if (!req.user?.role || !allowedPeRoles.includes(req.user.role as UserRole)) {
+          return res.status(403).json({
+            error: 'The peBucket filter is only available to Sales, Management, and Admin roles.',
+          });
+        }
+        const ensureWhereAnd = () => {
+          if (!where.AND) {
+            const existing: any[] = [];
+            Object.keys(where).forEach((key) => {
+              if (key !== 'AND' && key !== 'OR') {
+                existing.push({ [key]: (where as any)[key] });
+                delete (where as any)[key];
+              }
+            });
+            where.AND = existing;
+          }
+        };
+        ensureWhereAnd();
+
+        const peBucketClause =
+          peBucketStr === 'proposal-ready'
+            ? {
+                peSelection: { isNot: null },
+                peCostingSheets: { some: {} },
+                peBomSheets: { some: {} },
+                peRoiResults: { some: {} },
+                peProposals: { some: {} },
+              }
+            : peBucketStr === 'not-started'
+              ? {
+                  peSelection: { isNot: null },
+                  peCostingSheets: { none: {} },
+                  peBomSheets: { none: {} },
+                  peRoiResults: { none: {} },
+                  peProposals: { none: {} },
+                }
+              : peBucketStr === 'draft'
+                ? {
+                    peSelection: { isNot: null },
+                    AND: [
+                      {
+                        NOT: {
+                          AND: [
+                            { peCostingSheets: { none: {} } },
+                            { peBomSheets: { none: {} } },
+                            { peRoiResults: { none: {} } },
+                            { peProposals: { none: {} } },
+                          ],
+                        },
+                      },
+                      {
+                        NOT: {
+                          AND: [
+                            { peCostingSheets: { some: {} } },
+                            { peBomSheets: { some: {} } },
+                            { peRoiResults: { some: {} } },
+                            { peProposals: { some: {} } },
+                          ],
+                        },
+                      },
+                    ],
+                  }
+                : {
+                    peSelection: { is: null },
+                    projectStatus: { in: [ProjectStatus.PROPOSAL, ProjectStatus.CONFIRMED] },
+                  };
+
+        (where.AND as any[]).push(peBucketClause);
       }
 
       // Build orderBy based on sortBy parameter (blank/null = zero: asc → nulls first, desc → nulls last)

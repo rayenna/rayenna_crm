@@ -7,10 +7,9 @@ The Rayenna CRM consists of several key modules designed to manage different asp
 ## Core Modules
 
 ### Dashboard
-- Role-based dashboards
-- Key performance indicators
-- Visual analytics
-- Quick access to important data
+- Role-based dashboards, KPI tiles, and **Quick Access** (metric cards plus **Payment Status**; **Proposal Engine** summary on Sales and Management)
+- **Filters:** Financial Year, Quarter, and Month — see [Analytics & Reports](/help/analytics) for Quick Access layout, Payment rows, Proposal Engine buckets, and charts
+- Visual analytics (charts vary by role)
 
 ### Customers
 - Customer master data

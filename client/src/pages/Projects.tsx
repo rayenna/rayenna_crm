@@ -21,6 +21,15 @@ const PROJECTS_FILTERS_STORAGE_KEY = 'rayenna_projects_filters'
 /** Valid paymentStatus URL params (matches paymentStatusOptions values) */
 const VALID_PAYMENT_STATUS_VALUES = ['FULLY_PAID', 'PARTIAL', 'PENDING', 'NA'] as const
 
+const VALID_PE_BUCKET_VALUES = ['proposal-ready', 'draft', 'not-started', 'rest'] as const
+type PeBucketParam = (typeof VALID_PE_BUCKET_VALUES)[number]
+
+function parsePeBucketFromSearch(search: string): PeBucketParam | null {
+  const p = new URLSearchParams(search)
+  const raw = p.get('peBucket')
+  return raw && (VALID_PE_BUCKET_VALUES as readonly string[]).includes(raw) ? (raw as PeBucketParam) : null
+}
+
 /** Read initial filters from URL (for tile links). Runs synchronously on mount so first request uses correct filters. */
 function getInitialFiltersFromUrl(): {
   status: string[]
@@ -29,6 +38,7 @@ function getInitialFiltersFromUrl(): {
   selectedFYs: string[]
   selectedQuarters: string[]
   selectedMonths: string[]
+  peBucket: PeBucketParam | null
 } | null {
   const p = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
   const status = p.getAll('status')
@@ -37,7 +47,15 @@ function getInitialFiltersFromUrl(): {
   const fy = p.getAll('fy')
   const quarter = p.getAll('quarter')
   const month = p.getAll('month')
-  const hasAny = status.length > 0 || paymentStatus.length > 0 || availingLoan || fy.length > 0 || quarter.length > 0 || month.length > 0
+  const peBucket = parsePeBucketFromSearch(typeof window !== 'undefined' ? window.location.search : '')
+  const hasAny =
+    status.length > 0 ||
+    paymentStatus.length > 0 ||
+    availingLoan ||
+    fy.length > 0 ||
+    quarter.length > 0 ||
+    month.length > 0 ||
+    peBucket != null
   if (!hasAny) return null
   const validStatus = status.filter((s) => Object.values(ProjectStatus).includes(s as ProjectStatus))
   const validPayment = paymentStatus.filter((v) => (VALID_PAYMENT_STATUS_VALUES as readonly string[]).includes(v))
@@ -48,6 +66,7 @@ function getInitialFiltersFromUrl(): {
     selectedFYs: fy,
     selectedQuarters: quarter,
     selectedMonths: month,
+    peBucket,
   }
 }
 
@@ -173,7 +192,8 @@ const Projects = () => {
   const debouncedSearch = useDebounce(searchInput, 500) // 500ms debounce
   const [showExportConfirm, setShowExportConfirm] = useState(false)
   const [pendingExportType, setPendingExportType] = useState<'excel' | 'csv' | null>(null)
-  const [showMoreFilters, setShowMoreFilters] = useState(!!urlInit)
+  // Always start collapsed (including dashboard tile links with URL params) so mobile users see results first; use "Show Filters" to expand.
+  const [showMoreFilters, setShowMoreFilters] = useState(false)
 
   // Dashboard-style date filters (FY / Quarter / Month)
   const [selectedFYs, setSelectedFYs] = useState<string[]>(() => urlInit?.selectedFYs ?? [])
@@ -222,6 +242,7 @@ const Projects = () => {
     paymentStatus: (urlInit?.paymentStatus ?? []) as string[],
     hasDocuments: false,
     availingLoan: urlInit?.availingLoan ?? false,
+    peBucket: (urlInit?.peBucket ?? null) as PeBucketParam | null,
     search: '',
     sortBy: '',
     sortOrder: 'desc',
@@ -242,24 +263,36 @@ const Projects = () => {
     const hasStatusParams = statusFromUrl.length > 0
     const hasPaymentParams = paymentStatusFromUrl.length > 0
     const hasDateParams = fyFromUrl.length > 0 || quarterFromUrl.length > 0 || monthFromUrl.length > 0
+    const peBucketValid = parsePeBucketFromSearch(searchParams.toString())
     // Wait for statusOptions when we have status in URL (needed to validate status values)
     const canResolveStatus = !hasStatusParams || statusOptions.length > 0
     const validStatus = hasStatusParams && canResolveStatus
       ? statusFromUrl.filter((v) => statusOptions.some((opt) => opt.value === v))
       : []
     const validPayment = hasPaymentParams ? paymentStatusFromUrl.filter((v) => (VALID_PAYMENT_STATUS_VALUES as readonly string[]).includes(v)) : []
-    if (canResolveStatus && (validStatus.length > 0 || validPayment.length > 0 || availingLoanFromUrl || hasDateParams)) {
+    if (
+      canResolveStatus &&
+      (peBucketValid != null ||
+        validStatus.length > 0 ||
+        validPayment.length > 0 ||
+        availingLoanFromUrl ||
+        hasDateParams)
+    ) {
       appliedFromUrlRef.current = true
       setFilters((prev) => ({
         ...prev,
-        ...(validStatus.length > 0 && { status: validStatus }),
+        peBucket: peBucketValid,
+        ...(validStatus.length > 0
+          ? { status: validStatus }
+          : peBucketValid != null
+            ? { status: [] as string[] }
+            : {}),
         ...(validPayment.length > 0 && { paymentStatus: validPayment }),
         ...(availingLoanFromUrl && { availingLoan: true }),
       }))
       if (fyFromUrl.length > 0) setSelectedFYs(fyFromUrl)
       if (quarterFromUrl.length > 0) setSelectedQuarters(quarterFromUrl)
       if (monthFromUrl.length > 0) setSelectedMonths(monthFromUrl)
-      setShowMoreFilters(true)
       setPage(1)
       setFiltersReady(true)
       return
@@ -297,8 +330,10 @@ const Projects = () => {
 
   // Initialize default status filter (all active statuses except LOST) when ready
   // Skip when we applied status from URL (prevents overwriting tile-filtered status)
+  // Skip when viewing a Proposal Engine bucket list (API uses peBucket, not stage filter)
   useEffect(() => {
     if (appliedFromUrlRef.current) return
+    if (filters.peBucket) return
     if (defaultStatusValues.length > 0 && filters.status.length === 0) {
       setFilters(prev => {
         if (prev.status.length === 0) {
@@ -356,6 +391,7 @@ const Projects = () => {
     filters.paymentStatus,
     filters.hasDocuments,
     filters.availingLoan,
+    filters.peBucket,
     filters.sortBy,
     selectedFYs,
     selectedQuarters,
@@ -388,6 +424,7 @@ const Projects = () => {
       paymentStatus: [],
       hasDocuments: false,
       availingLoan: false,
+      peBucket: null,
       search: '',
       sortBy: '',
       sortOrder: 'desc',
@@ -417,7 +454,8 @@ const Projects = () => {
       (user?.role !== UserRole.SALES && filters.salespersonId.length > 0 ? 1 : 0) +
       (filters.leadSource.length > 0 ? 1 : 0) +
       (filters.hasDocuments ? 1 : 0) +
-      (filters.availingLoan ? 1 : 0)
+      (filters.availingLoan ? 1 : 0) +
+      (filters.peBucket ? 1 : 0)
     )
   }, [
     filters.status,
@@ -429,6 +467,7 @@ const Projects = () => {
     filters.leadSource,
     filters.hasDocuments,
     filters.availingLoan,
+    filters.peBucket,
     defaultStatusValues,
     user?.role,
   ])
@@ -451,7 +490,8 @@ const Projects = () => {
     searchParams.getAll('paymentStatus').length > 0 ||
     searchParams.has('fy') ||
     searchParams.has('quarter') ||
-    searchParams.has('month')
+    searchParams.has('month') ||
+    searchParams.has('peBucket')
 
   const { data, isLoading } = useQuery({
     queryKey: [
@@ -480,6 +520,7 @@ const Projects = () => {
       if (filters.search) params.append('search', filters.search)
       if (filters.hasDocuments) params.append('hasDocuments', 'true')
       if (filters.availingLoan) params.append('availingLoan', 'true')
+      if (filters.peBucket) params.append('peBucket', filters.peBucket)
       if (filters.sortBy) {
         params.append('sortBy', filters.sortBy)
         params.append('sortOrder', filters.sortOrder)

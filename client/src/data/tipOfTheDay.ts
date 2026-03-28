@@ -18,7 +18,7 @@ const STORAGE_KEY_DONT_SHOW = 'rayenna_tip_dont_show'
 export const TIPS: string[] = [
   // General
   'Use the Dashboard filters (FY, Quarter, Month) to focus on specific periods.',
-  'Press ? from any page to open context-sensitive Help.',
+  'Press ? from any page to open context-sensitive Help — open Analytics & Reports there for dashboard filters, Quick Access layouts by role, and the Proposal Engine summary card.',
   'Create Support Tickets from the project detail page to track customer issues.',
   'Use the Audit & Security page to review login and key system events.',
   'Customer Master stores customer details used across projects and proposals.',
@@ -46,14 +46,15 @@ export const TIPS: string[] = [
   // Quick Access & dashboard behaviour
   'Click any Quick Access tile on your dashboard to open Projects with matching filters already applied.',
   'Set FY, Quarter, and Month on the dashboard – tile counts and Quick Access links respect these filters.',
-  'The Payment Status tile on Sales/Management dashboards shows Pending, Partial, and Fully Paid counts.',
+  'The Payment Status card lists each payment bucket as a row (e.g. Pending, Partial, Fully Paid, N/A) — click a row to open Projects with that payment filter and your dashboard dates.',
   'Operations: Completed Installation tile shows both Completed and Subsidy Credited projects.',
   // Sales-focused
   'Your Sales dashboard shows only your projects – use it to track your pipeline at a glance.',
   'Total Leads counts projects in the Lead stage only. Move leads to Site Survey or Proposal to grow Open Deals.',
   'Open Deals = Lead + Site Survey + Proposal. Focus on moving these to Confirmed for better conversion.',
   'My Confirmed Orders tile on the Sales dashboard links to your confirmed projects – click to open the filtered list.',
-  'Sales Quick Access includes Under Installation, Completed Installation, and Payment Status tiles; Under Installation counts installation-stage projects only.',
+  'Sales Quick Access is a 3×3 grid on large screens: row 1 is My Leads, Site Survey, Proposal; row 2 is Open Deals, My Confirmed Orders, Under Installation; row 3 is Payment Status, Completed Installation, and Proposal Engine — three equal-width columns.',
+  'Under Installation on the Sales dashboard counts projects in Under Installation stage only (not Confirmed).',
   'Use the Revenue by Lead Source chart to see which channels bring in the most confirmed business.',
   'Pipeline by Lead Source helps you prioritize follow-up on high-value lead sources.',
   'Add customers in Customer Master first, then create projects linked to them for a clean workflow.',
@@ -64,7 +65,7 @@ export const TIPS: string[] = [
   // Management-focused
   'Management dashboard shows company-wide data – use it for team oversight and strategic decisions.',
   'Sales Team Performance treemap (Management/Admin) shows each team member’s revenue at a glance.',
-  'Management has two rows of Quick Access tiles: row 1 for leads and orders, row 2 for installation, subsidy, Availing Loan, and payment status.',
+  'Management Quick Access uses three rows: four funnel tiles, four execution tiles (including Subsidy Credited), then Payment Status, Availing Loan, and Proposal Engine in three equal columns on desktop.',
   'Year-on-Year tile on Management dashboard compares capacity, pipeline, revenue, and profit to the same period last year.',
   'Management role is read-only: you can view all dashboards, projects, and reports but cannot edit records.',
   'Use Revenue by Sales Team and Pipeline by Customer Segment on the Management dashboard to spot trends and gaps.',

@@ -619,6 +619,8 @@ router.get('/projects/:id', authenticate, async (req: Request, res: Response) =>
                 usable_area_m2: roofLayout.usableAreaM2,
                 panel_count: roofLayout.panelCount,
                 layout_image_url: roofLayout.layoutImageUrl,
+                layout_image_3d_url: roofLayout.layoutImage3dUrl ?? undefined,
+                prefer_3d_for_proposal: roofLayout.prefer3dForProposal,
                 savedAt: roofLayout.savedAt?.toISOString?.() ?? undefined,
               }
             : null,

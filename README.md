@@ -98,7 +98,8 @@ cd client; npm install; cd ..
    cp .env.example .env
    ```
    Edit `.env` and update:
-   - `DATABASE_URL` with your PostgreSQL credentials
+   - `DATABASE_URL` — PostgreSQL URL used by the API at runtime (use your host’s **pooled** URL when they provide one, e.g. Neon `-pooler` + `pgbouncer=true` in the query string).
+   - `DIRECT_URL` — **Required.** Direct Postgres URL for `prisma migrate` (no PgBouncer). If you only have one URL, set `DIRECT_URL` to the **same** value as `DATABASE_URL`. See `.env.example` for Neon-style examples.
    - `OPENAI_API_KEY` for AI proposal generation (optional, see `SETUP_OPENAI_API.md`)
    - `JWT_SECRET` for authentication
 
@@ -167,7 +168,8 @@ See `QUICKSTART.md` for detailed setup instructions.
    ```
    
    Edit `.env` and configure:
-   - `DATABASE_URL`: PostgreSQL connection string
+   - `DATABASE_URL`: PostgreSQL connection string (runtime / pooler when applicable)
+   - `DIRECT_URL`: Same as `DATABASE_URL` for local Postgres, or Neon **non-pooler** URL in production when `DATABASE_URL` uses a pooler
    - `JWT_SECRET`: Secret key for JWT tokens
    - `PORT`: Backend server port (default: 3000)
 

@@ -48,6 +48,20 @@ async function uploadRoofLayoutToCloudinary(opts: {
   return uploadResult.secure_url;
 }
 
+async function uploadRoofLayout3dToCloudinary(opts: {
+  projectId: string;
+  filePath: string;
+}): Promise<string> {
+  const publicId = `roof-layout-3d-${opts.projectId}`;
+  const uploadResult = await cloudinary.uploader.upload(opts.filePath, {
+    folder: 'rayenna_crm',
+    public_id: publicId,
+    resource_type: 'image',
+    overwrite: true,
+  });
+  return uploadResult.secure_url;
+}
+
 /** Sales: project assignee OR customer's assigned salesperson (matches Proposal Engine access). */
 async function salesUserHasProjectAccess(
   project: { salespersonId: string | null; customerId: string },
@@ -157,6 +171,8 @@ router.post('/ai-layout', authenticate, async (req, res) => {
         panelCount: result.panelCount,
         layoutImageUrl,
         source: 'AI',
+        layoutImage3dUrl: null,
+        prefer3dForProposal: false,
       },
       update: {
         roofAreaM2: result.roofAreaM2,
@@ -164,6 +180,8 @@ router.post('/ai-layout', authenticate, async (req, res) => {
         panelCount: result.panelCount,
         layoutImageUrl,
         source: 'AI',
+        layoutImage3dUrl: null,
+        prefer3dForProposal: false,
       },
     });
 
@@ -253,6 +271,7 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
         panelCount: panels,
         layoutImageUrl,
         source: 'MANUAL',
+        prefer3dForProposal: false,
       },
       update: {
         roofAreaM2: roof,
@@ -260,6 +279,7 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
         panelCount: panels,
         layoutImageUrl,
         source: 'MANUAL',
+        prefer3dForProposal: false,
       },
     });
 
@@ -268,6 +288,130 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
     // eslint-disable-next-line no-console
     console.error('Failed to save manual roof layout image:', err);
     return res.status(500).json({ error: 'Failed to save layout image' });
+  }
+});
+
+/**
+ * Persist 3D simulation PNG/JPEG without replacing the 2D Konva layout URL.
+ * Requires an existing ProjectRoofLayout row (generate AI or save 2D first).
+ */
+router.post('/save-3d-layout-image', authenticate, async (req, res) => {
+  const { projectId, dataUrl, set_prefer_for_proposal, roof_area_m2, usable_area_m2, panel_count } =
+    req.body as {
+      projectId?: string;
+      dataUrl?: string;
+      set_prefer_for_proposal?: boolean;
+      roof_area_m2?: number;
+      usable_area_m2?: number;
+      panel_count?: number;
+    };
+
+  if (!projectId || !dataUrl || typeof dataUrl !== 'string') {
+    return res.status(400).json({ error: 'projectId and dataUrl are required' });
+  }
+
+  try {
+    const access = await ensureProjectWriteAccess(
+      projectId,
+      req.user!.id,
+      req.user!.role as UserRole,
+    );
+    if (!access.ok) return res.status(access.status).json({ error: 'No access to this project' });
+
+    const existing = await prisma.projectRoofLayout.findUnique({ where: { projectId } });
+    if (!existing) {
+      return res.status(400).json({
+        error:
+          'Save a 2D roof layout to this project first (Generate or Save to Proposal with 2D), then 3D can be stored.',
+      });
+    }
+
+    const match = dataUrl.match(/^data:image\/(png|jpeg);base64,(.+)$/);
+    if (!match) {
+      return res.status(400).json({ error: 'Invalid image data URL (use PNG or JPEG)' });
+    }
+    const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
+    const base64 = match[2];
+
+    const generatedLayoutsDir = getGeneratedLayoutsDir();
+    await fs.promises.mkdir(generatedLayoutsDir, { recursive: true });
+    const filePath = path.join(generatedLayoutsDir, `${projectId}_3d_layout.${ext}`);
+    await fs.promises.writeFile(filePath, Buffer.from(base64, 'base64'));
+
+    const publicUrlPath = `/api/generated_layouts/${projectId}_3d_layout.${ext}`;
+    let layout3dUrl = publicUrlPath;
+    if (useCloudinary) {
+      layout3dUrl = await uploadRoofLayout3dToCloudinary({ projectId, filePath });
+    }
+
+    const roof = Number.isFinite(Number(roof_area_m2)) ? Number(roof_area_m2) : existing.roofAreaM2;
+    const usable = Number.isFinite(Number(usable_area_m2)) ? Number(usable_area_m2) : existing.usableAreaM2;
+    const panels = Number.isFinite(Number(panel_count)) ? Number(panel_count) : existing.panelCount;
+
+    const prefer = set_prefer_for_proposal === true;
+
+    await prisma.projectRoofLayout.update({
+      where: { projectId },
+      data: {
+        layoutImage3dUrl: layout3dUrl,
+        ...(prefer ? { prefer3dForProposal: true } : {}),
+        ...(Number.isFinite(Number(roof_area_m2)) ||
+        Number.isFinite(Number(usable_area_m2)) ||
+        Number.isFinite(Number(panel_count))
+          ? {
+              roofAreaM2: roof,
+              usableAreaM2: usable,
+              panelCount: panels,
+            }
+          : {}),
+      },
+    });
+
+    return res.json({
+      layout_image_3d_url: layout3dUrl,
+      prefer_3d_for_proposal: prefer ? true : existing.prefer3dForProposal,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to save 3D roof layout image:', err);
+    return res.status(500).json({ error: 'Failed to save 3D layout image' });
+  }
+});
+
+/** Set which layout image the proposal section should embed (2D vs 3D). */
+router.post('/set-layout-embed-preference', authenticate, async (req, res) => {
+  const { projectId, prefer_3d_for_proposal } = req.body as {
+    projectId?: string;
+    prefer_3d_for_proposal?: boolean;
+  };
+  if (!projectId) return res.status(400).json({ error: 'projectId is required' });
+  if (typeof prefer_3d_for_proposal !== 'boolean') {
+    return res.status(400).json({ error: 'prefer_3d_for_proposal boolean is required' });
+  }
+  try {
+    const access = await ensureProjectWriteAccess(
+      projectId,
+      req.user!.id,
+      req.user!.role as UserRole,
+    );
+    if (!access.ok) return res.status(access.status).json({ error: 'No access to this project' });
+
+    const existing = await prisma.projectRoofLayout.findUnique({ where: { projectId } });
+    if (!existing) return res.status(404).json({ error: 'No roof layout for this project' });
+
+    if (prefer_3d_for_proposal === true && !existing.layoutImage3dUrl) {
+      return res.status(400).json({ error: 'No saved 3D layout image for this project yet' });
+    }
+
+    await prisma.projectRoofLayout.update({
+      where: { projectId },
+      data: { prefer3dForProposal: prefer_3d_for_proposal },
+    });
+    return res.json({ ok: true, prefer_3d_for_proposal });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to set roof layout embed preference:', err);
+    return res.status(500).json({ error: 'Failed to update preference' });
   }
 });
 
@@ -286,6 +430,8 @@ router.get('/manual-layout/:projectId', authenticate, async (req, res) => {
         usable_area_m2: record.usableAreaM2,
         panel_count: record.panelCount,
         layout_image_url: record.layoutImageUrl,
+        layout_image_3d_url: record.layoutImage3dUrl ?? undefined,
+        prefer_3d_for_proposal: record.prefer3dForProposal,
         savedAt: record.savedAt.toISOString(),
         projectId: record.projectId,
       });

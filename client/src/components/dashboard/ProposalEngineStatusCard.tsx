@@ -1,16 +1,19 @@
 import { useQuery } from '@tanstack/react-query'
-import { FaFileInvoice } from 'react-icons/fa'
+import { Link } from 'react-router-dom'
 import axiosInstance from '../../utils/axios'
 import { getFriendlyApiErrorMessage } from '../../utils/axios'
+import { buildProjectsUrl, type PeDashboardBucket } from '../../utils/dashboardTileLinks'
 
 interface ProposalEngineStatusCardProps {
   selectedFYs: string[]
   selectedQuarters: string[]
   selectedMonths: string[]
+  /** When embedded in Quick Access grid, span full width on large breakpoints */
+  gridClassName?: string
 }
 
 type PeStatusRow = {
-  key: 'proposal-ready' | 'draft' | 'not-started' | 'rest'
+  key: PeDashboardBucket
   label: string
   count: number
   crmOrderValue: number
@@ -32,7 +35,10 @@ const ProposalEngineStatusCard = ({
   selectedFYs,
   selectedQuarters,
   selectedMonths,
+  gridClassName = '',
 }: ProposalEngineStatusCardProps) => {
+  const tileParams = { selectedFYs, selectedQuarters, selectedMonths }
+
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['dashboard', 'proposal-engine-status', selectedFYs, selectedQuarters, selectedMonths],
     queryFn: async () => {
@@ -47,22 +53,30 @@ const ProposalEngineStatusCard = ({
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
-        <div className="h-6 w-52 rounded bg-slate-200 animate-pulse mb-4" />
-        <div className="h-40 rounded-xl bg-slate-100 animate-pulse" />
+      <div
+        className={`min-w-0 min-h-0 flex flex-col rounded-xl border-2 border-indigo-200/50 bg-gradient-to-br from-white via-indigo-50/50 to-white shadow-lg overflow-hidden backdrop-blur-sm ${gridClassName}`}
+      >
+        <div className="h-10 shrink-0 bg-gradient-to-r from-indigo-500 via-cyan-500 to-indigo-600 animate-pulse" />
+        <div className="p-3 space-y-2 flex-1 min-h-0 flex flex-col">
+          <div className="h-8 rounded bg-slate-200 animate-pulse" />
+          <div className="h-8 rounded bg-slate-200 animate-pulse" />
+          <div className="h-8 rounded bg-slate-200 animate-pulse" />
+        </div>
       </div>
     )
   }
 
   if (isError) {
     return (
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
-        <p className="font-medium text-sm">Unable to load Proposal Engine dashboard</p>
-        <p className="mt-1 text-xs sm:text-sm">{getFriendlyApiErrorMessage(error)}</p>
+      <div
+        className={`min-w-0 flex flex-col rounded-xl border-2 border-amber-200 bg-amber-50 p-3 text-amber-800 text-xs sm:text-sm ${gridClassName}`}
+      >
+        <p className="font-medium">Unable to load Proposal Engine summary</p>
+        <p className="mt-1">{getFriendlyApiErrorMessage(error)}</p>
         <button
           type="button"
           onClick={() => refetch()}
-          className="mt-3 px-3 py-2 rounded-lg bg-amber-600 text-white text-xs sm:text-sm font-medium hover:bg-amber-700"
+          className="mt-2 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-medium hover:bg-amber-700 w-fit"
         >
           Try again
         </button>
@@ -71,70 +85,42 @@ const ProposalEngineStatusCard = ({
   }
 
   const rows = data?.rows ?? []
-  const totals = rows.reduce(
-    (acc, row) => {
-      acc.count += row.count || 0
-      acc.crm += row.crmOrderValue || 0
-      acc.pe += row.peOrderValueExGst || 0
-      return acc
-    },
-    { count: 0, crm: 0, pe: 0 }
-  )
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-      <div className="px-4 sm:px-5 py-3 border-b border-slate-200 bg-slate-50/80">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-600 text-white shadow-sm">
-            <FaFileInvoice className="w-4 h-4" aria-hidden />
-          </div>
-          <div>
-            <h3 className="text-base sm:text-lg font-bold text-slate-900">Proposal Engine Dashboard</h3>
-            <p className="text-xs text-slate-500">
-              Status-wise count, CRM order value, and PE proposal value (excl. GST)
-            </p>
-          </div>
+    <div
+      className={`min-w-0 min-h-0 flex flex-col bg-gradient-to-br from-white via-indigo-50/50 to-white shadow-lg rounded-xl border-2 border-indigo-200/50 overflow-hidden backdrop-blur-sm ${gridClassName}`}
+    >
+      <div className="shrink-0 bg-gradient-to-r from-indigo-500 via-cyan-500 to-indigo-600 px-3 py-2 sm:px-4 sm:py-2.5">
+        <h3 className="text-sm sm:text-base font-bold text-white drop-shadow-md truncate">Proposal Engine</h3>
+      </div>
+      <div className="px-3 py-2 sm:px-4 sm:py-3 overflow-x-hidden flex-1 min-h-0 flex flex-col">
+        <div className="space-y-1.5 sm:space-y-2">
+          {rows.map((row) => (
+              <Link
+                key={row.key}
+                to={buildProjectsUrl({ peBucket: row.key }, tileParams)}
+                className="flex justify-between items-center gap-2 py-1.5 px-2 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors min-w-0 cursor-pointer no-underline text-inherit"
+                title={`${row.label}: ${row.count} projects — CRM ${formatInr(row.crmOrderValue)}${row.peOrderValueExGst > 0 ? `, PE ex GST ${formatInr(row.peOrderValueExGst)}` : ''}`}
+              >
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold flex-shrink-0 max-w-[55%] sm:max-w-none truncate ${badgeStyles[row.key]}`}
+                >
+                  {row.label}
+                </span>
+                <span className="text-xs sm:text-sm font-semibold text-gray-900 text-right min-w-0">
+                  <span className="block sm:inline">{row.count.toLocaleString('en-IN')}</span>{' '}
+                  <span className="text-primary-600">({formatInr(row.crmOrderValue)})</span>
+                  {row.peOrderValueExGst > 0 ? (
+                    <span className="block text-[10px] sm:text-xs text-indigo-700 font-medium leading-tight">
+                      PE ex GST {formatInr(row.peOrderValueExGst)}
+                    </span>
+                  ) : null}
+                </span>
+              </Link>
+          ))}
         </div>
       </div>
-
-      <div className="p-3 sm:p-4 overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="text-left border-b border-gray-200">
-              <th className="px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-gray-600">Status</th>
-              <th className="px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-gray-600 text-right">Count</th>
-              <th className="px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-gray-600 text-right">Total CRM Order Value</th>
-              <th className="px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-gray-600 text-right">Total PE Order Value</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {rows.map((row) => (
-              <tr key={row.key} className="hover:bg-primary-50/40 transition-colors">
-                <td className="px-3 py-2.5">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold ${badgeStyles[row.key]}`}>
-                    {row.label}
-                  </span>
-                </td>
-                <td className="px-3 py-2.5 text-right font-semibold text-gray-900">{row.count.toLocaleString('en-IN')}</td>
-                <td className="px-3 py-2.5 text-right font-semibold text-emerald-800">{formatInr(row.crmOrderValue)}</td>
-                <td className="px-3 py-2.5 text-right font-semibold text-indigo-800">{formatInr(row.peOrderValueExGst)}</td>
-              </tr>
-            ))}
-            <tr className="bg-slate-50 border-t border-slate-200">
-              <td className="px-3 py-2.5 text-xs font-bold uppercase tracking-wide text-slate-800">Total</td>
-              <td className="px-3 py-2.5 text-right font-extrabold text-slate-900">{totals.count.toLocaleString('en-IN')}</td>
-              <td className="px-3 py-2.5 text-right font-extrabold text-emerald-900">{formatInr(totals.crm)}</td>
-              <td className="px-3 py-2.5 text-right font-extrabold text-indigo-900">{formatInr(totals.pe)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div className="px-4 sm:px-5 pb-4">
-        <p className="text-[11px] sm:text-xs text-gray-500">
-          <span className="font-semibold text-gray-600">Note:</span> Rest = Proposal + Confirmed projects not yet started in Proposal Engine.
-        </p>
-      </div>
-    </section>
+    </div>
   )
 }
 

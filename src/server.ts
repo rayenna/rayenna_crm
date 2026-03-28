@@ -1,4 +1,5 @@
 import express from 'express';
+import helmet from 'helmet';
 import cors from 'cors';
 import compression from 'compression';
 import dotenv from 'dotenv';
@@ -36,6 +37,14 @@ if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
 }
 
 const app = express();
+
+// Security headers (X-Content-Type-Options, frameguard, etc.). CSP off for JSON API; CORP allows credentialed SPA on another origin.
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 
 // CORS origin check (defined early so health routes can use it)
 const allowedOrigins = [

@@ -9,8 +9,12 @@ generator client {
 // Run with: npm run prisma:seed
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Runtime queries (use a pooler URL here when your host provides one, e.g. Neon “-pooler” + pgbouncer=true).
+  url       = env("DATABASE_URL")
+  // Migrations & introspection need a direct Postgres connection (not PgBouncer transaction pooler).
+  // If you do not use a pooler, set DIRECT_URL to the same value as DATABASE_URL.
+  directUrl = env("DIRECT_URL")
 }
 
 enum UserRole {
@@ -715,6 +719,11 @@ model ProjectRoofLayout {
   panelCount     Int
 
   layoutImageUrl String
+  /// Optional 3D simulation export (PNG/JPEG URL); main `layoutImageUrl` stays the 2D Konva layout.
+  layoutImage3dUrl     String?
+  /// When true, proposal PDF/DOCX uses `layoutImage3dUrl` if set; otherwise `layoutImageUrl`.
+  prefer3dForProposal Boolean @default(false)
+
   source         RoofLayoutSource @default(AI)
 
   savedAt        DateTime @default(now())

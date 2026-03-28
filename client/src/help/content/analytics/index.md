@@ -1,72 +1,150 @@
 # Analytics and Reports
 
-## Overview
+> **Note:** The Dashboard is your main analytics view. Use the filter bar at the top to choose **Financial Year**, **Quarter**, and **Month**; Quick Access counts, the **Payment Status** and **Proposal Engine** summaries, and most KPI tiles follow those filters. Charts may have their own controls where noted.
 
-The Analytics section provides insights into your business performance through the Dashboard. The Dashboard is your main analytics view: it shows role-specific metrics, Quick Access tiles that link to filtered project lists, and charts such as revenue by financial year, project value by segment, and more.
+**Jump to:** [Dashboard filters](#dashboard-filters) · [Quick Access tiles](#quick-access-tiles) · [Payment Status](#payment-status-card) · [Proposal Engine](#proposal-engine-card) · [Layout by role](#layout-by-role) · [Charts](#charts-and-visualizations)
 
-## Dashboard Filters
+---
 
-Use the filter bar at the top of the Dashboard to focus on a specific period. All KPI tiles, Quick Access counts, and most charts respect these filters.
+## Dashboard filters
 
-- **Financial Year (FY)** – Select one or more financial years (e.g. 2024-25). Format is April to March.
-- **Quarter** – Available only when exactly one FY is selected. Options: Q1 (Apr–Jun), Q2 (Jul–Sep), Q3 (Oct–Dec), Q4 (Jan–Mar).
-- **Month** – Available only when exactly one FY is selected. Options run from April to March in FY order.
+Use the filter bar at the top of the Dashboard to focus on a period. **All Quick Access tiles** (metric cards plus **Payment Status** and **Proposal Engine**), **Year-on-Year** KPIs, and most charts respect these filters.
 
-If you select multiple FYs, Quarter and Month are disabled. Use **Clear Filter** (or clear the FY selection) to reset and see all data.
+- **Financial Year (FY)** — One or more years in **April–March** format (e.g. 2024-25).
+- **Quarter** — Only when **exactly one** FY is selected: Q1 (Apr–Jun) through Q4 (Jan–Mar).
+- **Month** — Only when **exactly one** FY is selected; months follow FY order (April through March). If quarters are selected, only months inside those quarters are listed.
 
-## Role-Based Dashboards
+If you select **multiple FYs**, Quarter and Month are disabled. Use **Clear Filter** (or clear FY) to reset and see all periods.
 
-Each role sees a different dashboard layout and set of metrics.
+**Tip:** Open **Projects** from a Quick Access row or tile; the address bar keeps the same FY / quarter / month query parameters so the list matches what you saw on the Dashboard.
 
-- **Sales** – Year-on-Year summary (capacity, pipeline, revenue, profit), Quick Access tiles, Projects by Stage and Revenue & Profit by FY (side by side), Revenue by Lead Source, Pipeline by Lead Source, Project Value by Segment (pie), Pipeline by Customer Segment, Customer Profitability word cloud, Projects Availing Loans by Bank. Data is limited to the logged-in salesperson.
-- **Operations** – Quick Access tiles, Pending Subsidy list (when applicable), Projects by Stage, Revenue by Sales Team, Project Value and Profit by FY, Project Value by Segment (pie). Company-wide data. (No Availing Loan tile or chart.)
-- **Finance** – Top KPIs (Total Revenue, Amount Received, Outstanding Balance), Quick Access (Pending Installation, Completed Installation, Subsidy Credited, Availing Loan, Payment Status), Revenue by Lead Source, Revenue by Sales Team, Project Value and Profit by FY, Project Value by Segment (pie), Customer Profitability word cloud, Projects Availing Loans by Bank. Company-wide data.
-- **Management / Admin** – Year-on-Year summary, Quick Access tiles (two rows of five), Projects by Stage and Revenue & Profit by FY (side by side), Revenue by Lead Source, Pipeline by Lead Source, Revenue by Sales Team, Sales Team treemap, Project Value by Segment, Pipeline by Customer Segment, Customer Profitability word cloud, Projects Availing Loans by Bank. Company-wide data.
+---
 
-## Key Metrics (by role)
+## Quick Access tiles
 
-### Sales
-- Leads, pipeline value, revenue, capacity, profit (in Year-on-Year tile)
-- Quick Access (2 rows): My Leads, Site Survey Stage, Proposal Stage, My Open Deals; My Confirmed Orders, Under Installation (Installation stage only), Completed Installation, Payment Status
-
-### Operations
-- Quick Access: Pending Installation, Completed Installation, Subsidy Credited, Payment Status (Pending, Partial, Fully Paid, N/A)
-- Pending Subsidy list with customer names and days pending
-
-### Finance
-- Total Revenue, Amount Received, Outstanding Balance
-- Quick Access (one row): Pending Installation, Completed Installation, Subsidy Credited, Availing Loan, Payment Status (click a tile to open filtered Projects)
-
-### Management / Admin
-- Year-on-Year: capacity, pipeline, revenue, profit
-- Quick Access row 1: Total Leads, Site Survey Stage, Proposal Stage, Open Deals, Confirmed Orders
-- Quick Access row 2: Pending Installation, Completed Installation, Subsidy Credited, Availing Loan, Payment Status
-
-## Quick Access Tiles
-
-Quick Access tiles appear on every dashboard (below the main metrics or at the top for Operations). Each tile shows a count for the current filter period (FY, Quarter, Month) and links to the Projects page with the same date filters plus the tile’s filter (e.g. status or payment status) applied.
+Quick Access appears below the main KPI area (or at the top on **Operations**). It mixes **metric tiles** (large gradient cards with a single count) and **list cards** (**Payment Status**, and on **Sales** and **Management**, **Proposal Engine**).
 
 **How to use**
-1. Set FY (and optionally Quarter or Month) on the Dashboard.
-2. Click a tile to open Projects with those filters and the tile’s filter already set.
-3. On the Projects page, use **Clear All** to remove all filters and see the full list.
 
-Hover over a tile to see “View projects” before clicking.
+1. Set **FY** (and optionally **Quarter** or **Month**).
+2. Click a **metric tile** or a **row** inside Payment / Proposal Engine.
+3. You land on **Projects** with the Dashboard date filters **plus** the tile’s filter (status, payment status, availing loan, or Proposal Engine bucket).
 
-## Data Visualization
+Hover a metric tile for a short **“View projects”** hint before you click.
 
-Charts and visualizations on the Dashboard include:
+---
 
-- **Year-on-Year** – Capacity, pipeline, revenue, profit with comparison to same period previous year (Sales, Management/Admin).
-- **Projects by Stage / Execution Status** – Bar chart of project counts by execution status (shown side by side with Revenue & Profit by FY on Sales and Management/Admin).
-- **Revenue & Profit by Financial Year** – Grouped column chart (top row on Sales and Management/Admin, next to Projects by Stage).
-- **Revenue by Lead Source** – Revenue broken down by lead source.
-- **Pipeline by Lead Source** – Pipeline value by lead source.
-- **Revenue by Sales Team** – Revenue by team member (Operations, Finance, Management).
-- **Sales Team Performance (treemap)** – Management/Admin only.
-- **Project Value by Segment** – Pie chart of project value by customer segment.
-- **Pipeline by Customer Segment** – Pie chart of pipeline by segment.
-- **Customer Profitability word cloud** – Most profitable customers (Sales, Finance, Management/Admin).
-- **Projects Availing Loans by Bank** – Column chart of project count by financing bank for projects with Availing Loan selected (Sales, Finance, Management/Admin; not shown to Operations).
+## Payment Status card
 
-Data is refreshed when you load the Dashboard or change filters. If numbers look outdated, refresh the page.
+The **Payment Status** card uses the same **indigo header strip** and white card body as **Proposal Engine**. Each row is a **link**:
+
+- **Label** — e.g. Pending, Partial, Fully Paid, N/A (colour-coded).
+- **Count** and **outstanding amount (₹)** for that payment bucket.
+
+Clicking a row opens **Projects** filtered by that **payment status** and your Dashboard dates. Rows only appear for statuses that exist in your data for the selected period.
+
+---
+
+## Proposal Engine card
+
+On **Sales** and **Management** dashboards (and **Admin**, who sees the Management layout), the **Proposal Engine** card groups CRM projects by **saved Proposal Engine activity**. It is **not** the same as the CRM pipeline stage. Each row is a shortcut to **Projects** with the right filter already applied, together with your Dashboard **FY / Quarter / Month** filters.
+
+Only **Sales**, **Management**, and **Admin** can load this card; other roles do not see it.
+
+**What each row means** (click any row on the dashboard to open **Projects** with that filter):
+
+#### PE Ready
+
+The project is set up in Proposal Engine and has **all four** saved parts: **Costing**, **BOM**, **ROI**, and **Proposal**.
+
+#### PE Draft
+
+The project is in Proposal Engine with **at least one** of those parts saved, but **not all four** yet.
+
+#### PE Not Yet Created
+
+The project is linked in Proposal Engine, but **nothing** has been saved there yet.
+
+#### Rest
+
+The project is **not** opened in Proposal Engine yet, but it is in **Proposal** or **Confirmed** in CRM — so it is ready for someone to start PE work.
+
+Each dashboard row also shows **project count** and **CRM order value (₹)**. For **PE Ready**, **PE Draft**, and **PE Not Yet Created**, a **PE ex GST** line appears when costing data supports it (**Rest** uses CRM order value only).
+
+**Tip:** Use these rows to open **Projects** with the right filter. To edit costing, BOM, ROI, or the document, open the **Proposal Engine** from the project (or your PE bookmark), not from this dashboard card alone.
+
+---
+
+## Layout by role
+
+Quick Access **layout** depends on your role. **Payment Status** appears for **Sales**, **Operations**, **Finance**, and **Management**. **Proposal Engine** appears for **Sales** and **Management** only.
+
+### Sales
+
+**On a laptop or a large monitor** (three tiles per row, all the same width):
+
+1. **First row:** My Leads, Site Survey Stage, Proposal Stage.  
+2. **Second row:** Open Deals, My Confirmed Orders, Under Installation.  
+3. **Third row:** **Payment Status** (payment list), **Completed Installation**, **Proposal Engine** (PE summary list).
+
+**Open Deals** uses the same filter as the older tile name **My Open Deals** (Lead + Site Survey + Proposal stages).
+
+**On a phone** the tiles stack **one under another** in that same order.
+
+**On a tablet or a narrow browser window** you usually see **two** tiles per row. The **third row** is an exception: **Payment Status**, **Completed Installation**, and **Proposal Engine** each use a **full row** so the two list cards stay easy to read.
+
+**Third row alignment (wide screens only):** **Payment Status** and **Proposal Engine** are drawn to the **same height** so they line up neatly. **Completed Installation** stays its natural height and sits **centred** between them.
+
+Inside the list cards, you only see **real rows** for data that exists — empty placeholder rows are not added.
+
+### Management and Admin
+
+**Row 1 (four tiles):** Total Leads, Site Survey Stage, Proposal Stage, Open Deals.
+
+**Row 2 (four tiles):** Confirmed Orders, Under Installation, Completed Installation, Subsidy Credited.
+
+**Row 3 (three tiles across, same width each):** **Payment Status** · **Availing Loan** · **Proposal Engine**.
+
+**When the screen is wide enough for three columns in that bottom row**, **Payment Status** and **Proposal Engine** are the **same height** so the two list cards align. **Availing Loan** in the middle keeps its normal compact card size and does **not** stretch to match the lists.
+
+### Operations
+
+**One band of four tiles:** Pending Installation, Completed Installation, Subsidy Credited, **Payment Status**.
+
+There is **no** Availing Loan tile and **no** Proposal Engine card on this dashboard.
+
+### Finance
+
+**On a wide screen** you may see **up to five** tiles in one band: Pending Installation, Completed Installation, Subsidy Credited, **Availing Loan**, **Payment Status**. If the window is narrower, tiles wrap to the next line so they stay usable.
+
+---
+
+## Role-based dashboards (summary)
+
+- **Sales** — Year-on-Year summary, Quick Access (above), Projects by Stage and Revenue & Profit by FY, Revenue by Lead Source, Pipeline by Lead Source, Project Value by Segment, Pipeline by Customer Segment, Customer Profitability word cloud, Projects Availing Loans by Bank. Data is **scoped to the logged-in salesperson**.
+- **Operations** — Quick Access, optional Pending Subsidy list, Projects by Stage, Revenue by Sales Team, Project Value and Profit by FY, Project Value by Segment. **Company-wide** execution view.
+- **Finance** — Top KPIs (Total Revenue, Amount Received, Outstanding Balance), Quick Access row (above), Revenue by Lead Source, Revenue by Sales Team, Project Value and Profit by FY, Project Value by Segment, Customer Profitability word cloud, Projects Availing Loans by Bank. **Company-wide**.
+- **Management / Admin** — Year-on-Year summary, Quick Access (above), Projects by Stage and Revenue & Profit by FY, Revenue by Lead Source, Pipeline by Lead Source, Revenue by Sales Team, Sales Team treemap, Project Value by Segment, Pipeline by Customer Segment, Customer Profitability word cloud, Projects Availing Loans by Bank. **Company-wide**.
+
+---
+
+## Charts and visualizations
+
+- **Year-on-Year** — Capacity, pipeline, revenue, profit vs same period last year (**Sales**, **Management**).
+- **Projects by Stage / Execution Status** — Bar chart beside **Revenue & Profit by FY** (**Sales**, **Management**).
+- **Revenue & Profit by Financial Year** — Grouped columns (**Sales**, **Management**; other roles in their own layout).
+- **Revenue by Lead Source** / **Pipeline by Lead Source** — Where shown on your role’s dashboard.
+- **Revenue by Sales Team** — **Operations**, **Finance**, **Management**.
+- **Sales Team Performance (treemap)** — **Management** only.
+- **Project Value by Segment** — Pie chart.
+- **Pipeline by Customer Segment** — Pie chart (**Sales**, **Management**).
+- **Customer Profitability word cloud** — **Sales**, **Finance**, **Management**.
+- **Projects Availing Loans by Bank** — **Sales**, **Finance**, **Management** (not **Operations**).
+
+Data refreshes when you load the Dashboard or change filters. If numbers look stale, refresh the page.
+
+---
+
+## Keyboard shortcut
+
+Press **?** (when focus is **not** in a text field) to open **Help** in context of the page you were on. From the Dashboard, that usually opens this **Analytics** section.

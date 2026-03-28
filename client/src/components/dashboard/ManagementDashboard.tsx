@@ -96,118 +96,132 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths, in
         />
       </div>
 
-      {/* Quick Access – two rows of five tiles each (Admin/Management) */}
+      {/* Quick Access – Admin/Management: 4+4 metric rows, then Payment | Availing Loan | Proposal Engine */}
       <QuickAccessSection>
-      <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 min-w-0">
-        {/* Row 1 – five tiles */}
-        <MetricCard
-          title="Total Leads"
-          value={data?.sales?.totalLeads || 0}
-          icon={<FaUsers />}
-          gradient="from-indigo-500 to-cyan-500"
-          to={buildProjectsUrl({ status: [ProjectStatus.LEAD] }, tileParams)}
-        />
-        <MetricCard
-          title="Site Survey Stage"
-          value={(data?.projectsByStatus?.find((p: any) => p.status === ProjectStatus.SITE_SURVEY)?.count) ?? 0}
-          icon={<FaClipboardList />}
-          gradient="from-indigo-500 to-indigo-600"
-          to={buildProjectsUrl({ status: [ProjectStatus.SITE_SURVEY] }, tileParams)}
-        />
-        <MetricCard
-          title="Proposal Stage"
-          value={(data?.projectsByStatus?.find((p: any) => p.status === ProjectStatus.PROPOSAL)?.count) ?? 0}
-          icon={<FaClipboardList />}
-          gradient="from-yellow-500 to-amber-500"
-          to={buildProjectsUrl({ status: [ProjectStatus.PROPOSAL] }, tileParams)}
-        />
-        <MetricCard
-          title="Open Deals"
-          value={data?.pipeline?.atRisk || 0}
-          icon={<FaExclamationTriangle />}
-          gradient="from-red-500 to-rose-500"
-          to={buildProjectsUrl({ status: [ProjectStatus.LEAD, ProjectStatus.SITE_SURVEY, ProjectStatus.PROPOSAL] }, tileParams)}
-        />
-        <MetricCard
-          title="Confirmed Orders"
-          value={(data?.projectsByStatus?.find((p: any) => p.status === ProjectStatus.CONFIRMED)?.count) ?? 0}
-          icon={<FaCheckCircle />}
-          gradient="from-purple-500 to-pink-500"
-          to={buildProjectsUrl({ status: [ProjectStatus.CONFIRMED] }, tileParams)}
-        />
-        {/* Row 2 – five tiles */}
-        <MetricCard
-          title="Under Installation"
-          value={data?.operations?.pendingInstallation || 0}
-          icon={<FaCog />}
-          gradient="from-indigo-500 to-indigo-600"
-          to={buildProjectsUrl({ status: [ProjectStatus.UNDER_INSTALLATION] }, tileParams)}
-        />
-        <MetricCard
-          title="Completed Installation"
-          value={((data?.projectsByStatus?.find((p: any) => p.status === ProjectStatus.COMPLETED)?.count) ?? 0) + ((data?.projectsByStatus?.find((p: any) => p.status === ProjectStatus.COMPLETED_SUBSIDY_CREDITED)?.count) ?? 0)}
-          icon={<FaFileInvoice />}
-          gradient="from-yellow-500 to-amber-500"
-          to={buildProjectsUrl({ status: [ProjectStatus.COMPLETED_SUBSIDY_CREDITED, ProjectStatus.COMPLETED] }, tileParams)}
-        />
-        <MetricCard
-          title="Subsidy Credited"
-          value={data?.operations?.subsidyCredited || 0}
-          icon={<FaCheckCircle />}
-          gradient="from-yellow-500 to-amber-500"
-          to={buildProjectsUrl({ status: [ProjectStatus.COMPLETED_SUBSIDY_CREDITED] }, tileParams)}
-        />
-        <MetricCard
-          title="Availing Loan"
-          value={data?.availingLoanCount ?? 0}
-          icon={<FaUniversity />}
-          gradient="from-emerald-500 to-teal-600"
-          to={buildProjectsUrl({ availingLoan: true }, tileParams)}
-        />
-        {/* Payment Status tile */}
-        <div className="min-w-0 flex flex-col bg-gradient-to-br from-white via-indigo-50/50 to-white shadow-lg rounded-xl border-2 border-indigo-200/50 overflow-hidden backdrop-blur-sm">
-          <div className="bg-gradient-to-r from-indigo-500 via-cyan-500 to-indigo-600 px-3 py-2 sm:px-4 sm:py-2.5">
-            <h3 className="text-sm sm:text-base font-bold text-white drop-shadow-md truncate">
-              Payment Status
-            </h3>
+        <div className="flex flex-col gap-4 sm:gap-5 min-w-0">
+          {/* Row 1 – pipeline funnel (4 tiles); phone 1 col, tablet 2×2, laptop 1×4 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 min-w-0">
+            <MetricCard
+              title="Total Leads"
+              value={data?.sales?.totalLeads || 0}
+              icon={<FaUsers />}
+              gradient="from-indigo-500 to-cyan-500"
+              to={buildProjectsUrl({ status: [ProjectStatus.LEAD] }, tileParams)}
+            />
+            <MetricCard
+              title="Site Survey Stage"
+              value={(data?.projectsByStatus?.find((p: any) => p.status === ProjectStatus.SITE_SURVEY)?.count) ?? 0}
+              icon={<FaClipboardList />}
+              gradient="from-indigo-500 to-indigo-600"
+              to={buildProjectsUrl({ status: [ProjectStatus.SITE_SURVEY] }, tileParams)}
+            />
+            <MetricCard
+              title="Proposal Stage"
+              value={(data?.projectsByStatus?.find((p: any) => p.status === ProjectStatus.PROPOSAL)?.count) ?? 0}
+              icon={<FaClipboardList />}
+              gradient="from-yellow-500 to-amber-500"
+              to={buildProjectsUrl({ status: [ProjectStatus.PROPOSAL] }, tileParams)}
+            />
+            <MetricCard
+              title="Open Deals"
+              value={data?.pipeline?.atRisk || 0}
+              icon={<FaExclamationTriangle />}
+              gradient="from-red-500 to-rose-500"
+              to={buildProjectsUrl({ status: [ProjectStatus.LEAD, ProjectStatus.SITE_SURVEY, ProjectStatus.PROPOSAL] }, tileParams)}
+            />
           </div>
-          <div className="px-3 py-2 sm:px-4 sm:py-3 overflow-x-hidden">
-            <div className="space-y-1.5 sm:space-y-2">
-              {data?.projectsByPaymentStatus?.map((item: any) => {
-                const statusLabel = item.status === 'N/A' ? 'N/A' : item.status.replace(/_/g, ' ');
-                const paymentParam = item.status === 'N/A' ? 'NA' : item.status;
-                const getStatusColor = (status: string) => {
-                  if (status === 'N/A') return 'bg-red-100 text-red-800';
-                  if (status === 'FULLY_PAID') return 'bg-green-100 text-green-800';
-                  if (status === 'PARTIAL') return 'bg-yellow-100 text-yellow-800';
-                  return 'bg-red-100 text-red-800';
-                };
-                return (
-                  <Link
-                    key={item.status}
-                    to={buildProjectsUrl({ paymentStatus: [paymentParam] }, tileParams)}
-                    className="flex justify-between items-center gap-2 py-1.5 px-2 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors min-w-0 cursor-pointer no-underline text-inherit"
-                  >
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${getStatusColor(item.status)}`}>
-                      {statusLabel}
-                    </span>
-                    <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate text-right" title={`${item.count} (₹${(item.outstanding ?? 0).toLocaleString('en-IN')})`}>
-                      {item.count} <span className="text-primary-600">(₹{(item.outstanding ?? 0).toLocaleString('en-IN')})</span>
-                    </span>
-                  </Link>
-                );
-              })}
+
+          {/* Row 2 – execution (4 tiles) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 min-w-0">
+            <MetricCard
+              title="Confirmed Orders"
+              value={(data?.projectsByStatus?.find((p: any) => p.status === ProjectStatus.CONFIRMED)?.count) ?? 0}
+              icon={<FaCheckCircle />}
+              gradient="from-purple-500 to-pink-500"
+              to={buildProjectsUrl({ status: [ProjectStatus.CONFIRMED] }, tileParams)}
+            />
+            <MetricCard
+              title="Under Installation"
+              value={data?.operations?.pendingInstallation || 0}
+              icon={<FaCog />}
+              gradient="from-indigo-500 to-indigo-600"
+              to={buildProjectsUrl({ status: [ProjectStatus.UNDER_INSTALLATION] }, tileParams)}
+            />
+            <MetricCard
+              title="Completed Installation"
+              value={((data?.projectsByStatus?.find((p: any) => p.status === ProjectStatus.COMPLETED)?.count) ?? 0) + ((data?.projectsByStatus?.find((p: any) => p.status === ProjectStatus.COMPLETED_SUBSIDY_CREDITED)?.count) ?? 0)}
+              icon={<FaFileInvoice />}
+              gradient="from-yellow-500 to-amber-500"
+              to={buildProjectsUrl({ status: [ProjectStatus.COMPLETED_SUBSIDY_CREDITED, ProjectStatus.COMPLETED] }, tileParams)}
+            />
+            <MetricCard
+              title="Subsidy Credited"
+              value={data?.operations?.subsidyCredited || 0}
+              icon={<FaCheckCircle />}
+              gradient="from-yellow-500 to-amber-500"
+              to={buildProjectsUrl({ status: [ProjectStatus.COMPLETED_SUBSIDY_CREDITED] }, tileParams)}
+            />
+          </div>
+
+          {/* Row 3 – Payment & Proposal Engine stretch to same height; Availing Loan stays top-aligned in the middle */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 min-w-0 md:items-stretch">
+            <div className="min-w-0 flex flex-col h-full min-h-0">
+              <div className="min-w-0 flex flex-col flex-1 h-full min-h-0 bg-gradient-to-br from-white via-indigo-50/50 to-white shadow-lg rounded-xl border-2 border-indigo-200/50 overflow-hidden backdrop-blur-sm">
+                <div className="bg-gradient-to-r from-indigo-500 via-cyan-500 to-indigo-600 px-3 py-2 sm:px-4 sm:py-2.5 shrink-0">
+                  <h3 className="text-sm sm:text-base font-bold text-white drop-shadow-md truncate">Payment Status</h3>
+                </div>
+                <div className="px-3 py-2 sm:px-4 sm:py-3 overflow-x-hidden flex-1 min-h-0 flex flex-col">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    {data?.projectsByPaymentStatus?.map((item: any) => {
+                      const statusLabel = item.status === 'N/A' ? 'N/A' : item.status.replace(/_/g, ' ')
+                      const paymentParam = item.status === 'N/A' ? 'NA' : item.status
+                      const getStatusColor = (status: string) => {
+                        if (status === 'N/A') return 'bg-red-100 text-red-800'
+                        if (status === 'FULLY_PAID') return 'bg-green-100 text-green-800'
+                        if (status === 'PARTIAL') return 'bg-yellow-100 text-yellow-800'
+                        return 'bg-red-100 text-red-800'
+                      }
+                      return (
+                        <Link
+                          key={item.status}
+                          to={buildProjectsUrl({ paymentStatus: [paymentParam] }, tileParams)}
+                          className="flex justify-between items-center gap-2 py-1.5 px-2 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors min-w-0 cursor-pointer no-underline text-inherit"
+                        >
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${getStatusColor(item.status)}`}>
+                            {statusLabel}
+                          </span>
+                          <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate text-right" title={`${item.count} (₹${(item.outstanding ?? 0).toLocaleString('en-IN')})`}>
+                            {item.count} <span className="text-primary-600">(₹{(item.outstanding ?? 0).toLocaleString('en-IN')})</span>
+                          </span>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="min-w-0 flex flex-col md:justify-center md:self-start">
+              <MetricCard
+                title="Availing Loan"
+                value={data?.availingLoanCount ?? 0}
+                icon={<FaUniversity />}
+                gradient="from-emerald-500 to-teal-600"
+                to={buildProjectsUrl({ availingLoan: true }, tileParams)}
+              />
+            </div>
+
+            <div className="min-w-0 flex flex-col h-full min-h-0">
+              <ProposalEngineStatusCard
+                selectedFYs={selectedFYs}
+                selectedQuarters={selectedQuarters}
+                selectedMonths={selectedMonths}
+                gridClassName="h-full min-h-0 flex-1"
+              />
             </div>
           </div>
         </div>
-      </div>
       </QuickAccessSection>
-
-      <ProposalEngineStatusCard
-        selectedFYs={selectedFYs}
-        selectedQuarters={selectedQuarters}
-        selectedMonths={selectedMonths}
-      />
 
       {/* Row 1: Projects by Stage / Execution Status, Revenue & Profit by Financial Year – side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">

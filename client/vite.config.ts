@@ -7,6 +7,10 @@ import path from 'path'
 export default defineConfig({
   base: '/',
   plugins: [react()],
+  /** Pre-bundle markdown stack so dev server does not return 504 Outdated Optimize Dep after dependency changes. */
+  optimizeDeps: {
+    include: ['react-markdown'],
+  },
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },
