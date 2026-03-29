@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import { useQuery } from '@tanstack/react-query'
@@ -86,14 +86,15 @@ const Zenith = () => {
     })
   }, [user?.role, zenithData, dateFilter, salesPerfInsights?.salesTeamData])
 
-  const handleResetFilters = () => {
+  const handleResetFilters = useCallback(() => {
     setSelectedFYs([])
     setSelectedQuarters([])
     setSelectedMonths([])
-  }
+  }, [])
 
-  const body = (() => {
+  const body = useMemo(() => {
     if (!user?.role) return null
+    const data = (zenithData ?? {}) as Record<string, unknown>
     switch (user.role) {
       case UserRole.SALES:
       case UserRole.MANAGEMENT:
@@ -101,26 +102,18 @@ const Zenith = () => {
         return (
           <ZenithExecutiveBody
             role={user.role}
-            data={(zenithData ?? {}) as Record<string, unknown>}
+            data={data}
             isLoading={isLoading}
             dateFilter={dateFilter}
           />
         )
       case UserRole.OPERATIONS:
         return (
-          <ZenithOperationsBody
-            data={(zenithData ?? {}) as Record<string, unknown>}
-            isLoading={isLoading}
-            dateFilter={dateFilter}
-          />
+          <ZenithOperationsBody data={data} isLoading={isLoading} dateFilter={dateFilter} />
         )
       case UserRole.FINANCE:
         return (
-          <ZenithFinanceBody
-            data={(zenithData ?? {}) as Record<string, unknown>}
-            isLoading={isLoading}
-            dateFilter={dateFilter}
-          />
+          <ZenithFinanceBody data={data} isLoading={isLoading} dateFilter={dateFilter} />
         )
       default:
         return (
@@ -129,7 +122,7 @@ const Zenith = () => {
           </div>
         )
     }
-  })()
+  }, [user?.role, zenithData, isLoading, dateFilter])
 
   return (
     <div className="zenith-root zenith-animated-bg min-h-screen">

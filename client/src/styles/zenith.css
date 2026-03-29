@@ -175,3 +175,27 @@
 .zenith-root .recharts-tooltip-item-unit {
   color: rgba(255, 255, 255, 0.92) !important;
 }
+
+/* Performance + accessibility: stop continuous repaints / heavy blur when user prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .zenith-root.zenith-animated-bg {
+    animation: none;
+    background-position: center top, 0 0, 0 0;
+  }
+
+  .zenith-skeleton {
+    animation: none;
+    background-position: 0 0;
+  }
+
+  .zenith-root .zenith-ai-insights-track {
+    animation: none;
+    transform: none;
+  }
+
+  .zenith-glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.055);
+  }
+}

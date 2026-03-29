@@ -4,6 +4,9 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 
 const COLORS = ['#f5a623', '#00d4b4', '#a78bfa', '#38bdf8', '#fb7185', '#fbbf24']
 
+/** Explicit pixel height — percentage height inside flex/grid often resolves to 0 for Recharts. */
+const CHART_PX = 300
+
 export interface SegmentSlice {
   name: string
   value: number
@@ -18,7 +21,14 @@ export default function SegmentDonut({
   data: SegmentSlice[]
 }) {
   const chartData = useMemo(
-    () => data.filter((d) => d.value > 0).map((d) => ({ name: d.name, value: d.value, pct: d.percentage })),
+    () =>
+      data
+        .filter((d) => Number(d.value) > 0)
+        .map((d) => ({
+          name: d.name,
+          value: Number(d.value),
+          pct: d.percentage,
+        })),
     [data],
   )
 
@@ -26,14 +36,16 @@ export default function SegmentDonut({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="zenith-glass rounded-2xl p-4 sm:p-5 min-h-[340px] flex flex-col"
+      className="zenith-glass rounded-2xl p-4 sm:p-5 flex flex-col"
     >
       <h3 className="zenith-display text-base sm:text-lg font-bold text-white mb-4">{title}</h3>
-      <div className="flex-1 min-h-[260px] w-full min-w-0">
+      <div className="w-full min-w-0" style={{ height: CHART_PX }}>
         {chartData.length === 0 ? (
-          <p className="text-sm text-white/40 text-center py-16">No data for this period</p>
+          <p className="text-sm text-white/40 text-center flex items-center justify-center h-full">
+            No data for this period
+          </p>
         ) : (
-          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <ResponsiveContainer width="100%" height={CHART_PX} minWidth={0}>
             <PieChart>
               <Pie
                 data={chartData}
@@ -67,7 +79,7 @@ export default function SegmentDonut({
               <Legend
                 verticalAlign="bottom"
                 formatter={(value, entry) => {
-                  const pct = (entry.payload as { pct?: string })?.pct
+                  const pct = (entry?.payload as { pct?: string } | undefined)?.pct
                   return (
                     <span className="text-white/80 text-xs">
                       {value}
