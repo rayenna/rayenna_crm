@@ -1,8 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   loadCustomers,
   getActiveCustomer,
+  getCustomer,
+  upsertCustomer,
   switchActiveCustomer,
   STATUS_LABELS,
   STATUS_COLORS,
@@ -11,7 +13,11 @@ import {
   getResolvedRoofLayout,
 } from '../lib/customerStore';
 import type { CustomerRecord } from '../lib/customerStore';
-import { getCurrentUserRole } from '../lib/apiClient';
+import {
+  getCurrentUserRole,
+  fetchProjectWithArtifacts,
+  applyProposalEngineProjectDetail,
+} from '../lib/apiClient';
 
 function fmtINR(n: number): string {
   if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(2)} Cr`;
@@ -45,6 +51,31 @@ export default function Dashboard() {
 
   const activeCustomer: CustomerRecord | null =
     allCustomers.find((c) => c.id === activeCustomerId) ?? null;
+
+  // Re-fetch CRM project + artifacts so `projectStage` (and other CRM fields) match CRM after edits elsewhere.
+  useEffect(() => {
+    const id = activeCustomerId;
+    if (!id) return;
+    const rec = getCustomer(id);
+    const projectId = rec?.master?.crmProjectId;
+    if (!projectId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetchProjectWithArtifacts(projectId);
+        if (cancelled) return;
+        const latest = getCustomer(id) ?? rec;
+        const merged = applyProposalEngineProjectDetail(latest, res);
+        upsertCustomer(merged);
+        if (!cancelled) setCustomers(loadCustomers());
+      } catch {
+        // Offline / API error — keep local snapshot
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCustomerId]);
 
   const resolvedRoofLayout = getResolvedRoofLayout(activeCustomer);
 

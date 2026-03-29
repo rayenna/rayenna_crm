@@ -9,12 +9,11 @@ import {
   getWipKeysForCurrentUser,
   STATUS_LABELS,
   STATUS_COLORS,
-  deriveProposalStatusFromArtifacts,
 } from '../lib/customerStore';
 import type { CustomerRecord, CustomerMaster } from '../lib/customerStore';
 import {
   fetchProjectWithArtifacts,
-  mapApiArtifactsToRecord,
+  applyProposalEngineProjectDetail,
   getCurrentUserRole,
   canDeleteProposalEngineArtifacts,
   clearProjectProposalArtifact,
@@ -220,22 +219,10 @@ export default function CustomerWorkspace() {
       try {
         const res = await fetchProjectWithArtifacts(projectId);
         if (cancelled) return;
-        const fromApi = mapApiArtifactsToRecord(res.artifacts);
-        const hasAny = fromApi.costing || fromApi.bom || fromApi.roi || fromApi.proposal;
-        if (!hasAny) return;
-        const merged: CustomerRecord = {
-          ...rec,
-          costing:  fromApi.costing  ?? rec.costing,
-          bom:      fromApi.bom      ?? rec.bom,
-          roi:      fromApi.roi      ?? rec.roi,
-          proposal: fromApi.proposal ?? rec.proposal,
-        };
-        const withStatus: CustomerRecord = {
-          ...merged,
-          status: deriveProposalStatusFromArtifacts(merged),
-        };
-        upsertCustomer(withStatus);
-        switchActiveCustomer(withStatus.id);
+        const latest = getCustomer(id) ?? rec;
+        const merged = applyProposalEngineProjectDetail(latest, res);
+        upsertCustomer(merged);
+        switchActiveCustomer(merged.id);
         setRecord(getCustomer(id)!);
       } catch {
         // Network or auth error — keep local data

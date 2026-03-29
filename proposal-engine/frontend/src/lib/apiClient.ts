@@ -432,13 +432,18 @@ import type {
   BomArtifact,
   RoiArtifact,
   ProposalArtifact,
+  CustomerRecord,
+  CustomerMaster,
 } from './customerStore';
+import { deriveProposalStatusFromArtifacts, formatEmailForDisplay } from './customerStore';
 
 export interface ProposalEngineProjectFromApi {
   id: string;
   slNo?: number | null;
   projectStatus?: string | null;
   projectStage?: string | null;
+  /** Panel wattage (W), from CRM project when available */
+  panelCapacityW?: number | null;
   /** Proposal Engine status computed by backend for selected projects. */
   peStatus?: 'not-started' | 'draft' | 'proposal-ready' | string;
   peSelectedAt?: string | null;
@@ -471,6 +476,8 @@ export interface ProposalEngineProjectFromApi {
     consumerNumber?: string | null;
     customerType?: string | null;
     contactNumbers?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
   };
 }
 
@@ -880,6 +887,98 @@ export function mapApiArtifactsToRecord(artifacts: ProposalEngineProjectDetailRe
             : null,
         }
       : null,
+  };
+}
+
+// ─────────────────────────────────────────────
+// Merge CRM project + artifacts into local CustomerRecord (cross-device / fresh stage)
+// ─────────────────────────────────────────────
+
+function derivePeCustomerDisplayName(c: ProposalEngineProjectFromApi['customer'] | null | undefined): string {
+  if (!c) return '';
+  if (c.customerName && c.customerName.trim()) return c.customerName.trim();
+  const fullName = [c.firstName, c.lastName].filter(Boolean).join(' ').trim();
+  if (fullName) return fullName;
+  const companyName = (c as { companyName?: string }).companyName;
+  if (companyName && companyName.trim()) return companyName.trim();
+  return '';
+}
+
+function derivePeContactNumber(c: ProposalEngineProjectFromApi['customer'] | null | undefined): string {
+  if (!c) return '';
+  if (c.contactNumbers && c.contactNumbers.trim()) {
+    try {
+      const parsed = JSON.parse(c.contactNumbers);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return String(parsed.join(', ')).trim();
+      }
+      return c.contactNumbers.trim();
+    } catch {
+      return c.contactNumbers.trim();
+    }
+  }
+  return (c.phone ?? '').trim();
+}
+
+/**
+ * Apply GET /api/proposal-engine/projects/:id onto a local record so CRM fields (especially
+ * `projectStage`) and server artifacts stay in sync when the user changes the project in CRM.
+ */
+export function applyProposalEngineProjectDetail(
+  existing: CustomerRecord,
+  detail: ProposalEngineProjectDetailResponse,
+): CustomerRecord {
+  const p = detail.project as ProposalEngineProjectFromApi;
+  const cust = p.customer ?? ({} as NonNullable<ProposalEngineProjectFromApi['customer']>);
+  const projectStageRaw = p.projectStatus ?? p.projectStage;
+  const projectStage =
+    projectStageRaw != null && String(projectStageRaw).trim() !== ''
+      ? String(projectStageRaw).trim().toUpperCase()
+      : existing.master.projectStage;
+
+  const displayName = derivePeCustomerDisplayName(p.customer);
+  const siteAddress =
+    (p.siteAddress ?? '').trim() ||
+    [cust.addressLine1, cust.addressLine2, cust.city, cust.state, cust.pinCode]
+      .filter(Boolean)
+      .map((part) => String(part).trim())
+      .join(', ');
+
+  const master: CustomerMaster = {
+    ...existing.master,
+    name: displayName || existing.master.name,
+    location: siteAddress || (cust.city ?? '').trim() || existing.master.location,
+    contactPerson: (cust.contactPerson ?? '').trim() || existing.master.contactPerson,
+    phone: derivePeContactNumber(p.customer) || existing.master.phone,
+    email: formatEmailForDisplay(cust.email ?? '') || existing.master.email,
+    crmCustomerId: cust.id || existing.master.crmCustomerId,
+    crmProjectId: p.id || existing.master.crmProjectId,
+    systemSizeKw: typeof p.systemCapacity === 'number' ? p.systemCapacity : existing.master.systemSizeKw,
+    customerNumber: (cust.customerId ?? '').trim() || existing.master.customerNumber,
+    projectNumber: typeof p.slNo === 'number' ? p.slNo : existing.master.projectNumber,
+    consumerNumber: (cust.consumerNumber ?? '').trim() || existing.master.consumerNumber,
+    segment: ((cust.customerType ?? p.type) ?? '').trim() || existing.master.segment,
+    salespersonName: (p.salesperson?.name ?? '').trim() || existing.master.salespersonName,
+    projectStage: projectStage ?? existing.master.projectStage,
+    panelType: (p.panelType ?? '').trim() || existing.master.panelType,
+    latitude: typeof cust.latitude === 'number' ? cust.latitude : existing.master.latitude,
+    longitude: typeof cust.longitude === 'number' ? cust.longitude : existing.master.longitude,
+    panelWattage: typeof p.panelCapacityW === 'number' ? p.panelCapacityW : existing.master.panelWattage,
+  };
+
+  const fromApi = mapApiArtifactsToRecord(detail.artifacts);
+  const merged: CustomerRecord = {
+    ...existing,
+    updatedAt: new Date().toISOString(),
+    master,
+    costing: fromApi.costing ?? existing.costing,
+    bom: fromApi.bom ?? existing.bom,
+    roi: fromApi.roi ?? existing.roi,
+    proposal: fromApi.proposal ?? existing.proposal,
+  };
+  return {
+    ...merged,
+    status: deriveProposalStatusFromArtifacts(merged),
   };
 }
 

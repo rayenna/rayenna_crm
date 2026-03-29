@@ -23,7 +23,7 @@ import {
   fetchProposalEngineProjects,
   fetchProposalEngineEligibleProjects,
   fetchProjectWithArtifacts,
-  mapApiArtifactsToRecord,
+  applyProposalEngineProjectDetail,
   getCurrentUserRole,
   deleteProjectFromProposalEngine,
   selectProposalEngineProject,
@@ -1196,28 +1196,19 @@ export default function Customers() {
   /** Create local record from CRM project and hydrate with backend artifacts if any. */
   const createFromProjectAndHydrate = useCallback(
     async (project: ProjectOption, proposalIndex: number): Promise<CustomerRecord> => {
-      let artifacts = {
-        costing: null as CustomerRecord['costing'],
-        bom: null as CustomerRecord['bom'],
-        roi: null as CustomerRecord['roi'],
-        proposal: null as CustomerRecord['proposal'],
-      };
-      try {
-        const res = await fetchProjectWithArtifacts(project.id);
-        artifacts = mapApiArtifactsToRecord(res.artifacts);
-      } catch {
-        // No backend data or network error — keep artifacts null
-      }
       const master: CustomerMaster = buildMasterFromProject(project);
       const record = createCustomer(master);
       const indexed: CustomerRecord = { ...record, proposalIndex };
-      const merged: CustomerRecord = { ...indexed, ...artifacts };
-      const final: CustomerRecord = {
-        ...merged,
-        status: deriveProposalStatusFromArtifacts(merged),
-      };
-      upsertCustomer(final);
-      return final;
+      try {
+        const res = await fetchProjectWithArtifacts(project.id);
+        const final = applyProposalEngineProjectDetail(indexed, res);
+        upsertCustomer(final);
+        return final;
+      } catch {
+        // No backend data or network error — keep local shell only
+        upsertCustomer(indexed);
+        return indexed;
+      }
     },
     [],
   );
@@ -1264,43 +1255,12 @@ export default function Customers() {
       setHydratingProjectId(project.id);
       try {
         const res = await fetchProjectWithArtifacts(project.id);
-        const artifacts = mapApiArtifactsToRecord(res.artifacts);
         const now = new Date().toISOString();
         const existing = customersByCrmProjectId.get(project.id) ?? null;
-        const record: CustomerRecord = existing
-          ? (() => {
-              const next: CustomerRecord = {
-                ...existing,
-                updatedAt: now,
-                costing: artifacts.costing ?? existing.costing,
-                bom: artifacts.bom ?? existing.bom,
-                roi: artifacts.roi ?? existing.roi,
-                proposal: artifacts.proposal ?? existing.proposal,
-              };
-              return {
-                ...next,
-                status: deriveProposalStatusFromArtifacts(next),
-              };
-            })()
-          : (() => {
-              const next: CustomerRecord = {
-                id: `crm_${project.id}`,
-                createdAt: now,
-                updatedAt: now,
-                status: 'not-started',
-                proposalIndex: 1,
-                master: buildMasterFromProject(project),
-                costing: artifacts.costing,
-                bom: artifacts.bom,
-                roi: artifacts.roi,
-                roofLayout: null,
-                proposal: artifacts.proposal,
-              };
-              return {
-                ...next,
-                status: deriveProposalStatusFromArtifacts(next),
-              };
-            })();
+        const base: CustomerRecord = existing
+          ? { ...existing, updatedAt: now }
+          : buildShellCustomerRecordFromProject(project);
+        const record = applyProposalEngineProjectDetail(base, res);
         upsertCustomer(record);
         switchActiveCustomer(record.id);
         setCustomers((prev) => {
@@ -1385,45 +1345,13 @@ export default function Customers() {
         if (cancelled) return;
 
         const projectOption = mapApiProjectToProjectOption(detail.project);
-        const artifacts = mapApiArtifactsToRecord(detail.artifacts);
         const now = new Date().toISOString();
         const existing =
           getLatestLocalRecordForCrmProject(projectId, loadCustomers()) ?? null;
-        const record: CustomerRecord = existing
-          ? (() => {
-              const next: CustomerRecord = {
-                ...existing,
-                updatedAt: now,
-                master: buildMasterFromProject(projectOption),
-                costing: artifacts.costing ?? existing.costing,
-                bom: artifacts.bom ?? existing.bom,
-                roi: artifacts.roi ?? existing.roi,
-                proposal: artifacts.proposal ?? existing.proposal,
-              };
-              return {
-                ...next,
-                status: deriveProposalStatusFromArtifacts(next),
-              };
-            })()
-          : (() => {
-              const next: CustomerRecord = {
-                id: `crm_${projectId}`,
-                createdAt: now,
-                updatedAt: now,
-                status: 'not-started',
-                proposalIndex: 1,
-                master: buildMasterFromProject(projectOption),
-                costing: artifacts.costing,
-                bom: artifacts.bom,
-                roi: artifacts.roi,
-                roofLayout: null,
-                proposal: artifacts.proposal,
-              };
-              return {
-                ...next,
-                status: deriveProposalStatusFromArtifacts(next),
-              };
-            })();
+        const base: CustomerRecord = existing
+          ? { ...existing, updatedAt: now }
+          : buildShellCustomerRecordFromProject(projectOption);
+        const record = applyProposalEngineProjectDetail(base, detail);
         if (cancelled) return;
 
         upsertCustomer(record);
