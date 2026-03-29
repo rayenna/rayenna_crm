@@ -13,7 +13,7 @@ export const helpSections: HelpSection[] = [
     title: 'Getting Started',
     routeKey: 'getting-started',
     markdownPath: '/help-docs/getting-started/index.md',
-    routePatterns: ['/dashboard', '/zenith']
+    routePatterns: ['/dashboard']
   },
   {
     id: 'roles',
@@ -103,6 +103,7 @@ export const getHelpSectionForRoute = (currentPath: string): string | null => {
 /** Human-readable label for a route, used in the context banner when opening Help from that page */
 const routeToContextLabel: Record<string, string> = {
   '/dashboard': 'Dashboard',
+  '/zenith': 'Zenith',
   '/customers': 'Customers',
   '/projects': 'Projects',
   '/support-tickets': 'Support Tickets',

@@ -24,6 +24,13 @@ const Help = () => {
   const navigate = useNavigate()
   const helpContextPathRef = useRef<string | null>(null)
 
+  // Legacy URL: /help/zenith → Zenith is a subsection under Analytics
+  useEffect(() => {
+    if (section === 'zenith') {
+      navigate('/help/analytics#zenith-command-center', { replace: true })
+    }
+  }, [section, navigate])
+
   // Determine current section - simplified and safe for hard refresh
   const selectedSection = useMemo(() => {
     try {
@@ -99,7 +106,7 @@ const Help = () => {
     const id = decodeURIComponent(raw)
     const timer = window.setTimeout(() => {
       document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 80)
+    }, 150)
     return () => window.clearTimeout(timer)
   }, [section, selectedSection?.id, markdownContent])
 

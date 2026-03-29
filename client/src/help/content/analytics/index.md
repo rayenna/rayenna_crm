@@ -2,7 +2,7 @@
 
 > **Note:** The Dashboard is your main analytics view. Use the filter bar at the top to choose **Financial Year**, **Quarter**, and **Month**; Quick Access counts, the **Payment Status** and **Proposal Engine** summaries, and most KPI tiles follow those filters. Charts may have their own controls where noted.
 
-**Jump to:** [Dashboard filters](#dashboard-filters) · [Quick Access tiles](#quick-access-tiles) · [Payment Status](#payment-status-card) · [Proposal Engine](#proposal-engine-card) · [Layout by role](#layout-by-role) · [Charts](#charts-and-visualizations)
+**Jump to:** [Dashboard filters](#dashboard-filters) · [Quick Access tiles](#quick-access-tiles) · [Payment Status](#payment-status-card) · [Proposal Engine](#proposal-engine-card) · [Layout by role](#layout-by-role) · [Charts](#charts-and-visualizations) · [Zenith Command Center](#zenith-command-center)
 
 ---
 
@@ -145,6 +145,120 @@ Data refreshes when you load the Dashboard or change filters. If numbers look st
 
 ---
 
+## Zenith Command Center
+
+> **Zenith** is a full-screen analytics experience for the same business data as the classic **Dashboard**, with a focused layout, dark theme, and role-specific panels. Use the **sticky command bar** to filter by **Financial Year**, **Quarter**, and **Month**; **AI Insights** (plain-English highlights from your current data), **Your Focus** (role-specific actions and tables), KPIs, funnels, and charts all respect those filters. (Zenith is documented here, under **Analytics and Reports** — there is no separate top-level Help topic.)
+
+**In this section:** [Opening Zenith](#opening-zenith) · [Filters and reset](#filters-and-reset) · [AI Insights ticker](#ai-insights-ticker) · [KPI strip and YoY](#kpi-strip-and-year-on-year) · [Your Focus](#your-focus-role-specific) · [Executive](#executive-sales-management--admin) · [Operations (Zenith)](#operations-zenith) · [Finance (Zenith)](#finance-zenith) · [Charts and shortcuts](#charts-funnels-and-shortcuts) · [Help and tips](#help-and-tips-zenith)
+
+### Opening Zenith
+
+1. Open the **Dashboard** menu in the top navigation (next to **Dashboard**).
+2. Choose **Zenith ✦**.
+
+Zenith is available to **Sales**, **Operations**, **Finance**, **Management**, and **Admin**. If your role does not include it, ask your administrator.
+
+From **Zenith**, press **?** (when not typing in a field) to open **Help** on this **Analytics** page and jump to **Zenith Command Center**.
+
+### Filters and reset
+
+The command bar stays at the top as you scroll.
+
+- **Financial Year (FY)** — Select one or more years (April–March labels). FY options come from the same source as the main dashboard.
+- **Quarter** — Available when **exactly one** FY is selected. Quarters follow the CRM definition: **Q1** Apr–Jun, **Q2** Jul–Sep, **Q3** Oct–Dec, **Q4** Jan–Mar.
+- **Month** — Available when **exactly one** FY is selected. If you pick quarters first, month choices narrow to months inside those quarters.
+- **Reset** — Clears all FY, quarter, and month selections. With filters empty, Zenith can show **unfiltered** summary data (same idea as clearing filters on the classic dashboard).
+
+**Tip:** Filter rules match the [Dashboard filters](#dashboard-filters) section above so numbers stay comparable between **Dashboard** and **Zenith**.
+
+### AI Insights ticker
+
+Directly under the **command bar**, Zenith shows an **AI Insights** ribbon: a **horizontal scrolling strip** of short, plain-English highlights derived from the **same dashboard data** already loaded for your filters (no external AI service).
+
+- **Content** — Examples include conversion vs a simple benchmark, top pipeline or revenue by salesperson, stale pipeline signals, revenue vs a prior period, loan concentration by bank, and role-relevant finance or operations notes. The exact lines change with your **role** and **filters**.
+- **Motion** — Text scrolls continuously; **hover** over the strip to **pause** scrolling.
+- **Click an insight** — The page **smooth-scrolls** to a related section (KPIs, **Your Focus**, funnel, charts, etc.). If a target section does not exist for your role, Zenith scrolls to the nearest sensible anchor.
+
+### KPI strip and year-on-year
+
+The **top row of KPI cards** summarises key metrics for your role. Each card includes:
+
+- A **large value** that **animates from zero** when the page loads or when you **change date filters** (about 1.2 seconds, ease-out), for a quick read of the current number.
+- A **mini sparkline** (line chart, no axes) using the **last seven financial-year buckets** available for that metric in the payload — the line is **gold** when the series trends up and **crimson** when it trends down.
+- A **trend badge** in the **top-right** (e.g. **▲ 12%** in teal / **▼ 3%** in crimson) when a **period-over-period %** is available — same rules as classic dashboard comparisons (e.g. one FY selected for YoY-style badges).
+- A subtle **hover glow** (gold-tinted shadow) on the card.
+
+Cards **stagger in** slightly when the strip appears (animation order by column).
+
+**YoY / comparison behaviour**
+
+- Comparison badges appear when you select **exactly one** Financial Year (and the system can compare to the **prior FY** or the **same quarter/month in the prior FY**, matching dashboard logic).
+- If you select **multiple FYs**, those badges are hidden so the comparison stays unambiguous.
+- If the prior period was **zero**, the % change may not show (to avoid misleading divides).
+
+Metrics and labels are **role-specific** (see below). **Sales** sees data **scoped to you**; **Management**, **Admin**, **Operations**, and **Finance** see **company-wide** views where applicable.
+
+### Your Focus (role-specific)
+
+Between the **KPI strip** and the **funnel**, **Your Focus** surfaces actionable context **by role**:
+
+| Role | What you see |
+|------|----------------|
+| **Sales** | **Your pipeline today** — a compact table of **your** leads/deals (assigned to you): customer, stage, deal value, and **last activity** (days since update or last project remark). **Green / amber / red** styling by recency; a **Follow-up needed** count for the oldest band; **Log activity** opens a short remark modal (saved on the project). |
+| **Finance** | **Payment radar** — finance KPIs (e.g. outstanding, collection timing, subsidy pending), a short **overdue** list with actions, and a small **collected vs outstanding vs subsidy** chart. |
+| **Operations** | **Installation pulse** — projects **under installation**, with size, installer, dates, progress where available, and quick stats (e.g. delayed count). |
+| **Management / Admin** | **All** of the above blocks in one view (company-wide where applicable). |
+
+If there is nothing to show for the current filters, **Your Focus** may be hidden. Each block has a **subtle coloured left border** to distinguish Sales (gold-leaning), Finance (teal-leaning), and Operations (cool accent) content.
+
+### Executive (Sales, Management & Admin)
+
+**KPI strip** — Typically includes **Total Capacity**, **Total Pipeline**, **Total Revenue**, **Total Profit**, and **Pipeline Conversion** (definitions match the classic dashboard and the sections above).
+
+**Your Focus** — See [Your Focus](#your-focus-role-specific); **Sales** sees own pipeline, **Management/Admin** see the combined focus layout.
+
+**Funnel** — Deal-flow style view of stages from leads through execution (layout varies slightly by role).
+
+**Charts and panels** — May include **Revenue by lead source**, **Sales team performance**, **segment donuts**, **customer profitability**, **Revenue & Profit by FY**, and **Projects by stage**. **Proposal Engine** summary appears where your role has access on the classic dashboard.
+
+**Links** — Many tiles and chart actions open **Projects** (or related views) with **filters aligned** to your Zenith FY / quarter / month — same pattern as Quick Access on the Dashboard.
+
+### Operations (Zenith)
+
+**KPI strip** — Focus on execution: e.g. **Pending Installation**, **Completed Installation**, **Subsidy Credited**, and **Confirmed Revenue** (order value for confirmed / in-progress / completed revenue-eligible projects, respecting your date filters).
+
+**Your Focus** — **Installation pulse** for **Operations** (see [Your Focus](#your-focus-role-specific)).
+
+**Funnel** — Execution-oriented funnel (installation, subsidy, etc.).
+
+**Charts** — **Revenue & Profit by FY**, **Projects by stage**, **segment** views, and **sales team** style charts where shown.
+
+Use **Reset** when you want a fresh, unscoped overview before drilling into a single FY or quarter.
+
+### Finance (Zenith)
+
+**KPI strip** — **Total Revenue** (confirmed-order value), **Amount Received**, **Outstanding**, **Total Profit** (gross profit on revenue-eligible projects in scope), and **Availing Loan** count.
+
+**Your Focus** — **Payment radar** for **Finance** (see [Your Focus](#your-focus-role-specific)).
+
+**Funnel** — Built from project statuses relevant to finance oversight.
+
+**Charts** — **Revenue & Profit by FY**, **Payment / segment** views, **customer profitability**, **lead source** revenue, and **loan by bank** where applicable.
+
+### Charts, funnels, and shortcuts
+
+- **Hover** tooltips on charts explain series and values.
+- **Click-through** where offered — opens **Projects** (or the app route documented on the tile) with **query parameters** carrying your Zenith dates so lists match what you saw.
+- **Loading states** — Skeleton placeholders appear while data loads; if an error banner appears, use **Retry** or refresh the page.
+
+### Help and tips (Zenith)
+
+- **Tip of the Day** includes tips for **AI Insights**, **Your Focus**, **KPI animations**, and other Zenith behaviour; use **Next tip** in the modal to browse more.
+
+For module basics (Customers, Projects, Proposal Engine), see [Modules](/help/modules) and [Getting Started](/help/getting-started).
+
+---
+
 ## Keyboard shortcut
 
-Press **?** (when focus is **not** in a text field) to open **Help** in context of the page you were on. From the Dashboard, that usually opens this **Analytics** section.
+Press **?** (when focus is **not** in a text field) to open **Help** in context of the page you were on. From the **Dashboard**, that opens this **Analytics** section. From **Zenith**, it opens **Analytics** with **Zenith Command Center** in view.

@@ -159,96 +159,126 @@ export function buildExecutiveZenithKpis(
   ]
 }
 
-export function buildOperationsZenithKpis(data: Record<string, unknown>): ZenithKpiItem[] {
+interface OperationsPrevKpis {
+  pendingInstallation: number
+  completedInstallation: number
+  subsidyCredited: number
+  confirmedRevenue: number
+}
+
+export function buildOperationsZenithKpis(
+  data: Record<string, unknown>,
+  selectedFYs: string[],
+): ZenithKpiItem[] {
   const rows = (data?.projectValueProfitByFY ?? []) as ZenithFYRow[]
-  const fySum = rows.reduce((s, r) => s + (r.totalProjectValue ?? 0), 0)
+  const confirmedRevenue = Number(
+    data?.confirmedOrderRevenue ?? data?.confirmedRevenue ?? 0,
+  )
+  const singleFY = selectedFYs.length === 1
+  const prev = data?.previousYearOperationsKpis as OperationsPrevKpis | null | undefined
+
+  const pend = Number(data?.pendingInstallation ?? 0)
+  const done = Number(data?.completedInstallation ?? 0)
+  const cred = Number(data?.subsidyCredited ?? 0)
+
   return [
     {
       key: 'pend',
       label: 'Pending Installation',
-      value: Number(data?.pendingInstallation ?? 0),
+      value: pend,
       format: 'number',
-      changePct: null,
-      sparkline: fySparkline(rows, () => Number(data?.pendingInstallation ?? 0)),
+      changePct: singleFY && prev ? pctChange(pend, prev.pendingInstallation) : null,
+      sparkline: fySparkline(rows, () => pend),
     },
     {
       key: 'done',
       label: 'Completed Installation',
-      value: Number(data?.completedInstallation ?? 0),
+      value: done,
       format: 'number',
-      changePct: null,
-      sparkline: fySparkline(rows, () => Number(data?.completedInstallation ?? 0)),
-    },
-    {
-      key: 'sub',
-      label: 'Submitted for Subsidy',
-      value: Number(data?.submittedForSubsidy ?? 0),
-      format: 'number',
-      changePct: null,
-      sparkline: fySparkline(rows, () => Number(data?.submittedForSubsidy ?? 0)),
+      changePct: singleFY && prev ? pctChange(done, prev.completedInstallation) : null,
+      sparkline: fySparkline(rows, () => done),
     },
     {
       key: 'cred',
       label: 'Subsidy Credited',
-      value: Number(data?.subsidyCredited ?? 0),
+      value: cred,
       format: 'number',
-      changePct: null,
-      sparkline: fySparkline(rows, () => Number(data?.subsidyCredited ?? 0)),
+      changePct: singleFY && prev ? pctChange(cred, prev.subsidyCredited) : null,
+      sparkline: fySparkline(rows, () => cred),
     },
     {
       key: 'vol',
-      label: 'Confirmed Revenue (FY sum)',
-      value: fySum,
+      label: 'Confirmed Revenue',
+      value: confirmedRevenue,
       format: 'currency',
-      changePct: null,
+      changePct: singleFY && prev ? pctChange(confirmedRevenue, prev.confirmedRevenue) : null,
       sparkline: fySparkline(rows, (r) => r.totalProjectValue ?? 0),
     },
   ]
 }
 
-export function buildFinanceZenithKpis(data: Record<string, unknown>): ZenithKpiItem[] {
+interface FinancePrevKpis {
+  totalProjectValue: number
+  totalAmountReceived: number
+  totalOutstanding: number
+  totalProfit: number
+  availingLoanCount: number
+}
+
+export function buildFinanceZenithKpis(
+  data: Record<string, unknown>,
+  selectedFYs: string[],
+): ZenithKpiItem[] {
   const rows = (data?.projectValueProfitByFY ?? []) as ZenithFYRow[]
-  const totalProfit = rows.reduce((s, r) => s + (r.totalProfit ?? 0), 0)
+  const singleFY = selectedFYs.length === 1
+  const prev = data?.previousYearFinanceKpis as FinancePrevKpis | null | undefined
+
+  const totalPV = Number(data?.totalProjectValue ?? 0)
+  const totalRecv = Number(data?.totalAmountReceived ?? 0)
+  const totalOut = Number(data?.totalOutstanding ?? 0)
+  const totalProfit = Number(data?.totalGrossProfit ?? 0)
+  const loans = Number(data?.availingLoanCount ?? 0)
+
   return [
     {
       key: 'rev',
       label: 'Total Revenue',
-      value: Number(data?.totalProjectValue ?? 0),
+      value: totalPV,
       format: 'currency',
-      changePct: null,
+      changePct: singleFY && prev ? pctChange(totalPV, prev.totalProjectValue) : null,
       sparkline: fySparkline(rows, (r) => r.totalProjectValue ?? 0),
     },
     {
       key: 'recv',
       label: 'Amount Received',
-      value: Number(data?.totalAmountReceived ?? 0),
+      value: totalRecv,
       format: 'currency',
-      changePct: null,
+      changePct: singleFY && prev ? pctChange(totalRecv, prev.totalAmountReceived) : null,
       sparkline: fySparkline(rows, (r) => r.totalProjectValue ?? 0),
     },
     {
       key: 'out',
       label: 'Outstanding',
-      value: Number(data?.totalOutstanding ?? 0),
+      value: totalOut,
       format: 'currency',
-      changePct: null,
-      sparkline: fySparkline(rows, () => Number(data?.totalOutstanding ?? 0)),
+      changePct: singleFY && prev ? pctChange(totalOut, prev.totalOutstanding) : null,
+      sparkline: fySparkline(rows, () => totalOut),
     },
     {
       key: 'prof',
       label: 'Total Profit',
       value: totalProfit,
       format: 'currency',
-      changePct: null,
+      changePct: singleFY && prev ? pctChange(totalProfit, prev.totalProfit) : null,
       sparkline: fySparkline(rows, (r) => r.totalProfit ?? 0),
     },
     {
       key: 'loan',
       label: 'Availing Loan',
-      value: Number(data?.availingLoanCount ?? 0),
+      value: loans,
       format: 'number',
-      changePct: null,
-      sparkline: fySparkline(rows, () => Number(data?.availingLoanCount ?? 0)),
+      changePct: singleFY && prev ? pctChange(loans, prev.availingLoanCount) : null,
+      sparkline: fySparkline(rows, () => loans),
     },
   ]
 }

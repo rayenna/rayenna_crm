@@ -7,23 +7,21 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ComposedChart,
-  Area,
   Legend,
 } from 'recharts'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
-import { Link } from 'react-router-dom'
-import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { buildFinanceZenithKpis } from './zenithKpi'
 import { buildZenithFunnelFromStatuses } from './zenithFunnel'
 import type { ZenithDateFilter } from './zenithTypes'
 import KPICard from './KPICard'
 import DealFlowFunnel from './DealFlowFunnel'
+import ZenithYourFocus from './ZenithYourFocus'
 import ChartPanel from './ChartPanel'
 import SegmentDonut from './SegmentDonut'
 import CustomerProfitabilityRank from './CustomerProfitabilityRank'
+import ZenithRevenueProfitFyChart from './ZenithRevenueProfitFyChart'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
 
@@ -87,7 +85,7 @@ export default function ZenithFinanceBody({
     )
   }
 
-  const kpis = buildFinanceZenithKpis(data)
+  const kpis = buildFinanceZenithKpis(data, effFYs)
   const funnel = buildZenithFunnelFromStatuses(data, dateFilter)
   const fyRows = (data?.projectValueProfitByFY ?? []) as {
     fy: string
@@ -120,47 +118,27 @@ export default function ZenithFinanceBody({
     }))
   })()
 
-  const tile = {
-    selectedFYs: dateFilter.selectedFYs,
-    selectedQuarters: dateFilter.selectedQuarters,
-    selectedMonths: dateFilter.selectedMonths,
-  }
-
   return (
     <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-6 space-y-8 pb-16">
-      <div className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pb-2">
+      <div
+        id="zenith-kpis"
+        className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pb-2 scroll-mt-28"
+      >
         {kpis.map((k, i) => (
           <div key={k.key} className="min-w-0">
             <KPICard item={k} index={i} icon={icons[i] ?? Zap} />
           </div>
         ))}
       </div>
-      <DealFlowFunnel stages={funnel} />
-      <div className="zenith-glass rounded-2xl p-4">
-        <h3 className="zenith-display text-sm font-bold text-white/90 mb-3 uppercase tracking-widest">
-          Payment status
-        </h3>
-        <div className="flex flex-wrap gap-2">
-          {paymentItems.map((item) => {
-            const label = item.status === 'N/A' ? 'N/A' : item.status.replace(/_/g, ' ')
-            const param = item.status === 'N/A' ? 'NA' : item.status
-            return (
-              <Link
-                key={item.status}
-                to={buildProjectsUrl({ paymentStatus: [param] }, tile)}
-                className="inline-flex flex-col px-3 py-2 rounded-full border border-white/10 bg-white/[0.04] hover:border-[#f5a623]/40 text-xs"
-              >
-                <span className="font-bold text-[#00d4b4]">{label}</span>
-                <span className="text-white/50">
-                  {item.count} · ₹{(item.outstanding ?? 0).toLocaleString('en-IN')}
-                </span>
-              </Link>
-            )
-          })}
-        </div>
+      <div id="zenith-focus" className="scroll-mt-28">
+        <ZenithYourFocus role={user!.role} dateFilter={dateFilter} zenithMainLoading={isLoading} />
+      </div>
+      <div id="zenith-funnel" className="scroll-mt-28">
+        <DealFlowFunnel stages={funnel} paymentItems={paymentItems} dateFilter={dateFilter} />
       </div>
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <ChartPanel title="Revenue by lead source">
+        <div id="zenith-lead-source" className="scroll-mt-28 min-w-0">
+          <ChartPanel title="Revenue by lead source">
           <ResponsiveContainer width="100%" height={280} minWidth={0}>
             <BarChart layout="vertical" data={leadChart} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
@@ -171,41 +149,40 @@ export default function ZenithFinanceBody({
             </BarChart>
           </ResponsiveContainer>
         </ChartPanel>
-        <ChartPanel title="Revenue vs pipeline by sales team">
-          <ResponsiveContainer width="100%" height={280} minWidth={0}>
-            <BarChart layout="vertical" data={salesMerge} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
-              <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 9 }} />
-              <Tooltip formatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} {...tt} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="revenue" name="Revenue" fill="#f5a623" />
-              <Bar dataKey="pipeline" name="Pipeline" fill="#a78bfa" />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartPanel>
+        </div>
+        <div id="zenith-sales-team" className="scroll-mt-28 min-w-0">
+          <ChartPanel title="Revenue vs pipeline by sales team">
+            <ResponsiveContainer width="100%" height={280} minWidth={0}>
+              <BarChart layout="vertical" data={salesMerge} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
+                <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 9 }} />
+                <Tooltip formatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} {...tt} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="revenue" name="Revenue" fill="#f5a623" />
+                <Bar dataKey="pipeline" name="Pipeline" fill="#a78bfa" />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartPanel>
+        </div>
       </div>
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div
+        id="zenith-charts-row-1"
+        className="grid grid-cols-1 xl:grid-cols-2 gap-4 scroll-mt-28"
+      >
         <ChartPanel title="Revenue & profit by financial year">
-          <ResponsiveContainer width="100%" height={280} minWidth={0}>
-            <ComposedChart data={fyChart}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis dataKey="fy" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
-              <YAxis tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
-              <Tooltip formatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} {...tt} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Area type="monotone" dataKey="revenue" stroke="#f5a623" fill="rgba(245,166,35,0.12)" />
-              <Bar dataKey="profit" fill="#00d4b4" radius={[4, 4, 0, 0]} />
-            </ComposedChart>
-          </ResponsiveContainer>
+          <ZenithRevenueProfitFyChart data={fyChart} />
         </ChartPanel>
-        <SegmentDonut
-          title="Revenue by customer segment"
-          data={seg.map((s) => ({ name: s.label, value: s.value, percentage: s.percentage }))}
-        />
+        <div id="zenith-segments" className="min-w-0">
+          <SegmentDonut
+            title="Revenue by customer segment"
+            data={seg.map((s) => ({ name: s.label, value: s.value, percentage: s.percentage }))}
+          />
+        </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartPanel title="Loans by bank">
+        <div id="zenith-loans" className="scroll-mt-28 min-w-0">
+          <ChartPanel title="Loans by bank">
           <ResponsiveContainer width="100%" height={260} minWidth={0}>
             <BarChart layout="vertical" data={loans}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
@@ -216,6 +193,7 @@ export default function ZenithFinanceBody({
             </BarChart>
           </ResponsiveContainer>
         </ChartPanel>
+        </div>
         <CustomerProfitabilityRank rows={wordCloud} />
       </div>
     </div>

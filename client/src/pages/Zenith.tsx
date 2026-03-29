@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import { useQuery } from '@tanstack/react-query'
@@ -9,6 +9,8 @@ import CommandBar from '../components/zenith/CommandBar'
 import ZenithExecutiveBody from '../components/zenith/ZenithExecutiveBody'
 import ZenithOperationsBody from '../components/zenith/ZenithOperationsBody'
 import ZenithFinanceBody from '../components/zenith/ZenithFinanceBody'
+import ZenithAiInsightsTicker from '../components/zenith/ZenithAiInsightsTicker'
+import { buildZenithAiInsights } from '../components/zenith/zenithAiInsights'
 
 const Zenith = () => {
   const { user } = useAuth()
@@ -16,7 +18,7 @@ const Zenith = () => {
   const [selectedQuarters, setSelectedQuarters] = useState<string[]>([])
   const [selectedMonths, setSelectedMonths] = useState<string[]>([])
 
-  const { data: dashboardData, error: fyError, isError: isFyError, refetch: refetchFYs, dataUpdatedAt: fyUpdatedAt } =
+  const { data: dashboardData, error: fyError, isError: isFyError, refetch: refetchFYs } =
     useQuery({
       queryKey: ['dashboard', 'fys', user?.role],
       queryFn: async () => {
@@ -45,7 +47,6 @@ const Zenith = () => {
     isError,
     error,
     refetch,
-    dataUpdatedAt: zenithUpdatedAt,
   } = useZenithMainQuery(
     user?.role,
     selectedFYs,
@@ -54,8 +55,36 @@ const Zenith = () => {
     initialDataWhenFiltersEmpty,
   )
 
-  const dateFilter = { selectedFYs, selectedQuarters, selectedMonths }
-  const lastRefresh = Math.max(zenithUpdatedAt ?? 0, fyUpdatedAt ?? 0) || undefined
+  const dateFilter = useMemo(
+    () => ({ selectedFYs, selectedQuarters, selectedMonths }),
+    [selectedFYs, selectedQuarters, selectedMonths],
+  )
+
+  const execForInsights =
+    user?.role === UserRole.SALES ||
+    user?.role === UserRole.MANAGEMENT ||
+    user?.role === UserRole.ADMIN
+
+  const { data: salesPerfInsights } = useQuery({
+    queryKey: ['zenith', 'salesPerf', selectedFYs, selectedQuarters, selectedMonths],
+    queryFn: async () => {
+      const params = new URLSearchParams()
+      selectedFYs.forEach((fy) => params.append('fy', fy))
+      selectedQuarters.forEach((q) => params.append('quarter', q))
+      selectedMonths.forEach((m) => params.append('month', m))
+      const res = await axiosInstance.get(`/api/sales-team-performance?${params.toString()}`)
+      return res.data as { salesTeamData: { salespersonName: string; totalOrderValue: number }[] }
+    },
+    enabled: !!user && execForInsights,
+  })
+
+  const insights = useMemo(() => {
+    if (!user?.role) return []
+    const d = (zenithData ?? {}) as Record<string, unknown>
+    return buildZenithAiInsights(user.role, d, dateFilter, {
+      salesTeamPipeline: salesPerfInsights?.salesTeamData,
+    })
+  }, [user?.role, zenithData, dateFilter, salesPerfInsights?.salesTeamData])
 
   const handleResetFilters = () => {
     setSelectedFYs([])
@@ -105,7 +134,6 @@ const Zenith = () => {
   return (
     <div className="zenith-root zenith-animated-bg min-h-screen">
       <CommandBar
-        user={user}
         availableFYs={availableFYs}
         selectedFYs={selectedFYs}
         selectedQuarters={selectedQuarters}
@@ -114,8 +142,11 @@ const Zenith = () => {
         onQuarterChange={setSelectedQuarters}
         onMonthChange={setSelectedMonths}
         onResetFilters={handleResetFilters}
-        dataUpdatedAt={lastRefresh}
       />
+
+      {!isFyError && !isError && user?.role ? (
+        <ZenithAiInsightsTicker insights={insights} isLoading={isLoading} />
+      ) : null}
 
       {isFyError && (
         <div className="max-w-xl mx-auto mt-6 px-4 rounded-2xl border border-[#ff4757]/30 bg-[#ff4757]/10 p-5 text-sm text-white/90">

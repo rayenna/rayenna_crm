@@ -8,8 +8,6 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
-  ComposedChart,
-  Area,
   Legend,
 } from 'recharts'
 import { useQuery } from '@tanstack/react-query'
@@ -17,12 +15,14 @@ import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
 import { getProjectStatusColor } from '../dashboard/projectStatusColors'
 import { buildOperationsZenithKpis } from './zenithKpi'
-import { buildZenithFunnelFromStatuses } from './zenithFunnel'
+import { buildZenithOperationsExecutionFunnel } from './zenithFunnel'
 import type { ZenithDateFilter } from './zenithTypes'
 import KPICard from './KPICard'
 import DealFlowFunnel from './DealFlowFunnel'
+import ZenithYourFocus from './ZenithYourFocus'
 import ChartPanel from './ChartPanel'
 import SegmentDonut from './SegmentDonut'
+import ZenithRevenueProfitFyChart from './ZenithRevenueProfitFyChart'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
 
@@ -73,8 +73,8 @@ export default function ZenithOperationsBody({
     )
   }
 
-  const kpis = buildOperationsZenithKpis(data)
-  const funnel = buildZenithFunnelFromStatuses(data, dateFilter)
+  const kpis = buildOperationsZenithKpis(data, effFYs)
+  const funnel = buildZenithOperationsExecutionFunnel(data, dateFilter)
   const projectsByStatus = (data?.projectsByStatus ?? []) as {
     status: string
     statusLabel: string
@@ -91,7 +91,11 @@ export default function ZenithOperationsBody({
     profit: r.totalProfit,
   }))
   const seg = (data?.projectValueByType ?? []) as { label: string; value: number; percentage: string }[]
-
+  const paymentItems = (data?.projectsByPaymentStatus ?? []) as {
+    status: string
+    count: number
+    outstanding: number
+  }[]
   const salesMerge = (() => {
     const rev = perfData?.revenueBySalesperson ?? []
     const pipe = perfData?.salesTeamData ?? []
@@ -105,15 +109,28 @@ export default function ZenithOperationsBody({
 
   return (
     <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-6 space-y-8 pb-16">
-      <div className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pb-2">
+      <div
+        id="zenith-kpis"
+        className="grid w-full grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 pb-2 scroll-mt-28"
+      >
         {kpis.map((k, i) => (
           <div key={k.key} className="min-w-0">
             <KPICard item={k} index={i} icon={icons[i] ?? Zap} />
           </div>
         ))}
       </div>
-      <DealFlowFunnel stages={funnel} />
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div id="zenith-focus" className="scroll-mt-28">
+        <ZenithYourFocus role={user!.role} dateFilter={dateFilter} zenithMainLoading={isLoading} />
+      </div>
+      <div id="zenith-funnel" className="scroll-mt-28">
+        <DealFlowFunnel
+          stages={funnel}
+          title="Project Execution Flow"
+          paymentItems={paymentItems}
+          dateFilter={dateFilter}
+        />
+      </div>
+      <div id="zenith-charts-row-1" className="grid grid-cols-1 xl:grid-cols-2 gap-4 scroll-mt-28">
         <ChartPanel title="Projects by stage">
           <ResponsiveContainer width="100%" height={280} minWidth={0}>
             <BarChart layout="vertical" data={projectsByStatus} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
@@ -129,33 +146,25 @@ export default function ZenithOperationsBody({
             </BarChart>
           </ResponsiveContainer>
         </ChartPanel>
-        <ChartPanel title="Revenue vs pipeline by sales team">
-          <ResponsiveContainer width="100%" height={280} minWidth={0}>
-            <BarChart layout="vertical" data={salesMerge} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
-              <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 9 }} />
-              <Tooltip formatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} {...chartTooltip} />
-              <Legend wrapperStyle={{ fontSize: 11, color: '#fff' }} />
-              <Bar dataKey="revenue" fill="#f5a623" name="Revenue" />
-              <Bar dataKey="pipeline" fill="#00d4b4" name="Pipeline" />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartPanel>
+        <div id="zenith-sales-team" className="scroll-mt-28 min-w-0">
+          <ChartPanel title="Revenue vs pipeline by sales team">
+            <ResponsiveContainer width="100%" height={280} minWidth={0}>
+              <BarChart layout="vertical" data={salesMerge} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
+                <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 9 }} />
+                <Tooltip formatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} {...chartTooltip} />
+                <Legend wrapperStyle={{ fontSize: 11, color: '#fff' }} />
+                <Bar dataKey="revenue" fill="#f5a623" name="Revenue" />
+                <Bar dataKey="pipeline" fill="#00d4b4" name="Pipeline" />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartPanel>
+        </div>
       </div>
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div id="zenith-segments" className="grid grid-cols-1 xl:grid-cols-2 gap-4 scroll-mt-28">
         <ChartPanel title="Revenue & profit by financial year">
-          <ResponsiveContainer width="100%" height={280} minWidth={0}>
-            <ComposedChart data={fyChart}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis dataKey="fy" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
-              <YAxis tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
-              <Tooltip formatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} {...chartTooltip} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Area type="monotone" dataKey="revenue" stroke="#f5a623" fill="rgba(245,166,35,0.12)" />
-              <Bar dataKey="profit" fill="#00d4b4" radius={[4, 4, 0, 0]} />
-            </ComposedChart>
-          </ResponsiveContainer>
+          <ZenithRevenueProfitFyChart data={fyChart} />
         </ChartPanel>
         <SegmentDonut
           title="Revenue by customer segment"

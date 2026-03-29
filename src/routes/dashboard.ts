@@ -1,5 +1,14 @@
 import express, { Request, Response } from 'express';
-import { UserRole, ProjectStatus, LeadStatus, ProjectStage, LeadSource, PaymentStatus } from '@prisma/client';
+import {
+  UserRole,
+  ProjectStatus,
+  LeadStatus,
+  ProjectStage,
+  LeadSource,
+  PaymentStatus,
+  Prisma,
+  InstallationStatus,
+} from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
 
@@ -156,14 +165,88 @@ function getPipelineWhere(baseWhere: any): any {
   };
 }
 
-// Execution order and labels for Projects by Stage chart (Lost excluded from chart in all views)
+/** Same slice as open pipeline tiles (used when appending previous FY pipeline). */
+const DASHBOARD_PIPELINE_WHERE_BASE = {
+  projectCost: { not: null },
+  projectStatus: { not: ProjectStatus.LOST },
+} as const;
+
+type ProjectValueProfitFYRow = {
+  fy: string;
+  totalProjectValue: number;
+  totalProfit: number;
+  totalCapacity?: number;
+  totalPipeline?: number;
+};
+
+/**
+ * When exactly one FY is filtered, append the prior FY row so charts match across roles (YoY context).
+ * `baseWhereForPreviousFY` scopes Sales to their projects via { salespersonId } when needed.
+ */
+async function appendPreviousFYToProjectValueProfitByFY(
+  fyFilters: string[],
+  rows: ProjectValueProfitFYRow[],
+  baseWhereForPreviousFY: Record<string, unknown>,
+  mode: 'full' | 'revenueProfitOnly'
+): Promise<ProjectValueProfitFYRow[]> {
+  if (fyFilters.length !== 1) return rows;
+  const previousFY = getPreviousFY(fyFilters[0]!);
+  if (!previousFY || rows.some((r) => r.fy === previousFY)) return rows;
+
+  const wherePrev = applyDateFilters(baseWhereForPreviousFY as any, [previousFY], [], []);
+  const revenueWherePrev = getRevenueWhere(wherePrev);
+  const pipelineWherePrev = { ...wherePrev, ...DASHBOARD_PIPELINE_WHERE_BASE };
+
+  if (mode === 'full') {
+    const [prevRev, prevProfit, prevCap, prevPipe] = await Promise.all([
+      prisma.project.aggregate({ where: revenueWherePrev, _sum: { projectCost: true } }),
+      prisma.project.aggregate({
+        where: { ...revenueWherePrev, grossProfit: { not: null } },
+        _sum: { grossProfit: true },
+      }),
+      prisma.project.aggregate({
+        where: { ...revenueWherePrev, systemCapacity: { not: null } },
+        _sum: { systemCapacity: true },
+      }),
+      prisma.project.aggregate({ where: pipelineWherePrev, _sum: { projectCost: true } }),
+    ]);
+    return [
+      ...rows,
+      {
+        fy: previousFY,
+        totalProjectValue: prevRev._sum.projectCost || 0,
+        totalProfit: prevProfit._sum.grossProfit || 0,
+        totalCapacity: prevCap._sum.systemCapacity || 0,
+        totalPipeline: prevPipe._sum.projectCost || 0,
+      },
+    ].sort((a, b) => String(a.fy).localeCompare(String(b.fy)));
+  }
+
+  const [prevRev, prevProfit] = await Promise.all([
+    prisma.project.aggregate({ where: revenueWherePrev, _sum: { projectCost: true } }),
+    prisma.project.aggregate({
+      where: { ...revenueWherePrev, grossProfit: { not: null } },
+      _sum: { grossProfit: true },
+    }),
+  ]);
+  return [
+    ...rows,
+    {
+      fy: previousFY,
+      totalProjectValue: prevRev._sum.projectCost || 0,
+      totalProfit: prevProfit._sum.grossProfit || 0,
+    },
+  ].sort((a, b) => String(a.fy).localeCompare(String(b.fy)));
+}
+
+// Execution order and labels for Projects by Stage chart (Lost excluded from chart in all views).
+// SUBMITTED_FOR_SUBSIDY is omitted — stage is not used in CRM workflow; counts still exist in DB but are not shown here.
 const PROJECT_STATUS_ORDER: ProjectStatus[] = [
   ProjectStatus.LEAD,
   ProjectStatus.SITE_SURVEY,
   ProjectStatus.PROPOSAL,
   ProjectStatus.CONFIRMED,
   ProjectStatus.UNDER_INSTALLATION,
-  ProjectStatus.SUBMITTED_FOR_SUBSIDY,
   ProjectStatus.COMPLETED,
   ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
 ];
@@ -186,6 +269,40 @@ function buildProjectsByStatus(countByStatus: { status: ProjectStatus; _count: n
     status,
     statusLabel: PROJECT_STATUS_LABELS[status] || status,
     count: map.get(status) || 0,
+  }));
+}
+
+/** Mean days in current status (stageEnteredAt ?? createdAt → now) for Zenith funnel tooltips. */
+async function computeAvgDaysByProjectStatus(where: Prisma.ProjectWhereInput): Promise<Record<string, number>> {
+  const rows = await prisma.project.findMany({
+    where,
+    select: { projectStatus: true, stageEnteredAt: true, createdAt: true },
+  });
+  const acc: Record<string, { sum: number; n: number }> = {};
+  const now = Date.now();
+  for (const r of rows) {
+    const start = r.stageEnteredAt ?? r.createdAt;
+    if (!start) continue;
+    const days = (now - start.getTime()) / 86400000;
+    const k = r.projectStatus;
+    if (!acc[k]) acc[k] = { sum: 0, n: 0 };
+    acc[k].sum += days;
+    acc[k].n += 1;
+  }
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(acc)) {
+    if (v.n > 0) out[k] = Math.round((v.sum / v.n) * 10) / 10;
+  }
+  return out;
+}
+
+function mergeProjectsByStatusAvgDays(
+  rows: { status: string; statusLabel: string; count: number }[],
+  avgMap: Record<string, number>
+): { status: string; statusLabel: string; count: number; avgDaysInStage: number | null }[] {
+  return rows.map((r) => ({
+    ...r,
+    avgDaysInStage: avgMap[r.status] != null && Number.isFinite(avgMap[r.status]) ? avgMap[r.status]! : null,
   }));
 }
 
@@ -528,7 +645,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       ...pipelineByFY.map((item) => item.year),
     ]);
 
-    let projectValueProfitByFY = Array.from(allFYs)
+    let projectValueProfitByFY: ProjectValueProfitFYRow[] = Array.from(allFYs)
       .sort()
       .map((fy) => ({
         fy,
@@ -538,33 +655,14 @@ router.get('/sales', authenticate, async (req: Request, res) => {
         totalPipeline: pipelineByFY.find((item) => item.year === fy)?._sum.projectCost || 0,
       }));
 
-    // When exactly one FY is selected, include previous FY in projectValueProfitByFY for YoY (full-year comparison).
-    if (fyFilters.length === 1) {
-      const previousFY = getPreviousFY(fyFilters[0]);
-      if (previousFY && !projectValueProfitByFY.some((r) => r.fy === previousFY)) {
-        const baseWherePrev: any = {};
-        if (role === UserRole.SALES) baseWherePrev.salespersonId = userId;
-        const wherePrev = applyDateFilters(baseWherePrev, [previousFY], [], []);
-        const revenueWherePrev = getRevenueWhere(wherePrev);
-        const pipelineWherePrev = { ...wherePrev, ...pipelineWhereBase };
-        const [prevRev, prevProfit, prevCap, prevPipe] = await Promise.all([
-          prisma.project.aggregate({ where: revenueWherePrev, _sum: { projectCost: true } }),
-          prisma.project.aggregate({ where: { ...revenueWherePrev, grossProfit: { not: null } }, _sum: { grossProfit: true } }),
-          prisma.project.aggregate({ where: { ...revenueWherePrev, systemCapacity: { not: null } }, _sum: { systemCapacity: true } }),
-          prisma.project.aggregate({ where: pipelineWherePrev, _sum: { projectCost: true } }),
-        ]);
-        projectValueProfitByFY = [
-          ...projectValueProfitByFY,
-          {
-            fy: previousFY,
-            totalProjectValue: prevRev._sum.projectCost || 0,
-            totalProfit: prevProfit._sum.grossProfit || 0,
-            totalCapacity: prevCap._sum.systemCapacity || 0,
-            totalPipeline: prevPipe._sum.projectCost || 0,
-          },
-        ].sort((a, b) => String(a.fy).localeCompare(String(b.fy)));
-      }
-    }
+    const baseWherePrevSales: Record<string, unknown> = {};
+    if (role === UserRole.SALES) baseWherePrevSales.salespersonId = userId!;
+    projectValueProfitByFY = await appendPreviousFYToProjectValueProfitByFY(
+      fyFilters,
+      projectValueProfitByFY,
+      baseWherePrevSales,
+      'full'
+    );
 
     // Total Leads = deals in Lead stage only (Sales and Management)
     const totalLeadsCount =
@@ -573,9 +671,11 @@ router.get('/sales', authenticate, async (req: Request, res) => {
         .reduce((sum, p) => sum + (p._count?.id || 0), 0) || 0;
 
     // Build chart-ready projects by status (single place)
-    const projectsByStatus = buildProjectsByStatus(
+    let projectsByStatus = buildProjectsByStatus(
       (projectsByStatusRawFromPromise || []).map((r) => ({ status: r.projectStatus, _count: r._count.id }))
     );
+    const avgDaysByStatusSales = await computeAvgDaysByProjectStatus(where);
+    projectsByStatus = mergeProjectsByStatusAvgDays(projectsByStatus, avgDaysByStatusSales);
 
     // The detailed LeadStatus-based metrics (NEW / QUALIFIED / CONVERTED) and
     // expected values are not used on the frontend today, so we keep them as
@@ -845,6 +945,7 @@ router.get('/operations', authenticate, async (req: Request, res) => {
       pendingSubsidy,
       ksebBottlenecks,
       mnreBottlenecks,
+      confirmedOrderRevenueAgg,
     ] = await Promise.all([
       // Projects pending installation
       prisma.project.count({
@@ -928,7 +1029,13 @@ router.get('/operations', authenticate, async (req: Request, res) => {
           projectStatus: true,
         },
       }),
+      prisma.project.aggregate({
+        where: getRevenueWhere(where),
+        _sum: { projectCost: true },
+      }),
     ]);
+
+    const confirmedOrderRevenue = confirmedOrderRevenueAgg._sum.projectCost ?? 0;
 
     // Calculate project value by type for pie chart (with optional FY filter) - only confirmed/completed projects
     const projectValueByType = await prisma.project.groupBy({
@@ -986,7 +1093,7 @@ router.get('/operations', authenticate, async (req: Request, res) => {
       ...profitByFY.map((item) => item.year),
     ]);
 
-    const projectValueProfitByFY = Array.from(allFYs)
+    let projectValueProfitByFY = Array.from(allFYs)
       .sort()
       .map((fy) => ({
         fy,
@@ -994,15 +1101,24 @@ router.get('/operations', authenticate, async (req: Request, res) => {
         totalProfit: profitByFY.find((item) => item.year === fy)?._sum.grossProfit || 0,
       }));
 
+    projectValueProfitByFY = await appendPreviousFYToProjectValueProfitByFY(
+      fyFilters,
+      projectValueProfitByFY,
+      {},
+      'revenueProfitOnly'
+    );
+
     // Projects by Stage / Execution Status (for Operations and shared chart)
     const projectsByStatusRaw = await prisma.project.groupBy({
       by: ['projectStatus'],
       where,
       _count: { id: true },
     });
-    const projectsByStatus = buildProjectsByStatus(
+    let projectsByStatus = buildProjectsByStatus(
       projectsByStatusRaw.map((r) => ({ status: r.projectStatus, _count: r._count.id }))
     );
+    const avgDaysByStatusOps = await computeAvgDaysByProjectStatus(where);
+    projectsByStatus = mergeProjectsByStatusAvgDays(projectsByStatus, avgDaysByStatusOps);
 
     // Projects by payment status (for Quick Access tile – Operations scope)
     // Avoid loading all projects into Node. Compute buckets via groupBy + aggregates.
@@ -1075,11 +1191,52 @@ router.get('/operations', authenticate, async (req: Request, res) => {
       })),
     ];
 
+    let previousYearOperationsKpis: {
+      pendingInstallation: number
+      completedInstallation: number
+      subsidyCredited: number
+      confirmedRevenue: number
+    } | null = null;
+    if (fyFilters.length === 1) {
+      const previousFY = getPreviousFY(fyFilters[0]!);
+      if (previousFY) {
+        const wherePrev = applyDateFilters(baseWhere, [previousFY], monthFilters, quarterFilters);
+        const [pendPrev, donePrev, credPrev, revPrevAgg] = await Promise.all([
+          prisma.project.count({
+            where: {
+              ...wherePrev,
+              projectStatus: { in: [ProjectStatus.CONFIRMED, ProjectStatus.UNDER_INSTALLATION] },
+            },
+          }),
+          prisma.project.count({
+            where: {
+              ...wherePrev,
+              projectStatus: { in: [ProjectStatus.COMPLETED, ProjectStatus.COMPLETED_SUBSIDY_CREDITED] },
+            },
+          }),
+          prisma.project.count({
+            where: { ...wherePrev, projectStatus: ProjectStatus.COMPLETED_SUBSIDY_CREDITED },
+          }),
+          prisma.project.aggregate({
+            where: getRevenueWhere(wherePrev),
+            _sum: { projectCost: true },
+          }),
+        ]);
+        previousYearOperationsKpis = {
+          pendingInstallation: pendPrev,
+          completedInstallation: donePrev,
+          subsidyCredited: credPrev,
+          confirmedRevenue: revPrevAgg._sum.projectCost ?? 0,
+        };
+      }
+    }
+
     res.json({
       pendingInstallation,
       submittedForSubsidy,
       subsidyCredited,
       completedInstallation,
+      confirmedOrderRevenue,
       pendingSubsidy: pendingSubsidy.map((p) => ({
         ...p,
         customerName: p.customer?.customerName || 'Unknown',
@@ -1095,6 +1252,7 @@ router.get('/operations', authenticate, async (req: Request, res) => {
       projectValueProfitByFY,
       projectsByStatus,
       projectsByPaymentStatus,
+      previousYearOperationsKpis,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -1110,10 +1268,11 @@ router.get('/finance', authenticate, async (req: Request, res) => {
 
     const baseWhere: any = {};
     const where = applyDateFilters(baseWhere, fyFilters, monthFilters, quarterFilters);
-    
-      const [
+
+    const [
       totalProjectValue,
       totalAmountReceived,
+      totalGrossProfit,
       profitByProject,
       profitBySalesperson,
     ] = await Promise.all([
@@ -1126,6 +1285,10 @@ router.get('/finance', authenticate, async (req: Request, res) => {
       prisma.project.aggregate({
         _sum: { totalAmountReceived: true },
         where,
+      }),
+      prisma.project.aggregate({
+        _sum: { grossProfit: true },
+        where: { ...getRevenueWhere(where), grossProfit: { not: null } },
       }),
       // Profit by project
       prisma.project.findMany({
@@ -1246,9 +1409,11 @@ router.get('/finance', authenticate, async (req: Request, res) => {
         where: { ...where, projectStatus: ProjectStatus.COMPLETED_SUBSIDY_CREDITED },
       }),
     ]);
-    const projectsByStatus = buildProjectsByStatus(
+    let projectsByStatus = buildProjectsByStatus(
       projectsByStatusRawFinance.map((r) => ({ status: r.projectStatus, _count: r._count.id }))
     );
+    const avgDaysByStatusFin = await computeAvgDaysByProjectStatus(where);
+    projectsByStatus = mergeProjectsByStatusAvgDays(projectsByStatus, avgDaysByStatusFin);
     const operations = { pendingInstallation, subsidyCredited };
 
     // Batch: availingLoanByBank, profitability, projectValueByType, FY series (no cross-deps)
@@ -1358,7 +1523,7 @@ router.get('/finance', authenticate, async (req: Request, res) => {
       ...profitByFYFinance.map((item) => item.year),
     ]);
 
-    const projectValueProfitByFY = Array.from(allFYsFinance)
+    let projectValueProfitByFY = Array.from(allFYsFinance)
       .sort()
       .map((fy) => ({
         fy,
@@ -1366,9 +1531,65 @@ router.get('/finance', authenticate, async (req: Request, res) => {
         totalProfit: profitByFYFinance.find((item) => item.year === fy)?._sum.grossProfit || 0,
       }));
 
+    projectValueProfitByFY = await appendPreviousFYToProjectValueProfitByFY(
+      fyFilters,
+      projectValueProfitByFY,
+      {},
+      'revenueProfitOnly'
+    );
+
+    let previousYearFinanceKpis: {
+      totalProjectValue: number
+      totalAmountReceived: number
+      totalOutstanding: number
+      totalProfit: number
+      availingLoanCount: number
+    } | null = null;
+    if (fyFilters.length === 1) {
+      const previousFY = getPreviousFY(fyFilters[0]!);
+      if (previousFY) {
+        const wherePrev = applyDateFilters(baseWhere, [previousFY], monthFilters, quarterFilters);
+        const revenueWherePrev = getRevenueWhere(wherePrev);
+        const [prevTV, prevRecv, prevOutstandingAgg, prevProfit, prevLoan] = await Promise.all([
+          prisma.project.aggregate({
+            where: revenueWherePrev,
+            _sum: { projectCost: true },
+          }),
+          prisma.project.aggregate({
+            where: wherePrev,
+            _sum: { totalAmountReceived: true },
+          }),
+          prisma.project.aggregate({
+            where: {
+              ...wherePrev,
+              projectCost: { gt: 0 },
+              projectStatus: { notIn: earlyOrLostStatuses },
+              paymentStatus: { in: [PaymentStatus.PENDING, PaymentStatus.PARTIAL] },
+            },
+            _sum: { balanceAmount: true },
+          }),
+          prisma.project.aggregate({
+            where: { ...revenueWherePrev, grossProfit: { not: null } },
+            _sum: { grossProfit: true },
+          }),
+          prisma.project.count({
+            where: { ...wherePrev, projectStatus: { not: ProjectStatus.LOST }, availingLoan: true },
+          }),
+        ]);
+        previousYearFinanceKpis = {
+          totalProjectValue: prevTV._sum.projectCost ?? 0,
+          totalAmountReceived: prevRecv._sum.totalAmountReceived ?? 0,
+          totalOutstanding: prevOutstandingAgg._sum.balanceAmount ?? 0,
+          totalProfit: prevProfit._sum.grossProfit ?? 0,
+          availingLoanCount: prevLoan,
+        };
+      }
+    }
+
     res.json({
       totalProjectValue: totalProjectValue._sum.projectCost || 0,
       totalAmountReceived: totalAmountReceived._sum.totalAmountReceived || 0,
+      totalGrossProfit: totalGrossProfit._sum.grossProfit ?? 0,
       totalOutstanding: totalOutstanding, // Use the calculated totalOutstanding (only PENDING and PARTIAL)
       projectsByPaymentStatus, // Use the calculated effective payment status
       availingLoanCount,
@@ -1380,6 +1601,7 @@ router.get('/finance', authenticate, async (req: Request, res) => {
       profitBySalesperson: profitBreakdown,
       projectValueByType: valueByTypeWithPercentage,
       projectValueProfitByFY,
+      previousYearFinanceKpis,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -1681,7 +1903,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
       ...pipelineByFY.map((item) => item.year),
     ]);
 
-    let projectValueProfitByFY = Array.from(allFYs)
+    let projectValueProfitByFY: ProjectValueProfitFYRow[] = Array.from(allFYs)
       .sort()
       .map((fy) => ({
         fy,
@@ -1691,37 +1913,19 @@ router.get('/management', authenticate, async (req: Request, res) => {
         totalPipeline: pipelineByFY.find((item) => item.year === fy)?._sum.projectCost || 0,
       }));
 
-    // When exactly one FY is selected, include previous FY in projectValueProfitByFY for YoY (full-year comparison).
-    if (fyFilters.length === 1) {
-      const previousFY = getPreviousFY(fyFilters[0]);
-      if (previousFY && !projectValueProfitByFY.some((r) => r.fy === previousFY)) {
-        const baseWherePrevMgmt: any = {};
-        const wherePrev = applyDateFilters(baseWherePrevMgmt, [previousFY], [], []);
-        const revenueWherePrev = getRevenueWhere(wherePrev);
-        const pipelineWherePrevMgmt = { ...wherePrev, ...pipelineWhereBaseMgmt };
-        const [prevRev, prevProfit, prevCap, prevPipe] = await Promise.all([
-          prisma.project.aggregate({ where: revenueWherePrev, _sum: { projectCost: true } }),
-          prisma.project.aggregate({ where: { ...revenueWherePrev, grossProfit: { not: null } }, _sum: { grossProfit: true } }),
-          prisma.project.aggregate({ where: { ...revenueWherePrev, systemCapacity: { not: null } }, _sum: { systemCapacity: true } }),
-          prisma.project.aggregate({ where: pipelineWherePrevMgmt, _sum: { projectCost: true } }),
-        ]);
-        projectValueProfitByFY = [
-          ...projectValueProfitByFY,
-          {
-            fy: previousFY,
-            totalProjectValue: prevRev._sum.projectCost || 0,
-            totalProfit: prevProfit._sum.grossProfit || 0,
-            totalCapacity: prevCap._sum.systemCapacity || 0,
-            totalPipeline: prevPipe._sum.projectCost || 0,
-          },
-        ].sort((a, b) => String(a.fy).localeCompare(String(b.fy)));
-      }
-    }
+    projectValueProfitByFY = await appendPreviousFYToProjectValueProfitByFY(
+      fyFilters,
+      projectValueProfitByFY,
+      {},
+      'full'
+    );
 
     // Projects by Stage / Execution Status (totalPipeline, projectsByStatusRawMgmt from batch above)
-    const projectsByStatus = buildProjectsByStatus(
+    let projectsByStatus = buildProjectsByStatus(
       projectsByStatusRawMgmt.map((r) => ({ status: r.projectStatus, _count: r._count.id }))
     );
+    const avgDaysByStatusMgmt = await computeAvgDaysByProjectStatus(where);
+    projectsByStatus = mergeProjectsByStatusAvgDays(projectsByStatus, avgDaysByStatusMgmt);
 
     // Open Deals = Lead, Site Survey, Proposal (for Management/Admin tile)
     const openDealsStatuses: ProjectStatus[] = [
@@ -2097,6 +2301,287 @@ router.get('/revenue-by-lead-source', authenticate, async (req: Request, res: Re
   } catch (error: any) {
     console.error('[Revenue by Lead Source API] Error:', error);
     res.status(500).json({ error: error.message || 'Failed to fetch revenue by lead source' });
+  }
+});
+
+const ZENITH_PIPELINE_STATUSES: ProjectStatus[] = [
+  ProjectStatus.LEAD,
+  ProjectStatus.SITE_SURVEY,
+  ProjectStatus.PROPOSAL,
+  ProjectStatus.CONFIRMED,
+];
+
+const ZENITH_FINANCE_EARLY_OR_LOST: ProjectStatus[] = [
+  ProjectStatus.LEAD,
+  ProjectStatus.SITE_SURVEY,
+  ProjectStatus.PROPOSAL,
+  ProjectStatus.LOST,
+];
+
+/** Role-specific “Your Focus” data for Zenith (KPI strip → funnel). */
+router.get('/zenith-focus', authenticate, async (req: Request, res: Response) => {
+  try {
+    const role = req.user?.role;
+    const userId = req.user?.id;
+    if (!role || !userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const fyFilters = req.query.fy ? (Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[] : [];
+    const monthFilters = req.query.month
+      ? (Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[]
+      : [];
+    const quarterFilters = req.query.quarter
+      ? (Array.isArray(req.query.quarter) ? req.query.quarter : [req.query.quarter]) as string[]
+      : [];
+
+    const baseWhere: any = {};
+    const where = applyDateFilters(baseWhere, fyFilters, monthFilters, quarterFilters);
+
+    const buildSalesPipeline = async (scope: 'self' | 'all') => {
+      const w: any = {
+        ...where,
+        projectStatus: { in: ZENITH_PIPELINE_STATUSES },
+      };
+      if (scope === 'self') w.salespersonId = userId;
+
+      const projects = await prisma.project.findMany({
+        where: w,
+        select: {
+          id: true,
+          projectStatus: true,
+          projectCost: true,
+          updatedAt: true,
+          customer: { select: { customerName: true } },
+          projectRemarks: { orderBy: { createdAt: 'desc' }, take: 1, select: { createdAt: true } },
+        },
+        orderBy: { updatedAt: 'asc' },
+        take: 80,
+      });
+
+      const now = Date.now();
+      const rows = projects.map((p) => {
+        const remarkAt = p.projectRemarks[0]?.createdAt?.getTime() ?? 0;
+        const lastTs = Math.max(p.updatedAt.getTime(), remarkAt);
+        const daysSinceActivity = Math.floor((now - lastTs) / 86400000);
+        return {
+          projectId: p.id,
+          customerName: p.customer?.customerName?.trim() || '—',
+          stage: PROJECT_STATUS_LABELS[p.projectStatus] || p.projectStatus,
+          dealValue: p.projectCost ?? 0,
+          daysSinceActivity,
+        };
+      });
+      const followUpNeeded = rows.filter((r) => r.daysSinceActivity > 7).length;
+      return { rows, followUpNeeded };
+    };
+
+    const buildFinanceRadar = async () => {
+      const receivingWhere: any = {
+        ...where,
+        projectCost: { gt: 0 },
+        projectStatus: { notIn: ZENITH_FINANCE_EARLY_OR_LOST },
+      };
+
+      const [outstandingAgg, settled, subsidyPendingCount, overdueList, collectedAgg, subsidyValAgg] =
+        await Promise.all([
+          prisma.project.aggregate({
+            where: {
+              ...receivingWhere,
+              paymentStatus: { in: [PaymentStatus.PENDING, PaymentStatus.PARTIAL] },
+            },
+            _sum: { balanceAmount: true },
+          }),
+          prisma.project.findMany({
+            where: {
+              ...where,
+              balanceAmount: 0,
+              totalAmountReceived: { gt: 0 },
+              confirmationDate: { not: null },
+              lastPaymentDate: { not: null },
+            },
+            select: { confirmationDate: true, lastPaymentDate: true },
+            take: 500,
+          }),
+          prisma.project.count({
+            where: { ...where, projectStatus: ProjectStatus.SUBMITTED_FOR_SUBSIDY },
+          }),
+          prisma.project.findMany({
+            where: {
+              ...receivingWhere,
+              paymentStatus: { in: [PaymentStatus.PENDING, PaymentStatus.PARTIAL] },
+              balanceAmount: { gt: 0 },
+              confirmationDate: { not: null },
+            },
+            select: {
+              id: true,
+              balanceAmount: true,
+              confirmationDate: true,
+              customer: { select: { customerName: true } },
+            },
+            orderBy: { balanceAmount: 'desc' },
+            take: 5,
+          }),
+          prisma.project.aggregate({
+            where: getRevenueWhere(where),
+            _sum: { totalAmountReceived: true },
+          }),
+          prisma.project.aggregate({
+            where: { ...where, projectStatus: ProjectStatus.SUBMITTED_FOR_SUBSIDY },
+            _sum: { projectCost: true },
+          }),
+        ]);
+
+      let sumDays = 0;
+      let nCol = 0;
+      for (const p of settled) {
+        if (!p.confirmationDate || !p.lastPaymentDate) continue;
+        const d = (p.lastPaymentDate.getTime() - p.confirmationDate.getTime()) / 86400000;
+        if (d >= 0 && d < 4000) {
+          sumDays += d;
+          nCol++;
+        }
+      }
+      const avgCollectionDays = nCol > 0 ? Math.round((sumDays / nCol) * 10) / 10 : null;
+      const totalOutstanding = outstandingAgg._sum.balanceAmount ?? 0;
+      const collectedTotal = collectedAgg._sum.totalAmountReceived ?? 0;
+      const subsidyPendingValue = subsidyValAgg._sum.projectCost ?? 0;
+
+      const overdueTop5 = overdueList.map((p) => {
+        const conf = p.confirmationDate!;
+        const daysOverdue = Math.max(0, Math.floor((Date.now() - conf.getTime()) / 86400000));
+        return {
+          projectId: p.id,
+          customerName: p.customer?.customerName?.trim() || '—',
+          amount: p.balanceAmount ?? 0,
+          dueSince: conf.toISOString(),
+          daysOverdue,
+        };
+      });
+
+      return {
+        totalOutstanding,
+        avgCollectionDays,
+        subsidyPendingCount,
+        overdueTop5,
+        donut: {
+          collected: collectedTotal,
+          outstanding: totalOutstanding,
+          subsidyPending: subsidyPendingValue,
+        },
+      };
+    };
+
+    const buildInstallPulse = async () => {
+      const projects = await prisma.project.findMany({
+        where: { ...where, projectStatus: ProjectStatus.UNDER_INSTALLATION },
+        select: {
+          id: true,
+          systemCapacity: true,
+          expectedCommissioningDate: true,
+          customer: { select: { customerName: true } },
+          opsPerson: { select: { name: true } },
+          installations: {
+            orderBy: { updatedAt: 'desc' },
+            take: 1,
+            select: {
+              installerName: true,
+              startDate: true,
+              completionDate: true,
+              status: true,
+            },
+          },
+        },
+        take: 100,
+      });
+
+      const now = Date.now();
+      const rows = projects.map((p) => {
+        const inst = p.installations[0];
+        const installer = inst?.installerName?.trim() || p.opsPerson?.name?.trim() || '—';
+        const startDate = inst?.startDate?.toISOString() ?? null;
+        const expected = p.expectedCommissioningDate?.toISOString() ?? null;
+
+        let percentComplete: number | null = null;
+        if (inst?.completionDate || inst?.status === InstallationStatus.COMPLETED) {
+          percentComplete = 100;
+        } else if (inst?.startDate && p.expectedCommissioningDate) {
+          const total = p.expectedCommissioningDate.getTime() - inst.startDate.getTime();
+          const elapsed = now - inst.startDate.getTime();
+          if (total > 0) {
+            percentComplete = Math.min(99, Math.max(8, Math.round((elapsed / total) * 100)));
+          } else {
+            percentComplete = 45;
+          }
+        } else if (inst?.status === InstallationStatus.IN_PROGRESS) {
+          percentComplete = 55;
+        } else if (inst) {
+          percentComplete = 25;
+        }
+
+        const overdue =
+          !!p.expectedCommissioningDate && now > p.expectedCommissioningDate.getTime();
+
+        return {
+          projectId: p.id,
+          customerName: p.customer?.customerName?.trim() || '—',
+          kW: p.systemCapacity ?? null,
+          installer,
+          startDate,
+          expectedCompletion: expected,
+          percentComplete,
+          overdue,
+        };
+      });
+
+      let sumAge = 0;
+      let nAge = 0;
+      for (const p of projects) {
+        const inst = p.installations[0];
+        if (inst?.startDate) {
+          sumAge += (now - inst.startDate.getTime()) / 86400000;
+          nAge++;
+        }
+      }
+      const avgInstallationDays = nAge > 0 ? Math.round((sumAge / nAge) * 10) / 10 : null;
+      const delayedCount = rows.filter((r) => r.overdue).length;
+
+      return { rows, avgInstallationDays, delayedCount };
+    };
+
+    if (role === UserRole.SALES) {
+      const salesPipeline = await buildSalesPipeline('self');
+      return res.json({ focusKind: 'SALES', salesPipeline });
+    }
+
+    if (role === UserRole.FINANCE) {
+      const financeRadar = await buildFinanceRadar();
+      return res.json({ focusKind: 'FINANCE', financeRadar });
+    }
+
+    if (role === UserRole.OPERATIONS) {
+      const installPulse = await buildInstallPulse();
+      return res.json({ focusKind: 'OPERATIONS', installPulse });
+    }
+
+    if (role === UserRole.MANAGEMENT || role === UserRole.ADMIN) {
+      const [salesPipeline, financeRadar, installPulse] = await Promise.all([
+        buildSalesPipeline('all'),
+        buildFinanceRadar(),
+        buildInstallPulse(),
+      ]);
+      return res.json({
+        focusKind: 'MANAGEMENT',
+        salesPipeline,
+        financeRadar,
+        installPulse,
+      });
+    }
+
+    return res.json({ focusKind: 'NONE' });
+  } catch (error: any) {
+    console.error('[zenith-focus]', error);
+    res.status(500).json({ error: error.message || 'Failed to load Zenith focus' });
   }
 });
 

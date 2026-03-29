@@ -18,7 +18,7 @@ Use the user menu (your name, top right) and select the logout option. For secur
 The system logs you out after a period of inactivity for security. Log in again to continue; consider changing your password if you are concerned about account security.
 
 ### How do I get help in the app?
-Press **?** (question mark) from most pages for context-sensitive help, or click **Help** in the navigation menu. Help content is organised by section (Getting Started, Roles, Modules, Analytics, Security, FAQ).
+Press **?** (question mark) from most pages for context-sensitive help, or click **Help** in the navigation menu. Help content is organised by section (Getting Started, Roles, Modules, Analytics & Reports, Security, FAQ). **Zenith** is documented inside **Analytics** — open [Analytics & Reports](/help/analytics) and scroll to **Zenith Command Center**, or use the direct link [Zenith Command Center](/help/analytics#zenith-command-center).
 
 ## Roles and Permissions
 
@@ -38,6 +38,9 @@ Use the top navigation menu. Available options depend on your user role.
 
 ### What is the Dashboard?
 The Dashboard provides an overview of key metrics and information relevant to your role (KPIs, charts, Quick Access tiles). Each role sees a different dashboard (Sales, Operations, Finance, Management/Admin).
+
+### What is Zenith?
+**Zenith** is an optional full-screen **Command Center** for analytics. Open it from the **Dashboard** menu (**Zenith ✦**). It uses the same **Financial Year, Quarter, and Month** rules as the classic dashboard, with a sticky command bar, an **AI Insights** scrolling ribbon (plain-English highlights from your data), a **Your Focus** area tailored to **Sales / Finance / Operations / Management**, animated **KPI** cards with sparklines and trend badges, funnels, and charts. Full documentation: [Analytics & Reports → Zenith Command Center](/help/analytics#zenith-command-center).
 
 ### What are the Dashboard filters (FY, Quarter, Month)?
 Use the filter bar at the top of the Dashboard to focus on a period. **Financial Year (FY)** is always available; **Quarter** and **Month** are available when exactly one FY is selected. Tile counts and most charts respect these filters.

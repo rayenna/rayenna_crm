@@ -6,6 +6,16 @@ import TipOfTheDay from './TipOfTheDay'
 import { getHelpSectionForRoute, helpSections } from '../help/sections'
 import { setSessionStorageItem } from '../lib/safeLocalStorage'
 
+/** For `/help/analytics#foo`, `pathname` is `/help/analytics` and `hash` is `#foo`. */
+function isHelpMenuPathActive(itemPath: string, pathname: string, locHash: string): boolean {
+  const i = itemPath.indexOf('#')
+  if (i === -1) return pathname === itemPath
+  const pathOnly = itemPath.slice(0, i)
+  const frag = itemPath.slice(i)
+  if (pathname !== pathOnly) return false
+  return locHash === frag
+}
+
 const Layout = () => {
   const { user, logout, hasRole } = useAuth()
   const location = useLocation()
@@ -29,9 +39,11 @@ const Layout = () => {
 
   const filteredNav = navigation.filter((nav) => hasRole(nav.roles))
   
-  // Help menu items - visible to all logged-in users
-  const helpMenuItems = [
-    { name: 'Help (?)', path: '/help' },
+  const helpMenuItems: (
+    | { name: string; contextHelp: true }
+    | { name: string; path: string; openTip?: boolean }
+  )[] = [
+    { name: 'Help (?)', contextHelp: true },
     { name: 'About', path: '/about' },
     { name: 'Tip of the Day', path: '/dashboard?showTip=1', openTip: true },
   ]
@@ -53,7 +65,11 @@ const Layout = () => {
   const getHelpPath = () => {
     const sectionId = getHelpSectionForRoute(location.pathname)
     const section = helpSections.find((s) => s.id === sectionId)
-    return section ? `/help/${section.routeKey}` : '/help'
+    if (!section) return '/help'
+    if (location.pathname.startsWith('/zenith')) {
+      return `/help/${section.routeKey}#zenith-command-center`
+    }
+    return `/help/${section.routeKey}`
   }
 
   const openHelp = () => {
@@ -239,20 +255,20 @@ const Layout = () => {
                   
                   {/* Dropdown Menu */}
                   {helpDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[100]">
+                    <div className="absolute top-full left-0 mt-1 min-w-[11rem] w-max max-w-[min(100vw,15rem)] bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[100]">
                       {helpMenuItems.map((item) =>
-                        item.openTip ? (
+                        'openTip' in item && item.openTip ? (
                           <button
-                            key={item.path}
+                            key={item.name}
                             type="button"
                             onClick={openTipOfTheDay}
                             className="block w-full text-left px-4 py-2 text-sm font-medium transition-colors text-gray-700 hover:bg-gray-50 hover:text-primary-600"
                           >
                             {item.name}
                           </button>
-                        ) : item.path.startsWith('/help') ? (
+                        ) : 'contextHelp' in item && item.contextHelp ? (
                           <button
-                            key={item.path}
+                            key={item.name}
                             type="button"
                             onClick={openHelp}
                             className={`block w-full text-left px-4 py-2 text-sm font-medium transition-colors ${
@@ -261,20 +277,33 @@ const Layout = () => {
                           >
                             {item.name}
                           </button>
-                        ) : (
+                        ) : 'path' in item && item.path.startsWith('/help/') ? (
                           <Link
                             key={item.path}
                             to={item.path}
                             onClick={() => setHelpDropdownOpen(false)}
                             className={`block px-4 py-2 text-sm font-medium transition-colors ${
-                              location.pathname.startsWith(item.path)
+                              isHelpMenuPathActive(item.path, location.pathname, location.hash)
                                 ? 'bg-primary-50 text-primary-700'
                                 : 'text-gray-700 hover:bg-gray-50 hover:text-primary-600'
                             }`}
                           >
                             {item.name}
                           </Link>
-                        )
+                        ) : 'path' in item ? (
+                          <Link
+                            key={item.path}
+                            to={item.path}
+                            onClick={() => setHelpDropdownOpen(false)}
+                            className={`block px-4 py-2 text-sm font-medium transition-colors ${
+                              location.pathname.startsWith(item.path.split('?')[0] ?? item.path)
+                                ? 'bg-primary-50 text-primary-700'
+                                : 'text-gray-700 hover:bg-gray-50 hover:text-primary-600'
+                            }`}
+                          >
+                            {item.name}
+                          </Link>
+                        ) : null
                       )}
                     </div>
                   )}
@@ -364,18 +393,18 @@ const Layout = () => {
                 ))}
                 {/* Help Menu Items for Mobile */}
                 {helpMenuItems.map((item) =>
-                  item.openTip ? (
+                  'openTip' in item && item.openTip ? (
                     <button
-                      key={item.path}
+                      key={item.name}
                       type="button"
                       onClick={openTipOfTheDay}
                       className="block w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 text-white/95 hover:bg-white/20 hover:text-white"
                     >
                       {item.name}
                     </button>
-                  ) : item.path.startsWith('/help') ? (
+                  ) : 'contextHelp' in item && item.contextHelp ? (
                     <button
-                      key={item.path}
+                      key={item.name}
                       type="button"
                       onClick={() => {
                         setMobileMenuOpen(false)
@@ -387,20 +416,33 @@ const Layout = () => {
                     >
                       {item.name}
                     </button>
-                  ) : (
+                  ) : 'path' in item && item.path.startsWith('/help/') ? (
                     <Link
                       key={item.path}
                       to={item.path}
                       onClick={() => setMobileMenuOpen(false)}
                       className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 ${
-                        location.pathname.startsWith(item.path)
+                        isHelpMenuPathActive(item.path, location.pathname, location.hash)
                           ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40'
                           : 'text-white/95 hover:bg-white/20 hover:text-white'
                       }`}
                     >
                       {item.name}
                     </Link>
-                  )
+                  ) : 'path' in item ? (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 ${
+                        location.pathname.startsWith(item.path.split('?')[0] ?? item.path)
+                          ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40'
+                          : 'text-white/95 hover:bg-white/20 hover:text-white'
+                      }`}
+                    >
+                      {item.name}
+                    </Link>
+                  ) : null
                 )}
                 {/* Mobile user info and actions */}
                 <div className="mt-4 pt-4 border-t border-white/20 px-4 space-y-2">

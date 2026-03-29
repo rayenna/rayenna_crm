@@ -98,3 +98,43 @@
   color: rgba(255, 255, 255, 0.75) !important;
   font-size: 12px !important;
 }
+
+/* Word cloud (DOM spans) — hover glow matches Zenith gold/teal accents */
+.zenith-root .zenith-wordcloud-host {
+  position: relative;
+}
+
+.zenith-root .zenith-wordcloud-host .zenith-wc-word {
+  cursor: default;
+  letter-spacing: 0.02em;
+  transition:
+    filter 0.22s ease,
+    text-shadow 0.22s ease;
+}
+
+.zenith-root .zenith-wordcloud-host .zenith-wc-word.zenith-wc-glow {
+  filter: drop-shadow(0 0 6px rgba(245, 166, 35, 0.95)) drop-shadow(0 0 14px rgba(0, 212, 180, 0.55));
+  text-shadow:
+    0 0 12px rgba(245, 166, 35, 0.85),
+    0 0 24px rgba(0, 212, 180, 0.45);
+  z-index: 5;
+}
+
+/* AI Insights ticker — seamless loop, pause on hover */
+@keyframes zenith-insights-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.zenith-root .zenith-ai-insights-track {
+  width: max-content;
+  animation: zenith-insights-scroll 30s linear infinite;
+}
+
+.zenith-root .zenith-ai-insights-root:hover .zenith-ai-insights-track {
+  animation-play-state: paused;
+}

@@ -75,6 +75,19 @@ export const TIPS: string[] = [
   'Save frequently used Costing configurations as templates in Proposal Engine – they are shared across all Sales and Admin users.',
   'Only Admin can delete shared Costing templates in Proposal Engine; Sales can save and use them but not remove them.',
   'Operations, Management, and Finance can open Proposal Engine from Proposals (New) to review Costing, BOM, ROI, and Proposal in read-only mode.',
+  // Zenith Command Center
+  'Open Zenith ✦ from the Dashboard menu for a full-screen analytics view — same FY, Quarter, and Month rules as the classic dashboard.',
+  'Zenith AI Insights: under the command bar, a scrolling ribbon shows plain-English highlights from your current data — hover to pause, click any line to jump to a related section.',
+  'Zenith Your Focus sits between KPIs and the funnel: Sales see their pipeline table with follow-up styling; Finance see payment radar; Operations see installation pulse; Management and Admin see all three blocks.',
+  'Sales in Zenith: use Log activity in Your Focus to add a quick project remark — it updates last-activity signals for your pipeline row.',
+  'Zenith KPI cards count up when you load or change date filters, show a 7-point FY sparkline (gold up, crimson down), and a teal/crimson % badge when a prior-period comparison exists.',
+  'In Zenith, select exactly one Financial Year to see comparison % badges on KPI tiles when a prior-period comparison is available.',
+  'Zenith Operations: the KPI row covers Pending Installation, Completed Installation, Subsidy Credited, and Confirmed Revenue for your selected dates.',
+  'Zenith Finance: watch Total Revenue, Amount Received, Outstanding, Total Profit, and Availing Loan — all scoped to your filters.',
+  'Use Reset in the Zenith command bar to clear FY, Quarter, and Month and refresh the unscoped summary.',
+  'From Zenith, press ? (outside text fields) to open Help on Analytics — it jumps straight to the Zenith Command Center subsection.',
+  'Zenith funnel and chart tiles often link to Projects with the same date filters — click through to reconcile lists with what you saw.',
+  'Sales Zenith shows your data only (like your Sales dashboard); Management and Admin see company-wide executive metrics.',
 ]
 
 /**

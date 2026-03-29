@@ -8,7 +8,37 @@ export interface ZenithFunnelStage {
   label: string
   count: number
   to: string
+  /** Legacy mobile row gradient (optional; desktop SVG uses gold→teal ramp). */
   gradient: string
+  /** Mean days in current status (from API); null for composite stages (e.g. Open Deals). */
+  avgDaysInStage?: number | null
+}
+
+type StatusRow = { status: string; avgDaysInStage?: number | null }
+
+function avgDaysForStatus(data: Record<string, unknown>, status: ProjectStatus): number | null {
+  const list = (data?.projectsByStatus ?? []) as StatusRow[]
+  const row = list.find((p) => p.status === status)
+  const v = row?.avgDaysInStage
+  return v != null && Number.isFinite(v) ? v : null
+}
+
+/** Weighted mean of avg days for composite funnel stages (e.g. Completed + Subsidy). */
+function avgDaysComposite(data: Record<string, unknown>, statuses: ProjectStatus[]): number | null {
+  const list = (data?.projectsByStatus ?? []) as (StatusRow & { count?: number })[]
+  let sum = 0
+  let w = 0
+  for (const st of statuses) {
+    const row = list.find((p) => p.status === st)
+    const days = row?.avgDaysInStage
+    const c = row && 'count' in row ? Number(row.count) : 0
+    if (days != null && Number.isFinite(days) && c > 0) {
+      sum += days * c
+      w += c
+    }
+  }
+  if (w <= 0) return null
+  return Math.round((sum / w) * 10) / 10
 }
 
 function countByStatus(data: Record<string, unknown>, status: ProjectStatus): number {
@@ -51,6 +81,7 @@ export function buildZenithFunnelStages(
         count: leads,
         to: buildProjectsUrl({ status: [ProjectStatus.LEAD] }, t),
         gradient: 'from-violet-600 to-indigo-500',
+        avgDaysInStage: avgDaysForStatus(data, ProjectStatus.LEAD),
       },
       {
         id: 'survey',
@@ -58,6 +89,7 @@ export function buildZenithFunnelStages(
         count: p?.survey ?? 0,
         to: buildProjectsUrl({ status: [ProjectStatus.SITE_SURVEY] }, t),
         gradient: 'from-indigo-600 to-blue-600',
+        avgDaysInStage: avgDaysForStatus(data, ProjectStatus.SITE_SURVEY),
       },
       {
         id: 'proposal',
@@ -65,6 +97,7 @@ export function buildZenithFunnelStages(
         count: p?.proposal ?? 0,
         to: buildProjectsUrl({ status: [ProjectStatus.PROPOSAL] }, t),
         gradient: 'from-amber-500 to-orange-500',
+        avgDaysInStage: avgDaysForStatus(data, ProjectStatus.PROPOSAL),
       },
       {
         id: 'open',
@@ -75,6 +108,7 @@ export function buildZenithFunnelStages(
           t,
         ),
         gradient: 'from-rose-600 to-red-500',
+        avgDaysInStage: null,
       },
       {
         id: 'confirmed',
@@ -82,6 +116,7 @@ export function buildZenithFunnelStages(
         count: p?.approved ?? 0,
         to: buildProjectsUrl({ status: [ProjectStatus.CONFIRMED] }, t),
         gradient: 'from-fuchsia-600 to-pink-500',
+        avgDaysInStage: avgDaysForStatus(data, ProjectStatus.CONFIRMED),
       },
       {
         id: 'install',
@@ -89,6 +124,7 @@ export function buildZenithFunnelStages(
         count: under,
         to: buildProjectsUrl({ status: [ProjectStatus.UNDER_INSTALLATION] }, t),
         gradient: 'from-sky-600 to-cyan-500',
+        avgDaysInStage: avgDaysForStatus(data, ProjectStatus.UNDER_INSTALLATION),
       },
       {
         id: 'completed',
@@ -99,6 +135,10 @@ export function buildZenithFunnelStages(
           t,
         ),
         gradient: 'from-emerald-600 to-teal-500',
+        avgDaysInStage: avgDaysComposite(data, [
+          ProjectStatus.COMPLETED,
+          ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
+        ]),
       },
       {
         id: 'subsidy',
@@ -106,6 +146,7 @@ export function buildZenithFunnelStages(
         count: subsidy,
         to: buildProjectsUrl({ status: [ProjectStatus.COMPLETED_SUBSIDY_CREDITED] }, t),
         gradient: 'from-yellow-500 to-amber-400',
+        avgDaysInStage: avgDaysForStatus(data, ProjectStatus.COMPLETED_SUBSIDY_CREDITED),
       },
     ]
   }
@@ -122,6 +163,7 @@ export function buildZenithFunnelStages(
       count: sales?.totalLeads ?? 0,
       to: buildProjectsUrl({ status: [ProjectStatus.LEAD] }, t),
       gradient: 'from-violet-600 to-indigo-500',
+      avgDaysInStage: avgDaysForStatus(data, ProjectStatus.LEAD),
     },
     {
       id: 'survey',
@@ -129,6 +171,7 @@ export function buildZenithFunnelStages(
       count: countByStatus(data, ProjectStatus.SITE_SURVEY),
       to: buildProjectsUrl({ status: [ProjectStatus.SITE_SURVEY] }, t),
       gradient: 'from-indigo-600 to-blue-600',
+      avgDaysInStage: avgDaysForStatus(data, ProjectStatus.SITE_SURVEY),
     },
     {
       id: 'proposal',
@@ -136,6 +179,7 @@ export function buildZenithFunnelStages(
       count: countByStatus(data, ProjectStatus.PROPOSAL),
       to: buildProjectsUrl({ status: [ProjectStatus.PROPOSAL] }, t),
       gradient: 'from-amber-500 to-orange-500',
+      avgDaysInStage: avgDaysForStatus(data, ProjectStatus.PROPOSAL),
     },
     {
       id: 'open',
@@ -146,6 +190,7 @@ export function buildZenithFunnelStages(
         t,
       ),
       gradient: 'from-rose-600 to-red-500',
+      avgDaysInStage: null,
     },
     {
       id: 'confirmed',
@@ -153,6 +198,7 @@ export function buildZenithFunnelStages(
       count: countByStatus(data, ProjectStatus.CONFIRMED),
       to: buildProjectsUrl({ status: [ProjectStatus.CONFIRMED] }, t),
       gradient: 'from-fuchsia-600 to-pink-500',
+      avgDaysInStage: avgDaysForStatus(data, ProjectStatus.CONFIRMED),
     },
     {
       id: 'install',
@@ -160,6 +206,7 @@ export function buildZenithFunnelStages(
       count: ops?.pendingInstallation ?? 0,
       to: buildProjectsUrl({ status: [ProjectStatus.UNDER_INSTALLATION] }, t),
       gradient: 'from-sky-600 to-cyan-500',
+      avgDaysInStage: avgDaysForStatus(data, ProjectStatus.UNDER_INSTALLATION),
     },
     {
       id: 'completed',
@@ -172,6 +219,10 @@ export function buildZenithFunnelStages(
         t,
       ),
       gradient: 'from-emerald-600 to-teal-500',
+      avgDaysInStage: avgDaysComposite(data, [
+        ProjectStatus.COMPLETED,
+        ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
+      ]),
     },
     {
       id: 'subsidy',
@@ -179,6 +230,7 @@ export function buildZenithFunnelStages(
       count: ops?.subsidyCredited ?? 0,
       to: buildProjectsUrl({ status: [ProjectStatus.COMPLETED_SUBSIDY_CREDITED] }, t),
       gradient: 'from-yellow-500 to-amber-400',
+      avgDaysInStage: avgDaysForStatus(data, ProjectStatus.COMPLETED_SUBSIDY_CREDITED),
     },
   ]
 }
@@ -201,6 +253,7 @@ export function buildZenithFunnelFromStatuses(
       count: c(ProjectStatus.LEAD),
       to: buildProjectsUrl({ status: [ProjectStatus.LEAD] }, t),
       gradient: 'from-violet-600 to-indigo-500',
+      avgDaysInStage: avgDaysForStatus(data, ProjectStatus.LEAD),
     },
     {
       id: 'survey',
@@ -208,6 +261,7 @@ export function buildZenithFunnelFromStatuses(
       count: c(ProjectStatus.SITE_SURVEY),
       to: buildProjectsUrl({ status: [ProjectStatus.SITE_SURVEY] }, t),
       gradient: 'from-indigo-600 to-blue-600',
+      avgDaysInStage: avgDaysForStatus(data, ProjectStatus.SITE_SURVEY),
     },
     {
       id: 'proposal',
@@ -215,6 +269,7 @@ export function buildZenithFunnelFromStatuses(
       count: c(ProjectStatus.PROPOSAL),
       to: buildProjectsUrl({ status: [ProjectStatus.PROPOSAL] }, t),
       gradient: 'from-amber-500 to-orange-500',
+      avgDaysInStage: avgDaysForStatus(data, ProjectStatus.PROPOSAL),
     },
     {
       id: 'open',
@@ -225,6 +280,7 @@ export function buildZenithFunnelFromStatuses(
         t,
       ),
       gradient: 'from-rose-600 to-red-500',
+      avgDaysInStage: null,
     },
     {
       id: 'confirmed',
@@ -232,6 +288,7 @@ export function buildZenithFunnelFromStatuses(
       count: c(ProjectStatus.CONFIRMED),
       to: buildProjectsUrl({ status: [ProjectStatus.CONFIRMED] }, t),
       gradient: 'from-fuchsia-600 to-pink-500',
+      avgDaysInStage: avgDaysForStatus(data, ProjectStatus.CONFIRMED),
     },
     {
       id: 'install',
@@ -239,13 +296,7 @@ export function buildZenithFunnelFromStatuses(
       count: c(ProjectStatus.UNDER_INSTALLATION),
       to: buildProjectsUrl({ status: [ProjectStatus.UNDER_INSTALLATION] }, t),
       gradient: 'from-sky-600 to-cyan-500',
-    },
-    {
-      id: 'sub',
-      label: 'Submitted Subsidy',
-      count: c(ProjectStatus.SUBMITTED_FOR_SUBSIDY),
-      to: buildProjectsUrl({ status: [ProjectStatus.SUBMITTED_FOR_SUBSIDY] }, t),
-      gradient: 'from-teal-600 to-emerald-500',
+      avgDaysInStage: avgDaysForStatus(data, ProjectStatus.UNDER_INSTALLATION),
     },
     {
       id: 'completed',
@@ -256,6 +307,30 @@ export function buildZenithFunnelFromStatuses(
         t,
       ),
       gradient: 'from-emerald-600 to-teal-500',
+      avgDaysInStage: avgDaysComposite(data, [
+        ProjectStatus.COMPLETED,
+        ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
+      ]),
+    },
+    {
+      id: 'subsidy',
+      label: 'Subsidy Credited',
+      count: c(ProjectStatus.COMPLETED_SUBSIDY_CREDITED),
+      to: buildProjectsUrl({ status: [ProjectStatus.COMPLETED_SUBSIDY_CREDITED] }, t),
+      gradient: 'from-yellow-500 to-amber-400',
+      avgDaysInStage: avgDaysForStatus(data, ProjectStatus.COMPLETED_SUBSIDY_CREDITED),
     },
   ]
+}
+
+/** Operations Zenith: execution-only stages (Confirmed → Subsidy Credited). */
+const OPERATIONS_EXECUTION_FUNNEL_IDS = new Set(['confirmed', 'install', 'completed', 'subsidy'])
+
+export function buildZenithOperationsExecutionFunnel(
+  data: Record<string, unknown>,
+  dateFilter: ZenithDateFilter,
+): ZenithFunnelStage[] {
+  return buildZenithFunnelFromStatuses(data, dateFilter).filter((s) =>
+    OPERATIONS_EXECUTION_FUNNEL_IDS.has(s.id),
+  )
 }
