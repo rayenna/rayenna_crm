@@ -78,8 +78,28 @@ const Dashboard = () => {
     }
   }
 
-  const marqueeText =
+  const announcementProposal =
     'New: Rayenna Proposal Engine is now live — create full solar proposals in one click from any eligible project in the CRM.'
+  const announcementZenith =
+    'Zenith is live — your solar CRM, now reimagined as a command center. Try it under Dashboard.'
+
+  const renderMarqueeUnit = () => (
+    <>
+      <span className="inline-flex items-center gap-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-300 text-primary-900 shadow-sm shrink-0">
+          New
+        </span>
+        <span>{announcementProposal}</span>
+      </span>
+      <span className="mx-6 sm:mx-8 text-amber-100/90" aria-hidden>
+        •
+      </span>
+      <span>{announcementZenith}</span>
+      <span className="mx-6 sm:mx-8 text-amber-100/90" aria-hidden>
+        •
+      </span>
+    </>
+  )
 
   return (
     <div className="px-0 -mt-6 pt-0 pb-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden dashboard-mobile-no-clip">
@@ -98,17 +118,11 @@ const Dashboard = () => {
               <div
                 className="inline-block whitespace-nowrap text-[11px] sm:text-sm font-semibold"
                 style={{
-                  animation: 'ray-proposal-marquee 22s linear infinite',
+                  animation: 'ray-proposal-marquee 32s linear infinite',
                 }}
               >
-                <span className="inline-flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-300 text-primary-900 shadow-sm">
-                    New
-                  </span>
-                  <span>{marqueeText}</span>
-                </span>
-                <span className="mx-8 text-amber-100/90">•</span>
-                <span>{marqueeText}</span>
+                {renderMarqueeUnit()}
+                {renderMarqueeUnit()}
               </div>
             </div>
           </div>
