@@ -12,10 +12,13 @@ const Layout = () => {
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [helpDropdownOpen, setHelpDropdownOpen] = useState(false)
+  const [dashboardDropdownOpen, setDashboardDropdownOpen] = useState(false)
   const helpDropdownRef = useRef<HTMLDivElement>(null)
+  const dashboardDropdownRef = useRef<HTMLDivElement>(null)
+
+  const dashboardNavRoles = [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE, UserRole.MANAGEMENT]
 
   const navigation = [
-    { name: 'Dashboard', path: '/dashboard', roles: [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE, UserRole.MANAGEMENT] },
     { name: 'Customers', path: '/customers', roles: [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE, UserRole.MANAGEMENT] },
     { name: 'Projects', path: '/projects', roles: [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE, UserRole.MANAGEMENT] },
     { name: 'Support Tickets', path: '/support-tickets', roles: [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.MANAGEMENT] },
@@ -42,6 +45,9 @@ const Layout = () => {
   }
   
   const isHelpActive = location.pathname.startsWith('/help') || location.pathname.startsWith('/about')
+  const isDashboardMenuActive =
+    location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/zenith')
+  const canAccessDashboardMenu = hasRole(dashboardNavRoles)
 
   /** Context-sensitive Help path: open the section that matches the current page */
   const getHelpPath = () => {
@@ -113,16 +119,19 @@ const Layout = () => {
       if (helpDropdownRef.current && !helpDropdownRef.current.contains(event.target as Node)) {
         setHelpDropdownOpen(false)
       }
+      if (dashboardDropdownRef.current && !dashboardDropdownRef.current.contains(event.target as Node)) {
+        setDashboardDropdownOpen(false)
+      }
     }
 
-    if (helpDropdownOpen) {
+    if (helpDropdownOpen || dashboardDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside)
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [helpDropdownOpen])
+  }, [helpDropdownOpen, dashboardDropdownOpen])
 
   return (
     <div className="min-h-screen bg-gray-50/80">
@@ -139,6 +148,60 @@ const Layout = () => {
               </Link>
               {/* Desktop Navigation - lg and above; also visible in mobile landscape (left-side nav + Help) */}
               <div className="hidden lg:ml-4 lg:flex lg:space-x-2 xl:space-x-3 2xl:space-x-4 items-center flex-wrap lg:gap-1.5 xl:gap-0 landscape-nav-visible">
+                {canAccessDashboardMenu && (
+                  <div
+                    ref={dashboardDropdownRef}
+                    className="relative"
+                    onMouseEnter={() => setDashboardDropdownOpen(true)}
+                    onMouseLeave={() => setDashboardDropdownOpen(false)}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setDashboardDropdownOpen(!dashboardDropdownOpen)}
+                      className={`inline-flex items-center px-3 xl:px-3 2xl:px-4 py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
+                        isDashboardMenuActive
+                          ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40'
+                          : 'text-white/95 hover:bg-white/20 hover:text-white'
+                      }`}
+                    >
+                      Dashboard
+                      <svg
+                        className={`ml-1 h-3 w-3 xl:h-4 xl:w-4 transition-transform ${dashboardDropdownOpen ? 'rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {dashboardDropdownOpen && (
+                      <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[100]">
+                        <Link
+                          to="/dashboard"
+                          className={`block px-4 py-2 text-sm font-medium ${
+                            location.pathname.startsWith('/dashboard')
+                              ? 'bg-primary-50 text-primary-700'
+                              : 'text-gray-700 hover:bg-gray-50 hover:text-primary-600'
+                          }`}
+                          onClick={() => setDashboardDropdownOpen(false)}
+                        >
+                          Dashboard
+                        </Link>
+                        <Link
+                          to="/zenith"
+                          className={`block px-4 py-2 text-sm font-medium ${
+                            location.pathname.startsWith('/zenith')
+                              ? 'bg-primary-50 text-primary-700'
+                              : 'text-gray-700 hover:bg-gray-50 hover:text-primary-600'
+                          }`}
+                          onClick={() => setDashboardDropdownOpen(false)}
+                        >
+                          Zenith ✦
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {filteredNav.map((item) => (
                   <Link
                     key={item.path}
@@ -259,6 +322,32 @@ const Layout = () => {
           {mobileMenuOpen && (
             <div className="lg:hidden pb-4 pt-2 max-h-[min(85vh,400px)] overflow-y-auto overflow-x-hidden overscroll-contain mobile-menu-scroll">
               <div className="space-y-2">
+                {canAccessDashboardMenu && (
+                  <>
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 ${
+                        location.pathname.startsWith('/dashboard')
+                          ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40'
+                          : 'text-white/95 hover:bg-white/20 hover:text-white'
+                      }`}
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      to="/zenith"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 ${
+                        location.pathname.startsWith('/zenith')
+                          ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40'
+                          : 'text-white/95 hover:bg-white/20 hover:text-white'
+                      }`}
+                    >
+                      Zenith ✦
+                    </Link>
+                  </>
+                )}
                 {filteredNav.map((item) => (
                   <Link
                     key={item.path}

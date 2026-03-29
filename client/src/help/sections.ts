@@ -13,7 +13,7 @@ export const helpSections: HelpSection[] = [
     title: 'Getting Started',
     routeKey: 'getting-started',
     markdownPath: '/help-docs/getting-started/index.md',
-    routePatterns: ['/dashboard']
+    routePatterns: ['/dashboard', '/zenith']
   },
   {
     id: 'roles',
@@ -33,7 +33,7 @@ export const helpSections: HelpSection[] = [
     title: 'Analytics',
     routeKey: 'analytics',
     markdownPath: '/help-docs/analytics/index.md',
-    routePatterns: ['/dashboard']
+    routePatterns: ['/dashboard', '/zenith']
   },
   {
     id: 'security',
@@ -53,6 +53,7 @@ export const helpSections: HelpSection[] = [
 // Route to help section mapping (Dashboard opens Analytics for context-sensitive help)
 export const routeToHelpMapping: Record<string, string> = {
   '/dashboard': 'analytics',
+  '/zenith': 'analytics',
   '/customers': 'modules',
   '/projects': 'modules',
   '/support-tickets': 'modules',

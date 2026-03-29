@@ -13,6 +13,7 @@ import Layout from './components/Layout'
 
 const Login = lazy(() => import('./pages/Login'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Zenith = lazy(() => import('./pages/Zenith'))
 const CustomerMaster = lazy(() => import('./pages/CustomerMaster'))
 const Projects = lazy(() => import('./pages/Projects'))
 const ProjectDetail = lazy(() => import('./pages/ProjectDetail'))
@@ -108,6 +109,14 @@ function App() {
               element={
                 <ErrorBoundary>
                   <Suspense fallback={<PageLoader />}><Dashboard /></Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="zenith"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><Zenith /></Suspense>
                 </ErrorBoundary>
               }
             />

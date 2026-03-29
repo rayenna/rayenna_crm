@@ -1,0 +1,100 @@
+/* Zenith — Dark Command Center (scoped via .zenith-root) */
+/* Plus Jakarta Sans: crisp SaaS headings & KPIs; DM Sans: UI body */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Plus+Jakarta+Sans:ital,wght@0,500;0,600;0,700;0,800;1,500&display=swap');
+
+.zenith-root {
+  --zenith-bg: #0a0a0f;
+  --zenith-surface: rgba(255, 255, 255, 0.04);
+  --zenith-border: rgba(255, 255, 255, 0.08);
+  --zenith-gold: #f5a623;
+  --zenith-teal: #00d4b4;
+  --zenith-crimson: #ff4757;
+  --zenith-text: rgba(255, 255, 255, 0.92);
+  --zenith-muted: rgba(255, 255, 255, 0.55);
+  --zenith-font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --zenith-font-body: 'DM Sans', system-ui, sans-serif;
+
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  position: relative;
+  min-height: calc(100vh - 5rem);
+  background-color: var(--zenith-bg);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(245, 166, 35, 0.15), transparent),
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    48px 48px,
+    48px 48px;
+  background-position: center top, center center, center center;
+  color: var(--zenith-text);
+  font-family: var(--zenith-font-body);
+}
+
+.zenith-root h1,
+.zenith-root h2,
+.zenith-root h3,
+.zenith-root .zenith-display {
+  font-family: var(--zenith-font-display);
+  letter-spacing: -0.02em;
+}
+
+/* Large metric numbers: tighter, readable (avoids “overly wide” geometric look) */
+.zenith-root .zenith-kpi-value {
+  font-family: var(--zenith-font-display);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+}
+
+@keyframes zenith-grid-drift {
+  0% {
+    background-position: center top, 0 0, 0 0;
+  }
+  100% {
+    background-position: center top, 48px 48px, 48px 48px;
+  }
+}
+
+.zenith-root.zenith-animated-bg {
+  animation: zenith-grid-drift 120s linear infinite;
+}
+
+.zenith-glass {
+  background: var(--zenith-surface);
+  border: 1px solid var(--zenith-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.zenith-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: zenith-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes zenith-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Recharts text in Zenith */
+.zenith-root .recharts-cartesian-axis-tick-value {
+  fill: rgba(255, 255, 255, 0.45);
+  font-size: 11px;
+}
+
+.zenith-root .recharts-legend-item-text {
+  color: rgba(255, 255, 255, 0.75) !important;
+  font-size: 12px !important;
+}
