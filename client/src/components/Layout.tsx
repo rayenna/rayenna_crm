@@ -473,7 +473,13 @@ const Layout = () => {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto py-6 px-2 sm:px-4 md:px-6 lg:px-8">
+      <main
+        className={
+          location.pathname.startsWith('/zenith')
+            ? 'w-full max-w-none mx-auto py-0 px-0 overflow-x-hidden min-h-0'
+            : 'max-w-7xl mx-auto py-6 px-2 sm:px-4 md:px-6 lg:px-8'
+        }
+      >
         <Outlet />
       </main>
 

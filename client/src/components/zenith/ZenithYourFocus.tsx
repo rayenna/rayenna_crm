@@ -265,10 +265,13 @@ function FinanceRadarBlock({
                   <Tooltip
                     formatter={(v: number) => `₹${Math.round(v).toLocaleString('en-IN')}`}
                     contentStyle={{
-                      background: 'rgba(10,10,15,0.95)',
-                      border: '1px solid rgba(255,255,255,0.1)',
+                      background: 'rgba(10,10,15,0.96)',
+                      border: '1px solid rgba(255,255,255,0.14)',
                       borderRadius: 10,
+                      color: '#f8fafc',
                     }}
+                    labelStyle={{ color: '#ffffff', fontWeight: 600 }}
+                    itemStyle={{ color: '#f1f5f9' }}
                   />
                 </PieChart>
               </ResponsiveContainer>

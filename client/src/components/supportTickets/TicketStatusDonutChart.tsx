@@ -57,18 +57,33 @@ const TicketStatusDonutChart = ({ data, onSliceClick, selectedStatus }: TicketSt
               ))}
             </Pie>
             <Tooltip
-              content={({ active, payload }: any) => {
-                if (active && payload && payload.length) {
+              content={({
+                active,
+                payload,
+              }: {
+                active?: boolean
+                payload?: Array<{ payload?: TicketStatusData }>
+              }) => {
+                if (active && payload && payload.length && payload[0].payload) {
                   const data = payload[0].payload
                   const percentage = total > 0 ? ((data.value / total) * 100).toFixed(1) : 0
                   return (
-                    <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-                      <p className="font-semibold text-gray-900">{data.label}</p>
-                      <p className="text-gray-600">
-                        Count: <span className="font-medium">{data.value}</span>
+                    <div
+                      className="p-3 border border-gray-200 rounded-lg shadow-lg"
+                      style={{
+                        backgroundColor: '#ffffff',
+                        color: '#0f172a',
+                      }}
+                    >
+                      <p className="font-semibold" style={{ color: '#0f172a' }}>
+                        {data.label}
                       </p>
-                      <p className="text-gray-600">
-                        Percentage: <span className="font-medium">{percentage}%</span>
+                      <p style={{ color: '#334155' }}>
+                        Count: <span className="font-medium" style={{ color: '#0f172a' }}>{data.value}</span>
+                      </p>
+                      <p style={{ color: '#334155' }}>
+                        Percentage:{' '}
+                        <span className="font-medium" style={{ color: '#0f172a' }}>{percentage}%</span>
                       </p>
                     </div>
                   )

@@ -54,25 +54,43 @@ const ProjectsByStageChart = ({ data: chartData = [] }: ProjectsByStageChartProp
                 margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
                 barCategoryGap="4%"
               >
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis
                   dataKey="statusLabel"
-                  tick={{ fontSize: 11 }}
+                  tick={{ fontSize: 11, fill: '#475569' }}
                   angle={-45}
                   textAnchor="end"
                   height={80}
                   interval={0}
+                  stroke="#94a3b8"
                 />
-                <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                <YAxis
+                  tick={{ fontSize: 12, fill: '#475569' }}
+                  stroke="#94a3b8"
+                  allowDecimals={false}
+                />
                 <Tooltip
+                  wrapperStyle={{ outline: 'none', zIndex: 100 }}
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const d = payload[0].payload as ProjectsByStageItem
                       return (
-                        <div className="bg-gradient-to-br from-white to-primary-50 p-4 border-2 border-primary-200 rounded-xl shadow-2xl backdrop-blur-sm">
-                          <p className="font-semibold text-gray-900 mb-2">{d.statusLabel}</p>
-                          <p className="text-sm text-indigo-600">
-                            Projects: <span className="font-medium">{d.count}</span>
+                        <div
+                          className="p-3 sm:p-4 border border-slate-200 rounded-xl shadow-xl"
+                          style={{
+                            backgroundColor: '#ffffff',
+                            color: '#0f172a',
+                            WebkitFontSmoothing: 'antialiased',
+                          }}
+                        >
+                          <p className="font-semibold mb-2" style={{ color: '#0f172a' }}>
+                            {d.statusLabel}
+                          </p>
+                          <p className="text-sm" style={{ color: '#334155' }}>
+                            Projects:{' '}
+                            <span className="font-semibold tabular-nums" style={{ color: '#0d1b3a' }}>
+                              {d.count}
+                            </span>
                           </p>
                         </div>
                       )

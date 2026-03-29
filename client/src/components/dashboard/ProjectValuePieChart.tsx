@@ -208,19 +208,35 @@ const ProjectValuePieChart = memo(({ data: initialData, availableFYs = [], dashb
                   ))}
                 </Pie>
                 <Tooltip
-                  content={({ active, payload }: any) => {
-                    if (active && payload && payload.length) {
+                  content={({ active, payload }: { active?: boolean; payload?: Array<{ payload?: ProjectValueByType }> }) => {
+                    if (active && payload && payload.length && payload[0].payload) {
                       const data = payload[0].payload
                       return (
-                        <div className="bg-white p-2 sm:p-3 border border-gray-200 rounded-lg shadow-lg text-xs sm:text-sm">
-                          <p className="font-semibold text-gray-900">{data.label}</p>
-                          <p className="text-gray-600">
-                            Value: <span className="font-medium text-primary-600">₹{data.value.toLocaleString('en-IN')}</span>
+                        <div
+                          className="p-2 sm:p-3 border border-gray-200 rounded-lg shadow-lg text-xs sm:text-sm"
+                          style={{
+                            backgroundColor: '#ffffff',
+                            color: '#0f172a',
+                          }}
+                        >
+                          <p className="font-semibold" style={{ color: '#0f172a' }}>
+                            {data.label}
                           </p>
-                          <p className="text-gray-600">
-                            Percentage: <span className="font-medium text-primary-600">{data.percentage}%</span>
+                          <p style={{ color: '#334155' }}>
+                            Value:{' '}
+                            <span className="font-medium" style={{ color: '#0d1b3a' }}>
+                              ₹{data.value.toLocaleString('en-IN')}
+                            </span>
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">Projects: {data.count}</p>
+                          <p style={{ color: '#334155' }}>
+                            Percentage:{' '}
+                            <span className="font-medium" style={{ color: '#0d1b3a' }}>
+                              {data.percentage}%
+                            </span>
+                          </p>
+                          <p className="text-xs mt-1" style={{ color: '#64748b' }}>
+                            Projects: {data.count}
+                          </p>
                         </div>
                       )
                     }

@@ -14,10 +14,15 @@
   --zenith-font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
   --zenith-font-body: 'DM Sans', system-ui, sans-serif;
 
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
+  /* 100% width: Layout uses full-width main for /zenith (avoids iOS 100vw + padding horizontal scroll) */
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
   position: relative;
   min-height: calc(100vh - 5rem);
+  overflow-x: hidden;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  -webkit-tap-highlight-color: transparent;
   background-color: var(--zenith-bg);
   background-image:
     radial-gradient(ellipse 80% 50% at 50% -20%, rgba(245, 166, 35, 0.15), transparent),
@@ -30,6 +35,12 @@
   background-position: center top, center center, center center;
   color: var(--zenith-text);
   font-family: var(--zenith-font-body);
+}
+
+/* Faster taps on iOS; avoid accidental double-tap zoom on controls */
+.zenith-root button,
+.zenith-root a[href] {
+  touch-action: manipulation;
 }
 
 .zenith-root h1,
@@ -88,10 +99,21 @@
   }
 }
 
-/* Recharts text in Zenith */
+/* Recharts text in Zenith — explicit fills for WebKit (Safari) SVG text inheritance */
+.zenith-root .recharts-wrapper,
+.zenith-root .recharts-responsive-container,
+.zenith-root .recharts-tooltip-wrapper {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 .zenith-root .recharts-cartesian-axis-tick-value {
-  fill: rgba(255, 255, 255, 0.45);
+  fill: rgba(255, 255, 255, 0.45) !important;
   font-size: 11px;
+}
+
+.zenith-root .recharts-cartesian-axis-tick text {
+  fill: rgba(255, 255, 255, 0.5) !important;
 }
 
 .zenith-root .recharts-legend-item-text {
@@ -137,4 +159,19 @@
 
 .zenith-root .zenith-ai-insights-root:hover .zenith-ai-insights-track {
   animation-play-state: paused;
+}
+
+/* Recharts default tooltip: item text used slice fill (entry.color) — dark slices = invisible on dark panel */
+.zenith-root .recharts-default-tooltip {
+  color: rgba(255, 255, 255, 0.95);
+}
+.zenith-root .recharts-tooltip-label {
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+.zenith-root .recharts-tooltip-item,
+.zenith-root .recharts-tooltip-item-name,
+.zenith-root .recharts-tooltip-item-separator,
+.zenith-root .recharts-tooltip-item-value,
+.zenith-root .recharts-tooltip-item-unit {
+  color: rgba(255, 255, 255, 0.92) !important;
 }

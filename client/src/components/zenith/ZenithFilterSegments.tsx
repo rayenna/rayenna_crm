@@ -67,7 +67,7 @@ export default function ZenithFilterSegments({
               key={fy}
               type="button"
               onClick={() => toggle(selectedFYs, fy, onFYChange)}
-              className={`px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition-all tabular-nums tracking-tight ${
+              className={`px-2.5 py-2 sm:py-1.5 rounded-full text-[11px] font-semibold border transition-all tabular-nums tracking-tight ${
                 on
                   ? 'bg-[#f5a623]/25 text-[#f5a623] border-[#f5a623]/50 shadow-[0_0_16px_rgba(245,166,35,0.2)]'
                   : 'bg-white/5 text-white/60 border-white/10 hover:border-white/25'
@@ -81,7 +81,7 @@ export default function ZenithFilterSegments({
           <button
             type="button"
             onClick={onResetAll}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-semibold border border-white/20 text-white/80 hover:text-white hover:border-[#00d4b4]/50 hover:bg-[#00d4b4]/10 transition-all"
+            className="inline-flex items-center gap-1.5 px-2.5 py-2 sm:py-1.5 rounded-full text-[11px] font-semibold border border-white/20 text-white/80 hover:text-white hover:border-[#00d4b4]/50 hover:bg-[#00d4b4]/10 transition-all"
             title="Clear all date filters (show all periods)"
           >
             <RotateCcw className="w-3.5 h-3.5 opacity-80" aria-hidden />
@@ -102,7 +102,7 @@ export default function ZenithFilterSegments({
                 key={q.value}
                 type="button"
                 onClick={() => toggle(selectedQuarters, q.value, onQuarterChange)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                className={`px-3 py-2 sm:py-1.5 rounded-full text-xs font-bold border transition-all ${
                   on
                     ? 'bg-[#00d4b4]/20 text-[#00d4b4] border-[#00d4b4]/40'
                     : 'bg-white/5 text-white/60 border-white/10 hover:border-white/25'
@@ -116,7 +116,7 @@ export default function ZenithFilterSegments({
       ) : null}
 
       {singleFY ? (
-        <div className="flex flex-wrap items-center justify-center gap-1 max-h-[72px] overflow-y-auto sm:max-h-none">
+        <div className="flex flex-wrap items-center justify-center gap-1 max-h-[88px] overflow-y-auto overscroll-y-contain sm:max-h-none [-webkit-overflow-scrolling:touch]">
           <span className="text-[10px] uppercase tracking-widest text-white/40 w-full text-center sm:w-auto sm:mr-2">
             Mo
           </span>
@@ -132,7 +132,7 @@ export default function ZenithFilterSegments({
                 key={m.value}
                 type="button"
                 onClick={() => toggle(selectedMonths, m.value, onMonthChange)}
-                className={`px-2 py-1 rounded-full text-[10px] font-semibold border transition-all ${
+                className={`px-2.5 py-1.5 sm:px-2 sm:py-1 rounded-full text-[10px] font-semibold border transition-all ${
                   on
                     ? 'bg-white/15 text-white border-white/30'
                     : 'bg-white/5 text-white/50 border-white/10 hover:border-white/25'

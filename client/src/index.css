@@ -51,6 +51,20 @@ textarea,
   user-select: text;
 }
 
+/*
+ * Safari / WebKit: a global user-select: none on body * can prevent Recharts SVG <text>
+ * (axis ticks, some labels) from painting correctly. Tooltips portaled outside the chart
+ * still inherit the rule and may show an empty box on macOS.
+ */
+.recharts-wrapper,
+.recharts-responsive-container,
+.recharts-surface,
+.recharts-layer,
+.recharts-tooltip-wrapper {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 @keyframes gradientShift {
   0% {
     background-position: 0% 50%;
