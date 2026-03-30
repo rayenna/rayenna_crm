@@ -21,12 +21,17 @@ const Dashboard = () => {
   const { data: dashboardData, error: fyError, isError: isFyError, refetch: refetchFYs } = useQuery({
     queryKey: ['dashboard', 'fys', user?.role],
     queryFn: async () => {
-      // For sales users, fetch from sales endpoint to get only their FYs
+      // Sales: full dashboard payload (also used as initialData when filters empty)
       if (user?.role === UserRole.SALES) {
         const res = await axiosInstance.get('/api/dashboard/sales')
         return res.data
       }
-      // For other roles, use management endpoint to get all FYs
+      // Operations / Finance: FY list only — avoids loading full /management just for the filter bar
+      if (user?.role === UserRole.OPERATIONS || user?.role === UserRole.FINANCE) {
+        const res = await axiosInstance.get('/api/dashboard/financial-years')
+        return res.data
+      }
+      // Management / Admin: full management payload for FYs + initialData when filters empty
       const res = await axiosInstance.get('/api/dashboard/management')
       return res.data
     },

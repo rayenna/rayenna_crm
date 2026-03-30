@@ -4,6 +4,7 @@ import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
 import { getSalesTeamColor } from './salesTeamColors'
+import { salesTeamPerformanceQueryKey } from '../../utils/salesTeamPerformanceQuery'
 
 export interface RevenueBySalesTeamItem {
   salespersonId: string | null
@@ -35,7 +36,7 @@ const RevenueBySalesTeamChart = ({ dashboardFilter, data: dataProp = [] }: Reven
   const effectiveMonths = dashboardFilter?.selectedMonths ?? []
 
   const { data: fetchedData, isLoading } = useQuery({
-    queryKey: ['salesTeamPerformance', 'revenue', effectiveFYs, effectiveMonths, effectiveQuarters],
+    queryKey: salesTeamPerformanceQueryKey(effectiveFYs, effectiveMonths, effectiveQuarters),
     queryFn: async () => {
       const params = new URLSearchParams()
       effectiveFYs.forEach((fy) => params.append('fy', fy))

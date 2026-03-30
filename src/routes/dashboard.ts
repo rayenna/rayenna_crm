@@ -303,6 +303,78 @@ function mergeProjectsByStatusAvgDays(
   }));
 }
 
+type PaymentStatusBucketRow = {
+  status: string;
+  count: number;
+  totalValue: number;
+  outstanding: number;
+};
+
+/**
+ * Payment Quick Access buckets — same logic as Sales dashboard (aggregate + groupBy, no findMany).
+ * N/A = no/zero order value OR early/lost stages; else group by paymentStatus (null → PENDING).
+ */
+async function buildProjectsByPaymentStatus(where: Prisma.ProjectWhereInput): Promise<PaymentStatusBucketRow[]> {
+  const earlyOrLostStatuses: ProjectStatus[] = [
+    ProjectStatus.LEAD,
+    ProjectStatus.SITE_SURVEY,
+    ProjectStatus.PROPOSAL,
+    ProjectStatus.LOST,
+  ];
+  const [naCount, naTotals, paidGroups] = await Promise.all([
+    prisma.project.count({
+      where: {
+        ...where,
+        OR: [
+          { projectCost: null },
+          { projectCost: 0 },
+          { projectStatus: { in: earlyOrLostStatuses } },
+        ],
+      },
+    }),
+    prisma.project.aggregate({
+      where: {
+        ...where,
+        OR: [
+          { projectCost: null },
+          { projectCost: 0 },
+          { projectStatus: { in: earlyOrLostStatuses } },
+        ],
+      },
+      _sum: { projectCost: true },
+    }),
+    prisma.project.groupBy({
+      by: ['paymentStatus'],
+      where: {
+        ...where,
+        projectCost: { gt: 0 },
+        projectStatus: { notIn: earlyOrLostStatuses },
+      },
+      _count: { _all: true },
+      _sum: { projectCost: true, balanceAmount: true },
+    }),
+  ]);
+
+  return [
+    {
+      status: 'N/A',
+      count: naCount,
+      totalValue: naTotals._sum.projectCost ?? 0,
+      outstanding: 0,
+    },
+    ...paidGroups.map((g) => {
+      const paymentStatus = (g.paymentStatus ?? PaymentStatus.PENDING) as PaymentStatus;
+      return {
+        status: String(paymentStatus),
+        count: g._count._all,
+        totalValue: g._sum.projectCost ?? 0,
+        outstanding:
+          paymentStatus === PaymentStatus.PENDING || paymentStatus === PaymentStatus.PARTIAL ? (g._sum.balanceAmount ?? 0) : 0,
+      };
+    }),
+  ];
+}
+
 // Bank key to display label (for Availing Loan by Bank chart; must match client form options)
 const BANK_LABELS: Record<string, string> = {
   SBI: 'State Bank of India (SBI)',
@@ -398,6 +470,57 @@ function computePeOrderValueExGstFromCosting(costing: {
   const exGst = grandTotal - gstTotal;
   return exGst > 0 ? exGst : 0;
 }
+
+/**
+ * Lightweight FY list for filter dropdowns only (same year scope as dashboard FY series: revenue-eligible projects).
+ * Use instead of GET /management when the full management payload is not needed (e.g. Operations, Finance bootstrap).
+ */
+router.get('/financial-years', authenticate, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const role = req.user?.role;
+    if (!role || !userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const allowed: UserRole[] = [
+      UserRole.SALES,
+      UserRole.OPERATIONS,
+      UserRole.FINANCE,
+      UserRole.MANAGEMENT,
+      UserRole.ADMIN,
+    ];
+    if (!allowed.includes(role)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const baseWhere: Record<string, unknown> = {};
+    if (role === UserRole.SALES) {
+      baseWhere.salespersonId = userId;
+    }
+    const where = applyDateFilters(baseWhere, [], [], []);
+    const revenueWhere = getRevenueWhere(where);
+    // `year` is required on Project — do not use `year: { not: null }` (Prisma rejects `not: null` on String filters).
+    const rows = await prisma.project.groupBy({
+      by: ['year'],
+      where: revenueWhere,
+      _count: { _all: true },
+    });
+    const fys = rows
+      .map((r) => r.year)
+      .filter((y): y is string => typeof y === 'string' && y.trim() !== '')
+      .sort((a, b) => String(a).localeCompare(String(b)));
+
+    res.json({
+      projectValueProfitByFY: fys.map((fy) => ({
+        fy,
+        totalProjectValue: 0,
+        totalProfit: 0,
+      })),
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to load financial years' });
+  }
+});
 
 // Sales Dashboard
 router.get('/sales', authenticate, async (req: Request, res) => {
@@ -822,69 +945,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       }
     }
 
-    // Projects by payment status (for Sales Quick Access tile)
-    // Bucket logic matches Management/Operations dashboards:
-    // - "N/A" includes early/lost stages and projects with no/zero order value
-    // - "PENDING"/"PARTIAL" report outstanding (balanceAmount); "FULLY_PAID" reports 0 outstanding
-    const earlyOrLostStatuses: ProjectStatus[] = [
-      ProjectStatus.LEAD,
-      ProjectStatus.SITE_SURVEY,
-      ProjectStatus.PROPOSAL,
-      ProjectStatus.LOST,
-    ];
-
-    const [naCount, naTotals, paidGroups] = await Promise.all([
-      prisma.project.count({
-        where: {
-          ...where,
-          OR: [
-            { projectCost: null },
-            { projectCost: 0 },
-            { projectStatus: { in: earlyOrLostStatuses } },
-          ],
-        },
-      }),
-      prisma.project.aggregate({
-        where: {
-          ...where,
-          OR: [
-            { projectCost: null },
-            { projectCost: 0 },
-            { projectStatus: { in: earlyOrLostStatuses } },
-          ],
-        },
-        _sum: { projectCost: true },
-      }),
-      prisma.project.groupBy({
-        by: ['paymentStatus'],
-        where: {
-          ...where,
-          projectCost: { gt: 0 },
-          projectStatus: { notIn: earlyOrLostStatuses },
-        },
-        _count: { _all: true },
-        _sum: { projectCost: true, balanceAmount: true },
-      }),
-    ]);
-
-    const projectsByPaymentStatus = [
-      {
-        status: 'N/A',
-        count: naCount,
-        totalValue: naTotals._sum.projectCost ?? 0,
-        outstanding: 0,
-      },
-      ...paidGroups.map((g) => {
-        const paymentStatus = (g.paymentStatus ?? PaymentStatus.PENDING) as PaymentStatus;
-        return {
-          status: String(paymentStatus),
-          count: g._count._all,
-          totalValue: g._sum.projectCost ?? 0,
-          outstanding:
-            paymentStatus === PaymentStatus.PENDING || paymentStatus === PaymentStatus.PARTIAL ? (g._sum.balanceAmount ?? 0) : 0,
-        };
-      }),
-    ];
+    const projectsByPaymentStatus = await buildProjectsByPaymentStatus(where as Prisma.ProjectWhereInput);
 
     res.json({
       leads: {
@@ -1711,7 +1772,6 @@ router.get('/management', authenticate, async (req: Request, res) => {
       pipelineByFY,
       totalPipelineResult,
       projectsByStatusRawMgmt,
-      allProjectsMgmt,
       availingLoanCount,
       profitabilityData,
       availingLoanByBankRawMgmt,
@@ -1768,16 +1828,6 @@ router.get('/management', authenticate, async (req: Request, res) => {
         by: ['projectStatus'],
         where,
         _count: { id: true },
-      }),
-      prisma.project.findMany({
-        where: { ...where },
-        select: {
-          id: true,
-          paymentStatus: true,
-          projectCost: true,
-          projectStatus: true,
-          balanceAmount: true,
-        },
       }),
       prisma.project.count({
         where: { ...where, projectStatus: { not: ProjectStatus.LOST }, availingLoan: true },
@@ -1935,31 +1985,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
         ?.filter((p) => openDealsStatuses.includes(p.projectStatus as ProjectStatus))
         .reduce((sum, p) => sum + (p._count?.id || 0), 0) || 0;
 
-    // Projects by payment status (allProjectsMgmt from batch above)
-    const projectsByEffectiveStatusMgmt: Record<string, { count: number; totalValue: number; outstanding: number }> = {};
-    allProjectsMgmt.forEach((project) => {
-      const hasNoOrderValue = !project.projectCost || project.projectCost === 0;
-      const isEarlyOrLostStage =
-        project.projectStatus === ProjectStatus.LEAD ||
-        project.projectStatus === ProjectStatus.SITE_SURVEY ||
-        project.projectStatus === ProjectStatus.PROPOSAL ||
-        project.projectStatus === ProjectStatus.LOST;
-      const effectiveStatus = (hasNoOrderValue || isEarlyOrLostStage) ? 'N/A' : (project.paymentStatus || 'PENDING');
-      if (!projectsByEffectiveStatusMgmt[effectiveStatus]) {
-        projectsByEffectiveStatusMgmt[effectiveStatus] = { count: 0, totalValue: 0, outstanding: 0 };
-      }
-      projectsByEffectiveStatusMgmt[effectiveStatus].count++;
-      projectsByEffectiveStatusMgmt[effectiveStatus].totalValue += project.projectCost || 0;
-      if (effectiveStatus === 'PENDING' || effectiveStatus === 'PARTIAL') {
-        projectsByEffectiveStatusMgmt[effectiveStatus].outstanding += project.balanceAmount || 0;
-      }
-    });
-    const projectsByPaymentStatus = Object.entries(projectsByEffectiveStatusMgmt).map(([status, data]) => ({
-      status,
-      count: data.count,
-      totalValue: data.totalValue,
-      outstanding: data.outstanding,
-    }));
+    const projectsByPaymentStatus = await buildProjectsByPaymentStatus(where as Prisma.ProjectWhereInput);
 
     // Availing Loan count and profitabilityData from batch above
 

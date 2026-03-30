@@ -26,6 +26,10 @@ const Zenith = () => {
           const res = await axiosInstance.get('/api/dashboard/sales')
           return res.data
         }
+        if (user?.role === UserRole.OPERATIONS || user?.role === UserRole.FINANCE) {
+          const res = await axiosInstance.get('/api/dashboard/financial-years')
+          return res.data
+        }
         const res = await axiosInstance.get('/api/dashboard/management')
         return res.data
       },

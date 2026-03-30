@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { getSalesTeamColor } from './salesTeamColors'
+import { salesTeamPerformanceQueryKey } from '../../utils/salesTeamPerformanceQuery'
 
 interface SalesTeamData {
   salespersonId: string
@@ -84,7 +85,7 @@ const SalesTeamTreemap = ({ availableFYs = [], dashboardFilter }: SalesTeamTreem
 
   // Fetch sales team performance: use dashboard filter when provided, else chart's own filters
   const { data, isLoading } = useQuery({
-    queryKey: ['salesTeamPerformance', effectiveFYs, effectiveMonths, effectiveQuarters],
+    queryKey: salesTeamPerformanceQueryKey(effectiveFYs, effectiveMonths, effectiveQuarters),
     queryFn: async () => {
       const params = new URLSearchParams()
       effectiveFYs.forEach((fy) => params.append('fy', fy))
