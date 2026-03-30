@@ -2479,6 +2479,9 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
           id: true,
           systemCapacity: true,
           expectedCommissioningDate: true,
+          stageEnteredAt: true,
+          confirmationDate: true,
+          installationCompletionDate: true,
           customer: { select: { customerName: true } },
           opsPerson: { select: { name: true } },
           installations: {
@@ -2498,16 +2501,23 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
       const now = Date.now();
       const rows = projects.map((p) => {
         const inst = p.installations[0];
+        /** Prefer Installation row; else dates many teams only set on the project. */
+        const inferredStart = inst?.startDate ?? p.stageEnteredAt ?? p.confirmationDate ?? null;
         const installer = inst?.installerName?.trim() || p.opsPerson?.name?.trim() || '—';
-        const startDate = inst?.startDate?.toISOString() ?? null;
+        const startDate = inferredStart?.toISOString() ?? null;
         const expected = p.expectedCommissioningDate?.toISOString() ?? null;
 
+        const installCompleted =
+          !!inst?.completionDate ||
+          inst?.status === InstallationStatus.COMPLETED ||
+          !!p.installationCompletionDate;
+
         let percentComplete: number | null = null;
-        if (inst?.completionDate || inst?.status === InstallationStatus.COMPLETED) {
+        if (installCompleted) {
           percentComplete = 100;
-        } else if (inst?.startDate && p.expectedCommissioningDate) {
-          const total = p.expectedCommissioningDate.getTime() - inst.startDate.getTime();
-          const elapsed = now - inst.startDate.getTime();
+        } else if (inferredStart && p.expectedCommissioningDate) {
+          const total = p.expectedCommissioningDate.getTime() - inferredStart.getTime();
+          const elapsed = now - inferredStart.getTime();
           if (total > 0) {
             percentComplete = Math.min(99, Math.max(8, Math.round((elapsed / total) * 100)));
           } else {
@@ -2517,6 +2527,8 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
           percentComplete = 55;
         } else if (inst) {
           percentComplete = 25;
+        } else if (inferredStart) {
+          percentComplete = 35;
         }
 
         const overdue =
@@ -2538,8 +2550,9 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
       let nAge = 0;
       for (const p of projects) {
         const inst = p.installations[0];
-        if (inst?.startDate) {
-          sumAge += (now - inst.startDate.getTime()) / 86400000;
+        const inferredStart = inst?.startDate ?? p.stageEnteredAt ?? p.confirmationDate ?? null;
+        if (inferredStart) {
+          sumAge += (now - inferredStart.getTime()) / 86400000;
           nAge++;
         }
       }

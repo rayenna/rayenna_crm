@@ -96,7 +96,7 @@ function SalesPipelineBlock({
             </span>
           )}
         </div>
-        <div className="overflow-x-auto -mx-1">
+        <div className="zenith-scroll-x overflow-x-auto -mx-1">
           <table className="w-full text-left text-xs sm:text-sm min-w-[520px]">
             <thead>
               <tr className="text-white/45 border-b border-white/10">
@@ -307,7 +307,16 @@ function InstallationPulseBlock({
             <strong className={data.delayedCount > 0 ? 'text-red-300' : 'text-emerald-300'}>{data.delayedCount}</strong>
           </span>
         </div>
-        <div className="overflow-x-auto -mx-1">
+        <p className="text-[11px] sm:text-xs text-white/45 leading-relaxed mb-4 max-w-3xl">
+          <span className="text-white/55 font-semibold">Data sources: </span>
+          Installer shows the latest <strong className="text-white/70">installation record’s installer</strong> when present,
+          otherwise the project’s <strong className="text-white/70">assigned operations</strong> user. Start uses installation
+          start date, then <strong className="text-white/70">stage entered</strong> or <strong className="text-white/70">order confirmation</strong>{' '}
+          date. Expected is <strong className="text-white/70">expected commissioning</strong> on the project. Progress uses those
+          dates (or marks complete if <strong className="text-white/70">installation completion</strong> is set). Fill those fields
+          on the project if this table looks empty.
+        </p>
+        <div className="zenith-scroll-x overflow-x-auto -mx-1">
           <table className="w-full text-left text-xs sm:text-sm min-w-[720px]">
             <thead>
               <tr className="text-white/45 border-b border-white/10">

@@ -473,10 +473,11 @@ const Layout = () => {
         </div>
       </nav>
 
+      {/* Zenith: avoid overflow-x clip/hidden on main — CSS pairs it with overflow-y: auto and breaks document scroll in Chrome/Edge */}
       <main
         className={
           location.pathname.startsWith('/zenith')
-            ? 'w-full max-w-none mx-auto py-0 px-0 overflow-x-hidden min-h-0'
+            ? 'w-full max-w-none mx-auto py-0 px-0'
             : 'max-w-7xl mx-auto py-6 px-2 sm:px-4 md:px-6 lg:px-8'
         }
       >
