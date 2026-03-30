@@ -65,7 +65,7 @@
 ## Efficiency Tips
 
 ### Navigation
-- Use keyboard shortcuts (? for help)
+- Use **keyboard shortcuts**: **?** for Help; **Ctrl+Shift+D / C / P / K / Z** (Dashboard, Customers, Projects, Support Tickets, Zenith); **Ctrl+Shift+M** new customer, **E** new project — role rules apply; on Mac use **⌘⇧**. Details: [Getting Started → Keyboard shortcuts](/help/getting-started#keyboard-shortcuts).
 - Bookmark frequently used pages
 - Use browser back/forward buttons
 - Take advantage of search and filters

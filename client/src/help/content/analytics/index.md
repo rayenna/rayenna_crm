@@ -200,13 +200,13 @@ Metrics and labels are **role-specific** (see below). **Sales** sees data **scop
 
 ### Your Focus (role-specific)
 
-Between the **KPI strip** and the **funnel**, **Your Focus** surfaces actionable context **by role**:
+Between the **KPI strip** and the **funnel**, **Your Focus** surfaces actionable context **by role**. The table below summarises what each role sees.
 
 | Role | What you see |
-|------|----------------|
+| :-- | :-- |
 | **Sales** | **Your pipeline today** — a compact table of **your** leads/deals (assigned to you): customer, stage, deal value, and **last activity** (days since update or last project remark). **Green / amber / red** styling by recency; a **Follow-up needed** count for the oldest band; **Log activity** opens a short remark modal (saved on the project). |
 | **Finance** | **Payment radar** — finance KPIs (e.g. outstanding, collection timing, subsidy pending), a short **overdue** list with actions, and a small **collected vs outstanding vs subsidy** chart. |
-| **Operations** | **Installation pulse** — projects **under installation**, with size, installer, dates, progress where available, and quick stats (e.g. delayed count). |
+| **Operations** | **Installation pulse** — projects **under installation**: customer, kW, **sales person**, start / expected dates, progress, and quick stats (e.g. delayed count). |
 | **Management / Admin** | **All** of the above blocks in one view (company-wide where applicable). |
 
 If there is nothing to show for the current filters, **Your Focus** may be hidden. Each block has a **subtle coloured left border** to distinguish Sales (gold-leaning), Finance (teal-leaning), and Operations (cool accent) content.
@@ -259,6 +259,20 @@ For module basics (Customers, Projects, Proposal Engine), see [Modules](/help/mo
 
 ---
 
-## Keyboard shortcut
+## Keyboard shortcuts
 
-Press **?** (when focus is **not** in a text field) to open **Help** in context of the page you were on. From the **Dashboard**, that opens this **Analytics** section. From **Zenith**, it opens **Analytics** with **Zenith Command Center** in view.
+Use **Ctrl+Shift+**_letter_ on Windows/Linux or **⌘⇧**_letter_ on Mac. They do nothing while focus is in a text field, **select**, or contenteditable (same rule as **?** for Help). The same shortcuts are also listed under [Getting Started → Keyboard shortcuts](/help/getting-started#keyboard-shortcuts).
+
+- **?** — Open **Help** for the current area. From **Dashboard**, opens **Analytics**. From **Zenith**, opens **Analytics** with **Zenith Command Center** in view.
+
+| Shortcut | Action |
+| :-- | :-- |
+| ⌘⇧D / Ctrl+Shift+D | **Dashboard** |
+| ⌘⇧C / Ctrl+Shift+C | **Customers** (Admin, Sales, Operations, Finance, Management) |
+| ⌘⇧P / Ctrl+Shift+P | **Projects** (same roles as Customers) |
+| ⌘⇧K / Ctrl+Shift+K | **Support Tickets** (Admin, Sales, Operations, Management — not Finance) |
+| ⌘⇧Z / Ctrl+Shift+Z | **Zenith** (roles that see Zenith under the Dashboard menu) |
+| ⌘⇧M / Ctrl+Shift+M | **New customer** — opens the create form (Sales, Management, Admin) |
+| ⌘⇧E / Ctrl+Shift+E | **New project** — opens the new-project screen (Admin, Sales). Route: projects/new |
+
+**Esc** on a **Help** page returns you to the **Dashboard**. A three-column version (Win/Linux · Mac · Action) is under [Getting Started → Keyboard shortcuts](/help/getting-started#keyboard-shortcuts).

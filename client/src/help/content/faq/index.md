@@ -36,6 +36,9 @@ Editing and deleting are restricted by role. For example, only Admin can delete 
 ### How do I navigate between modules?
 Use the top navigation menu. Available options depend on your user role.
 
+### What keyboard shortcuts are available?
+Press **?** (outside text fields) for context-sensitive **Help**. Use **Ctrl+Shift+** a letter on Windows/Linux (**⌘⇧** on Mac) to jump to **Dashboard (D)**, **Customers (C)**, **Projects (P)**, **Support Tickets (K)**, **Zenith (Z)**, open **new customer (M)**, or **new project (E)** — only if your role has access to that screen. **Esc** on a Help page returns to the **Dashboard**. Full tables: [Getting Started → Keyboard shortcuts](/help/getting-started#keyboard-shortcuts) and [Analytics → Keyboard shortcuts](/help/analytics#keyboard-shortcuts).
+
 ### What is the Dashboard?
 The Dashboard provides an overview of key metrics and information relevant to your role (KPIs, charts, Quick Access tiles). Each role sees a different dashboard (Sales, Operations, Finance, Management/Admin).
 

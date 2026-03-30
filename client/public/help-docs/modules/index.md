@@ -170,8 +170,6 @@ Exports include all customer information and respect current filters and search.
 
 A quick reference for Customer Master access:
 
-![Permission Matrix](/help/docs/overview/access_matrix.jpg)
-
 - **Sales**: Create customers, edit own customers (My Customers), view All Customers (read-only). Cannot change salesperson.
 - **Operations / Finance**: View customers (via filters). Cannot create or edit.
 - **Management**: View all customers, assign/change salesperson. Cannot create or edit other fields.
@@ -241,8 +239,6 @@ At any stage, a project may be marked **Lost** if the customer does not proceed.
 If **Lead Source** is Referral, Channel Partner, or Other, the corresponding detail field is required. If status is **Lost**, **Lost Date** and **Reason for Loss** are required.
 
 ## Project Status Stages
-
-![Project Status Workflow](/help/docs/overview/CRM_Workflow.jpg)
 
 **Sales** typically update status from Lead through Confirmed Order. **Operations** update status from Installation onward and manage execution milestones. **Finance** can view all statuses but cannot change them.
 
@@ -322,8 +318,6 @@ Each project displays:
 ## Permissions Summary
 
 A quick reference for project-related access:
-
-![Permission Matrix](/help/docs/overview/access_matrix.jpg)
 
 - **Sales**: Create projects (own customers), edit Sales & Commercial, update status through Confirmed, add remarks, create tickets, upload documents. Cannot edit Lifecycle or Payments.
 - **Operations**: View all projects, edit **Sales & Commercial** (non-payment fields) and **Project Lifecycle**, update status from Installation onward, add remarks, create tickets, upload documents. Cannot edit Payment Tracking.
@@ -504,9 +498,7 @@ Each ticket displays:
 
 ## Permissions Summary
 
-A quick reference showing which features each role can access:
-
-![Permission Matrix](/help/docs/overview/access_matrix.jpg)
+A quick reference showing which features each role can access is described in the bullet lists above.
 
 ## Getting Help
 

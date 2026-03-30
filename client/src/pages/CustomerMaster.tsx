@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
@@ -23,6 +24,7 @@ function getCustomerDisplayName(customer: Customer) {
 const CustomerMaster = () => {
   const { user, hasRole } = useAuth()
   const queryClient = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [page, setPage] = useState(1)
   const [searchInput, setSearchInput] = useState('')
   const debouncedSearch = useDebounce(searchInput, 500) // 500ms debounce
@@ -52,6 +54,17 @@ const CustomerMaster = () => {
 
   const canCreate = hasRole([UserRole.SALES, UserRole.MANAGEMENT, UserRole.ADMIN])
   const isSalesUser = user?.role === UserRole.SALES
+
+  // Open "new customer" from global shortcut: /customers?new=1
+  useEffect(() => {
+    if (searchParams.get('new') !== '1') return
+    const next = new URLSearchParams(searchParams)
+    next.delete('new')
+    setSearchParams(next, { replace: true })
+    if (!canCreate) return
+    setEditingCustomer(null)
+    setShowForm(true)
+  }, [searchParams, setSearchParams, canCreate])
 
   // Fetch sales users for the filter dropdown (only for non-SALES users)
   const { data: salesUsers } = useQuery({

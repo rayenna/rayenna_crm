@@ -149,10 +149,7 @@ function getRevenueWhere(baseWhere: any): any {
   } else {
     revenueFilter.AND = [stageCondition];
   }
-  
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[REVENUE FILTER] Final filter:', JSON.stringify(revenueFilter, null, 2));
-  }
+
   return revenueFilter;
 }
 

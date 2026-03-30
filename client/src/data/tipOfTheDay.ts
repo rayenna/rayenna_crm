@@ -19,6 +19,10 @@ export const TIPS: string[] = [
   // General
   'Use the Dashboard filters (FY, Quarter, Month) to focus on specific periods.',
   'Press ? from any page to open context-sensitive Help — open Analytics & Reports there for dashboard filters, Quick Access layouts by role, and the Proposal Engine summary card.',
+  'Keyboard shortcuts (when focus is not in a text field or dropdown): ? Help · Ctrl+Shift+D Dashboard · C Customers · P Projects · K Support Tickets · Z Zenith · M new customer · E new project. On Mac use ⌘⇧ instead of Ctrl+Shift. Full list in Help under Getting Started or Analytics.',
+  'Press Ctrl+Shift+Z (⌘⇧Z on Mac) to jump straight to Zenith — same roles that see Zenith ✦ under the Dashboard menu.',
+  'Ctrl+Shift+M (⌘⇧M) opens the new-customer form (Sales, Management, Admin). Ctrl+Shift+E (⌘⇧E) opens New Project for Admin and Sales.',
+  'On a Help page, press Esc to return to the Dashboard. The Help docs include a full keyboard shortcut table under Getting Started and Analytics & Reports.',
   'Create Support Tickets from the project detail page to track customer issues.',
   'Use the Audit & Security page to review login and key system events.',
   'Customer Master stores customer details used across projects and proposals.',

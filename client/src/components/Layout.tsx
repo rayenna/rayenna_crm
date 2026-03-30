@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import TipOfTheDay from './TipOfTheDay'
@@ -15,6 +15,23 @@ function isHelpMenuPathActive(itemPath: string, pathname: string, locHash: strin
   if (pathname !== pathOnly) return false
   return locHash === frag
 }
+
+/** Keyboard Ctrl/Cmd+Shift shortcuts — same access as main nav / buttons */
+const SHORTCUT_ROLES_CUSTOMERS_PROJECTS: UserRole[] = [
+  UserRole.ADMIN,
+  UserRole.SALES,
+  UserRole.OPERATIONS,
+  UserRole.FINANCE,
+  UserRole.MANAGEMENT,
+]
+const SHORTCUT_ROLES_SUPPORT: UserRole[] = [
+  UserRole.ADMIN,
+  UserRole.SALES,
+  UserRole.OPERATIONS,
+  UserRole.MANAGEMENT,
+]
+const SHORTCUT_ROLES_NEW_CUSTOMER: UserRole[] = [UserRole.SALES, UserRole.MANAGEMENT, UserRole.ADMIN]
+const SHORTCUT_ROLES_NEW_PROJECT: UserRole[] = [UserRole.ADMIN, UserRole.SALES]
 
 const Layout = () => {
   const { user, logout, hasRole } = useAuth()
@@ -62,7 +79,7 @@ const Layout = () => {
   const canAccessDashboardMenu = hasRole(dashboardNavRoles)
 
   /** Context-sensitive Help path: open the section that matches the current page */
-  const getHelpPath = () => {
+  const getHelpPath = useCallback(() => {
     const sectionId = getHelpSectionForRoute(location.pathname)
     const section = helpSections.find((s) => s.id === sectionId)
     if (!section) return '/help'
@@ -70,7 +87,7 @@ const Layout = () => {
       return `/help/${section.routeKey}#zenith-command-center`
     }
     return `/help/${section.routeKey}`
-  }
+  }, [location.pathname])
 
   const openHelp = () => {
     setSessionStorageItem('helpReferrer', location.pathname)
@@ -78,18 +95,17 @@ const Layout = () => {
     setHelpDropdownOpen(false)
   }
 
-  // Keyboard shortcuts: ? to open Help, Esc to close Help
+  // Keyboard: ? → Help · Ctrl/Cmd+Shift+ D C P K Z M E → routes (see help docs) · Esc → leave Help
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Check if user is typing in an input, textarea, or contenteditable element
       const target = event.target as HTMLElement
-      const isInputFocused = 
+      const isInputFocused =
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
         target.isContentEditable ||
         target.closest('[contenteditable="true"]') !== null
 
-      // ? key to open Help (only if not typing in an input)
       const isQuestionMark = event.key === '?' || (event.key === '/' && event.shiftKey)
       if (isQuestionMark && !isInputFocused && !event.ctrlKey && !event.metaKey && !event.altKey) {
         if (!location.pathname.startsWith('/help')) {
@@ -97,9 +113,55 @@ const Layout = () => {
           setSessionStorageItem('helpReferrer', location.pathname)
           navigate(getHelpPath())
         }
+        return
       }
 
-      // Esc key to close Help (only if on help page)
+      const mod = event.ctrlKey || event.metaKey
+      const isModShiftLetter =
+        mod && event.shiftKey && !event.altKey && event.key.length === 1 && !isInputFocused
+
+      if (isModShiftLetter) {
+        const key = event.key.toLowerCase()
+        const closeMenus = () => {
+          setMobileMenuOpen(false)
+          setDashboardDropdownOpen(false)
+        }
+        const go = (to: string) => {
+          event.preventDefault()
+          navigate(to)
+          closeMenus()
+        }
+
+        if (key === 'd') {
+          go('/dashboard')
+          return
+        }
+        if (key === 'c' && hasRole(SHORTCUT_ROLES_CUSTOMERS_PROJECTS)) {
+          go('/customers')
+          return
+        }
+        if (key === 'p' && hasRole(SHORTCUT_ROLES_CUSTOMERS_PROJECTS)) {
+          go('/projects')
+          return
+        }
+        if (key === 'k' && hasRole(SHORTCUT_ROLES_SUPPORT)) {
+          go('/support-tickets')
+          return
+        }
+        if (key === 'z' && canAccessDashboardMenu) {
+          go('/zenith')
+          return
+        }
+        if (key === 'm' && hasRole(SHORTCUT_ROLES_NEW_CUSTOMER)) {
+          go('/customers?new=1')
+          return
+        }
+        if (key === 'e' && hasRole(SHORTCUT_ROLES_NEW_PROJECT)) {
+          go('/projects/new')
+          return
+        }
+      }
+
       if (event.key === 'Escape' && location.pathname.startsWith('/help')) {
         event.preventDefault()
         navigate('/dashboard')
@@ -110,7 +172,7 @@ const Layout = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [location.pathname, navigate])
+  }, [location.pathname, navigate, canAccessDashboardMenu, hasRole, getHelpPath])
 
   // Prefetch route chunks when mobile menu opens so navigation feels instant when user taps a link
   useEffect(() => {
@@ -120,7 +182,8 @@ const Layout = () => {
       import('../pages/Projects').catch(() => {})
       import('../pages/CustomerMaster').catch(() => {})
     }
-    const ric = (window as any).requestIdleCallback as undefined | ((cb: () => void) => void)
+    const w = window as Window & { requestIdleCallback?: (cb: () => void) => void }
+    const ric = w.requestIdleCallback
     if (ric) {
       ric(run)
       return
@@ -205,6 +268,7 @@ const Layout = () => {
                         </Link>
                         <Link
                           to="/zenith"
+                          title="Zenith — Ctrl+Shift+Z or ⌘⇧Z"
                           className={`block px-4 py-2 text-sm font-medium ${
                             location.pathname.startsWith('/zenith')
                               ? 'bg-primary-50 text-primary-700'
@@ -366,6 +430,7 @@ const Layout = () => {
                     </Link>
                     <Link
                       to="/zenith"
+                      title="Zenith — Ctrl+Shift+Z or ⌘⇧Z"
                       onClick={() => setMobileMenuOpen(false)}
                       className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 ${
                         location.pathname.startsWith('/zenith')

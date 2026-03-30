@@ -37,6 +37,4 @@ The Rayenna CRM system supports multiple user roles, each with specific permissi
 
 ## Permission Matrix
 
-A quick reference showing which features each role can access:
-
-![Permission Matrix](/help/docs/overview/access_matrix.jpg)
+A quick reference showing which features each role can access is listed in the sections below.

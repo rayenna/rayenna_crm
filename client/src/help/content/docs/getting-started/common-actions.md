@@ -451,7 +451,8 @@ This guide covers the most frequently performed actions in Rayenna Energy CRM. T
 
 ### Efficiency Tips
 
-- **Use keyboard shortcuts**: Tab to navigate, Enter to submit
+- **CRM keyboard shortcuts** (when not typing in a field): **?** opens Help; **Ctrl+Shift+D** Dashboard, **C** Customers, **P** Projects, **K** Support Tickets, **Z** Zenith; **Ctrl+Shift+M** opens **new customer**, **E** **new project** (role limits apply). On Mac use **⌘** instead of **Ctrl**. Full list: [Getting Started → Keyboard shortcuts](/help/getting-started#keyboard-shortcuts) or [Analytics → Keyboard shortcuts](/help/analytics#keyboard-shortcuts).
+- **Forms**: Tab to move between fields, Enter to submit where shown
 - **Bookmark common pages**: Save frequently accessed pages
 - **Use Help (?)**: Quick access to context-sensitive help
 - **Learn your role's features**: Focus on tools available to you

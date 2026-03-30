@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState, Suspense } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { helpSections, HelpSection, getHelpSectionForRoute, getHelpContextLabel } from '../help/sections'
 import { getHelpContent } from '../help/contentLoader'
 import { searchHelpContent } from '../help/searchHelp'
@@ -248,6 +249,7 @@ const Help = () => {
                         >
                           <ReactMarkdown
                             key={selectedSection?.id ?? 'help'}
+                            remarkPlugins={[remarkGfm]}
                             components={{
                       h1: ({ children, ...props }) => (
                         <h1
@@ -439,7 +441,7 @@ const Help = () => {
                           src = `${basePath}/${src}`
                         }
                         return (
-                          <div className="my-6 flex justify-center w-full">
+                          <span className="my-6 flex justify-center w-full">
                             <img
                               {...props}
                               src={src}
@@ -448,11 +450,11 @@ const Help = () => {
                               style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
                               loading="lazy"
                               onError={(e) => {
-                                if (import.meta.env.DEV) console.error('Image failed to load:', src)
+                                if (import.meta.env.DEV) console.debug('Help image failed to load:', src)
                                 e.currentTarget.style.display = 'none'
                               }}
                             />
-                          </div>
+                          </span>
                         )
                       },
                     }}
