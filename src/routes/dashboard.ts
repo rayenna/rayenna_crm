@@ -2483,12 +2483,11 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
           confirmationDate: true,
           installationCompletionDate: true,
           customer: { select: { customerName: true } },
-          opsPerson: { select: { name: true } },
+          salesperson: { select: { name: true } },
           installations: {
             orderBy: { updatedAt: 'desc' },
             take: 1,
             select: {
-              installerName: true,
               startDate: true,
               completionDate: true,
               status: true,
@@ -2503,9 +2502,14 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
         const inst = p.installations[0];
         /** Prefer Installation row; else dates many teams only set on the project. */
         const inferredStart = inst?.startDate ?? p.stageEnteredAt ?? p.confirmationDate ?? null;
-        const installer = inst?.installerName?.trim() || p.opsPerson?.name?.trim() || '—';
+        const salespersonName = p.salesperson?.name?.trim() || '—';
         const startDate = inferredStart?.toISOString() ?? null;
-        const expected = p.expectedCommissioningDate?.toISOString() ?? null;
+        /**
+         * Expected column: primary field is expectedCommissioningDate. Many projects only have
+         * installationCompletionDate filled (Project Lifecycle — no separate commissioning input was exposed).
+         */
+        const expectedEnd = p.expectedCommissioningDate ?? p.installationCompletionDate ?? null;
+        const expected = expectedEnd?.toISOString() ?? null;
 
         const installCompleted =
           !!inst?.completionDate ||
@@ -2515,8 +2519,8 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
         let percentComplete: number | null = null;
         if (installCompleted) {
           percentComplete = 100;
-        } else if (inferredStart && p.expectedCommissioningDate) {
-          const total = p.expectedCommissioningDate.getTime() - inferredStart.getTime();
+        } else if (inferredStart && expectedEnd) {
+          const total = expectedEnd.getTime() - inferredStart.getTime();
           const elapsed = now - inferredStart.getTime();
           if (total > 0) {
             percentComplete = Math.min(99, Math.max(8, Math.round((elapsed / total) * 100)));
@@ -2531,14 +2535,13 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
           percentComplete = 35;
         }
 
-        const overdue =
-          !!p.expectedCommissioningDate && now > p.expectedCommissioningDate.getTime();
+        const overdue = !!expectedEnd && now > expectedEnd.getTime();
 
         return {
           projectId: p.id,
           customerName: p.customer?.customerName?.trim() || '—',
           kW: p.systemCapacity ?? null,
-          installer,
+          salespersonName,
           startDate,
           expectedCompletion: expected,
           percentComplete,

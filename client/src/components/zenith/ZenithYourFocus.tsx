@@ -29,7 +29,7 @@ type InstallRow = {
   projectId: string
   customerName: string
   kW: number | null
-  installer: string
+  salespersonName: string
   startDate: string | null
   expectedCompletion: string | null
   percentComplete: number | null
@@ -309,23 +309,29 @@ function InstallationPulseBlock({
         </div>
         <p className="text-[11px] sm:text-xs text-white/45 leading-relaxed mb-4 max-w-3xl">
           <span className="text-white/55 font-semibold">Data sources: </span>
-          Installer shows the latest <strong className="text-white/70">installation record’s installer</strong> when present,
-          otherwise the project’s <strong className="text-white/70">assigned operations</strong> user. Start uses installation
-          start date, then <strong className="text-white/70">stage entered</strong> or <strong className="text-white/70">order confirmation</strong>{' '}
-          date. Expected is <strong className="text-white/70">expected commissioning</strong> on the project. Progress uses those
-          dates (or marks complete if <strong className="text-white/70">installation completion</strong> is set). Fill those fields
-          on the project if this table looks empty.
+          <strong className="text-white/70">Sales person</strong> is the project’s assigned{' '}
+          <strong className="text-white/70">salesperson</strong>. Start uses installation start date, then{' '}
+          <strong className="text-white/70">stage entered</strong> or <strong className="text-white/70">order confirmation</strong>{' '}
+          date. <strong className="text-white/70">Expected</strong> uses <strong className="text-white/70">expected commissioning</strong>{' '}
+          on the project when set; otherwise <strong className="text-white/70">installation completion date</strong> (same field as
+          Project Lifecycle). Progress uses start vs that target (or 100% if install is marked complete).
         </p>
-        <div className="zenith-scroll-x overflow-x-auto -mx-1">
-          <table className="w-full text-left text-xs sm:text-sm min-w-[720px]">
+        <div
+          className="zenith-scroll-x zenith-install-pulse-scroll overflow-x-auto overscroll-x-contain -mx-1 px-1 sm:px-0 rounded-lg sm:rounded-none"
+          role="region"
+          aria-label="Installation projects table, scroll horizontally on small screens"
+        >
+          <table className="w-full min-w-[820px] md:min-w-[860px] xl:min-w-[900px] text-left text-xs sm:text-sm border-separate border-spacing-0">
             <thead>
               <tr className="text-white/45 border-b border-white/10">
-                <th className="py-2 pr-2 font-semibold">Customer</th>
-                <th className="py-2 pr-2 font-semibold text-right">kW</th>
-                <th className="py-2 pr-2 font-semibold">Installer</th>
-                <th className="py-2 pr-2 font-semibold">Start</th>
-                <th className="py-2 pr-2 font-semibold">Expected</th>
-                <th className="py-2 font-semibold min-w-[120px]">Progress</th>
+                <th className="py-2.5 pr-3 sm:pr-4 font-semibold align-bottom">Customer</th>
+                <th className="py-2.5 pl-2 pr-5 sm:pr-8 font-semibold text-right align-bottom tabular-nums">
+                  kW
+                </th>
+                <th className="py-2.5 pl-3 sm:pl-5 pr-3 sm:pr-4 font-semibold align-bottom">Sales person</th>
+                <th className="py-2.5 px-3 sm:px-4 font-semibold align-bottom whitespace-nowrap">Start</th>
+                <th className="py-2.5 px-3 sm:px-4 font-semibold align-bottom whitespace-nowrap">Expected</th>
+                <th className="py-2.5 pl-3 font-semibold align-bottom min-w-[7.5rem] sm:min-w-[8.5rem]">Progress</th>
               </tr>
             </thead>
             <tbody>
@@ -341,37 +347,45 @@ function InstallationPulseBlock({
                     key={r.projectId}
                     className={`border-b border-white/[0.06] ${r.overdue ? 'bg-red-500/5' : 'hover:bg-white/[0.04]'}`}
                   >
-                    <td className="py-2.5 pr-2">
-                      <div className="flex items-center gap-2">
+                    <td className="py-2.5 pr-3 sm:pr-4 align-middle">
+                      <div className="flex items-center gap-2 min-w-0">
                         <span
                           className={`h-2 w-2 rounded-full flex-shrink-0 ${r.overdue ? 'bg-red-400' : 'bg-emerald-400'}`}
                           title={r.overdue ? 'Overdue' : 'On track'}
                         />
-                        <Link to={`/projects/${r.projectId}`} className="text-white font-medium hover:text-[#f5a623]">
+                        <Link
+                          to={`/projects/${r.projectId}`}
+                          className="text-white font-medium hover:text-[#f5a623] truncate sm:whitespace-normal sm:break-words"
+                          title={r.customerName}
+                        >
                           {r.customerName}
                         </Link>
                       </div>
                     </td>
-                    <td className="py-2.5 pr-2 text-right tabular-nums text-white/85">
+                    <td className="py-2.5 pl-2 pr-5 sm:pr-8 text-right tabular-nums text-white/85 align-middle whitespace-nowrap">
                       {r.kW != null ? r.kW.toFixed(2) : '—'}
                     </td>
-                    <td className="py-2.5 pr-2 text-white/75">{r.installer}</td>
-                    <td className="py-2.5 pr-2 text-white/60">
+                    <td className="py-2.5 pl-3 sm:pl-5 pr-3 sm:pr-4 text-white/75 align-middle whitespace-nowrap">
+                      {r.salespersonName}
+                    </td>
+                    <td className="py-2.5 px-3 sm:px-4 text-white/60 align-middle whitespace-nowrap">
                       {r.startDate ? format(parseISO(r.startDate), 'dd MMM yy') : '—'}
                     </td>
-                    <td className="py-2.5 pr-2 text-white/60">
+                    <td className="py-2.5 px-3 sm:px-4 text-white/60 align-middle whitespace-nowrap">
                       {r.expectedCompletion ? format(parseISO(r.expectedCompletion), 'dd MMM yy') : '—'}
                     </td>
-                    <td className="py-2.5">
+                    <td className="py-2.5 pl-3 align-middle">
                       {r.percentComplete != null ? (
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden min-w-[64px]">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden min-w-[48px] sm:min-w-[64px]">
                             <div
                               className="h-full rounded-full bg-gradient-to-r from-[#f5a623] to-[#00d4b4]"
                               style={{ width: `${r.percentComplete}%` }}
                             />
                           </div>
-                          <span className="text-[11px] tabular-nums text-white/55 w-8">{r.percentComplete}%</span>
+                          <span className="text-[11px] tabular-nums text-white/55 shrink-0 w-7 sm:w-8 text-right">
+                            {r.percentComplete}%
+                          </span>
                         </div>
                       ) : (
                         <span className="text-white/35">—</span>

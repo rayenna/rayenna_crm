@@ -1603,6 +1603,20 @@ const ProjectForm = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
+                  Expected commissioning date
+                </label>
+                <input
+                  type="date"
+                  {...register('expectedCommissioningDate')}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Target date for go-live; used in Zenith Installation pulse. If left empty, installation completion date is used
+                  there as a fallback.
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
                   Installation Completion Date
                 </label>
                 <input

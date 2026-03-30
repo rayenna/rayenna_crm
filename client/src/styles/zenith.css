@@ -49,6 +49,11 @@
   overscroll-behavior-x: contain;
 }
 
+/* Installation pulse: prefer horizontal pan so the table scrolls cleanly on phones/tablets */
+.zenith-root .zenith-install-pulse-scroll {
+  touch-action: pan-x pan-y;
+}
+
 .zenith-root h1,
 .zenith-root h2,
 .zenith-root h3,
