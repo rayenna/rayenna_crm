@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useModalEscape } from '../contexts/ModalEscapeContext'
 // Payment Status: Shows N/A in red for projects without Order Value or in early/lost stages
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
@@ -21,6 +22,8 @@ const ProjectDetail = () => {
   const queryClient = useQueryClient()
   const [showProposal, setShowProposal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  useModalEscape(showDeleteConfirm, () => setShowDeleteConfirm(false))
 
   const { data: project, isLoading, error } = useQuery({
     queryKey: ['project', id],

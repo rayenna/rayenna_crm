@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useModalEscape } from '../../contexts/ModalEscapeContext'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
@@ -14,6 +15,7 @@ export default function ZenithLogActivityModal({
 }) {
   const [text, setText] = useState('')
   const queryClient = useQueryClient()
+  useModalEscape(true, onClose)
 
   const mutation = useMutation({
     mutationFn: async (remark: string) => {

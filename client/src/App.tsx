@@ -6,6 +6,7 @@ import {
   type BrowserStorageErrorDetail,
 } from './lib/safeLocalStorage'
 import { AuthProvider } from './contexts/AuthContext'
+import { ModalEscapeProvider } from './contexts/ModalEscapeContext'
 import PrivateRoute from './components/PrivateRoute'
 import ErrorBoundary from './components/ErrorBoundary'
 import PageLoader from './components/PageLoader'
@@ -76,6 +77,7 @@ function App() {
 
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <ModalEscapeProvider>
       <AuthProvider>
         <Toaster position="top-right" />
         <Routes>
@@ -227,6 +229,7 @@ function App() {
           </Route>
         </Routes>
       </AuthProvider>
+      </ModalEscapeProvider>
     </BrowserRouter>
   )
 }

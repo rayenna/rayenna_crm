@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useModalEscape } from '../../contexts/ModalEscapeContext'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
@@ -46,6 +47,7 @@ interface ProposalData {
 
 const ProposalPreview = ({ projectId, onClose }: ProposalPreviewProps) => {
   const queryClient = useQueryClient()
+  useModalEscape(true, onClose)
   const [loading, setLoading] = useState(false)
   const [proposal, setProposal] = useState<ProposalData | null>(null)
   const [pdfLoading, setPdfLoading] = useState(false)

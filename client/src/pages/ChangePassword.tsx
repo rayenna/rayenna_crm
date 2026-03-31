@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useMutation } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import PageCard from '../components/PageCard'
+import { useModalEscape } from '../contexts/ModalEscapeContext'
 import { FaLock } from 'react-icons/fa'
 
 interface ChangePasswordForm {
@@ -32,6 +33,12 @@ const ChangePassword = () => {
   } = useForm<ChangePasswordForm>()
 
   const newPassword = watch('newPassword')
+
+  const handleCancel = useCallback(() => {
+    navigate('/dashboard')
+  }, [navigate])
+
+  useModalEscape(true, handleCancel)
 
   const mutation = useMutation({
     mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
@@ -196,7 +203,7 @@ const ChangePassword = () => {
             <div className="flex gap-3 pt-4">
               <button
                 type="button"
-                onClick={() => navigate('/dashboard')}
+                onClick={handleCancel}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
               >
                 Cancel

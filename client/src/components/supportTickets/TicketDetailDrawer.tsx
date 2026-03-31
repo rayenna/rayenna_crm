@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useModalEscape } from '@/contexts/ModalEscapeContext'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import { SupportTicket, SupportTicketStatus, UserRole } from '../../types'
@@ -21,6 +22,8 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh }: TicketDetail
   const [followUpDate, setFollowUpDate] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
+
+  useModalEscape(!!ticket && isOpen, onClose)
 
   const canManageTickets = hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS])
 

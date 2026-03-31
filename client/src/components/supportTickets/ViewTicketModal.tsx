@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useModalEscape } from '@/contexts/ModalEscapeContext'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
@@ -16,6 +17,7 @@ interface ViewTicketModalProps {
 const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) => {
   const { hasRole } = useAuth()
   const queryClient = useQueryClient()
+  useModalEscape(true, onClose)
   const [showAddActivity, setShowAddActivity] = useState(false)
   const [activityNote, setActivityNote] = useState('')
   const [followUpDate, setFollowUpDate] = useState('')

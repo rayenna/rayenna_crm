@@ -444,6 +444,25 @@ Support tickets are used to track customer service requests and issues. They hel
 - Prioritize high-value projects
 - Address at-risk projects quickly
 
+### Deal Health Score
+
+**Deal Health Score** (0–100) helps you **prioritise** which open deals deserve attention **today**. It is calculated from information already on the project: how **recently** it was updated, how **long** it has sat in the **current stage**, the **order value**, whether an **expected close date** is set and still realistic, and the **lead source**.
+
+**Where to use it**
+
+- **Projects** — Sort by **Deal Health Score** to surface **weaker** deals across your filtered list; each row shows a **badge**; **hover** for the breakdown.
+- **Zenith** — In **Your pipeline today**, compare deals at a glance; **Today’s Hit List** shows the same badge on urgent items with a quick **Open** link.
+- **Project Detail** — Open the full **Deal Health Score** card to see every factor and the suggested **insight** (usually pointing at the weakest area).
+
+**What to do when the score is low**
+
+- **Log activity** (remarks/updates) so “Activity” reflects reality.
+- **Move the stage** or follow up if **Momentum** shows the deal stuck.
+- **Enter or correct order value** and **expected close date** so value and timeline score fairly.
+- **Set lead source** accurately for better forecasting context.
+
+The complete rules, score bands, and exclusions are documented under the **Projects** module help — topic **Deal Health Score**.
+
 ### Working with Other Teams
 
 **Operations Team**:

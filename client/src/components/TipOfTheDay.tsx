@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useModalEscape } from '../contexts/ModalEscapeContext'
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom'
 import {
   TIPS,
@@ -36,6 +37,8 @@ const TipOfTheDay = () => {
     setShow(false)
     clearShowTipFromUrl()
   }
+
+  useModalEscape(show, handleGotIt)
 
   const handleDontShowAgain = () => {
     markDontShowAgain()

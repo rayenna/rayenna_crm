@@ -222,7 +222,20 @@ These controls work on the rows already loaded for your current FY / Quarter / M
 
 #### Deal Health Score (Zenith)
 
-**Deal Health** is a 0–100 score shown as a small colour-coded badge. Hover to see a breakdown (activity, momentum, value, close date, lead source). Terminal outcomes (Completed / Subsidy Credited / Lost) show no badge.
+**Deal Health** is the same **0–100** score as on the **Projects** list: it summarises how “healthy” an **open** deal looks from **Activity** (recency of updates), **Momentum** (time in stage vs expected), **Deal value**, **Close date**, and **Lead source**. Those five parts add up (with caps per part) to the number on the badge; **hover** any badge to see each part and how it scored.
+
+**Where it shows in Zenith**
+
+- **Your pipeline today** (in **Your Focus**): one badge per row for your deals, plus **Log activity** when you need to record a touchpoint.
+- **Today’s Hit List** (beside the KPI strip on wide layouts for Sales / Management / Admin): urgent deals also show the badge; use **Open →** to jump to **Project Detail** for the full card.
+
+**Why it helps**
+
+You can **spot cold or stuck deals** in context with the rest of Zenith (KPIs, funnel, filters) without exporting to a spreadsheet. **Management / Admin** see the same badge semantics when they review pipeline rows in **Your Focus**.
+
+**Not shown** for **Completed**, **Subsidy Credited** (including combined/loan variants where applicable), or **Lost** — same rule as elsewhere.
+
+For the **full explanation** of weights, sort behaviour, and sales tips, open the **Projects** module help and the section **Deal Health Score**.
 
 ### Executive (Sales, Management & Admin)
 

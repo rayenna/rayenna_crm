@@ -32,6 +32,7 @@ import ZenithProposalEngineCard from './ZenithProposalEngineCard'
 import HitList from './HitList'
 import { useHitList, type HitListProjectRow } from '../../hooks/useHitList'
 import { useQuickAction } from '../../hooks/useQuickAction'
+import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent, Landmark]
 const DEFAULT_MONTHLY_TARGET_KW = 50
@@ -204,6 +205,7 @@ export default function ZenithExecutiveBody({
   if (isLoading) return <ZenithSkeleton />
 
   const kpis = buildExecutiveZenithKpis(role, data, dateFilter.selectedFYs)
+  const availingLoanProjectsUrl = buildProjectsUrl({ availingLoan: true }, dateFilter)
   const totalCapacityKW = Number(kpis.find((k) => k.key === 'capacity')?.value ?? 0)
   const pipelineCapacityKW = Number((data as { pipelineCapacityKW?: number })?.pipelineCapacityKW ?? 0)
   const hasExplicitPeriod =
@@ -313,7 +315,12 @@ export default function ZenithExecutiveBody({
                     targetKW={targetKW}
                   />
                 ) : (
-                  <KPICard item={k} index={i} icon={icons[i] ?? Zap} />
+                  <KPICard
+                    item={k}
+                    index={i}
+                    icon={icons[i] ?? Zap}
+                    to={k.key === 'loan' ? availingLoanProjectsUrl : undefined}
+                  />
                 )}
               </div>
             ))}
@@ -333,7 +340,12 @@ export default function ZenithExecutiveBody({
                   targetKW={targetKW}
                 />
               ) : (
-                <KPICard item={k} index={i} icon={icons[i] ?? Zap} />
+                <KPICard
+                  item={k}
+                  index={i}
+                  icon={icons[i] ?? Zap}
+                  to={k.key === 'loan' ? availingLoanProjectsUrl : undefined}
+                />
               )}
             </div>
           ))}

@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
+import { useModalEscape } from '../contexts/ModalEscapeContext'
 import { Customer, UserRole } from '../types'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
@@ -580,6 +581,8 @@ const CustomerForm = ({
   onSuccess: () => void
 }) => {
   const { hasRole } = useAuth()
+  useModalEscape(true, onClose)
+
   const { data: salespersons } = useQuery({
     queryKey: ['salespersons'],
     queryFn: async () => {
@@ -856,14 +859,6 @@ const CustomerForm = ({
     })
     return () => cancelAnimationFrame(id)
   }, [])
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
 
   // Shared input styles for consistency
   const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all'

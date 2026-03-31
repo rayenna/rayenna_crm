@@ -863,10 +863,42 @@ Projects can have multiple support tickets and documents linked to them. These r
 
 ### Deal Health Score
 
-Projects display a compact **Deal Health** badge (0–100) near the project/customer name for quick scanning.
+**Deal Health Score** is a **0–100** number that estimates how strong an open deal looks **right now**, based on data already on the project. It is **not** a prediction of whether you will win the deal; it is a **prioritisation aid** so you can see which opportunities need attention (follow-up, stage movement, missing data) before others.
 
-- **Hover** the badge to see a breakdown (activity recency, stage momentum, deal value, close date, lead source).
-- Deals in terminal outcomes (Completed / Subsidy Credited / Lost) show no badge.
+The score is **computed in the app** from your project fields (last update time, time in stage, order value, expected close date, lead source). When you **hover** a **Deal Health** badge, you see the **five building blocks** and how each one scored. On **Project Detail**, the **Deal Health Score** card shows the same breakdown plus a short **insight** that usually highlights the **weakest** area so you know what to fix first.
+
+#### When you see it (and when you do not)
+
+- **Shown** for deals that are still in the **active pipeline** (not finished or lost).
+- **Not shown** for **terminal** outcomes, including **Completed**, **Subsidy Credited** (and combined/loan variants where applicable), and **Lost** — those stages no longer need a health signal.
+
+#### Where it appears in the app
+
+| Location | What you get |
+| :-- | :-- |
+| **Projects** list | A compact **badge** (0–100) next to the project/customer. **Sort** the list by **Deal Health Score** (ascending shows the weakest deals first across the full list — same data the server uses for sorting). |
+| **Project Detail** | A full **Deal Health Score** card with **all factors**, scores, and the insight line. |
+| **Zenith (Executive view)** | **Your pipeline today** (Sales / Management / Admin): each row can show a **Deal Health** badge; **hover** for the breakdown. **Today’s Hit List** also shows the badge on urgent deals with an **Open** link to the project. |
+| **Tip of the Day** | Occasionally reminds you about sorting by Deal Health and hovering badges. |
+
+#### How the score is computed (five factors)
+
+The score is the **sum** of five parts (each has a **maximum** points). The total is **capped at 100**. Together they answer: *Is anyone working this deal? Is it moving? Is it worth enough? Is there a timeline? Is the source reliable?*
+
+1. **Activity (up to 30 points)** — **Recency of the last update** on the project (the system uses the latest of the usual “last modified” style timestamps). **Recent updates score higher**; long gaps score lower, down to zero if the deal looks neglected.
+2. **Momentum (up to 25 points)** — **How long the deal has stayed in the current stage** compared to a **typical** duration for that stage (for example, early stages expect shorter dwell times; later stages allow longer). **On track** scores highest; **stuck** (far beyond the expected time in stage) scores lowest.
+3. **Deal value (up to 20 points)** — **Order / deal value** on the project. **Higher** confirmed values score higher; **very low or missing** value scores low — nudging you to **enter or refresh** the commercial figure so the pipeline stays honest.
+4. **Close date (up to 15 points)** — **Expected close date** (or equivalent commissioning/close field the app uses). Having a **future** date that is **not** already past scores higher; **missing** date scores zero; **overdue** dates score low (the deal still counts, but you are prompted to **update the plan** with the customer).
+5. **Lead source (up to 10 points)** — **Lead source** on the project. Known sources such as **Referral** and **channel / management** style sources score higher than generic or **unknown** sources, reflecting typical forecast quality. **Unknown** still gets a small base score so the row is usable.
+
+**Colour bands (typical):** high scores trend **teal / green** (healthy), mid scores **amber** (watch), low scores **red** (needs action). Exact labels (e.g. Healthy, At Risk) match what you see on the badge and detail card.
+
+#### How this helps sales
+
+- **Triage fast:** Scan badges on the **Projects** list or in **Zenith → Your Focus** to see which deals are **cold** or **stuck** without opening every record.
+- **Sort globally:** Use **Sort by → Deal Health Score** to pull **at-risk** deals to the top of a long list (especially when combined with your usual filters).
+- **Know what to do:** **Hover** the badge or open **Project Detail** to see **which** of activity, momentum, value, close date, or source is dragging the score — then **log an activity**, **advance the stage**, **fill value and close date**, or **correct lead source** as needed.
+- **Stay honest:** The score **reruns** when project data changes, so keeping **remarks / updates**, **stage**, and **dates** current directly improves what you see the next day.
 
 ## Project Detail View
 
@@ -881,12 +913,10 @@ Projects display a compact **Deal Health** badge (0–100) near the project/cust
 **Project Information Displayed**:
 - Project number and customer name
 - Creation date
+- **Deal Health Score** card (for eligible, non-terminal deals) — full factor breakdown and insight; see [Deal Health Score](#deal-health-score) above
 - All project sections
 - Linked resources
 - Action buttons
-
-**Deal Health Score (detail)**:
-- The Project Detail page includes a **Deal Health Score** card with the full breakdown (when applicable).
 
 ### Project Sections
 

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useModalEscape } from '../../contexts/ModalEscapeContext'
 import { motion } from 'framer-motion'
 import { Binoculars } from 'lucide-react'
 import { UserRole } from '../../types'
@@ -33,6 +34,29 @@ function firstNameOf(fullName: string | undefined | null): string {
   return n.split(/\s+/)[0] || 'there'
 }
 
+/** Dashboard payloads differ by endpoint: Sales has top-level totalProfit + revenue.*; Management/Admin nests profit under finance.* and revenue under sales.* */
+function parseZenithDashboardMetrics(data: Record<string, unknown>): {
+  totalPipeline: number
+  revenueTotal: number
+  totalProfit: number
+} {
+  const d = data as {
+    totalPipeline?: number
+    totalProfit?: number
+    totalProjectValue?: number
+    totalGrossProfit?: number
+    revenue?: { totalRevenue?: number }
+    sales?: { totalRevenue?: number }
+    finance?: { totalProfit?: number }
+  }
+  const totalPipeline = Number(d.totalPipeline ?? 0)
+  const revenueTotal = Number(
+    d.revenue?.totalRevenue ?? d.sales?.totalRevenue ?? d.totalProjectValue ?? 0,
+  )
+  const totalProfit = Number(d.totalProfit ?? d.finance?.totalProfit ?? d.totalGrossProfit ?? 0)
+  return { totalPipeline, revenueTotal, totalProfit }
+}
+
 function generateBriefing(args: {
   role: UserRole
   currentUserName?: string | null
@@ -43,13 +67,9 @@ function generateBriefing(args: {
   const greeting = greetingForHour(now.getHours())
   const firstName = firstNameOf(currentUserName)
 
-  const totalPipeline = Number((data as { totalPipeline?: number })?.totalPipeline ?? 0)
-  const revenueTotal = Number((data as { revenue?: { totalRevenue?: number } })?.revenue?.totalRevenue ?? 0)
-  const totalProfit = Number((data as { totalProfit?: number })?.totalProfit ?? 0)
+  const { totalPipeline, revenueTotal, totalProfit } = parseZenithDashboardMetrics(data)
 
-  const atRiskCount =
-    Number((data as { pipeline?: { atRisk?: number } })?.pipeline?.atRisk ?? 0) ||
-    Number((data as { pipeline?: { atRisk?: number } })?.pipeline?.atRisk ?? 0)
+  const atRiskCount = Number((data as { pipeline?: { atRisk?: number } })?.pipeline?.atRisk ?? 0)
 
   const lines: BriefingLine[] = []
 
@@ -172,6 +192,8 @@ export default function DailyBriefing({
     () => generateBriefing({ role, currentUserName, data }),
     [role, currentUserName, data],
   )
+
+  useModalEscape(isVisible, () => onDismiss(false))
 
   if (!isVisible) return null
 

@@ -22,6 +22,7 @@ import ChartPanel from './ChartPanel'
 import SegmentDonut from './SegmentDonut'
 import CustomerProfitabilityRank from './CustomerProfitabilityRank'
 import ZenithRevenueProfitFyChart from './ZenithRevenueProfitFyChart'
+import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
 
@@ -92,6 +93,7 @@ export default function ZenithFinanceBody({
   }
 
   const kpis = buildFinanceZenithKpis(data, effFYs)
+  const availingLoanProjectsUrl = buildProjectsUrl({ availingLoan: true }, dateFilter)
   const funnel = buildZenithFunnelFromStatuses(data, dateFilter)
   const fyRows = (data?.projectValueProfitByFY ?? []) as {
     fy: string
@@ -132,7 +134,12 @@ export default function ZenithFinanceBody({
       >
         {kpis.map((k, i) => (
           <div key={k.key} className="min-w-0">
-            <KPICard item={k} index={i} icon={icons[i] ?? Zap} />
+            <KPICard
+              item={k}
+              index={i}
+              icon={icons[i] ?? Zap}
+              to={k.key === 'loan' ? availingLoanProjectsUrl : undefined}
+            />
           </div>
         ))}
       </div>

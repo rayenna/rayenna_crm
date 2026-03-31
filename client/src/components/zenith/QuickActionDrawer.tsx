@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useModalEscape } from '../../contexts/ModalEscapeContext'
 import { motion } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
@@ -108,14 +109,12 @@ export default function QuickActionDrawer({
     setToast(null)
   }, [isOpen])
 
-  useEffect(() => {
-    if (!isOpen) return
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [isOpen, onClose])
+  const closeAndClear = useCallback(() => {
+    onClose()
+    setNoteText('')
+  }, [onClose])
+
+  useModalEscape(isOpen, closeAndClear)
 
   useEffect(() => {
     if (!project) return
@@ -161,11 +160,6 @@ export default function QuickActionDrawer({
   const logActivity = async (id: string, remark: string) => {
     await axiosInstance.post(`/api/remarks/project/${id}`, { remark })
     await invalidateAfterSave(id)
-  }
-
-  const closeAndClear = () => {
-    onClose()
-    setNoteText('')
   }
 
   return (

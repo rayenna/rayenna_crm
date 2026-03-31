@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useModalEscape } from '../../contexts/ModalEscapeContext'
 
 export type ErrorModalType = 'error' | 'warning' | 'info' | 'fatal'
 
@@ -48,6 +49,8 @@ export function ErrorModal({ open, onClose, type, message, technical, actions, a
   const [showTechnical, setShowTechnical] = useState(false)
   const dialogRef = useRef<HTMLDivElement>(null)
   const firstActionRef = useRef<HTMLButtonElement>(null)
+
+  useModalEscape(open, onClose)
 
   useEffect(() => {
     if (!open) return

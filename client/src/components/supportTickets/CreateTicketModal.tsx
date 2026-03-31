@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useModalEscape } from '../../contexts/ModalEscapeContext'
 import { createPortal } from 'react-dom'
 import { useMutation } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
@@ -13,6 +14,8 @@ interface CreateTicketModalProps {
 const CreateTicketModal = ({ projectId, onClose, onSuccess }: CreateTicketModalProps) => {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+
+  useModalEscape(true, onClose)
 
   // Render in viewport: portal to body so modal is always centered on screen (laptop/desktop), not at top of page
   useEffect(() => {

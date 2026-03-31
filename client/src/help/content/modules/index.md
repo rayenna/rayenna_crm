@@ -323,7 +323,7 @@ The detail page shows:
 
 - **Customer** information, **Project** and **Sales & Commercial** details
 - **Project Lifecycle** (execution dates, costs, equipment)
-- **Deal Health Score** (0–100) — a breakdown card that explains what is helping or hurting the deal (excluded for terminal outcomes)
+- **Deal Health Score** (0–100) — a card that breaks the score into **Activity**, **Momentum**, **Deal value**, **Close date**, and **Lead source**, with a short insight (hidden for completed / subsidy-credited / lost projects). Open the **Projects** module in Help for **how it is calculated**, **where else it appears** (including Zenith), and **how to use it** in daily selling.
 - **Payment Tracking** (status, amounts, balance)
 - **Remarks** (versioned history)
 - **Support / Service Tickets** (create, view, manage)
