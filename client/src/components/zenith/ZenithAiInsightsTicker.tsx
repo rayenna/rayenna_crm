@@ -43,7 +43,7 @@ export default function ZenithAiInsightsTicker({
   if (isLoading && insights.length === 0) {
     return (
       <div className="zenith-ai-insights-root border-b border-white/[0.06] bg-[#0a0a0f]/90">
-        <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-2 flex flex-col sm:block">
+        <div className="zenith-exec-main mx-auto px-3 sm:px-5 py-2 flex flex-col sm:block">
           <div className="h-10 sm:h-9 rounded-full bg-white/[0.06] zenith-skeleton" aria-hidden />
         </div>
       </div>
@@ -60,14 +60,14 @@ export default function ZenithAiInsightsTicker({
             100% { transform: translateX(-50%); }
           }`}
       </style>
-      <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 min-h-0">
+      <div className="zenith-exec-main mx-auto px-3 sm:px-5 py-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 min-h-0">
         <div className="flex items-center justify-center sm:justify-start shrink-0">
           <span className="zenith-display text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] text-[#f5a623]/70">
             AI insights
           </span>
         </div>
         <div
-          className="zenith-ai-insights-viewport flex-1 min-w-0 min-h-[44px] sm:min-h-0 rounded-full border border-white/10 bg-black/55 py-2 sm:py-1.5 shadow-inner shadow-black/40 flex items-center"
+          className="zenith-ai-insights-viewport flex-1 min-w-0 min-h-[44px] sm:min-h-0 rounded-full border border-white/[0.08] bg-black/40 py-2 sm:py-1.5 flex items-center"
           role="region"
           aria-label="AI insights, auto-scrolling"
         >

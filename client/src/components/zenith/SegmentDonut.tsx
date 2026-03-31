@@ -5,7 +5,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 const COLORS = ['#f5a623', '#00d4b4', '#a78bfa', '#38bdf8', '#fb7185', '#fbbf24']
 
 /** Explicit pixel height — percentage height inside flex/grid often resolves to 0 for Recharts. */
-const CHART_PX = 300
+const CHART_PX = 252
 
 export interface SegmentSlice {
   name: string
@@ -36,9 +36,9 @@ export default function SegmentDonut({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="zenith-glass rounded-2xl p-4 sm:p-5 flex flex-col"
+      className="zenith-glass rounded-xl p-3 sm:p-4 flex flex-col"
     >
-      <h3 className="zenith-display text-base sm:text-lg font-bold text-white mb-4">{title}</h3>
+      <h3 className="zenith-display text-sm sm:text-[15px] font-semibold text-white/95 mb-3">{title}</h3>
       <div className="w-full min-w-0" style={{ height: CHART_PX }}>
         {chartData.length === 0 ? (
           <p className="text-sm text-white/40 text-center flex items-center justify-center h-full">

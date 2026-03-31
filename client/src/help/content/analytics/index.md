@@ -204,18 +204,41 @@ Between the **KPI strip** and the **funnel**, **Your Focus** surfaces actionable
 
 | Role | What you see |
 | :-- | :-- |
-| **Sales** | **Your pipeline today** — a compact table of **your** leads/deals (assigned to you): customer, stage, deal value, and **last activity** (days since update or last project remark). **Green / amber / red** styling by recency; a **Follow-up needed** count for the oldest band; **Log activity** opens a short remark modal (saved on the project). |
-| **Finance** | **Payment radar** — finance KPIs (e.g. outstanding, collection timing, subsidy pending), a short **overdue** list with actions, and a small **collected vs outstanding vs subsidy** chart. |
-| **Operations** | **Installation pulse** — projects **under installation**: customer, kW, **sales person**, start / expected dates, progress, and quick stats (e.g. delayed count). |
+| **Sales** | **Your pipeline today** — a compact table of **your** leads/deals (assigned to you): customer, stage, deal value, **last activity**, and a **Deal Health** badge (0–100). **Green / amber / red** styling by recency; a **Follow-up needed** count for the oldest band; **Log activity** opens a short remark modal (saved on the project). |
+| **Finance** | **Payment radar** — finance KPIs (e.g. outstanding, collection timing, subsidy pending), a sortable **Top overdue** table, and a small **collected vs outstanding vs subsidy** chart. |
+| **Operations** | **Installation pulse** — projects **under installation**: customer, kW, **sales person**, start / expected dates, progress, and quick stats (e.g. delayed count). Table headers can be sorted; use **Overdue only** to focus on delayed installs. |
 | **Management / Admin** | **All** of the above blocks in one view (company-wide where applicable). |
 
 If there is nothing to show for the current filters, **Your Focus** may be hidden. Each block has a **subtle coloured left border** to distinguish Sales (gold-leaning), Finance (teal-leaning), and Operations (cool accent) content.
+
+#### Sorting and filtering inside Zenith tables
+
+In Zenith, some tables can be refined **without changing your dashboard filters**:
+
+- **Sort**: click a column heading (e.g. Deal value, Health, Days).
+- **Filter**: use the small filter controls near the table title (where available).
+
+These controls work on the rows already loaded for your current FY / Quarter / Month filters (no extra API calls).
+
+#### Deal Health Score (Zenith)
+
+**Deal Health** is a 0–100 score shown as a small colour-coded badge. Hover to see a breakdown (activity, momentum, value, close date, lead source). Terminal outcomes (Completed / Subsidy Credited / Lost) show no badge.
 
 ### Executive (Sales, Management & Admin)
 
 **KPI strip** — Typically includes **Total Capacity**, **Total Pipeline**, **Total Revenue**, **Total Profit**, and **Pipeline Conversion** (definitions match the classic dashboard and the sections above).
 
 **Your Focus** — See [Your Focus](#your-focus-role-specific); **Sales** sees own pipeline, **Management/Admin** see the combined focus layout.
+
+**Today’s Hit List** — On wide screens, Sales / Management / Admin also see **Today’s Hit List** beside the KPI strip. It highlights a small set of deals that need attention (e.g. overdue close dates, stalled proposals, deals going cold), with:
+
+- **Stage** and **deal value**
+- An **urgency label** (e.g. Overdue, Closing soon, Stalled)
+- A compact **Deal Health** badge (0–100) with hover breakdown
+- A **days counter** showing how long it has been overdue / stalled
+- **Open →** to jump straight to the Project Detail page
+
+If a day has no urgent deals, the card shows **All clear**.
 
 **Funnel** — Deal-flow style view of stages from leads through execution (layout varies slightly by role).
 

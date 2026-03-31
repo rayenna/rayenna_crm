@@ -859,6 +859,14 @@ Projects can have multiple support tickets and documents linked to them. These r
 - By project value
 - By customer name
 - By status
+- By **Deal Health Score** (0–100)
+
+### Deal Health Score
+
+Projects display a compact **Deal Health** badge (0–100) near the project/customer name for quick scanning.
+
+- **Hover** the badge to see a breakdown (activity recency, stage momentum, deal value, close date, lead source).
+- Deals in terminal outcomes (Completed / Subsidy Credited / Lost) show no badge.
 
 ## Project Detail View
 
@@ -876,6 +884,9 @@ Projects can have multiple support tickets and documents linked to them. These r
 - All project sections
 - Linked resources
 - Action buttons
+
+**Deal Health Score (detail)**:
+- The Project Detail page includes a **Deal Health Score** card with the full breakdown (when applicable).
 
 ### Project Sections
 

@@ -1,11 +1,11 @@
 /* Zenith — Dark Command Center (scoped via .zenith-root) */
 /* Plus Jakarta Sans: crisp SaaS headings & KPIs; DM Sans: UI body */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Plus+Jakarta+Sans:ital,wght@0,500;0,600;0,700;0,800;1,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Plus+Jakarta+Sans:ital,wght@0,500;0,600;0,700;0,800;1,500&family=Syne:wght@700&display=swap');
 
 .zenith-root {
   --zenith-bg: #0a0a0f;
-  --zenith-surface: rgba(255, 255, 255, 0.04);
-  --zenith-border: rgba(255, 255, 255, 0.08);
+  --zenith-surface: rgba(255, 255, 255, 0.035);
+  --zenith-border: rgba(255, 255, 255, 0.065);
   --zenith-gold: #f5a623;
   --zenith-teal: #00d4b4;
   --zenith-crimson: #ff4757;
@@ -26,9 +26,9 @@
   -webkit-tap-highlight-color: transparent;
   background-color: var(--zenith-bg);
   background-image:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(245, 166, 35, 0.15), transparent),
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    radial-gradient(ellipse 70% 45% at 50% -18%, rgba(245, 166, 35, 0.09), transparent),
+    linear-gradient(rgba(255, 255, 255, 0.017) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.017) 1px, transparent 1px);
   background-size:
     100% 100%,
     48px 48px,
@@ -86,8 +86,26 @@
 .zenith-glass {
   background: var(--zenith-surface);
   border: 1px solid var(--zenith-border);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Executive Zenith: readable column width + section rhythm (used on main body wrapper) */
+.zenith-root .zenith-exec-main {
+  max-width: 1520px;
+}
+
+.zenith-root .zenith-exec-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.055);
+  padding-top: 1.25rem;
+  margin-top: 0.125rem;
+}
+
+@media (min-width: 1024px) {
+  .zenith-root .zenith-exec-section {
+    padding-top: 1.5rem;
+    margin-top: 0.25rem;
+  }
 }
 
 .zenith-skeleton {
@@ -204,4 +222,62 @@
     background: rgba(255, 255, 255, 0.055);
   }
 
+}
+
+/* Today’s Hit List — pulse (keyframes appended; Syne loaded in @import at top) */
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes pulse-number {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.pulse-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff4757;
+  margin-right: 5px;
+  vertical-align: middle;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.pulse-number {
+  animation: pulse-number 2s ease-in-out infinite;
+}
+
+/* Hit List widget: scrollable body on laptop without heavy scrollbar */
+.zenith-root .zenith-hit-list-body {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+.zenith-root .zenith-hit-list-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.zenith-root .zenith-hit-list-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.zenith-root .zenith-hit-list-body::-webkit-scrollbar-track {
+  background: transparent;
 }

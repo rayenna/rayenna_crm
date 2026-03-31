@@ -85,7 +85,17 @@ router.get(
     query('availingLoan').optional().isIn(['true']),
     query('page').optional().isInt({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 100 }),
-    query('sortBy').optional().isIn(['systemCapacity', 'projectCost', 'confirmationDate', 'creationDate', 'profitability', 'customerName']),
+    query('sortBy')
+      .optional()
+      .isIn([
+        'systemCapacity',
+        'projectCost',
+        'confirmationDate',
+        'creationDate',
+        'profitability',
+        'customerName',
+        'dealHealthScore',
+      ]),
     query('sortOrder').optional().isIn(['asc', 'desc']),
     query('peBucket').optional().isIn(['proposal-ready', 'draft', 'not-started', 'rest']),
   ],
@@ -508,9 +518,104 @@ router.get(
         (where.AND as any[]).push(peBucketClause);
       }
 
+      const computeDealHealthScore = (p: {
+        projectStatus: ProjectStatus;
+        updatedAt: Date;
+        stageEnteredAt: Date | null;
+        projectCost: number | null;
+        expectedCommissioningDate: Date | null;
+        leadSource: LeadSource | null;
+      }): number | null => {
+        // Excluded (terminal) stages: no score
+        if (
+          p.projectStatus === ProjectStatus.COMPLETED ||
+          p.projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED ||
+          p.projectStatus === ProjectStatus.LOST
+        ) {
+          return null;
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const daysSince = (d: Date | null | undefined) => {
+          if (!d) return 999;
+          const dd = new Date(d);
+          dd.setHours(0, 0, 0, 0);
+          return Math.max(0, Math.floor((today.getTime() - dd.getTime()) / 86400000));
+        };
+
+        const diffDays = (d: Date | null | undefined) => {
+          if (!d) return null;
+          const dd = new Date(d);
+          dd.setHours(0, 0, 0, 0);
+          return Math.ceil((dd.getTime() - today.getTime()) / 86400000);
+        };
+
+        // Factor 1: activity recency (max 30)
+        const daysSinceActivity = daysSince(p.updatedAt);
+        let factor1 = 0;
+        if (daysSinceActivity <= 3) factor1 = 30;
+        else if (daysSinceActivity <= 7) factor1 = 22;
+        else if (daysSinceActivity <= 14) factor1 = 12;
+        else if (daysSinceActivity <= 30) factor1 = 5;
+        else factor1 = 0;
+
+        // Factor 2: stage momentum (max 25)
+        const EXPECTED_DAYS_PER_STATUS: Partial<Record<ProjectStatus, number>> = {
+          [ProjectStatus.LEAD]: 7,
+          [ProjectStatus.SITE_SURVEY]: 14,
+          [ProjectStatus.PROPOSAL]: 21,
+          [ProjectStatus.CONFIRMED]: 30,
+          [ProjectStatus.UNDER_INSTALLATION]: 45,
+          [ProjectStatus.SUBMITTED_FOR_SUBSIDY]: 21,
+        };
+        const expectedDays = EXPECTED_DAYS_PER_STATUS[p.projectStatus] ?? 14;
+        const daysInStage = daysSince(p.stageEnteredAt ?? p.updatedAt);
+        let factor2 = 0;
+        if (daysInStage <= expectedDays) factor2 = 25;
+        else if (daysInStage <= expectedDays * 1.5) factor2 = 15;
+        else if (daysInStage <= expectedDays * 2) factor2 = 8;
+        else factor2 = 0;
+
+        // Factor 3: deal value (max 20)
+        const value = Number(p.projectCost ?? 0);
+        let factor3 = 0;
+        if (value >= 500000) factor3 = 20;
+        else if (value >= 200000) factor3 = 15;
+        else if (value >= 50000) factor3 = 10;
+        else if (value > 0) factor3 = 5;
+        else factor3 = 0;
+
+        // Factor 4: close date awareness (max 15)
+        const daysToClose = diffDays(p.expectedCommissioningDate);
+        let factor4 = 0;
+        if (daysToClose === null) factor4 = 0;
+        else if (daysToClose > 30) factor4 = 15;
+        else if (daysToClose > 14) factor4 = 12;
+        else if (daysToClose > 7) factor4 = 8;
+        else if (daysToClose >= 0) factor4 = 5;
+        else factor4 = 2;
+
+        // Factor 5: lead source (max 10)
+        const SOURCE_SCORES: Partial<Record<LeadSource, number>> = {
+          [LeadSource.REFERRAL]: 10,
+          [LeadSource.MANAGEMENT_CONNECT]: 8,
+          [LeadSource.CHANNEL_PARTNER]: 8,
+          [LeadSource.DIGITAL_MARKETING]: 6,
+          [LeadSource.SALES]: 5,
+        };
+        const factor5 = (p.leadSource && SOURCE_SCORES[p.leadSource]) ? (SOURCE_SCORES[p.leadSource] as number) : 3;
+
+        const raw = factor1 + factor2 + factor3 + factor4 + factor5;
+        return Math.min(100, Math.max(0, raw));
+      };
+
+      const wantsHealthSort = sortBy === 'dealHealthScore';
+
       // Build orderBy based on sortBy parameter (blank/null = zero: asc → nulls first, desc → nulls last)
       let orderBy: any[] = [];
-      if (sortBy) {
+      if (sortBy && !wantsHealthSort) {
         const order = sortOrder === 'asc' ? 'asc' : 'desc';
         switch (sortBy) {
           case 'systemCapacity':
@@ -562,54 +667,64 @@ router.get(
         ],
       };
 
-      const [projects, total, totals, balanceTotals] = await Promise.all([
-        prisma.project.findMany({
-          where,
+      const baseSelect: any = {
+        id: true,
+        slNo: true,
+        customerId: true,
+        type: true,
+        projectServiceType: true,
+        salespersonId: true,
+        year: true,
+        systemCapacity: true,
+        projectCost: true,
+        projectStatus: true,
+        confirmationDate: true,
+        createdAt: true,
+        updatedAt: true,
+        stageEnteredAt: true,
+        expectedCommissioningDate: true,
+        paymentStatus: true,
+        balanceAmount: true,
+        leadSource: true,
+        availingLoan: true,
+        customer: {
           select: {
             id: true,
-            slNo: true,
             customerId: true,
-            type: true,
-            projectServiceType: true,
-            salespersonId: true,
-            year: true,
-            systemCapacity: true,
-            projectCost: true,
-            projectStatus: true,
-            confirmationDate: true,
-            createdAt: true,
-            paymentStatus: true,
-            balanceAmount: true,
-            leadSource: true,
-            availingLoan: true,
-            customer: {
-              select: {
-                id: true,
-                customerId: true,
-                customerName: true,
-                firstName: true,
-                middleName: true,
-                lastName: true,
-              },
-            },
-            createdBy: {
-              select: { id: true, name: true, email: true },
-            },
-            salesperson: {
-              select: { id: true, name: true, email: true },
-            },
-            _count: {
-              select: { documents: true },
-            },
-            supportTickets: {
-              where: { status: { in: [SupportTicketStatus.OPEN, SupportTicketStatus.IN_PROGRESS] } },
-              select: { id: true },
-            },
+            customerName: true,
+            firstName: true,
+            middleName: true,
+            lastName: true,
           },
-          orderBy,
-          skip,
-          take,
-        }),
+        },
+        createdBy: {
+          select: { id: true, name: true, email: true },
+        },
+        salesperson: {
+          select: { id: true, name: true, email: true },
+        },
+        _count: {
+          select: { documents: true },
+        },
+        supportTickets: {
+          where: { status: { in: [SupportTicketStatus.OPEN, SupportTicketStatus.IN_PROGRESS] as SupportTicketStatus[] } },
+          select: { id: true },
+        },
+      };
+
+      const [allOrPage, total, totals, balanceTotals] = await Promise.all([
+        wantsHealthSort
+          ? prisma.project.findMany({
+              where,
+              select: baseSelect,
+            })
+          : prisma.project.findMany({
+              where,
+              select: baseSelect,
+              orderBy,
+              skip,
+              take,
+            }),
         prisma.project.count({ where }),
         prisma.project.aggregate({
           where,
@@ -620,6 +735,35 @@ router.get(
           _sum: { balanceAmount: true },
         }),
       ]);
+
+      const projects = wantsHealthSort
+        ? (() => {
+            const order = sortOrder === 'asc' ? 'asc' : 'desc';
+            const scored = (allOrPage as any[]).map((p) => ({
+              p,
+              s: computeDealHealthScore({
+                projectStatus: p.projectStatus,
+                updatedAt: p.updatedAt,
+                stageEnteredAt: p.stageEnteredAt,
+                projectCost: p.projectCost,
+                expectedCommissioningDate: p.expectedCommissioningDate,
+                leadSource: p.leadSource,
+              }),
+            }));
+
+            scored.sort((a, b) => {
+              const sa = a.s ?? -1;
+              const sb = b.s ?? -1;
+              if (sa !== sb) return order === 'asc' ? sa - sb : sb - sa;
+              // stable-ish fallback
+              const ac = a.p.createdAt?.getTime?.() ?? 0;
+              const bc = b.p.createdAt?.getTime?.() ?? 0;
+              return bc - ac;
+            });
+
+            return scored.slice(skip, skip + take).map((x) => x.p);
+          })()
+        : (allOrPage as any[]);
 
       res.json({
         projects,

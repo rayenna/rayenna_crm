@@ -23,15 +23,15 @@ export default function CommandBar({
   onResetFilters,
 }: Props) {
   return (
-    <header className="sticky top-0 z-40 bg-[#0a0a0f]/80 backdrop-blur-xl">
-      <div className="max-w-[1600px] mx-auto px-3 sm:px-5 pb-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))] flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-3 min-w-0">
-          <Binoculars className="w-6 h-6 sm:w-7 sm:h-7 text-[#f5a623] flex-shrink-0" strokeWidth={2} aria-hidden />
+    <header className="sticky top-0 z-40 border-b border-white/[0.05] bg-[#0a0a0f]/85 backdrop-blur-xl">
+      <div className="zenith-exec-main mx-auto px-3 sm:px-5 pb-2.5 pt-[max(0.65rem,env(safe-area-inset-top,0px))] flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <Binoculars className="w-5 h-5 sm:w-6 sm:h-6 text-[#f5a623] flex-shrink-0" strokeWidth={2} aria-hidden />
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow truncate font-sans">
+            <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight truncate font-sans">
               Zenith
             </h1>
-            <p className="mt-0.5 text-white/90 text-sm sm:text-base font-sans font-normal">
+            <p className="mt-0 text-white/55 text-[11px] sm:text-xs font-sans font-medium tracking-wide uppercase">
               Command Center
             </p>
           </div>

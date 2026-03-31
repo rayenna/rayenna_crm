@@ -143,7 +143,7 @@ export default function CustomerProfitabilityRank({ rows }: { rows: ProfitRow[] 
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="zenith-glass rounded-2xl p-4 sm:p-5 min-h-[380px] flex flex-col overflow-hidden"
+      className="zenith-glass rounded-xl p-3 sm:p-4 min-h-[300px] flex flex-col overflow-hidden"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3 min-w-0">

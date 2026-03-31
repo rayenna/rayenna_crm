@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
@@ -8,6 +8,8 @@ import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
 import type { ZenithDateFilter } from './zenithTypes'
 import ZenithLogActivityModal from './ZenithLogActivityModal'
+import HealthBadge from './HealthBadge'
+import { computeDealHealth, pipelineRowToHealthProject } from '../../utils/dealHealthScore'
 
 type SalesPipelineRow = {
   projectId: string
@@ -15,6 +17,12 @@ type SalesPipelineRow = {
   stage: string
   dealValue: number
   daysSinceActivity: number
+  /** Extra fields from zenith-focus for Today’s Hit List (same API, no extra fetch). */
+  expectedCloseDate?: string | null
+  createdAt?: string
+  updatedAt?: string
+  salespersonId?: string
+  leadSource?: string | null
 }
 
 type FinanceOverdueRow = {
@@ -82,6 +90,58 @@ function SalesPipelineBlock({
   accentClass: string
 }) {
   const [logFor, setLogFor] = useState<{ id: string; label: string } | null>(null)
+  const [sortField, setSortField] = useState<
+    'customerName' | 'stage' | 'dealValue' | 'lastActivity' | 'health' | null
+  >(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [stageFilter, setStageFilter] = useState<string>('ALL')
+  const [customerFilter, setCustomerFilter] = useState<string>('')
+
+  const handleSort = (field: NonNullable<typeof sortField>) => {
+    if (sortField !== field) {
+      setSortField(field)
+      setSortDir(field === 'health' ? 'desc' : 'asc')
+      return
+    }
+    setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))
+  }
+
+  const displayRows = useMemo(() => {
+    const q = customerFilter.trim().toLowerCase()
+    let rows = [...data.rows]
+    if (stageFilter !== 'ALL') rows = rows.filter((r) => r.stage === stageFilter)
+    if (q) rows = rows.filter((r) => (r.customerName || '').toLowerCase().includes(q))
+
+    if (!sortField) return rows
+
+    const dir = sortDir === 'asc' ? 1 : -1
+
+    rows.sort((a, b) => {
+      switch (sortField) {
+        case 'customerName': {
+          return (a.customerName || '').localeCompare(b.customerName || '') * dir
+        }
+        case 'stage': {
+          return (a.stage || '').localeCompare(b.stage || '') * dir
+        }
+        case 'dealValue': {
+          return ((a.dealValue ?? 0) - (b.dealValue ?? 0)) * dir
+        }
+        case 'lastActivity': {
+          return ((a.daysSinceActivity ?? 0) - (b.daysSinceActivity ?? 0)) * dir
+        }
+        case 'health': {
+          const sa = computeDealHealth(pipelineRowToHealthProject(a))?.score ?? -1
+          const sb = computeDealHealth(pipelineRowToHealthProject(b))?.score ?? -1
+          return (sa - sb) * dir
+        }
+        default:
+          return 0
+      }
+    })
+
+    return rows
+  }, [customerFilter, data.rows, sortDir, sortField, stageFilter])
 
   return (
     <section
@@ -90,6 +150,27 @@ function SalesPipelineBlock({
       <div className="p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <h3 className="zenith-display text-base font-bold text-white">{title}</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={customerFilter}
+              onChange={(e) => setCustomerFilter(e.target.value)}
+              placeholder="Filter customer…"
+              className="h-9 rounded-lg bg-black/25 border border-white/10 px-3 text-xs text-white/80 placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#00d4b4]/40"
+            />
+            <select
+              value={stageFilter}
+              onChange={(e) => setStageFilter(e.target.value)}
+              className="h-9 rounded-lg bg-black/25 border border-white/10 px-2.5 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-[#00d4b4]/40"
+              aria-label="Filter by stage"
+            >
+              <option value="ALL">All stages</option>
+              {Array.from(new Set(data.rows.map((r) => r.stage))).map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
           {data.followUpNeeded > 0 && (
             <span className="inline-flex items-center rounded-full bg-red-500/20 text-red-200 text-xs font-bold px-2.5 py-1 border border-red-400/30">
               Follow-up needed: {data.followUpNeeded}
@@ -97,25 +178,62 @@ function SalesPipelineBlock({
           )}
         </div>
         <div className="zenith-scroll-x overflow-x-auto -mx-1">
-          <table className="w-full text-left text-xs sm:text-sm min-w-[520px]">
+          <table className="w-full text-left text-xs sm:text-sm min-w-[640px]">
             <thead>
               <tr className="text-white/45 border-b border-white/10">
-                <th className="py-2 pr-3 font-semibold">Customer</th>
-                <th className="py-2 pr-3 font-semibold">Stage</th>
-                <th className="py-2 pr-3 font-semibold text-right">Deal value</th>
-                <th className="py-2 pr-3 font-semibold">Last activity</th>
+                <th
+                  className="py-2 pr-3 font-semibold cursor-pointer select-none"
+                  onClick={() => handleSort('customerName')}
+                >
+                  Customer {sortField === 'customerName' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                </th>
+                <th
+                  className="py-2 pr-3 font-semibold cursor-pointer select-none"
+                  onClick={() => handleSort('stage')}
+                >
+                  Stage {sortField === 'stage' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                </th>
+                <th
+                  className="py-2 pr-3 font-semibold text-right cursor-pointer select-none"
+                  onClick={() => handleSort('dealValue')}
+                >
+                  Deal value {sortField === 'dealValue' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                </th>
+                <th
+                  className="py-2 pr-3 font-semibold cursor-pointer select-none"
+                  onClick={() => handleSort('lastActivity')}
+                >
+                  Last activity {sortField === 'lastActivity' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                </th>
+                <th
+                  className="py-2 align-middle"
+                  style={{
+                    width: '90px',
+                    textAlign: 'center',
+                    fontSize: '12px',
+                    color: 'rgba(255,255,255,0.4)',
+                    fontWeight: 500,
+                    padding: '10px 12px',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                  }}
+                  onClick={() => handleSort('health')}
+                >
+                  Health{' '}
+                  {sortField === 'health' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                </th>
                 <th className="py-2 pl-2 font-semibold w-[120px]"> </th>
               </tr>
             </thead>
             <tbody>
               {data.rows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-white/40">
+                  <td colSpan={6} className="py-8 text-center text-white/40">
                     No pipeline rows for this period.
                   </td>
                 </tr>
               ) : (
-                data.rows.map((r) => {
+                displayRows.map((r) => {
                   const tone = activityTone(r.daysSinceActivity)
                   return (
                     <tr key={r.projectId} className="border-b border-white/[0.06] hover:bg-white/[0.04]">
@@ -132,6 +250,9 @@ function SalesPipelineBlock({
                         <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-bold ${tone.className} ${tone.text}`}>
                           {r.daysSinceActivity}d ago
                         </span>
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '0 12px' }}>
+                        <HealthBadge project={pipelineRowToHealthProject(r)} size="sm" showLabel={false} />
                       </td>
                       <td className="py-2.5 pl-2">
                         <button
@@ -174,6 +295,40 @@ function FinanceRadarBlock({
   }
   accentClass: string
 }) {
+  const [sortField, setSortField] = useState<'amount' | 'days' | 'customer' | null>('amount')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [customerFilter, setCustomerFilter] = useState<string>('')
+
+  const overdueRows = useMemo(() => {
+    const q = customerFilter.trim().toLowerCase()
+    let rows = [...data.overdueTop5]
+    if (q) rows = rows.filter((r) => (r.customerName || '').toLowerCase().includes(q))
+    if (!sortField) return rows
+    const dir = sortDir === 'asc' ? 1 : -1
+    rows.sort((a, b) => {
+      switch (sortField) {
+        case 'amount':
+          return ((a.amount ?? 0) - (b.amount ?? 0)) * dir
+        case 'days':
+          return ((a.daysOverdue ?? 0) - (b.daysOverdue ?? 0)) * dir
+        case 'customer':
+          return (a.customerName || '').localeCompare(b.customerName || '') * dir
+        default:
+          return 0
+      }
+    })
+    return rows
+  }, [customerFilter, data.overdueTop5, sortDir, sortField])
+
+  const toggleSort = (f: NonNullable<typeof sortField>) => {
+    if (sortField !== f) {
+      setSortField(f)
+      setSortDir(f === 'customer' ? 'asc' : 'desc')
+      return
+    }
+    setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))
+  }
+
   const pieData = [
     { name: 'Collected', value: data.donut.collected, fill: '#00d4b4' },
     { name: 'Outstanding', value: data.donut.outstanding, fill: '#f5a623' },
@@ -207,41 +362,86 @@ function FinanceRadarBlock({
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           <div>
-            <h4 className="text-xs font-bold text-white/50 uppercase tracking-widest mb-2">Top overdue</h4>
-            <ul className="space-y-2">
-              {data.overdueTop5.length === 0 ? (
-                <li className="text-sm text-white/40">No overdue rows in top slice.</li>
-              ) : (
-                data.overdueTop5.map((r) => {
-                  const mail = `mailto:?subject=${encodeURIComponent(`Payment reminder — ${r.customerName}`)}&body=${encodeURIComponent(
-                    `Project outstanding: ₹${Math.round(r.amount).toLocaleString('en-IN')}\nDays since confirmation: ${r.daysOverdue}`,
-                  )}`
-                  return (
-                    <li
-                      key={r.projectId}
-                      className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs sm:text-sm"
-                    >
-                      <Link to={`/projects/${r.projectId}`} className="font-semibold text-white hover:text-[#f5a623] min-w-0 flex-1 truncate">
-                        {r.customerName}
-                      </Link>
-                      <span className="tabular-nums text-white/80">₹{Math.round(r.amount).toLocaleString('en-IN')}</span>
-                      <span className="text-white/45 text-xs">
-                        Since {format(parseISO(r.dueSince), 'dd MMM yyyy')}
-                      </span>
-                      <span className="inline-flex items-center rounded-md bg-red-500/25 text-red-200 text-[11px] font-bold px-1.5 py-0.5">
-                        {r.daysOverdue}d
-                      </span>
-                      <a
-                        href={mail}
-                        className="ml-auto text-xs font-bold text-[#00d4b4] hover:underline"
+            <div className="flex items-end justify-between gap-2 mb-2">
+              <h4 className="text-xs font-bold text-white/50 uppercase tracking-widest">Top overdue</h4>
+              <input
+                value={customerFilter}
+                onChange={(e) => setCustomerFilter(e.target.value)}
+                placeholder="Filter customer…"
+                className="h-8 rounded-lg bg-black/25 border border-white/10 px-3 text-xs text-white/80 placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#00d4b4]/40"
+              />
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-black/20 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[520px] text-left text-xs sm:text-sm">
+                  <thead>
+                    <tr className="text-white/45 border-b border-white/10">
+                      <th
+                        className="py-2 px-3 font-semibold cursor-pointer select-none"
+                        onClick={() => toggleSort('customer')}
                       >
-                        Send reminder
-                      </a>
-                    </li>
-                  )
-                })
-              )}
-            </ul>
+                        Customer {sortField === 'customer' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                      </th>
+                      <th
+                        className="py-2 px-3 font-semibold text-right cursor-pointer select-none"
+                        onClick={() => toggleSort('amount')}
+                      >
+                        Amount {sortField === 'amount' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                      </th>
+                      <th className="py-2 px-3 font-semibold">Since</th>
+                      <th
+                        className="py-2 px-3 font-semibold text-right cursor-pointer select-none"
+                        onClick={() => toggleSort('days')}
+                      >
+                        Days {sortField === 'days' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                      </th>
+                      <th className="py-2 px-3 font-semibold text-right"> </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {overdueRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-6 text-center text-white/40">
+                          No overdue rows in top slice.
+                        </td>
+                      </tr>
+                    ) : (
+                      overdueRows.map((r) => {
+                        const mail = `mailto:?subject=${encodeURIComponent(`Payment reminder — ${r.customerName}`)}&body=${encodeURIComponent(
+                          `Project outstanding: ₹${Math.round(r.amount).toLocaleString('en-IN')}\nDays since confirmation: ${r.daysOverdue}`,
+                        )}`
+                        return (
+                          <tr key={r.projectId} className="border-b border-white/[0.06] last:border-b-0 hover:bg-white/[0.04]">
+                            <td className="py-2.5 px-3">
+                              <Link to={`/projects/${r.projectId}`} className="font-semibold text-white hover:text-[#f5a623]">
+                                {r.customerName}
+                              </Link>
+                            </td>
+                            <td className="py-2.5 px-3 text-right tabular-nums text-white/85">
+                              ₹{Math.round(r.amount).toLocaleString('en-IN')}
+                            </td>
+                            <td className="py-2.5 px-3 text-white/55 text-xs whitespace-nowrap">
+                              {format(parseISO(r.dueSince), 'dd MMM yyyy')}
+                            </td>
+                            <td className="py-2.5 px-3 text-right">
+                              <span className="inline-flex items-center rounded-md bg-red-500/25 text-red-200 text-[11px] font-bold px-1.5 py-0.5 tabular-nums">
+                                {r.daysOverdue}d
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-right">
+                              <a href={mail} className="text-xs font-bold text-[#00d4b4] hover:underline whitespace-nowrap">
+                                Send reminder
+                              </a>
+                            </td>
+                          </tr>
+                        )
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
           <div className="h-[160px] w-full min-w-0">
             {pieData.length === 0 ? (
@@ -291,12 +491,72 @@ function InstallationPulseBlock({
   data: { rows: InstallRow[]; avgInstallationDays: number | null; delayedCount: number }
   accentClass: string
 }) {
+  const [sortField, setSortField] = useState<
+    'customerName' | 'kW' | 'salespersonName' | 'startDate' | 'expectedCompletion' | 'percentComplete' | null
+  >(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [overdueOnly, setOverdueOnly] = useState(false)
+
+  const handleSort = (field: NonNullable<typeof sortField>) => {
+    if (sortField !== field) {
+      setSortField(field)
+      setSortDir(field === 'percentComplete' || field === 'kW' ? 'desc' : 'asc')
+      return
+    }
+    setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))
+  }
+
+  const displayRows = useMemo(() => {
+    let rows = [...data.rows]
+    if (overdueOnly) rows = rows.filter((r) => r.overdue)
+    if (!sortField) return rows
+    const dir = sortDir === 'asc' ? 1 : -1
+    const ts = (s: string | null) => {
+      if (!s) return 0
+      const t = Date.parse(s)
+      return Number.isFinite(t) ? t : 0
+    }
+    rows.sort((a, b) => {
+      switch (sortField) {
+        case 'customerName':
+          return (a.customerName || '').localeCompare(b.customerName || '') * dir
+        case 'kW':
+          return (((a.kW ?? -1) - (b.kW ?? -1)) || 0) * dir
+        case 'salespersonName':
+          return (a.salespersonName || '').localeCompare(b.salespersonName || '') * dir
+        case 'startDate':
+          return (ts(a.startDate) - ts(b.startDate)) * dir
+        case 'expectedCompletion':
+          return (ts(a.expectedCompletion) - ts(b.expectedCompletion)) * dir
+        case 'percentComplete':
+          return (((a.percentComplete ?? -1) - (b.percentComplete ?? -1)) || 0) * dir
+        default:
+          return 0
+      }
+    })
+    return rows
+  }, [data.rows, overdueOnly, sortDir, sortField])
+
   return (
     <section
       className={`rounded-2xl border border-white/[0.08] bg-white/[0.03] overflow-hidden ${accentClass} pl-4`}
     >
       <div className="p-4 sm:p-5">
-        <h3 className="zenith-display text-base font-bold text-white mb-3">Installation pulse</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <h3 className="zenith-display text-base font-bold text-white">Installation pulse</h3>
+          <button
+            type="button"
+            onClick={() => setOverdueOnly((v) => !v)}
+            className={`h-9 px-3 rounded-lg border text-xs font-bold transition-colors ${
+              overdueOnly
+                ? 'bg-red-500/20 text-red-200 border-red-400/30'
+                : 'bg-black/25 text-white/70 border-white/10 hover:bg-white/[0.05]'
+            }`}
+            title="Toggle: show only overdue rows"
+          >
+            {overdueOnly ? 'Overdue only ✓' : 'Overdue only'}
+          </button>
+        </div>
         <div className="flex flex-wrap gap-4 text-xs sm:text-sm text-white/70 mb-4">
           <span>
             Avg install days:{' '}
@@ -307,15 +567,6 @@ function InstallationPulseBlock({
             <strong className={data.delayedCount > 0 ? 'text-red-300' : 'text-emerald-300'}>{data.delayedCount}</strong>
           </span>
         </div>
-        <p className="text-[11px] sm:text-xs text-white/45 leading-relaxed mb-4 max-w-3xl">
-          <span className="text-white/55 font-semibold">Data sources: </span>
-          <strong className="text-white/70">Sales person</strong> is the project’s assigned{' '}
-          <strong className="text-white/70">salesperson</strong>. Start uses installation start date, then{' '}
-          <strong className="text-white/70">stage entered</strong> or <strong className="text-white/70">order confirmation</strong>{' '}
-          date. <strong className="text-white/70">Expected</strong> uses <strong className="text-white/70">expected commissioning</strong>{' '}
-          on the project when set; otherwise <strong className="text-white/70">installation completion date</strong> (same field as
-          Project Lifecycle). Progress uses start vs that target (or 100% if install is marked complete).
-        </p>
         <div
           className="zenith-scroll-x zenith-install-pulse-scroll overflow-x-auto overscroll-x-contain -mx-1 px-1 sm:px-0 rounded-lg sm:rounded-none"
           role="region"
@@ -324,25 +575,53 @@ function InstallationPulseBlock({
           <table className="w-full min-w-[820px] md:min-w-[860px] xl:min-w-[900px] text-left text-xs sm:text-sm border-separate border-spacing-0">
             <thead>
               <tr className="text-white/45 border-b border-white/10">
-                <th className="py-2.5 pr-3 sm:pr-4 font-semibold align-bottom">Customer</th>
-                <th className="py-2.5 pl-2 pr-5 sm:pr-8 font-semibold text-right align-bottom tabular-nums">
-                  kW
+                <th
+                  className="py-2.5 pr-3 sm:pr-4 font-semibold align-bottom cursor-pointer select-none"
+                  onClick={() => handleSort('customerName')}
+                >
+                  Customer {sortField === 'customerName' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
                 </th>
-                <th className="py-2.5 pl-3 sm:pl-5 pr-3 sm:pr-4 font-semibold align-bottom">Sales person</th>
-                <th className="py-2.5 px-3 sm:px-4 font-semibold align-bottom whitespace-nowrap">Start</th>
-                <th className="py-2.5 px-3 sm:px-4 font-semibold align-bottom whitespace-nowrap">Expected</th>
-                <th className="py-2.5 pl-3 font-semibold align-bottom min-w-[7.5rem] sm:min-w-[8.5rem]">Progress</th>
+                <th
+                  className="py-2.5 pl-2 pr-5 sm:pr-8 font-semibold text-right align-bottom tabular-nums cursor-pointer select-none"
+                  onClick={() => handleSort('kW')}
+                >
+                  kW {sortField === 'kW' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                </th>
+                <th
+                  className="py-2.5 pl-3 sm:pl-5 pr-3 sm:pr-4 font-semibold align-bottom cursor-pointer select-none"
+                  onClick={() => handleSort('salespersonName')}
+                >
+                  Sales person {sortField === 'salespersonName' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                </th>
+                <th
+                  className="py-2.5 px-3 sm:px-4 font-semibold align-bottom whitespace-nowrap cursor-pointer select-none"
+                  onClick={() => handleSort('startDate')}
+                >
+                  Start {sortField === 'startDate' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                </th>
+                <th
+                  className="py-2.5 px-3 sm:px-4 font-semibold align-bottom whitespace-nowrap cursor-pointer select-none"
+                  onClick={() => handleSort('expectedCompletion')}
+                >
+                  Expected {sortField === 'expectedCompletion' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                </th>
+                <th
+                  className="py-2.5 pl-3 font-semibold align-bottom min-w-[7.5rem] sm:min-w-[8.5rem] cursor-pointer select-none"
+                  onClick={() => handleSort('percentComplete')}
+                >
+                  Progress {sortField === 'percentComplete' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                </th>
               </tr>
             </thead>
             <tbody>
-              {data.rows.length === 0 ? (
+              {displayRows.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-white/40">
                     No projects under installation for this period.
                   </td>
                 </tr>
               ) : (
-                data.rows.map((r) => (
+                displayRows.map((r) => (
                   <tr
                     key={r.projectId}
                     className={`border-b border-white/[0.06] ${r.overdue ? 'bg-red-500/5' : 'hover:bg-white/[0.04]'}`}
@@ -397,6 +676,15 @@ function InstallationPulseBlock({
             </tbody>
           </table>
         </div>
+        <p className="text-[11px] sm:text-xs text-white/45 leading-relaxed mt-4 max-w-3xl">
+          <span className="text-white/55 font-semibold">Data sources: </span>
+          <strong className="text-white/70">Sales person</strong> is the project’s assigned{' '}
+          <strong className="text-white/70">salesperson</strong>. Start uses installation start date, then{' '}
+          <strong className="text-white/70">stage entered</strong> or <strong className="text-white/70">order confirmation</strong>{' '}
+          date. <strong className="text-white/70">Expected</strong> uses <strong className="text-white/70">expected commissioning</strong>{' '}
+          on the project when set; otherwise <strong className="text-white/70">installation completion date</strong> (same field as
+          Project Lifecycle). Progress uses start vs that target (or 100% if install is marked complete).
+        </p>
       </div>
     </section>
   )

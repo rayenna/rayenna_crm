@@ -11,6 +11,7 @@ import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import ProposalPreview from '../components/proposal/ProposalPreview'
 import PageCard from '../components/PageCard'
+import HealthDetail from '../components/zenith/HealthDetail'
 import { FaProjectDiagram } from 'react-icons/fa'
 
 const ProjectDetail = () => {
@@ -799,8 +800,14 @@ const ProjectDetail = () => {
           </dl>
         </div>
 
+      </div>
+
+      {/* Deal Health + Payment + Remarks (side-by-side on laptop) */}
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <HealthDetail project={project} />
+
         {/* Payment Tracking */}
-        <div className="bg-gradient-to-br from-emerald-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-emerald-400">
+        <div className="bg-gradient-to-br from-emerald-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-emerald-400 border border-emerald-100/60 shadow-sm">
           <div className="flex items-center gap-2">
             <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Payment Tracking</h3>
@@ -810,19 +817,21 @@ const ProjectDetail = () => {
               <dt className="text-xs text-gray-500 uppercase tracking-wide">Payment Status</dt>
               <dd className="text-sm font-medium">
                 {(() => {
-                  // Check if project has no order value (null, undefined, 0, or falsy)
                   const projectCost = project?.projectCost
-                  const hasNoOrderValue = !projectCost || projectCost === 0 || projectCost === null || projectCost === undefined || Number(projectCost) <= 0
-                  
-                  // Check if project is in early stages or lost
+                  const hasNoOrderValue =
+                    !projectCost ||
+                    projectCost === 0 ||
+                    projectCost === null ||
+                    projectCost === undefined ||
+                    Number(projectCost) <= 0
+
                   const currentStatus = project?.projectStatus
-                  const isEarlyOrLostStage = 
+                  const isEarlyOrLostStage =
                     currentStatus === ProjectStatus.LEAD ||
                     currentStatus === ProjectStatus.SITE_SURVEY ||
                     currentStatus === ProjectStatus.PROPOSAL ||
                     currentStatus === ProjectStatus.LOST
-                  
-                  // Show N/A if no order value OR if in early/lost stage
+
                   if (hasNoOrderValue || isEarlyOrLostStage) {
                     return (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
@@ -830,8 +839,7 @@ const ProjectDetail = () => {
                       </span>
                     )
                   }
-                  
-                  // Otherwise show actual payment status
+
                   const paymentStatus = project?.paymentStatus || 'PENDING'
                   return (
                     <span
@@ -839,8 +847,8 @@ const ProjectDetail = () => {
                         paymentStatus === 'FULLY_PAID'
                           ? 'bg-green-100 text-green-800'
                           : paymentStatus === 'PARTIAL'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
                       }`}
                     >
                       {String(paymentStatus).replace(/_/g, ' ')}
@@ -849,38 +857,34 @@ const ProjectDetail = () => {
                 })()}
               </dd>
             </div>
-            {project.projectCost && (() => {
-              const totalReceived =
-                (Number(project.advanceReceived) || 0) +
-                (Number(project.payment1) || 0) +
-                (Number(project.payment2) || 0) +
-                (Number(project.payment3) || 0) +
-                (Number(project.lastPayment) || 0);
-              const balance = Math.max(0, Number(project.projectCost) - totalReceived);
-              return (
-                <>
-                  <div>
-                    <dt className="text-xs text-gray-500 uppercase tracking-wide">Total Amount Received</dt>
-                    <dd className="text-sm font-medium text-yellow-600">
-                      ₹{totalReceived.toLocaleString('en-IN')}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-gray-500 uppercase tracking-wide">Balance Amount</dt>
-                    <dd className="text-sm font-medium text-red-600">
-                      ₹{balance.toLocaleString('en-IN')}
-                    </dd>
-                  </div>
-                </>
-              );
-            })()}
+            {project.projectCost &&
+              (() => {
+                const totalReceived =
+                  (Number(project.advanceReceived) || 0) +
+                  (Number(project.payment1) || 0) +
+                  (Number(project.payment2) || 0) +
+                  (Number(project.payment3) || 0) +
+                  (Number(project.lastPayment) || 0)
+                const balance = Math.max(0, Number(project.projectCost) - totalReceived)
+                return (
+                  <>
+                    <div>
+                      <dt className="text-xs text-gray-500 uppercase tracking-wide">Total Amount Received</dt>
+                      <dd className="text-sm font-medium text-yellow-600">₹{totalReceived.toLocaleString('en-IN')}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-gray-500 uppercase tracking-wide">Balance Amount</dt>
+                      <dd className="text-sm font-medium text-red-600">₹{balance.toLocaleString('en-IN')}</dd>
+                    </div>
+                  </>
+                )
+              })()}
             {project.advanceReceived && (
               <div>
                 <dt className="text-xs text-gray-500 uppercase tracking-wide">Advance Received</dt>
                 <dd className="text-sm font-medium">
                   ₹{project.advanceReceived.toLocaleString('en-IN')}
-                  {project.advanceReceivedDate &&
-                    ` (${format(new Date(project.advanceReceivedDate), 'MMM dd, yyyy')})`}
+                  {project.advanceReceivedDate && ` (${format(new Date(project.advanceReceivedDate), 'MMM dd, yyyy')})`}
                 </dd>
               </div>
             )}
@@ -892,40 +896,41 @@ const ProjectDetail = () => {
                 { label: 'Payment 3', amount: project.payment3, date: project.payment3Date },
                 { label: 'Last Payment', amount: project.lastPayment, date: project.lastPaymentDate },
               ].filter((p) => {
-                const hasAmount = p.amount != null && Number(p.amount) > 0;
-                const hasDate = !!p.date;
-                return hasAmount || hasDate;
-              });
+                const hasAmount = p.amount != null && Number(p.amount) > 0
+                const hasDate = !!p.date
+                return hasAmount || hasDate
+              })
 
-              if (!installments.length) return null;
+              if (!installments.length) return null
 
               return (
                 <div>
                   <dt className="text-xs text-gray-500 uppercase tracking-wide">Installments Received</dt>
                   <dd className="mt-1 text-sm text-gray-700 space-y-1">
                     {installments.map((p) => {
-                      const hasAmount = p.amount != null && Number(p.amount) > 0;
+                      const hasAmount = p.amount != null && Number(p.amount) > 0
                       return (
                         <div key={p.label} className="flex items-center justify-between gap-3">
                           <span className="text-xs font-medium text-gray-500">{p.label}</span>
                           <span className="text-sm font-medium text-gray-900">
                             {hasAmount ? `₹${Number(p.amount).toLocaleString('en-IN')}` : '—'}
-                            {p.date &&
-                              ` (${format(new Date(p.date), 'MMM dd, yyyy')})`}
+                            {p.date && ` (${format(new Date(p.date), 'MMM dd, yyyy')})`}
                           </span>
                         </div>
-                      );
+                      )
                     })}
                   </dd>
                 </div>
-              );
+              )
             })()}
           </dl>
         </div>
-      </div>
 
-      {/* Remarks - View Only */}
-      <RemarksSection projectId={project.id} isEditMode={false} />
+        {/* Remarks - View Only */}
+        <div className="[&>div]:mt-0">
+          <RemarksSection projectId={project.id} isEditMode={false} />
+        </div>
+      </div>
 
       {/* Support / Service Tickets */}
       <div className="mt-6">

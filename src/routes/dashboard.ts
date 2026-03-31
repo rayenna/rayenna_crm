@@ -893,12 +893,17 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       };
     });
 
-    // Availing Loan by Bank (for column chart – projects with availingLoan true and bank selected)
-    const availingLoanByBankRaw = await prisma.project.groupBy({
-      by: ['financingBank'],
-      where: { ...where, availingLoan: true, financingBank: { not: null } },
-      _count: { id: true },
-    });
+    // Availing Loan count + by bank (same semantics as Management/Finance tiles: not Lost, availingLoan true)
+    const [availingLoanByBankRaw, availingLoanCount] = await Promise.all([
+      prisma.project.groupBy({
+        by: ['financingBank'],
+        where: { ...where, availingLoan: true, financingBank: { not: null } },
+        _count: { id: true },
+      }),
+      prisma.project.count({
+        where: { ...where, projectStatus: { not: ProjectStatus.LOST }, availingLoan: true },
+      }),
+    ]);
     const availingLoanByBank = buildAvailingLoanByBank(availingLoanByBankRaw);
 
     // When one FY and quarter/month selected: same period in previous year for YoY
@@ -979,6 +984,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       projectsByStatus,
       projectsByPaymentStatus,
       availingLoanByBank,
+      availingLoanCount,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -2374,7 +2380,10 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
           id: true,
           projectStatus: true,
           projectCost: true,
+          createdAt: true,
           updatedAt: true,
+          expectedCommissioningDate: true,
+          salespersonId: true,
           customer: { select: { customerName: true } },
           projectRemarks: { orderBy: { createdAt: 'desc' }, take: 1, select: { createdAt: true } },
         },
@@ -2393,6 +2402,10 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
           stage: PROJECT_STATUS_LABELS[p.projectStatus] || p.projectStatus,
           dealValue: p.projectCost ?? 0,
           daysSinceActivity,
+          expectedCloseDate: p.expectedCommissioningDate?.toISOString() ?? null,
+          createdAt: p.createdAt.toISOString(),
+          updatedAt: p.updatedAt.toISOString(),
+          salespersonId: p.salespersonId,
         };
       });
       const followUpNeeded = rows.filter((r) => r.daysSinceActivity > 7).length;

@@ -30,7 +30,7 @@ export type ZenithFyRevenueProfitPoint = { fy: string; revenue: number; profit: 
  */
 export default function ZenithRevenueProfitFyChart({ data }: { data: ZenithFyRevenueProfitPoint[] }) {
   return (
-    <ResponsiveContainer width="100%" height={280} minWidth={0}>
+    <ResponsiveContainer width="100%" height={240} minWidth={0}>
       <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
         <XAxis dataKey="fy" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />

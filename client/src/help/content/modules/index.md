@@ -307,7 +307,7 @@ The tile counts and filters match the dashboard filters (FY, Quarter, Month) you
    - **Support Ticket Status**: Has Tickets, Open, In Progress, Closed, No Tickets
    - **Salesperson** (for non-Sales users): Filter by assigned salesperson
 4. Use **Clear All** to reset search, filters, and sort. Works even when arriving from a dashboard tile.
-5. Sort by creation date, confirmation date, order value, customer name, profitability, or system capacity. Default is confirmation date (newest first).
+5. Sort by creation date, confirmation date, order value, customer name, profitability, system capacity, or **Deal Health Score**. Default is confirmation date (newest first).
 6. Click a **project row** or **project number** to open the **Project Detail** page.
 
 Filters are remembered when you navigate to a project and use **Back** to return.
@@ -323,6 +323,7 @@ The detail page shows:
 
 - **Customer** information, **Project** and **Sales & Commercial** details
 - **Project Lifecycle** (execution dates, costs, equipment)
+- **Deal Health Score** (0–100) — a breakdown card that explains what is helping or hurting the deal (excluded for terminal outcomes)
 - **Payment Tracking** (status, amounts, balance)
 - **Remarks** (versioned history)
 - **Support / Service Tickets** (create, view, manage)

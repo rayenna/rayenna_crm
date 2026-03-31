@@ -47,6 +47,7 @@ export const TIPS: string[] = [
   'Select multiple projects on the Projects page to see subtotals for Order Value, Amount Received, and Outstanding at the bottom.',
   'Hover over Pending or Partial in the Payment Status column to see the outstanding balance amount.',
   'Project page filters (Status, FY, Quarter, Month, Payment Status, Availing Loan) are remembered as you navigate.',
+  'Projects: use Sort By → Deal Health Score to surface the most at-risk deals (0–100). Hover the health badge for a quick breakdown.',
   // Quick Access & dashboard behaviour
   'Click any Quick Access tile on your dashboard to open Projects with matching filters already applied.',
   'Set FY, Quarter, and Month on the dashboard – tile counts and Quick Access links respect these filters.',
@@ -83,6 +84,9 @@ export const TIPS: string[] = [
   'Open Zenith ✦ from the Dashboard menu for a full-screen analytics view — same FY, Quarter, and Month rules as the classic dashboard.',
   'Zenith AI Insights: under the command bar, a scrolling ribbon shows plain-English highlights from your current data — hover to pause, click any line to jump to a related section.',
   'Zenith Your Focus sits between KPIs and the funnel: Sales see their pipeline table with follow-up styling; Finance see payment radar; Operations see installation pulse; Management and Admin see all three blocks.',
+  'Zenith tables: click a column header to sort (e.g. Deal value, Health, Days). Use the small filter controls near the table title where available.',
+  'Deal Health badges appear in Zenith Pipeline and Hit List — hover a badge to see what’s hurting the score (activity, momentum, value, close date, source).',
+  'Zenith: Today’s Hit List surfaces urgent deals (overdue / stalled / going cold) with a Deal Health badge and a quick Open → link to the project.',
   'Sales in Zenith: use Log activity in Your Focus to add a quick project remark — it updates last-activity signals for your pipeline row.',
   'Zenith KPI cards count up when you load or change date filters, show a 7-point FY sparkline (gold up, crimson down), and a teal/crimson % badge when a prior-period comparison exists.',
   'In Zenith, select exactly one Financial Year to see comparison % badges on KPI tiles when a prior-period comparison is available.',

@@ -13,15 +13,15 @@ export default function ChartPanel({
 }) {
   return (
     <div
-      className={`zenith-glass rounded-2xl p-4 sm:p-5 min-h-[320px] flex flex-col ${className}`}
+      className={`zenith-glass rounded-xl p-3 sm:p-4 min-h-0 flex flex-col ${className}`}
     >
-      <div className="mb-3 sm:mb-4">
-        <h3 className="zenith-display text-base sm:text-lg font-bold text-white tracking-tight">
+      <div className="mb-2 sm:mb-2.5 shrink-0">
+        <h3 className="zenith-display text-sm sm:text-[15px] font-semibold text-white/95 tracking-tight">
           {title}
         </h3>
-        {subtitle ? <p className="text-xs text-white/50 mt-0.5">{subtitle}</p> : null}
+        {subtitle ? <p className="text-[11px] text-white/45 mt-0.5 leading-snug">{subtitle}</p> : null}
       </div>
-      <div className="flex-1 min-h-[240px] min-w-0">{children}</div>
+      <div className="flex-1 min-h-[220px] min-w-0">{children}</div>
     </div>
   )
 }

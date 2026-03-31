@@ -11,6 +11,7 @@ import toast from 'react-hot-toast'
 import { setSessionStorageItem } from '../lib/safeLocalStorage'
 import { getSalesTeamColor } from '../components/dashboard/salesTeamColors'
 import DashboardFilters from '../components/dashboard/DashboardFilters'
+import HealthBadge from '../components/zenith/HealthBadge'
 import { FiPaperclip } from 'react-icons/fi'
 import { FaUniversity, FaTicketAlt, FaBriefcase } from 'react-icons/fa'
 import PageCard from '../components/PageCard'
@@ -521,6 +522,7 @@ const Projects = () => {
       if (filters.hasDocuments) params.append('hasDocuments', 'true')
       if (filters.availingLoan) params.append('availingLoan', 'true')
       if (filters.peBucket) params.append('peBucket', filters.peBucket)
+      // Deal Health Score sorts server-side (same /api/projects endpoint) so it works across the full dataset.
       if (filters.sortBy) {
         params.append('sortBy', filters.sortBy)
         params.append('sortOrder', filters.sortOrder)
@@ -689,6 +691,10 @@ const Projects = () => {
     setPendingExportType(null)
   }
 
+  const displayProjects = useMemo(() => {
+    return (data?.projects ?? []) as Project[]
+  }, [data?.projects])
+
   if (!filtersReady || isLoading) {
     return (
       <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
@@ -777,6 +783,7 @@ const Projects = () => {
                 <option value="creationDate">Creation Date</option>
                 <option value="profitability">Profitability</option>
                 <option value="customerName">Customer Name</option>
+                <option value="dealHealthScore">Deal Health Score</option>
               </select>
             </div>
             <div>
@@ -1009,16 +1016,25 @@ Do you want to continue?`}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {data?.projects?.map((project: Project) => (
+              {displayProjects.map((project: Project) => (
                 <tr
                   key={project.id}
                   onClick={() => navigate(`/projects/${project.id}`)}
                   className="group transition-colors cursor-pointer bg-white hover:bg-primary-50/50"
                 >
                   <td className="px-4 py-3 min-w-0">
-                    <p className="text-base sm:text-lg font-semibold text-gray-900 truncate">
-                      #{project.slNo} · {project.customer?.customerName || 'Unknown Customer'}
-                    </p>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="text-base sm:text-lg font-semibold text-gray-900 truncate min-w-0">
+                        #{project.slNo} · {project.customer?.customerName || 'Unknown Customer'}
+                      </p>
+                      <div className="shrink-0">
+                        <HealthBadge
+                          project={project as unknown as Record<string, unknown>}
+                          size="sm"
+                          showLabel={false}
+                        />
+                      </div>
+                    </div>
                     <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[200px] sm:max-w-none">
                       {project.salesperson && (
                         <span style={{ color: getSalesTeamColor(project.salesperson.name, 0) }}>

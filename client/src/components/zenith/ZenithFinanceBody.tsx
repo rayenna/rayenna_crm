@@ -25,6 +25,8 @@ import ZenithRevenueProfitFyChart from './ZenithRevenueProfitFyChart'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
 
+const ZENITH_CHART_H = 240
+
 const tt = {
   wrapperStyle: { outline: 'none' as const, zIndex: 100 },
   contentStyle: {
@@ -140,66 +142,71 @@ export default function ZenithFinanceBody({
       <div id="zenith-funnel" className="scroll-mt-28">
         <DealFlowFunnel stages={funnel} paymentItems={paymentItems} dateFilter={dateFilter} />
       </div>
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <div id="zenith-lead-source" className="scroll-mt-28 min-w-0">
-          <ChartPanel title="Revenue by lead source">
-          <ResponsiveContainer width="100%" height={280} minWidth={0}>
-            <BarChart layout="vertical" data={leadChart} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
-              <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 9 }} />
-              <Tooltip formatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} {...tt} />
-              <Bar dataKey="revenue" fill="#f5a623" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartPanel>
+      <section className="zenith-exec-section" aria-label="Finance charts">
+        <div
+          id="zenith-charts-row-1"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 scroll-mt-28"
+        >
+          <div id="zenith-lead-source" className="min-w-0 scroll-mt-24 lg:scroll-mt-0">
+            <ChartPanel title="Revenue by lead source">
+              <ResponsiveContainer width="100%" height={ZENITH_CHART_H} minWidth={0}>
+                <BarChart layout="vertical" data={leadChart} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                  <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
+                  <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 9 }} />
+                  <Tooltip formatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} {...tt} />
+                  <Bar dataKey="revenue" fill="#f5a623" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartPanel>
+          </div>
+          <div id="zenith-sales-team" className="min-w-0 scroll-mt-24 lg:scroll-mt-0">
+            <ChartPanel title="Revenue vs pipeline by sales team">
+              <ResponsiveContainer width="100%" height={ZENITH_CHART_H} minWidth={0}>
+                <BarChart layout="vertical" data={salesMerge} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                  <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
+                  <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 9 }} />
+                  <Tooltip formatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} {...tt} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="revenue" name="Revenue" fill="#f5a623" />
+                  <Bar dataKey="pipeline" name="Pipeline" fill="#a78bfa" />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartPanel>
+          </div>
+          <div className="min-w-0">
+            <ChartPanel title="Revenue & profit by financial year">
+              <ZenithRevenueProfitFyChart data={fyChart} />
+            </ChartPanel>
+          </div>
+          <div id="zenith-loans" className="min-w-0 scroll-mt-24 lg:scroll-mt-0">
+            <ChartPanel title="Loans by bank">
+              <ResponsiveContainer width="100%" height={ZENITH_CHART_H} minWidth={0}>
+                <BarChart layout="vertical" data={loans} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                  <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
+                  <YAxis dataKey="bankLabel" type="category" width={100} tick={{ fontSize: 9 }} />
+                  <Tooltip {...tt} />
+                  <Bar dataKey="count" fill="#f5a623" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartPanel>
+          </div>
         </div>
-        <div id="zenith-sales-team" className="scroll-mt-28 min-w-0">
-          <ChartPanel title="Revenue vs pipeline by sales team">
-            <ResponsiveContainer width="100%" height={280} minWidth={0}>
-              <BarChart layout="vertical" data={salesMerge} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
-                <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 9 }} />
-                <Tooltip formatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} {...tt} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="revenue" name="Revenue" fill="#f5a623" />
-                <Bar dataKey="pipeline" name="Pipeline" fill="#a78bfa" />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartPanel>
+        <div
+          id="zenith-segments"
+          className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 scroll-mt-24"
+        >
+          <div className="min-w-0">
+            <SegmentDonut
+              title="Revenue by customer segment"
+              data={seg.map((s) => ({ name: s.label, value: s.value, percentage: s.percentage }))}
+            />
+          </div>
+          <CustomerProfitabilityRank rows={wordCloud} />
         </div>
-      </div>
-      <div
-        id="zenith-charts-row-1"
-        className="grid grid-cols-1 xl:grid-cols-2 gap-4 scroll-mt-28"
-      >
-        <ChartPanel title="Revenue & profit by financial year">
-          <ZenithRevenueProfitFyChart data={fyChart} />
-        </ChartPanel>
-        <div id="zenith-segments" className="min-w-0">
-          <SegmentDonut
-            title="Revenue by customer segment"
-            data={seg.map((s) => ({ name: s.label, value: s.value, percentage: s.percentage }))}
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div id="zenith-loans" className="scroll-mt-28 min-w-0">
-          <ChartPanel title="Loans by bank">
-          <ResponsiveContainer width="100%" height={260} minWidth={0}>
-            <BarChart layout="vertical" data={loans}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
-              <YAxis dataKey="bankLabel" type="category" width={100} tick={{ fontSize: 9 }} />
-              <Tooltip {...tt} />
-              <Bar dataKey="count" fill="#f5a623" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartPanel>
-        </div>
-        <CustomerProfitabilityRank rows={wordCloud} />
-      </div>
+      </section>
     </div>
   )
 }

@@ -52,7 +52,12 @@ interface PrevPeriod {
   totalProfit: number
 }
 
-/** Build 5 KPIs for Sales / Management / Admin Zenith strip (matches classic dashboard semantics). */
+/** Optional; Finance dashboard only — used for loan YoY when present */
+interface ExecutiveOptionalFinancePrev {
+  availingLoanCount?: number
+}
+
+/** Build 6 KPIs for Sales / Management / Admin Zenith strip (includes Availing Loan, same as Finance tile). */
 export function buildExecutiveZenithKpis(
   role: UserRole,
   data: Record<string, unknown>,
@@ -110,6 +115,19 @@ export function buildExecutiveZenithKpis(
   const convChange =
     conversion != null && singleFYSelected ? pctChange(conversion, convPrev) : null
 
+  const loanCountApi = data?.availingLoanCount
+  const loansByBank = (data?.availingLoanByBank ?? []) as { count?: number }[]
+  const loanSumFromBanks = loansByBank.reduce((s, x) => s + (Number(x.count) || 0), 0)
+  const loans =
+    loanCountApi != null && loanCountApi !== ''
+      ? Number(loanCountApi)
+      : loanSumFromBanks
+
+  const prevFinLoans = (data?.previousYearFinanceKpis as ExecutiveOptionalFinancePrev | null | undefined)
+    ?.availingLoanCount
+  const loanChangePct =
+    singleFYSelected && prevFinLoans != null ? pctChange(loans, prevFinLoans) : null
+
   return [
     {
       key: 'capacity',
@@ -155,6 +173,14 @@ export function buildExecutiveZenithKpis(
         const rev = r.totalProjectValue ?? 0
         return p > 0 ? (rev / p) * 100 : 0
       }),
+    },
+    {
+      key: 'loan',
+      label: 'Availing Loan',
+      value: loans,
+      format: 'number',
+      changePct: loanChangePct,
+      sparkline: fySparkline(rows, () => loans),
     },
   ]
 }
