@@ -4163,7 +4163,9 @@ export default function ProposalPreview() {
                 )}
                 <Divider />
                 <CommercialsBlock sheet={proposal.sheet} roi={proposal.roi} roiAutofill={proposal.roiAutofill} />
-                <Divider />
+                <div className="print-hide">
+                  <Divider />
+                </div>
                 <ListBlock title="Client Scope" items={CLIENT_SCOPE} />
                 <Divider />
                 <ListBlock title="Terms & Conditions" items={TERMS_AND_CONDITIONS} />
