@@ -7,7 +7,6 @@ import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
 import type { ZenithDateFilter } from './zenithTypes'
-import ZenithLogActivityModal from './ZenithLogActivityModal'
 import HealthBadge from './HealthBadge'
 import { computeDealHealth, pipelineRowToHealthProject } from '../../utils/dealHealthScore'
 
@@ -84,12 +83,13 @@ function SalesPipelineBlock({
   title,
   data,
   accentClass,
+  onOpenDrawer,
 }: {
   title: string
   data: { rows: SalesPipelineRow[]; followUpNeeded: number }
   accentClass: string
+  onOpenDrawer?: (p: { id: string; customerName?: string; stageLabel?: string }) => void
 }) {
-  const [logFor, setLogFor] = useState<{ id: string; label: string } | null>(null)
   const [sortField, setSortField] = useState<
     'customerName' | 'stage' | 'dealValue' | 'lastActivity' | 'health' | null
   >(null)
@@ -255,13 +255,15 @@ function SalesPipelineBlock({
                         <HealthBadge project={pipelineRowToHealthProject(r)} size="sm" showLabel={false} />
                       </td>
                       <td className="py-2.5 pl-2">
-                        <button
-                          type="button"
-                          onClick={() => setLogFor({ id: r.projectId, label: r.customerName })}
-                          className="text-xs font-bold text-[#00d4b4] hover:text-[#5eead4] underline-offset-2 hover:underline"
-                        >
-                          Log activity
-                        </button>
+                        <div className="flex items-center justify-end gap-3">
+                          <button
+                            type="button"
+                            onClick={() => onOpenDrawer?.({ id: r.projectId, customerName: r.customerName, stageLabel: r.stage })}
+                            className="text-xs font-bold text-white/70 hover:text-[#f5a623] underline-offset-2 hover:underline"
+                          >
+                            Open →
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )
@@ -271,13 +273,6 @@ function SalesPipelineBlock({
           </table>
         </div>
       </div>
-      {logFor && (
-        <ZenithLogActivityModal
-          projectId={logFor.id}
-          customerLabel={logFor.label}
-          onClose={() => setLogFor(null)}
-        />
-      )}
     </section>
   )
 }
@@ -694,11 +689,13 @@ export default function ZenithYourFocus({
   role,
   dateFilter,
   zenithMainLoading,
+  onOpenDrawer,
 }: {
   role: UserRole
   dateFilter: ZenithDateFilter
   /** When Zenith dashboard payload is still loading, skip focus fetch to avoid duplicate empty state. */
   zenithMainLoading: boolean
+  onOpenDrawer?: (p: { id: string; customerName?: string; stageLabel?: string }) => void
 }) {
   const { user } = useAuth()
   const effFYs = dateFilter.selectedFYs
@@ -746,6 +743,7 @@ export default function ZenithYourFocus({
           title="Your pipeline today"
           data={data.salesPipeline}
           accentClass="border-l-4 border-[#F5A623]"
+          onOpenDrawer={onOpenDrawer}
         />
       )}
 
@@ -763,6 +761,7 @@ export default function ZenithYourFocus({
             title="Company pipeline today"
             data={data.salesPipeline}
             accentClass="border-l-4 border-[#F5A623]"
+            onOpenDrawer={onOpenDrawer}
           />
           <FinanceRadarBlock data={data.financeRadar} accentClass="border-l-4 border-[#00D4B4]" />
           <InstallationPulseBlock data={data.installPulse} accentClass="border-l-4 border-sky-400" />

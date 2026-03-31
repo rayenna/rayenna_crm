@@ -160,6 +160,14 @@ const ProjectForm = () => {
   const isEdit = !!id
   const isFinanceOnly = user?.role === UserRole.FINANCE && isEdit
 
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') navigate('/projects')
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [navigate])
+
   const { data: project } = useQuery({
     queryKey: ['project', id],
     queryFn: async () => {
@@ -1359,41 +1367,45 @@ const ProjectForm = () => {
                         className={selectCls}
                       >
                         <option value="">Select Bank</option>
-                        <option value="SBI">State Bank of India (SBI)</option>
+                        <option value="AXIS_BANK">Axis Bank</option>
+                        <option value="AU_SMALL_FINANCE_BANK">AU Small Finance Bank</option>
+                        <option value="BANDHAN_BANK">Bandhan Bank</option>
+                        <option value="BANK_OF_BARODA">Bank of Baroda</option>
+                        <option value="BANK_OF_INDIA">Bank of India</option>
+                        <option value="BANK_OF_MAHARASHTRA">Bank of Maharashtra</option>
+                        <option value="CANARA_BANK">Canara Bank</option>
+                        <option value="CAPITAL_SMALL_FINANCE_BANK">Capital Small Finance Bank</option>
+                        <option value="KOTAK_MAHINDRA_BANK">Kotak Mahindra Bank</option>
+                        <option value="CATHOLIC_SYRIAN_BANK">Catholic Syrian Bank</option>
+                        <option value="CITY_UNION_BANK">City Union Bank</option>
+                        <option value="DCB_BANK">DCB Bank</option>
+                        <option value="DHANLAXMI_BANK">Dhanlaxmi Bank</option>
+                        <option value="EQUITAS_SMALL_FINANCE_BANK">Equitas Small Finance Bank</option>
+                        <option value="ESAF_SMALL_FINANCE_BANK">ESAF Small Finance Bank</option>
+                        <option value="FEDERAL_BANK">Federal Bank</option>
                         <option value="HDFC_BANK">HDFC Bank</option>
                         <option value="ICICI_BANK">ICICI Bank</option>
-                        <option value="AXIS_BANK">Axis Bank</option>
-                        <option value="KOTAK_MAHINDRA_BANK">Kotak Mahindra Bank</option>
-                        <option value="INDUSIND_BANK">IndusInd Bank</option>
-                        <option value="YES_BANK">YES Bank</option>
+                        <option value="IDBI_BANK">IDBI Bank</option>
                         <option value="IDFC_FIRST_BANK">IDFC FIRST Bank</option>
-                        <option value="PUNJAB_NATIONAL_BANK">Punjab National Bank (PNB)</option>
-                        <option value="BANK_OF_BARODA">Bank of Baroda</option>
-                        <option value="CANARA_BANK">Canara Bank</option>
-                        <option value="UNION_BANK_OF_INDIA">Union Bank of India</option>
-                        <option value="FEDERAL_BANK">Federal Bank</option>
-                        <option value="SOUTH_INDIAN_BANK">South Indian Bank</option>
-                        <option value="CATHOLIC_SYRIAN_BANK">Catholic Syrian Bank</option>
-                        <option value="DHANLAXMI_BANK">Dhanlaxmi Bank</option>
-                        <option value="KERALA_GRAMIN_BANK">Kerala Gramin Bank</option>
-                        <option value="KERALA_BANK">Kerala Bank</option>
-                        <option value="KARNATAKA_BANK">Karnataka Bank</option>
-                        <option value="RBL_BANK">RBL Bank</option>
-                        <option value="TAMILNADU_MERCANTILE_BANK">Tamilnadu Mercantile Bank</option>
-                        <option value="CITY_UNION_BANK">City Union Bank</option>
                         <option value="INDIAN_BANK">Indian Bank</option>
                         <option value="INDIAN_OVERSEAS_BANK">Indian Overseas Bank</option>
-                        <option value="DCB_BANK">DCB Bank</option>
-                        <option value="KARUR_VYSYA_BANK">Karur Vysya Bank</option>
-                        <option value="EQUITAS_SMALL_FINANCE_BANK">Equitas Small Finance Bank</option>
-                        <option value="UJJIVAN_SMALL_FINANCE_BANK">Ujjivan Small Finance Bank</option>
-                        <option value="JANA_SMALL_FINANCE_BANK">Jana Small Finance Bank</option>
-                        <option value="UTKARSH_SMALL_FINANCE_BANK">Utkarsh Small Finance Bank</option>
-                        <option value="SHIVALIK_SMALL_FINANCE_BANK">Shivalik Small Finance Bank</option>
-                        <option value="AU_SMALL_FINANCE_BANK">AU Small Finance Bank</option>
-                        <option value="CAPITAL_SMALL_FINANCE_BANK">Capital Small Finance Bank</option>
-                        <option value="BANDHAN_BANK">Bandhan Bank</option>
+                        <option value="INDUSIND_BANK">IndusInd Bank</option>
                         <option value="JAMMU_KASHMIR_BANK">Jammu &amp; Kashmir Bank</option>
+                        <option value="JANA_SMALL_FINANCE_BANK">Jana Small Finance Bank</option>
+                        <option value="KARNATAKA_BANK">Karnataka Bank</option>
+                        <option value="KARUR_VYSYA_BANK">Karur Vysya Bank</option>
+                        <option value="KERALA_BANK">Kerala Bank</option>
+                        <option value="KERALA_GRAMIN_BANK">Kerala Gramin Bank</option>
+                        <option value="PUNJAB_NATIONAL_BANK">Punjab National Bank (PNB)</option>
+                        <option value="RBL_BANK">RBL Bank</option>
+                        <option value="SBI">State Bank of India (SBI)</option>
+                        <option value="SHIVALIK_SMALL_FINANCE_BANK">Shivalik Small Finance Bank</option>
+                        <option value="SOUTH_INDIAN_BANK">South Indian Bank</option>
+                        <option value="TAMILNADU_MERCANTILE_BANK">Tamilnadu Mercantile Bank</option>
+                        <option value="UJJIVAN_SMALL_FINANCE_BANK">Ujjivan Small Finance Bank</option>
+                        <option value="UNION_BANK_OF_INDIA">Union Bank of India</option>
+                        <option value="UTKARSH_SMALL_FINANCE_BANK">Utkarsh Small Finance Bank</option>
+                        <option value="YES_BANK">YES Bank</option>
                         <option value="OTHER">Other</option>
                       </select>
                     </div>

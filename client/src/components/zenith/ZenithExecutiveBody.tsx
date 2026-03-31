@@ -20,6 +20,8 @@ import { buildExecutiveZenithKpis } from './zenithKpi'
 import { buildZenithFunnelStages } from './zenithFunnel'
 import type { ZenithDateFilter } from './zenithTypes'
 import KPICard from './KPICard'
+import KPIGauge from './KPIGauge'
+import QuickActionDrawer from './QuickActionDrawer'
 import DealFlowFunnel from './DealFlowFunnel'
 import ZenithYourFocus from './ZenithYourFocus'
 import ChartPanel from './ChartPanel'
@@ -29,8 +31,25 @@ import ZenithRevenueProfitFyChart from './ZenithRevenueProfitFyChart'
 import ZenithProposalEngineCard from './ZenithProposalEngineCard'
 import HitList from './HitList'
 import { useHitList, type HitListProjectRow } from '../../hooks/useHitList'
+import { useQuickAction } from '../../hooks/useQuickAction'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent, Landmark]
+const DEFAULT_MONTHLY_TARGET_KW = 50
+const SALES_MONTHLY_TARGET_KW = 25
+
+function monthsInSelectedPeriod(dateFilter: ZenithDateFilter): number {
+  const months = dateFilter.selectedMonths?.length ?? 0
+  if (months > 0) return months
+
+  const quarters = dateFilter.selectedQuarters?.length ?? 0
+  if (quarters > 0) return quarters * 3
+
+  const fys = dateFilter.selectedFYs?.length ?? 0
+  if (fys > 0) return fys * 12
+
+  // Fallback: treat as "this month" to avoid overstating the target.
+  return 1
+}
 
 function ZenithSkeleton() {
   return (
@@ -119,6 +138,7 @@ export default function ZenithExecutiveBody({
       : []
 
   const hitListResult = useHitList(pipelineRows, role, user ?? null)
+  const quickAction = useQuickAction()
 
   /** Match Hit List height to KPI grid on lg+. Row must use items-start (not stretch) so the grid keeps its natural height; if the row stretches the grid to the Hit List, offsetHeight equals the list and the widget never shrinks. */
   const kpiBandRef = useRef<HTMLDivElement>(null)
@@ -184,6 +204,15 @@ export default function ZenithExecutiveBody({
   if (isLoading) return <ZenithSkeleton />
 
   const kpis = buildExecutiveZenithKpis(role, data, dateFilter.selectedFYs)
+  const totalCapacityKW = Number(kpis.find((k) => k.key === 'capacity')?.value ?? 0)
+  const pipelineCapacityKW = Number((data as { pipelineCapacityKW?: number })?.pipelineCapacityKW ?? 0)
+  const hasExplicitPeriod =
+    (dateFilter.selectedMonths?.length ?? 0) > 0 ||
+    (dateFilter.selectedQuarters?.length ?? 0) > 0 ||
+    (dateFilter.selectedFYs?.length ?? 0) > 0
+  const monthlyTargetKW = role === UserRole.SALES ? SALES_MONTHLY_TARGET_KW : DEFAULT_MONTHLY_TARGET_KW
+  const targetKW = hasExplicitPeriod ? monthlyTargetKW * monthsInSelectedPeriod(dateFilter) : null
+  const gaugePipelineKW = hasExplicitPeriod ? pipelineCapacityKW : null
   const funnelRole = role === UserRole.SALES ? UserRole.SALES : UserRole.MANAGEMENT
   const funnelStages = buildZenithFunnelStages(funnelRole, data, dateFilter)
 
@@ -266,6 +295,7 @@ export default function ZenithExecutiveBody({
                 totalAtRisk={hitListResult.totalAtRisk}
                 allClear={hitListResult.allClear}
                 role={role}
+                onOpenDrawer={(p) => quickAction.openDrawer(p)}
               />
             </div>
           )}
@@ -275,8 +305,16 @@ export default function ZenithExecutiveBody({
             className="grid min-w-0 flex-1 grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-2.5 sm:gap-3 scroll-mt-28 content-start lg:pb-0"
           >
             {kpis.map((k, i) => (
-              <div key={k.key} className="min-w-0">
-                <KPICard item={k} index={i} icon={icons[i] ?? Zap} />
+              <div key={k.key} className="min-w-0 h-full">
+                {k.key === 'capacity' ? (
+                  <KPIGauge
+                    totalKW={totalCapacityKW}
+                    pipelineKW={gaugePipelineKW}
+                    targetKW={targetKW}
+                  />
+                ) : (
+                  <KPICard item={k} index={i} icon={icons[i] ?? Zap} />
+                )}
               </div>
             ))}
           </div>
@@ -287,8 +325,16 @@ export default function ZenithExecutiveBody({
           className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-2.5 sm:gap-3 scroll-mt-28"
         >
           {kpis.map((k, i) => (
-            <div key={k.key} className="min-w-0">
-              <KPICard item={k} index={i} icon={icons[i] ?? Zap} />
+            <div key={k.key} className="min-w-0 h-full">
+              {k.key === 'capacity' ? (
+                <KPIGauge
+                  totalKW={totalCapacityKW}
+                  pipelineKW={gaugePipelineKW}
+                  targetKW={targetKW}
+                />
+              ) : (
+                <KPICard item={k} index={i} icon={icons[i] ?? Zap} />
+              )}
             </div>
           ))}
         </div>
@@ -300,7 +346,12 @@ export default function ZenithExecutiveBody({
         </div>
 
         <div id="zenith-focus" className="scroll-mt-24">
-          <ZenithYourFocus role={role} dateFilter={dateFilter} zenithMainLoading={isLoading} />
+          <ZenithYourFocus
+            role={role}
+            dateFilter={dateFilter}
+            zenithMainLoading={isLoading}
+            onOpenDrawer={(p) => quickAction.openDrawer(p)}
+          />
         </div>
 
         {(role === UserRole.ADMIN || role === UserRole.MANAGEMENT || role === UserRole.SALES) && (
@@ -434,6 +485,11 @@ export default function ZenithExecutiveBody({
       </div>
       </section>
 
+      <QuickActionDrawer
+        isOpen={quickAction.isOpen}
+        projectId={quickAction.project?.id ?? null}
+        onClose={quickAction.closeDrawer}
+      />
     </div>
   )
 }

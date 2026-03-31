@@ -52,11 +52,13 @@ export default function HitList({
   totalAtRisk,
   allClear,
   role,
+  onOpenDrawer,
 }: {
   hitList: HitListItem[]
   totalAtRisk: string
   allClear: boolean
   role: UserRole
+  onOpenDrawer?: (p: { id: string; customerName?: string; stageLabel?: string }) => void
 }) {
   const n = hitList.length
   const isSales = role === UserRole.SALES
@@ -224,12 +226,20 @@ export default function HitList({
                   </div>
 
                   <div className="ml-1 shrink-0">
-                    <span
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        if (!onOpenDrawer) return
+                        e.preventDefault()
+                        e.stopPropagation()
+                        onOpenDrawer({ id: project.id, customerName: project.customerName, stageLabel: project.stage })
+                      }}
                       className="inline-block rounded-md border border-white/20 bg-transparent px-2 py-1 text-[10px] text-white/70 transition-all duration-200 ease-out group-hover:border-[#F5A623] group-hover:bg-[rgba(245,166,35,0.08)] group-hover:text-[#F5A623] whitespace-nowrap"
                       style={{ fontFamily: 'var(--zenith-font-body)' }}
+                      aria-label={`Open quick actions for ${project.customerName}`}
                     >
                       Open →
-                    </span>
+                    </button>
                   </div>
                 </div>
 
@@ -275,12 +285,20 @@ export default function HitList({
                   <div className="flex justify-center py-1">
                     <HealthBadge project={hitListItemToHealthProject(project)} size="sm" showLabel={false} />
                   </div>
-                  <span
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      if (!onOpenDrawer) return
+                      e.preventDefault()
+                      e.stopPropagation()
+                      onOpenDrawer({ id: project.id, customerName: project.customerName, stageLabel: project.stage })
+                    }}
                     className="block w-full rounded-lg border border-white/20 bg-transparent py-1.5 text-center text-[13px] text-white/70 transition-all duration-200 ease-out group-hover:border-[#F5A623] group-hover:bg-[rgba(245,166,35,0.08)] group-hover:text-[#F5A623]"
                     style={{ fontFamily: 'var(--zenith-font-body)' }}
+                    aria-label={`Open quick actions for ${project.customerName}`}
                   >
-                    View project →
-                  </span>
+                    Open quick actions →
+                  </button>
                 </div>
                 </Link>
               </motion.div>

@@ -556,6 +556,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       totalLeads,
       confirmedProjects,
       totalCapacity,
+      pipelineCapacity,
       totalRevenue,
       totalProfit,
       projectsByStatusRawFromPromise,
@@ -578,6 +579,11 @@ router.get('/sales', authenticate, async (req: Request, res) => {
           _sum: { systemCapacity: true },
         });
       })(),
+      // Pipeline capacity (kW) = sum of systemCapacity for all non-lost projects (same scope as Total Pipeline, but capacity)
+      prisma.project.aggregate({
+        where: { ...where, projectStatus: { not: ProjectStatus.LOST }, systemCapacity: { not: null } },
+        _sum: { systemCapacity: true },
+      }),
       // Total revenue (only confirmed/completed projects, excluding leads/survey/proposal)
       (async () => {
         const revenueWhere = getRevenueWhere(where);
@@ -966,6 +972,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
         totalRevenue: totalRevenue._sum.projectCost || 0,
         expectedRevenue: totalRevenue._sum.projectCost || 0, // Using same for now
       },
+      pipelineCapacityKW: pipelineCapacity._sum.systemCapacity || 0,
       pipeline: {
         survey: pipelineSurvey,
         proposal: pipelineProposal,
@@ -1777,6 +1784,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
       capacityByFY,
       pipelineByFY,
       totalPipelineResult,
+      pipelineCapacityResult,
       projectsByStatusRawMgmt,
       availingLoanCount,
       profitabilityData,
@@ -1829,6 +1837,10 @@ router.get('/management', authenticate, async (req: Request, res) => {
       prisma.project.aggregate({
         where: pipelineWhereForTilesMgmt,
         _sum: { projectCost: true },
+      }),
+      prisma.project.aggregate({
+        where: { ...where, projectStatus: { not: ProjectStatus.LOST }, systemCapacity: { not: null } },
+        _sum: { systemCapacity: true },
       }),
       prisma.project.groupBy({
         by: ['projectStatus'],
@@ -2063,6 +2075,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
       operations,
       finance,
       totalPipeline: totalPipeline._sum.projectCost || 0,
+      pipelineCapacityKW: pipelineCapacityResult._sum.systemCapacity || 0,
       previousYearSamePeriod,
       projectValueByType: valueByTypeWithPercentage,
       projectValueProfitByFY,

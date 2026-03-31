@@ -6,17 +6,21 @@ import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useZenithMainQuery } from '../hooks/useZenithMainQuery'
 import '../styles/zenith.css'
 import CommandBar from '../components/zenith/CommandBar'
+import DailyBriefing from '../components/zenith/DailyBriefing'
 import ZenithExecutiveBody from '../components/zenith/ZenithExecutiveBody'
 import ZenithOperationsBody from '../components/zenith/ZenithOperationsBody'
 import ZenithFinanceBody from '../components/zenith/ZenithFinanceBody'
 import ZenithAiInsightsTicker from '../components/zenith/ZenithAiInsightsTicker'
 import { buildZenithAiInsights } from '../components/zenith/zenithAiInsights'
+import { AnimatePresence } from 'framer-motion'
+import { useDailyBriefing } from '../hooks/useDailyBriefing'
 
 const Zenith = () => {
   const { user } = useAuth()
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [selectedQuarters, setSelectedQuarters] = useState<string[]>([])
   const [selectedMonths, setSelectedMonths] = useState<string[]>([])
+  const { isVisible, dismiss, showBriefing } = useDailyBriefing()
 
   const { data: dashboardData, error: fyError, isError: isFyError, refetch: refetchFYs } =
     useQuery({
@@ -139,6 +143,7 @@ const Zenith = () => {
         onQuarterChange={setSelectedQuarters}
         onMonthChange={setSelectedMonths}
         onResetFilters={handleResetFilters}
+        onShowBriefing={showBriefing}
       />
 
       {!isFyError && !isError && user?.role ? (
@@ -174,6 +179,18 @@ const Zenith = () => {
       )}
 
       {!isFyError && !isError ? body : null}
+
+      <AnimatePresence>
+        {isVisible && user?.role ? (
+          <DailyBriefing
+            isVisible={isVisible}
+            onDismiss={dismiss}
+            role={user.role}
+            currentUserName={user.name}
+            data={(zenithData ?? {}) as Record<string, unknown>}
+          />
+        ) : null}
+      </AnimatePresence>
     </div>
   )
 }
