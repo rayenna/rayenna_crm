@@ -36,6 +36,12 @@ export const helpSections: HelpSection[] = [
     routePatterns: ['/dashboard', '/zenith']
   },
   {
+    id: 'training',
+    title: 'Training',
+    routeKey: 'training',
+    markdownPath: '/help-docs/training/index.md',
+  },
+  {
     id: 'security',
     title: 'Security',
     routeKey: 'security',

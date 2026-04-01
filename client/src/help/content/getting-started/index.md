@@ -24,6 +24,7 @@ The Rayenna CRM is a comprehensive customer relationship management system desig
 - Explore the [Modules](/help/modules)
 - Check out [Analytics & Reports](/help/analytics)
 - Try [Zenith — Command Center](/help/analytics#zenith-command-center) for immersive analytics; use [Revenue forecast](/help/analytics#revenue-forecast-wide-kpi-tile) and [FY revenue & profit chart](/help/analytics#revenue-and-profit-by-fy-chart-zenith) when you want the details
+- Run or join a session using the **[Zenith training guide](/help/training)** — presentation-style facilitator material (**Sales-first**; all roles)
 - Learn [keyboard shortcuts](#keyboard-shortcuts) for faster navigation
 
 ## Keyboard shortcuts

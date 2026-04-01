@@ -7,6 +7,7 @@ const SECTION_EMOJI: Record<string, string> = {
   roles: '👤',
   modules: '🧩',
   analytics: '📊',
+  training: '🎓',
   security: '🔒',
   faq: '❓',
 }

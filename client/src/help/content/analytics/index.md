@@ -369,6 +369,8 @@ On **wide screens**, **Today’s Hit List** and the **KPI + Revenue forecast** r
 - **Tip of the Day** rotates through dozens of hints, including **Revenue forecast**, **FY chart drill-down**, **Customer profitability**, **Explore** lists, **Hit List** layout, and the rest of Zenith — use **Next tip** in the modal to browse more.
 - Optional **Help** tooltips (`zenith.*` keys) exist for reuse in the UI; the full narrative is in the sections above.
 
+**Facilitator / end-user training:** A **presentation-style training guide** for Zenith (all roles, **Sales-first**), with exercises and permission notes, lives under **[Training](/help/training)** in Help.
+
 For module basics (Customers, Projects, Proposal Engine), see [Modules](/help/modules) and [Getting Started](/help/getting-started).
 
 ---

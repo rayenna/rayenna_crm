@@ -7,10 +7,11 @@ The Rayenna CRM consists of several key modules designed to manage different asp
 ## Core Modules
 
 ### Dashboard
-- Role-based dashboards
-- Key performance indicators
-- Visual analytics
-- Quick access to important data
+- Role-based dashboards, KPI tiles, and **Quick Access** (metric cards plus **Payment Status**; **Proposal Engine** summary on Sales and Management)
+- **Filters:** Financial Year, Quarter, and Month — see [Analytics & Reports](/help/analytics) for Quick Access layout, Payment rows, Proposal Engine buckets, and charts
+- **[Zenith ✦](/help/analytics#zenith-command-center)** — full-screen command center (same filters), **Revenue forecast**, **Explore** chart drill-downs, and **Quick Actions** lists; deep dive under Analytics → Zenith Command Center
+- **[Zenith training guide](/help/training)** — facilitator-led and self-study material for end-user sessions (**Sales-first**; all roles)
+- Visual analytics (charts vary by role)
 
 ### Customers
 - Customer master data
@@ -109,7 +110,7 @@ If **Id Proof#** is provided, **Type of Id Proof** is required. **Country** must
 - **Admin** users can edit any customer.
 - **Management** can view but not edit.
 
-**How to edit**: Open the **Customers** page → find the customer (search/filters) → click **Edit** → update fields → click **Update**.
+**How to edit**: Open the **Customers** page → find the customer (search/filters) → click the 3-dot **Actions** menu → **Edit** → update fields → click **Update**.
 
 **Salesperson** assignment can be changed only by **Management** or **Admin**.
 
@@ -118,7 +119,13 @@ If **Id Proof#** is provided, **Type of Id Proof** is required. **Country** must
 - **My Customers**: Customers you created or are assigned to. You can create, edit, and manage them.
 - **All Customers**: View-only list of all customers. You cannot edit others’ customers.
 
-Use the toggle on the Customers page to switch between **My Customers** and **All Customers**.
+Use the **Filter** radio buttons on the Customers page to switch between **My Customers** and **All Customers**.
+
+### Deleting Customers
+
+- **Admin** only can delete customers.
+- Customers with existing projects **cannot be deleted**. Delete or reassign projects first.
+- Use the 3-dot **Actions** menu on a customer row → **Delete** → confirm in the warning dialog.
 
 ## Viewing and Finding Customers
 
@@ -127,17 +134,26 @@ Use the toggle on the Customers page to switch between **My Customers** and **Al
 1. Navigate to **Customers** from the top menu.
 2. Use the **search bar** to find customers by **customer name**, **Customer ID**, or **consumer number** (real-time, case-insensitive).
 3. Apply **filters**:
-   - **Sales users**: Toggle **My Customers** / **All Customers**.
-   - **Other users**: Use **Sales Person** filter to view customers for selected salesperson(s). Leave empty to see all.
-4. The list shows customer name, ID, address, contact info, **project count** badge, and creation date.
+   - **Sales users**: Choose **My Customers** or **All Customers** (radio buttons).
+   - **Other users**: Use **Sales Person** dropdown to filter by one or more salespersons. Leave as "All Sales Persons" to see all customers.
+4. The list shows customer cards with ID, name, address, contact info, **project count** badge, and creation date.
+5. Use **Previous** and **Next** for pagination (25 customers per page).
+
+### Customer Row Actions
+
+Each customer row has a 3-dot **Actions** menu:
+
+- **Edit** (Admin, Management, or Sales in My Customers): Open the customer form to update details.
+- **Delete** (Admin only): Remove the customer. Not available if the customer has projects.
+- **Open in Google Maps**: Shown when location coordinates are set. Opens the customer location in Google Maps in a new tab.
 
 ### Customer Information Displayed
 
 - **Customer ID**, **Name** (or individual name components)
-- **Address**, **Pin Code**
-- **Contact numbers**, **Email IDs**
+- **Address**, **Pin Code**, **Google Maps link** (if location set)
+- **Contact numbers**, **Email IDs** (clickable mailto links)
 - **DISCOM Consumer Number**, **Company Name** (if provided)
-- **Project count** (number of projects linked to the customer)
+- **Project count** badge (number of projects linked to the customer)
 
 ## Relationship to Projects
 
@@ -152,9 +168,9 @@ Use the toggle on the Customers page to switch between **My Customers** and **Al
 
 - **Who can export**: **Administrators** only.
 - **Formats**: **Excel (.xlsx)** or **CSV (.csv)**.
-- **How**: Apply any filters (e.g. Sales Person, My/All) → click **Export to Excel** or **Export to CSV** → confirm → file downloads.
+- **How**: Apply any filters (e.g. Sales Person, My/All) → click **Export to Excel** or **Export to CSV** → read and confirm the authorization notice → click **YES** → file downloads.
 
-Exports include all customer information and respect current filters and search.
+Exports include all customer information and respect current filters and search. You must confirm that you are authorized to export data before the file is generated.
 
 ## Best Practices
 
@@ -170,10 +186,10 @@ Exports include all customer information and respect current filters and search.
 
 A quick reference for Customer Master access:
 
-- **Sales**: Create customers, edit own customers (My Customers), view All Customers (read-only). Cannot change salesperson.
-- **Operations / Finance**: View customers (via filters). Cannot create or edit.
-- **Management**: View all customers, assign/change salesperson. Cannot create or edit other fields.
-- **Admin**: Full access; create, edit, export.
+- **Sales**: Create customers, edit own customers (My Customers), view All Customers (read-only). Cannot change salesperson or delete.
+- **Operations / Finance**: View customers (via filters). Cannot create, edit, or delete.
+- **Management**: View all customers, assign/change salesperson, edit customer details. Cannot create or delete.
+- **Admin**: Full access; create, edit, delete (when no projects), export.
 
 ## Getting Help
 
@@ -219,6 +235,7 @@ At any stage, a project may be marked **Lost** if the customer does not proceed.
 5. Complete **Sales & Commercial Information**:
    - **Lead Source**: Website, Referral, Google, Channel Partner, Digital Marketing, Sales, Management Connect, or Other (additional details required for some options)
    - **System Capacity (kW)**, **Order Value (₹)**, **Confirmation Date** (required), **Project Status**
+   - **Availing Loan/Financing?**: Check if the customer is availing loan/financing. If **Yes**, select **Financing Bank** (required) from the dropdown (e.g. SBI, HDFC Bank, Other). If you select **Other**, enter **Other Bank Name** (required, alphanumeric).
    - **Roof Type** and **System Type** (technical details)
 6. If status is **Lost**, enter **Lost Date** and **Reason for Loss** (required).
 7. Click **Create**. The project is saved, assigned a Project Number, and you are redirected to the Projects list.
@@ -236,7 +253,7 @@ At any stage, a project may be marked **Lost** if the customer does not proceed.
 - **Segment** and **Project Type**
 - **Confirmation Date**
 
-If **Lead Source** is Referral, Channel Partner, or Other, the corresponding detail field is required. If status is **Lost**, **Lost Date** and **Reason for Loss** are required.
+If **Lead Source** is Referral, Channel Partner, or Other, the corresponding detail field is required. If **Availing Loan/Financing** is Yes, **Financing Bank** is required; if the bank is **Other**, **Other Bank Name** is required. If status is **Lost**, **Lost Date** and **Reason for Loss** are required.
 
 ## Project Status Stages
 
@@ -257,7 +274,8 @@ If **Lead Source** is Referral, Channel Partner, or Other, the corresponding det
 
 ### Sales & Commercial
 
-- **Sales**, **Operations**, and **Admin** maintain **Lead Source**, **Order Value**, **Confirmation Date**, **System Capacity**, **Roof Type**, **System Type**, and non-payment financial details (e.g. loan details, incentive eligibility, Availing Loan/Financing and bank when applicable).
+- **Sales**, **Operations**, and **Admin** can **edit** the Sales & Commercial section: **Lead Source**, **Order Value**, **Confirmation Date**, **System Capacity**, **Availing Loan/Financing** (checkbox, financing bank, other bank name when Other), **Roof Type**, **System Type**, and related non-payment financial details (e.g. loan details, incentive eligibility).
+- **Finance** and **Management** can **view** Sales & Commercial but cannot edit it.
 - Use **Remarks** for internal notes and decisions. Remarks are versioned and visible to users with project access.
 
 ### Support Tickets and Documents
@@ -267,18 +285,39 @@ If **Lead Source** is Referral, Channel Partner, or Other, the corresponding det
 
 ## Viewing Projects
 
+### Opening Projects from the Dashboard
+
+You can jump to a filtered Projects view from your dashboard:
+
+1. On your dashboard, find the **Quick Access** section (tiles showing counts like Total Leads, Open Deals, Payment Status).
+2. Click any tile. The Projects page opens with filters already applied (e.g. status, payment status, availing loan, FY, Quarter, Month).
+3. Use **Clear All** on the Projects page to remove all filters and see the full list.
+
+The tile counts and filters match the dashboard filters (FY, Quarter, Month) you have set.
+
 ### Projects List
 
-1. Navigate to **Projects** from the top menu.
+1. Navigate to **Projects** from the top menu (or click a dashboard Quick Access tile).
 2. Use the **search bar** to find projects by customer name, customer ID, or consumer number.
-3. Apply **filters**:
+3. Apply **filters** (click **Show Filters** to expand):
+   - **FY, Quarter, Month**: Same dashboard-style date filters. Tile counts and Quick Access links use these.
    - **Status**: Lead, Site Survey, Proposal, Confirmed, Installation, Completed, etc.
+   - **Payment Status**: Pending, Partial, Fully Paid, N/A (Finance, Sales, Management, Admin, Operations)
+   - **Availing Loan**: Check to show only projects where Availing Loan/Financing is Yes
    - **Segment**: Residential Subsidy, Residential Non-Subsidy, Commercial Industrial
    - **Service Type**: EPC Project, Panel Cleaning, Maintenance, etc.
    - **Support Ticket Status**: Has Tickets, Open, In Progress, Closed, No Tickets
    - **Salesperson** (for non-Sales users): Filter by assigned salesperson
-4. Sort by creation date, confirmation date, value, customer name, or status. Default is newest first.
-5. Click a **project row** or **project number** to open the **Project Detail** page.
+4. Use **Clear All** to reset search, filters, and sort. Works even when arriving from a dashboard tile.
+5. Sort by creation date, confirmation date, order value, customer name, profitability, system capacity, or **Deal Health Score**. Default is confirmation date (newest first).
+6. Click a **project row** or **project number** to open the **Project Detail** page.
+
+Filters are remembered when you navigate to a project and use **Back** to return.
+
+### Subtotals and Payment Status
+
+- **Subtotals**: Select multiple projects using the checkboxes. The bottom of the list shows subtotals for Order Value, Amount Received, and Outstanding.
+- **Payment Status tooltip**: Hover over **Pending** or **Partial** in the Payment Status column to see the outstanding balance amount.
 
 ### Project Detail Page
 
@@ -286,6 +325,7 @@ The detail page shows:
 
 - **Customer** information, **Project** and **Sales & Commercial** details
 - **Project Lifecycle** (execution dates, costs, equipment)
+- **Deal Health Score** (0–100) — a card that breaks the score into **Activity**, **Momentum**, **Deal value**, **Close date**, and **Lead source**, with a short insight (hidden for completed / subsidy-credited / lost projects). Open the **Projects** module in Help for **how it is calculated**, **where else it appears** (including Zenith), and **how to use it** in daily selling.
 - **Payment Tracking** (status, amounts, balance)
 - **Remarks** (versioned history)
 - **Support / Service Tickets** (create, view, manage)
@@ -301,6 +341,7 @@ Each project displays:
 - **Order Value**, **Payment Status**, **Balance**
 - **Confirmation Date**, **Financial Year**
 - **Project Status**, **Lead Source**
+- **Availing Loan/Financing** (Yes/No) and **Financing Bank** when applicable
 - **System Capacity**, **Roof Type**, **System Type**
 - **Support tickets** (count and status) and **documents** (in Key Artifacts)
 
@@ -319,9 +360,10 @@ Each project displays:
 
 A quick reference for project-related access:
 
-- **Sales**: Create projects (own customers), edit Sales & Commercial, update status through Confirmed, add remarks, create tickets, upload documents. Cannot edit Lifecycle or Payments.
+- **Sales**: Create projects (own customers), edit Sales & Commercial (including Availing Loan/Financing), update status through Confirmed, add remarks, create tickets, upload documents. Cannot edit Lifecycle or Payments.
 - **Operations**: View all projects, edit **Sales & Commercial** (non-payment fields) and **Project Lifecycle**, update status from Installation onward, add remarks, create tickets, upload documents. Cannot edit Payment Tracking.
-- **Finance**: View all projects, edit Payment Tracking only. Cannot edit other sections or change status.
+- **Finance**: View all projects, edit Payment Tracking only. Can view Sales & Commercial but cannot edit it or other sections.
+- **Management**: View all projects and all sections; cannot edit Sales & Commercial, Lifecycle, or Payments.
 - **Admin**: Full access; can delete Lost projects.
 
 ## Getting Help
@@ -358,7 +400,7 @@ Each support ticket is assigned a unique ticket number for easy identification a
 1. Navigate to the **Projects** page
 2. Click on the project for which you need to create a support ticket
 3. Scroll to the **Support / Service Tickets** section
-4. Click the **Create Ticket** button
+4. Click the **Create Ticket** button (disabled for projects in **Lost** status)
 5. Fill in the required information:
    - **Title**: A brief, descriptive title for the ticket (required)
    - **Description**: Detailed information about the issue or request (optional)
@@ -376,18 +418,21 @@ The system will automatically:
 - **Operations** users can create tickets for any project
 - **Admin** users have full access to create tickets
 
+**Note**: You cannot create tickets for projects in **Lost** status.
+
 ## Managing Follow-ups
 
 Follow-ups allow you to document progress, communications, and next steps for each ticket.
 
 ### Adding a Follow-up
 
-1. Open the ticket by clicking on the ticket number or **View** button
-2. In the ticket detail drawer, scroll to the **Follow-up Timeline** section
-3. Click **Add Follow-up** (if the form is not visible)
-4. Enter your notes in the **Note** field (required)
-5. Optionally set a **Follow-up Date** if you need to schedule a future action
-6. Click **Add Follow-up** to save
+1. Open the ticket by clicking the ticket number or **View** in the table
+2. The **Ticket Detail Drawer** opens from the right (slide-in panel)
+3. In the drawer, scroll to the **Follow-up Timeline** section
+4. Click **Add Follow-up** (if the form is not visible)
+5. Enter your notes in the **Note** field (required)
+6. Optionally set a **Follow-up Date** if you need to schedule a future action
+7. Click **Add Follow-up** to save
 
 ### Follow-up Best Practices
 
@@ -455,22 +500,24 @@ The Support Tickets Dashboard provides a comprehensive view of all tickets:
    - **In Progress**: Tickets being actively worked on
    - **Closed**: Resolved tickets
    - **Overdue**: Tickets with past follow-up dates
-3. Use the metrics cards to filter tickets by status
-4. View the **Ticket Status Breakdown** chart for visual insights
-5. Review the **Open Support Tickets** table for active tickets
+3. Use the metric cards or chart slices to filter the table
+4. View the **Ticket Status Breakdown** donut chart for visual insights
+5. Review the **All Support Tickets** table
 
 ### Filtering Tickets
 
-- Click on any metric card (Open, In Progress, Closed, Overdue) to filter the table
-- Click on a slice in the status chart to filter by that status
-- Use the **Clear Filters** button to reset to the default view
+- Click any **KPI card** (Open, In Progress, Closed, Overdue) to filter the table; click again to toggle that filter off
+- Click a **chart slice** in the Ticket Status Breakdown to filter by that status; click again to toggle off
+- **Overdue** shows tickets with past follow-up dates
+- **Clear Filters** appears when filters are active; use it to reset to the default view
 
 ### From Project Details
 
 1. Navigate to a specific project
 2. Scroll to the **Support / Service Tickets** section
 3. View all tickets associated with that project
-4. See ticket status, creation date, and latest follow-up information
+4. Click a ticket number or **View** to open the **Ticket Detail Drawer** (slide-in panel from the right)
+5. See ticket status, creation date, and latest follow-up information
 
 ## Ticket Information
 
@@ -485,6 +532,16 @@ Each ticket displays:
 - **Created Date**: When the ticket was created
 - **Closed Date**: When the ticket was resolved (if closed)
 - **Follow-up Timeline**: Complete history of all activities
+
+## Permissions Summary
+
+- **Admin**: Full access; can create, close, add follow-ups, delete tickets, and add follow-ups to closed tickets.
+- **Sales**: Can create tickets (own projects), add follow-ups, close tickets. Cannot delete.
+- **Operations**: Can create tickets (any project), add follow-ups, close tickets. Cannot delete.
+- **Management**: Can view the Support Tickets dashboard. Create, close, and follow-up access via API; UI may vary.
+- **Finance**: No access to the Support Tickets module.
+
+**Navigation access**: Admin, Sales, Operations, Management (Finance does not see Support Tickets in the menu).
 
 ## Best Practices
 
@@ -504,5 +561,95 @@ A quick reference showing which features each role can access is described in th
 
 If you need assistance with the Support Tickets module:
 - Press **?** or click **Help** in the navigation menu
+- Review the **FAQ** section for common questions
+- Contact your system administrator for access or permission issues
+
+---
+
+# Tally Export Module
+
+## Purpose
+
+The **Tally Export** module lets you export financial data from the CRM in formats compatible with Tally accounting software. Use it to move project, invoice, and payment data into Tally for bookkeeping and financial reporting. Access is restricted to **Finance** and **Admin** users; exports are monitored and require you to confirm that you are authorised and have management approval.
+
+## Who Can Access
+
+- **Finance** users and **Administrators** only. Other roles do not see **Tally Export** in the menu and cannot access the page.
+- Export is monitored and logged. You must confirm authorisation and management approval before the file is generated.
+
+## Using Tally Export
+
+### Opening the Page
+
+1. Navigate to **Tally Export** from the top menu.
+2. The page shows **Export Data Type**, **Export Format**, optional **Start Date** and **End Date**, and the **Export** button.
+3. If you do not have permission, you will see a message that you cannot access the page.
+
+### Export Data Type
+
+Choose what to export:
+
+- **Projects** – Project financial data (customer, order value, payments, costs). For Tally XML this is exported as ledgers.
+- **Invoices** – Invoice data (amounts, payments, customer details).
+- **Payments** – Payment transactions (amounts, dates, project and customer information, payment status). For Tally XML this is exported as vouchers.
+
+### Export Format
+
+- **Excel (.xlsx)** – Import into Tally using the Excel import feature. Recommended for most users.
+- **CSV (.csv)** – Compatible with Tally CSV import; useful for other tools as well.
+- **Tally XML** – Native Tally format. Import via Gateway of Tally → Import → Tally XML. Projects export as ledgers; Invoices/Payments as vouchers.
+
+### Date Filters (Optional)
+
+- **Start Date** and **End Date** – Limit the export to a date range. Leave both blank to export all data for the selected type.
+
+### Export Steps
+
+1. Select **Export Data Type** (Projects, Invoices, or Payments).
+2. Select **Export Format** (Excel, CSV, or Tally XML).
+3. Optionally set **Start Date** and **End Date**.
+4. Click the **Export** button (e.g. “Export Projects as Excel”).
+5. Read the **WARNING** and confirmation text. It states that data is company property, unauthorised export is prohibited, and you must be authorised and have written management approval.
+6. Click **YES** to confirm. The file downloads automatically (e.g. `tally-export-projects-1234567890.xlsx`).
+7. Click **CANCEL** to abort.
+
+If an error appears, check your connection and try again; contact your administrator if the problem continues.
+
+### Importing into Tally
+
+**For Excel or CSV:**
+
+1. Open Tally and go to **Gateway of Tally**.
+2. Press **F11** (Features) → set **Allow Excel Import** to **Yes**.
+3. Go to **Gateway of Tally** → **Import** → **Excel/CSV**.
+4. Select the exported file and map columns to Tally fields.
+5. Complete the import.
+
+**For Tally XML:**
+
+1. Open Tally and go to **Gateway of Tally**.
+2. Press **F11** (Features) → enable **Import from Tally XML**.
+3. Go to **Gateway of Tally** → **Import** → **Tally XML**.
+4. Select the exported XML file. Tally imports ledgers/vouchers as per the export type.
+
+## Best Practices
+
+- Export only when you are authorised and have management approval.
+- Verify **Export Data Type** and **Format** before confirming.
+- Use **Start Date** and **End Date** when you need a specific period.
+- Store exported files securely and do not share them outside authorised use.
+- Import into Tally promptly and follow company data policies.
+
+## Permissions Summary
+
+- **Finance**: Full access to Tally Export; can export Projects, Invoices, and Payments in Excel, CSV, or Tally XML.
+- **Admin**: Same as Finance; full access to Tally Export.
+- **Sales, Operations, Management**: No access; **Tally Export** does not appear in the menu.
+
+## Getting Help
+
+If you need assistance with the Tally Export module:
+
+- Press **?** or click **Help** in the navigation menu for context-sensitive help
 - Review the **FAQ** section for common questions
 - Contact your system administrator for access or permission issues

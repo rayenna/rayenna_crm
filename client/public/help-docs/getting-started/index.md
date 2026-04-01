@@ -13,10 +13,34 @@ The Rayenna CRM is a comprehensive customer relationship management system desig
 1. **Login**: Use your credentials to access the system
 2. **Dashboard**: View your personalized dashboard based on your role
 3. **Navigation**: Use the top navigation menu to access different modules
-4. **Help**: Press **?** or click Help in the menu for assistance
+4. **Proposals**: From a project in Proposal or Confirmed stage, click **Proposals (New)** to open the Proposal Engine and work on Costing, BOM, ROI, and Proposal
+5. **Zenith**: Open **Zenith ✦** from the Dashboard menu for Rayenna’s full-screen **command center** — same FY / Quarter / Month rules as the dashboard, **AI Insights**, **Your Focus**, **Revenue forecast** (stage-weighted pipeline), **clickable charts** with a **Quick Actions** drawer, and animated KPIs. Start at [Analytics → Zenith Command Center](/help/analytics#zenith-command-center); for chart clicks and lists see [Explore charts & drill-down](/help/analytics#explore-charts-and-drill-down-zenith).
+6. **Help**: Press **?** (when not typing in a field) or click **Help** in the menu for context-sensitive documentation
+7. **Keyboard shortcuts**: Use **Ctrl+Shift+** a letter (Windows/Linux) or **⌘⇧** on Mac to jump around the app — see [Keyboard shortcuts](#keyboard-shortcuts) below and [Analytics & Reports → Keyboard shortcuts](/help/analytics#keyboard-shortcuts)
 
 ## Next Steps
 
 - Learn about [User Roles & Permissions](/help/roles)
 - Explore the [Modules](/help/modules)
 - Check out [Analytics & Reports](/help/analytics)
+- Try [Zenith — Command Center](/help/analytics#zenith-command-center) for immersive analytics; use [Revenue forecast](/help/analytics#revenue-forecast-wide-kpi-tile) and [FY revenue & profit chart](/help/analytics#revenue-and-profit-by-fy-chart-zenith) when you want the details
+- Run or join a session using the **[Zenith training guide](/help/training)** — presentation-style facilitator material (**Sales-first**; all roles)
+- Learn [keyboard shortcuts](#keyboard-shortcuts) for faster navigation
+
+## Keyboard shortcuts
+
+When focus is **not** in a text field, **textarea**, **select**, or **contenteditable** area:
+
+- **?** — Open **Help** for the current area (from Dashboard, opens Analytics; from Zenith, includes Zenith Command Center).
+
+| Shortcut (Win/Linux) | Mac | Action |
+| :-- | :-- | :-- |
+| Ctrl+Shift+D | ⌘⇧D | **Dashboard** |
+| Ctrl+Shift+C | ⌘⇧C | **Customers** (Admin, Sales, Operations, Finance, Management) |
+| Ctrl+Shift+P | ⌘⇧P | **Projects** (same roles as Customers) |
+| Ctrl+Shift+K | ⌘⇧K | **Support Tickets** (Admin, Sales, Operations, Management — not Finance) |
+| Ctrl+Shift+Z | ⌘⇧Z | **Zenith** (roles that see Zenith under the Dashboard menu) |
+| Ctrl+Shift+M | ⌘⇧M | **New customer** — opens the create form (Sales, Management, Admin) |
+| Ctrl+Shift+E | ⌘⇧E | **New project** — opens the new-project screen (Admin, Sales). Route: projects/new |
+
+On a **Help** page, **Esc** returns you to the **Dashboard**. The same shortcuts are summarised under [Analytics & Reports → Keyboard shortcuts](/help/analytics#keyboard-shortcuts).
