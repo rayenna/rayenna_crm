@@ -16,9 +16,13 @@ export interface SegmentSlice {
 export default function SegmentDonut({
   title,
   data,
+  onSegmentClick,
+  showExploreHint,
 }: {
   title: string
   data: SegmentSlice[]
+  onSegmentClick?: (segmentName: string) => void
+  showExploreHint?: boolean
 }) {
   const chartData = useMemo(
     () =>
@@ -38,7 +42,19 @@ export default function SegmentDonut({
       animate={{ opacity: 1, y: 0 }}
       className="zenith-glass rounded-xl p-3 sm:p-4 flex flex-col"
     >
-      <h3 className="zenith-display text-sm sm:text-[15px] font-semibold text-white/95 mb-3">{title}</h3>
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <h3 className="zenith-display text-sm sm:text-[15px] font-semibold text-white/95 min-w-0">
+          {title}
+        </h3>
+        {showExploreHint ? (
+          <span
+            className="shrink-0 pt-0.5 italic text-[10px] text-white/[0.25]"
+            style={{ fontFamily: 'DM Sans, sans-serif' }}
+          >
+            Click to explore →
+          </span>
+        ) : null}
+      </div>
       <div className="w-full min-w-0" style={{ height: CHART_PX }}>
         {chartData.length === 0 ? (
           <p className="text-sm text-white/40 text-center flex items-center justify-center h-full">
@@ -57,24 +73,64 @@ export default function SegmentDonut({
                 dataKey="value"
                 animationBegin={0}
                 animationDuration={900}
+                cursor={onSegmentClick ? 'pointer' : 'default'}
+                onClick={(slice) => {
+                  const name = (slice as { name?: string })?.name
+                  if (name && onSegmentClick) onSegmentClick(String(name))
+                }}
               >
                 {chartData.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="rgba(0,0,0,0.2)" />
+                  <Cell
+                    key={i}
+                    fill={COLORS[i % COLORS.length]}
+                    stroke="rgba(0,0,0,0.2)"
+                    style={{
+                      cursor: onSegmentClick ? 'pointer' : 'default',
+                      filter: 'brightness(1)',
+                      transition: 'filter 0.15s, transform 0.15s',
+                      transformOrigin: 'center',
+                    }}
+                    onMouseEnter={(e) => {
+                      const el = e.currentTarget as SVGElement
+                      el.style.filter = 'brightness(1.25)'
+                      el.style.transform = 'scale(1.04)'
+                    }}
+                    onMouseLeave={(e) => {
+                      const el = e.currentTarget as SVGElement
+                      el.style.filter = 'brightness(1)'
+                      el.style.transform = 'scale(1)'
+                    }}
+                  />
                 ))}
               </Pie>
               <Tooltip
-                formatter={(value: number, _n, p) => {
-                  const pct = (p?.payload as { pct?: string })?.pct
-                  return [`₹${value.toLocaleString('en-IN')}${pct ? ` (${pct}%)` : ''}`, '']
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null
+                  const p = payload[0]
+                  const v = Number(p.value)
+                  const pct = (p.payload as { pct?: string })?.pct
+                  return (
+                    <div
+                      style={{
+                        background: '#1A1A2E',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: 8,
+                        padding: '8px 12px',
+                        fontFamily: 'DM Sans, sans-serif',
+                      }}
+                    >
+                      <div style={{ color: '#fff', fontSize: 13, fontWeight: 500 }}>
+                        {p.name}: ₹{v.toLocaleString('en-IN')}
+                        {pct ? ` (${pct}%)` : ''}
+                      </div>
+                      {onSegmentClick ? (
+                        <div style={{ color: '#F5A623', fontSize: 11, marginTop: 4 }}>
+                          Click to view projects →
+                        </div>
+                      ) : null}
+                    </div>
+                  )
                 }}
-                contentStyle={{
-                  background: 'rgba(10,10,15,0.96)',
-                  border: '1px solid rgba(255,255,255,0.14)',
-                  borderRadius: 10,
-                  color: '#f8fafc',
-                }}
-                labelStyle={{ color: '#ffffff', fontWeight: 600 }}
-                itemStyle={{ color: '#f1f5f9' }}
               />
               <Legend
                 verticalAlign="bottom"

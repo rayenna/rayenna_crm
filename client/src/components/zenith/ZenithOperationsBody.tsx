@@ -23,6 +23,7 @@ import ZenithYourFocus from './ZenithYourFocus'
 import ChartPanel from './ChartPanel'
 import SegmentDonut from './SegmentDonut'
 import ZenithRevenueProfitFyChart from './ZenithRevenueProfitFyChart'
+import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
 
@@ -89,11 +90,13 @@ export default function ZenithOperationsBody({
     totalProjectValue: number
     totalProfit: number
   }[]
-  const fyChart = [...fyRows].sort((a, b) => a.fy.localeCompare(b.fy)).map((r) => ({
-    fy: r.fy,
-    revenue: r.totalProjectValue,
-    profit: r.totalProfit,
-  }))
+  const fyChart = [...projectValueRowsVisibleInZenithFyChart(fyRows, effFYs)]
+    .sort((a, b) => a.fy.localeCompare(b.fy))
+    .map((r) => ({
+      fy: r.fy,
+      revenue: r.totalProjectValue,
+      profit: r.totalProfit,
+    }))
   const seg = (data?.projectValueByType ?? []) as { label: string; value: number; percentage: string }[]
   const paymentItems = (data?.projectsByPaymentStatus ?? []) as {
     status: string

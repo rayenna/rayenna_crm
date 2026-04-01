@@ -269,6 +269,90 @@ function buildProjectsByStatus(countByStatus: { status: ProjectStatus; _count: n
   }));
 }
 
+/** Lead source display label — must match pipelineByLeadSource / Zenith charts. */
+function formatLeadSourceForExplorer(ls: LeadSource | null | undefined): string {
+  if (ls == null) return 'Unknown';
+  switch (ls) {
+    case LeadSource.WEBSITE:
+      return 'Website';
+    case LeadSource.REFERRAL:
+      return 'Referral';
+    case LeadSource.GOOGLE:
+      return 'Google';
+    case LeadSource.CHANNEL_PARTNER:
+      return 'Channel Partner';
+    case LeadSource.DIGITAL_MARKETING:
+      return 'Digital Marketing';
+    case LeadSource.SALES:
+      return 'Sales';
+    case LeadSource.MANAGEMENT_CONNECT:
+      return 'Management Connect';
+    case LeadSource.OTHER:
+      return 'Other';
+    default:
+      return String(ls);
+  }
+}
+
+/** Segment label — must match projectValueByType / SegmentDonut. */
+function formatProjectTypeForExplorer(type: string): string {
+  switch (type) {
+    case 'RESIDENTIAL_SUBSIDY':
+      return 'Residential - Subsidy';
+    case 'RESIDENTIAL_NON_SUBSIDY':
+      return 'Residential - Non Subsidy';
+    case 'COMMERCIAL_INDUSTRIAL':
+      return 'Commercial Industrial';
+    default:
+      return type;
+  }
+}
+
+/** Lightweight project rows for Zenith chart drill-down + revenue forecast (same FY/date scope as dashboard). */
+async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
+  const rows = await prisma.project.findMany({
+    where,
+    select: {
+      id: true,
+      projectCost: true,
+      projectStatus: true,
+      projectStage: true,
+      leadSource: true,
+      type: true,
+      year: true,
+      updatedAt: true,
+      grossProfit: true,
+      availingLoan: true,
+      financingBank: true,
+      salesperson: { select: { name: true } },
+      customer: { select: { firstName: true, customerName: true } },
+    },
+    take: 5000,
+    orderBy: { updatedAt: 'desc' },
+  });
+  return rows.map((p) => ({
+    id: p.id,
+    projectStatus: p.projectStatus,
+    /** Raw enum for drill-down parity with `getRevenueWhere` / `getPipelineWhere`. */
+    project_stage: p.projectStage ?? null,
+    has_deal_value: p.projectCost != null,
+    stageLabel: PROJECT_STATUS_LABELS[p.projectStatus] || String(p.projectStatus),
+    deal_value: p.projectCost ?? 0,
+    lead_source: formatLeadSourceForExplorer(p.leadSource),
+    customer_segment: formatProjectTypeForExplorer(p.type),
+    financial_year: p.year,
+    assigned_to_name: p.salesperson?.name?.trim() || 'Unassigned',
+    updated_at: p.updatedAt.toISOString(),
+    customer_name: p.customer?.firstName?.trim() || p.customer?.customerName?.trim() || 'Unknown',
+    gross_profit: p.grossProfit,
+    /** Display label aligned with `availingLoanByBank[].bankLabel` (Zenith loans chart). */
+    loan_bank_label:
+      p.availingLoan && p.financingBank?.trim()
+        ? BANK_LABELS[p.financingBank] || p.financingBank
+        : '',
+  }));
+}
+
 /** Mean days in current status (stageEnteredAt ?? createdAt → now) for Zenith funnel tooltips. */
 async function computeAvgDaysByProjectStatus(where: Prisma.ProjectWhereInput): Promise<Record<string, number>> {
   const rows = await prisma.project.findMany({
@@ -958,6 +1042,8 @@ router.get('/sales', authenticate, async (req: Request, res) => {
 
     const projectsByPaymentStatus = await buildProjectsByPaymentStatus(where as Prisma.ProjectWhereInput);
 
+    const zenithExplorerProjects = await loadZenithExplorerProjects(where as Prisma.ProjectWhereInput);
+
     res.json({
       leads: {
         total: totalLeadsCount,
@@ -992,6 +1078,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       projectsByPaymentStatus,
       availingLoanByBank,
       availingLoanCount,
+      zenithExplorerProjects,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -2070,6 +2157,8 @@ router.get('/management', authenticate, async (req: Request, res) => {
       }
     }
 
+    const zenithExplorerProjects = await loadZenithExplorerProjects(where as Prisma.ProjectWhereInput);
+
     res.json({
       sales,
       operations,
@@ -2088,6 +2177,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
       pipelineByLeadSource,
       pipelineByType: pipelineByTypeWithPercentage,
       projectsByStatus,
+      zenithExplorerProjects,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

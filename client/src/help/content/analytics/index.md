@@ -2,7 +2,7 @@
 
 > **Note:** The Dashboard is your main analytics view. Use the filter bar at the top to choose **Financial Year**, **Quarter**, and **Month**; Quick Access counts, the **Payment Status** and **Proposal Engine** summaries, and most KPI tiles follow those filters. Charts may have their own controls where noted.
 
-**Jump to:** [Dashboard filters](#dashboard-filters) · [Quick Access tiles](#quick-access-tiles) · [Payment Status](#payment-status-card) · [Proposal Engine](#proposal-engine-card) · [Layout by role](#layout-by-role) · [Charts](#charts-and-visualizations) · [Zenith Command Center](#zenith-command-center)
+**Jump to:** [Dashboard filters](#dashboard-filters) · [Quick Access tiles](#quick-access-tiles) · [Payment Status](#payment-status-card) · [Proposal Engine](#proposal-engine-card) · [Layout by role](#layout-by-role) · [Charts](#charts-and-visualizations) · [Zenith Command Center](#zenith-command-center) · [Zenith Revenue Forecast](#revenue-forecast-wide-kpi-tile) · [Zenith FY revenue & profit chart](#revenue-and-profit-by-fy-chart-zenith) · [Zenith drill-down](#explore-charts-and-drill-down-zenith)
 
 ---
 
@@ -147,9 +147,9 @@ Data refreshes when you load the Dashboard or change filters. If numbers look st
 
 ## Zenith Command Center
 
-> **Zenith** is a full-screen analytics experience for the same business data as the classic **Dashboard**, with a focused layout, dark theme, and role-specific panels. Use the **sticky command bar** to filter by **Financial Year**, **Quarter**, and **Month**; **AI Insights** (plain-English highlights from your current data), **Your Focus** (role-specific actions and tables), KPIs, funnels, and charts all respect those filters. (Zenith is documented here, under **Analytics and Reports** — there is no separate top-level Help topic.)
+> **Zenith** is Rayenna CRM’s **command center analytics** experience: the same trusted numbers as the classic **Dashboard**, presented full-screen with a dark theme, **AI Insights**, role-specific **Your Focus** panels, and **clickable charts** that open a **Quick Actions** drawer so you can jump straight to projects. Use the **sticky command bar** for **Financial Year**, **Quarter**, and **Month** — KPIs, the funnel, **Revenue forecast**, **Explore the landscape** charts, and project lists loaded for drill-down **all follow those filters**. Data is loaded from the server for your session (not “this browser only”), so what you see stays aligned with CRM after login. Zenith is documented here under **Analytics and Reports** (no separate top-level Help topic).
 
-**In this section:** [Opening Zenith](#opening-zenith) · [Filters and reset](#filters-and-reset) · [AI Insights ticker](#ai-insights-ticker) · [KPI strip and YoY](#kpi-strip-and-year-on-year) · [Your Focus](#your-focus-role-specific) · [Executive](#executive-sales-management--admin) · [Operations (Zenith)](#operations-zenith) · [Finance (Zenith)](#finance-zenith) · [Charts and shortcuts](#charts-funnels-and-shortcuts) · [Help and tips](#help-and-tips-zenith)
+**In this section:** [Opening Zenith](#opening-zenith) · [Filters and reset](#filters-and-reset) · [AI Insights ticker](#ai-insights-ticker) · [KPI strip and YoY](#kpi-strip-and-year-on-year) · [Your Focus](#your-focus-role-specific) · [Executive](#executive-sales-management--admin) · [Operations (Zenith)](#operations-zenith) · [Finance (Zenith)](#finance-zenith) · [Revenue Forecast tile](#revenue-forecast-wide-kpi-tile) · [Revenue & profit by FY chart](#revenue-and-profit-by-fy-chart-zenith) · [Customer projects profitability](#customer-projects-profitability-zenith) · [Explore charts & drill-down](#explore-charts-and-drill-down-zenith) · [Quick Actions drawer](#quick-actions-drawer-zenith) · [Layout & Hit List](#layout-stability-and-hit-list-zenith) · [Charts overview](#charts-funnels-and-shortcuts) · [Help and tips](#help-and-tips-zenith)
 
 ### Opening Zenith
 
@@ -255,9 +255,9 @@ If a day has no urgent deals, the card shows **All clear**.
 
 **Funnel** — Deal-flow style view of stages from leads through execution (layout varies slightly by role).
 
-**Charts and panels** — May include **Revenue by lead source**, **Sales team performance**, **segment donuts**, **customer profitability**, **Revenue & Profit by FY**, and **Projects by stage**. **Proposal Engine** summary appears where your role has access on the classic dashboard.
+**Charts and panels** — Includes the wide **Revenue forecast** tile (below the KPI row), **Deal flow funnel**, **Your Focus**, then **Explore the landscape**: **Revenue by lead source**, **Pipeline by lead source**, **Revenue vs pipeline by sales team**, **segment donuts** (revenue and pipeline), **Revenue & profit by financial year**, **Projects by stage**, **Projects availing loans by bank**, **Customer projects profitability** (word cloud / Top 10), and **Proposal Engine** where your role has it on the classic dashboard.
 
-**Links** — Many tiles and chart actions open **Projects** (or related views) with **filters aligned** to your Zenith FY / quarter / month — same pattern as Quick Access on the Dashboard.
+**Links** — Chart drill-downs open the **Quick Actions** drawer with a **filtered project list** (see [Explore charts & drill-down](#explore-charts-and-drill-down-zenith)). Other links follow the same date rules as **Quick Access** on the Dashboard.
 
 ### Operations (Zenith)
 
@@ -267,7 +267,7 @@ If a day has no urgent deals, the card shows **All clear**.
 
 **Funnel** — Execution-oriented funnel (installation, subsidy, etc.).
 
-**Charts** — **Revenue & Profit by FY**, **Projects by stage**, **segment** views, and **sales team** style charts where shown.
+**Charts** — **Revenue & Profit by FY** (axis respects selected FYs; [details](#revenue-and-profit-by-fy-chart-zenith)), **Projects by stage**, **segment** views, and **sales team** style charts where shown.
 
 Use **Reset** when you want a fresh, unscoped overview before drilling into a single FY or quarter.
 
@@ -279,17 +279,95 @@ Use **Reset** when you want a fresh, unscoped overview before drilling into a si
 
 **Funnel** — Built from project statuses relevant to finance oversight.
 
-**Charts** — **Revenue & Profit by FY**, **Payment / segment** views, **customer profitability**, **lead source** revenue, and **loan by bank** where applicable.
+**Charts** — **Revenue & Profit by FY** ([filtered years](#revenue-and-profit-by-fy-chart-zenith)), **Payment / segment** views, **customer profitability**, **lead source** revenue, and **loan by bank** where applicable.
 
 ### Charts, funnels, and shortcuts
 
-- **Hover** tooltips on charts explain series and values.
-- **Click-through** where offered — opens **Projects** (or the app route documented on the tile) with **query parameters** carrying your Zenith dates so lists match what you saw.
-- **Loading states** — Skeleton placeholders appear while data loads; if an error banner appears, use **Retry** or refresh the page.
+- **Hover** tooltips show exact values where the chart supports them.
+- **Click to explore** — Where you see that hint, use the interactions described in [Explore charts & drill-down](#explore-charts-and-drill-down-zenith); lists open in the **Quick Actions** drawer with totals aligned to the chart metric.
+- **Loading** — Skeleton placeholders while data loads; use **Retry** or refresh if an error banner appears.
+
+---
+
+### Revenue Forecast (wide KPI tile)
+
+**Where** — Spans the width of the KPI band on **Sales**, **Management**, and **Admin** (executive Zenith).
+
+**What the big number is** — A **weighted pipeline forecast**, not raw pipeline value. Each **open** deal (not Completed, not Subsidy Credited, not Lost) contributes **order value × a win probability for its current stage** (for example Lead 10%, Proposal 45%, Confirmed Order 85%, Under Installation 90%, Submitted for Subsidy 95%). Early-stage deals count for less so the headline reflects **expected** revenue, not “every deal at 100%.”
+
+**Subtitle** — **Expected from N open deals** is the count of those weighted deals.
+
+**Tabs: Source, Sales, Segment, Stage** — The **total** does not change when you switch tabs; tabs only **split the same weighted total** by lead source, assigned salesperson, customer segment, or stage. Each row shows that slice’s **weighted** sum; bars are relative to the **largest row in the current tab**. **+N more** means there are more categories than the three rows shown — click it to open the drawer with **all open deals** (sorted by weighted contribution).
+
+**Layout** — The tile uses a **fixed height** so switching tabs does not resize the KPI row (that keeps **Today’s Hit List** and the funnel from jumping on large screens).
+
+**Info line** — **Stage-weighted probability** — hover or refer here for the full idea.
+
+---
+
+### Revenue and profit by FY chart (Zenith)
+
+**What it shows** — **Total Revenue** (orange line / points) and **Total Profit** (teal bars) per **financial year**, for deals that match CRM **revenue** rules (confirmed-path statuses, same logic as the classic dashboard). **Profit** is **gross profit** summed for projects that have it recorded.
+
+**Filters** — When you pick **one or more FYs** in the command bar, the chart **only shows those years** on the axis (so hover and tooltips stay on the filtered period). With **no** FY selected, you see the full series returned for Zenith.
+
+**How to drill down**
+
+- **Orange point (Total Revenue)** — Opens the drawer: **FY … — Revenue** with projects in that year that count toward revenue; list **totals use order value** and should match the revenue point for that FY.
+- **Teal bar (Total Profit)** — Opens **FY … — Profit Projects** with projects that have **gross profit** in that year; the drawer shows **gross profit** per row and in the **Total** (teal accent), not order value — so the total matches the **profit** bar.
+
+**Small or zero profit bars** — You can still open the **profit** drill-down: there is an invisible hit area along the bar baseline so **every year** on the chart is tappable.
+
+**Tooltip** — Hover shows **Total Revenue** and **Total Profit** once each (no duplicate lines). The footer reminds you which target is which.
+
+---
+
+### Customer projects profitability (Zenith)
+
+**What it is** — Same idea as the **Customer Profitability** word cloud on the classic **Sales / Management / Finance** dashboards: up to **50 projects** with **profitability** filled in on the project (**Sales & Commercial**), ordered by profitability, labelled with the **customer** name (primary name, with a fallback).
+
+**Word Cloud vs Top 10** — **Word Cloud**: **larger text = higher profitability** on that project (relative to others in the list). **Top 10**: a readable ranked list. **Font size** in the cloud is proportional to profitability; colours indicate tiers.
+
+**Reading it** — Each entry is **one project**, not lifetime customer totals. The same customer name can appear more than once if several of their projects rank in the top set.
+
+**Filters** — Respects Zenith **FY / Quarter / Month** like other tiles.
+
+---
+
+### Explore charts and drill-down (Zenith)
+
+**Section title** — **Explore the landscape**. Many panels show **Click to explore →** in the header.
+
+**Behaviour** — Clicking a bar, slice, stage, FY point, or bank (where implemented) opens the **Quick Actions** drawer in **list mode**: a **filter label** at the top (e.g. lead source, segment, stage, FY revenue or profit, loan bank) and a **scrollable project list** with **Open →** to jump to **Project detail**. The projects are the same cohort the chart used for that slice, with **Zenith date filters** applied.
+
+**FY revenue vs FY profit** — For **Revenue & profit by FY**, revenue and profit use **different** list metrics (order value vs gross profit); see [Revenue and profit by FY chart](#revenue-and-profit-by-fy-chart-zenith).
+
+**Revenue forecast “+N more”** — Opens the list of **all open deals** included in the forecast (not a single tab slice).
+
+**Segment donuts** — **Revenue** and **Pipeline** are separate charts; each drill-down uses the matching definition (revenue-eligible vs open pipeline).
+
+---
+
+### Quick Actions drawer (Zenith)
+
+**List mode** — Header shows **how many projects** match and a **Total** that matches the **metric of the chart** you came from (for FY **profit**, totals use **gross profit**; otherwise **order value**). Sort with **Order value / Gross profit**, **Health Score**, or **Last Activity** where offered.
+
+**Single project** — From a list row, **Open →** loads quick actions for that project (stage advance where allowed, log activity, etc.) without losing your place — use **Back** to return to the list.
+
+**Closing** — **Close** or click the backdrop; the yellow **Viewing: …** strip (when shown) reflects the active list filter.
+
+---
+
+### Layout stability and Hit List (Zenith)
+
+On **wide screens**, **Today’s Hit List** and the **KPI + Revenue forecast** row sit side by side. The Hit List column height is matched to the KPI band so the row looks balanced. **Fixed-height** tiles (including **Revenue forecast** and the **FY chart** panel) avoid **layout shift** when you switch forecast tabs or when charts redraw.
+
+---
 
 ### Help and tips (Zenith)
 
-- **Tip of the Day** includes tips for **AI Insights**, **Your Focus**, **KPI animations**, and other Zenith behaviour; use **Next tip** in the modal to browse more.
+- **Tip of the Day** rotates through dozens of hints, including **Revenue forecast**, **FY chart drill-down**, **Customer profitability**, **Explore** lists, **Hit List** layout, and the rest of Zenith — use **Next tip** in the modal to browse more.
+- Optional **Help** tooltips (`zenith.*` keys) exist for reuse in the UI; the full narrative is in the sections above.
 
 For module basics (Customers, Projects, Proposal Engine), see [Modules](/help/modules) and [Getting Started](/help/getting-started).
 

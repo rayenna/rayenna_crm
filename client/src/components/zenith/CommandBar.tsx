@@ -34,11 +34,17 @@ export default function CommandBar({
   }, [selectedFYs.join('|'), selectedQuarters.join('|'), selectedMonths.join('|')])
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const tick = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
       const diff = Math.floor((new Date().getTime() - lastFetched.getTime()) / 1000)
       setSecondsAgo(diff)
-    }, 1000)
-    return () => clearInterval(interval)
+    }
+    const interval = setInterval(tick, 1000)
+    document.addEventListener('visibilitychange', tick)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', tick)
+    }
   }, [lastFetched])
 
   const timeLabel = secondsAgo < 60 ? `${secondsAgo}s ago` : `${Math.floor(secondsAgo / 60)}m ago`
@@ -69,57 +75,21 @@ export default function CommandBar({
           onResetAll={onResetFilters}
         />
 
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            fontSize: '11px',
-            color: 'rgba(255,255,255,0.35)',
-          }}
-        >
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2 w-full min-w-0 lg:w-auto lg:justify-end text-[11px] text-white/35 font-sans">
           {onShowBriefing ? (
             <button
               type="button"
               onClick={onShowBriefing}
               title="Open Daily Briefing"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                background: 'rgba(245,166,35,0.1)',
-                border: '1px solid rgba(245,166,35,0.25)',
-                borderRadius: '20px',
-                padding: '4px 12px',
-                color: '#F5A623',
-                fontSize: '12px',
-                fontFamily: 'DM Sans, sans-serif',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(245,166,35,0.2)'
-                e.currentTarget.style.borderColor = 'rgba(245,166,35,0.5)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(245,166,35,0.1)'
-                e.currentTarget.style.borderColor = 'rgba(245,166,35,0.25)'
-              }}
+              className="inline-flex items-center gap-1.5 min-h-[44px] sm:min-h-0 rounded-full border border-[#f5a623]/25 bg-[#f5a623]/10 px-3 py-2 sm:py-1.5 text-xs font-semibold text-[#f5a623] cursor-pointer transition-all duration-200 touch-manipulation hover:bg-[#f5a623]/20 hover:border-[#f5a623]/50"
             >
               ✦ Briefing
             </button>
           ) : null}
-          <span
-            style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              background: '#00D4B4',
-              display: 'inline-block',
-              animation: 'pulse-dot 2s ease-in-out infinite',
-            }}
-          />
-          Live · {timeLabel}
+          <span className="inline-flex items-center gap-1.5 shrink-0 min-h-[44px] sm:min-h-0">
+            <span className="zenith-command-live-dot inline-block align-middle" aria-hidden />
+            <span>Live · {timeLabel}</span>
+          </span>
         </div>
       </div>
     </header>

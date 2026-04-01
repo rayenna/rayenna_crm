@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useModalEscape } from '../../contexts/ModalEscapeContext'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import { Project, ProjectStatus } from '../../types'
+import type { ZenithExplorerProject } from '../../types/zenithExplorer'
+import type { ZenithListAmountMode } from '../../hooks/useQuickAction'
+import DrawerProjectList from './DrawerProjectList'
 
 const STATUS_ORDER: ProjectStatus[] = [
   ProjectStatus.LEAD,
@@ -52,6 +55,14 @@ function formatINR(value: number | null | undefined): string {
   }).format(value)
 }
 
+function formatINRAlways(value: number): string {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(value)
+}
+
 function toYmd(value: string | null | undefined): string {
   if (!value) return ''
   const d = new Date(value)
@@ -71,17 +82,37 @@ function getNextStatus(current: ProjectStatus): ProjectStatus | null {
 
 type ToastState = { text: string; shownAt: number } | null
 
+type ListSubview = 'list' | 'single'
+
+function sumListAmount(projects: ZenithExplorerProject[], mode: ZenithListAmountMode): number {
+  return projects.reduce((s, p) => {
+    if (mode === 'gross_profit') return s + Number(p.gross_profit ?? 0)
+    return s + Number(p.deal_value ?? 0)
+  }, 0)
+}
+
 export default function QuickActionDrawer({
   isOpen,
   projectId,
   onClose,
+  listMode = false,
+  filterLabel = '',
+  filteredProjects = [],
+  listAmountMode = 'deal_value',
 }: {
   isOpen: boolean
   projectId: string | null
   onClose: () => void
+  listMode?: boolean
+  filterLabel?: string
+  filteredProjects?: ZenithExplorerProject[]
+  listAmountMode?: ZenithListAmountMode
 }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+
+  const [listSubview, setListSubview] = useState<ListSubview>('list')
+  const [listPickId, setListPickId] = useState<string | null>(null)
 
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<ToastState>(null)
@@ -91,16 +122,36 @@ export default function QuickActionDrawer({
   const [valueInput, setValueInput] = useState<string>('')
   const [dateInput, setDateInput] = useState<string>('')
 
+  const effectiveProjectId = listMode
+    ? listSubview === 'single' && listPickId
+      ? listPickId
+      : null
+    : projectId
+
   const { data: project, isLoading } = useQuery({
-    queryKey: ['quick-action-project', projectId],
+    queryKey: ['quick-action-project', effectiveProjectId],
     queryFn: async () => {
-      if (!projectId) throw new Error('Missing project id')
-      const res = await axiosInstance.get(`/api/projects/${projectId}`)
+      if (!effectiveProjectId) throw new Error('Missing project id')
+      const res = await axiosInstance.get(`/api/projects/${effectiveProjectId}`)
       return res.data as Project
     },
-    enabled: isOpen && !!projectId,
+    enabled: isOpen && !!effectiveProjectId,
     retry: 1,
   })
+
+  useEffect(() => {
+    if (!isOpen) {
+      setListSubview('list')
+      setListPickId(null)
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (isOpen && listMode) {
+      setListSubview('list')
+      setListPickId(null)
+    }
+  }, [isOpen, listMode])
 
   useEffect(() => {
     if (!isOpen) return
@@ -162,9 +213,26 @@ export default function QuickActionDrawer({
     await invalidateAfterSave(id)
   }
 
+  const listTotal = useMemo(
+    () => sumListAmount(filteredProjects, listAmountMode),
+    [filteredProjects, listAmountMode],
+  )
+
+  const showSingleChrome = !listMode || listSubview === 'single'
+  const showListBody = listMode && listSubview === 'list'
+
+  const openFromListRow = (p: ZenithExplorerProject) => {
+    setListPickId(p.id)
+    setListSubview('single')
+  }
+
+  const backToList = () => {
+    setListSubview('list')
+    setListPickId(null)
+  }
+
   return (
     <>
-      {/* Overlay */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: isOpen ? 1 : 0 }}
@@ -175,7 +243,6 @@ export default function QuickActionDrawer({
         aria-hidden={!isOpen}
       />
 
-      {/* Panel */}
       <motion.div
         initial={{ x: '100%' }}
         animate={{ x: isOpen ? 0 : '100%' }}
@@ -183,256 +250,361 @@ export default function QuickActionDrawer({
         className="fixed top-0 right-0 z-[901] h-[100dvh] w-[420px] max-w-[100vw] bg-[#0F0F1A] border-l border-white/10 shadow-[-20px_0_60px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden"
         style={{
           fontFamily: 'DM Sans, sans-serif',
-          // Keep footer buttons above OS/browser UI (mobile bars, desktop dock/taskbar overlays in webviews).
-          // `safe-area-inset-bottom` helps iOS; desktop taskbars often need extra breathing room.
           paddingBottom: 'max(56px, env(safe-area-inset-bottom, 0px))',
         }}
         role="dialog"
         aria-label="Quick actions"
       >
         {/* Header */}
-        <div className="h-16 px-5 flex items-center justify-between border-b border-white/[0.08] bg-white/[0.02]">
-          <div className="min-w-0">
-            <div
-              className="text-white font-bold text-[16px] truncate max-w-[260px]"
-              style={{ fontFamily: "'Syne', sans-serif" }}
-              title={project?.customer?.firstName || project?.customer?.customerName || undefined}
-            >
-              {project?.customer?.firstName || project?.customer?.customerName || (isLoading ? 'Loading…' : '—')}
-            </div>
-            <div className="mt-1">
-              <span className={`inline-block rounded-[20px] px-3 py-1 text-[12px] ${stagePillClass(stageLabel)}`}>
-                {stageLabel || '—'}
-              </span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 text-white/60 hover:bg-white/15 hover:text-white transition-colors"
-            aria-label="Close"
-          >
-            ×
-          </button>
-        </div>
-
-        {/* Body */}
-        <div
-          className="flex-1 overflow-y-auto p-5"
-          style={{
-            scrollbarWidth: 'thin',
-          }}
-        >
-          {error ? (
-            <div className="mb-4 rounded-xl border border-[#ff4757]/30 bg-[#ff4757]/10 px-4 py-3 text-sm text-white/85">
-              {error}
-            </div>
-          ) : null}
-
-          {/* SECTION 1: Advance stage */}
-          {canAdvance ? (
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
-                Advance stage
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className={`inline-block rounded-[20px] px-3 py-1 text-[12px] ${stagePillClass(stageLabel)}`}>
-                  {stageLabel}
-                </span>
-                <span className="text-white/30">→</span>
-                <span
-                  className="inline-block rounded-[20px] px-3 py-1 text-[12px]"
-                  style={{
-                    background: 'rgba(245,166,35,0.12)',
-                    border: '1px solid #F5A623',
-                    color: '#F5A623',
-                  }}
+        <div className="min-h-16 px-5 py-3 flex flex-col gap-2 border-b border-white/[0.08] bg-white/[0.02]">
+          {showListBody ? (
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div
+                  className="text-white font-bold text-[16px] truncate"
+                  style={{ fontFamily: "'Syne', sans-serif" }}
+                  title={filterLabel}
                 >
-                  {nextLabel}
-                </span>
+                  {filterLabel}
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span
+                    className="inline-block rounded-[20px] px-2.5 py-0.5 text-[12px]"
+                    style={{
+                      background: 'rgba(245,166,35,0.15)',
+                      border: '1px solid rgba(245,166,35,0.3)',
+                      color: '#F5A623',
+                    }}
+                  >
+                    {filteredProjects.length} projects
+                  </span>
+                </div>
               </div>
-
+              <div className="shrink-0 flex flex-row items-center gap-3">
+                <div
+                  className="text-[13px] font-medium text-right"
+                  style={{ color: listAmountMode === 'gross_profit' ? '#00D4B4' : '#F5A623' }}
+                >
+                  {formatINRAlways(listTotal)}
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-full bg-white/10 text-white/60 hover:bg-white/15 hover:text-white transition-colors"
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          ) : listMode && listSubview === 'single' ? (
+            <>
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={backToList}
+                  className="text-left text-[13px] text-[#F5A623] hover:text-[#ffc14d] transition-colors truncate min-w-0"
+                >
+                  ← Back to {filterLabel}
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-8 h-8 shrink-0 rounded-full bg-white/10 text-white/60 hover:bg-white/15 hover:text-white transition-colors"
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="min-w-0">
+                <div
+                  className="text-white font-bold text-[16px] truncate max-w-[280px]"
+                  style={{ fontFamily: "'Syne', sans-serif" }}
+                  title={project?.customer?.firstName || project?.customer?.customerName || undefined}
+                >
+                  {project?.customer?.firstName || project?.customer?.customerName || (isLoading ? 'Loading…' : '—')}
+                </div>
+                <div className="mt-1">
+                  <span className={`inline-block rounded-[20px] px-3 py-1 text-[12px] ${stagePillClass(stageLabel)}`}>
+                    {stageLabel || '—'}
+                  </span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div
+                  className="text-white font-bold text-[16px] truncate max-w-[260px]"
+                  style={{ fontFamily: "'Syne', sans-serif" }}
+                  title={project?.customer?.firstName || project?.customer?.customerName || undefined}
+                >
+                  {project?.customer?.firstName || project?.customer?.customerName || (isLoading ? 'Loading…' : '—')}
+                </div>
+                <div className="mt-1">
+                  <span className={`inline-block rounded-[20px] px-3 py-1 text-[12px] ${stagePillClass(stageLabel)}`}>
+                    {stageLabel || '—'}
+                  </span>
+                </div>
+              </div>
               <button
                 type="button"
-                disabled={saving || !project}
-                onClick={async () => {
-                  if (!project || !nextStatus) return
-                  setSaving(true)
-                  setError(null)
-                  try {
-                    await updateProject(project.id, { projectStatus: nextStatus })
-                    runToast(`✓ Moved to ${STATUS_LABELS[nextStatus]}`)
-                    window.setTimeout(() => closeAndClear(), 1500)
-                  } catch (e: unknown) {
-                    setError(getFriendlyApiErrorMessage(e))
-                  } finally {
-                    setSaving(false)
-                  }
-                }}
-                className="mt-3 w-full rounded-xl bg-[#F5A623] text-[#0A0A0F] text-[14px] font-semibold py-3 transition-all disabled:opacity-60"
-                style={{ transform: 'translateY(0)' }}
+                onClick={onClose}
+                className="w-8 h-8 shrink-0 rounded-full bg-white/10 text-white/60 hover:bg-white/15 hover:text-white transition-colors"
+                aria-label="Close"
               >
-                {saving ? `Moving…` : `Move to ${nextLabel}`}
+                ×
               </button>
-
-              <div className="my-5 h-px bg-white/[0.06]" />
             </div>
-          ) : null}
-
-          {/* SECTION 2: Log activity */}
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
-              Log activity
-            </div>
-            <textarea
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value.slice(0, 500))}
-              rows={3}
-              placeholder="What happened with this deal? Call made, site visited, proposal sent..."
-              className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[14px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#f5a623]/40"
-              style={{ resize: 'vertical', minHeight: 80 }}
-            />
-            <div className="mt-1 text-right text-[11px] text-white/25">{noteText.length}/500 characters</div>
-            <button
-              type="button"
-              disabled={saving || !project || !noteText.trim()}
-              onClick={async () => {
-                if (!project) return
-                const text = noteText.trim()
-                if (!text) return
-                setSaving(true)
-                setError(null)
-                try {
-                  await logActivity(project.id, text)
-                  setNoteText('')
-                  runToast('✓ Activity logged')
-                } catch (e: unknown) {
-                  setError(getFriendlyApiErrorMessage(e))
-                } finally {
-                  setSaving(false)
-                }
-              }}
-              className="mt-2 w-full rounded-xl border border-white/20 bg-transparent px-4 py-2.5 text-[14px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors disabled:opacity-60"
-            >
-              {saving ? 'Saving…' : 'Log activity'}
-            </button>
-
-            <div className="my-5 h-px bg-white/[0.06]" />
-          </div>
-
-          {/* SECTION 3: Edit deal value */}
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
-              Deal value
-            </div>
-            <div className="text-[22px] font-bold" style={{ fontFamily: "'Syne', sans-serif", color: '#F5A623' }}>
-              {formatINR(project?.projectCost ?? null)}
-            </div>
-            <input
-              type="number"
-              value={valueInput}
-              onChange={(e) => setValueInput(e.target.value)}
-              placeholder="Enter amount in ₹"
-              className="mt-2 w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[15px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#f5a623]/40"
-            />
-            {valuePreview ? <div className="mt-1 text-[12px] text-white/40">{valuePreview}</div> : null}
-            <button
-              type="button"
-              disabled={saving || !project}
-              onClick={async () => {
-                if (!project) return
-                const n = Number(valueInput)
-                setSaving(true)
-                setError(null)
-                try {
-                  await updateProject(project.id, { projectCost: Number.isFinite(n) ? n : 0 })
-                  runToast('✓ Value updated')
-                } catch (e: unknown) {
-                  setError(getFriendlyApiErrorMessage(e))
-                } finally {
-                  setSaving(false)
-                }
-              }}
-              className="mt-2 w-full rounded-xl border border-white/20 bg-transparent px-4 py-2.5 text-[14px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors disabled:opacity-60"
-            >
-              {saving ? 'Saving…' : 'Update value'}
-            </button>
-
-            <div className="my-5 h-px bg-white/[0.06]" />
-          </div>
-
-          {/* SECTION 4: Change close date */}
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
-              Expected close date
-            </div>
-            <div className="text-[13px] text-white/60">
-              {project?.expectedCommissioningDate ? new Date(project.expectedCommissioningDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'No date set'}
-            </div>
-            <input
-              type="date"
-              value={dateInput}
-              onChange={(e) => setDateInput(e.target.value)}
-              min={todayYmd()}
-              className="mt-2 w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[14px] text-white focus:outline-none focus:ring-2 focus:ring-[#f5a623]/40"
-              style={{ colorScheme: 'dark' }}
-            />
-            <button
-              type="button"
-              disabled={saving || !project}
-              onClick={async () => {
-                if (!project) return
-                setSaving(true)
-                setError(null)
-                try {
-                  await updateProject(project.id, {
-                    expectedCommissioningDate: dateInput ? new Date(dateInput).toISOString() : null,
-                  })
-                  runToast('✓ Date updated')
-                } catch (e: unknown) {
-                  setError(getFriendlyApiErrorMessage(e))
-                } finally {
-                  setSaving(false)
-                }
-              }}
-              className="mt-2 w-full rounded-xl border border-white/20 bg-transparent px-4 py-2.5 text-[14px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors disabled:opacity-60"
-            >
-              {saving ? 'Saving…' : 'Update date'}
-            </button>
-          </div>
+          )}
         </div>
 
-        {/* Footer */}
+        <div
+          className="flex-1 flex flex-col min-h-0 overflow-hidden p-5"
+          style={{ scrollbarWidth: 'thin' }}
+        >
+          <AnimatePresence mode="wait">
+            {showListBody ? (
+              <motion.div
+                key="drawer-list"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="flex-1 flex flex-col min-h-0"
+              >
+                <DrawerProjectList
+                  projects={filteredProjects}
+                  filterLabel={filterLabel}
+                  amountMode={listAmountMode}
+                  onOpen={openFromListRow}
+                />
+              </motion.div>
+            ) : showSingleChrome && effectiveProjectId ? (
+              <motion.div
+                key={`drawer-single-${effectiveProjectId}`}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="flex-1 overflow-y-auto -mx-1 px-1 min-h-0"
+              >
+                {error ? (
+                  <div className="mb-4 rounded-xl border border-[#ff4757]/30 bg-[#ff4757]/10 px-4 py-3 text-sm text-white/85">
+                    {error}
+                  </div>
+                ) : null}
+
+                {canAdvance ? (
+                  <div>
+                    <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
+                      Advance stage
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-block rounded-[20px] px-3 py-1 text-[12px] ${stagePillClass(stageLabel)}`}>
+                        {stageLabel}
+                      </span>
+                      <span className="text-white/30">→</span>
+                      <span
+                        className="inline-block rounded-[20px] px-3 py-1 text-[12px]"
+                        style={{
+                          background: 'rgba(245,166,35,0.12)',
+                          border: '1px solid #F5A623',
+                          color: '#F5A623',
+                        }}
+                      >
+                        {nextLabel}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={saving || !project}
+                      onClick={async () => {
+                        if (!project || !nextStatus) return
+                        setSaving(true)
+                        setError(null)
+                        try {
+                          await updateProject(project.id, { projectStatus: nextStatus })
+                          runToast(`✓ Moved to ${STATUS_LABELS[nextStatus]}`)
+                          window.setTimeout(() => closeAndClear(), 1500)
+                        } catch (e: unknown) {
+                          setError(getFriendlyApiErrorMessage(e))
+                        } finally {
+                          setSaving(false)
+                        }
+                      }}
+                      className="mt-3 w-full rounded-xl bg-[#F5A623] text-[#0A0A0F] text-[14px] font-semibold py-3 transition-all disabled:opacity-60"
+                    >
+                      {saving ? `Moving…` : `Move to ${nextLabel}`}
+                    </button>
+                    <div className="my-5 h-px bg-white/[0.06]" />
+                  </div>
+                ) : null}
+
+                <div>
+                  <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
+                    Log activity
+                  </div>
+                  <textarea
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value.slice(0, 500))}
+                    rows={3}
+                    placeholder="What happened with this deal? Call made, site visited, proposal sent..."
+                    className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[14px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#f5a623]/40"
+                    style={{ resize: 'vertical', minHeight: 80 }}
+                  />
+                  <div className="mt-1 text-right text-[11px] text-white/25">{noteText.length}/500 characters</div>
+                  <button
+                    type="button"
+                    disabled={saving || !project || !noteText.trim()}
+                    onClick={async () => {
+                      if (!project) return
+                      const text = noteText.trim()
+                      if (!text) return
+                      setSaving(true)
+                      setError(null)
+                      try {
+                        await logActivity(project.id, text)
+                        setNoteText('')
+                        runToast('✓ Activity logged')
+                      } catch (e: unknown) {
+                        setError(getFriendlyApiErrorMessage(e))
+                      } finally {
+                        setSaving(false)
+                      }
+                    }}
+                    className="mt-2 w-full rounded-xl border border-white/20 bg-transparent px-4 py-2.5 text-[14px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors disabled:opacity-60"
+                  >
+                    {saving ? 'Saving…' : 'Log activity'}
+                  </button>
+                  <div className="my-5 h-px bg-white/[0.06]" />
+                </div>
+
+                <div>
+                  <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
+                    Deal value
+                  </div>
+                  <div className="text-[22px] font-bold" style={{ fontFamily: "'Syne', sans-serif", color: '#F5A623' }}>
+                    {formatINR(project?.projectCost ?? null)}
+                  </div>
+                  <input
+                    type="number"
+                    value={valueInput}
+                    onChange={(e) => setValueInput(e.target.value)}
+                    placeholder="Enter amount in ₹"
+                    className="mt-2 w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[15px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#f5a623]/40"
+                  />
+                  {valuePreview ? <div className="mt-1 text-[12px] text-white/40">{valuePreview}</div> : null}
+                  <button
+                    type="button"
+                    disabled={saving || !project}
+                    onClick={async () => {
+                      if (!project) return
+                      const n = Number(valueInput)
+                      setSaving(true)
+                      setError(null)
+                      try {
+                        await updateProject(project.id, { projectCost: Number.isFinite(n) ? n : 0 })
+                        runToast('✓ Value updated')
+                      } catch (e: unknown) {
+                        setError(getFriendlyApiErrorMessage(e))
+                      } finally {
+                        setSaving(false)
+                      }
+                    }}
+                    className="mt-2 w-full rounded-xl border border-white/20 bg-transparent px-4 py-2.5 text-[14px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors disabled:opacity-60"
+                  >
+                    {saving ? 'Saving…' : 'Update value'}
+                  </button>
+                  <div className="my-5 h-px bg-white/[0.06]" />
+                </div>
+
+                <div>
+                  <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
+                    Expected close date
+                  </div>
+                  <div className="text-[13px] text-white/60">
+                    {project?.expectedCommissioningDate
+                      ? new Date(project.expectedCommissioningDate).toLocaleDateString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                      : 'No date set'}
+                  </div>
+                  <input
+                    type="date"
+                    value={dateInput}
+                    onChange={(e) => setDateInput(e.target.value)}
+                    min={todayYmd()}
+                    className="mt-2 w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[14px] text-white focus:outline-none focus:ring-2 focus:ring-[#f5a623]/40"
+                    style={{ colorScheme: 'dark' }}
+                  />
+                  <button
+                    type="button"
+                    disabled={saving || !project}
+                    onClick={async () => {
+                      if (!project) return
+                      setSaving(true)
+                      setError(null)
+                      try {
+                        await updateProject(project.id, {
+                          expectedCommissioningDate: dateInput ? new Date(dateInput).toISOString() : null,
+                        })
+                        runToast('✓ Date updated')
+                      } catch (e: unknown) {
+                        setError(getFriendlyApiErrorMessage(e))
+                      } finally {
+                        setSaving(false)
+                      }
+                    }}
+                    className="mt-2 w-full rounded-xl border border-white/20 bg-transparent px-4 py-2.5 text-[14px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors disabled:opacity-60"
+                  >
+                    {saving ? 'Saving…' : 'Update date'}
+                  </button>
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+        </div>
+
         <div
           className="h-14 px-5 flex items-center justify-between border-t border-white/[0.08] bg-black/20"
-          style={{
-            height: 'auto',
-            minHeight: 56,
-          }}
+          style={{ height: 'auto', minHeight: 56 }}
         >
-          <button
-            type="button"
-            className="text-[13px] font-semibold text-white/70 hover:text-[#F5A623] transition-colors"
-            onClick={() => {
-              if (projectId) navigate(`/projects/${projectId}`)
-              onClose()
-            }}
-          >
-            Open full project →
-          </button>
-          <button
-            type="button"
-            className="rounded-xl border border-white/20 bg-transparent px-4 py-1.5 text-[13px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors"
-            onClick={onClose}
-          >
-            Close
-          </button>
+          {showListBody ? (
+            <button
+              type="button"
+              className="ml-auto rounded-xl border border-white/20 bg-transparent px-4 py-1.5 text-[13px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors"
+              onClick={onClose}
+            >
+              Close
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="text-[13px] font-semibold text-white/70 hover:text-[#F5A623] transition-colors disabled:opacity-40"
+                disabled={!effectiveProjectId}
+                onClick={() => {
+                  if (effectiveProjectId) navigate(`/projects/${effectiveProjectId}`)
+                  onClose()
+                }}
+              >
+                Open full project →
+              </button>
+              <button
+                type="button"
+                className="rounded-xl border border-white/20 bg-transparent px-4 py-1.5 text-[13px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors"
+                onClick={onClose}
+              >
+                Close
+              </button>
+            </>
+          )}
         </div>
       </motion.div>
 
-      {/* Success toast */}
       {toast ? (
         <div
           style={{
@@ -458,4 +630,3 @@ export default function QuickActionDrawer({
     </>
   )
 }
-

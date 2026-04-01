@@ -82,6 +82,7 @@ export const TIPS: string[] = [
   'Operations, Management, and Finance can open Proposal Engine from Proposals (New) to review Costing, BOM, ROI, and Proposal in read-only mode.',
   // Zenith Command Center
   'Open Zenith ✦ from the Dashboard menu for a full-screen analytics view — same FY, Quarter, and Month rules as the classic dashboard.',
+  'Zenith is built to be the future of Rayenna CRM: one command bar, server-backed data after login, and charts you can click through to project lists.',
   'Zenith AI Insights: under the command bar, a scrolling ribbon shows plain-English highlights from your current data — hover to pause, click any line to jump to a related section.',
   'Zenith Your Focus sits between KPIs and the funnel: Sales see their pipeline table with follow-up styling; Finance see payment radar; Operations see installation pulse; Management and Admin see all three blocks.',
   'Zenith tables: click a column header to sort (e.g. Deal value, Health, Days). Use the small filter controls near the table title where available.',
@@ -90,11 +91,17 @@ export const TIPS: string[] = [
   'Sales in Zenith: use Log activity in Your Focus to add a quick project remark — it updates last-activity signals for your pipeline row.',
   'Zenith KPI cards count up when you load or change date filters, show a 7-point FY sparkline (gold up, crimson down), and a teal/crimson % badge when a prior-period comparison exists.',
   'In Zenith, select exactly one Financial Year to see comparison % badges on KPI tiles when a prior-period comparison is available.',
+  'Zenith Revenue forecast: the headline is weighted by stage (deal value × win probability) — tabs split the same total by Source, Sales, Segment, or Stage; +N more opens all open deals in the drawer.',
+  'Zenith Revenue forecast tile height is fixed on purpose so switching tabs does not jitter the Hit List or funnel beside it.',
+  'Zenith — Revenue & profit by FY: tap the orange point for a revenue project list (totals = order value); tap the teal bar for profit (totals = gross profit). Small or zero bars still open profit for that year.',
+  'When you filter Zenith to one or more FYs, the Revenue & profit by FY chart only shows those years — hover matches what you filtered.',
+  'Zenith Customer projects profitability matches the classic dashboard word cloud: larger names = higher project profitability; Top 10 is the same data sorted for reading.',
+  'Zenith Explore the landscape: where you see Click to explore, drill-down opens the Quick Actions drawer — list totals match the chart (FY profit uses gross profit in the footer).',
   'Zenith Operations: the KPI row covers Pending Installation, Completed Installation, Subsidy Credited, and Confirmed Revenue for your selected dates.',
   'Zenith Finance: watch Total Revenue, Amount Received, Outstanding, Total Profit, and Availing Loan — all scoped to your filters.',
   'Use Reset in the Zenith command bar to clear FY, Quarter, and Month and refresh the unscoped summary.',
-  'From Zenith, press ? (outside text fields) to open Help on Analytics — it jumps straight to the Zenith Command Center subsection.',
-  'Zenith funnel and chart tiles often link to Projects with the same date filters — click through to reconcile lists with what you saw.',
+  'From Zenith, press ? (outside text fields) to open Help on Analytics — full Zenith guide under Zenith Command Center, Revenue forecast, and Explore charts & drill-down.',
+  'Zenith funnel and chart drill-downs use the same date scope as the rest of Zenith — open Help → Analytics for the full behaviour.',
   'Sales Zenith shows your data only (like your Sales dashboard); Management and Admin see company-wide executive metrics.',
 ]
 

@@ -14,7 +14,7 @@ The Rayenna CRM is a comprehensive customer relationship management system desig
 2. **Dashboard**: View your personalized dashboard based on your role
 3. **Navigation**: Use the top navigation menu to access different modules
 4. **Proposals**: From a project in Proposal or Confirmed stage, click **Proposals (New)** to open the Proposal Engine and work on Costing, BOM, ROI, and Proposal
-5. **Zenith**: Open **Zenith ✦** from the Dashboard menu for a full-screen command-center view with the same FY / Quarter / Month rules as the dashboard, plus **AI Insights**, **Your Focus** by role, and animated KPIs — full guide under [Analytics → Zenith Command Center](/help/analytics#zenith-command-center)
+5. **Zenith**: Open **Zenith ✦** from the Dashboard menu for Rayenna’s full-screen **command center** — same FY / Quarter / Month rules as the dashboard, **AI Insights**, **Your Focus**, **Revenue forecast** (stage-weighted pipeline), **clickable charts** with a **Quick Actions** drawer, and animated KPIs. Start at [Analytics → Zenith Command Center](/help/analytics#zenith-command-center); for chart clicks and lists see [Explore charts & drill-down](/help/analytics#explore-charts-and-drill-down-zenith).
 6. **Help**: Press **?** (when not typing in a field) or click **Help** in the menu for context-sensitive documentation
 7. **Keyboard shortcuts**: Use **Ctrl+Shift+** a letter (Windows/Linux) or **⌘⇧** on Mac to jump around the app — see [Keyboard shortcuts](#keyboard-shortcuts) below and [Analytics & Reports → Keyboard shortcuts](/help/analytics#keyboard-shortcuts)
 
@@ -23,7 +23,7 @@ The Rayenna CRM is a comprehensive customer relationship management system desig
 - Learn about [User Roles & Permissions](/help/roles)
 - Explore the [Modules](/help/modules)
 - Check out [Analytics & Reports](/help/analytics)
-- Try [Zenith — Command Center](/help/analytics#zenith-command-center) for immersive analytics
+- Try [Zenith — Command Center](/help/analytics#zenith-command-center) for immersive analytics; use [Revenue forecast](/help/analytics#revenue-forecast-wide-kpi-tile) and [FY revenue & profit chart](/help/analytics#revenue-and-profit-by-fy-chart-zenith) when you want the details
 - Learn [keyboard shortcuts](#keyboard-shortcuts) for faster navigation
 
 ## Keyboard shortcuts

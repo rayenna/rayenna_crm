@@ -20,7 +20,14 @@ function tierColor(normalizedWeight: number): string {
   return '#fbbf24'
 }
 
-export default function CustomerProfitabilityRank({ rows }: { rows: ProfitRow[] }) {
+export default function CustomerProfitabilityRank({
+  rows,
+  className = '',
+}: {
+  rows: ProfitRow[]
+  /** e.g. `lg:h-full` so the card matches a stretched grid row */
+  className?: string
+}) {
   const [view, setView] = useState<'cloud' | 'top10'>('cloud')
   const wrapRef = useRef<HTMLDivElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
@@ -33,7 +40,7 @@ export default function CustomerProfitabilityRank({ rows }: { rows: ProfitRow[] 
       const r = el.getBoundingClientRect()
       setHostSize({
         w: Math.max(240, Math.floor(r.width)),
-        h: Math.max(220, Math.floor(r.height)),
+        h: Math.max(240, Math.floor(r.height)),
       })
     }
     measure()
@@ -86,8 +93,11 @@ export default function CustomerProfitabilityRank({ rows }: { rows: ProfitRow[] 
     const maxValue = Math.max(...values)
     const valueRange = maxValue - minValue || 1
 
-    const maxFont = hostSize.w < 400 ? 38 : hostSize.w < 640 ? 44 : 52
-    const minFont = hostSize.w < 400 ? 11 : 14
+    const baseMax = hostSize.w < 400 ? 36 : hostSize.w < 640 ? 42 : 48
+    const baseMin = hostSize.w < 400 ? 10 : 12
+    const maxByHeight = Math.max(26, Math.floor(hostSize.h / 5.75))
+    const maxFont = Math.min(baseMax, maxByHeight)
+    const minFont = Math.max(10, Math.round(baseMin * (maxFont / Math.max(baseMax, 1))))
 
     const list: WcListItem[] = rows.map((item, i) => {
       const normalized = (item.value - minValue) / valueRange
@@ -105,7 +115,9 @@ export default function CustomerProfitabilityRank({ rows }: { rows: ProfitRow[] 
     try {
       WordCloud(host, {
         list,
-        gridSize: Math.round(Math.max(10, hostSize.w / 45)),
+        gridSize: Math.round(
+          Math.max(8, Math.min(14, hostSize.w / 48, hostSize.h / 28)),
+        ),
         weightFactor: 1,
         fontFamily: 'Plus Jakarta Sans, DM Sans, system-ui, sans-serif',
         fontWeight: '600',
@@ -143,7 +155,7 @@ export default function CustomerProfitabilityRank({ rows }: { rows: ProfitRow[] 
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="zenith-glass rounded-xl p-3 sm:p-4 min-h-[300px] flex flex-col overflow-hidden"
+      className={`zenith-glass rounded-xl p-3 sm:p-4 min-h-[320px] lg:h-full lg:min-h-0 flex flex-col overflow-hidden ${className}`.trim()}
     >
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3 min-w-0">
@@ -191,7 +203,7 @@ export default function CustomerProfitabilityRank({ rows }: { rows: ProfitRow[] 
         </div>
       </div>
 
-      <div className="relative flex-1 min-h-[300px]">
+      <div className="relative flex-1 min-h-[280px] lg:min-h-0">
         <div
           className={`absolute inset-0 flex flex-col min-h-0 ${view === 'cloud' ? 'z-[1]' : 'z-0 opacity-0 pointer-events-none'}`}
           aria-hidden={view !== 'cloud'}
@@ -204,9 +216,9 @@ export default function CustomerProfitabilityRank({ rows }: { rows: ProfitRow[] 
             <>
               <div
                 ref={wrapRef}
-                className="zenith-wordcloud-host flex-1 min-h-[260px] w-full rounded-xl border border-white/[0.06] bg-black/20 overflow-hidden"
+                className="zenith-wordcloud-host flex-1 min-h-[280px] w-full rounded-xl border border-white/[0.06] bg-black/20 overflow-hidden"
               >
-                <div ref={hostRef} className="relative w-full h-full min-h-[260px]" />
+                <div ref={hostRef} className="relative h-full min-h-[280px] w-full" />
               </div>
               <p className="mt-2 text-center text-[11px] text-white/35">
                 Font size represents profitability (larger = higher margin).

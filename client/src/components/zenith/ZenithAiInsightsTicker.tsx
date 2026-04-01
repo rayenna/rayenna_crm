@@ -13,7 +13,10 @@ function scrollToZenithSection(target: ZenithInsightScrollTarget) {
       if (el) break
     }
   }
-  el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const reduceMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  el?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' })
 }
 
 function renderInsightButtons(
@@ -54,12 +57,6 @@ export default function ZenithAiInsightsTicker({
 
   return (
     <div className="zenith-ai-insights-root border-b border-white/[0.06] bg-[#0a0a0f]/90">
-      <style>
-        {`@keyframes zenith-ai-insights-marquee-kf {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-          }`}
-      </style>
       <div className="zenith-exec-main mx-auto px-3 sm:px-5 py-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 min-h-0">
         <div className="flex items-center justify-center sm:justify-start shrink-0">
           <span className="zenith-display text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] text-[#f5a623]/70">
@@ -73,9 +70,7 @@ export default function ZenithAiInsightsTicker({
         >
           <div
             className="zenith-ai-insights-marquee inline-flex shrink-0 items-center gap-8 sm:gap-12 whitespace-nowrap px-4 sm:px-6"
-            style={{
-              animation: 'zenith-ai-insights-marquee-kf 32s linear infinite',
-            }}
+            style={{ animation: 'zenith-ai-insights-marquee-kf 32s linear infinite' }}
           >
             {renderInsightButtons(insights, 'a')}
             {renderInsightButtons(insights, 'b')}

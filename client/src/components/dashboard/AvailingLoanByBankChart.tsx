@@ -2,6 +2,7 @@ import { memo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
+import { getLoanBankBarColor } from './loanBankChartColors'
 
 export interface AvailingLoanByBankItem {
   bankKey: string
@@ -11,16 +12,6 @@ export interface AvailingLoanByBankItem {
 
 interface AvailingLoanByBankChartProps {
   data?: AvailingLoanByBankItem[]
-}
-
-// Same visual palette as Projects by Stage (indigo/violet/teal spectrum) for consistent look
-const CHART_COLORS = [
-  '#3b82f6', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b',
-  '#ec4899', '#6366f1', '#14b8a6', '#84cc16', '#64748b',
-]
-
-function getBarColor(_bankKey: string, index: number): string {
-  return CHART_COLORS[index % CHART_COLORS.length]
 }
 
 const AvailingLoanByBankChart = memo(function AvailingLoanByBankChart({ data: chartData = [] }: AvailingLoanByBankChartProps) {
@@ -91,7 +82,10 @@ const AvailingLoanByBankChart = memo(function AvailingLoanByBankChart({ data: ch
                 />
                 <Bar dataKey="count" name="Projects" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={300}>
                   {chartData.map((entry, index) => (
-                    <Cell key={`cell-${entry.bankKey}-${index}`} fill={getBarColor(entry.bankKey, index)} />
+                    <Cell
+                      key={`cell-${entry.bankKey}-${index}`}
+                      fill={getLoanBankBarColor(entry.bankLabel || entry.bankKey, index)}
+                    />
                   ))}
                 </Bar>
               </BarChart>

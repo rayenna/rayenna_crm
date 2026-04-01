@@ -142,7 +142,39 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'project.confirmation-date',
     title: 'Confirmation Date',
     content: 'Date when the project was confirmed and order was placed.'
-  }
+  },
+
+  // Zenith Command Center (see Help → Analytics → Zenith Command Center)
+  'zenith.command-center': {
+    key: 'zenith.command-center',
+    title: 'Zenith Command Center',
+    content:
+      'Full-screen analytics with the same FY, Quarter, and Month rules as the Dashboard: AI Insights, Your Focus, KPIs, Revenue forecast, funnel, and clickable Explore charts. Open Help → Analytics for the full guide.',
+  },
+  'zenith.revenue-forecast': {
+    key: 'zenith.revenue-forecast',
+    title: 'Revenue forecast (Zenith)',
+    content:
+      'Weighted pipeline forecast: each open deal adds order value × stage win probability (not 100% for early stages). Tabs split the same total by Source, Sales, Segment, or Stage. +N more opens all open deals in the drawer.',
+  },
+  'zenith.revenue-profit-fy-chart': {
+    key: 'zenith.revenue-profit-fy-chart',
+    title: 'Revenue & profit by FY (Zenith)',
+    content:
+      'Orange point = revenue drill-down (list totals = order value). Teal bar = profit drill-down (list totals = gross profit). Chart years match your FY filter. Tooltip shows each metric once.',
+  },
+  'zenith.customer-profitability': {
+    key: 'zenith.customer-profitability',
+    title: 'Customer projects profitability',
+    content:
+      'Top projects by recorded profitability (Sales & Commercial): Word Cloud size = relative profit; Top 10 = same data ranked. Each label is one project; filters match Zenith dates.',
+  },
+  'zenith.chart-drill-down': {
+    key: 'zenith.chart-drill-down',
+    title: 'Click to explore',
+    content:
+      'Opens the Quick Actions drawer with projects matching that chart slice and your Zenith filters. FY profit lists use gross profit totals; most other slices use order value.',
+  },
 }
 
 /**

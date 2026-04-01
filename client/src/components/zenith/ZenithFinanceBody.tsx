@@ -8,6 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  Cell,
 } from 'recharts'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
@@ -23,6 +24,8 @@ import SegmentDonut from './SegmentDonut'
 import CustomerProfitabilityRank from './CustomerProfitabilityRank'
 import ZenithRevenueProfitFyChart from './ZenithRevenueProfitFyChart'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
+import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
+import { getLoanBankBarColor } from '../dashboard/loanBankChartColors'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
 
@@ -100,11 +103,13 @@ export default function ZenithFinanceBody({
     totalProjectValue: number
     totalProfit: number
   }[]
-  const fyChart = [...fyRows].sort((a, b) => a.fy.localeCompare(b.fy)).map((r) => ({
-    fy: r.fy,
-    revenue: r.totalProjectValue,
-    profit: r.totalProfit,
-  }))
+  const fyChart = [...projectValueRowsVisibleInZenithFyChart(fyRows, effFYs)]
+    .sort((a, b) => a.fy.localeCompare(b.fy))
+    .map((r) => ({
+      fy: r.fy,
+      revenue: r.totalProjectValue,
+      profit: r.totalProfit,
+    }))
   const seg = (data?.projectValueByType ?? []) as { label: string; value: number; percentage: string }[]
   const loans = (data?.availingLoanByBank ?? []) as { bankLabel: string; count: number }[]
   const wordCloud = (data?.wordCloudData ?? []) as { text: string; value: number }[]
@@ -195,7 +200,11 @@ export default function ZenithFinanceBody({
                   <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
                   <YAxis dataKey="bankLabel" type="category" width={100} tick={{ fontSize: 9 }} />
                   <Tooltip {...tt} />
-                  <Bar dataKey="count" fill="#f5a623" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                    {loans.map((row, i) => (
+                      <Cell key={row.bankLabel ?? i} fill={getLoanBankBarColor(row.bankLabel, i)} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </ChartPanel>

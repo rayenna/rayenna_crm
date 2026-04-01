@@ -14,6 +14,8 @@ import ZenithAiInsightsTicker from '../components/zenith/ZenithAiInsightsTicker'
 import { buildZenithAiInsights } from '../components/zenith/zenithAiInsights'
 import { AnimatePresence } from 'framer-motion'
 import { useDailyBriefing } from '../hooks/useDailyBriefing'
+import { useQuickAction } from '../hooks/useQuickAction'
+import QuickActionDrawer from '../components/zenith/QuickActionDrawer'
 
 const Zenith = () => {
   const { user } = useAuth()
@@ -21,6 +23,12 @@ const Zenith = () => {
   const [selectedQuarters, setSelectedQuarters] = useState<string[]>([])
   const [selectedMonths, setSelectedMonths] = useState<string[]>([])
   const { isVisible, dismiss, showBriefing } = useDailyBriefing()
+  const quickAction = useQuickAction()
+
+  const execZenithRole =
+    user?.role === UserRole.SALES ||
+    user?.role === UserRole.MANAGEMENT ||
+    user?.role === UserRole.ADMIN
 
   const { data: dashboardData, error: fyError, isError: isFyError, refetch: refetchFYs } =
     useQuery({
@@ -113,6 +121,7 @@ const Zenith = () => {
             data={data}
             isLoading={isLoading}
             dateFilter={dateFilter}
+            quickAction={quickAction}
           />
         )
       case UserRole.OPERATIONS:
@@ -130,10 +139,10 @@ const Zenith = () => {
           </div>
         )
     }
-  }, [user?.role, zenithData, isLoading, dateFilter])
+  }, [user?.role, zenithData, isLoading, dateFilter, quickAction])
 
   return (
-    <div className="zenith-root zenith-animated-bg min-h-screen">
+    <div className="zenith-root zenith-animated-bg">
       <CommandBar
         availableFYs={availableFYs}
         selectedFYs={selectedFYs}
@@ -148,6 +157,28 @@ const Zenith = () => {
 
       {!isFyError && !isError && user?.role ? (
         <ZenithAiInsightsTicker insights={insights} isLoading={isLoading} />
+      ) : null}
+
+      {execZenithRole && quickAction.listMode && quickAction.isOpen ? (
+        <div
+          className="mx-3 sm:mx-5 mt-2 mb-0 flex items-center justify-between rounded-lg border px-4 py-1.5"
+          style={{
+            background: 'rgba(245,166,35,0.08)',
+            borderColor: 'rgba(245,166,35,0.2)',
+            fontFamily: 'DM Sans, sans-serif',
+          }}
+        >
+          <span className="text-xs truncate pr-2" style={{ color: '#F5A623' }}>
+            Viewing: {quickAction.filterLabel}
+          </span>
+          <button
+            type="button"
+            onClick={() => quickAction.closeDrawer()}
+            className="shrink-0 text-xs cursor-pointer bg-transparent border-0 text-white/40 hover:text-white/70"
+          >
+            Clear ×
+          </button>
+        </div>
       ) : null}
 
       {isFyError && (
@@ -179,6 +210,18 @@ const Zenith = () => {
       )}
 
       {!isFyError && !isError ? body : null}
+
+      {execZenithRole ? (
+        <QuickActionDrawer
+          isOpen={quickAction.isOpen}
+          projectId={quickAction.project?.id ?? null}
+          onClose={quickAction.closeDrawer}
+          listMode={quickAction.listMode}
+          filterLabel={quickAction.filterLabel}
+          filteredProjects={quickAction.filteredProjects}
+          listAmountMode={quickAction.listAmountMode}
+        />
+      ) : null}
 
       <AnimatePresence>
         {isVisible && user?.role ? (

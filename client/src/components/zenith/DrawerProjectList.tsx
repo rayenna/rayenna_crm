@@ -1,0 +1,209 @@
+import { useMemo, useState } from 'react'
+import { Inbox } from 'lucide-react'
+import type { ZenithExplorerProject } from '../../types/zenithExplorer'
+import type { ZenithListAmountMode } from '../../hooks/useQuickAction'
+
+function rowAmount(p: ZenithExplorerProject, mode: ZenithListAmountMode): number {
+  if (mode === 'gross_profit') return Number(p.gross_profit ?? 0)
+  return Number(p.deal_value ?? 0)
+}
+import HealthBadge from './HealthBadge'
+
+type SortKey = 'value' | 'health' | 'activity'
+
+function formatINR(value: number): string {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(value)
+}
+
+function explorerToHealthProject(p: ZenithExplorerProject): Record<string, unknown> {
+  return {
+    stage: p.stageLabel,
+    deal_value: p.deal_value,
+    updated_at: p.updated_at,
+    stage_changed_at: p.updated_at,
+    lead_source: p.lead_source,
+    projectStatus: p.projectStatus,
+  }
+}
+
+export default function DrawerProjectList({
+  projects,
+  onOpen,
+  filterLabel,
+  amountMode = 'deal_value',
+}: {
+  projects: ZenithExplorerProject[]
+  onOpen: (p: ZenithExplorerProject) => void
+  filterLabel: string
+  /** Matches chart drill-down: FY profit lists use stored gross profit. */
+  amountMode?: ZenithListAmountMode
+}) {
+  const [sortField, setSortField] = useState<SortKey>('value')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+
+  /** Same interaction as “Your Pipeline today” headers: new column picks a default direction; same column toggles. */
+  const handleSortPill = (key: SortKey) => {
+    if (sortField !== key) {
+      setSortField(key)
+      setSortDir('desc')
+      return
+    }
+    setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))
+  }
+
+  const sorted = useMemo(() => {
+    const copy = [...projects]
+    const dir = sortDir === 'asc' ? 1 : -1
+    if (sortField === 'value') {
+      copy.sort((a, b) => (rowAmount(a, amountMode) - rowAmount(b, amountMode)) * dir)
+    } else if (sortField === 'activity') {
+      copy.sort(
+        (a, b) =>
+          (new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()) * dir,
+      )
+    } else {
+      copy.sort((a, b) => {
+        const sa = computeHealthScore(a)
+        const sb = computeHealthScore(b)
+        return (sa - sb) * dir
+      })
+    }
+    return copy
+  }, [projects, sortDir, sortField, amountMode])
+
+  const total = useMemo(() => sorted.reduce((s, p) => s + rowAmount(p, amountMode), 0), [sorted, amountMode])
+
+  const valueAccent = amountMode === 'gross_profit' ? '#00D4B4' : '#F5A623'
+  const valuePillLabel = amountMode === 'gross_profit' ? 'Gross profit' : 'Order value'
+
+  const pill = (key: SortKey, label: string) => {
+    const active = sortField === key
+    const arrow = active ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''
+    const profitSort = key === 'value' && amountMode === 'gross_profit'
+    return (
+      <button
+        type="button"
+        key={key}
+        onClick={() => handleSortPill(key)}
+        aria-pressed={active}
+        aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
+        className="rounded-[20px] px-2.5 py-1 text-[11px] transition-colors cursor-pointer"
+        style={
+          active
+            ? profitSort
+              ? {
+                  background: 'rgba(0,212,180,0.12)',
+                  border: '1px solid rgba(0,212,180,0.3)',
+                  color: '#00D4B4',
+                }
+              : {
+                  background: 'rgba(245,166,35,0.12)',
+                  border: '1px solid rgba(245,166,35,0.3)',
+                  color: '#F5A623',
+                }
+            : {
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.5)',
+              }
+        }
+      >
+        {label}
+        {arrow}
+      </button>
+    )
+  }
+
+  if (projects.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center px-5 py-10 text-center">
+        <Inbox className="w-8 h-8 mb-3" style={{ color: 'rgba(255,255,255,0.2)' }} aria-hidden />
+        <p className="text-sm text-white/50">No projects match this filter</p>
+        <p className="text-xs mt-1 text-white/30">{filterLabel}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col min-h-0 flex-1">
+      <div className="flex flex-wrap gap-1.5 mb-3 shrink-0">
+        {pill('value', valuePillLabel)}
+        {pill('health', 'Health Score')}
+        {pill('activity', 'Last Activity')}
+      </div>
+
+      <div className="flex-1 min-h-0 overflow-y-auto -mx-1 px-1">
+        {sorted.map((p) => (
+          <div
+            key={p.id}
+            className="flex items-center gap-2.5 py-3 border-b border-white/[0.05]"
+          >
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold text-white truncate" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+                {p.customer_name}
+              </div>
+              <div className="mt-1">
+                <span
+                  className="inline-block rounded-[20px] px-2 py-0.5 text-[11px]"
+                  style={{
+                    background: 'rgba(255,255,255,0.06)',
+                    color: 'rgba(255,255,255,0.65)',
+                  }}
+                >
+                  {p.stageLabel}
+                </span>
+              </div>
+            </div>
+            <div className="shrink-0 text-right">
+              <div className="text-[13px] font-medium" style={{ color: valueAccent }}>
+                {formatINR(rowAmount(p, amountMode))}
+              </div>
+              <div className="mt-1 flex justify-end">
+                <HealthBadge project={explorerToHealthProject(p)} size="sm" />
+              </div>
+            </div>
+            <div className="shrink-0">
+              <button
+                type="button"
+                onClick={() => onOpen(p)}
+                className="rounded-lg px-3 py-1.5 text-xs border border-white/15 text-white/60 hover:border-[#F5A623] hover:text-[#F5A623] transition-colors"
+              >
+                Open →
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div
+        className="shrink-0 pt-3 mt-1 flex justify-between items-center border-t border-white/[0.08]"
+        style={{ paddingBottom: 4 }}
+      >
+        <span className="text-xs text-white/40">{sorted.length} projects</span>
+        <span className="text-xs font-medium" style={{ color: valueAccent }}>
+          Total: {formatINR(total)}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+/** Approximate sort by health without importing full compute in sort path */
+function computeHealthScore(p: ZenithExplorerProject): number {
+  const days = Math.max(0, (Date.now() - new Date(p.updated_at).getTime()) / 86400000)
+  const v = Number(p.deal_value ?? 0)
+  let s = 0
+  if (days <= 3) s += 30
+  else if (days <= 7) s += 22
+  else if (days <= 14) s += 12
+  else if (days <= 30) s += 5
+  if (v >= 500000) s += 20
+  else if (v >= 200000) s += 15
+  else if (v >= 50000) s += 10
+  else if (v > 0) s += 5
+  return s
+}

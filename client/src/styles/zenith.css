@@ -20,6 +20,7 @@
   margin-left: 0;
   position: relative;
   min-height: calc(100vh - 5rem);
+  min-height: calc(100dvh - 5rem);
   /* Horizontal clipping is on Layout main (overflow-x-clip). Avoid overflow-x: hidden here — it forces
      overflow-y to compute as auto and can trap page scroll in some browsers. */
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -177,9 +178,18 @@
   overflow-y: hidden;
 }
 
+@keyframes zenith-ai-insights-marquee-kf {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
 .zenith-ai-insights-marquee {
   flex-shrink: 0;
-  will-change: transform;
+  animation: zenith-ai-insights-marquee-kf 32s linear infinite;
 }
 
 /* Pause only for real mouse hover — avoids “stuck paused” after touch on some browsers */
@@ -222,6 +232,7 @@
     background: rgba(255, 255, 255, 0.055);
   }
 
+  /* Do not disable the AI insights marquee or command “Live” pulse here — product requires continuous ticker scroll. */
 }
 
 /* Today’s Hit List — pulse (keyframes appended; Syne loaded in @import at top) */
@@ -262,6 +273,15 @@
   animation: pulse-number 2s ease-in-out infinite;
 }
 
+/* Command bar “Live” indicator (teal; distinct from Hit List .pulse-dot) */
+.zenith-root .zenith-command-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00d4b4;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
 /* Hit List widget: scrollable body on laptop without heavy scrollbar */
 .zenith-root .zenith-hit-list-body {
   scrollbar-gutter: stable;
@@ -280,4 +300,10 @@
 
 .zenith-root .zenith-hit-list-body::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* FY revenue/profit chart: area fill is painted above bars and steals all pointer events — let clicks reach profit bars + top-layer revenue hit targets */
+.zenith-root .zenith-fy-revenue-profit-chart .recharts-area-area,
+.zenith-root .zenith-fy-revenue-profit-chart .recharts-area-curve {
+  pointer-events: none;
 }
