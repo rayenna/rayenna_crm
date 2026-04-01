@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+import { ZENITH_DONUT_CHART_HEIGHT_PX } from './zenithDonutConstants'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
@@ -355,8 +356,8 @@ function FinanceRadarBlock({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-          <div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-stretch lg:items-start">
+          <div className="min-w-0">
             <div className="flex items-end justify-between gap-2 mb-2">
               <h4 className="text-xs font-bold text-white/50 uppercase tracking-widest">Top overdue</h4>
               <input
@@ -438,40 +439,58 @@ function FinanceRadarBlock({
               </div>
             </div>
           </div>
-          <div className="h-[160px] w-full min-w-0">
-            {pieData.length === 0 ? (
-              <p className="text-sm text-white/40 py-8 text-center">No payment mix data</p>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={44}
-                    outerRadius={68}
-                    paddingAngle={2}
-                  >
-                    {pieData.map((e, i) => (
-                      <Cell key={i} fill={e.fill} stroke="rgba(0,0,0,0.25)" />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(v: number) => `₹${Math.round(v).toLocaleString('en-IN')}`}
-                    contentStyle={{
-                      background: 'rgba(10,10,15,0.96)',
-                      border: '1px solid rgba(255,255,255,0.14)',
-                      borderRadius: 10,
-                      color: '#f8fafc',
-                    }}
-                    labelStyle={{ color: '#ffffff', fontWeight: 600 }}
-                    itemStyle={{ color: '#f1f5f9' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-            <p className="text-[10px] text-center text-white/40 mt-1">Collected · Outstanding · Subsidy pending (₹)</p>
+          <div className="w-full min-w-0 flex flex-col">
+            <h4 className="text-xs font-bold text-white/50 uppercase tracking-widest mb-2 lg:mb-3">
+              Collected vs outstanding
+            </h4>
+            <div
+              className="w-full min-w-0 flex-1 mx-auto max-w-[min(100%,420px)] lg:max-w-none"
+              style={{ height: ZENITH_DONUT_CHART_HEIGHT_PX }}
+            >
+              {pieData.length === 0 ? (
+                <p className="text-sm text-white/40 flex items-center justify-center h-full text-center px-2">
+                  No payment mix data
+                </p>
+              ) : (
+                <ResponsiveContainer width="100%" height={ZENITH_DONUT_CHART_HEIGHT_PX} minWidth={0}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      cx="50%"
+                      cy="45%"
+                      innerRadius="58%"
+                      outerRadius="82%"
+                      paddingAngle={2}
+                    >
+                      {pieData.map((e, i) => (
+                        <Cell key={i} fill={e.fill} stroke="rgba(0,0,0,0.2)" />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(v: number) => `₹${Math.round(v).toLocaleString('en-IN')}`}
+                      contentStyle={{
+                        background: 'rgba(10,10,15,0.96)',
+                        border: '1px solid rgba(255,255,255,0.14)',
+                        borderRadius: 10,
+                        color: '#f8fafc',
+                      }}
+                      labelStyle={{ color: '#ffffff', fontWeight: 600 }}
+                      itemStyle={{ color: '#f1f5f9' }}
+                    />
+                    <Legend
+                      verticalAlign="bottom"
+                      formatter={(value) => (
+                        <span className="text-white/80 text-[11px] sm:text-xs">{value}</span>
+                      )}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+            <p className="text-[10px] text-center text-white/40 mt-1 sm:mt-2 px-2">
+              Amounts in ₹ · Collected, outstanding, subsidy pending
+            </p>
           </div>
         </div>
       </div>

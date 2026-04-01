@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
-import { Project, ProjectStatus } from '../../types'
+import { Project, ProjectStatus, UserRole } from '../../types'
+import { useAuth } from '../../contexts/AuthContext'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
 import type { ZenithListAmountMode } from '../../hooks/useQuickAction'
 import DrawerProjectList from './DrawerProjectList'
@@ -110,6 +111,7 @@ export default function QuickActionDrawer({
 }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { user, hasRole } = useAuth()
 
   const [listSubview, setListSubview] = useState<ListSubview>('list')
   const [listPickId, setListPickId] = useState<string | null>(null)
@@ -185,6 +187,14 @@ export default function QuickActionDrawer({
 
   const canAdvance =
     !!project && !TERMINAL_STATUSES.includes(project.projectStatus) && !!nextStatus && !!nextLabel
+
+  /** Same rule as ProjectDetail `canEdit`: Admin; Sales on own project; Operations & Finance. Management is view-only. */
+  const canEditProjectInDrawer =
+    !!project &&
+    project.projectStatus !== ProjectStatus.LOST &&
+    (hasRole([UserRole.ADMIN]) ||
+      (hasRole([UserRole.SALES]) && project.salespersonId === user?.id) ||
+      hasRole([UserRole.OPERATIONS, UserRole.FINANCE]))
 
   const valuePreview = useMemo(() => {
     const n = Number(valueInput)
@@ -395,6 +405,13 @@ export default function QuickActionDrawer({
                   </div>
                 ) : null}
 
+                {project && !canEditProjectInDrawer ? (
+                  <div className="mb-4 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[12px] text-white/55">
+                    View-only for your role — stage, value, and dates are shown below; use{' '}
+                    <span className="text-white/75">Open full project</span> for the full record.
+                  </div>
+                ) : null}
+
                 {canAdvance ? (
                   <div>
                     <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
@@ -416,69 +433,73 @@ export default function QuickActionDrawer({
                         {nextLabel}
                       </span>
                     </div>
+                    {canEditProjectInDrawer ? (
+                      <button
+                        type="button"
+                        disabled={saving || !project}
+                        onClick={async () => {
+                          if (!project || !nextStatus) return
+                          setSaving(true)
+                          setError(null)
+                          try {
+                            await updateProject(project.id, { projectStatus: nextStatus })
+                            runToast(`✓ Moved to ${STATUS_LABELS[nextStatus]}`)
+                            window.setTimeout(() => closeAndClear(), 1500)
+                          } catch (e: unknown) {
+                            setError(getFriendlyApiErrorMessage(e))
+                          } finally {
+                            setSaving(false)
+                          }
+                        }}
+                        className="mt-3 w-full rounded-xl bg-[#F5A623] text-[#0A0A0F] text-[14px] font-semibold py-3 transition-all disabled:opacity-60"
+                      >
+                        {saving ? `Moving…` : `Move to ${nextLabel}`}
+                      </button>
+                    ) : null}
+                    <div className="my-5 h-px bg-white/[0.06]" />
+                  </div>
+                ) : null}
+
+                {canEditProjectInDrawer ? (
+                  <div>
+                    <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
+                      Log activity
+                    </div>
+                    <textarea
+                      value={noteText}
+                      onChange={(e) => setNoteText(e.target.value.slice(0, 500))}
+                      rows={3}
+                      placeholder="What happened with this deal? Call made, site visited, proposal sent..."
+                      className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[14px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#f5a623]/40"
+                      style={{ resize: 'vertical', minHeight: 80 }}
+                    />
+                    <div className="mt-1 text-right text-[11px] text-white/25">{noteText.length}/500 characters</div>
                     <button
                       type="button"
-                      disabled={saving || !project}
+                      disabled={saving || !project || !noteText.trim()}
                       onClick={async () => {
-                        if (!project || !nextStatus) return
+                        if (!project) return
+                        const text = noteText.trim()
+                        if (!text) return
                         setSaving(true)
                         setError(null)
                         try {
-                          await updateProject(project.id, { projectStatus: nextStatus })
-                          runToast(`✓ Moved to ${STATUS_LABELS[nextStatus]}`)
-                          window.setTimeout(() => closeAndClear(), 1500)
+                          await logActivity(project.id, text)
+                          setNoteText('')
+                          runToast('✓ Activity logged')
                         } catch (e: unknown) {
                           setError(getFriendlyApiErrorMessage(e))
                         } finally {
                           setSaving(false)
                         }
                       }}
-                      className="mt-3 w-full rounded-xl bg-[#F5A623] text-[#0A0A0F] text-[14px] font-semibold py-3 transition-all disabled:opacity-60"
+                      className="mt-2 w-full rounded-xl border border-white/20 bg-transparent px-4 py-2.5 text-[14px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors disabled:opacity-60"
                     >
-                      {saving ? `Moving…` : `Move to ${nextLabel}`}
+                      {saving ? 'Saving…' : 'Log activity'}
                     </button>
                     <div className="my-5 h-px bg-white/[0.06]" />
                   </div>
                 ) : null}
-
-                <div>
-                  <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
-                    Log activity
-                  </div>
-                  <textarea
-                    value={noteText}
-                    onChange={(e) => setNoteText(e.target.value.slice(0, 500))}
-                    rows={3}
-                    placeholder="What happened with this deal? Call made, site visited, proposal sent..."
-                    className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[14px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#f5a623]/40"
-                    style={{ resize: 'vertical', minHeight: 80 }}
-                  />
-                  <div className="mt-1 text-right text-[11px] text-white/25">{noteText.length}/500 characters</div>
-                  <button
-                    type="button"
-                    disabled={saving || !project || !noteText.trim()}
-                    onClick={async () => {
-                      if (!project) return
-                      const text = noteText.trim()
-                      if (!text) return
-                      setSaving(true)
-                      setError(null)
-                      try {
-                        await logActivity(project.id, text)
-                        setNoteText('')
-                        runToast('✓ Activity logged')
-                      } catch (e: unknown) {
-                        setError(getFriendlyApiErrorMessage(e))
-                      } finally {
-                        setSaving(false)
-                      }
-                    }}
-                    className="mt-2 w-full rounded-xl border border-white/20 bg-transparent px-4 py-2.5 text-[14px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors disabled:opacity-60"
-                  >
-                    {saving ? 'Saving…' : 'Log activity'}
-                  </button>
-                  <div className="my-5 h-px bg-white/[0.06]" />
-                </div>
 
                 <div>
                   <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
@@ -487,35 +508,39 @@ export default function QuickActionDrawer({
                   <div className="text-[22px] font-bold" style={{ fontFamily: "'Syne', sans-serif", color: '#F5A623' }}>
                     {formatINR(project?.projectCost ?? null)}
                   </div>
-                  <input
-                    type="number"
-                    value={valueInput}
-                    onChange={(e) => setValueInput(e.target.value)}
-                    placeholder="Enter amount in ₹"
-                    className="mt-2 w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[15px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#f5a623]/40"
-                  />
-                  {valuePreview ? <div className="mt-1 text-[12px] text-white/40">{valuePreview}</div> : null}
-                  <button
-                    type="button"
-                    disabled={saving || !project}
-                    onClick={async () => {
-                      if (!project) return
-                      const n = Number(valueInput)
-                      setSaving(true)
-                      setError(null)
-                      try {
-                        await updateProject(project.id, { projectCost: Number.isFinite(n) ? n : 0 })
-                        runToast('✓ Value updated')
-                      } catch (e: unknown) {
-                        setError(getFriendlyApiErrorMessage(e))
-                      } finally {
-                        setSaving(false)
-                      }
-                    }}
-                    className="mt-2 w-full rounded-xl border border-white/20 bg-transparent px-4 py-2.5 text-[14px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors disabled:opacity-60"
-                  >
-                    {saving ? 'Saving…' : 'Update value'}
-                  </button>
+                  {canEditProjectInDrawer ? (
+                    <>
+                      <input
+                        type="number"
+                        value={valueInput}
+                        onChange={(e) => setValueInput(e.target.value)}
+                        placeholder="Enter amount in ₹"
+                        className="mt-2 w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[15px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#f5a623]/40"
+                      />
+                      {valuePreview ? <div className="mt-1 text-[12px] text-white/40">{valuePreview}</div> : null}
+                      <button
+                        type="button"
+                        disabled={saving || !project}
+                        onClick={async () => {
+                          if (!project) return
+                          const n = Number(valueInput)
+                          setSaving(true)
+                          setError(null)
+                          try {
+                            await updateProject(project.id, { projectCost: Number.isFinite(n) ? n : 0 })
+                            runToast('✓ Value updated')
+                          } catch (e: unknown) {
+                            setError(getFriendlyApiErrorMessage(e))
+                          } finally {
+                            setSaving(false)
+                          }
+                        }}
+                        className="mt-2 w-full rounded-xl border border-white/20 bg-transparent px-4 py-2.5 text-[14px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors disabled:opacity-60"
+                      >
+                        {saving ? 'Saving…' : 'Update value'}
+                      </button>
+                    </>
+                  ) : null}
                   <div className="my-5 h-px bg-white/[0.06]" />
                 </div>
 
@@ -532,36 +557,40 @@ export default function QuickActionDrawer({
                         })
                       : 'No date set'}
                   </div>
-                  <input
-                    type="date"
-                    value={dateInput}
-                    onChange={(e) => setDateInput(e.target.value)}
-                    min={todayYmd()}
-                    className="mt-2 w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[14px] text-white focus:outline-none focus:ring-2 focus:ring-[#f5a623]/40"
-                    style={{ colorScheme: 'dark' }}
-                  />
-                  <button
-                    type="button"
-                    disabled={saving || !project}
-                    onClick={async () => {
-                      if (!project) return
-                      setSaving(true)
-                      setError(null)
-                      try {
-                        await updateProject(project.id, {
-                          expectedCommissioningDate: dateInput ? new Date(dateInput).toISOString() : null,
-                        })
-                        runToast('✓ Date updated')
-                      } catch (e: unknown) {
-                        setError(getFriendlyApiErrorMessage(e))
-                      } finally {
-                        setSaving(false)
-                      }
-                    }}
-                    className="mt-2 w-full rounded-xl border border-white/20 bg-transparent px-4 py-2.5 text-[14px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors disabled:opacity-60"
-                  >
-                    {saving ? 'Saving…' : 'Update date'}
-                  </button>
+                  {canEditProjectInDrawer ? (
+                    <>
+                      <input
+                        type="date"
+                        value={dateInput}
+                        onChange={(e) => setDateInput(e.target.value)}
+                        min={todayYmd()}
+                        className="mt-2 w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[14px] text-white focus:outline-none focus:ring-2 focus:ring-[#f5a623]/40"
+                        style={{ colorScheme: 'dark' }}
+                      />
+                      <button
+                        type="button"
+                        disabled={saving || !project}
+                        onClick={async () => {
+                          if (!project) return
+                          setSaving(true)
+                          setError(null)
+                          try {
+                            await updateProject(project.id, {
+                              expectedCommissioningDate: dateInput ? new Date(dateInput).toISOString() : null,
+                            })
+                            runToast('✓ Date updated')
+                          } catch (e: unknown) {
+                            setError(getFriendlyApiErrorMessage(e))
+                          } finally {
+                            setSaving(false)
+                          }
+                        }}
+                        className="mt-2 w-full rounded-xl border border-white/20 bg-transparent px-4 py-2.5 text-[14px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors disabled:opacity-60"
+                      >
+                        {saving ? 'Saving…' : 'Update date'}
+                      </button>
+                    </>
+                  ) : null}
                 </div>
               </motion.div>
             ) : null}

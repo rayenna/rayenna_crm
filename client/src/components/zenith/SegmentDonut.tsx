@@ -1,11 +1,9 @@
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+import { ZENITH_DONUT_CHART_HEIGHT_PX } from './zenithDonutConstants'
 
 const COLORS = ['#f5a623', '#00d4b4', '#a78bfa', '#38bdf8', '#fb7185', '#fbbf24']
-
-/** Explicit pixel height — percentage height inside flex/grid often resolves to 0 for Recharts. */
-const CHART_PX = 252
 
 export interface SegmentSlice {
   name: string
@@ -55,13 +53,13 @@ export default function SegmentDonut({
           </span>
         ) : null}
       </div>
-      <div className="w-full min-w-0" style={{ height: CHART_PX }}>
+      <div className="w-full min-w-0" style={{ height: ZENITH_DONUT_CHART_HEIGHT_PX }}>
         {chartData.length === 0 ? (
           <p className="text-sm text-white/40 text-center flex items-center justify-center h-full">
             No data for this period
           </p>
         ) : (
-          <ResponsiveContainer width="100%" height={CHART_PX} minWidth={0}>
+          <ResponsiveContainer width="100%" height={ZENITH_DONUT_CHART_HEIGHT_PX} minWidth={0}>
             <PieChart>
               <Pie
                 data={chartData}
