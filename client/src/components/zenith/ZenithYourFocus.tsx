@@ -602,8 +602,8 @@ function FinanceRadarBlock({
           </div>
         ) : null}
 
-        {/* lg: table ~50% left, stacked charts ~50% right — equal vertical stretch */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 lg:items-stretch gap-8 lg:gap-6 xl:gap-8">
+        {/* lg: row at least ~620px so chart column never collapses when few overdue rows; table body scrolls inside */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 lg:items-stretch lg:[grid-auto-rows:minmax(640px,auto)] gap-8 lg:gap-6 xl:gap-8">
           <div className="min-w-0 flex flex-col lg:h-full lg:min-h-0">
             <div className="flex flex-wrap items-end justify-between gap-2 mb-2">
               <div className="flex flex-wrap items-center gap-2 min-w-0">
