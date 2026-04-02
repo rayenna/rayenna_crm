@@ -9,6 +9,8 @@ import { useAuth } from '../../contexts/AuthContext'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
 import type { ZenithAutoFocusSection, ZenithListAmountMode } from '../../hooks/useQuickAction'
 import DrawerProjectList from './DrawerProjectList'
+import HealthBadge from './HealthBadge'
+import { projectDetailToHealthProject } from '../../utils/dealHealthScore'
 import { ZENITH_CHARTS_TOUCH_RESET_EVENT, ZENITH_FLOATING_DISMISS_EVENT } from '../../utils/zenithEvents'
 
 const STATUS_ORDER: ProjectStatus[] = [
@@ -383,10 +385,13 @@ export default function QuickActionDrawer({
                 >
                   {project?.customer?.firstName || project?.customer?.customerName || (isLoading ? 'Loading…' : '—')}
                 </div>
-                <div className="mt-1">
+                <div className="mt-1 flex flex-wrap items-center gap-2">
                   <span className={`inline-block rounded-[20px] px-3 py-1 text-[12px] ${stagePillClass(stageLabel)}`}>
                     {stageLabel || '—'}
                   </span>
+                  {project ? (
+                    <HealthBadge project={projectDetailToHealthProject(project)} tooltipZIndex={6500} />
+                  ) : null}
                 </div>
               </div>
             </>
@@ -400,10 +405,13 @@ export default function QuickActionDrawer({
                 >
                   {project?.customer?.firstName || project?.customer?.customerName || (isLoading ? 'Loading…' : '—')}
                 </div>
-                <div className="mt-1">
+                <div className="mt-1 flex flex-wrap items-center gap-2">
                   <span className={`inline-block rounded-[20px] px-3 py-1 text-[12px] ${stagePillClass(stageLabel)}`}>
                     {stageLabel || '—'}
                   </span>
+                  {project ? (
+                    <HealthBadge project={projectDetailToHealthProject(project)} tooltipZIndex={6500} />
+                  ) : null}
                 </div>
               </div>
               <button

@@ -150,6 +150,7 @@ const Zenith = () => {
 
   return (
     <div className="zenith-root zenith-animated-bg">
+      <div className="min-w-0 max-w-full overflow-x-clip max-lg:overscroll-x-none">
       <CommandBar
         availableFYs={availableFYs}
         selectedFYs={selectedFYs}
@@ -242,6 +243,7 @@ const Zenith = () => {
           />
         ) : null}
       </AnimatePresence>
+      </div>
     </div>
   )
 }

@@ -15,6 +15,8 @@ type HealthBadgeProps = {
   project: Record<string, unknown>
   size?: 'sm' | 'md'
   showLabel?: boolean
+  /** Portal tooltip stacking (e.g. quick drawer panel z-[6001]). */
+  tooltipZIndex?: number
 }
 
 /** True when device is suited to hover tooltips (laptop + mouse/trackpad). */
@@ -32,7 +34,12 @@ function useHoverCapableForTooltip(): boolean {
   return ok
 }
 
-const HealthBadge = ({ project, size = 'sm', showLabel = false }: HealthBadgeProps) => {
+const HealthBadge = ({
+  project,
+  size = 'sm',
+  showLabel = false,
+  tooltipZIndex = 3000,
+}: HealthBadgeProps) => {
   const health = computeDealHealth(project)
   const hoverCapable = useHoverCapableForTooltip()
   const [mouseInside, setMouseInside] = useState(false)
@@ -99,7 +106,7 @@ const HealthBadge = ({ project, size = 'sm', showLabel = false }: HealthBadgePro
           borderRadius: '10px',
           padding: '12px 14px',
           width: `${tooltipW}px`,
-          zIndex: 3000,
+          zIndex: tooltipZIndex,
           pointerEvents: 'none',
           fontFamily: 'DM Sans, sans-serif',
           boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
@@ -215,7 +222,7 @@ const HealthBadge = ({ project, size = 'sm', showLabel = false }: HealthBadgePro
         />
       </div>
     )
-  }, [health, showCard, pos])
+  }, [health, showCard, pos, tooltipZIndex])
 
   useEffect(() => {
     if (!health || !showCard) {

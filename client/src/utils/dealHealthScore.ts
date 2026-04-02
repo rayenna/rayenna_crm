@@ -4,6 +4,7 @@
  */
 
 import type { HitListItem } from '../hooks/useHitList'
+import type { Project } from '../types'
 
 const EXCLUDED_STAGES = [
   'Completed',
@@ -130,6 +131,30 @@ export function pipelineRowToHealthProject(r: {
     expected_close_date: r.expectedCloseDate,
     close_date: r.expectedCloseDate,
     lead_source: r.leadSource ?? '',
+  }
+}
+
+/** Map a loaded CRM `Project` (drawer / detail) into the shape `computeDealHealth` expects. */
+export function projectDetailToHealthProject(p: Project): Record<string, unknown> {
+  const lead = p.leadSource
+  const leadStr = lead != null ? String(lead) : ''
+  return {
+    projectStatus: p.projectStatus,
+    updated_at: p.updatedAt,
+    updatedAt: p.updatedAt,
+    last_modified_at: p.updatedAt,
+    lastModifiedAt: p.updatedAt,
+    stage_changed_at: p.stageEnteredAt ?? p.updatedAt,
+    stageChangedAt: p.stageEnteredAt ?? p.updatedAt,
+    deal_value: p.projectCost,
+    projectCost: p.projectCost,
+    expected_close_date: p.expectedCommissioningDate,
+    expectedCommissioningDate: p.expectedCommissioningDate,
+    expectedCloseDate: p.expectedCommissioningDate,
+    close_date: p.expectedCommissioningDate,
+    closeDate: p.expectedCommissioningDate,
+    lead_source: leadStr,
+    leadSource: leadStr,
   }
 }
 

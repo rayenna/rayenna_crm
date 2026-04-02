@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import { ZENITH_DONUT_CHART_HEIGHT_PX } from './zenithDonutConstants'
@@ -35,6 +35,17 @@ export default function SegmentDonut({
     [data],
   )
 
+  const [narrow, setNarrow] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)')
+    const u = () => setNarrow(mq.matches)
+    u()
+    mq.addEventListener('change', u)
+    return () => mq.removeEventListener('change', u)
+  }, [])
+
+  const chartHeightPx = narrow ? ZENITH_DONUT_CHART_HEIGHT_PX + 4 : ZENITH_DONUT_CHART_HEIGHT_PX
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -54,7 +65,7 @@ export default function SegmentDonut({
           </span>
         ) : null}
       </div>
-      <div className="zenith-chart-slot w-full min-w-0" style={{ height: ZENITH_DONUT_CHART_HEIGHT_PX }}>
+      <div className="zenith-chart-slot w-full min-w-0" style={{ height: chartHeightPx }}>
         {chartData.length === 0 ? (
           <p className="text-sm text-white/40 text-center flex items-center justify-center h-full">
             No data for this period
@@ -62,14 +73,14 @@ export default function SegmentDonut({
         ) : (
           <ZenithChartTouchReset>
             {(rk) => (
-              <ResponsiveContainer key={rk} width="100%" height={ZENITH_DONUT_CHART_HEIGHT_PX} minWidth={0}>
-                <PieChart>
+              <ResponsiveContainer key={rk} width="100%" height={chartHeightPx} minWidth={0}>
+                <PieChart margin={narrow ? { top: 4, bottom: 4, left: 4, right: 4 } : undefined}>
                   <Pie
                     data={chartData}
                     cx="50%"
-                    cy="45%"
-                    innerRadius="58%"
-                    outerRadius="82%"
+                    cy={narrow ? '50%' : '45%'}
+                    innerRadius={narrow ? '54%' : '58%'}
+                    outerRadius={narrow ? '78%' : '82%'}
                     paddingAngle={2}
                     dataKey="value"
                     animationBegin={0}
@@ -133,24 +144,34 @@ export default function SegmentDonut({
                       )
                     }}
                   />
-                  <Legend
-                    verticalAlign="bottom"
-                    formatter={(value, entry) => {
-                      const pct = (entry?.payload as { pct?: string } | undefined)?.pct
-                      return (
-                        <span className="text-white/80 text-xs">
-                          {value}
-                          {pct ? ` · ${pct}%` : ''}
-                        </span>
-                      )
-                    }}
-                  />
+                  {!narrow ? (
+                    <Legend
+                      verticalAlign="bottom"
+                      formatter={(value, entry) => {
+                        const pct = (entry?.payload as { pct?: string } | undefined)?.pct
+                        return (
+                          <span className="text-white/80 text-xs">
+                            {value}
+                            {pct ? ` · ${pct}%` : ''}
+                          </span>
+                        )
+                      }}
+                    />
+                  ) : null}
                 </PieChart>
               </ResponsiveContainer>
             )}
           </ZenithChartTouchReset>
         )}
       </div>
+      {narrow && chartData.length > 0 ? (
+        <p
+          className="mt-2 text-center text-[10px] leading-snug text-white/45 px-1"
+          style={{ fontFamily: 'DM Sans, sans-serif' }}
+        >
+          {chartData.map((d) => (d.pct ? `${d.name} · ${d.pct}%` : d.name)).join(' · ')}
+        </p>
+      ) : null}
     </motion.div>
   )
 }
