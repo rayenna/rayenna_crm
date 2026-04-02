@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
-import { ZENITH_DONUT_CHART_HEIGHT_PX } from './zenithDonutConstants'
+import { ZENITH_DONUT_CHART_HEIGHT_MOBILE_PX, ZENITH_DONUT_CHART_HEIGHT_PX } from './zenithDonutConstants'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
 
 const COLORS = ['#f5a623', '#00d4b4', '#a78bfa', '#38bdf8', '#fb7185', '#fbbf24']
@@ -44,14 +44,13 @@ export default function SegmentDonut({
     return () => mq.removeEventListener('change', u)
   }, [])
 
-  const chartHeightPx = narrow ? ZENITH_DONUT_CHART_HEIGHT_PX + 4 : ZENITH_DONUT_CHART_HEIGHT_PX
+  const chartHeightPx = narrow ? ZENITH_DONUT_CHART_HEIGHT_MOBILE_PX : ZENITH_DONUT_CHART_HEIGHT_PX
+  const pieMargin = narrow ? { top: 10, bottom: 14, left: 6, right: 6 } : undefined
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="zenith-segment-donut-card zenith-glass rounded-xl p-3 sm:p-4 flex flex-col"
-    >
+  const cardClass = 'zenith-segment-donut-card zenith-glass rounded-xl p-3 sm:p-4 flex flex-col'
+
+  const cardBody = (
+    <>
       <div className="flex items-start justify-between gap-2 mb-3">
         <h3 className="zenith-display text-sm sm:text-[15px] font-semibold text-white/95 min-w-0">
           {title}
@@ -74,13 +73,13 @@ export default function SegmentDonut({
           <ZenithChartTouchReset>
             {(rk) => (
               <ResponsiveContainer key={rk} width="100%" height={chartHeightPx} minWidth={0}>
-                <PieChart margin={narrow ? { top: 4, bottom: 4, left: 4, right: 4 } : undefined}>
+                <PieChart margin={pieMargin}>
                   <Pie
                     data={chartData}
                     cx="50%"
-                    cy={narrow ? '50%' : '45%'}
-                    innerRadius={narrow ? '54%' : '58%'}
-                    outerRadius={narrow ? '78%' : '82%'}
+                    cy={narrow ? '48%' : '45%'}
+                    innerRadius={narrow ? '52%' : '58%'}
+                    outerRadius={narrow ? '70%' : '82%'}
                     paddingAngle={2}
                     dataKey="value"
                     animationBegin={0}
@@ -172,6 +171,16 @@ export default function SegmentDonut({
           {chartData.map((d) => (d.pct ? `${d.name} · ${d.pct}%` : d.name)).join(' · ')}
         </p>
       ) : null}
+    </>
+  )
+
+  if (narrow) {
+    return <div className={cardClass}>{cardBody}</div>
+  }
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className={cardClass}>
+      {cardBody}
     </motion.div>
   )
 }

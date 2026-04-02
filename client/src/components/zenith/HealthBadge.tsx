@@ -1,12 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type MouseEvent,
-  type TouchEvent,
-} from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { computeDealHealth } from '../../utils/dealHealthScore'
 import { ZENITH_FLOATING_DISMISS_EVENT } from '../../utils/zenithEvents'
@@ -44,7 +36,7 @@ const HealthBadge = ({
   const hoverCapable = useHoverCapableForTooltip()
   const [mouseInside, setMouseInside] = useState(false)
   const [tapOpen, setTapOpen] = useState(false)
-  const anchorRef = useRef<HTMLDivElement>(null)
+  const anchorRef = useRef<HTMLButtonElement>(null)
   const [pos, setPos] = useState<{ left: number; top: number; place: 'above' | 'below' } | null>(null)
 
   const isSmall = size === 'sm'
@@ -56,16 +48,6 @@ const HealthBadge = ({
   const gutter = 12
 
   const showCard = hoverCapable ? mouseInside : tapOpen
-
-  const toggleTap = useCallback(
-    (e: MouseEvent | TouchEvent) => {
-      if (hoverCapable) return
-      e.preventDefault()
-      e.stopPropagation()
-      setTapOpen((v) => !v)
-    },
-    [hoverCapable],
-  )
 
   useEffect(() => {
     const dismissFloating = () => {
@@ -271,28 +253,40 @@ const HealthBadge = ({
   if (!health) return null
 
   return (
-    <div
+    <button
+      type="button"
       ref={anchorRef}
-      style={{ position: 'relative', display: 'inline-flex', touchAction: 'manipulation' }}
+      style={{
+        position: 'relative',
+        display: 'inline-flex',
+        touchAction: 'manipulation',
+        cursor: hoverCapable ? 'default' : 'pointer',
+        border: 'none',
+        margin: 0,
+        padding: 0,
+        background: 'transparent',
+        font: 'inherit',
+        textAlign: 'inherit',
+        WebkitTapHighlightColor: 'transparent',
+      }}
       onMouseEnter={() => hoverCapable && setMouseInside(true)}
       onMouseLeave={() => hoverCapable && setMouseInside(false)}
-      onClick={hoverCapable ? undefined : toggleTap}
-      onKeyDown={
+      onTouchStart={(e) => {
+        if (!hoverCapable) e.stopPropagation()
+      }}
+      onClick={
         hoverCapable
           ? undefined
           : (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                setTapOpen((v) => !v)
-              }
+              e.preventDefault()
+              e.stopPropagation()
+              setTapOpen((v) => !v)
             }
       }
-      role={hoverCapable ? undefined : 'button'}
-      tabIndex={hoverCapable ? undefined : 0}
       aria-expanded={hoverCapable ? undefined : tapOpen}
-      aria-label={hoverCapable ? undefined : 'Deal health, tap for details'}
+      aria-label={hoverCapable ? 'Deal health, hover for details' : 'Deal health, tap for details'}
     >
-      <div
+      <span
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -301,9 +295,7 @@ const HealthBadge = ({
           border: `1px solid ${health.color}40`,
           borderRadius: '20px',
           padding: isSmall ? '2px 8px' : '3px 10px',
-          cursor: hoverCapable ? 'default' : 'pointer',
           transition: 'all 0.2s ease',
-          pointerEvents: 'auto',
           ...(showCard && {
             background: `${health.color}28`,
             border: `1px solid ${health.color}70`,
@@ -350,10 +342,10 @@ const HealthBadge = ({
             {health.label}
           </span>
         )}
-      </div>
+      </span>
 
       {tooltipNode ? createPortal(tooltipNode, document.body) : null}
-    </div>
+    </button>
   )
 }
 

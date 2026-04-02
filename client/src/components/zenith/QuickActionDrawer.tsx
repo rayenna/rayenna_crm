@@ -390,7 +390,7 @@ export default function QuickActionDrawer({
                     {stageLabel || '—'}
                   </span>
                   {project ? (
-                    <HealthBadge project={projectDetailToHealthProject(project)} tooltipZIndex={6500} />
+                    <HealthBadge project={projectDetailToHealthProject(project)} tooltipZIndex={12000} />
                   ) : null}
                 </div>
               </div>
@@ -410,7 +410,7 @@ export default function QuickActionDrawer({
                     {stageLabel || '—'}
                   </span>
                   {project ? (
-                    <HealthBadge project={projectDetailToHealthProject(project)} tooltipZIndex={6500} />
+                    <HealthBadge project={projectDetailToHealthProject(project)} tooltipZIndex={12000} />
                   ) : null}
                 </div>
               </div>

@@ -174,12 +174,13 @@
     isolation: isolate;
   }
 
-  /* Segment donuts: contain SVG in the slot so scroll/compositing does not clip the ring or bleed past the card. */
+  /* Segment donuts: keep overflow visible so the ring is not flat-clipped at the slot edge during scroll
+     (height is set generously in SegmentDonut for mobile). */
   .zenith-root .zenith-segment-donut-card .zenith-chart-slot {
-    overflow: hidden;
+    overflow: visible;
   }
   .zenith-root .zenith-segment-donut-card .recharts-wrapper {
-    overflow: hidden !important;
+    overflow: visible !important;
   }
 
   /* Payment radar pie only: clip wrapper so legend/tooltip don’t bleed into the bar section below.
