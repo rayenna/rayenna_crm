@@ -164,20 +164,22 @@
     overflow: visible;
   }
 
-  /* Segment donuts: lighter glass + compositing — reduces SVG clipping during scroll next to backdrop-filter. */
+  /* Segment donuts: lighter glass; avoid GPU layers on the chart (translate3d + isolation) — they often clip
+     the SVG on iOS/Android while scrolling next to backdrop-filter. */
   .zenith-root .zenith-segment-donut-card.zenith-glass {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
   }
 
   .zenith-root .zenith-segment-donut-card .recharts-responsive-container {
-    isolation: isolate;
+    transform: none !important;
+    -webkit-transform: none !important;
+    isolation: auto;
   }
 
-  /* Segment donuts: keep overflow visible so the ring is not flat-clipped at the slot edge during scroll
-     (height is set generously in SegmentDonut for mobile). */
+  /* Pie sits in a fixed-height slot; clip only this slot so paint doesn’t overlap the card below. */
   .zenith-root .zenith-segment-donut-card .zenith-chart-slot {
-    overflow: visible;
+    overflow: hidden;
   }
   .zenith-root .zenith-segment-donut-card .recharts-wrapper {
     overflow: visible !important;

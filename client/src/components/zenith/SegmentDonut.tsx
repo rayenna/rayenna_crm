@@ -1,15 +1,33 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
-import { ZENITH_DONUT_CHART_HEIGHT_MOBILE_PX, ZENITH_DONUT_CHART_HEIGHT_PX } from './zenithDonutConstants'
+import { ZENITH_DONUT_CHART_HEIGHT_PX, ZENITH_DONUT_PIE_ONLY_MOBILE_PX } from './zenithDonutConstants'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
 
 const COLORS = ['#f5a623', '#00d4b4', '#a78bfa', '#38bdf8', '#fb7185', '#fbbf24']
+
+function formatSliceInr(value: number): string {
+  return `₹${Math.round(value || 0).toLocaleString('en-IN')}`
+}
 
 export interface SegmentSlice {
   name: string
   value: number
   percentage?: string
+}
+
+function useZenithNarrowLayout(): boolean {
+  const [narrow, setNarrow] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 1023px)').matches : false,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)')
+    const u = () => setNarrow(mq.matches)
+    u()
+    mq.addEventListener('change', u)
+    return () => mq.removeEventListener('change', u)
+  }, [])
+  return narrow
 }
 
 export default function SegmentDonut({
@@ -35,23 +53,17 @@ export default function SegmentDonut({
     [data],
   )
 
-  const [narrow, setNarrow] = useState(false)
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 1023px)')
-    const u = () => setNarrow(mq.matches)
-    u()
-    mq.addEventListener('change', u)
-    return () => mq.removeEventListener('change', u)
-  }, [])
+  const narrow = useZenithNarrowLayout()
 
-  const chartHeightPx = narrow ? ZENITH_DONUT_CHART_HEIGHT_MOBILE_PX : ZENITH_DONUT_CHART_HEIGHT_PX
-  const pieMargin = narrow ? { top: 10, bottom: 14, left: 6, right: 6 } : undefined
+  const pieSlotHeightPx = narrow ? ZENITH_DONUT_PIE_ONLY_MOBILE_PX : ZENITH_DONUT_CHART_HEIGHT_PX
+  const pieMargin = narrow ? { top: 2, bottom: 2, left: 4, right: 4 } : undefined
 
-  const cardClass = 'zenith-segment-donut-card zenith-glass rounded-xl p-3 sm:p-4 flex flex-col'
+  const cardClass =
+    'zenith-segment-donut-card zenith-glass rounded-xl p-3 sm:p-4 flex flex-col max-lg:overflow-visible shrink-0'
 
   const cardBody = (
     <>
-      <div className="flex items-start justify-between gap-2 mb-3">
+      <div className="flex items-start justify-between gap-2 mb-3 shrink-0">
         <h3 className="zenith-display text-sm sm:text-[15px] font-semibold text-white/95 min-w-0">
           {title}
         </h3>
@@ -64,7 +76,10 @@ export default function SegmentDonut({
           </span>
         ) : null}
       </div>
-      <div className="zenith-chart-slot w-full min-w-0" style={{ height: chartHeightPx }}>
+      <div
+        className="zenith-chart-slot w-full min-w-0 shrink-0"
+        style={{ height: pieSlotHeightPx }}
+      >
         {chartData.length === 0 ? (
           <p className="text-sm text-white/40 text-center flex items-center justify-center h-full">
             No data for this period
@@ -72,14 +87,14 @@ export default function SegmentDonut({
         ) : (
           <ZenithChartTouchReset>
             {(rk) => (
-              <ResponsiveContainer key={rk} width="100%" height={chartHeightPx} minWidth={0}>
+              <ResponsiveContainer key={rk} width="100%" height={pieSlotHeightPx} minWidth={0}>
                 <PieChart margin={pieMargin}>
                   <Pie
                     data={chartData}
                     cx="50%"
-                    cy={narrow ? '48%' : '45%'}
-                    innerRadius={narrow ? '52%' : '58%'}
-                    outerRadius={narrow ? '70%' : '82%'}
+                    cy="50%"
+                    innerRadius={narrow ? '50%' : '58%'}
+                    outerRadius={narrow ? '68%' : '82%'}
                     paddingAngle={2}
                     dataKey="value"
                     animationBegin={0}
@@ -101,16 +116,24 @@ export default function SegmentDonut({
                           transition: 'filter 0.15s, transform 0.15s',
                           transformOrigin: 'center',
                         }}
-                        onMouseEnter={(e) => {
-                          const el = e.currentTarget as SVGElement
-                          el.style.filter = 'brightness(1.25)'
-                          el.style.transform = 'scale(1.04)'
-                        }}
-                        onMouseLeave={(e) => {
-                          const el = e.currentTarget as SVGElement
-                          el.style.filter = 'brightness(1)'
-                          el.style.transform = 'scale(1)'
-                        }}
+                        onMouseEnter={
+                          narrow
+                            ? undefined
+                            : (e) => {
+                                const el = e.currentTarget as SVGElement
+                                el.style.filter = 'brightness(1.25)'
+                                el.style.transform = 'scale(1.04)'
+                              }
+                        }
+                        onMouseLeave={
+                          narrow
+                            ? undefined
+                            : (e) => {
+                                const el = e.currentTarget as SVGElement
+                                el.style.filter = 'brightness(1)'
+                                el.style.transform = 'scale(1)'
+                              }
+                        }
                       />
                     ))}
                   </Pie>
@@ -119,7 +142,7 @@ export default function SegmentDonut({
                       if (!active || !payload?.length) return null
                       const p = payload[0]
                       const v = Number(p.value)
-                      const pct = (p.payload as { pct?: string })?.pct
+                      const pct = (p.payload as { pct?: string } | undefined)?.pct
                       return (
                         <div
                           style={{
@@ -164,12 +187,33 @@ export default function SegmentDonut({
         )}
       </div>
       {narrow && chartData.length > 0 ? (
-        <p
-          className="mt-2 text-center text-[10px] leading-snug text-white/45 px-1"
-          style={{ fontFamily: 'DM Sans, sans-serif' }}
-        >
-          {chartData.map((d) => (d.pct ? `${d.name} · ${d.pct}%` : d.name)).join(' · ')}
-        </p>
+        <ul className="mt-3 w-full list-none space-y-2 p-0 m-0 shrink-0" aria-label={`${title} breakdown`}>
+          {chartData.map((d, i) => (
+            <li
+              key={d.name}
+              className="flex items-start justify-between gap-2 rounded-lg bg-white/[0.04] px-2.5 py-2 border border-white/[0.06]"
+            >
+              <span className="flex min-w-0 flex-1 items-start gap-2">
+                <span
+                  className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                  aria-hidden
+                />
+                <span className="text-left text-[12px] font-medium leading-snug text-white/90">
+                  {d.name}
+                </span>
+              </span>
+              <span className="shrink-0 text-right text-[12px] font-semibold tabular-nums text-[#f5a623]">
+                {formatSliceInr(d.value)}
+                {d.pct ? (
+                  <span className="mt-0.5 block text-[11px] font-medium text-white/55">
+                    {String(d.pct).includes('%') ? String(d.pct) : `${d.pct}%`}
+                  </span>
+                ) : null}
+              </span>
+            </li>
+          ))}
+        </ul>
       ) : null}
     </>
   )
