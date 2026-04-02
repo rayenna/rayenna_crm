@@ -64,11 +64,17 @@ function ExploreFyTooltip({
         fontFamily: 'DM Sans, sans-serif',
       }}
     >
-      {rows.map((p) => (
-        <div key={String(p.name)} style={{ color: '#fff', fontSize: 13, fontWeight: 500 }}>
-          {p.name}: ₹{Number(p.value).toLocaleString('en-IN')}
-        </div>
-      ))}
+      {rows.map((p) => {
+        const v = Number(p.value)
+        const isProfit =
+          String(p.dataKey) === 'profit' || /total profit/i.test(String(p.name ?? ''))
+        const amount = isProfit ? Math.round(v) : v
+        return (
+          <div key={String(p.name)} style={{ color: '#fff', fontSize: 13, fontWeight: 500 }}>
+            {p.name}: ₹{amount.toLocaleString('en-IN')}
+          </div>
+        )
+      })}
       <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, marginTop: 6, lineHeight: 1.35 }}>
         Tap the <span style={{ color: '#f5a623' }}>orange point</span> for revenue, or the{' '}
         <span style={{ color: '#00d4b4' }}>teal bar</span> for profit (including small or zero bars).

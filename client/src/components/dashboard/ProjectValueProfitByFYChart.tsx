@@ -236,11 +236,18 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
                       <p className="font-semibold text-gray-900 mb-2">
                         FY: {payload[0].payload.fy}
                       </p>
-                      {payload.map((entry: any, index: number) => (
-                        <p key={index} className="text-sm" style={{ color: entry.color }}>
-                          {entry.name}: <span className="font-medium">{formatCurrency(entry.value)}</span>
-                        </p>
-                      ))}
+                      {payload.map((entry: any, index: number) => {
+                        const isProfit = entry.dataKey === 'totalProfit'
+                        const val = Number(entry.value)
+                        const text = isProfit
+                          ? `₹${Math.round(val).toLocaleString('en-IN')}`
+                          : formatCurrency(val)
+                        return (
+                          <p key={index} className="text-sm" style={{ color: entry.color }}>
+                            {entry.name}: <span className="font-medium">{text}</span>
+                          </p>
+                        )
+                      })}
                     </div>
                   )
                 }
