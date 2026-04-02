@@ -137,6 +137,22 @@
   user-select: text;
 }
 
+/* Mobile / narrow viewports: WebKit often clips Recharts SVG during scroll or overscroll
+   when ancestors use backdrop-filter (Zenith glass). Promote the chart layer and relax
+   wrapper overflow; matches Tailwind lg (1024px). */
+@media (max-width: 1023px) {
+  .zenith-root .recharts-responsive-container {
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+  }
+  .zenith-root .recharts-wrapper {
+    overflow: visible !important;
+  }
+  .zenith-root .zenith-chart-slot {
+    overflow: visible;
+  }
+}
+
 .zenith-root .recharts-cartesian-axis-tick-value {
   fill: rgba(255, 255, 255, 0.45) !important;
   font-size: 11px;

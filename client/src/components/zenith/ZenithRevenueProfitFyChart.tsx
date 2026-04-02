@@ -203,7 +203,7 @@ export default function ZenithRevenueProfitFyChart({
   )
 
   return (
-    <div className="zenith-fy-revenue-profit-chart w-full h-full min-h-0 min-w-0">
+    <div className="zenith-fy-revenue-profit-chart zenith-chart-slot w-full h-full min-h-0 min-w-0">
       <ResponsiveContainer width="100%" height={240} minWidth={0}>
         <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />

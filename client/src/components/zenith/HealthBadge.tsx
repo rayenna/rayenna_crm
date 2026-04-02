@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  type TouchEvent,
+} from 'react'
 import { createPortal } from 'react-dom'
 import { computeDealHealth } from '../../utils/dealHealthScore'
 
@@ -8,9 +16,26 @@ type HealthBadgeProps = {
   showLabel?: boolean
 }
 
+/** True when device is suited to hover tooltips (laptop + mouse/trackpad). */
+function useHoverCapableForTooltip(): boolean {
+  const [ok, setOk] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return window.matchMedia('(hover: hover) and (pointer: fine)').matches
+  })
+  useEffect(() => {
+    const mq = window.matchMedia('(hover: hover) and (pointer: fine)')
+    const fn = () => setOk(mq.matches)
+    mq.addEventListener('change', fn)
+    return () => mq.removeEventListener('change', fn)
+  }, [])
+  return ok
+}
+
 const HealthBadge = ({ project, size = 'sm', showLabel = false }: HealthBadgeProps) => {
   const health = computeDealHealth(project)
-  const [hovered, setHovered] = useState(false)
+  const hoverCapable = useHoverCapableForTooltip()
+  const [mouseInside, setMouseInside] = useState(false)
+  const [tapOpen, setTapOpen] = useState(false)
   const anchorRef = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ left: number; top: number; place: 'above' | 'below' } | null>(null)
 
@@ -22,8 +47,36 @@ const HealthBadge = ({ project, size = 'sm', showLabel = false }: HealthBadgePro
   const tooltipHApprox = 260
   const gutter = 12
 
+  const showCard = hoverCapable ? mouseInside : tapOpen
+
+  const toggleTap = useCallback(
+    (e: MouseEvent | TouchEvent) => {
+      if (hoverCapable) return
+      e.preventDefault()
+      e.stopPropagation()
+      setTapOpen((v) => !v)
+    },
+    [hoverCapable],
+  )
+
+  useEffect(() => {
+    if (hoverCapable || !tapOpen) return
+    const close = (e: Event) => {
+      const el = anchorRef.current
+      const t = e.target
+      if (el && t instanceof Node && el.contains(t)) return
+      setTapOpen(false)
+    }
+    document.addEventListener('touchstart', close, { capture: true })
+    document.addEventListener('mousedown', close, { capture: true })
+    return () => {
+      document.removeEventListener('touchstart', close, { capture: true })
+      document.removeEventListener('mousedown', close, { capture: true })
+    }
+  }, [hoverCapable, tapOpen])
+
   const tooltipNode = useMemo(() => {
-    if (!health || !hovered || !pos) return null
+    if (!health || !showCard || !pos) return null
     return (
       <div
         style={{
@@ -152,10 +205,10 @@ const HealthBadge = ({ project, size = 'sm', showLabel = false }: HealthBadgePro
         />
       </div>
     )
-  }, [health, hovered, pos])
+  }, [health, showCard, pos])
 
   useEffect(() => {
-    if (!health || !hovered) {
+    if (!health || !showCard) {
       setPos(null)
       return
     }
@@ -179,22 +232,48 @@ const HealthBadge = ({ project, size = 'sm', showLabel = false }: HealthBadgePro
     }
 
     compute()
-    window.addEventListener('scroll', compute, true)
-    window.addEventListener('resize', compute)
-    return () => {
-      window.removeEventListener('scroll', compute, true)
-      window.removeEventListener('resize', compute)
+
+    let raf = 0
+    const scheduleReposition = () => {
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = 0
+        compute()
+      })
     }
-  }, [health, hovered])
+
+    window.addEventListener('scroll', scheduleReposition, { capture: true, passive: true })
+    window.addEventListener('resize', scheduleReposition)
+    return () => {
+      if (raf) cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', scheduleReposition, true)
+      window.removeEventListener('resize', scheduleReposition)
+    }
+  }, [health, showCard])
 
   if (!health) return null
 
   return (
     <div
       ref={anchorRef}
-      style={{ position: 'relative', display: 'inline-flex' }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      style={{ position: 'relative', display: 'inline-flex', touchAction: 'manipulation' }}
+      onMouseEnter={() => hoverCapable && setMouseInside(true)}
+      onMouseLeave={() => hoverCapable && setMouseInside(false)}
+      onClick={hoverCapable ? undefined : toggleTap}
+      onKeyDown={
+        hoverCapable
+          ? undefined
+          : (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setTapOpen((v) => !v)
+              }
+            }
+      }
+      role={hoverCapable ? undefined : 'button'}
+      tabIndex={hoverCapable ? undefined : 0}
+      aria-expanded={hoverCapable ? undefined : tapOpen}
+      aria-label={hoverCapable ? undefined : 'Deal health, tap for details'}
     >
       <div
         style={{
@@ -205,9 +284,10 @@ const HealthBadge = ({ project, size = 'sm', showLabel = false }: HealthBadgePro
           border: `1px solid ${health.color}40`,
           borderRadius: '20px',
           padding: isSmall ? '2px 8px' : '3px 10px',
-          cursor: 'default',
+          cursor: hoverCapable ? 'default' : 'pointer',
           transition: 'all 0.2s ease',
-          ...(hovered && {
+          pointerEvents: 'auto',
+          ...(showCard && {
             background: `${health.color}28`,
             border: `1px solid ${health.color}70`,
           }),

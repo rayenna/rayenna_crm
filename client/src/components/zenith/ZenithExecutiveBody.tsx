@@ -702,8 +702,8 @@ export default function ZenithExecutiveBody({
           <ChartPanel
             title="Loans by bank"
             showExploreHint
-            className="flex h-full min-h-[320px] flex-col overflow-hidden lg:min-h-0"
-            contentClassName="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+            className="flex h-full min-h-[320px] flex-col overflow-visible lg:min-h-0 lg:overflow-hidden"
+            contentClassName="flex min-h-0 min-w-0 flex-1 flex-col overflow-visible lg:overflow-hidden"
           >
             <div className="h-[260px] w-full shrink-0 lg:h-0 lg:min-h-[360px] lg:flex-1">
               <ResponsiveContainer width="100%" height="100%" minWidth={0}>

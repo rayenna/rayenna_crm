@@ -239,9 +239,7 @@ function SalesPipelineBlock({
                   return (
                     <tr key={r.projectId} className="border-b border-white/[0.06] hover:bg-white/[0.04]">
                       <td className="py-2.5 pr-3">
-                        <Link to={`/projects/${r.projectId}`} className="text-white font-medium hover:text-[#f5a623]">
-                          {r.customerName}
-                        </Link>
+                        <span className="text-white font-medium">{r.customerName}</span>
                       </td>
                       <td className="py-2.5 pr-3 text-white/80">{r.stage}</td>
                       <td className="py-2.5 pr-3 text-right tabular-nums text-white/90">
@@ -444,7 +442,7 @@ function FinanceRadarBlock({
               Collected vs outstanding
             </h4>
             <div
-              className="w-full min-w-0 flex-1 mx-auto max-w-[min(100%,420px)] lg:max-w-none"
+              className="zenith-chart-slot w-full min-w-0 flex-1 mx-auto max-w-[min(100%,420px)] lg:max-w-none"
               style={{ height: ZENITH_DONUT_CHART_HEIGHT_PX }}
             >
               {pieData.length === 0 ? (

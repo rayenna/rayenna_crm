@@ -1,5 +1,4 @@
 import type { CSSProperties } from 'react'
-import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Target, CheckCircle2 } from 'lucide-react'
 import { UserRole } from '../../types'
@@ -154,10 +153,10 @@ export default function HitList({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.06, duration: 0.3 }}
               >
-                <Link
-                  to={`/projects/${project.id}`}
-                  className="group border-b border-white/[0.06] last:border-b-0 transition-colors duration-200 ease-out hover:bg-white/[0.04] cursor-pointer block no-underline text-inherit focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F5A623]/50 focus-visible:ring-inset px-5 py-3.5 md:py-2 md:px-3"
-                  aria-label={`Open project: ${project.customerName}`}
+                <div
+                  className="group border-b border-white/[0.06] last:border-b-0 transition-colors duration-200 ease-out hover:bg-white/[0.04] px-5 py-3.5 md:py-2 md:px-3"
+                  role="group"
+                  aria-label={project.customerName}
                 >
                 {/* Desktop / tablet — compact widget row */}
                 <div className="hidden md:flex md:items-center md:gap-2">
@@ -300,7 +299,7 @@ export default function HitList({
                     Open quick actions →
                   </button>
                 </div>
-                </Link>
+                </div>
               </motion.div>
             )
           })}

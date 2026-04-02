@@ -53,7 +53,7 @@ export default function SegmentDonut({
           </span>
         ) : null}
       </div>
-      <div className="w-full min-w-0" style={{ height: ZENITH_DONUT_CHART_HEIGHT_PX }}>
+      <div className="zenith-chart-slot w-full min-w-0" style={{ height: ZENITH_DONUT_CHART_HEIGHT_PX }}>
         {chartData.length === 0 ? (
           <p className="text-sm text-white/40 text-center flex items-center justify-center h-full">
             No data for this period

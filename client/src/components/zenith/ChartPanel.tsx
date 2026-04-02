@@ -40,8 +40,8 @@ export default function ChartPanel({
       <div
         className={
           contentClassName.trim()
-            ? `flex-1 min-w-0 ${contentClassName}`.trim()
-            : 'flex-1 min-h-[220px] min-w-0'
+            ? `zenith-chart-slot flex-1 min-w-0 ${contentClassName}`.trim()
+            : 'zenith-chart-slot flex-1 min-h-[220px] min-w-0'
         }
       >
         {children}
