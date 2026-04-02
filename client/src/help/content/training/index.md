@@ -265,13 +265,13 @@ By the end of this session, participants should be able to:
 ## Operations
 
 - KPIs emphasise **installation**, **completed**, **subsidy**, **confirmed revenue** (definitions respect filters).
-- **Your Focus:** **Installation pulse** — under-installation projects, kW, salesperson, dates, progress; **Overdue only** filter; sortable columns.
+- **Your Focus — Installation pulse:** Under-installation projects with **kW**, **Sales person**, **Start** / **Expected**, a **Progress** bar (%, with overdue / not-started labels when relevant), **Last note** (medium+ screens), and **+ Log update** (opens Quick Actions with the note field ready). **Overdue only** narrows the list; column headers sort the loaded rows. On phones, **scroll the table sideways**; **Last note** is hidden on very narrow widths — use project detail or **Log update** for remarks.
 - Charts: stage views, FY revenue/profit, segments, sales-team style views as shown.
 
 ## Finance
 
 - KPIs: **Total revenue**, **Amount received**, **Outstanding**, **Total profit**, **Availing loan** count (filter-scoped).
-- **Your Focus:** **Payment radar** — outstanding, average collection days, subsidy pending; **Top overdue** table (sortable, filter by customer); **Collected vs outstanding vs subsidy** donut (same **height and legend style** as segment donuts for readability).
+- **Your Focus — Payment radar:** Three KPI tiles (**Total outstanding**, **Avg collection days**, **Subsidy pending**); **Payment ageing** buckets (0–30 … 90+ days) you can **click** to filter **Top overdue**; table sort by customer, amount, days; **Filter customer…** and **Reset filters**. **Remind** on a row opens **WhatsApp / Email** helpers with prefilled text. Beside the table (wide layout): **Collected vs outstanding** donut, **Collections — last 6 months** bars, and a **vs last month** collections trend line.
 - Charts: FY, segments, profitability, lead-source revenue, loans by bank as applicable.
 
 ## Management and Admin

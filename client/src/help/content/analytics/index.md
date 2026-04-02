@@ -149,7 +149,7 @@ Data refreshes when you load the Dashboard or change filters. If numbers look st
 
 > **Zenith** is Rayenna CRM’s **command center analytics** experience: the same trusted numbers as the classic **Dashboard**, presented full-screen with a dark theme, **AI Insights**, role-specific **Your Focus** panels, and **clickable charts** that open a **Quick Actions** drawer so you can jump straight to projects. Use the **sticky command bar** for **Financial Year**, **Quarter**, and **Month** — KPIs, the funnel, **Revenue forecast**, **Explore the landscape** charts, and project lists loaded for drill-down **all follow those filters**. Data is loaded from the server for your session (not “this browser only”), so what you see stays aligned with CRM after login. Zenith is documented here under **Analytics and Reports** (no separate top-level Help topic).
 
-**In this section:** [Opening Zenith](#opening-zenith) · [Filters and reset](#filters-and-reset) · [AI Insights ticker](#ai-insights-ticker) · [KPI strip and YoY](#kpi-strip-and-year-on-year) · [Your Focus](#your-focus-role-specific) · [Executive](#executive-sales-management--admin) · [Operations (Zenith)](#operations-zenith) · [Finance (Zenith)](#finance-zenith) · [Revenue Forecast tile](#revenue-forecast-wide-kpi-tile) · [Revenue & profit by FY chart](#revenue-and-profit-by-fy-chart-zenith) · [Customer projects profitability](#customer-projects-profitability-zenith) · [Explore charts & drill-down](#explore-charts-and-drill-down-zenith) · [Quick Actions drawer](#quick-actions-drawer-zenith) · [Layout & Hit List](#layout-stability-and-hit-list-zenith) · [Charts overview](#charts-funnels-and-shortcuts) · [Help and tips](#help-and-tips-zenith)
+**In this section:** [Opening Zenith](#opening-zenith) · [Filters and reset](#filters-and-reset) · [AI Insights ticker](#ai-insights-ticker) · [KPI strip and YoY](#kpi-strip-and-year-on-year) · [Your Focus](#your-focus-role-specific) · [Payment radar](#payment-radar-finance) · [Installation pulse](#installation-pulse-operations) · [Executive](#executive-sales-management--admin) · [Operations (Zenith)](#operations-zenith) · [Finance (Zenith)](#finance-zenith) · [Revenue Forecast tile](#revenue-forecast-wide-kpi-tile) · [Revenue & profit by FY chart](#revenue-and-profit-by-fy-chart-zenith) · [Customer projects profitability](#customer-projects-profitability-zenith) · [Explore charts & drill-down](#explore-charts-and-drill-down-zenith) · [Quick Actions drawer](#quick-actions-drawer-zenith) · [Layout & Hit List](#layout-stability-and-hit-list-zenith) · [Charts overview](#charts-funnels-and-shortcuts) · [Help and tips](#help-and-tips-zenith)
 
 ### Opening Zenith
 
@@ -205,11 +205,35 @@ Between the **KPI strip** and the **funnel**, **Your Focus** surfaces actionable
 | Role | What you see |
 | :-- | :-- |
 | **Sales** | **Your pipeline today** — a compact table of **your** leads/deals (assigned to you): customer, stage, deal value, **last activity**, and a **Deal Health** badge (0–100). **Green / amber / red** styling by recency; a **Follow-up needed** count for the oldest band; **Log activity** opens a short remark modal (saved on the project). |
-| **Finance** | **Payment radar** — finance KPIs (e.g. outstanding, collection timing, subsidy pending), a sortable **Top overdue** table, and a small **collected vs outstanding vs subsidy** chart. |
-| **Operations** | **Installation pulse** — projects **under installation**: customer, kW, **sales person**, start / expected dates, progress, and quick stats (e.g. delayed count). Table headers can be sorted; use **Overdue only** to focus on delayed installs. |
+| **Finance** | **Payment radar** — see [Payment radar (Finance)](#payment-radar-finance) below. |
+| **Operations** | **Installation pulse** — see [Installation pulse (Operations)](#installation-pulse-operations) below. |
 | **Management / Admin** | **All** of the above blocks in one view (company-wide where applicable). |
 
 If there is nothing to show for the current filters, **Your Focus** may be hidden. Each block has a **subtle coloured left border** to distinguish Sales (gold-leaning), Finance (teal-leaning), and Operations (cool accent) content.
+
+#### Payment radar (Finance)
+
+**KPI strip (three tiles)** — **Total outstanding**, **Avg collection days** (average days from **order confirmation** to **last payment** among **settled** projects in scope — balance zero and amount received &gt; 0; helps benchmark how long full collection typically takes), and **Subsidy pending** (count of projects in **Submitted for subsidy**).
+
+**Payment ageing** — Four buckets (**0–30**, **31–60**, **61–90**, **90+** days overdue) show **project count**, **₹ outstanding** in that band, and a bar proportional to share of total outstanding. **Click a bucket** to filter the **Top overdue** table to rows whose days overdue fall in that band; click again (or **Reset ageing filter**) to clear. Colours escalate from neutral to amber, coral, and red for older debt.
+
+**Top overdue** — Sortable columns: **Customer** (name), **Amt** (outstanding), **Since** (reference date), **Days** (overdue). Use **Filter customer…** to narrow by name. **Reset filters** clears both customer text and ageing. Row **Remind** opens a small **Reminder** panel with **WhatsApp** and **Email** options using prefilled copy from the project’s outstanding amount and customer contact fields (opens your device’s apps or `wa.me` / `mailto:` — nothing is sent from Rayenna’s servers).
+
+**Right-hand column (wide layouts)** — **Collected vs outstanding** donut (teal / gold / violet for subsidy pending when present) and **Collections — last 6 months** stacked-style bars (collected vs outstanding per month). A short line under the chart compares **last month’s collected** to the **prior month** (up / down / steady).
+
+#### Installation pulse (Operations)
+
+**Summary** — **Avg install days** and **Delayed** count (installations past expected completion that are not yet marked complete).
+
+**Overdue only** — Toggles the table to rows flagged **overdue** (same rule as the red row tint and progress treatment).
+
+**Table** — **Customer** (with link to Project detail), **kW**, **Sales person** (assigned salesperson), **Start** and **Expected** dates, **Last note** (latest project remark, two-line clamp on medium+ widths), **Progress** (visual bar and % from timeline logic), and **+ Log update** (opens the **Quick Actions** drawer on that project with the **note** area focused so you can log activity without leaving Zenith).
+
+**Sorting** — Click **Customer**, **kW**, **Sales person**, **Start**, **Expected**, or **Progress** to sort; click again to reverse.
+
+**Narrow screens** — The table is **wider than the phone** by design: **scroll horizontally** in the installation region to see all columns. The **Last note** column is **hidden on small viewports** to keep the layout usable; open the project or use **+ Log update** for full context.
+
+**Footnote** — The block explains data sources: **Expected** prefers **expected commissioning** on the project, otherwise **installation completion**; **Start** uses installation start, then stage-entered or order-confirmation dates; **Progress** is driven by elapsed time to the target (or 100% when install-complete).
 
 #### Sorting and filtering inside Zenith tables
 

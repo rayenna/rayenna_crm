@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useModalEscape } from '../../contexts/ModalEscapeContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -7,8 +7,9 @@ import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import { Project, ProjectStatus, UserRole } from '../../types'
 import { useAuth } from '../../contexts/AuthContext'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
-import type { ZenithListAmountMode } from '../../hooks/useQuickAction'
+import type { ZenithAutoFocusSection, ZenithListAmountMode } from '../../hooks/useQuickAction'
 import DrawerProjectList from './DrawerProjectList'
+import { ZENITH_CHARTS_TOUCH_RESET_EVENT, ZENITH_FLOATING_DISMISS_EVENT } from '../../utils/zenithEvents'
 
 const STATUS_ORDER: ProjectStatus[] = [
   ProjectStatus.LEAD,
@@ -100,6 +101,7 @@ export default function QuickActionDrawer({
   filterLabel = '',
   filteredProjects = [],
   listAmountMode = 'deal_value',
+  autoFocusSection = null,
 }: {
   isOpen: boolean
   projectId: string | null
@@ -108,6 +110,7 @@ export default function QuickActionDrawer({
   filterLabel?: string
   filteredProjects?: ZenithExplorerProject[]
   listAmountMode?: ZenithListAmountMode
+  autoFocusSection?: ZenithAutoFocusSection
 }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -123,6 +126,8 @@ export default function QuickActionDrawer({
   const [noteText, setNoteText] = useState('')
   const [valueInput, setValueInput] = useState<string>('')
   const [dateInput, setDateInput] = useState<string>('')
+  /** Narrow viewport: lighter motion + no backdrop blur (Android GPU / stutter). */
+  const [narrowViewport, setNarrowViewport] = useState(false)
 
   const effectiveProjectId = listMode
     ? listSubview === 'single' && listPickId
@@ -162,6 +167,32 @@ export default function QuickActionDrawer({
     setToast(null)
   }, [isOpen])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(max-width: 1023px)')
+    const sync = () => setNarrowViewport(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
+  const wasOpenRef = useRef(false)
+  useEffect(() => {
+    if (!isOpen) return
+    document.body.classList.add('zenith-drawer-open')
+    window.dispatchEvent(new CustomEvent(ZENITH_FLOATING_DISMISS_EVENT))
+    return () => {
+      document.body.classList.remove('zenith-drawer-open')
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (wasOpenRef.current && !isOpen) {
+      window.dispatchEvent(new CustomEvent(ZENITH_CHARTS_TOUCH_RESET_EVENT))
+    }
+    wasOpenRef.current = isOpen
+  }, [isOpen])
+
   const closeAndClear = useCallback(() => {
     onClose()
     setNoteText('')
@@ -174,6 +205,18 @@ export default function QuickActionDrawer({
     setValueInput(project.projectCost != null ? String(project.projectCost) : '')
     setDateInput(toYmd(project.expectedCommissioningDate))
   }, [project])
+
+  useEffect(() => {
+    if (!isOpen || autoFocusSection !== 'note' || !effectiveProjectId || !project) return
+    const t = window.setTimeout(() => {
+      const textarea = document.getElementById('quick-action-note-textarea') as HTMLTextAreaElement | null
+      if (textarea) {
+        textarea.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        textarea.focus()
+      }
+    }, 350)
+    return () => window.clearTimeout(t)
+  }, [isOpen, autoFocusSection, effectiveProjectId, project?.id])
 
   useEffect(() => {
     if (!toast) return
@@ -246,8 +289,8 @@ export default function QuickActionDrawer({
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: isOpen ? 1 : 0 }}
-        transition={{ duration: 0.25, ease: 'easeOut' }}
-        className="fixed inset-0 z-[900] bg-black/50 backdrop-blur-sm"
+        transition={{ duration: narrowViewport ? 0.18 : 0.25, ease: 'easeOut' }}
+        className="fixed inset-0 z-[6000] bg-black/60 backdrop-blur-none lg:backdrop-blur-sm lg:bg-black/50"
         style={{ pointerEvents: isOpen ? 'auto' : 'none' }}
         onClick={onClose}
         aria-hidden={!isOpen}
@@ -256,11 +299,17 @@ export default function QuickActionDrawer({
       <motion.div
         initial={{ x: '100%' }}
         animate={{ x: isOpen ? 0 : '100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed top-0 right-0 z-[901] h-[100dvh] w-[420px] max-w-[100vw] bg-[#0F0F1A] border-l border-white/10 shadow-[-20px_0_60px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden"
+        transition={
+          narrowViewport
+            ? { type: 'tween', duration: 0.2, ease: [0.22, 1, 0.36, 1] }
+            : { type: 'spring', damping: 30, stiffness: 300 }
+        }
+        className="fixed top-0 right-0 z-[6001] h-[100dvh] w-full max-w-full lg:w-[420px] lg:max-w-[420px] bg-[#0F0F1A] border-l border-white/10 lg:shadow-[-20px_0_60px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden"
         style={{
           fontFamily: 'DM Sans, sans-serif',
           paddingBottom: 'max(56px, env(safe-area-inset-bottom, 0px))',
+          paddingRight: 'env(safe-area-inset-right, 0px)',
+          ...(narrowViewport ? { willChange: 'transform' as const } : {}),
         }}
         role="dialog"
         aria-label="Quick actions"
@@ -466,6 +515,7 @@ export default function QuickActionDrawer({
                       Log activity
                     </div>
                     <textarea
+                      id="quick-action-note-textarea"
                       value={noteText}
                       onChange={(e) => setNoteText(e.target.value.slice(0, 500))}
                       rows={3}
@@ -648,7 +698,7 @@ export default function QuickActionDrawer({
             color: '#00D4B4',
             fontFamily: 'DM Sans, sans-serif',
             fontSize: 14,
-            zIndex: 1000,
+            zIndex: 6100,
           }}
           role="status"
           aria-live="polite"

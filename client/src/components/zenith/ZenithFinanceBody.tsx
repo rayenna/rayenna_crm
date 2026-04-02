@@ -26,6 +26,7 @@ import ZenithRevenueProfitFyChart from './ZenithRevenueProfitFyChart'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
 import { getLoanBankBarColor } from '../dashboard/loanBankChartColors'
+import ZenithChartTouchReset from './ZenithChartTouchReset'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
 
@@ -132,7 +133,7 @@ export default function ZenithFinanceBody({
   })()
 
   return (
-    <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-6 space-y-8 pb-16">
+    <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-6 space-y-8 pb-24 max-lg:pb-32">
       <div
         id="zenith-kpis"
         className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pb-2 scroll-mt-28"
@@ -161,30 +162,38 @@ export default function ZenithFinanceBody({
         >
           <div id="zenith-lead-source" className="min-w-0 scroll-mt-24 lg:scroll-mt-0">
             <ChartPanel title="Revenue by lead source">
-              <ResponsiveContainer width="100%" height={ZENITH_CHART_H} minWidth={0}>
-                <BarChart layout="vertical" data={leadChart} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                  <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
-                  <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 9 }} />
-                  <Tooltip formatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} {...tt} />
-                  <Bar dataKey="revenue" fill="#f5a623" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <ZenithChartTouchReset>
+                {(rk) => (
+                  <ResponsiveContainer key={rk} width="100%" height={ZENITH_CHART_H} minWidth={0}>
+                    <BarChart layout="vertical" data={leadChart} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                      <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
+                      <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 9 }} />
+                      <Tooltip formatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} {...tt} />
+                      <Bar dataKey="revenue" fill="#f5a623" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </ZenithChartTouchReset>
             </ChartPanel>
           </div>
           <div id="zenith-sales-team" className="min-w-0 scroll-mt-24 lg:scroll-mt-0">
             <ChartPanel title="Revenue vs pipeline by sales team">
-              <ResponsiveContainer width="100%" height={ZENITH_CHART_H} minWidth={0}>
-                <BarChart layout="vertical" data={salesMerge} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                  <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
-                  <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 9 }} />
-                  <Tooltip formatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} {...tt} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="revenue" name="Revenue" fill="#f5a623" />
-                  <Bar dataKey="pipeline" name="Pipeline" fill="#a78bfa" />
-                </BarChart>
-              </ResponsiveContainer>
+              <ZenithChartTouchReset>
+                {(rk) => (
+                  <ResponsiveContainer key={rk} width="100%" height={ZENITH_CHART_H} minWidth={0}>
+                    <BarChart layout="vertical" data={salesMerge} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                      <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
+                      <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 9 }} />
+                      <Tooltip formatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} {...tt} />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      <Bar dataKey="revenue" name="Revenue" fill="#f5a623" />
+                      <Bar dataKey="pipeline" name="Pipeline" fill="#a78bfa" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </ZenithChartTouchReset>
             </ChartPanel>
           </div>
           <div className="min-w-0">
@@ -194,19 +203,23 @@ export default function ZenithFinanceBody({
           </div>
           <div id="zenith-loans" className="min-w-0 scroll-mt-24 lg:scroll-mt-0">
             <ChartPanel title="Loans by bank">
-              <ResponsiveContainer width="100%" height={ZENITH_CHART_H} minWidth={0}>
-                <BarChart layout="vertical" data={loans} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                  <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
-                  <YAxis dataKey="bankLabel" type="category" width={100} tick={{ fontSize: 9 }} />
-                  <Tooltip {...tt} />
-                  <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                    {loans.map((row, i) => (
-                      <Cell key={row.bankLabel ?? i} fill={getLoanBankBarColor(row.bankLabel, i)} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <ZenithChartTouchReset>
+                {(rk) => (
+                  <ResponsiveContainer key={rk} width="100%" height={ZENITH_CHART_H} minWidth={0}>
+                    <BarChart layout="vertical" data={loans} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                      <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
+                      <YAxis dataKey="bankLabel" type="category" width={100} tick={{ fontSize: 9 }} />
+                      <Tooltip {...tt} />
+                      <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                        {loans.map((row, i) => (
+                          <Cell key={row.bankLabel ?? i} fill={getLoanBankBarColor(row.bankLabel, i)} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </ZenithChartTouchReset>
             </ChartPanel>
           </div>
         </div>

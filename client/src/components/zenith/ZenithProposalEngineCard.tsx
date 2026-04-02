@@ -50,7 +50,7 @@ export default function ZenithProposalEngineCard({
 
   if (isLoading) {
     return (
-      <div className="zenith-glass rounded-xl overflow-hidden min-h-[180px]">
+      <div className="zenith-glass rounded-xl overflow-visible lg:overflow-hidden min-h-[180px]">
         <div className="h-10 bg-gradient-to-r from-cyan-600/40 to-indigo-600/50 animate-pulse" />
         <div className="p-3 space-y-2">
           <div className="h-9 rounded-lg zenith-skeleton" />
@@ -83,7 +83,7 @@ export default function ZenithProposalEngineCard({
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="zenith-glass rounded-xl overflow-hidden flex flex-col min-h-0"
+      className="zenith-glass rounded-xl overflow-visible lg:overflow-hidden flex flex-col min-h-0"
     >
       <div className="shrink-0 px-3 py-2 bg-gradient-to-r from-cyan-600/25 via-indigo-600/30 to-[#0a0a0f] border-b border-white/[0.06]">
         <h3 className="zenith-display text-sm font-semibold text-white tracking-tight">Proposal Engine</h3>

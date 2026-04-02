@@ -11,6 +11,7 @@ import {
   Bar,
   Scatter,
 } from 'recharts'
+import ZenithChartTouchReset from './ZenithChartTouchReset'
 
 export type ZenithFyRevenueProfitPoint = { fy: string; revenue: number; profit: number }
 
@@ -204,8 +205,10 @@ export default function ZenithRevenueProfitFyChart({
 
   return (
     <div className="zenith-fy-revenue-profit-chart zenith-chart-slot w-full h-full min-h-0 min-w-0">
-      <ResponsiveContainer width="100%" height={240} minWidth={0}>
-        <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+      <ZenithChartTouchReset>
+        {(rk) => (
+          <ResponsiveContainer key={rk} width="100%" height={240} minWidth={0}>
+            <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
           <XAxis dataKey="fy" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
           <YAxis tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
@@ -247,8 +250,10 @@ export default function ZenithRevenueProfitFyChart({
             tooltipType="none"
             shape={revenueScatterShape}
           />
-        </ComposedChart>
-      </ResponsiveContainer>
+            </ComposedChart>
+          </ResponsiveContainer>
+        )}
+      </ZenithChartTouchReset>
     </div>
   )
 }

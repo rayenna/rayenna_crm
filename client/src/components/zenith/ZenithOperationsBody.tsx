@@ -17,12 +17,14 @@ import { getProjectStatusColor } from '../dashboard/projectStatusColors'
 import { buildOperationsZenithKpis } from './zenithKpi'
 import { buildZenithOperationsExecutionFunnel } from './zenithFunnel'
 import type { ZenithDateFilter } from './zenithTypes'
+import type { ZenithQuickActionHandle } from '../../hooks/useQuickAction'
 import KPICard from './KPICard'
 import DealFlowFunnel from './DealFlowFunnel'
 import ZenithYourFocus from './ZenithYourFocus'
 import ChartPanel from './ChartPanel'
 import SegmentDonut from './SegmentDonut'
 import ZenithRevenueProfitFyChart from './ZenithRevenueProfitFyChart'
+import ZenithChartTouchReset from './ZenithChartTouchReset'
 import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
@@ -43,10 +45,12 @@ export default function ZenithOperationsBody({
   data,
   isLoading,
   dateFilter,
+  quickAction,
 }: {
   data: Record<string, unknown>
   isLoading: boolean
   dateFilter: ZenithDateFilter
+  quickAction: ZenithQuickActionHandle
 }) {
   const { user } = useAuth()
   const effFYs = dateFilter.selectedFYs
@@ -115,7 +119,7 @@ export default function ZenithOperationsBody({
   })()
 
   return (
-    <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-6 space-y-8 pb-16">
+    <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-6 space-y-8 pb-24 max-lg:pb-32">
       <div
         id="zenith-kpis"
         className="grid w-full grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 pb-2 scroll-mt-28"
@@ -127,7 +131,12 @@ export default function ZenithOperationsBody({
         ))}
       </div>
       <div id="zenith-focus" className="scroll-mt-28">
-        <ZenithYourFocus role={user!.role} dateFilter={dateFilter} zenithMainLoading={isLoading} />
+        <ZenithYourFocus
+          role={user!.role}
+          dateFilter={dateFilter}
+          zenithMainLoading={isLoading}
+          onOpenDrawer={(p, section) => quickAction.openDrawer(p, section ?? null)}
+        />
       </div>
       <div id="zenith-funnel" className="scroll-mt-28">
         <DealFlowFunnel
@@ -139,33 +148,41 @@ export default function ZenithOperationsBody({
       </div>
       <div id="zenith-charts-row-1" className="grid grid-cols-1 xl:grid-cols-2 gap-4 scroll-mt-28">
         <ChartPanel title="Projects by stage">
-          <ResponsiveContainer width="100%" height={280} minWidth={0}>
-            <BarChart layout="vertical" data={projectsByStatus} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
-              <YAxis type="category" dataKey="statusLabel" width={118} tick={{ fontSize: 10 }} />
-              <Tooltip {...chartTooltip} />
-              <Bar dataKey="count" radius={[0, 6, 6, 0]}>
-                {projectsByStatus.map((_, i) => (
-                  <Cell key={i} fill={getProjectStatusColor(projectsByStatus[i]!.status, i)} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <ZenithChartTouchReset>
+            {(rk) => (
+              <ResponsiveContainer key={rk} width="100%" height={280} minWidth={0}>
+                <BarChart layout="vertical" data={projectsByStatus} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                  <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
+                  <YAxis type="category" dataKey="statusLabel" width={118} tick={{ fontSize: 10 }} />
+                  <Tooltip {...chartTooltip} />
+                  <Bar dataKey="count" radius={[0, 6, 6, 0]}>
+                    {projectsByStatus.map((_, i) => (
+                      <Cell key={i} fill={getProjectStatusColor(projectsByStatus[i]!.status, i)} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </ZenithChartTouchReset>
         </ChartPanel>
         <div id="zenith-sales-team" className="scroll-mt-28 min-w-0">
           <ChartPanel title="Revenue vs pipeline by sales team">
-            <ResponsiveContainer width="100%" height={280} minWidth={0}>
-              <BarChart layout="vertical" data={salesMerge} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
-                <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 9 }} />
-                <Tooltip formatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} {...chartTooltip} />
-                <Legend wrapperStyle={{ fontSize: 11, color: '#fff' }} />
-                <Bar dataKey="revenue" fill="#f5a623" name="Revenue" />
-                <Bar dataKey="pipeline" fill="#00d4b4" name="Pipeline" />
-              </BarChart>
-            </ResponsiveContainer>
+            <ZenithChartTouchReset>
+              {(rk) => (
+                <ResponsiveContainer key={rk} width="100%" height={280} minWidth={0}>
+                  <BarChart layout="vertical" data={salesMerge} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                    <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
+                    <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 9 }} />
+                    <Tooltip formatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} {...chartTooltip} />
+                    <Legend wrapperStyle={{ fontSize: 11, color: '#fff' }} />
+                    <Bar dataKey="revenue" fill="#f5a623" name="Revenue" />
+                    <Bar dataKey="pipeline" fill="#00d4b4" name="Pipeline" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </ZenithChartTouchReset>
           </ChartPanel>
         </div>
       </div>

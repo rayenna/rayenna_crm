@@ -36,6 +36,7 @@ import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../..
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
 import ForecastKPI from './ForecastKPI'
+import ZenithChartTouchReset from './ZenithChartTouchReset'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
 
@@ -349,7 +350,7 @@ export default function ZenithExecutiveBody({
   }[]
 
   return (
-    <div className="zenith-exec-main mx-auto px-3 sm:px-5 py-5 lg:py-6 pb-14 space-y-5 lg:space-y-6">
+    <div className="zenith-exec-main mx-auto px-3 sm:px-5 py-5 lg:py-6 pb-24 max-lg:pb-36 space-y-5 lg:space-y-6">
       {showHitList ? (
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-4 xl:gap-5 scroll-mt-28">
           {focusLoading ? (
@@ -447,7 +448,7 @@ export default function ZenithExecutiveBody({
             role={role}
             dateFilter={dateFilter}
             zenithMainLoading={isLoading}
-            onOpenDrawer={(p) => quickAction.openDrawer(p)}
+            onOpenDrawer={(p, section) => quickAction.openDrawer(p, section ?? null)}
           />
         </div>
       </section>
@@ -474,47 +475,51 @@ export default function ZenithExecutiveBody({
         >
           <div className="min-w-0">
             <ChartPanel title="Projects by stage" showExploreHint>
-              <ResponsiveContainer width="100%" height={ZENITH_CHART_H} minWidth={0}>
-                <BarChart
-                  layout="vertical"
-                  data={projectsByStatus}
-                  margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                  <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
-                  <YAxis
-                    type="category"
-                    dataKey="statusLabel"
-                    width={118}
-                    tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
-                  />
-                  <Tooltip content={ExploreCountTooltip} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                  <Bar
-                    dataKey="count"
-                    radius={[0, 6, 6, 0]}
-                    animationDuration={900}
-                    cursor="pointer"
-                    onClick={(_row: unknown, index: number) => {
-                      const row = projectsByStatus[index]
-                      if (row?.statusLabel) drill('stage', row.statusLabel)
-                    }}
-                  >
-                    {projectsByStatus.map((_, i) => (
-                      <Cell
-                        key={i}
-                        fill={getProjectStatusColor(projectsByStatus[i]!.status, i)}
-                        style={{ transition: 'filter 0.15s' }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.filter = 'brightness(1.3)'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.filter = 'brightness(1)'
-                        }}
+              <ZenithChartTouchReset>
+                {(rk) => (
+                  <ResponsiveContainer key={rk} width="100%" height={ZENITH_CHART_H} minWidth={0}>
+                    <BarChart
+                      layout="vertical"
+                      data={projectsByStatus}
+                      margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                      <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
+                      <YAxis
+                        type="category"
+                        dataKey="statusLabel"
+                        width={118}
+                        tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
                       />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+                      <Tooltip content={ExploreCountTooltip} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                      <Bar
+                        dataKey="count"
+                        radius={[0, 6, 6, 0]}
+                        animationDuration={900}
+                        cursor="pointer"
+                        onClick={(_row: unknown, index: number) => {
+                          const row = projectsByStatus[index]
+                          if (row?.statusLabel) drill('stage', row.statusLabel)
+                        }}
+                      >
+                        {projectsByStatus.map((_, i) => (
+                          <Cell
+                            key={i}
+                            fill={getProjectStatusColor(projectsByStatus[i]!.status, i)}
+                            style={{ transition: 'filter 0.15s' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.filter = 'brightness(1.3)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.filter = 'brightness(1)'
+                            }}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </ZenithChartTouchReset>
             </ChartPanel>
           </div>
 
@@ -533,141 +538,149 @@ export default function ZenithExecutiveBody({
             <>
               <div id="zenith-lead-source" className="min-w-0 scroll-mt-24 lg:scroll-mt-0">
                 <ChartPanel title="Revenue vs pipeline by lead source" showExploreHint>
-                  <ResponsiveContainer width="100%" height={ZENITH_CHART_H} minWidth={0}>
-                    <BarChart
-                      layout="vertical"
-                      data={leadMerge}
-                      margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                      <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
-                      <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 9 }} />
-                      <Tooltip
-                        shared={false}
-                        content={ExploreInrTooltip}
-                        cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                      />
-                      <Legend />
-                      <Bar
-                        dataKey="revenue"
-                        name="Revenue"
-                        radius={[0, 4, 4, 0]}
-                        cursor="pointer"
-                        onClick={(_row: unknown, index: number) => {
-                          const row = leadMerge[index]
-                          if (row?.name) drill('lead_source', row.name, { leadSourceMetric: 'revenue' })
-                        }}
-                      >
-                        {leadMerge.map((_, i) => (
-                          <Cell
-                            key={`r-${i}`}
-                            fill="#f5a623"
-                            style={{ transition: 'filter 0.15s' }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.filter = 'brightness(1.3)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.filter = 'brightness(1)'
-                            }}
+                  <ZenithChartTouchReset>
+                    {(rk) => (
+                      <ResponsiveContainer key={rk} width="100%" height={ZENITH_CHART_H} minWidth={0}>
+                        <BarChart
+                          layout="vertical"
+                          data={leadMerge}
+                          margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                          <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
+                          <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 9 }} />
+                          <Tooltip
+                            shared={false}
+                            content={ExploreInrTooltip}
+                            cursor={{ fill: 'rgba(255,255,255,0.04)' }}
                           />
-                        ))}
-                      </Bar>
-                      <Bar
-                        dataKey="pipeline"
-                        name="Pipeline"
-                        radius={[0, 4, 4, 0]}
-                        cursor="pointer"
-                        onClick={(_row: unknown, index: number) => {
-                          const row = leadMerge[index]
-                          if (row?.name) drill('lead_source', row.name, { leadSourceMetric: 'pipeline' })
-                        }}
-                      >
-                        {leadMerge.map((_, i) => (
-                          <Cell
-                            key={`p-${i}`}
-                            fill="#00d4b4"
-                            style={{ transition: 'filter 0.15s' }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.filter = 'brightness(1.3)'
+                          <Legend />
+                          <Bar
+                            dataKey="revenue"
+                            name="Revenue"
+                            radius={[0, 4, 4, 0]}
+                            cursor="pointer"
+                            onClick={(_row: unknown, index: number) => {
+                              const row = leadMerge[index]
+                              if (row?.name) drill('lead_source', row.name, { leadSourceMetric: 'revenue' })
                             }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.filter = 'brightness(1)'
+                          >
+                            {leadMerge.map((_, i) => (
+                              <Cell
+                                key={`r-${i}`}
+                                fill="#f5a623"
+                                style={{ transition: 'filter 0.15s' }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.filter = 'brightness(1.3)'
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.filter = 'brightness(1)'
+                                }}
+                              />
+                            ))}
+                          </Bar>
+                          <Bar
+                            dataKey="pipeline"
+                            name="Pipeline"
+                            radius={[0, 4, 4, 0]}
+                            cursor="pointer"
+                            onClick={(_row: unknown, index: number) => {
+                              const row = leadMerge[index]
+                              if (row?.name) drill('lead_source', row.name, { leadSourceMetric: 'pipeline' })
                             }}
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                          >
+                            {leadMerge.map((_, i) => (
+                              <Cell
+                                key={`p-${i}`}
+                                fill="#00d4b4"
+                                style={{ transition: 'filter 0.15s' }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.filter = 'brightness(1.3)'
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.filter = 'brightness(1)'
+                                }}
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
+                  </ZenithChartTouchReset>
                 </ChartPanel>
               </div>
 
               <div id="zenith-sales-team" className="min-w-0 scroll-mt-24 lg:scroll-mt-0">
                 <ChartPanel title="Revenue vs pipeline by sales team" showExploreHint>
-                  <ResponsiveContainer width="100%" height={ZENITH_CHART_H} minWidth={0}>
-                    <BarChart
-                      layout="vertical"
-                      data={salesMerge}
-                      margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                      <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
-                      <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 9 }} />
-                      <Tooltip
-                        shared={false}
-                        content={ExploreInrTooltip}
-                        cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                      />
-                      <Legend />
-                      <Bar
-                        dataKey="revenue"
-                        name="Revenue"
-                        radius={[0, 4, 4, 0]}
-                        cursor="pointer"
-                        onClick={(_row: unknown, index: number) => {
-                          const row = salesMerge[index]
-                          if (row?.name) drill('assigned_to', row.name, { salesTeamMetric: 'revenue' })
-                        }}
-                      >
-                        {salesMerge.map((_, i) => (
-                          <Cell
-                            key={`sr-${i}`}
-                            fill="#f5a623"
-                            style={{ transition: 'filter 0.15s' }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.filter = 'brightness(1.3)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.filter = 'brightness(1)'
-                            }}
+                  <ZenithChartTouchReset>
+                    {(rk) => (
+                      <ResponsiveContainer key={rk} width="100%" height={ZENITH_CHART_H} minWidth={0}>
+                        <BarChart
+                          layout="vertical"
+                          data={salesMerge}
+                          margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                          <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
+                          <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 9 }} />
+                          <Tooltip
+                            shared={false}
+                            content={ExploreInrTooltip}
+                            cursor={{ fill: 'rgba(255,255,255,0.04)' }}
                           />
-                        ))}
-                      </Bar>
-                      <Bar
-                        dataKey="pipeline"
-                        name="Pipeline"
-                        radius={[0, 4, 4, 0]}
-                        cursor="pointer"
-                        onClick={(_row: unknown, index: number) => {
-                          const row = salesMerge[index]
-                          if (row?.name) drill('assigned_to', row.name, { salesTeamMetric: 'pipeline' })
-                        }}
-                      >
-                        {salesMerge.map((_, i) => (
-                          <Cell
-                            key={`sp-${i}`}
-                            fill="#a78bfa"
-                            style={{ transition: 'filter 0.15s' }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.filter = 'brightness(1.3)'
+                          <Legend />
+                          <Bar
+                            dataKey="revenue"
+                            name="Revenue"
+                            radius={[0, 4, 4, 0]}
+                            cursor="pointer"
+                            onClick={(_row: unknown, index: number) => {
+                              const row = salesMerge[index]
+                              if (row?.name) drill('assigned_to', row.name, { salesTeamMetric: 'revenue' })
                             }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.filter = 'brightness(1)'
+                          >
+                            {salesMerge.map((_, i) => (
+                              <Cell
+                                key={`sr-${i}`}
+                                fill="#f5a623"
+                                style={{ transition: 'filter 0.15s' }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.filter = 'brightness(1.3)'
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.filter = 'brightness(1)'
+                                }}
+                              />
+                            ))}
+                          </Bar>
+                          <Bar
+                            dataKey="pipeline"
+                            name="Pipeline"
+                            radius={[0, 4, 4, 0]}
+                            cursor="pointer"
+                            onClick={(_row: unknown, index: number) => {
+                              const row = salesMerge[index]
+                              if (row?.name) drill('assigned_to', row.name, { salesTeamMetric: 'pipeline' })
                             }}
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                          >
+                            {salesMerge.map((_, i) => (
+                              <Cell
+                                key={`sp-${i}`}
+                                fill="#a78bfa"
+                                style={{ transition: 'filter 0.15s' }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.filter = 'brightness(1.3)'
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.filter = 'brightness(1)'
+                                }}
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
+                  </ZenithChartTouchReset>
                 </ChartPanel>
               </div>
             </>
@@ -706,42 +719,46 @@ export default function ZenithExecutiveBody({
             contentClassName="flex min-h-0 min-w-0 flex-1 flex-col overflow-visible lg:overflow-hidden"
           >
             <div className="h-[260px] w-full shrink-0 lg:h-0 lg:min-h-[360px] lg:flex-1">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                <BarChart
-                  layout="vertical"
-                  data={loans}
-                  margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                  <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
-                  <YAxis dataKey="bankLabel" type="category" width={100} tick={{ fontSize: 9 }} />
-                  <Tooltip content={ExploreCountTooltip} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                  <Bar
-                    dataKey="count"
-                    radius={[0, 4, 4, 0]}
-                    animationDuration={800}
-                    cursor="pointer"
-                    onClick={(_row: unknown, index: number) => {
-                      const row = loans[index]
-                      if (row?.bankLabel) drill('loan_bank', row.bankLabel)
-                    }}
-                  >
-                    {loans.map((row, i) => (
-                      <Cell
-                        key={row.bankLabel ?? i}
-                        fill={getLoanBankBarColor(row.bankLabel, i)}
-                        style={{ transition: 'filter 0.15s' }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.filter = 'brightness(1.3)'
+              <ZenithChartTouchReset className="h-full w-full min-w-0">
+                {(rk) => (
+                  <ResponsiveContainer key={rk} width="100%" height="100%" minWidth={0}>
+                    <BarChart
+                      layout="vertical"
+                      data={loans}
+                      margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                      <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
+                      <YAxis dataKey="bankLabel" type="category" width={100} tick={{ fontSize: 9 }} />
+                      <Tooltip content={ExploreCountTooltip} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                      <Bar
+                        dataKey="count"
+                        radius={[0, 4, 4, 0]}
+                        animationDuration={800}
+                        cursor="pointer"
+                        onClick={(_row: unknown, index: number) => {
+                          const row = loans[index]
+                          if (row?.bankLabel) drill('loan_bank', row.bankLabel)
                         }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.filter = 'brightness(1)'
-                        }}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+                      >
+                        {loans.map((row, i) => (
+                          <Cell
+                            key={row.bankLabel ?? i}
+                            fill={getLoanBankBarColor(row.bankLabel, i)}
+                            style={{ transition: 'filter 0.15s' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.filter = 'brightness(1.3)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.filter = 'brightness(1)'
+                            }}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </ZenithChartTouchReset>
             </div>
           </ChartPanel>
         </div>

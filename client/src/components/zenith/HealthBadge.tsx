@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { computeDealHealth } from '../../utils/dealHealthScore'
+import { ZENITH_FLOATING_DISMISS_EVENT } from '../../utils/zenithEvents'
 
 type HealthBadgeProps = {
   project: Record<string, unknown>
@@ -58,6 +59,15 @@ const HealthBadge = ({ project, size = 'sm', showLabel = false }: HealthBadgePro
     },
     [hoverCapable],
   )
+
+  useEffect(() => {
+    const dismissFloating = () => {
+      setTapOpen(false)
+      setMouseInside(false)
+    }
+    window.addEventListener(ZENITH_FLOATING_DISMISS_EVENT, dismissFloating)
+    return () => window.removeEventListener(ZENITH_FLOATING_DISMISS_EVENT, dismissFloating)
+  }, [])
 
   useEffect(() => {
     if (hoverCapable || !tapOpen) return

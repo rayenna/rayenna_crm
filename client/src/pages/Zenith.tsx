@@ -30,6 +30,8 @@ const Zenith = () => {
     user?.role === UserRole.MANAGEMENT ||
     user?.role === UserRole.ADMIN
 
+  const showQuickActionDrawer = execZenithRole || user?.role === UserRole.OPERATIONS
+
   const { data: dashboardData, error: fyError, isError: isFyError, refetch: refetchFYs } =
     useQuery({
       queryKey: ['dashboard', 'fys', user?.role],
@@ -126,7 +128,12 @@ const Zenith = () => {
         )
       case UserRole.OPERATIONS:
         return (
-          <ZenithOperationsBody data={data} isLoading={isLoading} dateFilter={dateFilter} />
+          <ZenithOperationsBody
+            data={data}
+            isLoading={isLoading}
+            dateFilter={dateFilter}
+            quickAction={quickAction}
+          />
         )
       case UserRole.FINANCE:
         return (
@@ -211,7 +218,7 @@ const Zenith = () => {
 
       {!isFyError && !isError ? body : null}
 
-      {execZenithRole ? (
+      {showQuickActionDrawer ? (
         <QuickActionDrawer
           isOpen={quickAction.isOpen}
           projectId={quickAction.project?.id ?? null}
@@ -220,6 +227,7 @@ const Zenith = () => {
           filterLabel={quickAction.filterLabel}
           filteredProjects={quickAction.filteredProjects}
           listAmountMode={quickAction.listAmountMode}
+          autoFocusSection={quickAction.autoFocusSection}
         />
       ) : null}
 

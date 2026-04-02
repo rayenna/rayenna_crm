@@ -2556,10 +2556,13 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
               id: true,
               balanceAmount: true,
               confirmationDate: true,
-              customer: { select: { customerName: true } },
+              totalAmountReceived: true,
+              projectCost: true,
+              projectStatus: true,
+              customer: { select: { customerName: true, phone: true, email: true } },
             },
             orderBy: { balanceAmount: 'desc' },
-            take: 5,
+            take: 800,
           }),
           prisma.project.aggregate({
             where: getRevenueWhere(where),
@@ -2595,14 +2598,81 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
           amount: p.balanceAmount ?? 0,
           dueSince: conf.toISOString(),
           daysOverdue,
+          customerPhone: p.customer?.phone?.trim() || null,
+          customerEmail: p.customer?.email?.trim() || null,
+          orderValue: p.projectCost ?? 0,
+          amountPaid: p.totalAmountReceived ?? 0,
+          projectStatus: p.projectStatus,
         };
       });
+
+      const ageingBucketsMap = {
+        '0-30': { id: '0-30' as const, label: '0–30d', count: 0, amount: 0 },
+        '31-60': { id: '31-60' as const, label: '31–60d', count: 0, amount: 0 },
+        '61-90': { id: '61-90' as const, label: '61–90d', count: 0, amount: 0 },
+        '90+': { id: '90+' as const, label: '90d+', count: 0, amount: 0 },
+      };
+      const nowMs = Date.now();
+      for (const p of overdueList) {
+        const conf = p.confirmationDate;
+        if (!conf) continue;
+        const days = Math.max(0, Math.floor((nowMs - conf.getTime()) / 86400000));
+        const amt = p.balanceAmount ?? 0;
+        if (days <= 30) {
+          ageingBucketsMap['0-30'].count += 1;
+          ageingBucketsMap['0-30'].amount += amt;
+        } else if (days <= 60) {
+          ageingBucketsMap['31-60'].count += 1;
+          ageingBucketsMap['31-60'].amount += amt;
+        } else if (days <= 90) {
+          ageingBucketsMap['61-90'].count += 1;
+          ageingBucketsMap['61-90'].amount += amt;
+        } else {
+          ageingBucketsMap['90+'].count += 1;
+          ageingBucketsMap['90+'].amount += amt;
+        }
+      }
+      const ageingBuckets = Object.values(ageingBucketsMap);
+
+      const monthlySlots: {
+        label: string;
+        year: number;
+        month: number;
+        collected: number;
+        outstanding: number;
+      }[] = [];
+      const anchor = new Date();
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1);
+        monthlySlots.push({
+          label: d.toLocaleString('en-IN', { month: 'short' }),
+          year: d.getFullYear(),
+          month: d.getMonth(),
+          collected: 0,
+          outstanding: 0,
+        });
+      }
+      for (const p of overdueList) {
+        const conf = p.confirmationDate;
+        if (!conf) continue;
+        const idx = monthlySlots.findIndex((m) => m.month === conf.getMonth() && m.year === conf.getFullYear());
+        if (idx === -1) continue;
+        monthlySlots[idx].collected += p.totalAmountReceived ?? 0;
+        monthlySlots[idx].outstanding += p.balanceAmount ?? 0;
+      }
+      const monthlyCollections = monthlySlots.map((m) => ({
+        label: m.label,
+        collected: Math.round(m.collected),
+        outstanding: Math.round(m.outstanding),
+      }));
 
       return {
         totalOutstanding,
         avgCollectionDays,
         subsidyPendingCount,
         overdueTop5,
+        ageingBuckets,
+        monthlyCollections,
         donut: {
           collected: collectedTotal,
           outstanding: totalOutstanding,
@@ -2621,6 +2691,9 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
           stageEnteredAt: true,
           confirmationDate: true,
           installationCompletionDate: true,
+          projectStatus: true,
+          remarks: true,
+          internalNotes: true,
           customer: { select: { customerName: true } },
           salesperson: { select: { name: true } },
           installations: {
@@ -2655,24 +2728,9 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
           inst?.status === InstallationStatus.COMPLETED ||
           !!p.installationCompletionDate;
 
-        let percentComplete: number | null = null;
-        if (installCompleted) {
-          percentComplete = 100;
-        } else if (inferredStart && expectedEnd) {
-          const total = expectedEnd.getTime() - inferredStart.getTime();
-          const elapsed = now - inferredStart.getTime();
-          if (total > 0) {
-            percentComplete = Math.min(99, Math.max(8, Math.round((elapsed / total) * 100)));
-          } else {
-            percentComplete = 45;
-          }
-        } else if (inst?.status === InstallationStatus.IN_PROGRESS) {
-          percentComplete = 55;
-        } else if (inst) {
-          percentComplete = 25;
-        } else if (inferredStart) {
-          percentComplete = 35;
-        }
+        const remarksTrim = (p.remarks ?? '').trim();
+        const internalTrim = (p.internalNotes ?? '').trim();
+        const lastNote = remarksTrim || internalTrim || null;
 
         const overdue = !!expectedEnd && now > expectedEnd.getTime();
 
@@ -2683,8 +2741,11 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
           salespersonName,
           startDate,
           expectedCompletion: expected,
-          percentComplete,
+          /** UI recomputes progress; kept for sort fallback only */
+          percentComplete: installCompleted ? 100 : null,
           overdue,
+          projectStatus: p.projectStatus,
+          lastNote,
         };
       });
 
