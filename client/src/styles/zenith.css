@@ -14,6 +14,9 @@
   --zenith-font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
   --zenith-font-body: 'DM Sans', system-ui, sans-serif;
 
+  /* Native inputs / selects: use dark system popups (fixes white text on light grey <option> lists on Windows). */
+  color-scheme: dark;
+
   /* 100% width: Layout uses full-width main for /zenith (avoids iOS 100vw + padding horizontal scroll) */
   width: 100%;
   max-width: 100%;
@@ -37,6 +40,51 @@
   background-position: center top, center center, center center;
   color: var(--zenith-text);
   font-family: var(--zenith-font-body);
+}
+
+/* Pipeline / Your focus filters: match page surface; dark native <select> popups + readable <option> rows */
+.zenith-root .zenith-native-filter-input {
+  color-scheme: dark;
+  background-color: rgba(14, 14, 20, 0.96);
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.zenith-root .zenith-native-filter-input::placeholder {
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.zenith-root .zenith-native-filter-input:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.zenith-root .zenith-native-filter-input:focus {
+  outline: none;
+  border-color: rgba(0, 212, 180, 0.55);
+  box-shadow: 0 0 0 2px rgba(0, 212, 180, 0.22);
+}
+
+.zenith-root .zenith-native-select {
+  color-scheme: dark;
+  background-color: rgba(14, 14, 20, 0.96);
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.zenith-root .zenith-native-select:hover {
+  background-color: rgba(20, 20, 28, 0.98);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.zenith-root .zenith-native-select:focus {
+  outline: none;
+  border-color: rgba(0, 212, 180, 0.55);
+  box-shadow: 0 0 0 2px rgba(0, 212, 180, 0.22);
+}
+
+.zenith-root .zenith-native-select option {
+  background-color: #0a0a0f;
+  color: rgba(255, 255, 255, 0.92);
 }
 
 /* Faster taps on iOS; avoid accidental double-tap zoom on controls (links only on real controls — not all anchors, so wheel/touch scroll isn’t affected on large link areas) */

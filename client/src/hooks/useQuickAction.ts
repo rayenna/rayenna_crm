@@ -20,6 +20,8 @@ export type ZenithQuickActionHandle = {
   listMode: boolean
   filterLabel: string
   filteredProjects: ZenithExplorerProject[]
+  /** When set, list-mode footer shows “Open in Projects” with this href. */
+  projectsPageHref: string | null
   /** FY profit drill-down uses gross profit; all other lists use order value. */
   listAmountMode: ZenithListAmountMode
   autoFocusSection: ZenithAutoFocusSection
@@ -31,6 +33,7 @@ export type ZenithQuickActionHandle = {
     filterLabel: string
     filteredProjects: ZenithExplorerProject[]
     listAmountMode?: ZenithListAmountMode
+    projectsPageHref?: string | null
   }) => void
   closeDrawer: () => void
   setSaving: Dispatch<SetStateAction<boolean>>
@@ -44,6 +47,7 @@ export function useQuickAction(): ZenithQuickActionHandle {
   const [listMode, setListMode] = useState(false)
   const [filterLabel, setFilterLabel] = useState('')
   const [filteredProjects, setFilteredProjects] = useState<ZenithExplorerProject[]>([])
+  const [projectsPageHref, setProjectsPageHref] = useState<string | null>(null)
   const [listAmountMode, setListAmountMode] = useState<ZenithListAmountMode>('deal_value')
   const [autoFocusSection, setAutoFocusSection] = useState<ZenithAutoFocusSection>(null)
   const [saving, setSaving] = useState(false)
@@ -54,6 +58,7 @@ export function useQuickAction(): ZenithQuickActionHandle {
     setProject(p)
     setListMode(false)
     setFilteredProjects([])
+    setProjectsPageHref(null)
     setListAmountMode('deal_value')
     setFilterLabel('')
     setAutoFocusSection(focus ?? null)
@@ -67,11 +72,13 @@ export function useQuickAction(): ZenithQuickActionHandle {
       filterLabel: string
       filteredProjects: ZenithExplorerProject[]
       listAmountMode?: ZenithListAmountMode
+      projectsPageHref?: string | null
     }) => {
       setProject(null)
       setListMode(true)
       setFilterLabel(args.filterLabel)
       setFilteredProjects(args.filteredProjects)
+      setProjectsPageHref(args.projectsPageHref ?? null)
       setListAmountMode(args.listAmountMode ?? 'deal_value')
       setAutoFocusSection(null)
       setSaveSuccess(false)
@@ -85,6 +92,7 @@ export function useQuickAction(): ZenithQuickActionHandle {
     setIsOpen(false)
     setListMode(false)
     setFilteredProjects([])
+    setProjectsPageHref(null)
     setListAmountMode('deal_value')
     setFilterLabel('')
     setAutoFocusSection(null)
@@ -98,6 +106,7 @@ export function useQuickAction(): ZenithQuickActionHandle {
       listMode,
       filterLabel,
       filteredProjects,
+      projectsPageHref,
       listAmountMode,
       autoFocusSection,
       saving,
@@ -116,6 +125,7 @@ export function useQuickAction(): ZenithQuickActionHandle {
       listMode,
       filterLabel,
       filteredProjects,
+      projectsPageHref,
       listAmountMode,
       autoFocusSection,
       saving,

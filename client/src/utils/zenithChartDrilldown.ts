@@ -13,6 +13,15 @@ function normalizeChartLabel(s: string): string {
 
 const LOST_STATUS = 'LOST'
 
+/** Same early/lost + no-order-value rule as `buildProjectsByPaymentStatus` (dashboard payment pills). */
+const PAYMENT_NA_PROJECT_STATUSES = new Set(['LEAD', 'SITE_SURVEY', 'PROPOSAL', 'LOST'])
+
+export function matchesZenithPaymentNaBucket(p: ZenithExplorerProject): boolean {
+  if (p.has_deal_value === false) return true
+  if (PAYMENT_NA_PROJECT_STATUSES.has(p.projectStatus)) return true
+  return false
+}
+
 /** Same status set as `getRevenueWhere` (dashboard + revenue-by-lead-source + sales-team revenue). */
 const REVENUE_PROJECT_STATUSES = new Set([
   'CONFIRMED',
@@ -67,6 +76,15 @@ export function buildFilterLabel(
   if (dimension === 'fy') {
     return opts?.fyMetric === 'profit' ? `FY ${value} — Profit Projects` : `FY ${value} Revenue`
   }
+  if (dimension === 'payment_status') {
+    const names: Record<string, string> = {
+      NA: 'N/A',
+      FULLY_PAID: 'Fully Paid',
+      PARTIAL: 'Partial',
+      PENDING: 'Pending',
+    }
+    return `Payment — ${names[value] ?? value}`
+  }
   const labels: Record<ZenithChartDrilldownDimension, string> = {
     lead_source: `${value} — Lead Source`,
     assigned_to: `${value} — Sales`,
@@ -75,6 +93,7 @@ export function buildFilterLabel(
     fy: `FY ${value}`,
     forecast: value,
     loan_bank: `${value} — Loan`,
+    payment_status: '',
   }
   return labels[dimension] ?? value
 }
@@ -128,6 +147,16 @@ export function filterProjectsByChartSlice(
     }
     case 'loan_bank':
       return all.filter((p) => (p.loan_bank_label ?? '') === value && (p.loan_bank_label ?? '') !== '')
+    case 'payment_status': {
+      if (value === 'NA') {
+        return all.filter((p) => matchesZenithPaymentNaBucket(p))
+      }
+      return all.filter((p) => {
+        if (matchesZenithPaymentNaBucket(p)) return false
+        const ps = p.payment_status ?? 'PENDING'
+        return ps === value
+      })
+    }
     default:
       return []
   }

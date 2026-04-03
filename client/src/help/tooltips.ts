@@ -149,13 +149,13 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.command-center',
     title: 'Zenith Command Center',
     content:
-      'Full-screen analytics with the same FY, Quarter, and Month rules as the Dashboard: AI Insights, The Board leaderboard, collapsible Your Focus, KPIs, Revenue forecast, funnel, clickable Explore charts, and Quick Actions lists. Open Help → Analytics for the full guide.',
+      'Full-screen analytics with the same FY, Quarter, and Month rules as the Dashboard: AI Insights, The Board leaderboard, collapsible Your Focus, KPIs, Revenue forecast, Deal flow funnel (click stages or payment pills), Proposal Engine under Your Focus, clickable Explore charts, and Quick Actions lists. List mode includes Open in Projects → for the full Projects page with matching filters. Open Help → Analytics for the full guide.',
   },
   'zenith.the-board': {
     key: 'zenith.the-board',
     title: 'The Board',
     content:
-      'Sales leaderboard by Month, Quarter (Indian FY quarters), or FY. Rankings use winning-stage deals credited by stage entered / confirmation dates. Click header totals or a row’s value to open the same Quick Actions list drawer as chart drill-down.',
+      'Sales leaderboard by Month, Quarter (Indian FY quarters), or FY. Rankings use winning-stage deals credited by stage entered / confirmation dates. Click header totals or a row’s value to open the same Quick Actions list drawer as chart drill-down. Use Open in Projects → for the full Projects list with matching filters.',
   },
   'zenith.victory-toast': {
     key: 'zenith.victory-toast',
@@ -185,7 +185,19 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.chart-drill-down',
     title: 'Click to explore',
     content:
-      'Opens the Quick Actions drawer with projects matching that chart slice and your Zenith filters. FY profit lists use gross profit totals; most other slices use order value. The Board uses the same drawer for period / salesperson drill-down.',
+      'Opens the Quick Actions drawer with projects matching that chart slice and your Zenith filters. FY profit lists use gross profit totals; most other slices use order value. Open in Projects → applies the same logical filters on the Projects page. The Board uses the same drawer for period / salesperson drill-down.',
+  },
+  'zenith.deal-flow-funnel': {
+    key: 'zenith.deal-flow-funnel',
+    title: 'Deal flow funnel (Zenith)',
+    content:
+      'Click a stage row or payment status pill to open Quick Actions in list mode with the same cohort as the funnel tile for your FY / Quarter / Month. Open in Projects → opens Projects with matching stage or payment filters.',
+  },
+  'zenith.proposal-engine-focus': {
+    key: 'zenith.proposal-engine-focus',
+    title: 'Proposal Engine (Zenith Your Focus)',
+    content:
+      'PE Ready, PE Draft, PE Not Yet Created, and Rest — same definitions as the Dashboard Proposal Engine card. In Zenith, click a row for the Quick Actions list, then Open in Projects → for the full Projects list with that PE bucket and your date filters.',
   },
 }
 

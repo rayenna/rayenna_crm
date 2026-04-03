@@ -320,12 +320,14 @@ async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
       leadSource: true,
       type: true,
       year: true,
+      paymentStatus: true,
       updatedAt: true,
       stageEnteredAt: true,
       confirmationDate: true,
       grossProfit: true,
       availingLoan: true,
       financingBank: true,
+      salespersonId: true,
       salesperson: { select: { name: true } },
       customer: { select: { firstName: true, customerName: true } },
     },
@@ -337,12 +339,13 @@ async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
     projectStatus: p.projectStatus,
     /** Raw enum for drill-down parity with `getRevenueWhere` / `getPipelineWhere`. */
     project_stage: p.projectStage ?? null,
-    has_deal_value: p.projectCost != null,
+    has_deal_value: p.projectCost != null && Number(p.projectCost) !== 0,
     stageLabel: PROJECT_STATUS_LABELS[p.projectStatus] || String(p.projectStatus),
     deal_value: p.projectCost ?? 0,
     lead_source: formatLeadSourceForExplorer(p.leadSource),
     customer_segment: formatProjectTypeForExplorer(p.type),
     financial_year: p.year,
+    assigned_to_id: p.salespersonId ?? null,
     assigned_to_name: p.salesperson?.name?.trim() || 'Unassigned',
     updated_at: p.updatedAt.toISOString(),
     /** Leaderboard period gate: stage transition time (preferred over updatedAt, which moves on any edit). */
@@ -351,10 +354,14 @@ async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
     customer_name: p.customer?.firstName?.trim() || p.customer?.customerName?.trim() || 'Unknown',
     gross_profit: p.grossProfit,
     /** Display label aligned with `availingLoanByBank[].bankLabel` (Zenith loans chart). */
+    /** Raw DB value for Projects deep link (`?financingBank=`) when drilling loans by bank. */
+    financing_bank: p.financingBank?.trim() ? p.financingBank : null,
     loan_bank_label:
       p.availingLoan && p.financingBank?.trim()
         ? BANK_LABELS[p.financingBank] || p.financingBank
         : '',
+    /** Resolved payment enum for dashboard payment pills (null → PENDING); N/A bucket uses `matchesZenithPaymentNaBucket` client-side. */
+    payment_status: p.paymentStatus ?? 'PENDING',
   }));
 }
 
@@ -1394,6 +1401,8 @@ router.get('/operations', authenticate, async (req: Request, res) => {
       }
     }
 
+    const zenithExplorerProjects = await loadZenithExplorerProjects(where as Prisma.ProjectWhereInput);
+
     res.json({
       pendingInstallation,
       submittedForSubsidy,
@@ -1416,6 +1425,7 @@ router.get('/operations', authenticate, async (req: Request, res) => {
       projectsByStatus,
       projectsByPaymentStatus,
       previousYearOperationsKpis,
+      zenithExplorerProjects,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -1749,6 +1759,8 @@ router.get('/finance', authenticate, async (req: Request, res) => {
       }
     }
 
+    const zenithExplorerProjects = await loadZenithExplorerProjects(where as Prisma.ProjectWhereInput);
+
     res.json({
       totalProjectValue: totalProjectValue._sum.projectCost || 0,
       totalAmountReceived: totalAmountReceived._sum.totalAmountReceived || 0,
@@ -1765,6 +1777,7 @@ router.get('/finance', authenticate, async (req: Request, res) => {
       projectValueByType: valueByTypeWithPercentage,
       projectValueProfitByFY,
       previousYearFinanceKpis,
+      zenithExplorerProjects,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -2224,10 +2237,38 @@ router.get('/proposal-engine-status', authenticate, async (req: Request, res: Re
     if (projects.length === 0) {
       return res.json({
         rows: [
-          { key: 'proposal-ready', label: 'PE Ready', count: 0, crmOrderValue: 0, peOrderValueExGst: 0 },
-          { key: 'draft', label: 'PE Draft', count: 0, crmOrderValue: 0, peOrderValueExGst: 0 },
-          { key: 'not-started', label: 'PE Not Yet Created', count: 0, crmOrderValue: 0, peOrderValueExGst: 0 },
-          { key: 'rest', label: 'Rest', count: 0, crmOrderValue: 0, peOrderValueExGst: 0 },
+          {
+            key: 'proposal-ready',
+            label: 'PE Ready',
+            count: 0,
+            crmOrderValue: 0,
+            peOrderValueExGst: 0,
+            projectIds: [] as string[],
+          },
+          {
+            key: 'draft',
+            label: 'PE Draft',
+            count: 0,
+            crmOrderValue: 0,
+            peOrderValueExGst: 0,
+            projectIds: [] as string[],
+          },
+          {
+            key: 'not-started',
+            label: 'PE Not Yet Created',
+            count: 0,
+            crmOrderValue: 0,
+            peOrderValueExGst: 0,
+            projectIds: [] as string[],
+          },
+          {
+            key: 'rest',
+            label: 'Rest',
+            count: 0,
+            crmOrderValue: 0,
+            peOrderValueExGst: 0,
+            projectIds: [] as string[],
+          },
         ],
       });
     }
@@ -2284,6 +2325,12 @@ router.get('/proposal-engine-status', authenticate, async (req: Request, res: Re
       'not-started': { count: 0, crmOrderValue: 0, peOrderValueExGst: 0 },
       rest: { count: 0, crmOrderValue: 0, peOrderValueExGst: 0 },
     };
+    const projectIdsByBucket: Record<PeBucketKey, string[]> = {
+      'proposal-ready': [],
+      draft: [],
+      'not-started': [],
+      rest: [],
+    };
 
     for (const project of projects) {
       const projectId = project.id;
@@ -2311,6 +2358,7 @@ router.get('/proposal-engine-status', authenticate, async (req: Request, res: Re
       }
 
       if (!bucket) continue;
+      projectIdsByBucket[bucket].push(projectId);
       metrics[bucket].count += 1;
       metrics[bucket].crmOrderValue += crmOrderValueByProjectId.get(projectId) ?? 0;
 
@@ -2327,10 +2375,20 @@ router.get('/proposal-engine-status', authenticate, async (req: Request, res: Re
 
     return res.json({
       rows: [
-        { key: 'proposal-ready', label: 'PE Ready', ...metrics['proposal-ready'] },
-        { key: 'draft', label: 'PE Draft', ...metrics.draft },
-        { key: 'not-started', label: 'PE Not Yet Created', ...metrics['not-started'] },
-        { key: 'rest', label: 'Rest', ...metrics.rest },
+        {
+          key: 'proposal-ready',
+          label: 'PE Ready',
+          ...metrics['proposal-ready'],
+          projectIds: projectIdsByBucket['proposal-ready'],
+        },
+        { key: 'draft', label: 'PE Draft', ...metrics.draft, projectIds: projectIdsByBucket.draft },
+        {
+          key: 'not-started',
+          label: 'PE Not Yet Created',
+          ...metrics['not-started'],
+          projectIds: projectIdsByBucket['not-started'],
+        },
+        { key: 'rest', label: 'Rest', ...metrics.rest, projectIds: projectIdsByBucket.rest },
       ],
     });
   } catch (error: any) {
@@ -2492,6 +2550,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
           updatedAt: true,
           expectedCommissioningDate: true,
           salespersonId: true,
+          salesperson: { select: { name: true } },
           customer: { select: { customerName: true } },
           projectRemarks: { orderBy: { createdAt: 'desc' }, take: 1, select: { createdAt: true } },
         },
@@ -2504,6 +2563,8 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
         const remarkAt = p.projectRemarks[0]?.createdAt?.getTime() ?? 0;
         const lastTs = Math.max(p.updatedAt.getTime(), remarkAt);
         const daysSinceActivity = Math.floor((now - lastTs) / 86400000);
+        const salespersonName =
+          p.salesperson?.name?.trim() || (p.salespersonId ? '—' : 'Unassigned');
         return {
           projectId: p.id,
           customerName: p.customer?.customerName?.trim() || '—',
@@ -2514,6 +2575,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
           createdAt: p.createdAt.toISOString(),
           updatedAt: p.updatedAt.toISOString(),
           salespersonId: p.salespersonId,
+          salespersonName,
         };
       });
       const followUpNeeded = rows.filter((r) => r.daysSinceActivity > 7).length;
@@ -2564,6 +2626,8 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
               totalAmountReceived: true,
               projectCost: true,
               projectStatus: true,
+              salespersonId: true,
+              salesperson: { select: { name: true } },
               customer: { select: { customerName: true, phone: true, email: true } },
             },
             orderBy: { balanceAmount: 'desc' },
@@ -2597,6 +2661,8 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
       const overdueTop5 = overdueList.map((p) => {
         const conf = p.confirmationDate!;
         const daysOverdue = Math.max(0, Math.floor((Date.now() - conf.getTime()) / 86400000));
+        const salespersonName =
+          p.salesperson?.name?.trim() || (p.salespersonId ? '—' : 'Unassigned');
         return {
           projectId: p.id,
           customerName: p.customer?.customerName?.trim() || '—',
@@ -2608,6 +2674,8 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
           orderValue: p.projectCost ?? 0,
           amountPaid: p.totalAmountReceived ?? 0,
           projectStatus: p.projectStatus,
+          salespersonId: p.salespersonId,
+          salespersonName,
         };
       });
 

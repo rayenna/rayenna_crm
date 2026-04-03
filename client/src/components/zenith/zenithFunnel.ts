@@ -1,6 +1,7 @@
 import { UserRole } from '../../types'
 import { ProjectStatus } from '../../types'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
+import type { ZenithExplorerProject } from '../../types/zenithExplorer'
 import type { ZenithDateFilter } from './zenithTypes'
 
 export interface ZenithFunnelStage {
@@ -333,4 +334,33 @@ export function buildZenithOperationsExecutionFunnel(
   return buildZenithFunnelFromStatuses(data, dateFilter).filter((s) =>
     OPERATIONS_EXECUTION_FUNNEL_IDS.has(s.id),
   )
+}
+
+/**
+ * Maps Deal Flow segment `id` to explorer `stageLabel` values (dashboard `PROJECT_STATUS_LABELS`).
+ * Used to mirror funnel tiles in the Quick Action drawer list.
+ */
+const FUNNEL_STAGE_ID_TO_LABELS: Record<string, readonly string[]> = {
+  lead: ['Lead'],
+  survey: ['Site Survey'],
+  proposal: ['Proposal'],
+  open: ['Lead', 'Site Survey', 'Proposal'],
+  confirmed: ['Confirmed Order'],
+  install: ['Under Installation'],
+  completed: ['Completed', 'Completed - Subsidy Credited'],
+  subsidy: ['Completed - Subsidy Credited'],
+}
+
+export function filterExplorerProjectsByFunnelStage(
+  stageId: string,
+  projects: ZenithExplorerProject[],
+): ZenithExplorerProject[] {
+  const labels = FUNNEL_STAGE_ID_TO_LABELS[stageId]
+  if (!labels?.length) return []
+  const allow = new Set(labels)
+  return projects.filter((p) => allow.has(p.stageLabel))
+}
+
+export function buildDealFlowDrawerFilterLabel(stage: ZenithFunnelStage): string {
+  return `Deal Flow — ${stage.label}`
 }

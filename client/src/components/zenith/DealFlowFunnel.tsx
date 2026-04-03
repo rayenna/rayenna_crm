@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import type { MouseEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import type { ZenithFunnelStage } from './zenithFunnel'
@@ -66,12 +67,18 @@ export default function DealFlowFunnel({
   dateFilter,
   title = 'Deal Flow',
   badge = 'Pipeline',
+  /** When set (Zenith + Quick Action), payment pills open the drawer list instead of /projects. */
+  onPaymentStatusClick,
+  /** When set, funnel stage tiles open the Quick Action drawer (same filtered list as `stage.to` on Projects). */
+  onDealFlowStageClick,
 }: {
   stages: ZenithFunnelStage[]
   paymentItems: DealFlowPaymentItem[]
   dateFilter: ZenithDateFilter
   title?: string
   badge?: string
+  onPaymentStatusClick?: (paymentUrlParam: string, pillLabel: string) => void
+  onDealFlowStageClick?: (stage: ZenithFunnelStage) => void
 }) {
   const [hovered, setHovered] = useState<number | null>(null)
   const n = stages.length
@@ -144,20 +151,39 @@ export default function DealFlowFunnel({
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
             >
-              <Link
-                to={s.to}
-                className="absolute inset-0 flex flex-col items-center justify-center text-center px-0.5 no-underline group"
-              >
-                <span className="text-[9px] sm:text-[10px] font-bold text-white/95 uppercase tracking-wide leading-tight line-clamp-2 drop-shadow-md">
-                  {s.label}
-                </span>
-                <span className="text-lg sm:text-xl font-extrabold text-white tabular-nums leading-none my-0.5 drop-shadow-md">
-                  {s.count}
-                </span>
-                <span className="text-[9px] sm:text-[10px] text-white/80 tabular-nums drop-shadow">
-                  {conversionPct(stages, i)} prev
-                </span>
-              </Link>
+              {onDealFlowStageClick ? (
+                <button
+                  type="button"
+                  className="absolute inset-0 flex flex-col items-center justify-center text-center px-0.5 no-underline group cursor-pointer bg-transparent border-0"
+                  onClick={() => onDealFlowStageClick(s)}
+                  aria-label={`${s.label}: ${s.count} projects, open quick list`}
+                >
+                  <span className="text-[9px] sm:text-[10px] font-bold text-white/95 uppercase tracking-wide leading-tight line-clamp-2 drop-shadow-md">
+                    {s.label}
+                  </span>
+                  <span className="text-lg sm:text-xl font-extrabold text-white tabular-nums leading-none my-0.5 drop-shadow-md">
+                    {s.count}
+                  </span>
+                  <span className="text-[9px] sm:text-[10px] text-white/80 tabular-nums drop-shadow">
+                    {conversionPct(stages, i)} prev
+                  </span>
+                </button>
+              ) : (
+                <Link
+                  to={s.to}
+                  className="absolute inset-0 flex flex-col items-center justify-center text-center px-0.5 no-underline group"
+                >
+                  <span className="text-[9px] sm:text-[10px] font-bold text-white/95 uppercase tracking-wide leading-tight line-clamp-2 drop-shadow-md">
+                    {s.label}
+                  </span>
+                  <span className="text-lg sm:text-xl font-extrabold text-white tabular-nums leading-none my-0.5 drop-shadow-md">
+                    {s.count}
+                  </span>
+                  <span className="text-[9px] sm:text-[10px] text-white/80 tabular-nums drop-shadow">
+                    {conversionPct(stages, i)} prev
+                  </span>
+                </Link>
+              )}
 
               <AnimatePresence>
                 {hovered === i && (
@@ -180,12 +206,22 @@ export default function DealFlowFunnel({
                       From previous:{' '}
                       <span className="text-white font-semibold">{conversionPct(stages, i)}</span>
                     </p>
-                    <Link
-                      to={s.to}
-                      className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[#00d4b4] hover:text-[#33e0c8]"
-                    >
-                      View Projects →
-                    </Link>
+                    {onDealFlowStageClick ? (
+                      <button
+                        type="button"
+                        className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[#00d4b4] hover:text-[#33e0c8] cursor-pointer bg-transparent border-0 p-0"
+                        onClick={() => onDealFlowStageClick(s)}
+                      >
+                        View Projects →
+                      </button>
+                    ) : (
+                      <Link
+                        to={s.to}
+                        className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[#00d4b4] hover:text-[#33e0c8]"
+                      >
+                        View Projects →
+                      </Link>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -215,18 +251,39 @@ export default function DealFlowFunnel({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.1, duration: 0.35 }}
               >
-                <Link
-                  to={s.to}
-                  className="block rounded-xl px-3 py-2.5 border border-white/10 bg-white/[0.06] active:bg-white/10"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-xs font-bold text-white/90">{s.label}</p>
-                      <p className="text-[11px] text-white/50 mt-0.5">Avg {s.avgDaysInStage != null ? `${s.avgDaysInStage}d` : '—'} · {conv} prev</p>
+                {onDealFlowStageClick ? (
+                  <button
+                    type="button"
+                    onClick={() => onDealFlowStageClick(s)}
+                    className="block w-full text-left rounded-xl px-3 py-2.5 border border-white/10 bg-white/[0.06] active:bg-white/10 cursor-pointer"
+                    aria-label={`${s.label}: ${s.count} projects, open quick list`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-bold text-white/90">{s.label}</p>
+                        <p className="text-[11px] text-white/50 mt-0.5">
+                          Avg {s.avgDaysInStage != null ? `${s.avgDaysInStage}d` : '—'} · {conv} prev
+                        </p>
+                      </div>
+                      <span className="text-xl font-extrabold text-white tabular-nums">{s.count}</span>
                     </div>
-                    <span className="text-xl font-extrabold text-white tabular-nums">{s.count}</span>
-                  </div>
-                </Link>
+                  </button>
+                ) : (
+                  <Link
+                    to={s.to}
+                    className="block rounded-xl px-3 py-2.5 border border-white/10 bg-white/[0.06] active:bg-white/10"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-bold text-white/90">{s.label}</p>
+                        <p className="text-[11px] text-white/50 mt-0.5">
+                          Avg {s.avgDaysInStage != null ? `${s.avgDaysInStage}d` : '—'} · {conv} prev
+                        </p>
+                      </div>
+                      <span className="text-xl font-extrabold text-white tabular-nums">{s.count}</span>
+                    </div>
+                  </Link>
+                )}
               </motion.div>
             </div>
           )
@@ -239,11 +296,35 @@ export default function DealFlowFunnel({
           const out = formatOutstandingPill(p.outstanding)
           const suffix =
             p.outstanding > 0 && (p.status === 'PARTIAL' || p.status === 'PENDING') ? ` ${out}` : ''
+          const pillClass =
+            'inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs sm:text-sm font-semibold border border-white/12 bg-black/25 hover:border-[#f5a623]/45 hover:bg-black/40 transition-colors text-white/90'
+          const projectsHref = buildProjectsUrl({ paymentStatus: [p.param] }, tile)
+
+          if (onPaymentStatusClick) {
+            const open = (e: MouseEvent) => {
+              e.preventDefault()
+              onPaymentStatusClick(p.param, p.label)
+            }
+            return (
+              <button
+                key={p.status}
+                type="button"
+                onClick={open}
+                className={`${pillClass} cursor-pointer`}
+              >
+                <span aria-hidden>{p.emoji}</span>
+                <span>{p.label}:</span>
+                <span className="tabular-nums font-bold text-white">{p.count}</span>
+                {suffix ? <span className="text-white/70 font-medium tabular-nums">{suffix}</span> : null}
+              </button>
+            )
+          }
+
           return (
             <Link
               key={p.status}
-              to={buildProjectsUrl({ paymentStatus: [p.param] }, tile)}
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs sm:text-sm font-semibold border border-white/12 bg-black/25 hover:border-[#f5a623]/45 hover:bg-black/40 transition-colors text-white/90 no-underline"
+              to={projectsHref}
+              className={`${pillClass} no-underline`}
             >
               <span aria-hidden>{p.emoji}</span>
               <span>{p.label}:</span>

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Trophy, ChevronDown } from 'lucide-react'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
+import type { ZenithDateFilter } from './zenithTypes'
 import {
   buildLeaderboardDrawerLabel,
   computeLeaderboard,
@@ -17,6 +18,7 @@ import {
   type LeaderboardEntry,
   type LeaderboardPeriod,
 } from '../../utils/leaderboardUtils'
+import { buildLeaderboardPeriodProjectsHref } from '../../utils/zenithListProjectsDeepLink'
 
 const PERIODS: LeaderboardPeriod[] = ['month', 'quarter', 'fy']
 
@@ -24,8 +26,13 @@ type Props = {
   projects: ZenithExplorerProject[]
   currentUser: { id: string; name: string }
   defaultOpen?: boolean
+  dateFilter: ZenithDateFilter
   /** Same quick drawer list mode as chart drill-down */
-  onOpenListMode?: (args: { filterLabel: string; filteredProjects: ZenithExplorerProject[] }) => void
+  onOpenListMode?: (args: {
+    filterLabel: string
+    filteredProjects: ZenithExplorerProject[]
+    projectsPageHref?: string | null
+  }) => void
 }
 
 function cyclePeriod(p: LeaderboardPeriod): LeaderboardPeriod {
@@ -33,7 +40,13 @@ function cyclePeriod(p: LeaderboardPeriod): LeaderboardPeriod {
   return PERIODS[(i + 1) % PERIODS.length]!
 }
 
-export default function Leaderboard({ projects, currentUser, defaultOpen, onOpenListMode }: Props) {
+export default function Leaderboard({
+  projects,
+  currentUser,
+  defaultOpen,
+  dateFilter,
+  onOpenListMode,
+}: Props) {
   const isMobile = useIsMobile()
   const [period, setPeriod] = useState<LeaderboardPeriod>('month')
   const [isOpen, setIsOpen] = useState(() =>
@@ -74,6 +87,7 @@ export default function Leaderboard({ projects, currentUser, defaultOpen, onOpen
     onOpenListMode({
       filterLabel: buildLeaderboardDrawerLabel(period),
       filteredProjects: getLeaderboardDealsInPeriod(projects, period),
+      projectsPageHref: buildLeaderboardPeriodProjectsHref(period, dateFilter),
     })
   }
 
@@ -231,11 +245,25 @@ export default function Leaderboard({ projects, currentUser, defaultOpen, onOpen
                 barsReady={barsReady}
                 onOpenDeals={
                   onOpenListMode
-                    ? () =>
+                    ? () => {
+                        const filtered = getLeaderboardDealsForSalesperson(
+                          projects,
+                          period,
+                          entry.name,
+                        )
+                        const sid =
+                          entry.name.trim() === 'Unassigned'
+                            ? null
+                            : (filtered.find((p) => p.assigned_to_id)?.assigned_to_id ?? null)
                         onOpenListMode({
                           filterLabel: buildLeaderboardDrawerLabel(period, entry.name),
-                          filteredProjects: getLeaderboardDealsForSalesperson(projects, period, entry.name),
+                          filteredProjects: filtered,
+                          projectsPageHref: buildLeaderboardPeriodProjectsHref(period, dateFilter, {
+                            salespersonId: sid ?? undefined,
+                            unassignedOnly: entry.name.trim() === 'Unassigned',
+                          }),
                         })
+                      }
                     : undefined
                 }
               />

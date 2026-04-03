@@ -25,7 +25,7 @@ export default function CustomerProfitabilityRank({
   className = '',
 }: {
   rows: ProfitRow[]
-  /** e.g. `lg:h-full` so the card matches a stretched grid row */
+  /** e.g. `h-full min-h-[320px] flex-1` so the card matches a stretched grid row (Executive / Finance Zenith). */
   className?: string
 }) {
   const [view, setView] = useState<'cloud' | 'top10'>('cloud')

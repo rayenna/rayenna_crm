@@ -19,6 +19,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { UserRole, ProjectStatus } from '../../types'
 import type { ZenithDateFilter } from './zenithTypes'
 import type { ZenithAutoFocusSection } from '../../hooks/useQuickAction'
+import type { ZenithExplorerProject } from '../../types/zenithExplorer'
 import HealthBadge from './HealthBadge'
 import { computeDealHealth, pipelineRowToHealthProject } from '../../utils/dealHealthScore'
 import ReminderModal from './ReminderModal'
@@ -38,6 +39,8 @@ type SalesPipelineRow = {
   createdAt?: string
   updatedAt?: string
   salespersonId?: string
+  /** Display name from zenith-focus (assigned project salesperson). */
+  salespersonName?: string | null
   leadSource?: string | null
 }
 
@@ -52,6 +55,8 @@ type FinanceOverdueRow = {
   orderValue?: number
   amountPaid?: number
   projectStatus?: string
+  salespersonId?: string | null
+  salespersonName?: string | null
 }
 
 type AgeingBucket = {
@@ -214,11 +219,21 @@ function SalesPipelineBlock({
   embedded?: boolean
 }) {
   const [sortField, setSortField] = useState<
-    'customerName' | 'stage' | 'dealValue' | 'lastActivity' | 'health' | null
+    'customerName' | 'stage' | 'salespersonName' | 'dealValue' | 'lastActivity' | 'health' | null
   >(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [stageFilter, setStageFilter] = useState<string>('ALL')
+  const [salesPersonFilter, setSalesPersonFilter] = useState<string>('ALL')
   const [customerFilter, setCustomerFilter] = useState<string>('')
+
+  const salesPersonOptions = useMemo(() => {
+    const labels = new Set<string>()
+    for (const r of data.rows) {
+      const n = (r.salespersonName ?? '').trim() || 'Unassigned'
+      labels.add(n)
+    }
+    return Array.from(labels).sort((a, b) => a.localeCompare(b))
+  }, [data.rows])
 
   const handleSort = (field: NonNullable<typeof sortField>) => {
     if (sortField !== field) {
@@ -233,6 +248,12 @@ function SalesPipelineBlock({
     const q = customerFilter.trim().toLowerCase()
     let rows = [...data.rows]
     if (stageFilter !== 'ALL') rows = rows.filter((r) => r.stage === stageFilter)
+    if (salesPersonFilter !== 'ALL') {
+      rows = rows.filter((r) => {
+        const n = (r.salespersonName ?? '').trim() || 'Unassigned'
+        return n === salesPersonFilter
+      })
+    }
     if (q) rows = rows.filter((r) => (r.customerName || '').toLowerCase().includes(q))
 
     if (!sortField) return rows
@@ -246,6 +267,11 @@ function SalesPipelineBlock({
         }
         case 'stage': {
           return (a.stage || '').localeCompare(b.stage || '') * dir
+        }
+        case 'salespersonName': {
+          const na = (a.salespersonName ?? '').trim() || 'Unassigned'
+          const nb = (b.salespersonName ?? '').trim() || 'Unassigned'
+          return na.localeCompare(nb) * dir
         }
         case 'dealValue': {
           return ((a.dealValue ?? 0) - (b.dealValue ?? 0)) * dir
@@ -264,7 +290,7 @@ function SalesPipelineBlock({
     })
 
     return rows
-  }, [customerFilter, data.rows, sortDir, sortField, stageFilter])
+  }, [customerFilter, data.rows, salesPersonFilter, sortDir, sortField, stageFilter])
 
   const shellClass = embedded
     ? 'overflow-hidden max-lg:overflow-visible lg:overflow-hidden'
@@ -280,18 +306,31 @@ function SalesPipelineBlock({
               value={customerFilter}
               onChange={(e) => setCustomerFilter(e.target.value)}
               placeholder="Filter customer…"
-              className="h-9 rounded-lg bg-black/25 border border-white/10 px-3 text-xs text-white/80 placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#00d4b4]/40"
+              className="zenith-native-filter-input h-9 rounded-lg px-3 text-xs focus:outline-none"
             />
             <select
               value={stageFilter}
               onChange={(e) => setStageFilter(e.target.value)}
-              className="h-9 rounded-lg bg-black/25 border border-white/10 px-2.5 text-xs text-white/80 focus:outline-none focus:ring-2 focus:ring-[#00d4b4]/40"
+              className="zenith-native-select h-9 rounded-lg px-2.5 text-xs focus:outline-none"
               aria-label="Filter by stage"
             >
               <option value="ALL">All stages</option>
               {Array.from(new Set(data.rows.map((r) => r.stage))).map((s) => (
                 <option key={s} value={s}>
                   {s}
+                </option>
+              ))}
+            </select>
+            <select
+              value={salesPersonFilter}
+              onChange={(e) => setSalesPersonFilter(e.target.value)}
+              className="zenith-native-select h-9 rounded-lg px-2.5 text-xs focus:outline-none max-w-[200px]"
+              aria-label="Filter by sales person"
+            >
+              <option value="ALL">All salespeople</option>
+              {salesPersonOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
                 </option>
               ))}
             </select>
@@ -303,7 +342,7 @@ function SalesPipelineBlock({
           )}
         </div>
         <div className="zenith-scroll-x overflow-x-auto -mx-1 max-lg:pb-1">
-          <table className="w-full text-left text-xs sm:text-sm min-w-[640px]">
+          <table className="w-full text-left text-xs sm:text-sm min-w-[760px]">
             <thead>
               <tr className="text-white/45 border-b border-white/10">
                 <th
@@ -317,6 +356,12 @@ function SalesPipelineBlock({
                   onClick={() => handleSort('stage')}
                 >
                   Stage {sortField === 'stage' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                </th>
+                <th
+                  className="py-2 pr-3 font-semibold cursor-pointer select-none min-w-[7rem]"
+                  onClick={() => handleSort('salespersonName')}
+                >
+                  Sales person {sortField === 'salespersonName' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
                 </th>
                 <th
                   className="py-2 pr-3 font-semibold text-right cursor-pointer select-none"
@@ -353,19 +398,23 @@ function SalesPipelineBlock({
             <tbody>
               {data.rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-white/40">
+                  <td colSpan={7} className="py-8 text-center text-white/40">
                     No pipeline rows for this period.
                   </td>
                 </tr>
               ) : (
                 displayRows.map((r) => {
                   const tone = activityTone(r.daysSinceActivity)
+                  const sp = (r.salespersonName ?? '').trim() || 'Unassigned'
                   return (
                     <tr key={r.projectId} className="border-b border-white/[0.06] hover:bg-white/[0.04]">
                       <td className="py-2.5 pr-3">
                         <span className="text-white font-medium">{r.customerName}</span>
                       </td>
                       <td className="py-2.5 pr-3 text-white/80">{r.stage}</td>
+                      <td className="py-2.5 pr-3 text-white/80 truncate max-w-[10rem]" title={sp}>
+                        {sp}
+                      </td>
                       <td className="py-2.5 pr-3 text-right tabular-nums text-white/90">
                         ₹{Math.round(r.dealValue).toLocaleString('en-IN')}
                       </td>
@@ -456,9 +505,10 @@ function FinanceRadarBlock({
   accentClass: string
   embedded?: boolean
 }) {
-  const [sortField, setSortField] = useState<'amount' | 'days' | 'customer' | null>('amount')
+  const [sortField, setSortField] = useState<'amount' | 'days' | 'customer' | 'salesperson' | null>('amount')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [customerFilter, setCustomerFilter] = useState<string>('')
+  const [salesPersonFilter, setSalesPersonFilter] = useState<string>('ALL')
   const [ageFilter, setAgeFilter] = useState<AgeingBucket['id'] | null>(null)
   const [reminderProject, setReminderProject] = useState<FinanceOverdueRow | null>(null)
   /** Recharts pie Legend is absolutely positioned; with global mobile `overflow:visible` it bleeds into the next section — hide legend on narrow widths (footnote + bar key still explain colours). */
@@ -479,10 +529,25 @@ function FinanceRadarBlock({
   const monthlyCollections = data.monthlyCollections ?? []
   const totalOut = Math.max(1, data.totalOutstanding)
 
+  const overdueSalesPersonOptions = useMemo(() => {
+    const labels = new Set<string>()
+    for (const r of data.overdueTop5) {
+      const n = (r.salespersonName ?? '').trim() || 'Unassigned'
+      labels.add(n)
+    }
+    return Array.from(labels).sort((a, b) => a.localeCompare(b))
+  }, [data.overdueTop5])
+
   const overdueRows = useMemo(() => {
     const q = customerFilter.trim().toLowerCase()
     let rows = [...data.overdueTop5]
     if (q) rows = rows.filter((r) => (r.customerName || '').toLowerCase().includes(q))
+    if (salesPersonFilter !== 'ALL') {
+      rows = rows.filter((r) => {
+        const n = (r.salespersonName ?? '').trim() || 'Unassigned'
+        return n === salesPersonFilter
+      })
+    }
     rows = rows.filter((r) => rowMatchesAgeFilter(r, ageFilter))
     if (!sortField) return rows
     const dir = sortDir === 'asc' ? 1 : -1
@@ -494,17 +559,22 @@ function FinanceRadarBlock({
           return ((a.daysOverdue ?? 0) - (b.daysOverdue ?? 0)) * dir
         case 'customer':
           return (a.customerName || '').localeCompare(b.customerName || '') * dir
+        case 'salesperson': {
+          const na = (a.salespersonName ?? '').trim() || 'Unassigned'
+          const nb = (b.salespersonName ?? '').trim() || 'Unassigned'
+          return na.localeCompare(nb) * dir
+        }
         default:
           return 0
       }
     })
     return rows
-  }, [ageFilter, customerFilter, data.overdueTop5, sortDir, sortField])
+  }, [ageFilter, customerFilter, data.overdueTop5, salesPersonFilter, sortDir, sortField])
 
   const toggleSort = (f: NonNullable<typeof sortField>) => {
     if (sortField !== f) {
       setSortField(f)
-      setSortDir(f === 'customer' ? 'asc' : 'desc')
+      setSortDir(f === 'customer' || f === 'salesperson' ? 'asc' : 'desc')
       return
     }
     setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))
@@ -641,30 +711,44 @@ function FinanceRadarBlock({
                 ) : null}
               </div>
               <div className="flex flex-wrap items-center gap-2 shrink-0">
-                {ageFilter || customerFilter.trim() ? (
+                {ageFilter || customerFilter.trim() || salesPersonFilter !== 'ALL' ? (
                   <button
                     type="button"
                     onClick={() => {
                       setAgeFilter(null)
                       setCustomerFilter('')
+                      setSalesPersonFilter('ALL')
                     }}
                     className="h-8 rounded-lg border border-white/15 bg-transparent px-3 text-[11px] font-semibold text-white/45 hover:text-white hover:border-white/25 transition-colors"
                   >
                     Reset filters
                   </button>
                 ) : null}
+                <select
+                  value={salesPersonFilter}
+                  onChange={(e) => setSalesPersonFilter(e.target.value)}
+                  className="zenith-native-select h-8 rounded-lg px-2.5 text-xs focus:outline-none min-w-[7.5rem] max-w-[11rem]"
+                  aria-label="Filter by sales person"
+                >
+                  <option value="ALL">All salespeople</option>
+                  {overdueSalesPersonOptions.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
                 <input
                   value={customerFilter}
                   onChange={(e) => setCustomerFilter(e.target.value)}
                   placeholder="Filter customer…"
-                  className="h-8 rounded-lg bg-black/25 border border-white/10 px-3 text-xs text-white/80 placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#00d4b4]/40 min-w-[120px] lg:max-w-[9rem]"
+                  className="zenith-native-filter-input h-8 rounded-lg px-3 text-xs focus:outline-none min-w-[120px] lg:max-w-[9rem]"
                 />
               </div>
             </div>
 
             <div className="rounded-xl border border-white/10 bg-black/20 overflow-hidden flex-1 flex flex-col min-h-[240px] lg:min-h-0">
-              <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 max-h-[min(70vh,520px)] lg:max-h-none">
-                <table className="w-full min-w-[400px] text-left text-[11px] sm:text-xs">
+              <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 max-h-[min(70vh,520px)] lg:max-h-none zenith-scroll-x">
+                <table className="w-full min-w-[520px] text-left text-[11px] sm:text-xs">
                   <thead>
                     <tr className="text-white/45 border-b border-white/10">
                       <th
@@ -672,6 +756,12 @@ function FinanceRadarBlock({
                         onClick={() => toggleSort('customer')}
                       >
                         Customer {sortField === 'customer' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                      </th>
+                      <th
+                        className="py-2 px-2 font-semibold cursor-pointer select-none min-w-[6.5rem] max-w-[9rem]"
+                        onClick={() => toggleSort('salesperson')}
+                      >
+                        Sales person {sortField === 'salesperson' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
                       </th>
                       <th
                         className="py-2 px-2 font-semibold text-right cursor-pointer select-none whitespace-nowrap"
@@ -692,14 +782,16 @@ function FinanceRadarBlock({
                   <tbody>
                     {overdueRows.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="py-6 px-2 text-center text-white/40">
+                        <td colSpan={6} className="py-6 px-2 text-center text-white/40">
                           {ageFilter
                             ? 'No overdue rows in this ageing bucket (adjust filter or customer search).'
                             : 'No overdue rows in top slice.'}
                         </td>
                       </tr>
                     ) : (
-                      overdueRows.map((r) => (
+                      overdueRows.map((r) => {
+                        const sp = (r.salespersonName ?? '').trim() || 'Unassigned'
+                        return (
                         <tr key={r.projectId} className="border-b border-white/[0.06] last:border-b-0 hover:bg-white/[0.04]">
                           <td className="py-2 px-2 sm:px-2.5 max-w-[7rem] sm:max-w-[9rem]">
                             <Link
@@ -709,6 +801,9 @@ function FinanceRadarBlock({
                             >
                               {r.customerName}
                             </Link>
+                          </td>
+                          <td className="py-2 px-2 text-white/70 truncate max-w-[9rem]" title={sp}>
+                            {sp}
                           </td>
                           <td className="py-2 px-2 text-right tabular-nums text-white/85 whitespace-nowrap">
                             ₹{Math.round(r.amount).toLocaleString('en-IN')}
@@ -731,7 +826,8 @@ function FinanceRadarBlock({
                             </button>
                           </td>
                         </tr>
-                      ))
+                        )
+                      })
                     )}
                   </tbody>
                 </table>
@@ -1273,12 +1369,26 @@ function InstallationPulseBlock({
   )
 }
 
+type PeBucketListClickArgs = {
+  row: {
+    key: string
+    label: string
+    count: number
+    crmOrderValue: number
+    peOrderValueExGst: number
+    projectIds: string[]
+  }
+  filteredProjects: ZenithExplorerProject[]
+}
+
 export default function ZenithYourFocus({
   role,
   dateFilter,
   zenithMainLoading,
   onOpenDrawer,
   showProposalEngine = false,
+  zenithExplorerProjects,
+  onPeBucketListClick,
 }: {
   role: UserRole
   dateFilter: ZenithDateFilter
@@ -1287,6 +1397,10 @@ export default function ZenithYourFocus({
   onOpenDrawer?: (p: { id: string; customerName?: string; stageLabel?: string }, section?: ZenithAutoFocusSection) => void
   /** Executive Zenith only: fourth collapsible under Your focus (sales / admin / management). */
   showProposalEngine?: boolean
+  /** Same slice as main Zenith dashboard; used to populate PE bucket quick drawer. */
+  zenithExplorerProjects?: ZenithExplorerProject[]
+  /** Opens quick drawer for a PE table row; footer uses `buildProjectsUrl({ peBucket })`. */
+  onPeBucketListClick?: (args: PeBucketListClickArgs) => void
 }) {
   const { user } = useAuth()
   const effFYs = dateFilter.selectedFYs
@@ -1335,7 +1449,7 @@ export default function ZenithYourFocus({
           Your focus
         </h2>
         <p
-          className="mt-1.5 text-[11px] sm:text-xs text-white/35 italic leading-snug max-w-2xl"
+          className="mt-1.5 text-[11px] text-white/45 leading-snug max-w-2xl"
           style={{ fontFamily: 'DM Sans, sans-serif' }}
         >
           Click on each of the sections to open and work on them.
@@ -1367,6 +1481,12 @@ export default function ZenithYourFocus({
                   selectedQuarters={dateFilter.selectedQuarters}
                   selectedMonths={dateFilter.selectedMonths}
                   embedded
+                  zenithExplorerProjects={zenithExplorerProjects}
+                  onPeBucketClick={
+                    onPeBucketListClick
+                      ? (args) => onPeBucketListClick(args)
+                      : undefined
+                  }
                 />
               </ZenithFocusCollapsible>
             ) : null}
@@ -1425,6 +1545,12 @@ export default function ZenithYourFocus({
                   selectedQuarters={dateFilter.selectedQuarters}
                   selectedMonths={dateFilter.selectedMonths}
                   embedded
+                  zenithExplorerProjects={zenithExplorerProjects}
+                  onPeBucketClick={
+                    onPeBucketListClick
+                      ? (args) => onPeBucketListClick(args)
+                      : undefined
+                  }
                 />
               </ZenithFocusCollapsible>
             ) : null}

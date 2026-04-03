@@ -11,6 +11,8 @@ export type ZenithExplorerProject = {
   lead_source: string
   customer_segment: string
   financial_year: string
+  /** CRM user id when assigned; omit or null for unassigned. */
+  assigned_to_id?: string | null
   assigned_to_name: string
   updated_at: string
   /** When current CRM stage was entered — primary leaderboard “closed in period” signal. */
@@ -18,8 +20,12 @@ export type ZenithExplorerProject = {
   confirmation_date?: string | null
   customer_name: string
   gross_profit?: number | null
+  /** Raw `financingBank` when set; used for Projects deep link. */
+  financing_bank?: string | null
   /** Matches `availingLoanByBank[].bankLabel` when project avails loan; else "". */
   loan_bank_label?: string
+  /** Prisma `PaymentStatus` or null stored as PENDING; N/A pill matches stage/cost via `matchesZenithPaymentNaBucket`. */
+  payment_status?: string
 }
 
 export type ZenithChartDrilldownDimension =
@@ -30,3 +36,4 @@ export type ZenithChartDrilldownDimension =
   | 'fy'
   | 'forecast'
   | 'loan_bank'
+  | 'payment_status'

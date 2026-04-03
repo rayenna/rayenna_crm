@@ -18,7 +18,12 @@ import { UserRole } from '../../types'
 import { getProjectStatusColor } from '../dashboard/projectStatusColors'
 import { getLoanBankBarColor } from '../dashboard/loanBankChartColors'
 import { buildExecutiveZenithKpis } from './zenithKpi'
-import { buildZenithFunnelStages } from './zenithFunnel'
+import {
+  buildDealFlowDrawerFilterLabel,
+  buildZenithFunnelStages,
+  filterExplorerProjectsByFunnelStage,
+  type ZenithFunnelStage,
+} from './zenithFunnel'
 import type { ZenithDateFilter } from './zenithTypes'
 import KPICard from './KPICard'
 import KPIGauge from './KPIGauge'
@@ -37,7 +42,11 @@ import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
 import ForecastKPI from './ForecastKPI'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
-import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
+import { buildProjectsUrl, type PeDashboardBucket } from '../../utils/dashboardTileLinks'
+import {
+  buildForecastOpenDealsProjectsHref,
+  buildZenithDrawerListProjectsHref,
+} from '../../utils/zenithListProjectsDeepLink'
 import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent, Landmark]
@@ -208,9 +217,74 @@ export default function ZenithExecutiveBody({
       const label = buildFilterLabel(dimension, value, opts)
       const listAmountMode =
         dimension === 'fy' && opts?.fyMetric === 'profit' ? 'gross_profit' : 'deal_value'
-      quickAction.openDrawerListMode({ filterLabel: label, filteredProjects: filtered, listAmountMode })
+      const sample =
+        dimension === 'loan_bank'
+          ? filtered.find((p) => p.financing_bank) ?? null
+          : dimension === 'assigned_to'
+            ? filtered.find((p) => p.assigned_to_id) ?? null
+            : filtered[0] ?? null
+      const projectsPageHref = buildZenithDrawerListProjectsHref(
+        dimension,
+        value,
+        dateFilter,
+        opts,
+        sample,
+      )
+      quickAction.openDrawerListMode({
+        filterLabel: label,
+        filteredProjects: filtered,
+        listAmountMode,
+        projectsPageHref,
+      })
     },
-    [explorerProjects, quickAction],
+    [explorerProjects, quickAction.openDrawerListMode, dateFilter],
+  )
+
+  const onPaymentStatusPillClick = useCallback(
+    (paymentUrlParam: string) => {
+      const filtered = filterProjectsByChartSlice(explorerProjects, 'payment_status', paymentUrlParam)
+      quickAction.openDrawerListMode({
+        filterLabel: buildFilterLabel('payment_status', paymentUrlParam),
+        filteredProjects: filtered,
+        listAmountMode: 'deal_value',
+        projectsPageHref: buildZenithDrawerListProjectsHref(
+          'payment_status',
+          paymentUrlParam,
+          dateFilter,
+          undefined,
+          filtered[0] ?? null,
+        ),
+      })
+    },
+    [explorerProjects, quickAction.openDrawerListMode, dateFilter],
+  )
+
+  const onDealFlowStageClick = useCallback(
+    (stage: ZenithFunnelStage) => {
+      const filtered = filterExplorerProjectsByFunnelStage(stage.id, explorerProjects)
+      quickAction.openDrawerListMode({
+        filterLabel: buildDealFlowDrawerFilterLabel(stage),
+        filteredProjects: filtered,
+        listAmountMode: 'deal_value',
+        projectsPageHref: stage.to,
+      })
+    },
+    [explorerProjects, quickAction.openDrawerListMode],
+  )
+
+  const onPeBucketListClick = useCallback(
+    (args: {
+      row: { key: string; label: string }
+      filteredProjects: ZenithExplorerProject[]
+    }) => {
+      quickAction.openDrawerListMode({
+        filterLabel: `Proposal Engine — ${args.row.label}`,
+        filteredProjects: args.filteredProjects,
+        listAmountMode: 'deal_value',
+        projectsPageHref: buildProjectsUrl({ peBucket: args.row.key as PeDashboardBucket }, dateFilter),
+      })
+    },
+    [quickAction.openDrawerListMode, dateFilter],
   )
 
   /** Match Hit List height to KPI grid on lg+. Row must use items-start (not stretch) so the grid keeps its natural height; if the row stretches the grid to the Hit List, offsetHeight equals the list and the widget never shrinks. */
@@ -401,7 +475,12 @@ export default function ZenithExecutiveBody({
             <div className="col-span-2 sm:col-span-3 min-w-0 shrink-0">
               <ForecastKPI
                 projects={explorerProjects}
-                onOpenForecastList={quickAction.openDrawerListMode}
+                onOpenForecastList={(args) =>
+                  quickAction.openDrawerListMode({
+                    ...args,
+                    projectsPageHref: buildForecastOpenDealsProjectsHref(dateFilter),
+                  })
+                }
               />
             </div>
           </div>
@@ -432,7 +511,12 @@ export default function ZenithExecutiveBody({
           <div className="col-span-2 sm:col-span-3 min-w-0 shrink-0">
             <ForecastKPI
               projects={explorerProjects}
-              onOpenForecastList={quickAction.openDrawerListMode}
+              onOpenForecastList={(args) =>
+                quickAction.openDrawerListMode({
+                  ...args,
+                  projectsPageHref: buildForecastOpenDealsProjectsHref(dateFilter),
+                })
+              }
             />
           </div>
         </div>
@@ -443,6 +527,7 @@ export default function ZenithExecutiveBody({
           <Leaderboard
             projects={explorerProjects}
             currentUser={{ id: user?.id ?? '', name: user?.name ?? '' }}
+            dateFilter={dateFilter}
             onOpenListMode={quickAction.openDrawerListMode}
           />
         </div>
@@ -450,7 +535,13 @@ export default function ZenithExecutiveBody({
 
       <section className="zenith-exec-section space-y-4" aria-label="Pipeline and priorities">
         <div id="zenith-funnel" className="scroll-mt-24">
-          <DealFlowFunnel stages={funnelStages} paymentItems={paymentItems} dateFilter={dateFilter} />
+          <DealFlowFunnel
+            stages={funnelStages}
+            paymentItems={paymentItems}
+            dateFilter={dateFilter}
+            onPaymentStatusClick={onPaymentStatusPillClick}
+            onDealFlowStageClick={onDealFlowStageClick}
+          />
         </div>
 
         <div id="zenith-focus" className="scroll-mt-24">
@@ -462,6 +553,8 @@ export default function ZenithExecutiveBody({
             showProposalEngine={
               role === UserRole.ADMIN || role === UserRole.MANAGEMENT || role === UserRole.SALES
             }
+            zenithExplorerProjects={explorerProjects}
+            onPeBucketListClick={onPeBucketListClick}
           />
         </div>
       </section>

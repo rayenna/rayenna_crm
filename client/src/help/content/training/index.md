@@ -24,8 +24,8 @@ By the end of this session, participants should be able to:
 1. **Open Zenith** and set **Financial Year**, **Quarter**, and **Month** filters consistently with the classic Dashboard.
 2. **Interpret** the **AI Insights** ribbon and jump to the relevant section on the page.
 3. **Read** the **KPI strip**, **Today’s Hit List** (where shown), and the **Revenue forecast** tile — including what “weighted” forecast means.
-4. Use **The Board** (Month / Quarter / FY) and **click-through lists** for transparency; expand **collapsible Your Focus** panels and use **Your pipeline today** to prioritise deals, **Deal Health**, and **Log activity** (Sales).
-5. **Explore** charts under **Explore the landscape**, open the **Quick Actions** drawer in **list** mode (including from **The Board**), and open a **single project** for quick updates **when their role allows**.
+4. Use **The Board** (Month / Quarter / FY) and **click-through lists** for transparency; expand **collapsible Your Focus** panels and use **Your pipeline today** to prioritise deals, **Deal Health**, and **Log activity** (Sales). Use **Proposal Engine** rows under Your Focus and **Deal flow funnel** stage / payment rows to open the same **Quick Actions** pattern.
+5. **Explore** charts under **Explore the landscape**, open the **Quick Actions** drawer in **list** mode (including from **The Board**, **funnel**, and **Proposal Engine**), use **Open in Projects →** when they need the full **Projects** grid with the same filters, and open a **single project** for quick updates **when their role allows**.
 6. **Recognise** what **Management** and other roles see differently (company-wide vs own pipeline, view-only drawer) and when a **Victory** toast may appear after a winning stage change.
 
 ---
@@ -48,9 +48,9 @@ By the end of this session, participants should be able to:
 | D | KPIs, Hit List, Revenue forecast | ✓ Deep | Overview |
 | E | The Board (leaderboard + drill-down lists) | ✓ | Overview |
 | F | Your Focus (collapsible panels) | ✓ Pipeline | Role panels |
-| G | Deal flow funnel | ✓ | ✓ |
+| G | Deal flow funnel (stages + payment → drawer + Projects link) | ✓ | ✓ |
 | H | Explore charts & drill-down | ✓ Deep | ✓ |
-| I | Quick Actions drawer & permissions | ✓ Deep | View vs edit |
+| I | Quick Actions drawer, **Open in Projects →**, permissions | ✓ Deep | View vs edit |
 | J | Role-specific summary | — | ✓ |
 
 ---
@@ -61,7 +61,7 @@ By the end of this session, participants should be able to:
 
 - **Same trusted numbers** as the classic **Dashboard**, with a full-screen, dark layout optimised for scanning and exploration.
 - **Sticky command bar** for date filters — KPIs, funnel, forecast, **Explore** charts, and drill-down lists **all follow** those filters.
-- **Clickable analytics**: **Explore** charts and **The Board** open a **Quick Actions** side drawer with a **filtered project list** (and optional quick edits for permitted roles).
+- **Clickable analytics**: **Explore** charts, **The Board**, the **Deal flow funnel** (stages and payment pills), and **Proposal Engine** rows under **Your Focus** open a **Quick Actions** side drawer with a **filtered project list** (and optional quick edits for permitted roles). The drawer footer’s **Open in Projects →** opens the **Projects** page with the **same slice filters** for deeper work.
 - **Server-backed data** after login — aligned with CRM when you switch devices (not “only on this browser”).
 
 **Open Zenith:** top navigation → **Dashboard** menu → **Zenith ✦**.  
@@ -205,9 +205,9 @@ By the end of this session, participants should be able to:
 - **Your pipeline today** — table of **your** open deals: customer, stage, deal value, **last activity**, **Deal Health**.
 - **Colour cues** for recency; **Follow-up needed** count for the oldest activity band.
 - **Log activity** on a row opens a short flow to attach a **remark** to the project (same family of action as elsewhere in CRM).
-- **Proposal Engine** panel — PE readiness buckets (when shown).
+- **Proposal Engine** panel — **PE Ready**, **PE Draft**, **PE Not Yet Created**, **Rest** (when shown). **Click a row** to open **Quick Actions** in list mode with the **same projects** the server counted for that bucket; **Open in Projects →** opens **Projects** with the matching **PE bucket** and command-bar dates. (The classic Dashboard **Proposal Engine** card rows still **link** straight to **Projects** — same filters, no drawer.)
 
-**Management / Admin** — Expand **Company pipeline**, **Payment radar**, **Installation pulse**, then **Proposal Engine** in order.
+**Management / Admin** — Expand **Company pipeline**, **Payment radar**, **Installation pulse**, then **Proposal Engine** in order. **Proposal Engine** rows use the **same click → drawer → Open in Projects** behaviour as Sales.
 
 **Table skills** (inside an expanded panel)
 
@@ -222,10 +222,11 @@ By the end of this session, participants should be able to:
 
 # Module 7 — Deal flow funnel
 
-- Visual **stage mix** from leads through execution (exact tiles depend by role).
-- **Placement:** **Below The Board**, **above** collapsible **Your Focus**.
-- **Sales:** use it to see **where deals pile up** for **you** under the current filters.
-- Click-through behaviour: align with your **Explore** charts session — many paths lead to the same **Quick Actions** drawer pattern.
+- Visual **stage mix** from leads through execution (exact tiles depend by role). **Payment status** appears as **clickable pills** where the layout includes them.
+- **Placement:** **Below The Board** (executive layout), **above** collapsible **Your Focus**.
+- **Sales:** use it to see **where deals pile up** for **you** under the current filters; **Management / Admin** see company-wide stage mix on the executive layout. **Operations** and **Finance** see a funnel suited to their KPIs — **stage** and **payment** rows are still **clickable** where shown.
+- **Click** a **stage row** or **payment pill** → **Quick Actions** list mode. The **numbers on the funnel** and the **list** use the **same rules**. **Open in Projects →** in the footer opens **Projects** with matching stage / payment and date filters.
+- **Trainer tie-in:** This is the same **drawer + footer link** pattern as **Explore** charts and **The Board** — one mental model for Zenith.
 
 ---
 
@@ -248,6 +249,7 @@ By the end of this session, participants should be able to:
 - Click a **bar**, **slice**, **stage**, **FY point**, or **bank** (where implemented) → **Quick Actions** drawer opens in **list mode**:
   - Header shows **filter label** and **how many projects**.
   - **Total** matches the **chart metric** (important: FY **profit** drill-down uses **gross profit** in the list and total — not order value).
+- **Open in Projects →** (drawer footer, when shown) — Continues on the **Projects** page with **URL filters aligned** to that drill-down (revenue vs pipeline slice, FY profit flag, etc.). Use it for the **full list**, sorting, or bulk workflows.
 
 **FY chart special case (train this explicitly)**
 
@@ -255,13 +257,18 @@ By the end of this session, participants should be able to:
 - **Teal (profit)** → drawer list uses **gross profit**; total matches the profit bar.
 - Small or **zero** profit bars: the chart still supports opening the **profit** drill-down via the chart hit targets.
 
+**Very large portfolios (facilitator note)** — Zenith loads a **batch** of projects for drawer lists (up to **5,000** per load, newest updates first). **Tile counts** can still include everyone in scope. If a trainee sees **fewer rows in the drawer** than on **Projects** after using **Open in Projects →**, that is why; for most teams it never comes up.
+
 **Exercise (5 min) — Sales**
 
 1. From **Projects by stage**, click **your** stage → drawer list.
 2. Click **Open →** on one row → **single-project** drawer (same flow as **Module 9 — Quick Actions** below).
 3. Use **Back** to return to the list without losing the chart context.
+4. Optional: tap **Open in Projects →** and confirm **Projects** opens with the expected filters.
 
-**The Board** — Same list pattern: from **The Board**, click **header totals** or a **row’s value** → drawer → **Open →** on a project.
+**The Board** — Same list pattern: from **The Board**, click **header totals** or a **row’s value** → drawer → **Open →** on a project or **Open in Projects →**.
+
+**Proposal Engine / funnel** — Covered in **Module 6** and **Module 7**; same drawer, same footer link pattern.
 
 ---
 
@@ -271,7 +278,8 @@ By the end of this session, participants should be able to:
 
 - Yellow **Viewing: …** strip (when shown) reminds you of the active filter.
 - **Sort** options may include **Order value / Gross profit**, **Health**, **Last activity** (depending on context).
-- **Totals** align with the **metric of the chart** you came from.
+- **Totals** align with the **metric of the chart** (or funnel / PE bucket) you came from.
+- **Open in Projects →** (bottom of the drawer when shown) — Opens the **Projects** list with the **same logical filters** as the current drawer list (stage, payment, chart slice, **PE bucket**, FY profit mode, etc., plus your Zenith **FY / Quarter / Month**). Use it when the drawer is not enough.
 
 ## Single project mode
 
@@ -296,19 +304,22 @@ By the end of this session, participants should be able to:
 ## Operations
 
 - KPIs emphasise **installation**, **completed**, **subsidy**, **confirmed revenue** (definitions respect filters).
+- **Deal flow funnel** (below KPIs on this layout): **click** stage or payment rows → **Quick Actions** list + **Open in Projects →** (same pattern as executive Zenith).
 - **Your Focus — Installation pulse:** **Expand the panel** first (sections start collapsed). Table: under-installation projects with **kW**, **Sales person**, **Start** / **Expected**, a **Progress** bar (%, with overdue / not-started labels when relevant), **Last note** (medium+ screens), and **+ Log update** (opens Quick Actions with the note field ready). **Overdue only** narrows the list; column headers sort the loaded rows. On phones, **scroll the table sideways**; **Last note** is hidden on very narrow widths — use project detail or **Log update** for remarks.
 - Charts: stage views, FY revenue/profit, segments, sales-team style views as shown.
 
 ## Finance
 
 - KPIs: **Total revenue**, **Amount received**, **Outstanding**, **Total profit**, **Availing loan** count (filter-scoped).
+- **Deal flow funnel:** **click** stage or payment rows → **Quick Actions** list + **Open in Projects →** (same idea as Operations / executive Zenith).
 - **Your Focus — Payment radar:** **Expand the panel** first. Three KPI tiles (**Total outstanding**, **Avg collection days**, **Subsidy pending**); **Payment ageing** buckets (0–30 … 90+ days) you can **click** to filter **Top overdue**; table sort by customer, amount, days; **Filter customer…** and **Reset filters**. **Remind** on a row opens **WhatsApp / Email** helpers with prefilled text. Beside the table (wide layout): **Collected vs outstanding** donut, **Collections — last 6 months** bars, and a **vs last month** collections trend line.
 - Charts: FY, segments, profitability, lead-source revenue, loans by bank as applicable.
 
 ## Management and Admin
 
-- **Company-wide** executive KPIs, **The Board**, then **all** Your Focus blocks (**expand** each: Sales pipeline + Finance radar + Operations installation + Proposal Engine) in one scroll.
+- **Company-wide** executive KPIs, **The Board**, **Deal flow funnel** (click stages / payment → drawer + **Open in Projects →**), then **all** Your Focus blocks (**expand** each: Sales pipeline + Finance radar + Operations installation + Proposal Engine) in one scroll.
 - **Hit List** and **Explore** charts behave like executive Sales/Management analytics.
+- **Proposal Engine** under Your Focus: **click** a bucket row for the drawer list; **Open in Projects →** for the full **Projects** view with **peBucket** filters.
 - **Management:** treat Zenith as **read-only analytics** for quick project actions; use **full project** for any process that requires edit (Management typically **cannot** edit projects in CRM).
 
 ## Admin
@@ -328,7 +339,10 @@ Use a **training FY** or sandbox data if available.
 | 3 | Read **Revenue forecast** and switch two tabs | Total unchanged; bars change |
 | 4 | Expand **Your pipeline today**, sort by **Deal Health** | Order updates |
 | 5 | Expand **The Board**, click a **row value** → drawer list | List opens; **Open →** works |
+| 5b | Optional: **Open in Projects →** from that list | **Projects** opens with matching filters |
 | 6 | Drill from **Projects by stage** | Drawer list count looks plausible |
+| 6b | Expand **Proposal Engine**, click **PE Ready** (or any row) | Drawer opens; optional **Open in Projects →** |
+| 6c | Click a **Deal flow funnel** stage row | Drawer opens with stage filter |
 | 7 | Open one project from list, **log activity** (if your project) | Success; remark visible on project (optional **Victory** toast if stage advanced) |
 | 8 | **Reset** filters | KPIs reflect broader scope |
 | 9 | Optional: `Ctrl+Shift+Z` from Dashboard | Zenith opens |
@@ -354,6 +368,12 @@ A: No — **intentional view-only** for roles without project edit rights.
 **Q: Data looks stale**  
 A: Refresh the page; ensure you are online. Zenith loads from the **server** after login.
 
+**Q: Why might the drawer show fewer projects than the Open in Projects page?**  
+A: Usually **no bug**. The drawer lists projects from Zenith’s **explorer batch** (see Help → Analytics → **Explorer batch limit**). **Open in Projects →** uses the full **Projects** list API. With **very large** portfolios in one period, counts can differ; for typical volumes they align.
+
+**Q: Zenith Proposal Engine panel vs the Dashboard Proposal Engine card?**  
+A: **Same buckets and filters.** On Zenith, rows open the **Quick Actions** drawer first; on the classic Dashboard card, rows **link** straight to **Projects**. Both respect your date filters.
+
 ---
 
 # Glossary
@@ -363,8 +383,10 @@ A: Refresh the page; ensure you are online. Zenith loads from the **server** aft
 | **FY** | Financial year April–March (label e.g. `2024-25`). |
 | **Weighted forecast** | Sum of (deal value × stage win probability) over open deals. |
 | **Deal Health** | 0–100 score from activity, momentum, value, close date, lead source. |
-| **Drill-down** | From chart or **The Board** → drawer **list** of projects behind that slice. |
+| **Drill-down** | From chart, **The Board**, **funnel**, or **PE row** → drawer **list** of projects behind that slice. |
 | **Quick Actions** | Right-hand drawer for list + quick project updates. |
+| **Open in Projects →** | Footer link from list mode → **Projects** page with the same slice filters. |
+| **PE bucket** | Proposal Engine readiness group: **PE Ready**, **PE Draft**, **PE Not Yet Created**, **Rest**. |
 
 ---
 

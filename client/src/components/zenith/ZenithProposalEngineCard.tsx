@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import axiosInstance from '../../utils/axios'
 import { getFriendlyApiErrorMessage } from '../../utils/axios'
 import { buildProjectsUrl, type PeDashboardBucket } from '../../utils/dashboardTileLinks'
+import type { ZenithExplorerProject } from '../../types/zenithExplorer'
 
 type PeStatusRow = {
   key: PeDashboardBucket
@@ -12,6 +13,7 @@ type PeStatusRow = {
   count: number
   crmOrderValue: number
   peOrderValueExGst: number
+  projectIds: string[]
 }
 
 const badgeClass: Record<PeStatusRow['key'], string> = {
@@ -26,17 +28,33 @@ function formatInr(value: number): string {
   return `₹${Math.round(value || 0).toLocaleString('en-IN')}`
 }
 
+function filterExplorerByPeBucketIds(
+  explorerProjects: ZenithExplorerProject[],
+  projectIds: string[],
+): ZenithExplorerProject[] {
+  const idMap = new Map(explorerProjects.map((p) => [p.id, p]))
+  return projectIds.map((id) => idMap.get(id)).filter((p): p is ZenithExplorerProject => p != null)
+}
+
 export default function ZenithProposalEngineCard({
   selectedFYs,
   selectedQuarters,
   selectedMonths,
   embedded = false,
+  zenithExplorerProjects,
+  onPeBucketClick,
 }: {
   selectedFYs: string[]
   selectedQuarters: string[]
   selectedMonths: string[]
   /** Inside ZenithFocusCollapsible: body only (no glass shell / gradient header / enter animation). */
   embedded?: boolean
+  /** When set with `onPeBucketClick`, rows open the quick drawer instead of navigating away. */
+  zenithExplorerProjects?: ZenithExplorerProject[]
+  onPeBucketClick?: (args: {
+    row: PeStatusRow
+    filteredProjects: ZenithExplorerProject[]
+  }) => void
 }) {
   const tileParams = { selectedFYs, selectedQuarters, selectedMonths }
 
@@ -50,6 +68,12 @@ export default function ZenithProposalEngineCard({
       const res = await axiosInstance.get(`/api/dashboard/proposal-engine-status?${params.toString()}`)
       return res.data as { rows: PeStatusRow[] }
     },
+    select: (data: { rows: PeStatusRow[] }) => ({
+      rows: (data.rows ?? []).map((r) => ({
+        ...r,
+        projectIds: Array.isArray(r.projectIds) ? r.projectIds : [],
+      })),
+    }),
   })
 
   const [narrow, setNarrow] = useState(false)
@@ -116,35 +140,66 @@ export default function ZenithProposalEngineCard({
 
   const rows = data?.rows ?? []
 
+  const drawerMode = Boolean(onPeBucketClick && zenithExplorerProjects != null)
+
+  const rowShellClass =
+    'flex justify-between items-start gap-2 py-2 px-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-[#f5a623]/35 hover:bg-white/[0.06] transition-all min-w-0 text-inherit'
+
   const linksList = (
     <div className="p-3 sm:p-4 flex-1 min-h-0 space-y-1.5">
-      {rows.map((row) => (
-        <Link
-          key={row.key}
-          to={buildProjectsUrl({ peBucket: row.key }, tileParams)}
-          className="flex justify-between items-start gap-2 py-2 px-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-[#f5a623]/35 hover:bg-white/[0.06] transition-all min-w-0 no-underline text-inherit"
-          title={`${row.label}: ${row.count} projects — CRM ${formatInr(row.crmOrderValue)}${
-            row.peOrderValueExGst > 0 ? `, PE ex GST ${formatInr(row.peOrderValueExGst)}` : ''
-          }`}
-        >
-          <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold flex-shrink-0 max-w-[48%] sm:max-w-none truncate ${badgeClass[row.key]}`}
-          >
-            {row.label}
-          </span>
-          <span className="text-right min-w-0">
-            <span className="block text-xs font-semibold text-white tabular-nums">
-              {row.count.toLocaleString('en-IN')}{' '}
-              <span className="text-[#f5a623]">({formatInr(row.crmOrderValue)})</span>
+      {rows.map((row) => {
+        const title = `${row.label}: ${row.count} projects — CRM ${formatInr(row.crmOrderValue)}${
+          row.peOrderValueExGst > 0 ? `, PE ex GST ${formatInr(row.peOrderValueExGst)}` : ''
+        }`
+        const body = (
+          <>
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold flex-shrink-0 max-w-[48%] sm:max-w-none truncate ${badgeClass[row.key]}`}
+            >
+              {row.label}
             </span>
-            {row.peOrderValueExGst > 0 ? (
-              <span className="block text-[10px] text-cyan-300/90 font-medium mt-0.5">
-                PE ex GST {formatInr(row.peOrderValueExGst)}
+            <span className="text-right min-w-0">
+              <span className="block text-xs font-semibold text-white tabular-nums">
+                {row.count.toLocaleString('en-IN')}{' '}
+                <span className="text-[#f5a623]">({formatInr(row.crmOrderValue)})</span>
               </span>
-            ) : null}
-          </span>
-        </Link>
-      ))}
+              {row.peOrderValueExGst > 0 ? (
+                <span className="block text-[10px] text-cyan-300/90 font-medium mt-0.5">
+                  PE ex GST {formatInr(row.peOrderValueExGst)}
+                </span>
+              ) : null}
+            </span>
+          </>
+        )
+        if (drawerMode && onPeBucketClick && zenithExplorerProjects) {
+          return (
+            <button
+              key={row.key}
+              type="button"
+              className={`${rowShellClass} w-full text-left cursor-pointer`}
+              title={title}
+              onClick={() =>
+                onPeBucketClick({
+                  row,
+                  filteredProjects: filterExplorerByPeBucketIds(zenithExplorerProjects, row.projectIds),
+                })
+              }
+            >
+              {body}
+            </button>
+          )
+        }
+        return (
+          <Link
+            key={row.key}
+            to={buildProjectsUrl({ peBucket: row.key }, tileParams)}
+            className={`${rowShellClass} no-underline`}
+            title={title}
+          >
+            {body}
+          </Link>
+        )
+      })}
     </div>
   )
 

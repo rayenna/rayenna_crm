@@ -10,11 +10,17 @@ import {
   Legend,
   Cell,
 } from 'recharts'
+import { useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
 import { buildFinanceZenithKpis } from './zenithKpi'
-import { buildZenithFunnelFromStatuses } from './zenithFunnel'
+import {
+  buildDealFlowDrawerFilterLabel,
+  buildZenithFunnelFromStatuses,
+  filterExplorerProjectsByFunnelStage,
+  type ZenithFunnelStage,
+} from './zenithFunnel'
 import type { ZenithDateFilter } from './zenithTypes'
 import KPICard from './KPICard'
 import DealFlowFunnel from './DealFlowFunnel'
@@ -27,6 +33,10 @@ import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
 import { getLoanBankBarColor } from '../dashboard/loanBankChartColors'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
+import type { ZenithQuickActionHandle } from '../../hooks/useQuickAction'
+import type { ZenithExplorerProject } from '../../types/zenithExplorer'
+import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
+import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
 
@@ -48,10 +58,12 @@ export default function ZenithFinanceBody({
   data,
   isLoading,
   dateFilter,
+  quickAction,
 }: {
   data: Record<string, unknown>
   isLoading: boolean
   dateFilter: ZenithDateFilter
+  quickAction: ZenithQuickActionHandle
 }) {
   const { user } = useAuth()
   const effFYs = dateFilter.selectedFYs
@@ -87,6 +99,40 @@ export default function ZenithFinanceBody({
     },
     enabled: !!user && !isLoading,
   })
+
+  const explorerProjects = (data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]
+
+  const onPaymentStatusPillClick = useCallback(
+    (paymentUrlParam: string) => {
+      const filtered = filterProjectsByChartSlice(explorerProjects, 'payment_status', paymentUrlParam)
+      quickAction.openDrawerListMode({
+        filterLabel: buildFilterLabel('payment_status', paymentUrlParam),
+        filteredProjects: filtered,
+        listAmountMode: 'deal_value',
+        projectsPageHref: buildZenithDrawerListProjectsHref(
+          'payment_status',
+          paymentUrlParam,
+          dateFilter,
+          undefined,
+          filtered[0] ?? null,
+        ),
+      })
+    },
+    [explorerProjects, quickAction.openDrawerListMode, dateFilter],
+  )
+
+  const onDealFlowStageClick = useCallback(
+    (stage: ZenithFunnelStage) => {
+      const filtered = filterExplorerProjectsByFunnelStage(stage.id, explorerProjects)
+      quickAction.openDrawerListMode({
+        filterLabel: buildDealFlowDrawerFilterLabel(stage),
+        filteredProjects: filtered,
+        listAmountMode: 'deal_value',
+        projectsPageHref: stage.to,
+      })
+    },
+    [explorerProjects, quickAction.openDrawerListMode],
+  )
 
   if (isLoading) {
     return (
@@ -153,7 +199,13 @@ export default function ZenithFinanceBody({
         <ZenithYourFocus role={user!.role} dateFilter={dateFilter} zenithMainLoading={isLoading} />
       </div>
       <div id="zenith-funnel" className="scroll-mt-28">
-        <DealFlowFunnel stages={funnel} paymentItems={paymentItems} dateFilter={dateFilter} />
+        <DealFlowFunnel
+          stages={funnel}
+          paymentItems={paymentItems}
+          dateFilter={dateFilter}
+          onPaymentStatusClick={onPaymentStatusPillClick}
+          onDealFlowStageClick={onDealFlowStageClick}
+        />
       </div>
       <section className="zenith-exec-section" aria-label="Finance charts">
         <div
@@ -225,15 +277,18 @@ export default function ZenithFinanceBody({
         </div>
         <div
           id="zenith-segments"
-          className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 scroll-mt-24"
+          className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 lg:items-stretch lg:min-h-[480px] scroll-mt-24"
         >
-          <div className="min-w-0">
+          <div className="min-w-0 flex h-full min-h-[320px] flex-col lg:min-h-0">
             <SegmentDonut
+              stretchToRowHeight
               title="Revenue by customer segment"
               data={seg.map((s) => ({ name: s.label, value: s.value, percentage: s.percentage }))}
             />
           </div>
-          <CustomerProfitabilityRank rows={wordCloud} />
+          <div className="flex min-h-[320px] h-full min-w-0 flex-col lg:min-h-0">
+            <CustomerProfitabilityRank rows={wordCloud} className="h-full min-h-[320px] flex-1" />
+          </div>
         </div>
       </section>
     </div>

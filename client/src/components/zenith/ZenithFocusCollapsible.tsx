@@ -60,14 +60,12 @@ export default function ZenithFocusCollapsible({
         aria-expanded={open}
       >
         <span className="min-w-0 flex flex-col gap-0.5 text-left">
-          <span
-            className="zenith-display text-lg sm:text-xl font-bold text-white tracking-tight"
-            style={{ fontFamily: "'Syne', sans-serif" }}
-          >
+          {/* Match ChartPanel chart titles (e.g. Projects by stage) */}
+          <span className="zenith-display text-sm sm:text-[15px] font-semibold text-white/95 tracking-tight">
             {title}
           </span>
           {subtitle ? (
-            <span className="text-[11px] text-white/35" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <span className="text-[11px] text-white/45 leading-snug" style={{ fontFamily: "'DM Sans', sans-serif" }}>
               {subtitle}
             </span>
           ) : null}

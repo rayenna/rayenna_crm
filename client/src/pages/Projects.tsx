@@ -40,6 +40,16 @@ function getInitialFiltersFromUrl(): {
   selectedQuarters: string[]
   selectedMonths: string[]
   peBucket: PeBucketParam | null
+  type: string[]
+  leadSource: string[]
+  salespersonId: string[]
+  financingBank: string[]
+  zenithClosedFrom: string | null
+  zenithClosedTo: string | null
+  salespersonUnassigned: boolean
+  leadSourceIsNull: boolean
+  zenithSlice: 'revenue' | 'pipeline' | null
+  zenithFyProfit: boolean
 } | null {
   const p = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
   const status = p.getAll('status')
@@ -49,6 +59,18 @@ function getInitialFiltersFromUrl(): {
   const quarter = p.getAll('quarter')
   const month = p.getAll('month')
   const peBucket = parsePeBucketFromSearch(typeof window !== 'undefined' ? window.location.search : '')
+  const type = p.getAll('type')
+  const leadSource = p.getAll('leadSource')
+  const salespersonId = p.getAll('salespersonId')
+  const financingBank = p.getAll('financingBank')
+  const zenithClosedFrom = p.get('zenithClosedFrom')
+  const zenithClosedTo = p.get('zenithClosedTo')
+  const salespersonUnassigned = p.get('salespersonUnassigned') === 'true'
+  const leadSourceIsNull = p.get('leadSourceIsNull') === 'true'
+  const rawZenithSlice = p.get('zenithSlice')
+  const zenithSlice =
+    rawZenithSlice === 'revenue' || rawZenithSlice === 'pipeline' ? rawZenithSlice : null
+  const zenithFyProfit = p.get('zenithFyProfit') === 'true'
   const hasAny =
     status.length > 0 ||
     paymentStatus.length > 0 ||
@@ -56,10 +78,23 @@ function getInitialFiltersFromUrl(): {
     fy.length > 0 ||
     quarter.length > 0 ||
     month.length > 0 ||
-    peBucket != null
+    peBucket != null ||
+    type.length > 0 ||
+    leadSource.length > 0 ||
+    salespersonId.length > 0 ||
+    financingBank.length > 0 ||
+    (zenithClosedFrom != null && zenithClosedFrom !== '') ||
+    (zenithClosedTo != null && zenithClosedTo !== '') ||
+    salespersonUnassigned ||
+    leadSourceIsNull ||
+    zenithSlice != null ||
+    zenithFyProfit
   if (!hasAny) return null
   const validStatus = status.filter((s) => Object.values(ProjectStatus).includes(s as ProjectStatus))
   const validPayment = paymentStatus.filter((v) => (VALID_PAYMENT_STATUS_VALUES as readonly string[]).includes(v))
+  const validType = type.filter((t) => Object.values(ProjectType).includes(t as ProjectType))
+  const validLead = leadSource.filter((ls) => Object.values(LeadSource).includes(ls as LeadSource))
+  const validFinancingBank = financingBank.map((b) => b.trim()).filter(Boolean)
   return {
     status: validStatus,
     paymentStatus: validPayment,
@@ -68,6 +103,16 @@ function getInitialFiltersFromUrl(): {
     selectedQuarters: quarter,
     selectedMonths: month,
     peBucket,
+    type: validType,
+    leadSource: leadSourceIsNull ? [] : validLead,
+    salespersonId: salespersonUnassigned ? [] : salespersonId.map((id) => id.trim()).filter(Boolean),
+    financingBank: validFinancingBank,
+    zenithClosedFrom: zenithClosedFrom?.trim() || null,
+    zenithClosedTo: zenithClosedTo?.trim() || null,
+    salespersonUnassigned,
+    leadSourceIsNull,
+    zenithSlice,
+    zenithFyProfit,
   }
 }
 
@@ -235,15 +280,22 @@ const Projects = () => {
 
   const [filters, setFilters] = useState(() => ({
     status: (urlInit?.status ?? []) as string[],
-    type: [] as string[],
+    type: (urlInit?.type ?? []) as string[],
     projectServiceType: [] as string[],
-    salespersonId: [] as string[],
-    leadSource: [] as string[],
+    salespersonId: (urlInit?.salespersonId ?? []) as string[],
+    leadSource: (urlInit?.leadSource ?? []) as string[],
     supportTicketStatus: [] as string[],
     paymentStatus: (urlInit?.paymentStatus ?? []) as string[],
     hasDocuments: false,
     availingLoan: urlInit?.availingLoan ?? false,
     peBucket: (urlInit?.peBucket ?? null) as PeBucketParam | null,
+    financingBank: (urlInit?.financingBank ?? []) as string[],
+    zenithClosedFrom: urlInit?.zenithClosedFrom ?? null,
+    zenithClosedTo: urlInit?.zenithClosedTo ?? null,
+    salespersonUnassigned: urlInit?.salespersonUnassigned ?? false,
+    leadSourceIsNull: urlInit?.leadSourceIsNull ?? false,
+    zenithSlice: urlInit?.zenithSlice ?? null,
+    zenithFyProfit: urlInit?.zenithFyProfit ?? false,
     search: '',
     sortBy: '',
     sortOrder: 'desc',
@@ -261,10 +313,38 @@ const Projects = () => {
     const fyFromUrl = searchParams.getAll('fy')
     const quarterFromUrl = searchParams.getAll('quarter')
     const monthFromUrl = searchParams.getAll('month')
+    const typeFromUrl = searchParams.getAll('type')
+    const leadSourceFromUrl = searchParams.getAll('leadSource')
+    const salespersonIdFromUrl = searchParams.getAll('salespersonId')
+    const financingBankFromUrl = searchParams.getAll('financingBank')
+    const zenithClosedFromUrl = searchParams.get('zenithClosedFrom')
+    const zenithClosedToUrl = searchParams.get('zenithClosedTo')
+    const salespersonUnassignedFromUrl = searchParams.get('salespersonUnassigned') === 'true'
+    const leadSourceIsNullFromUrl = searchParams.get('leadSourceIsNull') === 'true'
+    const rawZenithSliceUrl = searchParams.get('zenithSlice')
+    const zenithSliceFromUrl =
+      rawZenithSliceUrl === 'revenue' || rawZenithSliceUrl === 'pipeline' ? rawZenithSliceUrl : null
+    const zenithFyProfitFromUrl = searchParams.get('zenithFyProfit') === 'true'
     const hasStatusParams = statusFromUrl.length > 0
     const hasPaymentParams = paymentStatusFromUrl.length > 0
     const hasDateParams = fyFromUrl.length > 0 || quarterFromUrl.length > 0 || monthFromUrl.length > 0
     const peBucketValid = parsePeBucketFromSearch(searchParams.toString())
+    const validTypeFromUrl = typeFromUrl.filter((t) => Object.values(ProjectType).includes(t as ProjectType))
+    const validLeadFromUrl = leadSourceFromUrl.filter((ls) => Object.values(LeadSource).includes(ls as LeadSource))
+    const validFinancingFromUrl = financingBankFromUrl.map((b) => b.trim()).filter(Boolean)
+    const hasZenithClosedParams =
+      (zenithClosedFromUrl != null && zenithClosedFromUrl.trim() !== '') ||
+      (zenithClosedToUrl != null && zenithClosedToUrl.trim() !== '')
+    const hasExtendedTileParams =
+      validTypeFromUrl.length > 0 ||
+      validLeadFromUrl.length > 0 ||
+      salespersonIdFromUrl.length > 0 ||
+      validFinancingFromUrl.length > 0 ||
+      hasZenithClosedParams ||
+      salespersonUnassignedFromUrl ||
+      leadSourceIsNullFromUrl ||
+      zenithSliceFromUrl != null ||
+      zenithFyProfitFromUrl
     // Wait for statusOptions when we have status in URL (needed to validate status values)
     const canResolveStatus = !hasStatusParams || statusOptions.length > 0
     const validStatus = hasStatusParams && canResolveStatus
@@ -277,7 +357,8 @@ const Projects = () => {
         validStatus.length > 0 ||
         validPayment.length > 0 ||
         availingLoanFromUrl ||
-        hasDateParams)
+        hasDateParams ||
+        hasExtendedTileParams)
     ) {
       appliedFromUrlRef.current = true
       setFilters((prev) => ({
@@ -290,6 +371,25 @@ const Projects = () => {
             : {}),
         ...(validPayment.length > 0 && { paymentStatus: validPayment }),
         ...(availingLoanFromUrl && { availingLoan: true }),
+        ...(validTypeFromUrl.length > 0 && { type: validTypeFromUrl }),
+        ...(leadSourceIsNullFromUrl
+          ? { leadSourceIsNull: true, leadSource: [] as string[] }
+          : validLeadFromUrl.length > 0
+            ? { leadSource: validLeadFromUrl, leadSourceIsNull: false }
+            : {}),
+        ...(salespersonUnassignedFromUrl
+          ? { salespersonUnassigned: true, salespersonId: [] as string[] }
+          : salespersonIdFromUrl.length > 0
+            ? {
+                salespersonId: salespersonIdFromUrl.map((id) => id.trim()).filter(Boolean),
+                salespersonUnassigned: false,
+              }
+            : {}),
+        ...(validFinancingFromUrl.length > 0 && { financingBank: validFinancingFromUrl }),
+        ...(zenithClosedFromUrl?.trim() && { zenithClosedFrom: zenithClosedFromUrl.trim() }),
+        ...(zenithClosedToUrl?.trim() && { zenithClosedTo: zenithClosedToUrl.trim() }),
+        zenithSlice: zenithSliceFromUrl,
+        zenithFyProfit: zenithFyProfitFromUrl,
       }))
       if (fyFromUrl.length > 0) setSelectedFYs(fyFromUrl)
       if (quarterFromUrl.length > 0) setSelectedQuarters(quarterFromUrl)
@@ -393,6 +493,13 @@ const Projects = () => {
     filters.hasDocuments,
     filters.availingLoan,
     filters.peBucket,
+    filters.financingBank,
+    filters.zenithClosedFrom,
+    filters.zenithClosedTo,
+    filters.salespersonUnassigned,
+    filters.leadSourceIsNull,
+    filters.zenithSlice,
+    filters.zenithFyProfit,
     filters.sortBy,
     selectedFYs,
     selectedQuarters,
@@ -426,6 +533,13 @@ const Projects = () => {
       hasDocuments: false,
       availingLoan: false,
       peBucket: null,
+      financingBank: [],
+      zenithClosedFrom: null,
+      zenithClosedTo: null,
+      salespersonUnassigned: false,
+      leadSourceIsNull: false,
+      zenithSlice: null,
+      zenithFyProfit: false,
       search: '',
       sortBy: '',
       sortOrder: 'desc',
@@ -456,7 +570,13 @@ const Projects = () => {
       (filters.leadSource.length > 0 ? 1 : 0) +
       (filters.hasDocuments ? 1 : 0) +
       (filters.availingLoan ? 1 : 0) +
-      (filters.peBucket ? 1 : 0)
+      (filters.peBucket ? 1 : 0) +
+      (filters.financingBank.length > 0 ? 1 : 0) +
+      (filters.zenithClosedFrom || filters.zenithClosedTo ? 1 : 0) +
+      (filters.salespersonUnassigned ? 1 : 0) +
+      (filters.leadSourceIsNull ? 1 : 0) +
+      (filters.zenithSlice ? 1 : 0) +
+      (filters.zenithFyProfit ? 1 : 0)
     )
   }, [
     filters.status,
@@ -469,6 +589,13 @@ const Projects = () => {
     filters.hasDocuments,
     filters.availingLoan,
     filters.peBucket,
+    filters.financingBank,
+    filters.zenithClosedFrom,
+    filters.zenithClosedTo,
+    filters.salespersonUnassigned,
+    filters.leadSourceIsNull,
+    filters.zenithSlice,
+    filters.zenithFyProfit,
     defaultStatusValues,
     user?.role,
   ])
@@ -492,7 +619,18 @@ const Projects = () => {
     searchParams.has('fy') ||
     searchParams.has('quarter') ||
     searchParams.has('month') ||
-    searchParams.has('peBucket')
+    searchParams.has('peBucket') ||
+    searchParams.getAll('type').length > 0 ||
+    searchParams.getAll('leadSource').length > 0 ||
+    searchParams.getAll('salespersonId').length > 0 ||
+    searchParams.getAll('financingBank').length > 0 ||
+    searchParams.has('zenithClosedFrom') ||
+    searchParams.has('zenithClosedTo') ||
+    searchParams.get('salespersonUnassigned') === 'true' ||
+    searchParams.get('leadSourceIsNull') === 'true' ||
+    searchParams.get('zenithSlice') === 'revenue' ||
+    searchParams.get('zenithSlice') === 'pipeline' ||
+    searchParams.get('zenithFyProfit') === 'true'
 
   const { data, isLoading } = useQuery({
     queryKey: [
@@ -522,6 +660,13 @@ const Projects = () => {
       if (filters.hasDocuments) params.append('hasDocuments', 'true')
       if (filters.availingLoan) params.append('availingLoan', 'true')
       if (filters.peBucket) params.append('peBucket', filters.peBucket)
+      filters.financingBank.forEach((v) => params.append('financingBank', v))
+      if (filters.zenithClosedFrom) params.append('zenithClosedFrom', filters.zenithClosedFrom)
+      if (filters.zenithClosedTo) params.append('zenithClosedTo', filters.zenithClosedTo)
+      if (filters.salespersonUnassigned) params.append('salespersonUnassigned', 'true')
+      if (filters.leadSourceIsNull) params.append('leadSourceIsNull', 'true')
+      if (filters.zenithSlice) params.append('zenithSlice', filters.zenithSlice)
+      if (filters.zenithFyProfit) params.append('zenithFyProfit', 'true')
       // Deal Health Score sorts server-side (same /api/projects endpoint) so it works across the full dataset.
       if (filters.sortBy) {
         params.append('sortBy', filters.sortBy)
@@ -650,6 +795,13 @@ const Projects = () => {
       if (filters.search) params.append('search', filters.search)
       if (filters.hasDocuments) params.append('hasDocuments', 'true')
       if (filters.availingLoan) params.append('availingLoan', 'true')
+      filters.financingBank.forEach((v) => params.append('financingBank', v))
+      if (filters.zenithClosedFrom) params.append('zenithClosedFrom', filters.zenithClosedFrom)
+      if (filters.zenithClosedTo) params.append('zenithClosedTo', filters.zenithClosedTo)
+      if (filters.salespersonUnassigned) params.append('salespersonUnassigned', 'true')
+      if (filters.leadSourceIsNull) params.append('leadSourceIsNull', 'true')
+      if (filters.zenithSlice) params.append('zenithSlice', filters.zenithSlice)
+      if (filters.zenithFyProfit) params.append('zenithFyProfit', 'true')
       if (filters.sortBy) {
         params.append('sortBy', filters.sortBy)
         params.append('sortOrder', filters.sortOrder)

@@ -10,12 +10,18 @@ import {
   Cell,
   Legend,
 } from 'recharts'
+import { useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
 import { getProjectStatusColor } from '../dashboard/projectStatusColors'
 import { buildOperationsZenithKpis } from './zenithKpi'
-import { buildZenithOperationsExecutionFunnel } from './zenithFunnel'
+import {
+  buildDealFlowDrawerFilterLabel,
+  buildZenithOperationsExecutionFunnel,
+  filterExplorerProjectsByFunnelStage,
+  type ZenithFunnelStage,
+} from './zenithFunnel'
 import type { ZenithDateFilter } from './zenithTypes'
 import type { ZenithQuickActionHandle } from '../../hooks/useQuickAction'
 import KPICard from './KPICard'
@@ -26,6 +32,9 @@ import SegmentDonut from './SegmentDonut'
 import ZenithRevenueProfitFyChart from './ZenithRevenueProfitFyChart'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
 import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
+import type { ZenithExplorerProject } from '../../types/zenithExplorer'
+import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
+import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
 
@@ -73,6 +82,40 @@ export default function ZenithOperationsBody({
     enabled: !!user && !isLoading,
   })
 
+  const explorerProjects = (data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]
+
+  const onPaymentStatusPillClick = useCallback(
+    (paymentUrlParam: string) => {
+      const filtered = filterProjectsByChartSlice(explorerProjects, 'payment_status', paymentUrlParam)
+      quickAction.openDrawerListMode({
+        filterLabel: buildFilterLabel('payment_status', paymentUrlParam),
+        filteredProjects: filtered,
+        listAmountMode: 'deal_value',
+        projectsPageHref: buildZenithDrawerListProjectsHref(
+          'payment_status',
+          paymentUrlParam,
+          dateFilter,
+          undefined,
+          filtered[0] ?? null,
+        ),
+      })
+    },
+    [explorerProjects, quickAction.openDrawerListMode, dateFilter],
+  )
+
+  const onDealFlowStageClick = useCallback(
+    (stage: ZenithFunnelStage) => {
+      const filtered = filterExplorerProjectsByFunnelStage(stage.id, explorerProjects)
+      quickAction.openDrawerListMode({
+        filterLabel: buildDealFlowDrawerFilterLabel(stage),
+        filteredProjects: filtered,
+        listAmountMode: 'deal_value',
+        projectsPageHref: stage.to,
+      })
+    },
+    [explorerProjects, quickAction.openDrawerListMode],
+  )
+
   if (isLoading) {
     return (
       <div className="px-3 sm:px-5 py-6 space-y-6 max-w-[1600px] mx-auto">
@@ -107,6 +150,7 @@ export default function ZenithOperationsBody({
     count: number
     outstanding: number
   }[]
+
   const salesMerge = (() => {
     const rev = perfData?.revenueBySalesperson ?? []
     const pipe = perfData?.salesTeamData ?? []
@@ -144,6 +188,8 @@ export default function ZenithOperationsBody({
           title="Project Execution Flow"
           paymentItems={paymentItems}
           dateFilter={dateFilter}
+          onPaymentStatusClick={onPaymentStatusPillClick}
+          onDealFlowStageClick={onDealFlowStageClick}
         />
       </div>
       <div id="zenith-charts-row-1" className="grid grid-cols-1 xl:grid-cols-2 gap-4 scroll-mt-28">

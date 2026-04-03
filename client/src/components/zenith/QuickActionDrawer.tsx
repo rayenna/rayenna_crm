@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useModalEscape } from '../../contexts/ModalEscapeContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import { Project, ProjectStatus, UserRole } from '../../types'
 import { useAuth } from '../../contexts/AuthContext'
@@ -105,6 +105,7 @@ export default function QuickActionDrawer({
   filteredProjects = [],
   listAmountMode = 'deal_value',
   autoFocusSection = null,
+  projectsPageHref = null,
 }: {
   isOpen: boolean
   projectId: string | null
@@ -114,6 +115,8 @@ export default function QuickActionDrawer({
   filteredProjects?: ZenithExplorerProject[]
   listAmountMode?: ZenithListAmountMode
   autoFocusSection?: ZenithAutoFocusSection
+  /** List mode: deep link to Projects with the same filters as this drawer list. */
+  projectsPageHref?: string | null
 }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -663,13 +666,26 @@ export default function QuickActionDrawer({
           style={{ height: 'auto', minHeight: 56 }}
         >
           {showListBody ? (
-            <button
-              type="button"
-              className="ml-auto rounded-xl border border-white/20 bg-transparent px-4 py-1.5 text-[13px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors"
-              onClick={onClose}
-            >
-              Close
-            </button>
+            <>
+              {projectsPageHref ? (
+                <Link
+                  to={projectsPageHref}
+                  onClick={onClose}
+                  className="text-[13px] font-semibold text-white/70 hover:text-[#F5A623] transition-colors shrink-0 min-w-0 truncate pr-2"
+                >
+                  Open in Projects →
+                </Link>
+              ) : (
+                <span className="w-0 flex-1 min-w-0" aria-hidden />
+              )}
+              <button
+                type="button"
+                className="ml-auto rounded-xl border border-white/20 bg-transparent px-4 py-1.5 text-[13px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors shrink-0"
+                onClick={onClose}
+              >
+                Close
+              </button>
+            </>
           ) : (
             <>
               <button

@@ -35,11 +35,17 @@ export default function SegmentDonut({
   data,
   onSegmentClick,
   showExploreHint,
+  /**
+   * Fill a stretched grid cell (e.g. Finance segment + profitability row): card and chart area grow with the row
+   * while keeping a minimum chart height. Matches Executive Zenith loans + word cloud alignment.
+   */
+  stretchToRowHeight = false,
 }: {
   title: string
   data: SegmentSlice[]
   onSegmentClick?: (segmentName: string) => void
   showExploreHint?: boolean
+  stretchToRowHeight?: boolean
 }) {
   const chartData = useMemo(
     () =>
@@ -59,7 +65,8 @@ export default function SegmentDonut({
   const pieMargin = narrow ? { top: 6, bottom: 6, left: 6, right: 6 } : undefined
 
   const cardClass =
-    'zenith-segment-donut-card zenith-glass rounded-xl p-3 sm:p-4 flex flex-col max-lg:overflow-visible shrink-0'
+    'zenith-segment-donut-card zenith-glass rounded-xl p-3 sm:p-4 flex flex-col max-lg:overflow-visible ' +
+    (stretchToRowHeight ? 'h-full min-h-0' : 'shrink-0')
 
   const cardBody = (
     <>
@@ -77,17 +84,28 @@ export default function SegmentDonut({
         ) : null}
       </div>
       <div
-        className="zenith-chart-slot w-full min-w-0 shrink-0"
-        style={{ height: pieSlotHeightPx }}
+        className={
+          stretchToRowHeight
+            ? 'zenith-chart-slot w-full min-w-0 flex-1 min-h-0'
+            : 'zenith-chart-slot w-full min-w-0 shrink-0'
+        }
+        style={stretchToRowHeight ? { minHeight: pieSlotHeightPx } : { height: pieSlotHeightPx }}
       >
         {chartData.length === 0 ? (
           <p className="text-sm text-white/40 text-center flex items-center justify-center h-full">
             No data for this period
           </p>
         ) : (
-          <ZenithChartTouchReset>
+          <ZenithChartTouchReset
+            className={stretchToRowHeight ? 'h-full min-h-0 w-full min-w-0' : 'w-full min-w-0'}
+          >
             {(rk) => (
-              <ResponsiveContainer key={rk} width="100%" height={pieSlotHeightPx} minWidth={0}>
+              <ResponsiveContainer
+                key={rk}
+                width="100%"
+                height={stretchToRowHeight ? '100%' : pieSlotHeightPx}
+                minWidth={0}
+              >
                 <PieChart margin={pieMargin}>
                   <Pie
                     data={chartData}

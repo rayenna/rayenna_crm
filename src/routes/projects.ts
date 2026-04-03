@@ -21,6 +21,57 @@ import * as XLSX from 'xlsx';
 
 const router = express.Router();
 
+/**
+ * Zenith "Open in Projects" parity: same slice as `zenithExplorerProjects` client filters
+ * (`matchesDashboardRevenueWhere` vs `inDashboardPipelineSlice`), optional FY-profit (`grossProfit` set).
+ */
+function pushZenithExplorerSliceOntoWhere(
+  where: Record<string, unknown>,
+  slice: 'revenue' | 'pipeline',
+  fyProfitOnly: boolean,
+) {
+  const revenueStatuses: ProjectStatus[] = [
+    ProjectStatus.CONFIRMED,
+    ProjectStatus.UNDER_INSTALLATION,
+    ProjectStatus.COMPLETED,
+    ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
+  ];
+  const stageOr = {
+    OR: [
+      { projectStage: null },
+      { projectStage: { notIn: [ProjectStage.SURVEY, ProjectStage.PROPOSAL] } },
+    ],
+  };
+
+  const parts: object[] =
+    slice === 'revenue'
+      ? [
+          { projectCost: { gt: 0 } },
+          { projectStatus: { in: revenueStatuses } },
+          stageOr,
+          ...(fyProfitOnly ? [{ grossProfit: { not: null } }] : []),
+        ]
+      : [{ projectCost: { gt: 0 } }, { projectStatus: { not: ProjectStatus.LOST } }];
+
+  const clause = { AND: parts };
+  const w = where as any;
+  if (w.AND && Array.isArray(w.AND)) {
+    w.AND.push(clause);
+    return;
+  }
+  const topKeys = Object.keys(w).filter((k) => k !== 'AND' && k !== 'OR');
+  if (topKeys.length > 0) {
+    const existing: object[] = [];
+    topKeys.forEach((key) => {
+      existing.push({ [key]: w[key] });
+      delete w[key];
+    });
+    w.AND = [...existing, clause];
+  } else {
+    w.AND = [clause];
+  }
+}
+
 // Get all projects with filters
 router.get(
   '/',
@@ -98,6 +149,17 @@ router.get(
       ]),
     query('sortOrder').optional().isIn(['asc', 'desc']),
     query('peBucket').optional().isIn(['proposal-ready', 'draft', 'not-started', 'rest']),
+    query('financingBank').optional().custom((value) => {
+      if (!value) return true;
+      const values = Array.isArray(value) ? value : [value];
+      return values.every((v) => typeof v === 'string' && String(v).trim().length > 0);
+    }).withMessage('Invalid financingBank value'),
+    query('zenithClosedFrom').optional().isISO8601(),
+    query('zenithClosedTo').optional().isISO8601(),
+    query('salespersonUnassigned').optional().isIn(['true']),
+    query('leadSourceIsNull').optional().isIn(['true']),
+    query('zenithSlice').optional().isIn(['revenue', 'pipeline']),
+    query('zenithFyProfit').optional().isIn(['true']),
   ],
   async (req: Request, res: Response) => {
     let where: any = {};
@@ -127,6 +189,13 @@ router.get(
         sortBy,
         sortOrder = 'desc',
         peBucket,
+        financingBank,
+        zenithClosedFrom,
+        zenithClosedTo,
+        salespersonUnassigned,
+        leadSourceIsNull,
+        zenithSlice,
+        zenithFyProfit,
       } = req.query;
 
       const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
@@ -187,9 +256,110 @@ router.get(
       if (typeArray.length > 0) where.type = { in: typeArray as string[] };
       if (projectServiceTypeArray.length > 0) where.projectServiceType = { in: projectServiceTypeArray as string[] };
       if (leadSourceArray.length > 0) where.leadSource = { in: leadSourceArray as string[] };
+      if (String(leadSourceIsNull) === 'true' && leadSourceArray.length === 0) {
+        where.leadSource = null;
+      }
       // Only apply salespersonId filter for non-Sales users (Sales users already filtered above)
       if (salespersonIdArray.length > 0 && req.user?.role !== UserRole.SALES) {
         where.salespersonId = { in: salespersonIdArray as string[] };
+      }
+      if (
+        String(salespersonUnassigned) === 'true' &&
+        salespersonIdArray.length === 0 &&
+        req.user?.role !== UserRole.SALES
+      ) {
+        const unassignedCond = { salespersonId: null };
+        if (where.AND && Array.isArray(where.AND)) {
+          where.AND.push(unassignedCond);
+        } else if (!where.salespersonId) {
+          Object.assign(where, unassignedCond);
+        }
+      }
+
+      const financingBankArray = Array.isArray(financingBank)
+        ? financingBank
+        : financingBank
+          ? [financingBank]
+          : [];
+      if (financingBankArray.length > 0) {
+        const fbCond = { financingBank: { in: financingBankArray.map((v) => String(v)) } };
+        if (where.AND && Array.isArray(where.AND)) {
+          where.AND.push(fbCond);
+        } else {
+          const topKeys = Object.keys(where).filter((k) => k !== 'AND' && k !== 'OR');
+          if (topKeys.length > 0) {
+            const existing: any[] = [];
+            topKeys.forEach((key) => {
+              existing.push({ [key]: (where as any)[key] });
+              delete (where as any)[key];
+            });
+            where.AND = [...existing, fbCond];
+          } else {
+            Object.assign(where, fbCond);
+          }
+        }
+      }
+
+      const zcFromStr = typeof zenithClosedFrom === 'string' ? zenithClosedFrom : null;
+      const zcToStr = typeof zenithClosedTo === 'string' ? zenithClosedTo : null;
+      const zcFrom = zcFromStr ? new Date(zcFromStr) : null;
+      const zcTo = zcToStr ? new Date(zcToStr) : null;
+      if (
+        zcFrom &&
+        zcTo &&
+        !Number.isNaN(zcFrom.getTime()) &&
+        !Number.isNaN(zcTo.getTime())
+      ) {
+        const winningForZenith: ProjectStatus[] = [
+          ProjectStatus.CONFIRMED,
+          ProjectStatus.UNDER_INSTALLATION,
+          ProjectStatus.COMPLETED,
+          ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
+        ];
+        const zenithClosedClause = {
+          AND: [
+            { projectStatus: { in: winningForZenith } },
+            {
+              OR: [
+                {
+                  AND: [
+                    { stageEnteredAt: { not: null } },
+                    { stageEnteredAt: { gte: zcFrom, lte: zcTo } },
+                  ],
+                },
+                {
+                  AND: [
+                    { stageEnteredAt: null },
+                    { confirmationDate: { not: null } },
+                    { confirmationDate: { gte: zcFrom, lte: zcTo } },
+                  ],
+                },
+                {
+                  AND: [
+                    { stageEnteredAt: null },
+                    { confirmationDate: null },
+                    { updatedAt: { gte: zcFrom, lte: zcTo } },
+                  ],
+                },
+              ],
+            },
+          ],
+        };
+        if (where.AND && Array.isArray(where.AND)) {
+          where.AND.push(zenithClosedClause);
+        } else {
+          const topKeys = Object.keys(where).filter((k) => k !== 'AND' && k !== 'OR');
+          if (topKeys.length > 0) {
+            const existing: any[] = [];
+            topKeys.forEach((key) => {
+              existing.push({ [key]: (where as any)[key] });
+              delete (where as any)[key];
+            });
+            where.AND = [...existing, zenithClosedClause];
+          } else {
+            Object.assign(where, zenithClosedClause);
+          }
+        }
       }
 
       // Handle support ticket status filter
@@ -325,6 +495,11 @@ router.get(
           // Add payment status filter to AND array
           where.AND.push(paymentFilter);
         }
+      }
+
+      const zenithSliceStr = typeof zenithSlice === 'string' ? zenithSlice : '';
+      if (zenithSliceStr === 'revenue' || zenithSliceStr === 'pipeline') {
+        pushZenithExplorerSliceOntoWhere(where, zenithSliceStr, zenithSliceStr === 'revenue' && String(zenithFyProfit) === 'true');
       }
       
       // Handle search - combine with existing conditions using AND

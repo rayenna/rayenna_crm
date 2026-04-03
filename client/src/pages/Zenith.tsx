@@ -30,7 +30,8 @@ const Zenith = () => {
     user?.role === UserRole.MANAGEMENT ||
     user?.role === UserRole.ADMIN
 
-  const showQuickActionDrawer = execZenithRole || user?.role === UserRole.OPERATIONS
+  const showQuickActionDrawer =
+    execZenithRole || user?.role === UserRole.OPERATIONS || user?.role === UserRole.FINANCE
 
   const { data: dashboardData, error: fyError, isError: isFyError, refetch: refetchFYs } =
     useQuery({
@@ -137,7 +138,12 @@ const Zenith = () => {
         )
       case UserRole.FINANCE:
         return (
-          <ZenithFinanceBody data={data} isLoading={isLoading} dateFilter={dateFilter} />
+          <ZenithFinanceBody
+            data={data}
+            isLoading={isLoading}
+            dateFilter={dateFilter}
+            quickAction={quickAction}
+          />
         )
       default:
         return (
@@ -167,7 +173,7 @@ const Zenith = () => {
         <ZenithAiInsightsTicker insights={insights} isLoading={isLoading} />
       ) : null}
 
-      {execZenithRole && quickAction.listMode && quickAction.isOpen ? (
+      {showQuickActionDrawer && quickAction.listMode && quickAction.isOpen ? (
         <div
           className="mx-3 sm:mx-5 mt-2 mb-0 flex items-center justify-between rounded-lg border px-4 py-1.5"
           style={{
@@ -229,6 +235,7 @@ const Zenith = () => {
           filteredProjects={quickAction.filteredProjects}
           listAmountMode={quickAction.listAmountMode}
           autoFocusSection={quickAction.autoFocusSection}
+          projectsPageHref={quickAction.projectsPageHref}
         />
       ) : null}
 
