@@ -155,7 +155,7 @@ export default function CustomerProfitabilityRank({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`zenith-glass rounded-xl p-3 sm:p-4 min-h-[320px] lg:h-full lg:min-h-0 flex flex-col overflow-x-clip overflow-y-visible lg:overflow-hidden ${className}`.trim()}
+      className={`zenith-glass rounded-xl p-3 sm:p-4 min-h-[320px] lg:h-full lg:min-h-0 flex flex-col overflow-visible lg:overflow-hidden ${className}`.trim()}
     >
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3 min-w-0">
@@ -216,7 +216,7 @@ export default function CustomerProfitabilityRank({
             <>
               <div
                 ref={wrapRef}
-                className="zenith-wordcloud-host flex-1 min-h-[280px] w-full rounded-xl border border-white/[0.06] bg-black/20 overflow-hidden"
+                className="zenith-wordcloud-host flex-1 min-h-[280px] w-full rounded-xl border border-white/[0.06] bg-black/20 overflow-visible lg:overflow-hidden"
               >
                 <div ref={hostRef} className="relative h-full min-h-[280px] w-full" />
               </div>
