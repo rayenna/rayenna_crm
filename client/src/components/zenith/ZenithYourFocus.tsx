@@ -263,7 +263,7 @@ function SalesPipelineBlock({
 
   return (
     <section
-      className={`rounded-2xl border border-white/[0.08] bg-white/[0.03] overflow-hidden ${accentClass} pl-4`}
+      className={`zenith-pipeline-block-shell rounded-2xl border border-white/[0.08] bg-white/[0.03] ${accentClass} pl-4`}
     >
       <div className="p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -295,7 +295,7 @@ function SalesPipelineBlock({
             </span>
           )}
         </div>
-        <div className="zenith-scroll-x overflow-x-auto -mx-1">
+        <div className="zenith-scroll-x overflow-x-auto -mx-1 max-lg:pb-1">
           <table className="w-full text-left text-xs sm:text-sm min-w-[640px]">
             <thead>
               <tr className="text-white/45 border-b border-white/10">

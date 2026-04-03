@@ -56,7 +56,7 @@ export default function SegmentDonut({
   const narrow = useZenithNarrowLayout()
 
   const pieSlotHeightPx = narrow ? ZENITH_DONUT_PIE_ONLY_MOBILE_PX : ZENITH_DONUT_CHART_HEIGHT_PX
-  const pieMargin = narrow ? { top: 2, bottom: 2, left: 4, right: 4 } : undefined
+  const pieMargin = narrow ? { top: 6, bottom: 6, left: 6, right: 6 } : undefined
 
   const cardClass =
     'zenith-segment-donut-card zenith-glass rounded-xl p-3 sm:p-4 flex flex-col max-lg:overflow-visible shrink-0'
@@ -93,8 +93,8 @@ export default function SegmentDonut({
                     data={chartData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={narrow ? '50%' : '58%'}
-                    outerRadius={narrow ? '68%' : '82%'}
+                    innerRadius={narrow ? '48%' : '58%'}
+                    outerRadius={narrow ? '64%' : '82%'}
                     paddingAngle={2}
                     dataKey="value"
                     animationBegin={0}

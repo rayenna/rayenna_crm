@@ -184,6 +184,19 @@
   .zenith-root .zenith-segment-donut-card .recharts-wrapper {
     overflow: visible !important;
   }
+  .zenith-root .zenith-segment-donut-card .recharts-surface {
+    overflow: visible;
+  }
+
+  /* Pipeline table card: avoid overflow:hidden + border-radius compositing glitches on vertical scroll (Android Chrome). */
+  .zenith-root .zenith-pipeline-block-shell {
+    overflow: visible;
+  }
+  @media (min-width: 1024px) {
+    .zenith-root .zenith-pipeline-block-shell {
+      overflow: hidden;
+    }
+  }
 
   /* Payment radar pie only: clip wrapper so legend/tooltip don’t bleed into the bar section below.
      Bar chart slot stays overflow visible so X-axis ticks and bars aren’t clipped (see ZenithYourFocus mobile flex). */
