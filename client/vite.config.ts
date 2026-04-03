@@ -87,7 +87,8 @@ export default defineConfig(({ mode }) => {
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,jpg,jpeg}'],
           runtimeCaching,
-          navigateFallback: '/offline.html',
+          // App shell for navigations — not offline.html (avoids users stuck on offline page when SW/network edge cases).
+          navigateFallback: '/index.html',
           navigateFallbackDenylist: [/^\/api\//, /^\/auth\//],
           skipWaiting: true,
           clientsClaim: true,
