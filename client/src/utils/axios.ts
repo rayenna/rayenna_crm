@@ -11,6 +11,22 @@ export const API_TIMEOUT_MS = 90_000;
 /** Exported for Login-page check when API is not configured (production). */
 export const apiBaseUrl = API_BASE_URL;
 
+/** Full URL for a CRM API path (used by offline sync replay with `fetch` + credentials). */
+export function buildAbsoluteApiUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  const base = API_BASE_URL.replace(/\/$/, '');
+  const p = path.startsWith('/') ? path : `/${path}`;
+  if (base) {
+    return `${base}${p}`;
+  }
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}${p}`;
+  }
+  return p;
+}
+
 /** Check if error is due to timeout or backend unreachable (e.g. cold start). */
 export function isTimeoutOrNetworkError(error: unknown): boolean {
   const err = error as { code?: string; message?: string }

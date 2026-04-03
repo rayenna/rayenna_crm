@@ -2,9 +2,25 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import * as Sentry from '@sentry/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { registerSW } from 'virtual:pwa-register'
 import App from './App.tsx'
 import { scrubSentryEvent } from './utils/sentryScrub'
 import './index.css'
+
+registerSW({
+  onNeedRefresh() {
+    console.log('New version available — updating...')
+  },
+  onOfflineReady() {
+    console.log('Zenith is ready to work offline')
+  },
+  onRegistered(swRegistration) {
+    console.log('Service Worker registered', swRegistration)
+  },
+  onRegisterError(error) {
+    console.error('SW registration failed:', error)
+  },
+})
 
 // Sentry (optional – only when VITE_SENTRY_DSN is set)
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN

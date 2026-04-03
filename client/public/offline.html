@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zenith — Offline</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0A0A0F;
+      color: #fff;
+      font-family: 'DM Sans', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+      opacity: 0.8;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #F5A623;
+      margin-bottom: 10px;
+      font-family: system-ui;
+    }
+
+    p {
+      font-size: 15px;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.6;
+      max-width: 320px;
+      margin-bottom: 28px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 20px 24px;
+      max-width: 380px;
+      width: 100%;
+      margin-bottom: 24px;
+    }
+
+    .card-title {
+      font-size: 12px;
+      color: rgba(255,255,255,0.35);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+
+    .feature {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+    }
+
+    .feature:last-child { border-bottom: none; }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #00D4B4;
+      flex-shrink: 0;
+    }
+
+    .retry-btn {
+      background: #F5A623;
+      color: #0A0A0F;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 28px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: system-ui;
+    }
+
+    .retry-btn:hover { opacity: 0.9; }
+
+    .status {
+      margin-top: 16px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.25);
+    }
+  </style>
+</head>
+<body>
+  <div class="icon">⚡</div>
+  <h1>You're offline</h1>
+  <p>
+    Zenith needs a connection to load fresh data.
+    Your cached data is still available —
+    go back to continue working.
+  </p>
+
+  <div class="card">
+    <div class="card-title">Available offline</div>
+    <div class="feature">
+      <div class="dot"></div>
+      Previously loaded dashboards
+    </div>
+    <div class="feature">
+      <div class="dot"></div>
+      Cached project and customer data
+    </div>
+    <div class="feature">
+      <div class="dot"></div>
+      Actions queued for when you reconnect
+    </div>
+  </div>
+
+  <button class="retry-btn" type="button" onclick="window.location.reload()">
+    Try again
+  </button>
+
+  <p class="status" id="status">
+    Checking connection...
+  </p>
+
+  <script>
+    window.addEventListener('online', () => {
+      document.getElementById('status').textContent =
+        'Connection restored — reloading...';
+      setTimeout(() => window.history.back(), 800);
+    });
+
+    window.addEventListener('offline', () => {
+      document.getElementById('status').textContent =
+        'Still offline';
+    });
+
+    document.getElementById('status').textContent =
+      navigator.onLine
+        ? 'Connection available — tap to retry'
+        : 'No connection detected';
+  </script>
+</body>
+</html>

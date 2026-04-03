@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import { useQuery } from '@tanstack/react-query'
@@ -16,6 +16,8 @@ import { AnimatePresence } from 'framer-motion'
 import { useDailyBriefing } from '../hooks/useDailyBriefing'
 import { useQuickAction } from '../hooks/useQuickAction'
 import QuickActionDrawer from '../components/zenith/QuickActionDrawer'
+import OfflineBanner from '../components/OfflineBanner'
+import { useOfflineSync, ZENITH_DATA_SYNCED } from '../hooks/useOfflineSync'
 
 const Zenith = () => {
   const { user } = useAuth()
@@ -24,6 +26,23 @@ const Zenith = () => {
   const [selectedMonths, setSelectedMonths] = useState<string[]>([])
   const { isVisible, dismiss, showBriefing } = useDailyBriefing()
   const quickAction = useQuickAction()
+  const { isOnline, isSyncing, pendingCount, syncError, syncNow } = useOfflineSync()
+
+  const wasOfflineRef = useRef(false)
+  const [showOnlineAck, setShowOnlineAck] = useState(false)
+
+  useEffect(() => {
+    if (!isOnline) {
+      wasOfflineRef.current = true
+      return
+    }
+    if (wasOfflineRef.current) {
+      wasOfflineRef.current = false
+      setShowOnlineAck(true)
+      const t = window.setTimeout(() => setShowOnlineAck(false), 5000)
+      return () => window.clearTimeout(t)
+    }
+  }, [isOnline])
 
   const execZenithRole =
     user?.role === UserRole.SALES ||
@@ -73,6 +92,18 @@ const Zenith = () => {
     selectedMonths,
     initialDataWhenFiltersEmpty,
   )
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const d = (e as CustomEvent<{ successCount: number }>).detail
+      if (d?.successCount > 0) {
+        void refetchFYs()
+        void refetch()
+      }
+    }
+    window.addEventListener(ZENITH_DATA_SYNCED, handler)
+    return () => window.removeEventListener(ZENITH_DATA_SYNCED, handler)
+  }, [refetch, refetchFYs])
 
   const dateFilter = useMemo(
     () => ({ selectedFYs, selectedQuarters, selectedMonths }),
@@ -167,6 +198,16 @@ const Zenith = () => {
         onMonthChange={setSelectedMonths}
         onResetFilters={handleResetFilters}
         onShowBriefing={showBriefing}
+        isOnline={isOnline}
+      />
+
+      <OfflineBanner
+        isOnline={isOnline}
+        isSyncing={isSyncing}
+        pendingCount={pendingCount}
+        syncError={syncError}
+        onSyncNow={syncNow}
+        showOnlineAck={showOnlineAck}
       />
 
       {!isFyError && !isError && user?.role ? (

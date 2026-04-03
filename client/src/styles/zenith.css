@@ -506,3 +506,17 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   );
   animation: zenith-victory-shimmer 0.7s ease-out 0.2s forwards;
 }
+
+/* PWA offline banner */
+@keyframes zenith-sync-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sync-spin {
+  animation: zenith-sync-spin 1s linear infinite;
+}

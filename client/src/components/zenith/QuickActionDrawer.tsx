@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
+import { safePutProject, safePostProjectRemark } from '../../utils/safeOfflineMutation'
+import type { SyncActionType } from '../../utils/syncQueue'
 import { Project, ProjectStatus, UserRole } from '../../types'
 import { useAuth } from '../../contexts/AuthContext'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
@@ -86,6 +88,7 @@ function getNextStatus(current: ProjectStatus): ProjectStatus | null {
 }
 
 type ToastState = { text: string; shownAt: number } | null
+type QueuedToastState = { text: string; shownAt: number } | null
 
 type ListSubview = 'list' | 'single'
 
@@ -127,6 +130,7 @@ export default function QuickActionDrawer({
 
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<ToastState>(null)
+  const [queuedToast, setQueuedToast] = useState<QueuedToastState>(null)
   const [error, setError] = useState<string | null>(null)
 
   const [noteText, setNoteText] = useState('')
@@ -230,6 +234,12 @@ export default function QuickActionDrawer({
     return () => window.clearTimeout(t)
   }, [toast?.shownAt])
 
+  useEffect(() => {
+    if (!queuedToast) return
+    const t = window.setTimeout(() => setQueuedToast(null), 3000)
+    return () => window.clearTimeout(t)
+  }, [queuedToast?.shownAt])
+
   const stageLabel = project ? (STATUS_LABELS[project.projectStatus] || String(project.projectStatus)) : ''
   const nextStatus = project ? getNextStatus(project.projectStatus) : null
   const nextLabel = nextStatus ? STATUS_LABELS[nextStatus] : null
@@ -252,6 +262,17 @@ export default function QuickActionDrawer({
   }, [valueInput])
 
   const runToast = (text: string) => setToast({ text, shownAt: Date.now() })
+  const runQueuedToast = (text = '✓ Saved — will sync when back online') =>
+    setQueuedToast({ text, shownAt: Date.now() })
+
+  const patchQuickActionProjectCache = useCallback(
+    (id: string, patch: Partial<Project>) => {
+      queryClient.setQueryData(['quick-action-project', id], (prev: Project | undefined) =>
+        prev ? { ...prev, ...patch } : prev,
+      )
+    },
+    [queryClient],
+  )
 
   const invalidateAfterSave = async (id: string) => {
     await Promise.all([
@@ -262,14 +283,15 @@ export default function QuickActionDrawer({
     ])
   }
 
-  const updateProject = async (id: string, body: Record<string, unknown>) => {
-    await axiosInstance.put(`/api/projects/${id}`, body)
+  const putProjectWithOfflineQueue = async (
+    id: string,
+    body: Record<string, unknown>,
+    actionType: SyncActionType,
+  ): Promise<'queued' | 'ok'> => {
+    const result = await safePutProject(id, body, actionType)
+    if (result.queued) return 'queued'
     await invalidateAfterSave(id)
-  }
-
-  const logActivity = async (id: string, remark: string) => {
-    await axiosInstance.post(`/api/remarks/project/${id}`, { remark })
-    await invalidateAfterSave(id)
+    return 'ok'
   }
 
   const listTotal = useMemo(
@@ -504,10 +526,21 @@ export default function QuickActionDrawer({
                           setError(null)
                           try {
                             const prevStatus = project.projectStatus
-                            await updateProject(project.id, { projectStatus: nextStatus })
-                            fireVictoryToast({ ...project, projectStatus: nextStatus }, prevStatus)
-                            runToast(`✓ Moved to ${STATUS_LABELS[nextStatus]}`)
-                            window.setTimeout(() => closeAndClear(), 1500)
+                            const r = await putProjectWithOfflineQueue(
+                              project.id,
+                              { projectStatus: nextStatus },
+                              'STAGE_CHANGE',
+                            )
+                            if (r === 'queued') {
+                              patchQuickActionProjectCache(project.id, { projectStatus: nextStatus })
+                              fireVictoryToast({ ...project, projectStatus: nextStatus }, prevStatus)
+                              runQueuedToast()
+                              window.setTimeout(() => closeAndClear(), 1500)
+                            } else {
+                              fireVictoryToast({ ...project, projectStatus: nextStatus }, prevStatus)
+                              runToast(`✓ Moved to ${STATUS_LABELS[nextStatus]}`)
+                              window.setTimeout(() => closeAndClear(), 1500)
+                            }
                           } catch (e: unknown) {
                             setError(getFriendlyApiErrorMessage(e))
                           } finally {
@@ -548,9 +581,14 @@ export default function QuickActionDrawer({
                         setSaving(true)
                         setError(null)
                         try {
-                          await logActivity(project.id, text)
+                          const r = await safePostProjectRemark(project.id, text)
                           setNoteText('')
-                          runToast('✓ Activity logged')
+                          if (r.queued) {
+                            runQueuedToast()
+                          } else {
+                            await invalidateAfterSave(project.id)
+                            runToast('✓ Activity logged')
+                          }
                         } catch (e: unknown) {
                           setError(getFriendlyApiErrorMessage(e))
                         } finally {
@@ -591,8 +629,18 @@ export default function QuickActionDrawer({
                           setSaving(true)
                           setError(null)
                           try {
-                            await updateProject(project.id, { projectCost: Number.isFinite(n) ? n : 0 })
-                            runToast('✓ Value updated')
+                            const cost = Number.isFinite(n) ? n : 0
+                            const r = await putProjectWithOfflineQueue(
+                              project.id,
+                              { projectCost: cost },
+                              'UPDATE_VALUE',
+                            )
+                            if (r === 'queued') {
+                              patchQuickActionProjectCache(project.id, { projectCost: cost })
+                              runQueuedToast()
+                            } else {
+                              runToast('✓ Value updated')
+                            }
                           } catch (e: unknown) {
                             setError(getFriendlyApiErrorMessage(e))
                           } finally {
@@ -639,10 +687,20 @@ export default function QuickActionDrawer({
                           setSaving(true)
                           setError(null)
                           try {
-                            await updateProject(project.id, {
-                              expectedCommissioningDate: dateInput ? new Date(dateInput).toISOString() : null,
-                            })
-                            runToast('✓ Date updated')
+                            const iso = dateInput ? new Date(dateInput).toISOString() : null
+                            const r = await putProjectWithOfflineQueue(
+                              project.id,
+                              { expectedCommissioningDate: iso },
+                              'UPDATE_DATE',
+                            )
+                            if (r === 'queued') {
+                              patchQuickActionProjectCache(project.id, {
+                                expectedCommissioningDate: iso === null ? undefined : iso,
+                              })
+                              runQueuedToast()
+                            } else {
+                              runToast('✓ Date updated')
+                            }
                           } catch (e: unknown) {
                             setError(getFriendlyApiErrorMessage(e))
                           } finally {
@@ -731,6 +789,29 @@ export default function QuickActionDrawer({
           aria-live="polite"
         >
           {toast.text}
+        </div>
+      ) : null}
+
+      {queuedToast ? (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: toast ? 72 : 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(245,166,35,0.1)',
+            border: '1px solid rgba(245,166,35,0.3)',
+            borderRadius: 10,
+            padding: '10px 20px',
+            color: '#F5A623',
+            fontFamily: 'DM Sans, sans-serif',
+            fontSize: 14,
+            zIndex: 6100,
+          }}
+          role="status"
+          aria-live="polite"
+        >
+          {queuedToast.text}
         </div>
       ) : null}
     </>

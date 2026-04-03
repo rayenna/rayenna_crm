@@ -13,6 +13,8 @@ interface Props {
   onMonthChange: (m: string[]) => void
   onResetFilters: () => void
   onShowBriefing?: () => void
+  /** When false, live indicator shows Offline (Zenith PWA). */
+  isOnline?: boolean
 }
 
 export default function CommandBar({
@@ -25,6 +27,7 @@ export default function CommandBar({
   onMonthChange,
   onResetFilters,
   onShowBriefing,
+  isOnline = true,
 }: Props) {
   const [secondsAgo, setSecondsAgo] = useState(0)
   const [lastFetched, setLastFetched] = useState(() => new Date())
@@ -67,8 +70,21 @@ export default function CommandBar({
         </button>
       ) : null}
       <span className="inline-flex items-center gap-1 shrink-0 whitespace-nowrap">
-        <span className="zenith-command-live-dot inline-block align-middle" aria-hidden />
-        <span>Live · {timeLabel}</span>
+        {isOnline ? (
+          <>
+            <span className="zenith-command-live-dot inline-block align-middle" aria-hidden />
+            <span>Live · {timeLabel}</span>
+          </>
+        ) : (
+          <>
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full align-middle shrink-0"
+              style={{ background: '#FF4757', boxShadow: '0 0 6px rgba(255,71,87,0.7)' }}
+              aria-hidden
+            />
+            <span style={{ color: '#FF4757' }}>Offline</span>
+          </>
+        )}
       </span>
     </div>
   )
