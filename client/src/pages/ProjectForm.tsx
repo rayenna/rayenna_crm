@@ -6,6 +6,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Project, ProjectType, ProjectServiceType, UserRole, ProjectStatus, LostReason, LostToCompetitionReason, LeadSource } from '../types'
 import toast from 'react-hot-toast'
+import { fireVictoryToast } from '../hooks/useVictoryToast'
 import RemarksSection from '../components/remarks/RemarksSection'
 import PageCard from '../components/PageCard'
 import { FaEdit } from 'react-icons/fa'
@@ -406,8 +407,23 @@ const ProjectForm = () => {
         return axiosInstance.post('/api/projects', data)
       }
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables: Record<string, unknown>) => {
       toast.success(isEdit ? 'Project updated successfully' : 'Project created successfully')
+      if (isEdit && project && id && variables?.projectStatus != null) {
+        fireVictoryToast(
+          {
+            id,
+            projectStatus: variables.projectStatus as ProjectStatus,
+            customer: project.customer,
+            projectCost:
+              variables.projectCost !== undefined
+                ? (variables.projectCost as number | null)
+                : project.projectCost,
+            salesperson: project.salesperson,
+          },
+          project.projectStatus,
+        )
+      }
       // Refresh projects list
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       // Invalidate dashboard so Quick Access tiles (e.g. Availing Loan) and charts stay in sync

@@ -394,3 +394,51 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
 .zenith-root .zenith-fy-revenue-profit-chart .recharts-area-curve {
   pointer-events: none;
 }
+
+/* Victory toast (Zenith) — CSS-only confetti + countdown; no backdrop-filter */
+@keyframes zenith-confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(60px) rotate(420deg);
+    opacity: 0;
+  }
+}
+
+@keyframes zenith-victory-countdown {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+@keyframes zenith-victory-shimmer {
+  0% {
+    transform: translateX(-100%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(250%) skewX(-20deg);
+  }
+}
+
+.zenith-victory-confetti-dot {
+  animation: zenith-confetti-fall 0.8s ease-out forwards;
+}
+
+.zenith-victory-countdown-bar {
+  animation: zenith-victory-countdown 6s linear forwards;
+}
+
+.zenith-victory-shimmer {
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.07) 50%,
+    transparent 65%
+  );
+  animation: zenith-victory-shimmer 0.7s ease-out 0.2s forwards;
+}

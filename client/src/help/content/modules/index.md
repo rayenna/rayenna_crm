@@ -9,7 +9,7 @@ The Rayenna CRM consists of several key modules designed to manage different asp
 ### Dashboard
 - Role-based dashboards, KPI tiles, and **Quick Access** (metric cards plus **Payment Status**; **Proposal Engine** summary on Sales and Management)
 - **Filters:** Financial Year, Quarter, and Month — see [Analytics & Reports](/help/analytics) for Quick Access layout, Payment rows, Proposal Engine buckets, and charts
-- **[Zenith ✦](/help/analytics#zenith-command-center)** — full-screen command center (same filters), **Revenue forecast**, **Explore** chart drill-downs, and **Quick Actions** lists; deep dive under Analytics → Zenith Command Center
+- **[Zenith ✦](/help/analytics#zenith-command-center)** — full-screen command center (same filters), **The Board** leaderboard (Month / Quarter / FY + clickable drill-down lists), **collapsible Your Focus**, **Revenue forecast**, **Explore** chart drill-downs, **Victory** toast on winning stage changes, and **Quick Actions** lists; deep dive under Analytics → Zenith Command Center
 - **[Zenith training guide](/help/training)** — facilitator-led and self-study material for end-user sessions (**Sales-first**; all roles)
 - Visual analytics (charts vary by role)
 

@@ -12,6 +12,7 @@ import DrawerProjectList from './DrawerProjectList'
 import HealthBadge from './HealthBadge'
 import { projectDetailToHealthProject } from '../../utils/dealHealthScore'
 import { ZENITH_CHARTS_TOUCH_RESET_EVENT, ZENITH_FLOATING_DISMISS_EVENT } from '../../utils/zenithEvents'
+import { fireVictoryToast } from '../../hooks/useVictoryToast'
 
 const STATUS_ORDER: ProjectStatus[] = [
   ProjectStatus.LEAD,
@@ -499,7 +500,9 @@ export default function QuickActionDrawer({
                           setSaving(true)
                           setError(null)
                           try {
+                            const prevStatus = project.projectStatus
                             await updateProject(project.id, { projectStatus: nextStatus })
+                            fireVictoryToast({ ...project, projectStatus: nextStatus }, prevStatus)
                             runToast(`✓ Moved to ${STATUS_LABELS[nextStatus]}`)
                             window.setTimeout(() => closeAndClear(), 1500)
                           } catch (e: unknown) {

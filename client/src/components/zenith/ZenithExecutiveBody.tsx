@@ -28,8 +28,8 @@ import ChartPanel from './ChartPanel'
 import SegmentDonut from './SegmentDonut'
 import CustomerProfitabilityRank from './CustomerProfitabilityRank'
 import ZenithRevenueProfitFyChart from './ZenithRevenueProfitFyChart'
-import ZenithProposalEngineCard from './ZenithProposalEngineCard'
 import HitList from './HitList'
+import Leaderboard from './Leaderboard'
 import { useHitList, type HitListProjectRow } from '../../hooks/useHitList'
 import type { ZenithQuickActionHandle } from '../../hooks/useQuickAction'
 import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../../types/zenithExplorer'
@@ -438,6 +438,16 @@ export default function ZenithExecutiveBody({
         </div>
       )}
 
+      {(role === UserRole.SALES || role === UserRole.ADMIN || role === UserRole.MANAGEMENT) && (
+        <div id="zenith-leaderboard" className="w-full scroll-mt-28 shrink-0 min-w-0">
+          <Leaderboard
+            projects={explorerProjects}
+            currentUser={{ id: user?.id ?? '', name: user?.name ?? '' }}
+            onOpenListMode={quickAction.openDrawerListMode}
+          />
+        </div>
+      )}
+
       <section className="zenith-exec-section space-y-4" aria-label="Pipeline and priorities">
         <div id="zenith-funnel" className="scroll-mt-24">
           <DealFlowFunnel stages={funnelStages} paymentItems={paymentItems} dateFilter={dateFilter} />
@@ -449,6 +459,9 @@ export default function ZenithExecutiveBody({
             dateFilter={dateFilter}
             zenithMainLoading={isLoading}
             onOpenDrawer={(p, section) => quickAction.openDrawer(p, section ?? null)}
+            showProposalEngine={
+              role === UserRole.ADMIN || role === UserRole.MANAGEMENT || role === UserRole.SALES
+            }
           />
         </div>
       </section>
@@ -767,18 +780,6 @@ export default function ZenithExecutiveBody({
         </div>
       </div>
       </section>
-
-      {(role === UserRole.ADMIN || role === UserRole.MANAGEMENT || role === UserRole.SALES) && (
-        <section className="zenith-exec-section" aria-label="Proposal Engine">
-          <div id="zenith-proposal-engine" className="scroll-mt-24">
-            <ZenithProposalEngineCard
-              selectedFYs={dateFilter.selectedFYs}
-              selectedQuarters={dateFilter.selectedQuarters}
-              selectedMonths={dateFilter.selectedMonths}
-            />
-          </div>
-        </section>
-      )}
 
     </div>
   )

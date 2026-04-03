@@ -5,6 +5,9 @@ import { UserRole } from '../types'
 import TipOfTheDay from './TipOfTheDay'
 import { getHelpSectionForRoute, helpSections } from '../help/sections'
 import { setSessionStorageItem } from '../lib/safeLocalStorage'
+import '../styles/zenith.css'
+import VictoryToast from './zenith/VictoryToast'
+import { useVictoryToast } from '../hooks/useVictoryToast'
 
 /** For `/help/analytics#foo`, `pathname` is `/help/analytics` and `hash` is `#foo`. */
 function isHelpMenuPathActive(itemPath: string, pathname: string, locHash: string): boolean {
@@ -35,6 +38,7 @@ const SHORTCUT_ROLES_NEW_PROJECT: UserRole[] = [UserRole.ADMIN, UserRole.SALES]
 
 const Layout = () => {
   const { user, logout, hasRole } = useAuth()
+  const { toast: victoryToast, dismiss: dismissVictoryToast } = useVictoryToast()
   const location = useLocation()
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -548,6 +552,8 @@ const Layout = () => {
       >
         <Outlet />
       </main>
+
+      {user ? <VictoryToast toast={victoryToast} onDismiss={dismissVictoryToast} /> : null}
 
       <TipOfTheDay />
     </div>

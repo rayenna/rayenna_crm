@@ -23,6 +23,8 @@ import HealthBadge from './HealthBadge'
 import { computeDealHealth, pipelineRowToHealthProject } from '../../utils/dealHealthScore'
 import ReminderModal from './ReminderModal'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
+import ZenithFocusCollapsible from './ZenithFocusCollapsible'
+import ZenithProposalEngineCard from './ZenithProposalEngineCard'
 import type { ReminderTemplateProject } from '../../utils/reminderTemplates'
 
 type SalesPipelineRow = {
@@ -202,11 +204,14 @@ function SalesPipelineBlock({
   data,
   accentClass,
   onOpenDrawer,
+  embedded = false,
 }: {
   title: string
   data: { rows: SalesPipelineRow[]; followUpNeeded: number }
   accentClass: string
   onOpenDrawer?: (p: { id: string; customerName?: string; stageLabel?: string }, section?: ZenithAutoFocusSection) => void
+  /** Inside ZenithFocusCollapsible: drop outer card chrome and section title (title is on the collapsible header). */
+  embedded?: boolean
 }) {
   const [sortField, setSortField] = useState<
     'customerName' | 'stage' | 'dealValue' | 'lastActivity' | 'health' | null
@@ -261,14 +266,16 @@ function SalesPipelineBlock({
     return rows
   }, [customerFilter, data.rows, sortDir, sortField, stageFilter])
 
+  const shellClass = embedded
+    ? 'overflow-hidden max-lg:overflow-visible lg:overflow-hidden'
+    : `zenith-pipeline-block-shell rounded-2xl border border-white/[0.08] bg-white/[0.03] ${accentClass} pl-4`
+
   return (
-    <section
-      className={`zenith-pipeline-block-shell rounded-2xl border border-white/[0.08] bg-white/[0.03] ${accentClass} pl-4`}
-    >
+    <section className={shellClass}>
       <div className="p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <h3 className="zenith-display text-base font-bold text-white">{title}</h3>
-          <div className="flex flex-wrap items-center gap-2">
+          {!embedded ? <h3 className="zenith-display text-base font-bold text-white">{title}</h3> : null}
+          <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
             <input
               value={customerFilter}
               onChange={(e) => setCustomerFilter(e.target.value)}
@@ -435,6 +442,7 @@ function rowMatchesAgeFilter(row: FinanceOverdueRow, f: AgeingBucket['id'] | nul
 function FinanceRadarBlock({
   data,
   accentClass,
+  embedded = false,
 }: {
   data: {
     totalOutstanding: number
@@ -446,6 +454,7 @@ function FinanceRadarBlock({
     donut: { collected: number; outstanding: number; subsidyPending: number }
   }
   accentClass: string
+  embedded?: boolean
 }) {
   const [sortField, setSortField] = useState<'amount' | 'days' | 'customer' | null>('amount')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
@@ -512,12 +521,16 @@ function FinanceRadarBlock({
   const trendDelta =
     latestM && prevM ? (latestM.collected ?? 0) - (prevM.collected ?? 0) : 0
 
+  const shellClass = embedded
+    ? 'overflow-hidden max-lg:overflow-visible lg:overflow-hidden'
+    : `zenith-finance-radar-section rounded-2xl border border-white/[0.08] bg-white/[0.03] overflow-hidden max-lg:overflow-visible lg:overflow-hidden ${accentClass} pl-4`
+
   return (
-    <section
-      className={`zenith-finance-radar-section rounded-2xl border border-white/[0.08] bg-white/[0.03] overflow-hidden max-lg:overflow-visible lg:overflow-hidden ${accentClass} pl-4`}
-    >
+    <section className={shellClass}>
       <div className="p-4 sm:p-5">
-        <h3 className="zenith-display text-base font-bold text-white mb-4">Payment radar</h3>
+        {!embedded ? (
+          <h3 className="zenith-display text-base font-bold text-white mb-4">Payment radar</h3>
+        ) : null}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
           <div className="rounded-xl bg-black/25 border border-white/10 px-4 py-3">
             <p className="text-[10px] uppercase tracking-wider text-white/45 font-bold">Total outstanding</p>
@@ -984,10 +997,12 @@ function InstallationPulseBlock({
   data,
   accentClass,
   onOpenDrawer,
+  embedded = false,
 }: {
   data: { rows: InstallRow[]; avgInstallationDays: number | null; delayedCount: number }
   accentClass: string
   onOpenDrawer?: (p: { id: string; customerName?: string; stageLabel?: string }, section?: ZenithAutoFocusSection) => void
+  embedded?: boolean
 }) {
   const [sortField, setSortField] = useState<
     'customerName' | 'kW' | 'salespersonName' | 'startDate' | 'expectedCompletion' | 'percentComplete' | null
@@ -1035,13 +1050,17 @@ function InstallationPulseBlock({
     return rows
   }, [data.rows, overdueOnly, sortDir, sortField])
 
+  const shellClass = embedded
+    ? 'overflow-hidden'
+    : `rounded-2xl border border-white/[0.08] bg-white/[0.03] overflow-hidden ${accentClass} pl-4`
+
   return (
-    <section
-      className={`rounded-2xl border border-white/[0.08] bg-white/[0.03] overflow-hidden ${accentClass} pl-4`}
-    >
+    <section className={shellClass}>
       <div className="p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <h3 className="zenith-display text-base font-bold text-white">Installation pulse</h3>
+        <div
+          className={`flex flex-wrap items-center gap-2 mb-3 ${embedded ? 'justify-end' : 'justify-between'}`}
+        >
+          {!embedded ? <h3 className="zenith-display text-base font-bold text-white">Installation pulse</h3> : null}
           <button
             type="button"
             onClick={() => setOverdueOnly((v) => !v)}
@@ -1259,12 +1278,15 @@ export default function ZenithYourFocus({
   dateFilter,
   zenithMainLoading,
   onOpenDrawer,
+  showProposalEngine = false,
 }: {
   role: UserRole
   dateFilter: ZenithDateFilter
   /** When Zenith dashboard payload is still loading, skip focus fetch to avoid duplicate empty state. */
   zenithMainLoading: boolean
   onOpenDrawer?: (p: { id: string; customerName?: string; stageLabel?: string }, section?: ZenithAutoFocusSection) => void
+  /** Executive Zenith only: fourth collapsible under Your focus (sales / admin / management). */
+  showProposalEngine?: boolean
 }) {
   const { user } = useAuth()
   const effFYs = dateFilter.selectedFYs
@@ -1305,45 +1327,110 @@ export default function ZenithYourFocus({
 
   return (
     <div className="space-y-5 w-full">
-      <h2 className="zenith-display text-xs uppercase tracking-[0.2em] text-white/40 font-bold px-1">Your focus</h2>
+      <header className="px-0.5">
+        <h2
+          className="zenith-display text-lg sm:text-xl font-bold text-white tracking-tight"
+          style={{ fontFamily: "'Syne', sans-serif" }}
+        >
+          Your focus
+        </h2>
+        <p
+          className="mt-1.5 text-[11px] sm:text-xs text-white/35 italic leading-snug max-w-2xl"
+          style={{ fontFamily: 'DM Sans, sans-serif' }}
+        >
+          Click on each of the sections to open and work on them.
+        </p>
+      </header>
 
-      {data.focusKind === 'SALES' && (
-        <SalesPipelineBlock
-          title="Your pipeline today"
-          data={data.salesPipeline}
-          accentClass="border-l-4 border-[#F5A623]"
-          onOpenDrawer={onOpenDrawer}
-        />
-      )}
+      <div className="space-y-4 w-full">
+        {data.focusKind === 'SALES' && (
+          <>
+            <ZenithFocusCollapsible title="Your pipeline today" accent="gold" defaultOpen={false}>
+              <SalesPipelineBlock
+                title="Your pipeline today"
+                data={data.salesPipeline}
+                accentClass="border-l-4 border-[#F5A623]"
+                onOpenDrawer={onOpenDrawer}
+                embedded
+              />
+            </ZenithFocusCollapsible>
+            {showProposalEngine ? (
+              <ZenithFocusCollapsible
+                id="zenith-proposal-engine"
+                title="Proposal Engine"
+                accent="gold"
+                defaultOpen={false}
+                subtitle="PE readiness by project bucket"
+              >
+                <ZenithProposalEngineCard
+                  selectedFYs={dateFilter.selectedFYs}
+                  selectedQuarters={dateFilter.selectedQuarters}
+                  selectedMonths={dateFilter.selectedMonths}
+                  embedded
+                />
+              </ZenithFocusCollapsible>
+            ) : null}
+          </>
+        )}
 
-      {data.focusKind === 'FINANCE' && (
-        <FinanceRadarBlock data={data.financeRadar} accentClass="border-l-4 border-[#00D4B4]" />
-      )}
+        {data.focusKind === 'FINANCE' && (
+          <ZenithFocusCollapsible title="Payment radar" accent="teal" defaultOpen={false}>
+            <FinanceRadarBlock data={data.financeRadar} accentClass="border-l-4 border-[#00D4B4]" embedded />
+          </ZenithFocusCollapsible>
+        )}
 
-      {data.focusKind === 'OPERATIONS' && (
-        <InstallationPulseBlock
-          data={data.installPulse}
-          accentClass="border-l-4 border-sky-400"
-          onOpenDrawer={onOpenDrawer}
-        />
-      )}
+        {data.focusKind === 'OPERATIONS' && (
+          <ZenithFocusCollapsible title="Installation pulse" accent="sky" defaultOpen={false}>
+            <InstallationPulseBlock
+              data={data.installPulse}
+              accentClass="border-l-4 border-sky-400"
+              onOpenDrawer={onOpenDrawer}
+              embedded
+            />
+          </ZenithFocusCollapsible>
+        )}
 
-      {data.focusKind === 'MANAGEMENT' && (
-        <div className="space-y-5">
-          <SalesPipelineBlock
-            title="Company pipeline today"
-            data={data.salesPipeline}
-            accentClass="border-l-4 border-[#F5A623]"
-            onOpenDrawer={onOpenDrawer}
-          />
-          <FinanceRadarBlock data={data.financeRadar} accentClass="border-l-4 border-[#00D4B4]" />
-          <InstallationPulseBlock
-            data={data.installPulse}
-            accentClass="border-l-4 border-sky-400"
-            onOpenDrawer={onOpenDrawer}
-          />
-        </div>
-      )}
+        {data.focusKind === 'MANAGEMENT' && (
+          <>
+            <ZenithFocusCollapsible title="Company pipeline today" accent="gold" defaultOpen={false}>
+              <SalesPipelineBlock
+                title="Company pipeline today"
+                data={data.salesPipeline}
+                accentClass="border-l-4 border-[#F5A623]"
+                onOpenDrawer={onOpenDrawer}
+                embedded
+              />
+            </ZenithFocusCollapsible>
+            <ZenithFocusCollapsible title="Payment radar" accent="teal" defaultOpen={false}>
+              <FinanceRadarBlock data={data.financeRadar} accentClass="border-l-4 border-[#00D4B4]" embedded />
+            </ZenithFocusCollapsible>
+            <ZenithFocusCollapsible title="Installation pulse" accent="sky" defaultOpen={false}>
+              <InstallationPulseBlock
+                data={data.installPulse}
+                accentClass="border-l-4 border-sky-400"
+                onOpenDrawer={onOpenDrawer}
+                embedded
+              />
+            </ZenithFocusCollapsible>
+            {showProposalEngine ? (
+              <ZenithFocusCollapsible
+                id="zenith-proposal-engine"
+                title="Proposal Engine"
+                accent="gold"
+                defaultOpen={false}
+                subtitle="PE readiness by project bucket"
+              >
+                <ZenithProposalEngineCard
+                  selectedFYs={dateFilter.selectedFYs}
+                  selectedQuarters={dateFilter.selectedQuarters}
+                  selectedMonths={dateFilter.selectedMonths}
+                  embedded
+                />
+              </ZenithFocusCollapsible>
+            ) : null}
+          </>
+        )}
+      </div>
     </div>
   )
 }

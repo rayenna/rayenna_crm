@@ -95,7 +95,12 @@ export default function DealFlowFunnel({
   return (
     <div className="zenith-glass rounded-xl p-3 sm:p-4 overflow-visible w-full">
       <div className="flex items-center justify-between gap-2 mb-2 md:mb-1.5">
-        <h3 className="zenith-display text-sm sm:text-[15px] font-semibold text-white/95 tracking-tight">{title}</h3>
+        <h3
+          className="zenith-display text-lg sm:text-xl font-bold text-white tracking-tight"
+          style={{ fontFamily: "'Syne', sans-serif" }}
+        >
+          {title}
+        </h3>
         <span className="text-[9px] uppercase tracking-[0.14em] text-white/38">{badge}</span>
       </div>
 

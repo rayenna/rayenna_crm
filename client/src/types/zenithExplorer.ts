@@ -13,6 +13,9 @@ export type ZenithExplorerProject = {
   financial_year: string
   assigned_to_name: string
   updated_at: string
+  /** When current CRM stage was entered — primary leaderboard “closed in period” signal. */
+  stage_entered_at?: string | null
+  confirmation_date?: string | null
   customer_name: string
   gross_profit?: number | null
   /** Matches `availingLoanByBank[].bankLabel` when project avails loan; else "". */

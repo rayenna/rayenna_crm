@@ -149,7 +149,19 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.command-center',
     title: 'Zenith Command Center',
     content:
-      'Full-screen analytics with the same FY, Quarter, and Month rules as the Dashboard: AI Insights, Your Focus, KPIs, Revenue forecast, funnel, and clickable Explore charts. Open Help → Analytics for the full guide.',
+      'Full-screen analytics with the same FY, Quarter, and Month rules as the Dashboard: AI Insights, The Board leaderboard, collapsible Your Focus, KPIs, Revenue forecast, funnel, clickable Explore charts, and Quick Actions lists. Open Help → Analytics for the full guide.',
+  },
+  'zenith.the-board': {
+    key: 'zenith.the-board',
+    title: 'The Board',
+    content:
+      'Sales leaderboard by Month, Quarter (Indian FY quarters), or FY. Rankings use winning-stage deals credited by stage entered / confirmation dates. Click header totals or a row’s value to open the same Quick Actions list drawer as chart drill-down.',
+  },
+  'zenith.victory-toast': {
+    key: 'zenith.victory-toast',
+    title: 'Victory toast',
+    content:
+      'Short celebration when a project moves into Confirmed, Under Installation, Completed, or Subsidy Credited — from Quick Actions, project save, etc. Auto-dismisses; use × to close.',
   },
   'zenith.revenue-forecast': {
     key: 'zenith.revenue-forecast',
@@ -173,7 +185,7 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.chart-drill-down',
     title: 'Click to explore',
     content:
-      'Opens the Quick Actions drawer with projects matching that chart slice and your Zenith filters. FY profit lists use gross profit totals; most other slices use order value.',
+      'Opens the Quick Actions drawer with projects matching that chart slice and your Zenith filters. FY profit lists use gross profit totals; most other slices use order value. The Board uses the same drawer for period / salesperson drill-down.',
   },
 }
 
