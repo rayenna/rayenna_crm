@@ -34,7 +34,8 @@ import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChar
 import { getLoanBankBarColor } from '../dashboard/loanBankChartColors'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
 import type { ZenithQuickActionHandle } from '../../hooks/useQuickAction'
-import type { ZenithExplorerProject } from '../../types/zenithExplorer'
+import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../../types/zenithExplorer'
+import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
 import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
 
@@ -42,16 +43,67 @@ const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
 
 const ZENITH_CHART_H = 240
 
-const tt = {
-  wrapperStyle: { outline: 'none' as const, zIndex: 100 },
-  contentStyle: {
-    background: 'rgba(10,10,15,0.96)',
-    border: '1px solid rgba(255,255,255,0.14)',
-    borderRadius: 10,
-    color: '#f8fafc',
-  },
-  labelStyle: { color: '#ffffff', fontWeight: 600 },
-  itemStyle: { color: '#f1f5f9' },
+function ExploreInrTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean
+  payload?: Array<{ value?: unknown; name?: string | number; dataKey?: string | number }>
+  label?: string | number
+}) {
+  if (!active || !payload?.length) return null
+  const item = payload[0]!
+  const v = Number(item.value)
+  const seriesName =
+    item.name != null && String(item.name).trim() !== '' ? String(item.name) : 'Value'
+  const cat = label != null && label !== '' ? String(label) : ''
+  return (
+    <div
+      style={{
+        background: '#1A1A2E',
+        border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: 8,
+        padding: '8px 12px',
+        fontFamily: 'DM Sans, sans-serif',
+      }}
+    >
+      <div style={{ color: '#fff', fontSize: 13, fontWeight: 500 }}>
+        {cat ? `${cat} · ` : ''}
+        {seriesName}: ₹{Number.isFinite(v) ? v.toLocaleString('en-IN') : '—'}
+      </div>
+      <div style={{ color: '#F5A623', fontSize: 11, marginTop: 4 }}>Click to view projects →</div>
+    </div>
+  )
+}
+
+function ExploreCountTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean
+  payload?: Array<{ value?: unknown }>
+  label?: string | number
+}) {
+  if (!active || !payload?.length) return null
+  const n = Number(payload[0]?.value)
+  return (
+    <div
+      style={{
+        background: '#1A1A2E',
+        border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: 8,
+        padding: '8px 12px',
+        fontFamily: 'DM Sans, sans-serif',
+      }}
+    >
+      <div style={{ color: '#fff', fontSize: 13, fontWeight: 500 }}>
+        {label}: {Number.isFinite(n) ? n : '—'} projects
+      </div>
+      <div style={{ color: '#F5A623', fontSize: 11, marginTop: 4 }}>Click to view projects →</div>
+    </div>
+  )
 }
 
 export default function ZenithFinanceBody({
@@ -59,11 +111,13 @@ export default function ZenithFinanceBody({
   isLoading,
   dateFilter,
   quickAction,
+  onOpenFinanceDrawer,
 }: {
   data: Record<string, unknown>
   isLoading: boolean
   dateFilter: ZenithDateFilter
   quickAction: ZenithQuickActionHandle
+  onOpenFinanceDrawer?: (projectId: string) => void
 }) {
   const { user } = useAuth()
   const effFYs = dateFilter.selectedFYs
@@ -101,6 +155,35 @@ export default function ZenithFinanceBody({
   })
 
   const explorerProjects = (data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]
+
+  const drill = useCallback(
+    (dimension: ZenithChartDrilldownDimension, value: string, opts?: DrilldownOpts) => {
+      const filtered = filterProjectsByChartSlice(explorerProjects, dimension, value, opts)
+      const label = buildFilterLabel(dimension, value, opts)
+      const listAmountMode =
+        dimension === 'fy' && opts?.fyMetric === 'profit' ? 'gross_profit' : 'deal_value'
+      const sample =
+        dimension === 'loan_bank'
+          ? filtered.find((p) => p.financing_bank) ?? null
+          : dimension === 'assigned_to'
+            ? filtered.find((p) => p.assigned_to_id) ?? null
+            : filtered[0] ?? null
+      const projectsPageHref = buildZenithDrawerListProjectsHref(
+        dimension,
+        value,
+        dateFilter,
+        opts,
+        sample,
+      )
+      quickAction.openDrawerListMode({
+        filterLabel: label,
+        filteredProjects: filtered,
+        listAmountMode,
+        projectsPageHref,
+      })
+    },
+    [explorerProjects, quickAction.openDrawerListMode, dateFilter],
+  )
 
   const onPaymentStatusPillClick = useCallback(
     (paymentUrlParam: string) => {
@@ -196,7 +279,12 @@ export default function ZenithFinanceBody({
         ))}
       </div>
       <div id="zenith-focus" className="scroll-mt-28">
-        <ZenithYourFocus role={user!.role} dateFilter={dateFilter} zenithMainLoading={isLoading} />
+        <ZenithYourFocus
+          role={user!.role}
+          dateFilter={dateFilter}
+          zenithMainLoading={isLoading}
+          onOpenFinanceDrawer={onOpenFinanceDrawer}
+        />
       </div>
       <div id="zenith-funnel" className="scroll-mt-28">
         <DealFlowFunnel
@@ -207,13 +295,28 @@ export default function ZenithFinanceBody({
           onDealFlowStageClick={onDealFlowStageClick}
         />
       </div>
-      <section className="zenith-exec-section" aria-label="Finance charts">
+      <section className="zenith-exec-section space-y-3" aria-label="Finance charts">
+        <header id="zenith-charts" className="scroll-mt-24 px-0.5">
+          <h2
+            className="zenith-display text-lg sm:text-xl font-bold text-white tracking-tight"
+            style={{ fontFamily: "'Syne', sans-serif" }}
+          >
+            Explore the landscape
+          </h2>
+          <p
+            className="mt-1.5 text-[11px] sm:text-xs text-white/35 italic leading-snug max-w-2xl"
+            style={{ fontFamily: 'DM Sans, sans-serif' }}
+          >
+            These charts are live: click any bar, point, or slice to open matching projects in the quick
+            drawer.
+          </p>
+        </header>
         <div
           id="zenith-charts-row-1"
           className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 scroll-mt-28"
         >
           <div id="zenith-lead-source" className="min-w-0 scroll-mt-24 lg:scroll-mt-0">
-            <ChartPanel title="Revenue by lead source">
+            <ChartPanel title="Revenue by lead source" showExploreHint>
               <ZenithChartTouchReset>
                 {(rk) => (
                   <ResponsiveContainer key={rk} width="100%" height={ZENITH_CHART_H} minWidth={0}>
@@ -221,8 +324,35 @@ export default function ZenithFinanceBody({
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                       <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
                       <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 9 }} />
-                      <Tooltip formatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} {...tt} />
-                      <Bar dataKey="revenue" fill="#f5a623" radius={[0, 4, 4, 0]} />
+                      <Tooltip
+                        shared={false}
+                        content={ExploreInrTooltip}
+                        cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                      />
+                      <Bar
+                        dataKey="revenue"
+                        fill="#f5a623"
+                        radius={[0, 4, 4, 0]}
+                        cursor="pointer"
+                        onClick={(_row: unknown, index: number) => {
+                          const row = leadChart[index]
+                          if (row?.name) drill('lead_source', row.name, { leadSourceMetric: 'revenue' })
+                        }}
+                      >
+                        {leadChart.map((_, i) => (
+                          <Cell
+                            key={`ls-${i}`}
+                            fill="#f5a623"
+                            style={{ transition: 'filter 0.15s' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.filter = 'brightness(1.3)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.filter = 'brightness(1)'
+                            }}
+                          />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 )}
@@ -230,7 +360,7 @@ export default function ZenithFinanceBody({
             </ChartPanel>
           </div>
           <div id="zenith-sales-team" className="min-w-0 scroll-mt-24 lg:scroll-mt-0">
-            <ChartPanel title="Revenue vs pipeline by sales team">
+            <ChartPanel title="Revenue vs pipeline by sales team" showExploreHint>
               <ZenithChartTouchReset>
                 {(rk) => (
                   <ResponsiveContainer key={rk} width="100%" height={ZENITH_CHART_H} minWidth={0}>
@@ -238,10 +368,60 @@ export default function ZenithFinanceBody({
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                       <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
                       <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 9 }} />
-                      <Tooltip formatter={(v: number) => `₹${v.toLocaleString('en-IN')}`} {...tt} />
+                      <Tooltip
+                        shared={false}
+                        content={ExploreInrTooltip}
+                        cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                      />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
-                      <Bar dataKey="revenue" name="Revenue" fill="#f5a623" />
-                      <Bar dataKey="pipeline" name="Pipeline" fill="#a78bfa" />
+                      <Bar
+                        dataKey="revenue"
+                        name="Revenue"
+                        radius={[0, 4, 4, 0]}
+                        cursor="pointer"
+                        onClick={(_row: unknown, index: number) => {
+                          const row = salesMerge[index]
+                          if (row?.name) drill('assigned_to', row.name, { salesTeamMetric: 'revenue' })
+                        }}
+                      >
+                        {salesMerge.map((_, i) => (
+                          <Cell
+                            key={`sr-${i}`}
+                            fill="#f5a623"
+                            style={{ transition: 'filter 0.15s' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.filter = 'brightness(1.3)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.filter = 'brightness(1)'
+                            }}
+                          />
+                        ))}
+                      </Bar>
+                      <Bar
+                        dataKey="pipeline"
+                        name="Pipeline"
+                        radius={[0, 4, 4, 0]}
+                        cursor="pointer"
+                        onClick={(_row: unknown, index: number) => {
+                          const row = salesMerge[index]
+                          if (row?.name) drill('assigned_to', row.name, { salesTeamMetric: 'pipeline' })
+                        }}
+                      >
+                        {salesMerge.map((_, i) => (
+                          <Cell
+                            key={`sp-${i}`}
+                            fill="#a78bfa"
+                            style={{ transition: 'filter 0.15s' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.filter = 'brightness(1.3)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.filter = 'brightness(1)'
+                            }}
+                          />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 )}
@@ -249,12 +429,17 @@ export default function ZenithFinanceBody({
             </ChartPanel>
           </div>
           <div className="min-w-0">
-            <ChartPanel title="Revenue & profit by financial year">
-              <ZenithRevenueProfitFyChart data={fyChart} />
+            <ChartPanel title="Revenue & profit by financial year" showExploreHint>
+              <ZenithRevenueProfitFyChart
+                data={fyChart}
+                onFyClick={({ fy, metric }) =>
+                  drill('fy', fy, { fyMetric: metric === 'profit' ? 'profit' : 'revenue' })
+                }
+              />
             </ChartPanel>
           </div>
           <div id="zenith-loans" className="min-w-0 scroll-mt-24 lg:scroll-mt-0">
-            <ChartPanel title="Loans by bank">
+            <ChartPanel title="Loans by bank" showExploreHint>
               <ZenithChartTouchReset>
                 {(rk) => (
                   <ResponsiveContainer key={rk} width="100%" height={ZENITH_CHART_H} minWidth={0}>
@@ -262,10 +447,28 @@ export default function ZenithFinanceBody({
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                       <XAxis type="number" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.45)' }} />
                       <YAxis dataKey="bankLabel" type="category" width={100} tick={{ fontSize: 9 }} />
-                      <Tooltip {...tt} />
-                      <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                      <Tooltip content={ExploreCountTooltip} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                      <Bar
+                        dataKey="count"
+                        radius={[0, 4, 4, 0]}
+                        cursor="pointer"
+                        onClick={(_row: unknown, index: number) => {
+                          const row = loans[index]
+                          if (row?.bankLabel) drill('loan_bank', row.bankLabel)
+                        }}
+                      >
                         {loans.map((row, i) => (
-                          <Cell key={row.bankLabel ?? i} fill={getLoanBankBarColor(row.bankLabel, i)} />
+                          <Cell
+                            key={row.bankLabel ?? i}
+                            fill={getLoanBankBarColor(row.bankLabel, i)}
+                            style={{ transition: 'filter 0.15s' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.filter = 'brightness(1.3)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.filter = 'brightness(1)'
+                            }}
+                          />
                         ))}
                       </Bar>
                     </BarChart>
@@ -283,7 +486,11 @@ export default function ZenithFinanceBody({
             <SegmentDonut
               stretchToRowHeight
               title="Revenue by customer segment"
+              showExploreHint
               data={seg.map((s) => ({ name: s.label, value: s.value, percentage: s.percentage }))}
+              onSegmentClick={(segment) =>
+                drill('customer_segment', segment, { segmentChart: 'revenue' })
+              }
             />
           </div>
           <div className="flex min-h-[320px] h-full min-w-0 flex-col lg:min-h-0">

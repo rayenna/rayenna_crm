@@ -1726,6 +1726,7 @@ router.put(
           'mnrePortalRegistrationDate',
           'feasibilityDate',
           'registrationDate',
+          'expectedCommissioningDate',
           'installationCompletionDate',
           'completionReportSubmissionDate',
           'mnreInstallationDetails',
@@ -1829,6 +1830,14 @@ router.put(
             } else {
               updateData[field] = req.body[field];
             }
+          }
+        }
+
+        if (updateData.confirmationDate !== undefined) {
+          const conf = updateData.confirmationDate;
+          if (conf instanceof Date && !isNaN(conf.getTime())) {
+            const calculatedYear = calculateFY(conf);
+            if (calculatedYear) updateData.year = calculatedYear;
           }
         }
         
@@ -2020,6 +2029,7 @@ router.put(
           'payment2Date',
           'payment3Date',
           'lastPaymentDate',
+          'expectedCommissioningDate',
           'mnrePortalRegistrationDate',
           'feasibilityDate',
           'registrationDate',

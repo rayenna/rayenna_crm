@@ -1,19 +1,18 @@
 import type { CSSProperties } from 'react'
 import { motion } from 'framer-motion'
+import { format, parseISO } from 'date-fns'
 import { Target, CheckCircle2 } from 'lucide-react'
 import { UserRole } from '../../types'
 import type { HitListItem, HitListLabel } from '../../hooks/useHitList'
 import HealthBadge from './HealthBadge'
-import { hitListItemToHealthProject } from '../../utils/dealHealthScore'
-
-function stagePillClass(stage: string): string {
-  const s = stage.trim()
-  if (s === 'Lead') return 'bg-[rgba(56,139,255,0.15)] text-[#3B8BFF]'
-  if (s === 'Site Survey') return 'bg-[rgba(139,92,246,0.15)] text-[#8B5CF6]'
-  if (s === 'Proposal') return 'bg-[rgba(245,166,35,0.15)] text-[#F5A623]'
-  if (s === 'Confirmed Order') return 'bg-[rgba(0,212,180,0.15)] text-[#00D4B4]'
-  return 'bg-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.6)]'
-}
+import { pipelineRowToHealthProject } from '../../utils/dealHealthScore'
+import {
+  formatZenithDealInrParts,
+  zenithDealRowStagePillClass,
+  zenithDealRowStagePillClassMobile,
+  zenithLastActivityTone,
+  ZENITH_DEAL_OPEN_BUTTON_CLASS,
+} from './zenithDealCardUi'
 
 function labelBadgeClass(label: HitListLabel): { className: string; showPulse: boolean } {
   switch (label) {
@@ -32,9 +31,25 @@ function labelBadgeClass(label: HitListLabel): { className: string; showPulse: b
   }
 }
 
-function formatDealValue(v: number | null | undefined): string {
-  if (v == null || v === 0) return '—'
-  return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(v)
+function formatConfirmationShort(iso: string | null): string {
+  if (!iso) return '—'
+  try {
+    return format(parseISO(iso), 'dd MMM yy')
+  } catch {
+    return '—'
+  }
+}
+
+function hitListHealthProject(project: HitListItem) {
+  return pipelineRowToHealthProject({
+    stage: project.stage,
+    updatedAt: project.updatedAt,
+    dealValue: project.dealValue,
+    expectedCloseDate: project.expectedCloseDate,
+    confirmationDate: project.confirmationDate,
+    advanceReceived: project.advanceReceived,
+    leadSource: project.leadSource,
+  })
 }
 
 const cardBase: CSSProperties = {
@@ -119,9 +134,7 @@ export default function HitList({
       </div>
 
       {allClear ? (
-        <div
-          className="flex flex-col items-center justify-center gap-1 min-h-[64px] md:min-h-[52px] px-5 md:px-3.5 py-3 md:py-2 lg:min-h-0 lg:flex-1"
-        >
+        <div className="flex flex-col items-center justify-center gap-1 min-h-[64px] md:min-h-[52px] px-5 md:px-3.5 py-3 md:py-2 lg:min-h-0 lg:flex-1">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-[18px] h-[18px] md:w-4 md:h-4 shrink-0" color="#00D4B4" aria-hidden />
             <span
@@ -140,169 +153,238 @@ export default function HitList({
         </div>
       ) : (
         <div className="zenith-hit-list-body w-full min-h-[8rem] max-h-[min(42vh,320px)] overflow-y-auto overscroll-y-contain sm:max-h-[min(44vh,340px)] lg:min-h-0 lg:max-h-none lg:flex-1">
-          {hitList.map((project, index) => {
-            const crit = project.urgency === 'critical'
-            const numColor = crit ? '#FF4757' : '#F5A623'
-            const lb = labelBadgeClass(project.label)
-            const sp = stagePillClass(project.stage)
-
-            return (
-              <motion.div
-                key={project.id}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.06, duration: 0.3 }}
-              >
-                <div
-                  className="group border-b border-white/[0.06] last:border-b-0 transition-colors duration-200 ease-out hover:bg-white/[0.04] px-5 py-3.5 md:py-2 md:px-3"
-                  role="group"
-                  aria-label={project.customerName}
-                >
-                {/* Desktop / tablet — compact widget row */}
-                <div className="hidden md:flex md:items-center md:gap-2">
-                  <div className="min-w-0 flex-[2]">
-                    <p
-                      className="truncate text-[13px] font-medium text-white leading-tight"
-                      style={{ fontFamily: 'var(--zenith-font-body)' }}
+          <div className="zenith-scroll-x overflow-x-auto px-3 py-1 md:px-2 md:py-0">
+            {/* Desktop / tablet — same columns as “Your pipeline today” + alert + confirmation */}
+            <table className="hidden md:table w-full text-left text-[11px] sm:text-xs min-w-[820px]">
+              <thead>
+                <tr className="text-white/45 border-b border-white/10">
+                  <th className="py-2 pr-2 font-semibold" style={{ fontFamily: 'var(--zenith-font-body)' }}>
+                    Customer
+                  </th>
+                  <th className="py-2 pr-2 font-semibold" style={{ fontFamily: 'var(--zenith-font-body)' }}>
+                    Stage
+                  </th>
+                  <th
+                    className="py-2 pr-2 font-semibold min-w-[6.5rem]"
+                    style={{ fontFamily: 'var(--zenith-font-body)' }}
+                  >
+                    Sales person
+                  </th>
+                  <th
+                    className="py-2 pr-2 font-semibold text-right"
+                    style={{ fontFamily: 'var(--zenith-font-body)' }}
+                  >
+                    Deal value
+                  </th>
+                  <th className="py-2 pr-2 font-semibold" style={{ fontFamily: 'var(--zenith-font-body)' }}>
+                    Last activity
+                  </th>
+                  <th className="py-2 pr-2 font-semibold" style={{ fontFamily: 'var(--zenith-font-body)' }}>
+                    Alert
+                  </th>
+                  <th className="py-2 pr-2 font-semibold" style={{ fontFamily: 'var(--zenith-font-body)' }}>
+                    Confirmation
+                  </th>
+                  <th
+                    className="py-2 font-semibold text-center w-[72px]"
+                    style={{ fontFamily: 'var(--zenith-font-body)' }}
+                  >
+                    Health
+                  </th>
+                  <th className="py-2 pl-1 w-[88px]" aria-hidden />
+                </tr>
+              </thead>
+              <tbody>
+                {hitList.map((project, index) => {
+                  const tone = zenithLastActivityTone(project.daysSinceActivity)
+                  const lb = labelBadgeClass(project.label)
+                  const sp = project.salespersonName
+                  const dealParts = formatZenithDealInrParts(project.dealValue)
+                  const spRow = zenithDealRowStagePillClass(project.stage)
+                  return (
+                    <motion.tr
+                      key={project.id}
+                      className="group border-b border-white/[0.06] hover:bg-white/[0.04]"
+                      initial={{ opacity: 0, x: -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05, duration: 0.25 }}
                     >
-                      {project.customerName}
-                    </p>
-                    <span
-                      className={`mt-0.5 inline-block rounded-[8px] px-1.5 py-px text-[10px] leading-tight ${sp}`}
-                      style={{ fontFamily: 'var(--zenith-font-body)' }}
-                    >
-                      {project.stage}
-                    </span>
-                  </div>
-
-                  <div className="min-w-0 flex-[1.35] text-right">
-                    <p
-                      className="text-[12px] font-medium tabular-nums leading-tight"
-                      style={{
-                        fontFamily: 'var(--zenith-font-body)',
-                        color:
-                          project.dealValue == null || project.dealValue === 0
-                            ? 'rgba(255,255,255,0.3)'
-                            : '#F5A623',
-                      }}
-                    >
-                      {project.dealValue == null || project.dealValue === 0
-                        ? '—'
-                        : `₹${formatDealValue(project.dealValue)}`}
-                    </p>
-                    <div className="mt-0.5 flex justify-end">
-                      <span
-                        className={`inline-flex items-center max-w-full rounded-[8px] px-1.5 py-px text-[9px] leading-tight ${lb.className}`}
+                      <td className="py-2.5 pr-2">
+                        <span
+                          className="text-white font-medium truncate max-w-[11rem] inline-block align-bottom"
+                          title={project.customerName}
+                          style={{ fontFamily: 'var(--zenith-font-body)' }}
+                        >
+                          {project.customerName}
+                        </span>
+                      </td>
+                      <td className="py-2.5 pr-2">
+                        <span className={spRow} style={{ fontFamily: 'var(--zenith-font-body)' }}>
+                          {project.stage}
+                        </span>
+                      </td>
+                      <td
+                        className="py-2.5 pr-2 text-white/80 truncate max-w-[9rem]"
+                        title={sp}
                         style={{ fontFamily: 'var(--zenith-font-body)' }}
                       >
-                        {lb.showPulse && <span className="pulse-dot" aria-hidden />}
-                        <span className="truncate">{project.label}</span>
+                        {sp}
+                      </td>
+                      <td
+                        className={`py-2.5 pr-2 text-right tabular-nums font-medium ${
+                          dealParts.muted ? 'text-white/30' : 'text-[#F5A623]'
+                        }`}
+                        style={{ fontFamily: 'var(--zenith-font-body)' }}
+                      >
+                        {dealParts.text}
+                      </td>
+                      <td className="py-2.5 pr-2">
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded-md text-[11px] font-bold ${tone.className} ${tone.text} ${
+                            project.label === 'OVERDUE' ? 'pulse-number' : ''
+                          }`}
+                        >
+                          {project.daysSinceActivity}d ago
+                        </span>
+                      </td>
+                      <td className="py-2.5 pr-2">
+                        <span
+                          className={`inline-flex items-center max-w-[8.5rem] rounded-[8px] px-1.5 py-px text-[9px] leading-tight ${lb.className}`}
+                          style={{ fontFamily: 'var(--zenith-font-body)' }}
+                          title={`${project.label}: ${project.daysNumber} ${project.daysSubLabel}`}
+                        >
+                          {lb.showPulse && <span className="pulse-dot shrink-0" aria-hidden />}
+                          <span className="truncate">{project.label}</span>
+                        </span>
+                      </td>
+                      <td
+                        className="py-2.5 pr-2 text-white/70 tabular-nums whitespace-nowrap"
+                        style={{ fontFamily: 'var(--zenith-font-body)' }}
+                      >
+                        {formatConfirmationShort(project.confirmationDate)}
+                      </td>
+                      <td className="py-2.5 text-center align-middle">
+                        <HealthBadge project={hitListHealthProject(project)} size="sm" showLabel={false} />
+                      </td>
+                      <td className="py-2.5 pl-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            if (!onOpenDrawer) return
+                            e.preventDefault()
+                            e.stopPropagation()
+                            onOpenDrawer({
+                              id: project.id,
+                              customerName: project.customerName,
+                              stageLabel: project.stage,
+                            })
+                          }}
+                          className={ZENITH_DEAL_OPEN_BUTTON_CLASS}
+                          style={{ fontFamily: 'var(--zenith-font-body)' }}
+                          aria-label={`Open quick actions for ${project.customerName}`}
+                        >
+                          Open →
+                        </button>
+                      </td>
+                    </motion.tr>
+                  )
+                })}
+              </tbody>
+            </table>
+
+            {/* Mobile — same data, no oversized day count column */}
+            <div className="md:hidden divide-y divide-white/[0.06]">
+              {hitList.map((project, index) => {
+                const tone = zenithLastActivityTone(project.daysSinceActivity)
+                const lb = labelBadgeClass(project.label)
+                const dealParts = formatZenithDealInrParts(project.dealValue)
+                const spMobile = zenithDealRowStagePillClassMobile(project.stage)
+                return (
+                  <motion.div
+                    key={project.id}
+                    className="group py-3.5 first:pt-2"
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05, duration: 0.25 }}
+                    role="group"
+                    aria-label={project.customerName}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p
+                        className="min-w-0 flex-1 truncate text-[15px] font-medium text-white"
+                        style={{ fontFamily: 'var(--zenith-font-body)' }}
+                      >
+                        {project.customerName}
+                      </p>
+                      <span className={spMobile} style={{ fontFamily: 'var(--zenith-font-body)' }}>
+                        {project.stage}
                       </span>
                     </div>
-                  </div>
-
-                  <div className="flex shrink-0 items-center justify-center px-0.5">
-                    <HealthBadge project={hitListItemToHealthProject(project)} size="sm" showLabel={false} />
-                  </div>
-
-                  <div className="flex w-[4.5rem] shrink-0 flex-col items-center justify-center text-center">
-                    <span
-                      className={`text-[1.375rem] font-bold tabular-nums leading-none ${project.label === 'OVERDUE' ? 'pulse-number' : ''}`}
-                      style={{ color: numColor, fontFamily: 'var(--zenith-font-body)' }}
-                    >
-                      {project.daysNumber}
-                    </span>
-                    <span
-                      className="mt-0.5 max-w-full text-[8px] leading-[1.15] line-clamp-2 break-words hyphens-auto px-0.5"
-                      style={{
-                        color:
-                          crit ? 'rgba(255, 71, 87, 0.7)' : 'rgba(245, 166, 35, 0.7)',
-                        fontFamily: 'var(--zenith-font-body)',
-                      }}
-                    >
-                      {project.daysSubLabel}
-                    </span>
-                  </div>
-
-                  <div className="ml-1 shrink-0">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        if (!onOpenDrawer) return
-                        e.preventDefault()
-                        e.stopPropagation()
-                        onOpenDrawer({ id: project.id, customerName: project.customerName, stageLabel: project.stage })
-                      }}
-                      className="inline-block rounded-md border border-white/20 bg-transparent px-2 py-1 text-[10px] text-white/70 transition-all duration-200 ease-out group-hover:border-[#F5A623] group-hover:bg-[rgba(245,166,35,0.08)] group-hover:text-[#F5A623] whitespace-nowrap"
-                      style={{ fontFamily: 'var(--zenith-font-body)' }}
-                      aria-label={`Open quick actions for ${project.customerName}`}
-                    >
-                      Open →
-                    </button>
-                  </div>
-                </div>
-
-                {/* Mobile <768px */}
-                <div className="flex flex-col gap-3 md:hidden">
-                  <div className="flex items-start justify-between gap-2">
                     <p
-                      className="min-w-0 flex-1 truncate text-[15px] font-medium text-white"
+                      className="mt-1 text-[12px] text-white/60 truncate"
                       style={{ fontFamily: 'var(--zenith-font-body)' }}
+                      title={project.salespersonName}
                     >
-                      {project.customerName}
+                      {project.salespersonName}
                     </p>
-                    <span
-                      className={`shrink-0 rounded-[10px] px-2 py-0.5 text-[11px] ${sp}`}
-                      style={{ fontFamily: 'var(--zenith-font-body)' }}
-                    >
-                      {project.stage}
-                    </span>
-                  </div>
-                  <div className="flex items-start justify-between gap-2">
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <p
+                        className="text-[15px] font-medium tabular-nums"
+                        style={{
+                          fontFamily: 'var(--zenith-font-body)',
+                          color: dealParts.muted ? 'rgba(255,255,255,0.3)' : '#F5A623',
+                        }}
+                      >
+                        {dealParts.text}
+                      </p>
+                      <span
+                        className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-bold ${tone.className} ${tone.text}`}
+                      >
+                        {project.daysSinceActivity}d ago
+                      </span>
+                      <span
+                        className={`inline-flex items-center rounded-[10px] px-2 py-0.5 text-[11px] ${lb.className}`}
+                        style={{ fontFamily: 'var(--zenith-font-body)' }}
+                      >
+                        {lb.showPulse && <span className="pulse-dot mr-1" aria-hidden />}
+                        {project.label}
+                      </span>
+                    </div>
                     <p
-                      className="text-[15px] font-medium tabular-nums"
-                      style={{
-                        fontFamily: 'var(--zenith-font-body)',
-                        color:
-                          project.dealValue == null || project.dealValue === 0
-                            ? 'rgba(255,255,255,0.3)'
-                            : '#F5A623',
-                      }}
-                    >
-                      {project.dealValue == null || project.dealValue === 0
-                        ? '—'
-                        : `₹${formatDealValue(project.dealValue)}`}
-                    </p>
-                    <span
-                      className={`inline-flex items-center rounded-[10px] px-2 py-0.5 text-[11px] ${lb.className}`}
+                      className="mt-1.5 text-[12px] text-white/50"
                       style={{ fontFamily: 'var(--zenith-font-body)' }}
                     >
-                      {lb.showPulse && <span className="pulse-dot" aria-hidden />}
-                      {project.label}
-                    </span>
-                  </div>
-                  <div className="flex justify-center py-1">
-                    <HealthBadge project={hitListItemToHealthProject(project)} size="sm" showLabel={false} />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      if (!onOpenDrawer) return
-                      e.preventDefault()
-                      e.stopPropagation()
-                      onOpenDrawer({ id: project.id, customerName: project.customerName, stageLabel: project.stage })
-                    }}
-                    className="block w-full rounded-lg border border-white/20 bg-transparent py-1.5 text-center text-[13px] text-white/70 transition-all duration-200 ease-out group-hover:border-[#F5A623] group-hover:bg-[rgba(245,166,35,0.08)] group-hover:text-[#F5A623]"
-                    style={{ fontFamily: 'var(--zenith-font-body)' }}
-                    aria-label={`Open quick actions for ${project.customerName}`}
-                  >
-                    Open quick actions →
-                  </button>
-                </div>
-                </div>
-              </motion.div>
-            )
-          })}
+                      Confirmation:{' '}
+                      <span className="text-white/75 tabular-nums">
+                        {formatConfirmationShort(project.confirmationDate)}
+                      </span>
+                    </p>
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                      <HealthBadge project={hitListHealthProject(project)} size="sm" showLabel={false} />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          if (!onOpenDrawer) return
+                          e.preventDefault()
+                          e.stopPropagation()
+                          onOpenDrawer({
+                            id: project.id,
+                            customerName: project.customerName,
+                            stageLabel: project.stage,
+                          })
+                        }}
+                        className={ZENITH_DEAL_OPEN_BUTTON_CLASS}
+                        style={{ fontFamily: 'var(--zenith-font-body)' }}
+                        aria-label={`Open quick actions for ${project.customerName}`}
+                      >
+                        Open →
+                      </button>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </div>
+          </div>
         </div>
       )}
     </motion.div>

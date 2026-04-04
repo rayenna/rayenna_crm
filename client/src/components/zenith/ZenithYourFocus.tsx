@@ -27,6 +27,12 @@ import ZenithChartTouchReset from './ZenithChartTouchReset'
 import ZenithFocusCollapsible from './ZenithFocusCollapsible'
 import ZenithProposalEngineCard from './ZenithProposalEngineCard'
 import type { ReminderTemplateProject } from '../../utils/reminderTemplates'
+import {
+  formatZenithDealInrParts,
+  zenithDealRowStagePillClass,
+  zenithLastActivityTone,
+  ZENITH_DEAL_OPEN_BUTTON_CLASS,
+} from './zenithDealCardUi'
 
 type SalesPipelineRow = {
   projectId: string
@@ -57,8 +63,42 @@ type FinanceOverdueRow = {
   orderValue?: number
   amountPaid?: number
   projectStatus?: string
+  /** Prisma PaymentStatus from zenith-focus overdue list */
+  paymentStatus?: string
   salespersonId?: string | null
   salespersonName?: string | null
+}
+
+/** Installation pulse: customer name colour by project stage (confirmed vs under installation). */
+const INSTALL_PULSE_NAME_CONFIRMED = '#7dd3fc'
+const INSTALL_PULSE_NAME_UNDER_INSTALLATION = '#f5a623'
+
+function installPulseProjectNameColor(projectStatus: string | undefined): string {
+  if (projectStatus === ProjectStatus.CONFIRMED) return INSTALL_PULSE_NAME_CONFIRMED
+  if (projectStatus === ProjectStatus.UNDER_INSTALLATION) return INSTALL_PULSE_NAME_UNDER_INSTALLATION
+  return 'rgba(255,255,255,0.9)'
+}
+
+const INSTALL_PULSE_STAGE_LABEL: Partial<Record<ProjectStatus, string>> = {
+  [ProjectStatus.CONFIRMED]: 'Confirmed Order',
+  [ProjectStatus.UNDER_INSTALLATION]: 'Under Installation',
+}
+
+function installPulseStageLabel(projectStatus: string | undefined): string {
+  if (!projectStatus) return '—'
+  const ps = projectStatus as ProjectStatus
+  return INSTALL_PULSE_STAGE_LABEL[ps] ?? projectStatus
+}
+
+/** Payment radar table: project name colour by Prisma payment status (overdue list is PENDING / PARTIAL only). */
+const PAYMENT_RADAR_NAME_PENDING = '#7dd3fc'
+const PAYMENT_RADAR_NAME_PARTIAL = '#f5a623'
+
+function paymentRadarProjectNameColor(paymentStatus: string | undefined): string {
+  const s = String(paymentStatus ?? 'PENDING').toUpperCase()
+  if (s === 'PARTIAL') return PAYMENT_RADAR_NAME_PARTIAL
+  if (s === 'PENDING') return PAYMENT_RADAR_NAME_PENDING
+  return 'rgba(255,255,255,0.9)'
 }
 
 type AgeingBucket = {
@@ -199,12 +239,6 @@ type ZenithFocusResponse =
       }
       installPulse: { rows: InstallRow[]; avgInstallationDays: number | null; delayedCount: number }
     }
-
-function activityTone(days: number): { text: string; className: string } {
-  if (days < 3) return { text: 'text-emerald-300', className: 'bg-emerald-500/15' }
-  if (days <= 7) return { text: 'text-amber-300', className: 'bg-amber-500/15' }
-  return { text: 'text-red-300', className: 'bg-red-500/15' }
-}
 
 function SalesPipelineBlock({
   title,
@@ -406,19 +440,32 @@ function SalesPipelineBlock({
                 </tr>
               ) : (
                 displayRows.map((r) => {
-                  const tone = activityTone(r.daysSinceActivity)
+                  const tone = zenithLastActivityTone(r.daysSinceActivity)
                   const sp = (r.salespersonName ?? '').trim() || 'Unassigned'
+                  const dealParts = formatZenithDealInrParts(r.dealValue)
                   return (
-                    <tr key={r.projectId} className="border-b border-white/[0.06] hover:bg-white/[0.04]">
+                    <tr key={r.projectId} className="group border-b border-white/[0.06] hover:bg-white/[0.04]">
                       <td className="py-2.5 pr-3">
                         <span className="text-white font-medium">{r.customerName}</span>
                       </td>
-                      <td className="py-2.5 pr-3 text-white/80">{r.stage}</td>
+                      <td className="py-2.5 pr-3">
+                        <span
+                          className={zenithDealRowStagePillClass(r.stage)}
+                          style={{ fontFamily: 'var(--zenith-font-body)' }}
+                        >
+                          {r.stage}
+                        </span>
+                      </td>
                       <td className="py-2.5 pr-3 text-white/80 truncate max-w-[10rem]" title={sp}>
                         {sp}
                       </td>
-                      <td className="py-2.5 pr-3 text-right tabular-nums text-white/90">
-                        ₹{Math.round(r.dealValue).toLocaleString('en-IN')}
+                      <td
+                        className={`py-2.5 pr-3 text-right tabular-nums font-medium ${
+                          dealParts.muted ? 'text-white/30' : 'text-[#F5A623]'
+                        }`}
+                        style={{ fontFamily: 'var(--zenith-font-body)' }}
+                      >
+                        {dealParts.text}
                       </td>
                       <td className="py-2.5 pr-3">
                         <span className={`inline-flex px-2 py-0.5 rounded-md text-xs font-bold ${tone.className} ${tone.text}`}>
@@ -433,7 +480,9 @@ function SalesPipelineBlock({
                           <button
                             type="button"
                             onClick={() => onOpenDrawer?.({ id: r.projectId, customerName: r.customerName, stageLabel: r.stage })}
-                            className="text-xs font-bold text-white/70 hover:text-[#f5a623] underline-offset-2 hover:underline"
+                            className={ZENITH_DEAL_OPEN_BUTTON_CLASS}
+                            style={{ fontFamily: 'var(--zenith-font-body)' }}
+                            aria-label={`Open quick actions for ${r.customerName}`}
                           >
                             Open →
                           </button>
@@ -494,6 +543,7 @@ function FinanceRadarBlock({
   data,
   accentClass,
   embedded = false,
+  onOpenFinanceDrawer,
 }: {
   data: {
     totalOutstanding: number
@@ -506,6 +556,8 @@ function FinanceRadarBlock({
   }
   accentClass: string
   embedded?: boolean
+  /** Finance / Admin / Management: open payment quick drawer instead of navigating away. */
+  onOpenFinanceDrawer?: (projectId: string) => void
 }) {
   const [sortField, setSortField] = useState<'amount' | 'days' | 'customer' | 'salesperson' | null>('amount')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
@@ -757,7 +809,7 @@ function FinanceRadarBlock({
                         className="py-2 px-2 sm:px-2.5 font-semibold cursor-pointer select-none max-w-[7rem] sm:max-w-[9rem]"
                         onClick={() => toggleSort('customer')}
                       >
-                        Customer {sortField === 'customer' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                        Projects {sortField === 'customer' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
                       </th>
                       <th
                         className="py-2 px-2 font-semibold cursor-pointer select-none min-w-[6.5rem] max-w-[9rem]"
@@ -793,16 +845,30 @@ function FinanceRadarBlock({
                     ) : (
                       overdueRows.map((r) => {
                         const sp = (r.salespersonName ?? '').trim() || 'Unassigned'
+                        const nameColor = paymentRadarProjectNameColor(r.paymentStatus)
                         return (
                         <tr key={r.projectId} className="border-b border-white/[0.06] last:border-b-0 hover:bg-white/[0.04]">
                           <td className="py-2 px-2 sm:px-2.5 max-w-[7rem] sm:max-w-[9rem]">
-                            <Link
-                              to={`/projects/${r.projectId}`}
-                              className="font-semibold text-white hover:text-[#f5a623] block truncate"
-                              title={r.customerName}
-                            >
-                              {r.customerName}
-                            </Link>
+                            {onOpenFinanceDrawer ? (
+                              <button
+                                type="button"
+                                onClick={() => onOpenFinanceDrawer(r.projectId)}
+                                className="font-semibold block truncate text-left w-full bg-transparent border-0 cursor-pointer p-0 transition-[filter] hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f5a623]/50 rounded-sm"
+                                style={{ color: nameColor }}
+                                title={r.customerName}
+                              >
+                                {r.customerName}
+                              </button>
+                            ) : (
+                              <Link
+                                to={`/projects/${r.projectId}`}
+                                className="font-semibold block truncate transition-[filter] hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f5a623]/50 rounded-sm"
+                                style={{ color: nameColor }}
+                                title={r.customerName}
+                              >
+                                {r.customerName}
+                              </Link>
+                            )}
                           </td>
                           <td className="py-2 px-2 text-white/70 truncate max-w-[9rem]" title={sp}>
                             {sp}
@@ -834,6 +900,27 @@ function FinanceRadarBlock({
                   </tbody>
                 </table>
               </div>
+              <p
+                className="shrink-0 border-t border-white/[0.06] px-2 sm:px-2.5 py-2 m-0 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] leading-snug text-white/45"
+                role="note"
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <span
+                    className="h-2 w-2 rounded-full shrink-0"
+                    style={{ background: PAYMENT_RADAR_NAME_PENDING }}
+                    aria-hidden
+                  />
+                  <span>Project name — pending payment</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span
+                    className="h-2 w-2 rounded-full shrink-0"
+                    style={{ background: PAYMENT_RADAR_NAME_PARTIAL }}
+                    aria-hidden
+                  />
+                  <span>Project name — partial payment</span>
+                </span>
+              </p>
             </div>
           </div>
 
@@ -1095,11 +1182,14 @@ function InstallationPulseBlock({
   data,
   accentClass,
   onOpenDrawer,
+  onOpenOperationsDrawer,
   embedded = false,
 }: {
   data: { rows: InstallRow[]; avgInstallationDays: number | null; delayedCount: number }
   accentClass: string
   onOpenDrawer?: (p: { id: string; customerName?: string; stageLabel?: string }, section?: ZenithAutoFocusSection) => void
+  /** Installation / admin / management Zenith: log updates open the operations lifecycle drawer. */
+  onOpenOperationsDrawer?: (projectId: string) => void
   embedded?: boolean
 }) {
   const [sortField, setSortField] = useState<
@@ -1243,12 +1333,13 @@ function InstallationPulseBlock({
               {displayRows.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-white/40">
-                    No projects under installation for this period.
+                    No confirmed or under-installation projects for this period.
                   </td>
                 </tr>
               ) : (
                 displayRows.map((r) => {
                   const note = r.lastNote?.trim() || ''
+                  const nameColor = installPulseProjectNameColor(r.projectStatus)
                   return (
                     <tr
                       key={r.projectId}
@@ -1260,13 +1351,13 @@ function InstallationPulseBlock({
                             className={`h-2 w-2 rounded-full flex-shrink-0 ${r.overdue ? 'bg-red-400' : 'bg-emerald-400'}`}
                             title={r.overdue ? 'Overdue' : 'On track'}
                           />
-                          <Link
-                            to={`/projects/${r.projectId}`}
-                            className="text-white font-medium hover:text-[#f5a623] truncate sm:whitespace-normal sm:break-words"
+                          <span
+                            className="font-medium truncate sm:whitespace-normal sm:break-words"
+                            style={{ color: nameColor }}
                             title={r.customerName}
                           >
                             {r.customerName}
-                          </Link>
+                          </span>
                         </div>
                       </td>
                       <td className="py-2.5 pl-2 pr-5 sm:pr-8 text-right tabular-nums text-white/85 align-middle whitespace-nowrap">
@@ -1318,19 +1409,23 @@ function InstallationPulseBlock({
                         <InstallationProgressCell row={r} />
                       </td>
                       <td className="py-2.5 pl-2 align-middle whitespace-nowrap">
-                        {onOpenDrawer ? (
+                        {onOpenOperationsDrawer || onOpenDrawer ? (
                           <button
                             type="button"
-                            onClick={() =>
-                              onOpenDrawer(
+                            onClick={() => {
+                              if (onOpenOperationsDrawer) {
+                                onOpenOperationsDrawer(r.projectId)
+                                return
+                              }
+                              onOpenDrawer?.(
                                 {
                                   id: r.projectId,
                                   customerName: r.customerName,
-                                  stageLabel: 'Under Installation',
+                                  stageLabel: installPulseStageLabel(r.projectStatus),
                                 },
                                 'note',
                               )
-                            }
+                            }}
                             className="rounded-lg px-3 py-1 text-[12px] transition-all duration-200 bg-transparent cursor-pointer"
                             style={{
                               border: '1px solid rgba(0,212,180,0.25)',
@@ -1357,10 +1452,32 @@ function InstallationPulseBlock({
             </tbody>
           </table>
         </div>
+        <p
+          className="shrink-0 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] leading-snug text-white/45 mt-3 mb-1 max-w-3xl"
+          role="note"
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              className="h-2 w-2 rounded-full shrink-0"
+              style={{ background: INSTALL_PULSE_NAME_CONFIRMED }}
+              aria-hidden
+            />
+            <span>Customer — confirmed order</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              className="h-2 w-2 rounded-full shrink-0"
+              style={{ background: INSTALL_PULSE_NAME_UNDER_INSTALLATION }}
+              aria-hidden
+            />
+            <span>Customer — under installation</span>
+          </span>
+        </p>
         <p className="text-[11px] sm:text-xs text-white/45 leading-relaxed mt-4 max-w-3xl">
           <span className="text-white/55 font-semibold">Data sources: </span>
           <strong className="text-white/70">Sales person</strong> is the project’s assigned{' '}
-          <strong className="text-white/70">salesperson</strong>. Start uses installation start date, then{' '}
+          <strong className="text-white/70">salesperson</strong>. Rows are <strong className="text-white/70">confirmed order</strong>{' '}
+          and <strong className="text-white/70">under installation</strong>. Start uses installation start date, then{' '}
           <strong className="text-white/70">stage entered</strong> or <strong className="text-white/70">order confirmation</strong>{' '}
           date. <strong className="text-white/70">Expected</strong> uses <strong className="text-white/70">expected commissioning</strong>{' '}
           on the project when set; otherwise <strong className="text-white/70">installation completion date</strong> (same field as
@@ -1388,6 +1505,8 @@ export default function ZenithYourFocus({
   dateFilter,
   zenithMainLoading,
   onOpenDrawer,
+  onOpenFinanceDrawer,
+  onOpenOperationsDrawer,
   showProposalEngine = false,
   zenithExplorerProjects,
   onPeBucketListClick,
@@ -1397,6 +1516,10 @@ export default function ZenithYourFocus({
   /** When Zenith dashboard payload is still loading, skip focus fetch to avoid duplicate empty state. */
   zenithMainLoading: boolean
   onOpenDrawer?: (p: { id: string; customerName?: string; stageLabel?: string }, section?: ZenithAutoFocusSection) => void
+  /** Payment radar: Finance / Admin / Management payment quick drawer. */
+  onOpenFinanceDrawer?: (projectId: string) => void
+  /** Installation pulse: Operations / Admin / Management lifecycle drawer. */
+  onOpenOperationsDrawer?: (projectId: string) => void
   /** Executive Zenith only: fourth collapsible under Your focus (sales / admin / management). */
   showProposalEngine?: boolean
   /** Same slice as main Zenith dashboard; used to populate PE bucket quick drawer. */
@@ -1450,12 +1573,14 @@ export default function ZenithYourFocus({
         >
           Your focus
         </h2>
-        <p
-          className="mt-1.5 text-[11px] text-white/45 leading-snug max-w-2xl"
-          style={{ fontFamily: 'DM Sans, sans-serif' }}
-        >
-          Click on each of the sections to open and work on them.
-        </p>
+        {role !== UserRole.FINANCE && role !== UserRole.OPERATIONS ? (
+          <p
+            className="mt-1.5 text-[11px] text-white/45 leading-snug max-w-2xl"
+            style={{ fontFamily: 'DM Sans, sans-serif' }}
+          >
+            Click on each of the sections to open and work on them.
+          </p>
+        ) : null}
       </header>
 
       <div className="space-y-4 w-full">
@@ -1496,20 +1621,20 @@ export default function ZenithYourFocus({
         )}
 
         {data.focusKind === 'FINANCE' && (
-          <ZenithFocusCollapsible title="Payment radar" accent="teal" defaultOpen={false}>
-            <FinanceRadarBlock data={data.financeRadar} accentClass="border-l-4 border-[#00D4B4]" embedded />
-          </ZenithFocusCollapsible>
+          <FinanceRadarBlock
+            data={data.financeRadar}
+            accentClass="border-l-4 border-[#00D4B4]"
+            onOpenFinanceDrawer={onOpenFinanceDrawer}
+          />
         )}
 
         {data.focusKind === 'OPERATIONS' && (
-          <ZenithFocusCollapsible title="Installation pulse" accent="sky" defaultOpen={false}>
-            <InstallationPulseBlock
-              data={data.installPulse}
-              accentClass="border-l-4 border-sky-400"
-              onOpenDrawer={onOpenDrawer}
-              embedded
-            />
-          </ZenithFocusCollapsible>
+          <InstallationPulseBlock
+            data={data.installPulse}
+            accentClass="border-l-4 border-sky-400"
+            onOpenDrawer={onOpenDrawer}
+            onOpenOperationsDrawer={onOpenOperationsDrawer}
+          />
         )}
 
         {data.focusKind === 'MANAGEMENT' && (
@@ -1524,13 +1649,19 @@ export default function ZenithYourFocus({
               />
             </ZenithFocusCollapsible>
             <ZenithFocusCollapsible title="Payment radar" accent="teal" defaultOpen={false}>
-              <FinanceRadarBlock data={data.financeRadar} accentClass="border-l-4 border-[#00D4B4]" embedded />
+              <FinanceRadarBlock
+                data={data.financeRadar}
+                accentClass="border-l-4 border-[#00D4B4]"
+                embedded
+                onOpenFinanceDrawer={onOpenFinanceDrawer}
+              />
             </ZenithFocusCollapsible>
             <ZenithFocusCollapsible title="Installation pulse" accent="sky" defaultOpen={false}>
               <InstallationPulseBlock
                 data={data.installPulse}
                 accentClass="border-l-4 border-sky-400"
                 onOpenDrawer={onOpenDrawer}
+                onOpenOperationsDrawer={onOpenOperationsDrawer}
                 embedded
               />
             </ZenithFocusCollapsible>

@@ -451,7 +451,7 @@ Support tickets are used to track customer service requests and issues. They hel
 **Where to use it**
 
 - **Projects** — Sort by **Deal Health Score** to surface **weaker** deals across your filtered list; each row shows a **badge**; **hover** for the breakdown.
-- **Zenith** — In **Your pipeline today**, compare deals at a glance; **Today’s Hit List** shows the same badge on urgent items with a quick **Open** link.
+- **Zenith** — In **Your pipeline today**, compare deals at a glance (**customer**, **stage**, **sales person**, **deal value**, **last activity**, **Deal Health**). **Today’s Hit List** uses the **same row pattern** for up to seven urgent deals, adds an **Alert** (why it’s on the list) and **Confirmation** date, and **Open →** opens **Quick Actions** so you can log activity or update the project immediately.
 - **Project Detail** — Open the full **Deal Health Score** card to see every factor and the suggested **insight** (usually pointing at the weakest area).
 
 **What to do when the score is low**

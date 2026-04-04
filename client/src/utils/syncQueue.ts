@@ -2,7 +2,12 @@ const DB_NAME = 'zenith-sync-queue'
 const DB_VERSION = 1
 const STORE_NAME = 'pending-actions'
 
-export type SyncActionType = 'STAGE_CHANGE' | 'LOG_NOTE' | 'UPDATE_VALUE' | 'UPDATE_DATE'
+export type SyncActionType =
+  | 'STAGE_CHANGE'
+  | 'LOG_NOTE'
+  | 'UPDATE_VALUE'
+  | 'UPDATE_DATE'
+  | 'UPDATE_PAYMENT'
 
 export type QueuedAction = {
   id?: number

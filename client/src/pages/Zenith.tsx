@@ -14,8 +14,16 @@ import ZenithAiInsightsTicker from '../components/zenith/ZenithAiInsightsTicker'
 import { buildZenithAiInsights } from '../components/zenith/zenithAiInsights'
 import { AnimatePresence } from 'framer-motion'
 import { useDailyBriefing } from '../hooks/useDailyBriefing'
-import { useQuickAction } from '../hooks/useQuickAction'
+import {
+  useQuickAction,
+  type QuickActionProjectRef,
+  type ZenithAutoFocusSection,
+} from '../hooks/useQuickAction'
+import { useFinanceQuickDrawer } from '../hooks/useFinanceQuickDrawer'
+import { useOperationsQuickDrawer } from '../hooks/useOperationsQuickDrawer'
 import QuickActionDrawer from '../components/zenith/QuickActionDrawer'
+import FinanceQuickDrawer from '../components/zenith/FinanceQuickDrawer'
+import OperationsQuickDrawer from '../components/zenith/OperationsQuickDrawer'
 import OfflineBanner from '../components/OfflineBanner'
 import { useOfflineSync, ZENITH_DATA_SYNCED } from '../hooks/useOfflineSync'
 
@@ -26,6 +34,8 @@ const Zenith = () => {
   const [selectedMonths, setSelectedMonths] = useState<string[]>([])
   const { isVisible, dismiss, showBriefing } = useDailyBriefing()
   const quickAction = useQuickAction()
+  const financeQuickDrawer = useFinanceQuickDrawer()
+  const operationsQuickDrawer = useOperationsQuickDrawer()
   const { isOnline, isSyncing, pendingCount, syncError, syncNow } = useOfflineSync()
 
   const wasOfflineRef = useRef(false)
@@ -51,6 +61,16 @@ const Zenith = () => {
 
   const showQuickActionDrawer =
     execZenithRole || user?.role === UserRole.OPERATIONS || user?.role === UserRole.FINANCE
+
+  const showFinancePaymentDrawer =
+    user?.role === UserRole.FINANCE ||
+    user?.role === UserRole.ADMIN ||
+    user?.role === UserRole.MANAGEMENT
+
+  const showOperationsLifecycleDrawer =
+    user?.role === UserRole.OPERATIONS ||
+    user?.role === UserRole.MANAGEMENT ||
+    user?.role === UserRole.ADMIN
 
   const { data: dashboardData, error: fyError, isError: isFyError, refetch: refetchFYs } =
     useQuery({
@@ -142,6 +162,33 @@ const Zenith = () => {
     setSelectedMonths([])
   }, [])
 
+  /** Sales & Finance: QuickAction drawer. Admin, Management, Operations: operations lifecycle drawer. */
+  const openZenithProjectQuickDrawer = useCallback(
+    (p: QuickActionProjectRef, focus: ZenithAutoFocusSection | null = null) => {
+      if (!user?.role) return
+      if (user.role === UserRole.SALES || user.role === UserRole.FINANCE) {
+        quickAction.openDrawer(p, focus ?? undefined)
+        return
+      }
+      if (
+        user.role === UserRole.ADMIN ||
+        user.role === UserRole.MANAGEMENT ||
+        user.role === UserRole.OPERATIONS
+      ) {
+        operationsQuickDrawer.open(p.id)
+      }
+    },
+    [user?.role, quickAction, operationsQuickDrawer],
+  )
+
+  const handOffListPickToOperationsDrawer = useCallback(
+    (projectId: string) => {
+      operationsQuickDrawer.open(projectId)
+      quickAction.closeDrawer()
+    },
+    [operationsQuickDrawer, quickAction],
+  )
+
   const body = useMemo(() => {
     if (!user?.role) return null
     const data = (zenithData ?? {}) as Record<string, unknown>
@@ -156,6 +203,13 @@ const Zenith = () => {
             isLoading={isLoading}
             dateFilter={dateFilter}
             quickAction={quickAction}
+            onOpenFinanceDrawer={
+              user.role === UserRole.ADMIN || user.role === UserRole.MANAGEMENT
+                ? financeQuickDrawer.open
+                : undefined
+            }
+            onOpenOperationsDrawer={operationsQuickDrawer.open}
+            onOpenProjectQuickDrawer={openZenithProjectQuickDrawer}
           />
         )
       case UserRole.OPERATIONS:
@@ -165,6 +219,8 @@ const Zenith = () => {
             isLoading={isLoading}
             dateFilter={dateFilter}
             quickAction={quickAction}
+            onOpenOperationsDrawer={operationsQuickDrawer.open}
+            onOpenProjectQuickDrawer={openZenithProjectQuickDrawer}
           />
         )
       case UserRole.FINANCE:
@@ -174,6 +230,7 @@ const Zenith = () => {
             isLoading={isLoading}
             dateFilter={dateFilter}
             quickAction={quickAction}
+            onOpenFinanceDrawer={financeQuickDrawer.open}
           />
         )
       default:
@@ -183,7 +240,16 @@ const Zenith = () => {
           </div>
         )
     }
-  }, [user?.role, zenithData, isLoading, dateFilter, quickAction])
+  }, [
+    user?.role,
+    zenithData,
+    isLoading,
+    dateFilter,
+    quickAction,
+    financeQuickDrawer.open,
+    operationsQuickDrawer.open,
+    openZenithProjectQuickDrawer,
+  ])
 
   return (
     <div className="zenith-root zenith-animated-bg">
@@ -277,6 +343,31 @@ const Zenith = () => {
           listAmountMode={quickAction.listAmountMode}
           autoFocusSection={quickAction.autoFocusSection}
           projectsPageHref={quickAction.projectsPageHref}
+          onSelectProjectFromList={
+            user?.role === UserRole.ADMIN ||
+            user?.role === UserRole.MANAGEMENT ||
+            user?.role === UserRole.OPERATIONS
+              ? handOffListPickToOperationsDrawer
+              : undefined
+          }
+        />
+      ) : null}
+
+      {showFinancePaymentDrawer ? (
+        <FinanceQuickDrawer
+          isOpen={financeQuickDrawer.isOpen}
+          projectId={financeQuickDrawer.projectId}
+          readOnly={user?.role === UserRole.MANAGEMENT}
+          onClose={financeQuickDrawer.close}
+        />
+      ) : null}
+
+      {showOperationsLifecycleDrawer ? (
+        <OperationsQuickDrawer
+          isOpen={operationsQuickDrawer.isOpen}
+          projectId={operationsQuickDrawer.projectId}
+          readOnly={user?.role === UserRole.MANAGEMENT}
+          onClose={operationsQuickDrawer.close}
         />
       ) : null}
 

@@ -8,6 +8,11 @@ function rowAmount(p: ZenithExplorerProject, mode: ZenithListAmountMode): number
   return Number(p.deal_value ?? 0)
 }
 import HealthBadge from './HealthBadge'
+import {
+  formatZenithDealInrParts,
+  zenithDealRowStagePillClass,
+  ZENITH_DEAL_OPEN_BUTTON_CLASS,
+} from './zenithDealCardUi'
 
 type SortKey = 'value' | 'health' | 'activity'
 
@@ -137,46 +142,61 @@ export default function DrawerProjectList({
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto -mx-1 px-1">
-        {sorted.map((p) => (
-          <div
-            key={p.id}
-            className="flex items-center gap-2.5 py-3 border-b border-white/[0.05]"
-          >
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold text-white truncate" style={{ fontFamily: 'DM Sans, sans-serif' }}>
-                {p.customer_name}
+        {sorted.map((p) => {
+          const raw = rowAmount(p, amountMode)
+          const dealParts =
+            amountMode === 'gross_profit'
+              ? { text: raw === 0 ? '—' : formatINR(raw), muted: raw === 0 }
+              : formatZenithDealInrParts(raw)
+          return (
+            <div
+              key={p.id}
+              className="group flex items-center gap-2.5 py-3 border-b border-white/[0.05]"
+            >
+              <div className="flex-1 min-w-0">
+                <div
+                  className="text-[13px] font-medium text-white truncate"
+                  style={{ fontFamily: 'var(--zenith-font-body), DM Sans, sans-serif' }}
+                >
+                  {p.customer_name}
+                </div>
+                <div className="mt-1">
+                  <span
+                    className={zenithDealRowStagePillClass(p.stageLabel)}
+                    style={{ fontFamily: 'var(--zenith-font-body), DM Sans, sans-serif' }}
+                  >
+                    {p.stageLabel}
+                  </span>
+                </div>
               </div>
-              <div className="mt-1">
-                <span
-                  className="inline-block rounded-[20px] px-2 py-0.5 text-[11px]"
+              <div className="shrink-0 text-right">
+                <div
+                  className="text-[12px] font-medium tabular-nums leading-tight"
                   style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    color: 'rgba(255,255,255,0.65)',
+                    fontFamily: 'var(--zenith-font-body), DM Sans, sans-serif',
+                    color: dealParts.muted ? 'rgba(255,255,255,0.3)' : valueAccent,
                   }}
                 >
-                  {p.stageLabel}
-                </span>
+                  {dealParts.text}
+                </div>
+                <div className="mt-1 flex justify-end">
+                  <HealthBadge project={explorerToHealthProject(p)} size="sm" showLabel={false} />
+                </div>
+              </div>
+              <div className="shrink-0">
+                <button
+                  type="button"
+                  onClick={() => onOpen(p)}
+                  className={ZENITH_DEAL_OPEN_BUTTON_CLASS}
+                  style={{ fontFamily: 'var(--zenith-font-body), DM Sans, sans-serif' }}
+                  aria-label={`Open quick actions for ${p.customer_name}`}
+                >
+                  Open →
+                </button>
               </div>
             </div>
-            <div className="shrink-0 text-right">
-              <div className="text-[13px] font-medium" style={{ color: valueAccent }}>
-                {formatINR(rowAmount(p, amountMode))}
-              </div>
-              <div className="mt-1 flex justify-end">
-                <HealthBadge project={explorerToHealthProject(p)} size="sm" />
-              </div>
-            </div>
-            <div className="shrink-0">
-              <button
-                type="button"
-                onClick={() => onOpen(p)}
-                className="rounded-lg px-3 py-1.5 text-xs border border-white/15 text-white/60 hover:border-[#F5A623] hover:text-[#F5A623] transition-colors"
-              >
-                Open →
-              </button>
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       <div

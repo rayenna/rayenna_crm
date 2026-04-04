@@ -2,20 +2,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useModalEscape } from '../../contexts/ModalEscapeContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import { safePutProject, safePostProjectRemark } from '../../utils/safeOfflineMutation'
 import type { SyncActionType } from '../../utils/syncQueue'
 import { Project, ProjectStatus, UserRole } from '../../types'
 import { useAuth } from '../../contexts/AuthContext'
-import type { ZenithExplorerProject } from '../../types/zenithExplorer'
-import type { ZenithAutoFocusSection, ZenithListAmountMode } from '../../hooks/useQuickAction'
-import DrawerProjectList from './DrawerProjectList'
 import HealthBadge from './HealthBadge'
 import { projectDetailToHealthProject } from '../../utils/dealHealthScore'
 import { ZENITH_CHARTS_TOUCH_RESET_EVENT, ZENITH_FLOATING_DISMISS_EVENT } from '../../utils/zenithEvents'
 import { fireVictoryToast } from '../../hooks/useVictoryToast'
 import { zenithDrawerStagePillClass } from './zenithDealCardUi'
+
+const QK = 'operations-quick-drawer-project' as const
 
 const STATUS_ORDER: ProjectStatus[] = [
   ProjectStatus.LEAD,
@@ -46,15 +45,7 @@ const STATUS_LABELS: Record<ProjectStatus, string> = {
 }
 
 function formatINR(value: number | null | undefined): string {
-  if (!value) return 'Not set'
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(value)
-}
-
-function formatINRAlways(value: number): string {
+  if (value == null || Number.isNaN(value)) return '—'
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
@@ -69,6 +60,14 @@ function toYmd(value: string | null | undefined): string {
   return d.toISOString().split('T')[0]!
 }
 
+function ymdToIsoOrNull(ymd: string): string | null {
+  const t = ymd.trim()
+  if (!t) return null
+  const d = new Date(t)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toISOString()
+}
+
 function getNextStatus(current: ProjectStatus): ProjectStatus | null {
   const idx = STATUS_ORDER.indexOf(current)
   if (idx === -1 || idx >= STATUS_ORDER.length - 1) return null
@@ -78,46 +77,21 @@ function getNextStatus(current: ProjectStatus): ProjectStatus | null {
 type ToastState = { text: string; shownAt: number } | null
 type QueuedToastState = { text: string; shownAt: number } | null
 
-type ListSubview = 'list' | 'single'
-
-function sumListAmount(projects: ZenithExplorerProject[], mode: ZenithListAmountMode): number {
-  return projects.reduce((s, p) => {
-    if (mode === 'gross_profit') return s + Number(p.gross_profit ?? 0)
-    return s + Number(p.deal_value ?? 0)
-  }, 0)
-}
-
-export default function QuickActionDrawer({
+export default function OperationsQuickDrawer({
   isOpen,
   projectId,
+  readOnly,
   onClose,
-  listMode = false,
-  filterLabel = '',
-  filteredProjects = [],
-  listAmountMode = 'deal_value',
-  autoFocusSection = null,
-  projectsPageHref = null,
-  /** Admin / Management / Operations: picking a row opens the operations lifecycle drawer instead of this drawer’s single view. */
-  onSelectProjectFromList,
 }: {
   isOpen: boolean
   projectId: string | null
+  /** Management: view milestones only from Zenith. */
+  readOnly: boolean
   onClose: () => void
-  listMode?: boolean
-  filterLabel?: string
-  filteredProjects?: ZenithExplorerProject[]
-  listAmountMode?: ZenithListAmountMode
-  autoFocusSection?: ZenithAutoFocusSection
-  /** List mode: deep link to Projects with the same filters as this drawer list. */
-  projectsPageHref?: string | null
-  onSelectProjectFromList?: (projectId: string) => void
 }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { user, hasRole } = useAuth()
-
-  const [listSubview, setListSubview] = useState<ListSubview>('list')
-  const [listPickId, setListPickId] = useState<string | null>(null)
+  const { hasRole } = useAuth()
 
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<ToastState>(null)
@@ -126,47 +100,48 @@ export default function QuickActionDrawer({
 
   const [noteText, setNoteText] = useState('')
   const [valueInput, setValueInput] = useState<string>('')
-  const [dateInput, setDateInput] = useState<string>('')
-  /** Narrow viewport: lighter motion + no backdrop blur (Android GPU / stutter). */
+  const [confirmationYmd, setConfirmationYmd] = useState('')
+  const [mnreYmd, setMnreYmd] = useState('')
+  const [feasibilityYmd, setFeasibilityYmd] = useState('')
+  const [registrationYmd, setRegistrationYmd] = useState('')
+  const [installCompleteYmd, setInstallCompleteYmd] = useState('')
+  const [reportYmd, setReportYmd] = useState('')
+  const [netMeterYmd, setNetMeterYmd] = useState('')
   const [narrowViewport, setNarrowViewport] = useState(false)
 
-  const effectiveProjectId = listMode
-    ? listSubview === 'single' && listPickId
-      ? listPickId
-      : null
-    : projectId
+  const canEdit =
+    !readOnly && (hasRole([UserRole.ADMIN]) || hasRole([UserRole.OPERATIONS]))
 
   const { data: project, isLoading } = useQuery({
-    queryKey: ['quick-action-project', effectiveProjectId],
+    queryKey: [QK, projectId],
     queryFn: async () => {
-      if (!effectiveProjectId) throw new Error('Missing project id')
-      const res = await axiosInstance.get(`/api/projects/${effectiveProjectId}`)
+      if (!projectId) throw new Error('Missing project id')
+      const res = await axiosInstance.get(`/api/projects/${projectId}`)
       return res.data as Project
     },
-    enabled: isOpen && !!effectiveProjectId,
+    enabled: isOpen && !!projectId,
     retry: 1,
   })
-
-  useEffect(() => {
-    if (!isOpen) {
-      setListSubview('list')
-      setListPickId(null)
-    }
-  }, [isOpen])
-
-  useEffect(() => {
-    if (isOpen && listMode) {
-      setListSubview('list')
-      setListPickId(null)
-    }
-  }, [isOpen, listMode])
 
   useEffect(() => {
     if (!isOpen) return
     setError(null)
     setSaving(false)
     setToast(null)
-  }, [isOpen])
+    setNoteText('')
+  }, [isOpen, projectId])
+
+  useEffect(() => {
+    if (!project) return
+    setValueInput(project.projectCost != null ? String(project.projectCost) : '')
+    setConfirmationYmd(toYmd(project.confirmationDate))
+    setMnreYmd(toYmd(project.mnrePortalRegistrationDate))
+    setFeasibilityYmd(toYmd(project.feasibilityDate))
+    setRegistrationYmd(toYmd(project.registrationDate))
+    setInstallCompleteYmd(toYmd(project.installationCompletionDate))
+    setReportYmd(toYmd(project.completionReportSubmissionDate))
+    setNetMeterYmd(toYmd(project.subsidyRequestDate))
+  }, [project])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -177,7 +152,6 @@ export default function QuickActionDrawer({
     return () => mq.removeEventListener('change', sync)
   }, [])
 
-  const wasOpenRef = useRef(false)
   useEffect(() => {
     if (!isOpen) return
     document.body.classList.add('zenith-drawer-open')
@@ -187,6 +161,7 @@ export default function QuickActionDrawer({
     }
   }, [isOpen])
 
+  const wasOpenRef = useRef(false)
   useEffect(() => {
     if (wasOpenRef.current && !isOpen) {
       window.dispatchEvent(new CustomEvent(ZENITH_CHARTS_TOUCH_RESET_EVENT))
@@ -202,34 +177,16 @@ export default function QuickActionDrawer({
   useModalEscape(isOpen, closeAndClear)
 
   useEffect(() => {
-    if (!project) return
-    setValueInput(project.projectCost != null ? String(project.projectCost) : '')
-    setDateInput(toYmd(project.confirmationDate))
-  }, [project])
-
-  useEffect(() => {
-    if (!isOpen || autoFocusSection !== 'note' || !effectiveProjectId || !project) return
-    const t = window.setTimeout(() => {
-      const textarea = document.getElementById('quick-action-note-textarea') as HTMLTextAreaElement | null
-      if (textarea) {
-        textarea.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        textarea.focus()
-      }
-    }, 350)
-    return () => window.clearTimeout(t)
-  }, [isOpen, autoFocusSection, effectiveProjectId, project?.id])
-
-  useEffect(() => {
     if (!toast) return
     const t = window.setTimeout(() => setToast(null), 3000)
     return () => window.clearTimeout(t)
-  }, [toast?.shownAt])
+  }, [toast])
 
   useEffect(() => {
     if (!queuedToast) return
     const t = window.setTimeout(() => setQueuedToast(null), 3000)
     return () => window.clearTimeout(t)
-  }, [queuedToast?.shownAt])
+  }, [queuedToast])
 
   const stageLabel = project ? (STATUS_LABELS[project.projectStatus] || String(project.projectStatus)) : ''
   const nextStatus = project ? getNextStatus(project.projectStatus) : null
@@ -238,17 +195,10 @@ export default function QuickActionDrawer({
   const canAdvance =
     !!project && !TERMINAL_STATUSES.includes(project.projectStatus) && !!nextStatus && !!nextLabel
 
-  /**
-   * Quick Actions: Admin; Sales on own project; Operations can edit stage/notes/value/date.
-   * Management & Finance are view-only here — Finance edits payments via Payment radar → Finance drawer
-   * or Project detail (Payment Tracking), not this drawer.
-   */
   const canEditProjectInDrawer =
     !!project &&
-    project.projectStatus !== ProjectStatus.LOST &&
-    (hasRole([UserRole.ADMIN]) ||
-      (hasRole([UserRole.SALES]) && project.salespersonId === user?.id) ||
-      hasRole([UserRole.OPERATIONS]))
+    canEdit &&
+    project.projectStatus !== ProjectStatus.LOST
 
   const valuePreview = useMemo(() => {
     const n = Number(valueInput)
@@ -256,13 +206,18 @@ export default function QuickActionDrawer({
     return formatINR(n)
   }, [valueInput])
 
+  const projectTitle =
+    project?.customer?.firstName?.trim() ||
+    project?.customer?.customerName?.trim() ||
+    (isLoading ? 'Loading…' : '—')
+
   const runToast = (text: string) => setToast({ text, shownAt: Date.now() })
   const runQueuedToast = (text = '✓ Saved — will sync when back online') =>
     setQueuedToast({ text, shownAt: Date.now() })
 
-  const patchQuickActionProjectCache = useCallback(
+  const patchProjectCache = useCallback(
     (id: string, patch: Partial<Project>) => {
-      queryClient.setQueryData(['quick-action-project', id], (prev: Project | undefined) =>
+      queryClient.setQueryData([QK, id], (prev: Project | undefined) =>
         prev ? { ...prev, ...patch } : prev,
       )
     },
@@ -275,6 +230,7 @@ export default function QuickActionDrawer({
       queryClient.invalidateQueries({ queryKey: ['zenith-focus'] }),
       queryClient.invalidateQueries({ queryKey: ['projects'] }),
       queryClient.invalidateQueries({ queryKey: ['project', id] }),
+      queryClient.invalidateQueries({ queryKey: [QK, id] }),
     ])
   }
 
@@ -289,27 +245,18 @@ export default function QuickActionDrawer({
     return 'ok'
   }
 
-  const listTotal = useMemo(
-    () => sumListAmount(filteredProjects, listAmountMode),
-    [filteredProjects, listAmountMode],
+  const milestoneBody = useMemo(
+    () => ({
+      confirmationDate: ymdToIsoOrNull(confirmationYmd),
+      mnrePortalRegistrationDate: ymdToIsoOrNull(mnreYmd),
+      feasibilityDate: ymdToIsoOrNull(feasibilityYmd),
+      registrationDate: ymdToIsoOrNull(registrationYmd),
+      installationCompletionDate: ymdToIsoOrNull(installCompleteYmd),
+      completionReportSubmissionDate: ymdToIsoOrNull(reportYmd),
+      subsidyRequestDate: ymdToIsoOrNull(netMeterYmd),
+    }),
+    [confirmationYmd, mnreYmd, feasibilityYmd, registrationYmd, installCompleteYmd, reportYmd, netMeterYmd],
   )
-
-  const showSingleChrome = !listMode || listSubview === 'single'
-  const showListBody = listMode && listSubview === 'list'
-
-  const openFromListRow = (p: ZenithExplorerProject) => {
-    if (onSelectProjectFromList) {
-      onSelectProjectFromList(p.id)
-      return
-    }
-    setListPickId(p.id)
-    setListSubview('single')
-  }
-
-  const backToList = () => {
-    setListSubview('list')
-    setListPickId(null)
-  }
 
   return (
     <>
@@ -339,116 +286,36 @@ export default function QuickActionDrawer({
           ...(narrowViewport ? { willChange: 'transform' as const } : {}),
         }}
         role="dialog"
-        aria-label="Quick actions"
+        aria-label="Operations quick view"
       >
-        {/* Header */}
         <div className="min-h-16 px-5 py-3 flex flex-col gap-2 border-b border-white/[0.08] bg-white/[0.02]">
-          {showListBody ? (
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div
-                  className="text-white font-bold text-[16px] truncate"
-                  style={{ fontFamily: "'Syne', sans-serif" }}
-                  title={filterLabel}
-                >
-                  {filterLabel}
-                </div>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span
-                    className="inline-block rounded-[20px] px-2.5 py-0.5 text-[12px]"
-                    style={{
-                      background: 'rgba(245,166,35,0.15)',
-                      border: '1px solid rgba(245,166,35,0.3)',
-                      color: '#F5A623',
-                    }}
-                  >
-                    {filteredProjects.length} projects
-                  </span>
-                </div>
-              </div>
-              <div className="shrink-0 flex flex-row items-center gap-3">
-                <div
-                  className="text-[13px] font-medium text-right"
-                  style={{ color: listAmountMode === 'gross_profit' ? '#00D4B4' : '#F5A623' }}
-                >
-                  {formatINRAlways(listTotal)}
-                </div>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="w-8 h-8 rounded-full bg-white/10 text-white/60 hover:bg-white/15 hover:text-white transition-colors"
-                  aria-label="Close"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          ) : listMode && listSubview === 'single' ? (
-            <>
-              <div className="flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={backToList}
-                  className="text-left text-[13px] text-[#F5A623] hover:text-[#ffc14d] transition-colors truncate min-w-0"
-                >
-                  ← Back to {filterLabel}
-                </button>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="w-8 h-8 shrink-0 rounded-full bg-white/10 text-white/60 hover:bg-white/15 hover:text-white transition-colors"
-                  aria-label="Close"
-                >
-                  ×
-                </button>
-              </div>
-              <div className="min-w-0">
-                <div
-                  className="text-white font-bold text-[16px] truncate max-w-[280px]"
-                  style={{ fontFamily: "'Syne', sans-serif" }}
-                  title={project?.customer?.firstName || project?.customer?.customerName || undefined}
-                >
-                  {project?.customer?.firstName || project?.customer?.customerName || (isLoading ? 'Loading…' : '—')}
-                </div>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <span className={zenithDrawerStagePillClass(stageLabel)}>
-                    {stageLabel || '—'}
-                  </span>
-                  {project ? (
-                    <HealthBadge project={projectDetailToHealthProject(project)} tooltipZIndex={12000} />
-                  ) : null}
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <div
-                  className="text-white font-bold text-[16px] truncate max-w-[260px]"
-                  style={{ fontFamily: "'Syne', sans-serif" }}
-                  title={project?.customer?.firstName || project?.customer?.customerName || undefined}
-                >
-                  {project?.customer?.firstName || project?.customer?.customerName || (isLoading ? 'Loading…' : '—')}
-                </div>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <span className={zenithDrawerStagePillClass(stageLabel)}>
-                    {stageLabel || '—'}
-                  </span>
-                  {project ? (
-                    <HealthBadge project={projectDetailToHealthProject(project)} tooltipZIndex={12000} />
-                  ) : null}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-8 h-8 shrink-0 rounded-full bg-white/10 text-white/60 hover:bg-white/15 hover:text-white transition-colors"
-                aria-label="Close"
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <div
+                className="text-white font-bold text-[16px] truncate max-w-[260px]"
+                style={{ fontFamily: "'Syne', sans-serif" }}
+                title={projectTitle}
               >
-                ×
-              </button>
+                {projectTitle}
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span className={zenithDrawerStagePillClass(stageLabel)}>
+                  {stageLabel || '—'}
+                </span>
+                {project ? (
+                  <HealthBadge project={projectDetailToHealthProject(project)} tooltipZIndex={12000} />
+                ) : null}
+              </div>
             </div>
-          )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 shrink-0 rounded-full bg-white/10 text-white/60 hover:bg-white/15 hover:text-white transition-colors"
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         <div
@@ -456,25 +323,9 @@ export default function QuickActionDrawer({
           style={{ scrollbarWidth: 'thin' }}
         >
           <AnimatePresence mode="wait">
-            {showListBody ? (
+            {projectId ? (
               <motion.div
-                key="drawer-list"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
-                className="flex-1 flex flex-col min-h-0"
-              >
-                <DrawerProjectList
-                  projects={filteredProjects}
-                  filterLabel={filterLabel}
-                  amountMode={listAmountMode}
-                  onOpen={openFromListRow}
-                />
-              </motion.div>
-            ) : showSingleChrome && effectiveProjectId ? (
-              <motion.div
-                key={`drawer-single-${effectiveProjectId}`}
+                key={`ops-drawer-${projectId}`}
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
@@ -487,18 +338,23 @@ export default function QuickActionDrawer({
                   </div>
                 ) : null}
 
-                {project && !canEditProjectInDrawer ? (
+                {readOnly ? (
                   <div className="mb-4 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[12px] text-white/55">
-                    View-only for your role — stage, value, and dates are shown below; use{' '}
-                    <span className="text-white/75">Open full project</span> for the full record.
+                    Read-only for your role — use <span className="text-white/75">Open full project</span> for the full
+                    record.
+                  </div>
+                ) : null}
+
+                {project && !canEditProjectInDrawer && !readOnly ? (
+                  <div className="mb-4 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[12px] text-white/55">
+                    View-only — stage, activity, value, and dates are shown below; use{' '}
+                    <span className="text-white/75">Open full project</span> when you need the full form.
                   </div>
                 ) : null}
 
                 {canAdvance ? (
                   <div>
-                    <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
-                      Advance stage
-                    </div>
+                    <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">Advance stage</div>
                     <div className="flex items-center gap-2">
                       <span className={zenithDrawerStagePillClass(stageLabel)}>
                         {stageLabel}
@@ -531,7 +387,7 @@ export default function QuickActionDrawer({
                               'STAGE_CHANGE',
                             )
                             if (r === 'queued') {
-                              patchQuickActionProjectCache(project.id, { projectStatus: nextStatus })
+                              patchProjectCache(project.id, { projectStatus: nextStatus })
                               fireVictoryToast({ ...project, projectStatus: nextStatus }, prevStatus)
                               runQueuedToast()
                               window.setTimeout(() => closeAndClear(), 1500)
@@ -557,15 +413,13 @@ export default function QuickActionDrawer({
 
                 {canEditProjectInDrawer ? (
                   <div>
-                    <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
-                      Log activity
-                    </div>
+                    <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">Log activity</div>
                     <textarea
-                      id="quick-action-note-textarea"
+                      id="operations-drawer-note-textarea"
                       value={noteText}
                       onChange={(e) => setNoteText(e.target.value.slice(0, 500))}
                       rows={3}
-                      placeholder="What happened with this deal? Call made, site visited, proposal sent..."
+                      placeholder="Site visit, DISCOM update, crew schedule…"
                       className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[14px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#f5a623]/40"
                       style={{ resize: 'vertical', minHeight: 80 }}
                     />
@@ -603,9 +457,7 @@ export default function QuickActionDrawer({
                 ) : null}
 
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
-                    Deal value
-                  </div>
+                  <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">Deal value</div>
                   <div className="text-[22px] font-bold" style={{ fontFamily: "'Syne', sans-serif", color: '#F5A623' }}>
                     {formatINR(project?.projectCost ?? null)}
                   </div>
@@ -635,7 +487,7 @@ export default function QuickActionDrawer({
                               'UPDATE_VALUE',
                             )
                             if (r === 'queued') {
-                              patchQuickActionProjectCache(project.id, { projectCost: cost })
+                              patchProjectCache(project.id, { projectCost: cost })
                               runQueuedToast()
                             } else {
                               runToast('✓ Value updated')
@@ -657,59 +509,74 @@ export default function QuickActionDrawer({
 
                 <div>
                   <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
-                    Confirmation date
+                    Order & lifecycle dates
                   </div>
-                  <div className="text-[13px] text-white/60">
-                    {project?.confirmationDate
-                      ? new Date(project.confirmationDate).toLocaleDateString('en-IN', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })
-                      : 'No date set'}
+                  <p className="text-[11px] text-white/35 mb-3 leading-snug">
+                    Same fields as the project record. Clear a date and save to remove it.
+                  </p>
+                  <div className="space-y-3">
+                    {(
+                      [
+                        ['Confirmation date', confirmationYmd, setConfirmationYmd] as const,
+                        ['MNRE portal registration date', mnreYmd, setMnreYmd] as const,
+                        ['Feasibility date (DISCOM)', feasibilityYmd, setFeasibilityYmd] as const,
+                        ['Registration date (DISCOM)', registrationYmd, setRegistrationYmd] as const,
+                        ['Installation completion date', installCompleteYmd, setInstallCompleteYmd] as const,
+                        ['Completed report submission date', reportYmd, setReportYmd] as const,
+                        ['Net meter installation date', netMeterYmd, setNetMeterYmd] as const,
+                      ] as const
+                    ).map(([label, val, setVal]) => (
+                      <div key={label}>
+                        <label className="block text-[12px] text-white/50 mb-1">{label}</label>
+                        {canEditProjectInDrawer ? (
+                          <input
+                            type="date"
+                            value={val}
+                            onChange={(e) => setVal(e.target.value)}
+                            className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2.5 text-[14px] text-white focus:outline-none focus:ring-2 focus:ring-[#f5a623]/40"
+                            style={{ colorScheme: 'dark' }}
+                          />
+                        ) : (
+                          <div className="text-[14px] text-white/75 py-1">
+                            {val
+                              ? new Date(val + 'T12:00:00').toLocaleDateString('en-IN', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric',
+                                })
+                              : '—'}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                   {canEditProjectInDrawer ? (
-                    <>
-                      <input
-                        type="date"
-                        value={dateInput}
-                        onChange={(e) => setDateInput(e.target.value)}
-                        className="mt-2 w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[14px] text-white focus:outline-none focus:ring-2 focus:ring-[#f5a623]/40"
-                        style={{ colorScheme: 'dark' }}
-                      />
-                      <button
-                        type="button"
-                        disabled={saving || !project}
-                        onClick={async () => {
-                          if (!project) return
-                          setSaving(true)
-                          setError(null)
-                          try {
-                            const iso = dateInput ? new Date(dateInput).toISOString() : null
-                            const r = await putProjectWithOfflineQueue(
-                              project.id,
-                              { confirmationDate: iso },
-                              'UPDATE_DATE',
-                            )
-                            if (r === 'queued') {
-                              patchQuickActionProjectCache(project.id, {
-                                confirmationDate: iso === null ? undefined : iso,
-                              })
-                              runQueuedToast()
-                            } else {
-                              runToast('✓ Date updated')
-                            }
-                          } catch (e: unknown) {
-                            setError(getFriendlyApiErrorMessage(e))
-                          } finally {
-                            setSaving(false)
+                    <button
+                      type="button"
+                      disabled={saving || !project}
+                      onClick={async () => {
+                        if (!project) return
+                        setSaving(true)
+                        setError(null)
+                        try {
+                          const body = { ...milestoneBody }
+                          const r = await putProjectWithOfflineQueue(project.id, body, 'UPDATE_DATE')
+                          if (r === 'queued') {
+                            patchProjectCache(project.id, body as Partial<Project>)
+                            runQueuedToast()
+                          } else {
+                            runToast('✓ Dates updated')
                           }
-                        }}
-                        className="mt-2 w-full rounded-xl border border-white/20 bg-transparent px-4 py-2.5 text-[14px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors disabled:opacity-60"
-                      >
-                        {saving ? 'Saving…' : 'Update date'}
-                      </button>
-                    </>
+                        } catch (e: unknown) {
+                          setError(getFriendlyApiErrorMessage(e))
+                        } finally {
+                          setSaving(false)
+                        }
+                      }}
+                      className="mt-4 w-full rounded-xl border border-white/20 bg-transparent px-4 py-2.5 text-[14px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors disabled:opacity-60"
+                    >
+                      {saving ? 'Saving…' : 'Update Dates'}
+                    </button>
                   ) : null}
                 </div>
               </motion.div>
@@ -721,49 +588,24 @@ export default function QuickActionDrawer({
           className="h-14 px-5 flex items-center justify-between border-t border-white/[0.08] bg-black/20"
           style={{ height: 'auto', minHeight: 56 }}
         >
-          {showListBody ? (
-            <>
-              {projectsPageHref ? (
-                <Link
-                  to={projectsPageHref}
-                  onClick={onClose}
-                  className="text-[13px] font-semibold text-white/70 hover:text-[#F5A623] transition-colors shrink-0 min-w-0 truncate pr-2"
-                >
-                  Open in Projects →
-                </Link>
-              ) : (
-                <span className="w-0 flex-1 min-w-0" aria-hidden />
-              )}
-              <button
-                type="button"
-                className="ml-auto rounded-xl border border-white/20 bg-transparent px-4 py-1.5 text-[13px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors shrink-0"
-                onClick={onClose}
-              >
-                Close
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                className="text-[13px] font-semibold text-white/70 hover:text-[#F5A623] transition-colors disabled:opacity-40"
-                disabled={!effectiveProjectId}
-                onClick={() => {
-                  if (effectiveProjectId) navigate(`/projects/${effectiveProjectId}`)
-                  onClose()
-                }}
-              >
-                Open full project →
-              </button>
-              <button
-                type="button"
-                className="rounded-xl border border-white/20 bg-transparent px-4 py-1.5 text-[13px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors"
-                onClick={onClose}
-              >
-                Close
-              </button>
-            </>
-          )}
+          <button
+            type="button"
+            className="text-[13px] font-semibold text-white/70 hover:text-[#F5A623] transition-colors disabled:opacity-40"
+            disabled={!projectId}
+            onClick={() => {
+              if (projectId) navigate(`/projects/${projectId}`)
+              onClose()
+            }}
+          >
+            Open full project →
+          </button>
+          <button
+            type="button"
+            className="rounded-xl border border-white/20 bg-transparent px-4 py-1.5 text-[13px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors"
+            onClick={onClose}
+          >
+            Close
+          </button>
         </div>
       </motion.div>
 
@@ -774,11 +616,11 @@ export default function QuickActionDrawer({
             bottom: 24,
             left: '50%',
             transform: 'translateX(-50%)',
-            background: 'rgba(0,212,180,0.15)',
-            border: '1px solid #00D4B4',
+            background: 'rgba(245,166,35,0.15)',
+            border: '1px solid #F5A623',
             borderRadius: 10,
             padding: '10px 20px',
-            color: '#00D4B4',
+            color: '#F5A623',
             fontFamily: 'DM Sans, sans-serif',
             fontSize: 14,
             zIndex: 6100,

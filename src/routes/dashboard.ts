@@ -2632,6 +2632,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
               totalAmountReceived: true,
               projectCost: true,
               projectStatus: true,
+              paymentStatus: true,
               salespersonId: true,
               salesperson: { select: { name: true } },
               customer: { select: { customerName: true, phone: true, email: true } },
@@ -2680,6 +2681,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
           orderValue: p.projectCost ?? 0,
           amountPaid: p.totalAmountReceived ?? 0,
           projectStatus: p.projectStatus,
+          paymentStatus: p.paymentStatus,
           salespersonId: p.salespersonId,
           salespersonName,
         };
@@ -2762,7 +2764,10 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
 
     const buildInstallPulse = async () => {
       const projects = await prisma.project.findMany({
-        where: { ...where, projectStatus: ProjectStatus.UNDER_INSTALLATION },
+        where: {
+          ...where,
+          projectStatus: { in: [ProjectStatus.CONFIRMED, ProjectStatus.UNDER_INSTALLATION] },
+        },
         select: {
           id: true,
           systemCapacity: true,
@@ -2785,7 +2790,8 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
             },
           },
         },
-        take: 100,
+        orderBy: { updatedAt: 'desc' },
+        take: 150,
       });
 
       const now = Date.now();

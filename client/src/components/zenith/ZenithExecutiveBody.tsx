@@ -36,7 +36,11 @@ import ZenithRevenueProfitFyChart from './ZenithRevenueProfitFyChart'
 import HitList from './HitList'
 import Leaderboard from './Leaderboard'
 import { useHitList, type HitListProjectRow } from '../../hooks/useHitList'
-import type { ZenithQuickActionHandle } from '../../hooks/useQuickAction'
+import type {
+  ZenithQuickActionHandle,
+  QuickActionProjectRef,
+  ZenithAutoFocusSection,
+} from '../../hooks/useQuickAction'
 import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../../types/zenithExplorer'
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
@@ -158,12 +162,19 @@ export default function ZenithExecutiveBody({
   isLoading,
   dateFilter,
   quickAction,
+  onOpenFinanceDrawer,
+  onOpenOperationsDrawer,
+  onOpenProjectQuickDrawer,
 }: {
   role: UserRole
   data: Record<string, unknown>
   isLoading: boolean
   dateFilter: ZenithDateFilter
   quickAction: ZenithQuickActionHandle
+  onOpenFinanceDrawer?: (projectId: string) => void
+  onOpenOperationsDrawer?: (projectId: string) => void
+  /** Hit List, pipeline, etc.: QuickAction (Sales/Finance) or operations drawer (Admin/Mgmt/Ops). */
+  onOpenProjectQuickDrawer: (p: QuickActionProjectRef, section?: ZenithAutoFocusSection | null) => void
 }) {
   const { user } = useAuth()
   const fyRows = (data?.projectValueProfitByFY ?? []) as {
@@ -445,7 +456,7 @@ export default function ZenithExecutiveBody({
                 totalAtRisk={hitListResult.totalAtRisk}
                 allClear={hitListResult.allClear}
                 role={role}
-                onOpenDrawer={(p) => quickAction.openDrawer(p)}
+                onOpenDrawer={(p) => onOpenProjectQuickDrawer(p)}
               />
             </div>
           )}
@@ -549,7 +560,9 @@ export default function ZenithExecutiveBody({
             role={role}
             dateFilter={dateFilter}
             zenithMainLoading={isLoading}
-            onOpenDrawer={(p, section) => quickAction.openDrawer(p, section ?? null)}
+            onOpenDrawer={(p, section) => onOpenProjectQuickDrawer(p, section ?? null)}
+            onOpenFinanceDrawer={onOpenFinanceDrawer}
+            onOpenOperationsDrawer={onOpenOperationsDrawer}
             showProposalEngine={
               role === UserRole.ADMIN || role === UserRole.MANAGEMENT || role === UserRole.SALES
             }

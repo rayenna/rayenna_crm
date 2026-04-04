@@ -170,6 +170,17 @@ function scoreDealValueForHealth(orderValue: number): { score: number; detail: s
 }
 
 export function hitListItemToHealthProject(item: HitListItem): Record<string, unknown> {
+  if (item.updatedAt) {
+    return pipelineRowToHealthProject({
+      stage: item.stage,
+      updatedAt: item.updatedAt,
+      dealValue: item.dealValue,
+      expectedCloseDate: item.expectedCloseDate ?? null,
+      confirmationDate: item.confirmationDate ?? null,
+      advanceReceived: item.advanceReceived ?? 0,
+      leadSource: item.leadSource ?? null,
+    })
+  }
   let updatedAt: string
   if (item.label === 'STALLED' || item.label === 'NUDGE NEEDED' || item.label === 'GOING COLD') {
     updatedAt = new Date(Date.now() - item.daysNumber * 86400000).toISOString()

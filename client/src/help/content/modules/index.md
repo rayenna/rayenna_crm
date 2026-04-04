@@ -9,7 +9,7 @@ The Rayenna CRM consists of several key modules designed to manage different asp
 ### Dashboard
 - Role-based dashboards, KPI tiles, and **Quick Access** (metric cards plus **Payment Status**; **Proposal Engine** summary on Sales and Management)
 - **Filters:** Financial Year, Quarter, and Month — see [Analytics & Reports](/help/analytics) for Quick Access layout, Payment rows, Proposal Engine buckets, and charts
-- **[Zenith ✦](/help/analytics#zenith-command-center)** — full-screen command center (same filters), **The Board** leaderboard (Month / Quarter / FY + clickable drill-down lists), **collapsible Your Focus**, **Revenue forecast**, **Explore** chart drill-downs, **Victory** toast on winning stage changes, and **Quick Actions** lists; deep dive under Analytics → Zenith Command Center
+- **[Zenith ✦](/help/analytics#zenith-command-center)** — full-screen command center (same filters), **The Board** leaderboard (Month / Quarter / FY + clickable drill-down lists), **collapsible Your Focus**, **Today’s Hit List** (pipeline-aligned urgent slice + **Quick Actions**), **Revenue forecast**, **Explore** chart drill-downs, **Victory** toast on winning stage changes, and **Quick Actions** lists; deep dive under Analytics → Zenith Command Center
 - **[Zenith training guide](/help/training)** — facilitator-led and self-study material for end-user sessions (**Sales-first**; all roles)
 - Visual analytics (charts vary by role)
 
@@ -373,7 +373,7 @@ The total is the **sum** of five parts. Each part has a **maximum**; the overall
 | :-- | :-- |
 | **Projects** list | A compact **badge** (0–100) next to the project/customer. **Sort** the list by **Deal Health Score** (ascending shows the weakest deals first across the full list — same data the server uses for sorting). |
 | **Project Detail** | A full **Deal Health Score** card with **all factors**, scores, and the insight line. |
-| **Zenith (Executive view)** | **Your pipeline today** (Sales / Management / Admin): each row can show a **Deal Health** badge; **hover** for the breakdown. **Today’s Hit List** also shows the badge on urgent deals with an **Open** link to the project. |
+| **Zenith (Executive view)** | **Your pipeline today** (Sales / Management / Admin): each row can show a **Deal Health** badge; **hover** for the breakdown; **Open →** opens **Quick Actions**. **Today’s Hit List** uses the **same table style** (including **last activity**, **confirmation date**, and **Alert**), capped to urgent deals; **Open →** opens **Quick Actions** as well. |
 | **Tip of the Day** | Occasionally reminds you about Deal Health, sorting, and these rules. |
 
 ### How each factor is scored (reference tables)

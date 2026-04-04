@@ -208,7 +208,7 @@ Metrics and labels are **role-specific** (see below). **Sales** sees data **scop
 
 | Role | What you see (each in its own collapsible panel when applicable) |
 | :-- | :-- |
-| **Sales** | **Your pipeline today** — a compact table of **your** leads/deals (assigned to you): customer, stage, deal value, **last activity**, and a **Deal Health** badge (0–100). **Green / amber / red** styling by recency; a **Follow-up needed** count for the oldest band; **Log activity** opens a short remark modal (saved on the project). **Proposal Engine** — same **PE readiness buckets** as the classic dashboard (**PE Ready**, **PE Draft**, **PE Not Yet Created**, **Rest**). **In Zenith**, each row opens the **Quick Actions** drawer with the **same project set** the server used for that row’s counts; use **Open in Projects →** in the drawer to open the **Projects** list with the matching **PE bucket** and command-bar dates. (On the classic Dashboard Quick Access card, those rows still link straight to **Projects**.) |
+| **Sales** | **Your pipeline today** — a compact table of **your** leads/deals (assigned to you): **customer**, **stage**, **sales person**, **deal value**, **last activity** (*N*d ago, **green / amber / red** pill by recency), and a **Deal Health** badge (0–100). A **Follow-up needed** count calls out the oldest activity band; **Log activity** opens a short remark modal (saved on the project). **Open →** on a row opens **Quick Actions** for that project. **Proposal Engine** — same **PE readiness buckets** as the classic dashboard (**PE Ready**, **PE Draft**, **PE Not Yet Created**, **Rest**). **In Zenith**, each PE row opens the **Quick Actions** drawer with the **same project set** the server used for that row’s counts; use **Open in Projects →** in the drawer to open the **Projects** list with the matching **PE bucket** and command-bar dates. (On the classic Dashboard Quick Access card, those rows still link straight to **Projects**.) |
 | **Finance** | **Payment radar** — see [Payment radar (Finance)](#payment-radar-finance) below. |
 | **Operations** | **Installation pulse** — see [Installation pulse (Operations)](#installation-pulse-operations) below. |
 | **Management / Admin** | **Company pipeline today**, **Payment radar**, and **Installation pulse** in sequence, then **Proposal Engine** — all collapsible under **Your focus** (company-wide where applicable). **Proposal Engine** rows behave like **Sales**: click a bucket → **Quick Actions** list + **Open in Projects →** with the same filters as **Projects** for that bucket. |
@@ -243,8 +243,10 @@ If there is nothing to show for the current filters, **Your Focus** may be hidde
 
 In Zenith, some tables can be refined **without changing your dashboard filters**:
 
-- **Sort**: click a column heading (e.g. Deal value, Health, Days).
-- **Filter**: use the small filter controls near the table title (where available).
+- **Sort**: click a column heading (e.g. Deal value, Health, Last activity) **where the table offers it** — notably **Your pipeline today** under Your Focus.
+- **Filter**: use the small filter controls near the table title (where available) — again, **Your pipeline today** supports customer / stage / salesperson text filters.
+
+**Today’s Hit List** is different: it is a **fixed, ranked slice** (up to **seven** deals) built from the **same pipeline dataset** as **Your pipeline today**, with **no column sort** inside the Hit List card. For **sort**, **filters**, and the **full** table, expand **Your pipeline today**.
 
 These controls work on the rows already loaded for your current FY / Quarter / Month filters (no extra API calls).
 
@@ -255,7 +257,7 @@ These controls work on the rows already loaded for your current FY / Quarter / M
 **Where it shows in Zenith**
 
 - **Your pipeline today** (in **Your Focus**): one badge per row for your deals, plus **Log activity** when you need to record a touchpoint.
-- **Today’s Hit List** (beside the KPI strip on wide layouts for Sales / Management / Admin): urgent deals also show the badge; use **Open →** to jump to **Project Detail** for the full card.
+- **Today’s Hit List** (beside the KPI strip on wide layouts for Sales / Management / Admin): the **same column style** as **Your pipeline today** — including **last activity** (*N*d ago), **confirmation date**, and the badge; use **Open →** to open **Quick Actions** for that project (then **Open full project** if you need **Project detail**).
 
 **Why it helps**
 
@@ -271,15 +273,15 @@ For the **full explanation** of weights, sort behaviour, and sales tips, open th
 
 **Your Focus** — See [Your Focus](#your-focus-role-specific); **Sales** sees own pipeline, **Management/Admin** see the combined focus layout.
 
-**Today’s Hit List** — On wide screens, Sales / Management / Admin also see **Today’s Hit List** beside the KPI strip. It highlights a small set of deals that need attention (e.g. overdue close dates, stalled proposals, deals going cold), with:
+**Today’s Hit List** — On wide screens, Sales / Management / Admin also see **Today’s Hit List** beside the KPI strip. It is built from the **same zenith-focus pipeline rows** as **Your pipeline today**, but **scored and capped** (up to **seven** deals) for what needs attention **today** — for example **expected commissioning** overdue or within a week (**Overdue** / **Closing soon**), **stalled** proposals, **nudge needed** on site survey, or **going cold** leads (exact rules are role- and data-dependent).
 
-- **Stage** and **deal value**
-- An **urgency label** (e.g. Overdue, Closing soon, Stalled)
-- A compact **Deal Health** badge (0–100) with hover breakdown
-- A **days counter** showing how long it has been overdue / stalled
-- **Open →** to jump straight to the Project Detail page
+**Layout (desktop / tablet)** — A **scrollable table** with the same core idea as **Your pipeline today**: **Customer**, **Stage**, **Sales person**, **Deal value**, **Last activity** (*N*d ago, coloured pill), **Alert** (the hit-list reason), **Confirmation** (order **confirmation date**, or **—** if not set), **Deal Health** (badge + hover breakdown), and **Open →**.
 
-If a day has no urgent deals, the card shows **All clear**.
+**Narrow screens** — Stacked **cards** with the same information (no wide multi-column row).
+
+**Open →** — Opens **Quick Actions** for that project (stage, log activity, dates, etc., per your permissions — same entry point as **Open →** on **Your pipeline today**). Management remains **view-only** where that rule already applies.
+
+If a day has no qualifying deals, the card shows **All clear**.
 
 **The Board** — Full-width **sales leaderboard** (**Sales**, **Management**, **Admin** only) sits **below** the **KPI / Hit List / Revenue forecast** band and **above** the **Deal flow funnel**. See [The Board (leaderboard)](#the-board-leaderboard).
 
@@ -441,6 +443,8 @@ Use **Reset** when you want a fresh, unscoped overview before drilling into a si
 
 On **wide screens**, **Today’s Hit List** and the **KPI + Revenue forecast** row sit side by side. The Hit List column height is matched to the KPI band so the row looks balanced. **Fixed-height** tiles (including **Revenue forecast** and the **FY chart** panel) avoid **layout shift** when you switch forecast tabs or when charts redraw.
 
+The Hit List body **scrolls vertically** when there are several rows, and the **table** can **scroll horizontally** on narrower widths so columns stay readable — same pattern as other wide Zenith tables.
+
 ---
 
 ### Explorer batch limit (Zenith)
@@ -456,7 +460,7 @@ For typical portfolios this makes **no practical difference**; it matters only w
 
 ### Help and tips (Zenith)
 
-- **Tip of the Day** rotates through dozens of hints, including **The Board**, **Deal flow funnel** and **payment** drill-downs, **Proposal Engine** rows under Your Focus, **Open in Projects →**, **collapsible Your Focus**, **Victory toast**, **Revenue forecast**, **FY chart drill-down**, **Customer profitability**, **Explore** lists, **Hit List** layout, and the rest of Zenith — use **Next tip** in the modal to browse more.
+- **Tip of the Day** rotates through dozens of hints, including **The Board**, **Deal flow funnel** and **payment** drill-downs, **Proposal Engine** rows under Your Focus, **Open in Projects →**, **collapsible Your Focus**, **Victory toast**, **Revenue forecast**, **FY chart drill-down**, **Customer profitability**, **Explore** lists, **Today’s Hit List** (pipeline-aligned table, **Alert** + **confirmation date**), and the rest of Zenith — use **Next tip** in the modal to browse more.
 - Optional **Help** tooltips (`zenith.*` keys) exist for reuse in the UI; the full narrative is in the sections above.
 
 **Facilitator / end-user training:** A **presentation-style training guide** for Zenith (all roles, **Sales-first**), with exercises and permission notes, lives under **[Training](/help/training)** in Help.

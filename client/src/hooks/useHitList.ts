@@ -9,9 +9,13 @@ export type HitListProjectRow = {
   dealValue: number
   daysSinceActivity: number
   expectedCloseDate?: string | null
+  confirmationDate?: string | null
   createdAt?: string
   updatedAt?: string
   salespersonId?: string
+  salespersonName?: string | null
+  advanceReceived?: number | null
+  leadSource?: string | null
 }
 
 export type HitListLabel = 'OVERDUE' | 'CLOSING SOON' | 'STALLED' | 'NUDGE NEEDED' | 'GOING COLD'
@@ -26,6 +30,14 @@ export type HitListItem = {
   daysNumber: number
   daysSubLabel: string
   pulseNumber: boolean
+  /** Pipeline parity: real recency + CRM fields for table + health. */
+  salespersonName: string
+  confirmationDate: string | null
+  daysSinceActivity: number
+  updatedAt?: string
+  advanceReceived: number
+  leadSource: string | null
+  expectedCloseDate: string | null
 }
 
 const LABEL_ORDER: Record<HitListLabel, number> = {
@@ -34,6 +46,20 @@ const LABEL_ORDER: Record<HitListLabel, number> = {
   STALLED: 2,
   'NUDGE NEEDED': 3,
   'GOING COLD': 4,
+}
+
+function pipelineFieldsFromRow(p: HitListProjectRow) {
+  const salespersonName =
+    (p.salespersonName ?? '').trim() || (p.salespersonId ? '—' : 'Unassigned')
+  return {
+    salespersonName,
+    confirmationDate: p.confirmationDate ?? null,
+    daysSinceActivity: p.daysSinceActivity ?? 0,
+    updatedAt: p.updatedAt,
+    advanceReceived: p.advanceReceived ?? 0,
+    leadSource: p.leadSource ?? null,
+    expectedCloseDate: p.expectedCloseDate ?? null,
+  }
 }
 
 function isTerminalStage(stage: string): boolean {
@@ -110,6 +136,7 @@ export function useHitList(
               daysNumber: Math.abs(d),
               daysSubLabel: 'days overdue',
               pulseNumber: true,
+              ...pipelineFieldsFromRow(p),
             }
           } else if (d >= 0 && d <= 7) {
             item = {
@@ -122,6 +149,7 @@ export function useHitList(
               daysNumber: d,
               daysSubLabel: 'days left',
               pulseNumber: false,
+              ...pipelineFieldsFromRow(p),
             }
           }
         }
@@ -141,6 +169,7 @@ export function useHitList(
               daysNumber: daysU,
               daysSubLabel: 'days no movement',
               pulseNumber: false,
+              ...pipelineFieldsFromRow(p),
             }
           }
         } else if (stage === 'Site Survey') {
@@ -156,6 +185,7 @@ export function useHitList(
               daysNumber: daysU,
               daysSubLabel: 'days no movement',
               pulseNumber: false,
+              ...pipelineFieldsFromRow(p),
             }
           }
         }
@@ -176,6 +206,7 @@ export function useHitList(
             daysNumber: daysC,
             daysSubLabel: 'days since contact',
             pulseNumber: false,
+            ...pipelineFieldsFromRow(p),
           }
         }
       }

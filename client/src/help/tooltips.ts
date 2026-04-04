@@ -151,6 +151,12 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     content:
       'Full-screen analytics with the same FY, Quarter, and Month rules as the Dashboard: AI Insights, The Board leaderboard, collapsible Your Focus, KPIs, Revenue forecast, Deal flow funnel (click stages or payment pills), Proposal Engine under Your Focus, clickable Explore charts, and Quick Actions lists. List mode includes Open in Projects → for the full Projects page with matching filters. Open Help → Analytics for the full guide.',
   },
+  'zenith.hit-list': {
+    key: 'zenith.hit-list',
+    title: 'Today’s Hit List',
+    content:
+      'Up to seven deals that need attention today, from the same pipeline data as Your pipeline today. Table columns: customer, stage, sales person, deal value, last activity (N days ago), Alert (why it’s listed), confirmation date, Deal Health, Open →. Open → opens Quick Actions for that project. On small screens, the same facts appear as stacked cards. For sort and filters, use Your pipeline today under Your Focus.',
+  },
   'zenith.the-board': {
     key: 'zenith.the-board',
     title: 'The Board',
