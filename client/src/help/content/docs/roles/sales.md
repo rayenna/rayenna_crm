@@ -446,7 +446,7 @@ Support tickets are used to track customer service requests and issues. They hel
 
 ### Deal Health Score
 
-**Deal Health Score** (0–100) helps you **prioritise** which open deals deserve attention **today**. It is calculated from information already on the project: how **recently** it was updated, how **long** it has sat in the **current stage**, the **order value**, whether an **expected close date** is set and still realistic, and the **lead source**.
+**Deal Health Score** (0–100) helps you **prioritise** which open deals deserve attention **today**. It is calculated from five factors on the project: **Activity** (recency of updates), **Momentum** (time in stage vs typical), **Deal value** (order value bands — best scores around the **₹1.75L–₹3L** sweet spot for typical 3–5 kW deals), **Close date** (uses **confirmation date** and **advance received** vs order value — see Projects help), and **Lead source**.
 
 **Where to use it**
 
@@ -458,7 +458,7 @@ Support tickets are used to track customer service requests and issues. They hel
 
 - **Log activity** (remarks/updates) so “Activity” reflects reality.
 - **Move the stage** or follow up if **Momentum** shows the deal stuck.
-- **Enter or correct order value** and **expected close date** so value and timeline score fairly.
+- **Enter or correct order value**, **confirmation date**, and **advance received** (Payment tracking) so value and the “Close date” factor score fairly.
 - **Set lead source** accurately for better forecasting context.
 
 The complete rules, score bands, and exclusions are documented under the **Projects** module help — topic **Deal Health Score**.

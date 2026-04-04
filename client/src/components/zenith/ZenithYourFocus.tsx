@@ -36,6 +36,8 @@ type SalesPipelineRow = {
   daysSinceActivity: number
   /** Extra fields from zenith-focus for Today’s Hit List (same API, no extra fetch). */
   expectedCloseDate?: string | null
+  confirmationDate?: string | null
+  advanceReceived?: number
   createdAt?: string
   updatedAt?: string
   salespersonId?: string

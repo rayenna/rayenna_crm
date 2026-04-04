@@ -81,13 +81,60 @@ function daysSince(dateStr: string | undefined | null): number {
   return Math.max(0, Math.floor((today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)))
 }
 
-function diffDays(dateStr: string | undefined | null): number | null {
-  if (!dateStr) return null
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const d = new Date(dateStr as string)
-  d.setHours(0, 0, 0, 0)
-  return Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+/** Deal Health factor 4 (15 pts): confirmation date (Sales & Commercial) + advance vs order value (Payment tracking). */
+function scoreConfirmationAndAdvance(project: Record<string, unknown>): {
+  score: number
+  detail: string
+  hasConfirmation: boolean
+  advance: number
+  orderValue: number
+} {
+  const confirmationRaw =
+    (project.confirmationDate as string | undefined | null) ??
+    (project.confirmation_date as string | undefined | null) ??
+    null
+
+  const hasConfirmation =
+    confirmationRaw != null &&
+    String(confirmationRaw).trim() !== '' &&
+    !Number.isNaN(new Date(confirmationRaw as string).getTime())
+
+  const advance = Number(
+    (project.advanceReceived as number | undefined) ?? (project.advance_received as number | undefined) ?? 0,
+  )
+  const orderValue = Number(
+    (project.deal_value as number | undefined) ??
+      (project.order_value as number | undefined) ??
+      (project.total_amount as number | undefined) ??
+      (project.projectCost as number | undefined) ??
+      0,
+  )
+
+  let score = 0
+  if (hasConfirmation) score += 5
+
+  if (hasConfirmation && advance > 0 && orderValue > 0) {
+    if (advance < orderValue * 0.5) {
+      score += 5
+    } else {
+      score += 10
+    }
+  }
+
+  score = Math.min(15, score)
+
+  let detail: string
+  if (!hasConfirmation) {
+    detail = 'No confirmation date'
+  } else if (advance <= 0 || orderValue <= 0) {
+    detail = 'Confirmation set — record advance vs order value'
+  } else if (advance < orderValue * 0.5) {
+    detail = `Advance ${formatINR(advance)} — token (<50% of order)`
+  } else {
+    detail = `Advance ${formatINR(advance)} — ≥50% of order (work-ready)`
+  }
+
+  return { score, detail, hasConfirmation, advance, orderValue }
 }
 
 function formatINR(value: number): string {
@@ -96,6 +143,30 @@ function formatINR(value: number): string {
     currency: 'INR',
     maximumFractionDigits: 0,
   }).format(value)
+}
+
+/**
+ * Deal Health factor 3 (max 20). Bands favour typical 3–5 kW sweet-spot order values.
+ * ≥ ₹5L → 5 | ₹3L–₹5L → 10 | ₹1.75L–₹3L → 20 | ₹1.5L–₹1.75L → 10 | below ₹1.5L (but > 0) → 5 | else 0
+ */
+function scoreDealValueForHealth(orderValue: number): { score: number; detail: string } {
+  const v = orderValue
+  if (!Number.isFinite(v) || v <= 0) {
+    return { score: 0, detail: 'No deal value entered' }
+  }
+  if (v >= 500_000) {
+    return { score: 5, detail: `${formatINR(v)} — 5 pts (≥ ₹5L)` }
+  }
+  if (v >= 300_000) {
+    return { score: 10, detail: `${formatINR(v)} — 10 pts (₹3L–₹5L)` }
+  }
+  if (v >= 175_000) {
+    return { score: 20, detail: `${formatINR(v)} — 20 pts (sweet spot ₹1.75L–₹3L)` }
+  }
+  if (v >= 150_000) {
+    return { score: 10, detail: `${formatINR(v)} — 10 pts (₹1.5L–₹1.75L)` }
+  }
+  return { score: 5, detail: `${formatINR(v)} — 5 pts (< ₹1.5L)` }
 }
 
 export function hitListItemToHealthProject(item: HitListItem): Record<string, unknown> {
@@ -120,6 +191,8 @@ export function pipelineRowToHealthProject(r: {
   updatedAt?: string
   dealValue: number
   expectedCloseDate?: string | null
+  confirmationDate?: string | null
+  advanceReceived?: number | null
   leadSource?: string | null
 }): Record<string, unknown> {
   return {
@@ -128,8 +201,13 @@ export function pipelineRowToHealthProject(r: {
     last_modified_at: r.updatedAt,
     stage_changed_at: r.updatedAt,
     deal_value: r.dealValue,
+    projectCost: r.dealValue,
     expected_close_date: r.expectedCloseDate,
     close_date: r.expectedCloseDate,
+    confirmationDate: r.confirmationDate ?? null,
+    confirmation_date: r.confirmationDate ?? null,
+    advanceReceived: r.advanceReceived ?? 0,
+    advance_received: r.advanceReceived ?? 0,
     lead_source: r.leadSource ?? '',
   }
 }
@@ -153,6 +231,10 @@ export function projectDetailToHealthProject(p: Project): Record<string, unknown
     expectedCloseDate: p.expectedCommissioningDate,
     close_date: p.expectedCommissioningDate,
     closeDate: p.expectedCommissioningDate,
+    confirmationDate: p.confirmationDate ?? null,
+    confirmation_date: p.confirmationDate ?? null,
+    advanceReceived: p.advanceReceived ?? 0,
+    advance_received: p.advanceReceived ?? 0,
     lead_source: leadStr,
     leadSource: leadStr,
   }
@@ -242,56 +324,11 @@ export function computeDealHealth(project: Record<string, unknown> | null | unde
       0,
   )
 
-  let factor3: number
-  let factor3Detail: string
-  if (value >= 500000) {
-    factor3 = 20
-    factor3Detail = formatINR(value)
-  } else if (value >= 200000) {
-    factor3 = 15
-    factor3Detail = formatINR(value)
-  } else if (value >= 50000) {
-    factor3 = 10
-    factor3Detail = formatINR(value)
-  } else if (value > 0) {
-    factor3 = 5
-    factor3Detail = formatINR(value)
-  } else {
-    factor3 = 0
-    factor3Detail = 'No deal value entered'
-  }
+  const { score: factor3, detail: factor3Detail } = scoreDealValueForHealth(value)
 
-  const closeDateStr =
-    (project.expected_close_date as string | undefined) ??
-    (project.expectedCloseDate as string | undefined) ??
-    (project.close_date as string | undefined) ??
-    (project.closeDate as string | undefined) ??
-    (project.expectedCommissioningDate as string | undefined) ??
-    null
-
-  const daysToClose = diffDays(closeDateStr)
-
-  let factor4: number
-  let factor4Detail: string
-  if (daysToClose === null) {
-    factor4 = 0
-    factor4Detail = 'No close date set'
-  } else if (daysToClose > 30) {
-    factor4 = 15
-    factor4Detail = `Closes in ${daysToClose} days`
-  } else if (daysToClose > 14) {
-    factor4 = 12
-    factor4Detail = `Closes in ${daysToClose} days`
-  } else if (daysToClose > 7) {
-    factor4 = 8
-    factor4Detail = `Closes in ${daysToClose} days — approaching`
-  } else if (daysToClose >= 0) {
-    factor4 = 5
-    factor4Detail = `Closes in ${daysToClose} days — this week`
-  } else {
-    factor4 = 2
-    factor4Detail = `Close date passed ${Math.abs(daysToClose)}d ago`
-  }
+  const closePart = scoreConfirmationAndAdvance(project)
+  const factor4 = closePart.score
+  const factor4Detail = closePart.detail
 
   const sourceRaw = String(
     (project.lead_source as string | undefined) ??
@@ -341,6 +378,14 @@ export function computeDealHealth(project: Record<string, unknown> | null | unde
 
   const weakest = factorScores.reduce((a, b) => (a.score / a.max < b.score / b.max ? a : b))
 
+  const closeDateInsight = !closePart.hasConfirmation
+    ? `No confirmation date on record — add it under Sales & Commercial when the order is confirmed.`
+    : closePart.advance <= 0 || closePart.orderValue <= 0
+      ? `Record advance received in Payment tracking so the score can reflect payment vs order value.`
+      : closePart.advance < closePart.orderValue * 0.5
+        ? `Token advance only — push for a stronger advance to start work and material delivery.`
+        : `Advance is strong vs order value — good commercial footing.`
+
   const INSIGHTS: Record<(typeof factorScores)[number]['key'], string> = {
     activity:
       factor1 === 0
@@ -353,13 +398,12 @@ export function computeDealHealth(project: Record<string, unknown> | null | unde
     value:
       factor3 === 0
         ? `No deal value entered — add an order value to qualify this lead.`
-        : `Deal value is low — confirm scope with the customer.`,
-    closeDate:
-      daysToClose === null
-        ? `No close date set — deals without deadlines rarely close.`
-        : daysToClose < 0
-          ? `Close date passed ${Math.abs(daysToClose)} days ago — update or renegotiate.`
-          : `Close date approaching — make sure the customer is aligned.`,
+        : factor3 === 20
+          ? `Order value is in the sweet spot band for typical 3–5 kW deals.`
+          : value >= 500_000
+            ? `Larger orders score fewer points on this factor by design — focus on delivery and margin.`
+            : `Deal value sits outside the strongest band — validate scope or pricing where needed.`,
+    closeDate: closeDateInsight,
     source: `Lead source unknown — updating this improves forecast accuracy.`,
   }
 

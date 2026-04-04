@@ -865,7 +865,30 @@ Projects can have multiple support tickets and documents linked to them. These r
 
 **Deal Health Score** is a **0–100** number that estimates how strong an open deal looks **right now**, based on data already on the project. It is **not** a prediction of whether you will win the deal; it is a **prioritisation aid** so you can see which opportunities need attention (follow-up, stage movement, missing data) before others.
 
-The score is **computed in the app** from your project fields (last update time, time in stage, order value, expected close date, lead source). When you **hover** a **Deal Health** badge, you see the **five building blocks** and how each one scored. On **Project Detail**, the **Deal Health Score** card shows the same breakdown plus a short **insight** that usually highlights the **weakest** area so you know what to fix first.
+The score is **computed in the app** from five factors: **Activity** (last update), **Momentum** (time in stage), **Deal value** (order value bands tuned for typical **3–5 kW** sweet-spot deals), **Close date** (in Rayenna this uses **confirmation date** plus **advance received** vs order value — see tables below), and **Lead source**. When you **hover** a **Deal Health** badge, you see the **five building blocks** and how each one scored. On **Project Detail**, the **Deal Health Score** card shows the same breakdown plus a short **insight** that usually highlights the **weakest** area so you know what to fix first.
+
+#### Illustration — how the score adds up
+
+The total is the **sum** of five parts. Each part has a **maximum**; the overall score is **capped at 100**.
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  DEAL HEALTH  =  Activity  +  Momentum  +  Deal value  +  Close date  +  Source │
+│                 (max 30)      (max 25)     (max 20)       (max 15)      (max 10) │
+│                                                                                 │
+│                         └── All five add together → 0–100 ──┘                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+| Factor (label on the card) | Max pts | In plain words |
+| :-- | --: | :-- |
+| **Activity** | 30 | How recently someone updated the project |
+| **Momentum** | 25 | How long the deal has sat in the **current stage** vs what is typical for that stage |
+| **Deal value** | 20 | Order value band — **highest points** in the **₹1.75L–₹3L** range (typical 3–5 kW sweet spot) |
+| **Close date** | 15 | **Confirmation date** (Sales & Commercial) + **Advance received** vs **order value** (Payment tracking) |
+| **Lead source** | 10 | Referral and partner-style sources score higher than unknown |
+
+**Colour / letter bands (typical):** **A** Healthy (~75+), **B** Good (~55+), **C** At risk (~35+), **D** Weak (~15+), **F** Critical (below ~15). Exact thresholds match the live app.
 
 #### When you see it (and when you do not)
 
@@ -879,26 +902,70 @@ The score is **computed in the app** from your project fields (last update time,
 | **Projects** list | A compact **badge** (0–100) next to the project/customer. **Sort** the list by **Deal Health Score** (ascending shows the weakest deals first across the full list — same data the server uses for sorting). |
 | **Project Detail** | A full **Deal Health Score** card with **all factors**, scores, and the insight line. |
 | **Zenith (Executive view)** | **Your pipeline today** (Sales / Management / Admin): each row can show a **Deal Health** badge; **hover** for the breakdown. **Today’s Hit List** also shows the badge on urgent deals with an **Open** link to the project. |
-| **Tip of the Day** | Occasionally reminds you about sorting by Deal Health and hovering badges. |
+| **Tip of the Day** | Occasionally reminds you about Deal Health, sorting, and where to read the full rules (this section). |
 
-#### How the score is computed (five factors)
+#### How each factor is scored (reference tables)
 
-The score is the **sum** of five parts (each has a **maximum** points). The total is **capped at 100**. Together they answer: *Is anyone working this deal? Is it moving? Is it worth enough? Is there a timeline? Is the source reliable?*
+**1. Activity (max 30)** — days since the **last update** on the project (last modified–style timestamp).
 
-1. **Activity (up to 30 points)** — **Recency of the last update** on the project (the system uses the latest of the usual “last modified” style timestamps). **Recent updates score higher**; long gaps score lower, down to zero if the deal looks neglected.
-2. **Momentum (up to 25 points)** — **How long the deal has stayed in the current stage** compared to a **typical** duration for that stage (for example, early stages expect shorter dwell times; later stages allow longer). **On track** scores highest; **stuck** (far beyond the expected time in stage) scores lowest.
-3. **Deal value (up to 20 points)** — **Order / deal value** on the project. **Higher** confirmed values score higher; **very low or missing** value scores low — nudging you to **enter or refresh** the commercial figure so the pipeline stays honest.
-4. **Close date (up to 15 points)** — **Expected close date** (or equivalent commissioning/close field the app uses). Having a **future** date that is **not** already past scores higher; **missing** date scores zero; **overdue** dates score low (the deal still counts, but you are prompted to **update the plan** with the customer).
-5. **Lead source (up to 10 points)** — **Lead source** on the project. Known sources such as **Referral** and **channel / management** style sources score higher than generic or **unknown** sources, reflecting typical forecast quality. **Unknown** still gets a small base score so the row is usable.
+| Days since last update | Points |
+| :-- | --: |
+| 3 days or less | 30 |
+| 4–7 days | 22 |
+| 8–14 days | 12 |
+| 15–30 days | 5 |
+| More than 30 days | 0 |
 
-**Colour bands (typical):** high scores trend **teal / green** (healthy), mid scores **amber** (watch), low scores **red** (needs action). Exact labels (e.g. Healthy, At Risk) match what you see on the badge and detail card.
+**2. Momentum (max 25)** — **Days in current stage** vs a **typical** duration for that stage: Lead ~7, Site Survey ~14, Proposal ~21, Confirmed ~30, Under Installation ~45, Submitted for Subsidy ~21 (other stages use a default expectation).
+
+| Time in stage vs expected | Points |
+| :-- | --: |
+| Within the expected window | 25 |
+| Up to 1.5× the expected window | 15 |
+| Up to 2× the expected window | 8 |
+| Beyond 2× | 0 |
+
+**3. Deal value (max 20)** — uses **order / deal value** (same field as **Order value** / `projectCost`). Scoring favours Rayenna’s **typical 3–5 kW** commercial band.
+
+| Order value (₹) | Points |
+| :-- | --: |
+| Not set or **zero** | 0 |
+| **Greater than 0** and **below ₹1,50,000** | 5 |
+| **₹1,50,000** up to **below ₹1,75,000** | 10 |
+| **₹1,75,000** up to **below ₹3,00,000** | 20 |
+| **₹3,00,000** up to **below ₹5,00,000** | 10 |
+| **₹5,00,000** and above | 5 |
+
+*How boundaries work:* **₹5,00,000 exactly** → 5 points. **₹3,00,000 exactly** → 10 points (₹3L–₹5L band). **₹1,75,000 exactly** → 20 points (sweet-spot band). **₹1,50,000 exactly** → 10 points (₹1.5L–₹1.75L band).
+
+**4. Close date (max 15)** — the UI row is still named **Close date**; the maths use **Confirmation date** ( **Sales & Commercial** ) and **Advance received (₹)** ( **Payment tracking** ) vs **order value**.
+
+| Condition | Points |
+| :-- | --: |
+| Valid **confirmation date** entered | **+5** |
+| Same deal: advance **greater than 0**, order value **greater than 0**, and advance **under 50%** of order value (token advance) | **+5** more *(10 total for this factor)* |
+| Same deal: advance **greater than 0**, order value **greater than 0**, and advance **at least 50%** of order value | **+10** more *(15 total for this factor)* |
+
+- With **no** confirmation date, this factor scores **0** (advance alone does not count).
+- If **order value** is **zero**, the advance **percentage** lines do not add points.
+
+**5. Lead source (max 10)**
+
+| Lead source | Points |
+| :-- | --: |
+| Referral | 10 |
+| Management Connect | 8 |
+| Channel Partner | 8 |
+| Digital Marketing | 6 |
+| Sales | 5 |
+| Unknown / other mapped default | 3 |
 
 #### How this helps sales
 
 - **Triage fast:** Scan badges on the **Projects** list or in **Zenith → Your Focus** to see which deals are **cold** or **stuck** without opening every record.
 - **Sort globally:** Use **Sort by → Deal Health Score** to pull **at-risk** deals to the top of a long list (especially when combined with your usual filters).
-- **Know what to do:** **Hover** the badge or open **Project Detail** to see **which** of activity, momentum, value, close date, or source is dragging the score — then **log an activity**, **advance the stage**, **fill value and close date**, or **correct lead source** as needed.
-- **Stay honest:** The score **reruns** when project data changes, so keeping **remarks / updates**, **stage**, and **dates** current directly improves what you see the next day.
+- **Know what to do:** **Hover** the badge or open **Project Detail** to see **which** factor is weakest — then **log activity**, **move the stage**, **keep order value accurate**, set **confirmation date** and **advance received**, and **correct lead source** as needed.
+- **Stay honest:** The score **reruns** when project data changes, so keeping **remarks**, **stage**, **commercial**, and **payment** fields current updates what you see next time.
 
 ## Project Detail View
 

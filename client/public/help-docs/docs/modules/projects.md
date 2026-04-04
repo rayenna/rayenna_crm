@@ -64,6 +64,10 @@ The Projects module is the core of Rayenna CRM, managing the complete lifecycle 
 - **Year (FY)**: Automatically calculated from Confirmation Date (Financial Year format: 2024-25)
 - **Project Status**: Current status of the project (see Status Stages section)
 
+**Availing Loan / Financing**:
+- **Availing Loan/Financing?**: Check **Yes** if the customer is availing loan or financing for the project; leave unchecked for No.
+- If **Yes**, **Financing Bank** (required): Select from dropdown (e.g. State Bank of India, HDFC Bank, ICICI Bank, Other). If you select **Other**, **Other Bank Name** (required): Enter the bank name (alphanumeric, spaces and basic punctuation allowed).
+
 **Technical Details**:
 - **Roof Type**: Concrete-Flat, Concrete-Sloped, Tile, Thatched, Asbestos, Metal, Others
 - **System Type**: Off-Grid, On-Grid, Hybrid
@@ -104,6 +108,8 @@ The Projects module is the core of Rayenna CRM, managing the complete lifecycle 
 - Channel Partner Name (if Lead Source is Channel Partner)
 - Other Details (if Lead Source is Other)
 - Other Reason Details (if Lost Reason is Other)
+- Financing Bank (if Availing Loan/Financing is Yes)
+- Other Bank Name (if Financing Bank is Other)
 
 ### Project Creation Best Practices
 
@@ -387,6 +393,27 @@ Any stage → Lost (if project doesn't proceed)
 - Can delete Lost projects
 - Full access to all status changes
 
+### Proposal Engine Integration
+
+**Opening Proposal Engine**:
+- From **Project Detail**, use the **Proposals (New)** button (visible in Proposal and Confirmed stages) to open the Proposal Engine for that project.
+- This uses your CRM login (single sign-on) and logs a **Proposal generated** action in **Audit & Security**.
+
+**Artifacts in Proposal Engine**:
+- **Costing Sheet** – detailed cost breakdown, GST, and margins.
+- **BOM Sheet** – auto-generated Bill of Materials based on Costing.
+- **ROI Calculator** – financial returns and payback.
+- **Proposal** – customer-facing proposal content.
+
+**Proposal Ready rule**:
+- A project is marked **Proposal Ready** only when **all four artifacts** (Costing, BOM, ROI, and Proposal) are created and saved in Proposal Engine.
+- If any of the four is missing, the project remains in **Draft** status for proposals in both Proposal Engine and CRM (Projects list and Project Detail).
+
+**Costing templates (shared)**:
+- Sales and Admin can save frequently used Costing configurations as **templates** in Proposal Engine.
+- Templates are stored in the backend and are shared across all Sales and Admin users.
+- Only **Admin** can delete shared Costing templates; Sales can save and use them but not remove them.
+
 ### Status Best Practices
 
 **Regular Updates**:
@@ -421,8 +448,9 @@ The Projects module enables seamless collaboration between Sales and Operations 
 - Enter initial project information
 - Set lead source and commercial details
 
-**Sales & Commercial Section** (Sales and Admin can edit):
+**Sales & Commercial Section** (Sales and Admin can edit; Finance, Operations, and Management can view only):
 - **Lead Source**: Track where the lead came from
+- **Availing Loan/Financing**: Whether customer is availing loan; if Yes, **Financing Bank** (and **Other Bank Name** when Other) is required
 - **System Capacity**: Enter solar system capacity
 - **Order Value**: Set project contract value
 - **Confirmation Date**: Record when customer confirmed
@@ -797,6 +825,11 @@ Projects can have multiple support tickets and documents linked to them. These r
 - Shows projects for selected salespersons
 - Leave empty to see all projects
 
+**Availing Loan Filter**:
+- Checkbox: **Availing Loan**
+- When checked, shows only projects where Availing Loan/Financing is Yes (and a bank is selected)
+- Useful to see all projects tied to financing/loan
+
 **Support Ticket Status Filter**:
 - Filter projects by support ticket status
 - Options:
@@ -826,6 +859,113 @@ Projects can have multiple support tickets and documents linked to them. These r
 - By project value
 - By customer name
 - By status
+- By **Deal Health Score** (0–100)
+
+### Deal Health Score
+
+**Deal Health Score** is a **0–100** number that estimates how strong an open deal looks **right now**, based on data already on the project. It is **not** a prediction of whether you will win the deal; it is a **prioritisation aid** so you can see which opportunities need attention (follow-up, stage movement, missing data) before others.
+
+The score is **computed in the app** from five factors: **Activity** (last update), **Momentum** (time in stage), **Deal value** (order value bands tuned for typical **3–5 kW** sweet-spot deals), **Close date** (in Rayenna this uses **confirmation date** plus **advance received** vs order value — see tables below), and **Lead source**. When you **hover** a **Deal Health** badge, you see the **five building blocks** and how each one scored. On **Project Detail**, the **Deal Health Score** card shows the same breakdown plus a short **insight** that usually highlights the **weakest** area so you know what to fix first.
+
+#### Illustration — how the score adds up
+
+The total is the **sum** of five parts. Each part has a **maximum**; the overall score is **capped at 100**.
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  DEAL HEALTH  =  Activity  +  Momentum  +  Deal value  +  Close date  +  Source │
+│                 (max 30)      (max 25)     (max 20)       (max 15)      (max 10) │
+│                                                                                 │
+│                         └── All five add together → 0–100 ──┘                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+| Factor (label on the card) | Max pts | In plain words |
+| :-- | --: | :-- |
+| **Activity** | 30 | How recently someone updated the project |
+| **Momentum** | 25 | How long the deal has sat in the **current stage** vs what is typical for that stage |
+| **Deal value** | 20 | Order value band — **highest points** in the **₹1.75L–₹3L** range (typical 3–5 kW sweet spot) |
+| **Close date** | 15 | **Confirmation date** (Sales & Commercial) + **Advance received** vs **order value** (Payment tracking) |
+| **Lead source** | 10 | Referral and partner-style sources score higher than unknown |
+
+**Colour / letter bands (typical):** **A** Healthy (~75+), **B** Good (~55+), **C** At risk (~35+), **D** Weak (~15+), **F** Critical (below ~15). Exact thresholds match the live app.
+
+#### When you see it (and when you do not)
+
+- **Shown** for deals that are still in the **active pipeline** (not finished or lost).
+- **Not shown** for **terminal** outcomes, including **Completed**, **Subsidy Credited** (and combined/loan variants where applicable), and **Lost** — those stages no longer need a health signal.
+
+#### Where it appears in the app
+
+| Location | What you get |
+| :-- | :-- |
+| **Projects** list | A compact **badge** (0–100) next to the project/customer. **Sort** the list by **Deal Health Score** (ascending shows the weakest deals first across the full list — same data the server uses for sorting). |
+| **Project Detail** | A full **Deal Health Score** card with **all factors**, scores, and the insight line. |
+| **Zenith (Executive view)** | **Your pipeline today** (Sales / Management / Admin): each row can show a **Deal Health** badge; **hover** for the breakdown. **Today’s Hit List** also shows the badge on urgent deals with an **Open** link to the project. |
+| **Tip of the Day** | Occasionally reminds you about Deal Health, sorting, and where to read the full rules (this section). |
+
+#### How each factor is scored (reference tables)
+
+**1. Activity (max 30)** — days since the **last update** on the project (last modified–style timestamp).
+
+| Days since last update | Points |
+| :-- | --: |
+| 3 days or less | 30 |
+| 4–7 days | 22 |
+| 8–14 days | 12 |
+| 15–30 days | 5 |
+| More than 30 days | 0 |
+
+**2. Momentum (max 25)** — **Days in current stage** vs a **typical** duration for that stage: Lead ~7, Site Survey ~14, Proposal ~21, Confirmed ~30, Under Installation ~45, Submitted for Subsidy ~21 (other stages use a default expectation).
+
+| Time in stage vs expected | Points |
+| :-- | --: |
+| Within the expected window | 25 |
+| Up to 1.5× the expected window | 15 |
+| Up to 2× the expected window | 8 |
+| Beyond 2× | 0 |
+
+**3. Deal value (max 20)** — uses **order / deal value** (same field as **Order value** / `projectCost`). Scoring favours Rayenna’s **typical 3–5 kW** commercial band.
+
+| Order value (₹) | Points |
+| :-- | --: |
+| Not set or **zero** | 0 |
+| **Greater than 0** and **below ₹1,50,000** | 5 |
+| **₹1,50,000** up to **below ₹1,75,000** | 10 |
+| **₹1,75,000** up to **below ₹3,00,000** | 20 |
+| **₹3,00,000** up to **below ₹5,00,000** | 10 |
+| **₹5,00,000** and above | 5 |
+
+*How boundaries work:* **₹5,00,000 exactly** → 5 points. **₹3,00,000 exactly** → 10 points (₹3L–₹5L band). **₹1,75,000 exactly** → 20 points (sweet-spot band). **₹1,50,000 exactly** → 10 points (₹1.5L–₹1.75L band).
+
+**4. Close date (max 15)** — the UI row is still named **Close date**; the maths use **Confirmation date** ( **Sales & Commercial** ) and **Advance received (₹)** ( **Payment tracking** ) vs **order value**.
+
+| Condition | Points |
+| :-- | --: |
+| Valid **confirmation date** entered | **+5** |
+| Same deal: advance **greater than 0**, order value **greater than 0**, and advance **under 50%** of order value (token advance) | **+5** more *(10 total for this factor)* |
+| Same deal: advance **greater than 0**, order value **greater than 0**, and advance **at least 50%** of order value | **+10** more *(15 total for this factor)* |
+
+- With **no** confirmation date, this factor scores **0** (advance alone does not count).
+- If **order value** is **zero**, the advance **percentage** lines do not add points.
+
+**5. Lead source (max 10)**
+
+| Lead source | Points |
+| :-- | --: |
+| Referral | 10 |
+| Management Connect | 8 |
+| Channel Partner | 8 |
+| Digital Marketing | 6 |
+| Sales | 5 |
+| Unknown / other mapped default | 3 |
+
+#### How this helps sales
+
+- **Triage fast:** Scan badges on the **Projects** list or in **Zenith → Your Focus** to see which deals are **cold** or **stuck** without opening every record.
+- **Sort globally:** Use **Sort by → Deal Health Score** to pull **at-risk** deals to the top of a long list (especially when combined with your usual filters).
+- **Know what to do:** **Hover** the badge or open **Project Detail** to see **which** factor is weakest — then **log activity**, **move the stage**, **keep order value accurate**, set **confirmation date** and **advance received**, and **correct lead source** as needed.
+- **Stay honest:** The score **reruns** when project data changes, so keeping **remarks**, **stage**, **commercial**, and **payment** fields current updates what you see next time.
 
 ## Project Detail View
 
@@ -840,6 +980,7 @@ Projects can have multiple support tickets and documents linked to them. These r
 **Project Information Displayed**:
 - Project number and customer name
 - Creation date
+- **Deal Health Score** card (for eligible, non-terminal deals) — full factor breakdown and insight; see [Deal Health Score](#deal-health-score) above
 - All project sections
 - Linked resources
 - Action buttons

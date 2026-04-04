@@ -48,6 +48,8 @@ export const TIPS: string[] = [
   'Hover over Pending or Partial in the Payment Status column to see the outstanding balance amount.',
   'Project page filters (Status, FY, Quarter, Month, Payment Status, Availing Loan) are remembered as you navigate.',
   'Projects: use Sort By → Deal Health Score to surface the most at-risk deals (0–100). Hover the health badge for a quick breakdown.',
+  'Deal Health “Deal value” peaks for order values in the ₹1.75L–₹3L band (typical 3–5 kW sweet spot); very large orders score fewer points on that factor — see Help → Projects → Deal Health Score for the full table.',
+  'Deal Health “Close date” uses Confirmation date and Advance received vs order value (not expected commissioning alone). Help → Projects → Deal Health Score lists every rule.',
   // Quick Access & dashboard behaviour
   'Click any Quick Access tile on your dashboard to open Projects with matching filters already applied.',
   'Set FY, Quarter, and Month on the dashboard – tile counts and Quick Access links respect these filters.',
@@ -88,7 +90,7 @@ export const TIPS: string[] = [
   'Zenith Payment radar: click a payment ageing band (0–30 through 90+ days) to filter the Top overdue table; use Remind for prefilled WhatsApp or Email — your app sends the message, not Rayenna.',
   'Zenith Installation pulse: sort by any column, toggle Overdue only, and use + Log update to open Quick Actions with the note field focused. On narrow screens the table scrolls sideways; the Last note column hides on small phones — open the project or use Log update for full remarks.',
   'Zenith tables: click a column header to sort (e.g. Deal value, Health, Days). Use the small filter controls near the table title where available.',
-  'Deal Health badges appear in Zenith Pipeline and Hit List — hover a badge to see what’s hurting the score (activity, momentum, value, close date, source).',
+  'Deal Health badges appear in Zenith Pipeline and Hit List — hover a badge to see what’s hurting the score (activity, momentum, value, confirmation/advance, source).',
   'Zenith: Today’s Hit List surfaces urgent deals (overdue / stalled / going cold) with a Deal Health badge and a quick Open → link to the project.',
   'Zenith The Board: pick Month, Quarter (Indian FY), or FY on the card — rankings use stage-entered / confirmation dates so periods can show different totals. Click header totals or a salesperson’s value to open the same Quick Actions list drawer as Explore charts; use Open in Projects → for the full Projects grid with matching filters.',
   'Zenith Your Focus: pipeline, payment radar, installation pulse, and Proposal Engine (where shown) start collapsed — click each panel header to expand only what you need.',

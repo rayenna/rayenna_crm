@@ -250,7 +250,7 @@ These controls work on the rows already loaded for your current FY / Quarter / M
 
 #### Deal Health Score (Zenith)
 
-**Deal Health** is the same **0–100** score as on the **Projects** list: it summarises how “healthy” an **open** deal looks from **Activity** (recency of updates), **Momentum** (time in stage vs expected), **Deal value**, **Close date**, and **Lead source**. Those five parts add up (with caps per part) to the number on the badge; **hover** any badge to see each part and how it scored.
+**Deal Health** is the same **0–100** score as on the **Projects** list: it summarises how “healthy” an **open** deal looks from **Activity**, **Momentum**, **Deal value** (bands tuned for typical **3–5 kW** / **₹1.75L–₹3L** sweet spot), **Close date** (confirmation date + advance vs order value), and **Lead source**. Those five parts add up (with caps per part) to the number on the badge; **hover** any badge to see each part and how it scored.
 
 **Where it shows in Zenith**
 

@@ -698,7 +698,8 @@ router.get(
         updatedAt: Date;
         stageEnteredAt: Date | null;
         projectCost: number | null;
-        expectedCommissioningDate: Date | null;
+        confirmationDate: Date | null;
+        advanceReceived: number | null;
         leadSource: LeadSource | null;
       }): number | null => {
         // Excluded (terminal) stages: no score
@@ -718,13 +719,6 @@ router.get(
           const dd = new Date(d);
           dd.setHours(0, 0, 0, 0);
           return Math.max(0, Math.floor((today.getTime() - dd.getTime()) / 86400000));
-        };
-
-        const diffDays = (d: Date | null | undefined) => {
-          if (!d) return null;
-          const dd = new Date(d);
-          dd.setHours(0, 0, 0, 0);
-          return Math.ceil((dd.getTime() - today.getTime()) / 86400000);
         };
 
         // Factor 1: activity recency (max 30)
@@ -753,24 +747,28 @@ router.get(
         else if (daysInStage <= expectedDays * 2) factor2 = 8;
         else factor2 = 0;
 
-        // Factor 3: deal value (max 20)
+        // Factor 3: deal value (max 20) — sweet spot ~3–5 kW; matches client dealHealthScore.ts
         const value = Number(p.projectCost ?? 0);
         let factor3 = 0;
-        if (value >= 500000) factor3 = 20;
-        else if (value >= 200000) factor3 = 15;
-        else if (value >= 50000) factor3 = 10;
-        else if (value > 0) factor3 = 5;
-        else factor3 = 0;
+        if (!Number.isFinite(value) || value <= 0) factor3 = 0;
+        else if (value >= 500000) factor3 = 5;
+        else if (value >= 300000) factor3 = 10;
+        else if (value >= 175000) factor3 = 20;
+        else if (value >= 150000) factor3 = 10;
+        else factor3 = 5;
 
-        // Factor 4: close date awareness (max 15)
-        const daysToClose = diffDays(p.expectedCommissioningDate);
+        // Factor 4: confirmation date + advance vs order value (max 15) — matches client dealHealthScore.ts
+        const hasConfirmation =
+          p.confirmationDate != null && !Number.isNaN(new Date(p.confirmationDate).getTime());
+        const advance = Number(p.advanceReceived ?? 0);
+        const orderVal = Number(p.projectCost ?? 0);
         let factor4 = 0;
-        if (daysToClose === null) factor4 = 0;
-        else if (daysToClose > 30) factor4 = 15;
-        else if (daysToClose > 14) factor4 = 12;
-        else if (daysToClose > 7) factor4 = 8;
-        else if (daysToClose >= 0) factor4 = 5;
-        else factor4 = 2;
+        if (hasConfirmation) factor4 += 5;
+        if (hasConfirmation && advance > 0 && orderVal > 0) {
+          if (advance < orderVal * 0.5) factor4 += 5;
+          else factor4 += 10;
+        }
+        factor4 = Math.min(15, factor4);
 
         // Factor 5: lead source (max 10)
         const SOURCE_SCORES: Partial<Record<LeadSource, number>> = {
@@ -861,6 +859,7 @@ router.get(
         paymentStatus: true,
         balanceAmount: true,
         leadSource: true,
+        advanceReceived: true,
         availingLoan: true,
         customer: {
           select: {
@@ -921,7 +920,8 @@ router.get(
                 updatedAt: p.updatedAt,
                 stageEnteredAt: p.stageEnteredAt,
                 projectCost: p.projectCost,
-                expectedCommissioningDate: p.expectedCommissioningDate,
+                confirmationDate: p.confirmationDate,
+                advanceReceived: p.advanceReceived,
                 leadSource: p.leadSource,
               }),
             }));
