@@ -13,6 +13,7 @@ import { projectDetailToHealthProject } from '../../utils/dealHealthScore'
 import { ZENITH_CHARTS_TOUCH_RESET_EVENT, ZENITH_FLOATING_DISMISS_EVENT } from '../../utils/zenithEvents'
 import { fireVictoryToast } from '../../hooks/useVictoryToast'
 import { zenithDrawerStagePillClass } from './zenithDealCardUi'
+import ZenithDrawerRemarksPanel from './ZenithDrawerRemarksPanel'
 
 const QK = 'operations-quick-drawer-project' as const
 
@@ -230,6 +231,7 @@ export default function OperationsQuickDrawer({
       queryClient.invalidateQueries({ queryKey: ['zenith-focus'] }),
       queryClient.invalidateQueries({ queryKey: ['projects'] }),
       queryClient.invalidateQueries({ queryKey: ['project', id] }),
+      queryClient.invalidateQueries({ queryKey: ['remarks', id] }),
       queryClient.invalidateQueries({ queryKey: [QK, id] }),
     ])
   }
@@ -408,6 +410,12 @@ export default function OperationsQuickDrawer({
                       </button>
                     ) : null}
                     <div className="my-5 h-px bg-white/[0.06]" />
+                  </div>
+                ) : null}
+
+                {projectId ? (
+                  <div className="mb-5">
+                    <ZenithDrawerRemarksPanel projectId={projectId} enabled={isOpen && !!projectId} />
                   </div>
                 ) : null}
 

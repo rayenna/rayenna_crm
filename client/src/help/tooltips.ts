@@ -149,13 +149,19 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.command-center',
     title: 'Zenith Command Center',
     content:
-      'Full-screen analytics with the same FY, Quarter, and Month rules as the Dashboard: AI Insights, The Board leaderboard, collapsible Your Focus, KPIs, Revenue forecast, Deal flow funnel (click stages or payment pills), Proposal Engine under Your Focus, clickable Explore charts, and Quick Actions lists. List mode includes Open in Projects → for the full Projects page with matching filters. Open Help → Analytics for the full guide.',
+      'Full-screen analytics with the same FY, Quarter, and Month rules as the Dashboard: AI Insights, The Board leaderboard, collapsible Your Focus, KPIs, Revenue forecast, Deal flow funnel (click stages or payment pills), Proposal Engine under Your Focus, clickable Explore charts, and Quick Actions lists. Single-project Quick Actions show Recent remarks (read-only) above Log activity. List mode includes Open in Projects → for the full Projects page with matching filters. Open Help → Analytics for the full guide.',
   },
   'zenith.hit-list': {
     key: 'zenith.hit-list',
     title: 'Today’s Hit List',
     content:
-      'Up to seven deals that need attention today, from the same pipeline data as Your pipeline today. Table columns: customer, stage, sales person, deal value, last activity (N days ago), Alert (why it’s listed), confirmation date, Deal Health, Open →. Open → opens Quick Actions for that project. On small screens, the same facts appear as stacked cards. For sort and filters, use Your pipeline today under Your Focus.',
+      'Up to seven prioritised deals from the same pipeline data as Your pipeline today. Filter customer, stage, and salesperson; click column headers to sort (including Alert, Confirmation, Health). Columns: customer, stage, sales person, deal value, last activity, Alert, confirmation date, Deal Health, Open →. Open → opens Quick Actions (with Recent remarks above Log activity). On small screens: filters plus stacked cards.',
+  },
+  'zenith.quick-drawer-remarks': {
+    key: 'zenith.quick-drawer-remarks',
+    title: 'Recent remarks (Zenith)',
+    content:
+      'Shows the latest project remarks (same data as Project → Remarks) before you log new activity. Newest first; read-only here. Open full project for the complete history and to edit or delete remarks. Available in Quick Actions, Operations, and Finance Zenith drawers.',
   },
   'zenith.the-board': {
     key: 'zenith.the-board',

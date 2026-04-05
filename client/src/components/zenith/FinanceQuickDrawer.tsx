@@ -12,6 +12,7 @@ import HealthBadge from './HealthBadge'
 import { projectDetailToHealthProject } from '../../utils/dealHealthScore'
 import { ZENITH_CHARTS_TOUCH_RESET_EVENT, ZENITH_FLOATING_DISMISS_EVENT } from '../../utils/zenithEvents'
 import { zenithDrawerStagePillClass } from './zenithDealCardUi'
+import ZenithDrawerRemarksPanel from './ZenithDrawerRemarksPanel'
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {
   [ProjectStatus.LEAD]: 'Lead',
@@ -246,6 +247,7 @@ export default function FinanceQuickDrawer({
       queryClient.invalidateQueries({ queryKey: ['zenith-focus'] }),
       queryClient.invalidateQueries({ queryKey: ['projects'] }),
       queryClient.invalidateQueries({ queryKey: ['project', id] }),
+      queryClient.invalidateQueries({ queryKey: ['remarks', id] }),
       queryClient.invalidateQueries({ queryKey: [QK, id] }),
     ])
   }
@@ -379,10 +381,16 @@ export default function FinanceQuickDrawer({
                   </div>
                 </div>
 
+                {projectId ? (
+                  <div className="mt-5">
+                    <ZenithDrawerRemarksPanel projectId={projectId} enabled={isOpen && !!projectId} />
+                  </div>
+                ) : null}
+
                 {canEdit && project && project.projectStatus !== ProjectStatus.LOST ? (
                   <>
                     <div className="mt-5">
-                      <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">Remarks</div>
+                      <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">Log activity</div>
                       <textarea
                         id="finance-drawer-remark-textarea"
                         value={noteText}

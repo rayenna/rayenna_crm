@@ -1,11 +1,12 @@
 import type { CSSProperties } from 'react'
+import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
 import { Target, CheckCircle2 } from 'lucide-react'
 import { UserRole } from '../../types'
 import type { HitListItem, HitListLabel } from '../../hooks/useHitList'
 import HealthBadge from './HealthBadge'
-import { pipelineRowToHealthProject } from '../../utils/dealHealthScore'
+import { computeDealHealth, pipelineRowToHealthProject } from '../../utils/dealHealthScore'
 import {
   formatZenithDealInrParts,
   zenithDealRowStagePillClass,
@@ -52,6 +53,26 @@ function hitListHealthProject(project: HitListItem) {
   })
 }
 
+type HitListSortField =
+  | 'customerName'
+  | 'stage'
+  | 'salespersonName'
+  | 'dealValue'
+  | 'lastActivity'
+  | 'alert'
+  | 'confirmation'
+  | 'health'
+  | null
+
+function confirmationSortTime(iso: string | null): number {
+  if (!iso) return Number.POSITIVE_INFINITY
+  try {
+    return parseISO(iso).getTime()
+  } catch {
+    return Number.POSITIVE_INFINITY
+  }
+}
+
 const cardBase: CSSProperties = {
   background: 'rgba(255, 255, 255, 0.03)',
   border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -74,6 +95,81 @@ export default function HitList({
   role: UserRole
   onOpenDrawer?: (p: { id: string; customerName?: string; stageLabel?: string }) => void
 }) {
+  const [sortField, setSortField] = useState<HitListSortField>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [stageFilter, setStageFilter] = useState<string>('ALL')
+  const [salesPersonFilter, setSalesPersonFilter] = useState<string>('ALL')
+  const [customerFilter, setCustomerFilter] = useState<string>('')
+
+  const salesPersonOptions = useMemo(() => {
+    const labels = new Set<string>()
+    for (const r of hitList) {
+      const n = (r.salespersonName ?? '').trim() || 'Unassigned'
+      labels.add(n)
+    }
+    return Array.from(labels).sort((a, b) => a.localeCompare(b))
+  }, [hitList])
+
+  const handleSort = (field: NonNullable<HitListSortField>) => {
+    if (sortField !== field) {
+      setSortField(field)
+      setSortDir(field === 'health' ? 'desc' : 'asc')
+      return
+    }
+    setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))
+  }
+
+  const displayRows = useMemo(() => {
+    const q = customerFilter.trim().toLowerCase()
+    let rows = [...hitList]
+    if (stageFilter !== 'ALL') rows = rows.filter((r) => r.stage === stageFilter)
+    if (salesPersonFilter !== 'ALL') {
+      rows = rows.filter((r) => {
+        const n = (r.salespersonName ?? '').trim() || 'Unassigned'
+        return n === salesPersonFilter
+      })
+    }
+    if (q) rows = rows.filter((r) => (r.customerName || '').toLowerCase().includes(q))
+
+    if (!sortField) return rows
+
+    const dir = sortDir === 'asc' ? 1 : -1
+
+    rows.sort((a, b) => {
+      switch (sortField) {
+        case 'customerName':
+          return (a.customerName || '').localeCompare(b.customerName || '') * dir
+        case 'stage':
+          return (a.stage || '').localeCompare(b.stage || '') * dir
+        case 'salespersonName': {
+          const na = (a.salespersonName ?? '').trim() || 'Unassigned'
+          const nb = (b.salespersonName ?? '').trim() || 'Unassigned'
+          return na.localeCompare(nb) * dir
+        }
+        case 'dealValue':
+          return ((a.dealValue ?? 0) - (b.dealValue ?? 0)) * dir
+        case 'lastActivity':
+          return ((a.daysSinceActivity ?? 0) - (b.daysSinceActivity ?? 0)) * dir
+        case 'alert':
+          return a.label.localeCompare(b.label) * dir
+        case 'confirmation':
+          return (confirmationSortTime(a.confirmationDate) - confirmationSortTime(b.confirmationDate)) * dir
+        case 'health': {
+          const sa = computeDealHealth(hitListHealthProject(a))?.score ?? -1
+          const sb = computeDealHealth(hitListHealthProject(b))?.score ?? -1
+          return (sa - sb) * dir
+        }
+        default:
+          return 0
+      }
+    })
+
+    return rows
+  }, [customerFilter, hitList, salesPersonFilter, sortDir, sortField, stageFilter])
+
+  const hasActiveFilters =
+    stageFilter !== 'ALL' || salesPersonFilter !== 'ALL' || customerFilter.trim() !== ''
+
   const n = hitList.length
   const isSales = role === UserRole.SALES
   const subtitle = isSales
@@ -152,50 +248,132 @@ export default function HitList({
           </p>
         </div>
       ) : (
-        <div className="zenith-hit-list-body w-full min-h-[8rem] max-h-[min(42vh,320px)] overflow-y-auto overscroll-y-contain sm:max-h-[min(44vh,340px)] lg:min-h-0 lg:max-h-none lg:flex-1">
-          <div className="zenith-scroll-x overflow-x-auto px-3 py-1 md:px-2 md:py-0">
+        <div className="flex h-full min-h-[8rem] w-full max-h-[min(42vh,320px)] flex-col overflow-hidden overscroll-y-contain sm:max-h-[min(44vh,340px)] lg:min-h-0 lg:max-h-none lg:flex-1">
+          <div
+            className="shrink-0 border-b border-white/[0.08] px-3 py-2 md:px-2"
+            style={{ fontFamily: 'var(--zenith-font-body)' }}
+          >
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
+              <input
+                value={customerFilter}
+                onChange={(e) => setCustomerFilter(e.target.value)}
+                placeholder="Filter customer…"
+                className="zenith-native-filter-input h-9 min-w-[8rem] flex-1 rounded-lg px-3 text-xs focus:outline-none sm:min-w-[10rem] sm:flex-none sm:max-w-[14rem]"
+                aria-label="Filter hit list by customer"
+              />
+              <select
+                value={stageFilter}
+                onChange={(e) => setStageFilter(e.target.value)}
+                className="zenith-native-select h-9 rounded-lg px-2.5 text-xs focus:outline-none"
+                aria-label="Filter by stage"
+              >
+                <option value="ALL">All stages</option>
+                {Array.from(new Set(hitList.map((r) => r.stage))).map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={salesPersonFilter}
+                onChange={(e) => setSalesPersonFilter(e.target.value)}
+                className="zenith-native-select h-9 max-w-[200px] rounded-lg px-2.5 text-xs focus:outline-none"
+                aria-label="Filter by sales person"
+              >
+                <option value="ALL">All salespeople</option>
+                {salesPersonOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+              {hasActiveFilters && displayRows.length !== n && (
+                <span className="text-[11px] text-white/45 whitespace-nowrap">
+                  {displayRows.length} of {n} shown
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="zenith-hit-list-body min-h-0 flex-1 overflow-y-auto">
+            <div className="zenith-scroll-x overflow-x-auto px-3 py-1 md:px-2 md:py-0">
             {/* Desktop / tablet — same columns as “Your pipeline today” + alert + confirmation */}
             <table className="hidden md:table w-full text-left text-[11px] sm:text-xs min-w-[820px]">
               <thead>
                 <tr className="text-white/45 border-b border-white/10">
-                  <th className="py-2 pr-2 font-semibold" style={{ fontFamily: 'var(--zenith-font-body)' }}>
-                    Customer
-                  </th>
-                  <th className="py-2 pr-2 font-semibold" style={{ fontFamily: 'var(--zenith-font-body)' }}>
-                    Stage
+                  <th
+                    className="py-2 pr-2 font-semibold cursor-pointer select-none"
+                    style={{ fontFamily: 'var(--zenith-font-body)' }}
+                    onClick={() => handleSort('customerName')}
+                  >
+                    Customer {sortField === 'customerName' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
                   </th>
                   <th
-                    className="py-2 pr-2 font-semibold min-w-[6.5rem]"
+                    className="py-2 pr-2 font-semibold cursor-pointer select-none"
                     style={{ fontFamily: 'var(--zenith-font-body)' }}
+                    onClick={() => handleSort('stage')}
                   >
-                    Sales person
+                    Stage {sortField === 'stage' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
                   </th>
                   <th
-                    className="py-2 pr-2 font-semibold text-right"
+                    className="py-2 pr-2 font-semibold min-w-[6.5rem] cursor-pointer select-none"
                     style={{ fontFamily: 'var(--zenith-font-body)' }}
+                    onClick={() => handleSort('salespersonName')}
                   >
-                    Deal value
-                  </th>
-                  <th className="py-2 pr-2 font-semibold" style={{ fontFamily: 'var(--zenith-font-body)' }}>
-                    Last activity
-                  </th>
-                  <th className="py-2 pr-2 font-semibold" style={{ fontFamily: 'var(--zenith-font-body)' }}>
-                    Alert
-                  </th>
-                  <th className="py-2 pr-2 font-semibold" style={{ fontFamily: 'var(--zenith-font-body)' }}>
-                    Confirmation
+                    Sales person {sortField === 'salespersonName' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
                   </th>
                   <th
-                    className="py-2 font-semibold text-center w-[72px]"
+                    className="py-2 pr-2 font-semibold text-right cursor-pointer select-none"
                     style={{ fontFamily: 'var(--zenith-font-body)' }}
+                    onClick={() => handleSort('dealValue')}
                   >
-                    Health
+                    Deal value {sortField === 'dealValue' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                  </th>
+                  <th
+                    className="py-2 pr-2 font-semibold cursor-pointer select-none"
+                    style={{ fontFamily: 'var(--zenith-font-body)' }}
+                    onClick={() => handleSort('lastActivity')}
+                  >
+                    Last activity {sortField === 'lastActivity' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                  </th>
+                  <th
+                    className="py-2 pr-2 font-semibold cursor-pointer select-none"
+                    style={{ fontFamily: 'var(--zenith-font-body)' }}
+                    onClick={() => handleSort('alert')}
+                  >
+                    Alert {sortField === 'alert' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                  </th>
+                  <th
+                    className="py-2 pr-2 font-semibold cursor-pointer select-none"
+                    style={{ fontFamily: 'var(--zenith-font-body)' }}
+                    onClick={() => handleSort('confirmation')}
+                  >
+                    Confirmation {sortField === 'confirmation' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                  </th>
+                  <th
+                    className="py-2 w-[72px] cursor-pointer select-none text-center font-semibold"
+                    style={{
+                      fontFamily: 'var(--zenith-font-body)',
+                      fontSize: '12px',
+                      color: 'rgba(255,255,255,0.4)',
+                      fontWeight: 500,
+                      padding: '8px 10px',
+                    }}
+                    onClick={() => handleSort('health')}
+                  >
+                    Health {sortField === 'health' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
                   </th>
                   <th className="py-2 pl-1 w-[88px]" aria-hidden />
                 </tr>
               </thead>
               <tbody>
-                {hitList.map((project, index) => {
+                {displayRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-white/40" style={{ fontFamily: 'var(--zenith-font-body)' }}>
+                      {hasActiveFilters ? 'No deals match your filters.' : 'No rows to show.'}
+                    </td>
+                  </tr>
+                ) : null}
+                {displayRows.map((project, index) => {
                   const tone = zenithLastActivityTone(project.daysSinceActivity)
                   const lb = labelBadgeClass(project.label)
                   const sp = project.salespersonName
@@ -294,7 +472,15 @@ export default function HitList({
 
             {/* Mobile — same data, no oversized day count column */}
             <div className="md:hidden divide-y divide-white/[0.06]">
-              {hitList.map((project, index) => {
+              {displayRows.length === 0 ? (
+                <p
+                  className="py-8 text-center text-[13px] text-white/40"
+                  style={{ fontFamily: 'var(--zenith-font-body)' }}
+                >
+                  {hasActiveFilters ? 'No deals match your filters.' : 'No rows to show.'}
+                </p>
+              ) : null}
+              {displayRows.map((project, index) => {
                 const tone = zenithLastActivityTone(project.daysSinceActivity)
                 const lb = labelBadgeClass(project.label)
                 const dealParts = formatZenithDealInrParts(project.dealValue)
@@ -383,6 +569,7 @@ export default function HitList({
                   </motion.div>
                 )
               })}
+            </div>
             </div>
           </div>
         </div>

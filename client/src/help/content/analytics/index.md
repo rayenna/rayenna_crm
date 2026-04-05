@@ -243,12 +243,12 @@ If there is nothing to show for the current filters, **Your Focus** may be hidde
 
 In Zenith, some tables can be refined **without changing your dashboard filters**:
 
-- **Sort**: click a column heading (e.g. Deal value, Health, Last activity) **where the table offers it** — notably **Your pipeline today** under Your Focus.
-- **Filter**: use the small filter controls near the table title (where available) — again, **Your pipeline today** supports customer / stage / salesperson text filters.
+- **Sort**: click a column heading (e.g. Deal value, Health, Last activity, Alert, Confirmation) **where the table offers it** — **Your pipeline today** under Your Focus, and **Today’s Hit List** beside the KPI band (same click-to-toggle pattern, with **↑ / ↓** indicators).
+- **Filter**: use **Filter customer…**, **All stages**, and **All salespeople** (where shown) — **Your pipeline today** and **Today’s Hit List** both use this pattern. On the Hit List, filters apply only to the **up to seven** urgent rows already chosen for the day; if some rows are hidden, a small **“X of N shown”** hint may appear.
 
-**Today’s Hit List** is different: it is a **fixed, ranked slice** (up to **seven** deals) built from the **same pipeline dataset** as **Your pipeline today**, with **no column sort** inside the Hit List card. For **sort**, **filters**, and the **full** table, expand **Your pipeline today**.
+**Today’s Hit List vs Your pipeline today** — The Hit List is still a **prioritised slice** (server-ranked, capped at **seven** deals) from the same zenith-focus pipeline data. **Your pipeline today** is the **full** pipeline table for your filters (with its own sort/filter). Use **Your Focus → Your pipeline today** when you need the complete list beyond the Hit List cap.
 
-These controls work on the rows already loaded for your current FY / Quarter / Month filters (no extra API calls).
+These controls work on the rows already loaded for your current FY / Quarter / Month filters (no extra API calls for the Hit List slice beyond the focus payload you already have).
 
 #### Deal Health Score (Zenith)
 
@@ -275,9 +275,9 @@ For the **full explanation** of weights, sort behaviour, and sales tips, open th
 
 **Today’s Hit List** — On wide screens, Sales / Management / Admin also see **Today’s Hit List** beside the KPI strip. It is built from the **same zenith-focus pipeline rows** as **Your pipeline today**, but **scored and capped** (up to **seven** deals) for what needs attention **today** — for example **expected commissioning** overdue or within a week (**Overdue** / **Closing soon**), **stalled** proposals, **nudge needed** on site survey, or **going cold** leads (exact rules are role- and data-dependent).
 
-**Layout (desktop / tablet)** — A **scrollable table** with the same core idea as **Your pipeline today**: **Customer**, **Stage**, **Sales person**, **Deal value**, **Last activity** (*N*d ago, coloured pill), **Alert** (the hit-list reason), **Confirmation** (order **confirmation date**, or **—** if not set), **Deal Health** (badge + hover breakdown), and **Open →**.
+**Layout (desktop / tablet)** — A **filter bar** above the table (**Filter customer…**, **All stages**, **All salespeople** — same controls as **Company pipeline today**), then a **scrollable table** with **sortable** column headers: **Customer**, **Stage**, **Sales person**, **Deal value**, **Last activity** (*N*d ago, coloured pill), **Alert** (the hit-list reason), **Confirmation** (order **confirmation date**, or **—** if not set), **Deal Health** (badge + hover breakdown), and **Open →**.
 
-**Narrow screens** — Stacked **cards** with the same information (no wide multi-column row).
+**Narrow screens** — The same **filters** wrap in the Hit List header area; **stacked cards** show the same deal facts (no wide multi-column row).
 
 **Open →** — Opens **Quick Actions** for that project (stage, log activity, dates, etc., per your permissions — same entry point as **Open →** on **Your pipeline today**). Management remains **view-only** where that rule already applies.
 
@@ -433,7 +433,9 @@ Use **Reset** when you want a fresh, unscoped overview before drilling into a si
 
 **Open in Projects →** (footer, when shown) — Opens **Projects** in a new navigation context with filters that **match the current list** (same rules the server applies for that slice). Prefer this when you need the complete paginated list, bulk actions, or every column.
 
-**Single project** — From a list row, **Open →** loads quick actions for that project (stage advance where allowed, log activity, etc.) without losing your place — use **Back** to return to the list. Advancing a project into a **confirmed / install / completed** winning stage can trigger the [Victory toast](#victory-toast-stage-wins).
+**Single project** — From a list row, **Open →** loads quick actions for that project (stage advance where allowed, log activity, payments/dates by role, etc.) without losing your place — use **Back** to return to the list. Advancing a project into a **confirmed / install / completed** winning stage can trigger the [Victory toast](#victory-toast-stage-wins).
+
+**Recent remarks (context before you log activity)** — In **single-project** view, Zenith shows a **Recent remarks** panel (gold left accent) above **Log activity** where that section exists: **newest first**, author name and role, timestamp, **(edited)** when applicable, and the same remark text stored under **Project detail → Remarks**. It uses the **same read API** as the project page; permissions are unchanged (if you can open the drawer for the project, you see the same remark history the API allows). The panel shows a **limited number** of recent entries; use **Open full project** for the full remarks list and to edit or delete remarks on the project page. This appears in the **Sales / executive Quick Actions** drawer, **Operations** quick drawer, and **Finance** quick drawer (including read-only finance views — remarks are read-only context there).
 
 **Closing** — **Close** or click the backdrop; the yellow **Viewing: …** strip (when shown) reflects the active list filter.
 
@@ -443,7 +445,7 @@ Use **Reset** when you want a fresh, unscoped overview before drilling into a si
 
 On **wide screens**, **Today’s Hit List** and the **KPI + Revenue forecast** row sit side by side. The Hit List column height is matched to the KPI band so the row looks balanced. **Fixed-height** tiles (including **Revenue forecast** and the **FY chart** panel) avoid **layout shift** when you switch forecast tabs or when charts redraw.
 
-The Hit List body **scrolls vertically** when there are several rows, and the **table** can **scroll horizontally** on narrower widths so columns stay readable — same pattern as other wide Zenith tables.
+The Hit List body **scrolls vertically** when there are several rows (below the sticky **filter** row), and the **table** can **scroll horizontally** on narrower widths so columns stay readable — same pattern as other wide Zenith tables.
 
 ---
 
@@ -460,7 +462,7 @@ For typical portfolios this makes **no practical difference**; it matters only w
 
 ### Help and tips (Zenith)
 
-- **Tip of the Day** rotates through dozens of hints, including **The Board**, **Deal flow funnel** and **payment** drill-downs, **Proposal Engine** rows under Your Focus, **Open in Projects →**, **collapsible Your Focus**, **Victory toast**, **Revenue forecast**, **FY chart drill-down**, **Customer profitability**, **Explore** lists, **Today’s Hit List** (pipeline-aligned table, **Alert** + **confirmation date**), and the rest of Zenith — use **Next tip** in the modal to browse more.
+- **Tip of the Day** rotates through dozens of hints, including **The Board**, **Deal flow funnel** and **payment** drill-downs, **Proposal Engine** rows under Your Focus, **Open in Projects →**, **collapsible Your Focus**, **Victory toast**, **Revenue forecast**, **FY chart drill-down**, **Customer profitability**, **Explore** lists, **Today’s Hit List** (filters + sortable table, **Alert** + **confirmation date**), **Recent remarks** in quick drawers, and the rest of Zenith — use **Next tip** in the modal to browse more.
 - Optional **Help** tooltips (`zenith.*` keys) exist for reuse in the UI; the full narrative is in the sections above.
 
 **Facilitator / end-user training:** A **presentation-style training guide** for Zenith (all roles, **Sales-first**), with exercises and permission notes, lives under **[Training](/help/training)** in Help.
