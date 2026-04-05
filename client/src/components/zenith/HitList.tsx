@@ -212,6 +212,15 @@ export default function HitList({
             >
               {subtitle}
             </p>
+            {!allClear && n > 0 ? (
+              <p
+                className="mt-1.5 md:mt-1 max-w-xl text-[12px] md:text-[10px] text-white/40 leading-snug"
+                style={{ fontFamily: 'var(--zenith-font-body)' }}
+              >
+                Please scroll to the right and click <span className="text-white/55">Open →</span> to open the
+                Quick Actions drawer and work on the project.
+              </p>
+            ) : null}
           </div>
         </div>
         {!allClear && (

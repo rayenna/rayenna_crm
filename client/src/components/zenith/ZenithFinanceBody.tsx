@@ -14,6 +14,7 @@ import { useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
+import { ProjectStatus } from '../../types'
 import { buildFinanceZenithKpis } from './zenithKpi'
 import {
   buildDealFlowDrawerFilterLabel,
@@ -155,6 +156,7 @@ export default function ZenithFinanceBody({
   })
 
   const explorerProjects = (data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]
+  const availingLoanProjectsUrl = buildProjectsUrl({ availingLoan: true }, dateFilter)
 
   const drill = useCallback(
     (dimension: ZenithChartDrilldownDimension, value: string, opts?: DrilldownOpts) => {
@@ -217,6 +219,18 @@ export default function ZenithFinanceBody({
     [explorerProjects, quickAction.openDrawerListMode],
   )
 
+  const onAvailingLoanKpiClick = useCallback(() => {
+    const filtered = explorerProjects.filter(
+      (p) => p.availing_loan === true && p.projectStatus !== ProjectStatus.LOST,
+    )
+    quickAction.openDrawerListMode({
+      filterLabel: 'Availing loan',
+      filteredProjects: filtered,
+      listAmountMode: 'deal_value',
+      projectsPageHref: availingLoanProjectsUrl,
+    })
+  }, [explorerProjects, quickAction.openDrawerListMode, availingLoanProjectsUrl])
+
   if (isLoading) {
     return (
       <div className="px-3 sm:px-5 py-6 space-y-6 max-w-[1600px] mx-auto">
@@ -226,7 +240,6 @@ export default function ZenithFinanceBody({
   }
 
   const kpis = buildFinanceZenithKpis(data, effFYs)
-  const availingLoanProjectsUrl = buildProjectsUrl({ availingLoan: true }, dateFilter)
   const funnel = buildZenithFunnelFromStatuses(data, dateFilter)
   const fyRows = (data?.projectValueProfitByFY ?? []) as {
     fy: string
@@ -273,7 +286,7 @@ export default function ZenithFinanceBody({
               item={k}
               index={i}
               icon={icons[i] ?? Zap}
-              to={k.key === 'loan' ? availingLoanProjectsUrl : undefined}
+              onClick={k.key === 'loan' ? onAvailingLoanKpiClick : undefined}
             />
           </div>
         ))}

@@ -801,6 +801,13 @@ function FinanceRadarBlock({
             </div>
 
             <div className="rounded-xl border border-white/10 bg-black/20 overflow-hidden flex-1 flex flex-col min-h-[240px] lg:min-h-0">
+              <p
+                className="shrink-0 m-0 px-2 sm:px-2.5 pt-2.5 pb-2 border-b border-white/[0.06] text-[10px] sm:text-[11px] leading-snug text-white/45"
+                style={{ fontFamily: 'var(--zenith-font-body)' }}
+              >
+                Click the project name to open the project and update the current payment status; use{' '}
+                <span className="text-white/60 font-medium">Remind</span> to send a reminder.
+              </p>
               <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 max-h-[min(70vh,520px)] lg:max-h-none zenith-scroll-x">
                 <table className="w-full min-w-[520px] text-left text-[11px] sm:text-xs">
                   <thead>

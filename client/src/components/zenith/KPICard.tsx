@@ -34,12 +34,15 @@ export default function KPICard({
   index,
   icon: Icon,
   to,
+  onClick,
 }: {
   item: ZenithKpiItem
   index: number
   icon: LucideIcon
-  /** When set, the whole tile navigates (e.g. Availing Loan → /projects?availingLoan=true&…) */
+  /** When set, the whole tile navigates (e.g. legacy deep links) */
   to?: string
+  /** When set, opens quick drawer / in-app action instead of navigating (takes precedence over `to`) */
+  onClick?: () => void
 }) {
   const target =
     item.format === 'percent' && item.key === 'conversion' ? item.value : item.value
@@ -61,7 +64,7 @@ export default function KPICard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className={`relative zenith-glass rounded-xl p-3 sm:p-3.5 w-full min-w-0 h-full overflow-hidden group transition-[box-shadow,transform,border-color] duration-200 ease-out hover:-translate-y-px hover:border-[color:rgba(255,255,255,0.11)] hover:shadow-md hover:shadow-black/30${to ? ' cursor-pointer' : ''}`}
+      className={`relative zenith-glass rounded-xl p-3 sm:p-3.5 w-full min-w-0 h-full overflow-hidden group transition-[box-shadow,transform,border-color] duration-200 ease-out hover:-translate-y-px hover:border-[color:rgba(255,255,255,0.11)] hover:shadow-md hover:shadow-black/30${to || onClick ? ' cursor-pointer' : ''}`}
     >
       <div
         className="pointer-events-none absolute -top-8 -right-8 w-28 h-28 rounded-full opacity-[0.12] blur-2xl transition-opacity duration-300 group-hover:opacity-[0.18]"
@@ -106,6 +109,19 @@ export default function KPICard({
       </div>
     </motion.div>
   )
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="block h-full min-w-0 w-full rounded-xl border-0 bg-transparent p-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f5a623]/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c0c12]"
+        aria-label={`Open list: ${item.label}`}
+      >
+        {inner}
+      </button>
+    )
+  }
 
   if (to) {
     return (

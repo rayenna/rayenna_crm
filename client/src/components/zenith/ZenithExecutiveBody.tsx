@@ -14,7 +14,7 @@ import {
 import { Zap, TrendingUp, IndianRupee, Target, Percent, Landmark } from 'lucide-react'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
-import { UserRole } from '../../types'
+import { ProjectStatus, UserRole } from '../../types'
 import { getProjectStatusColor } from '../dashboard/projectStatusColors'
 import { getLoanBankBarColor } from '../dashboard/loanBankChartColors'
 import { buildExecutiveZenithKpis } from './zenithKpi'
@@ -221,6 +221,7 @@ export default function ZenithExecutiveBody({
   const hitListResult = useHitList(pipelineRows, role, user ?? null)
 
   const explorerProjects = (data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]
+  const availingLoanProjectsUrl = buildProjectsUrl({ availingLoan: true }, dateFilter)
 
   const drill = useCallback(
     (dimension: ZenithChartDrilldownDimension, value: string, opts?: DrilldownOpts) => {
@@ -298,6 +299,18 @@ export default function ZenithExecutiveBody({
     [quickAction.openDrawerListMode, dateFilter],
   )
 
+  const onAvailingLoanKpiClick = useCallback(() => {
+    const filtered = explorerProjects.filter(
+      (p) => p.availing_loan === true && p.projectStatus !== ProjectStatus.LOST,
+    )
+    quickAction.openDrawerListMode({
+      filterLabel: 'Availing loan',
+      filteredProjects: filtered,
+      listAmountMode: 'deal_value',
+      projectsPageHref: availingLoanProjectsUrl,
+    })
+  }, [explorerProjects, quickAction.openDrawerListMode, availingLoanProjectsUrl])
+
   /** Match Hit List height to KPI grid on lg+. Row must use items-start (not stretch) so the grid keeps its natural height; if the row stretches the grid to the Hit List, offsetHeight equals the list and the widget never shrinks. */
   const kpiBandRef = useRef<HTMLDivElement>(null)
   const [kpiBandHeightPx, setKpiBandHeightPx] = useState(0)
@@ -362,7 +375,6 @@ export default function ZenithExecutiveBody({
   if (isLoading) return <ZenithSkeleton />
 
   const kpis = buildExecutiveZenithKpis(role, data, dateFilter.selectedFYs)
-  const availingLoanProjectsUrl = buildProjectsUrl({ availingLoan: true }, dateFilter)
   const totalCapacityKW = Number(kpis.find((k) => k.key === 'capacity')?.value ?? 0)
   const pipelineCapacityKW = Number((data as { pipelineCapacityKW?: number })?.pipelineCapacityKW ?? 0)
   const hasExplicitPeriod =
@@ -478,7 +490,7 @@ export default function ZenithExecutiveBody({
                     item={k}
                     index={i}
                     icon={icons[i] ?? Zap}
-                    to={k.key === 'loan' ? availingLoanProjectsUrl : undefined}
+                    onClick={k.key === 'loan' ? onAvailingLoanKpiClick : undefined}
                   />
                 )}
               </div>
@@ -514,7 +526,7 @@ export default function ZenithExecutiveBody({
                   item={k}
                   index={i}
                   icon={icons[i] ?? Zap}
-                  to={k.key === 'loan' ? availingLoanProjectsUrl : undefined}
+                  onClick={k.key === 'loan' ? onAvailingLoanKpiClick : undefined}
                 />
               )}
             </div>

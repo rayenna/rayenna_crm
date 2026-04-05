@@ -149,7 +149,7 @@ Data refreshes when you load the Dashboard or change filters. If numbers look st
 
 ## Zenith Command Center
 
-> **Zenith** is Rayenna CRM’s **command center analytics** experience: the same trusted numbers as the classic **Dashboard**, presented full-screen with a dark theme, **AI Insights**, **The Board** sales leaderboard (with drill-down lists), **collapsible Your Focus** panels, the **Deal flow funnel** (stage and payment shortcuts), **clickable charts** that open a **Quick Actions** drawer, **Proposal Engine** readiness rows (Sales / Management / Admin under Your Focus), and a **Victory** toast when deals hit winning stages — so you can jump straight to projects and verify numbers. List views opened from Zenith include **Open in Projects →** in the drawer footer so you can continue on the full **Projects** page with the **same filters** as the list. Use the **sticky command bar** for **Financial Year**, **Quarter**, and **Month** — KPIs, the funnel, **Revenue forecast**, **Explore the landscape** charts, and project lists loaded for drill-down **all follow those filters**. Data is loaded from the server for your session (not “this browser only”), so what you see stays aligned with CRM after login. Zenith is documented here under **Analytics and Reports** (no separate top-level Help topic).
+> **Zenith** is Rayenna CRM’s **command center analytics** experience: the same trusted numbers as the classic **Dashboard**, presented full-screen with a dark theme, **AI Insights**, **The Board** sales leaderboard (with drill-down lists), **collapsible Your Focus** panels, the **Deal flow funnel** (stage and payment shortcuts), **clickable charts** and the **Availing Loan** KPI (**Finance** and **executive** Zenith) that open a **Quick Actions** drawer, **Proposal Engine** readiness rows (Sales / Management / Admin under Your Focus), **Payment radar** with **Top overdue** guidance, and a **Victory** toast when deals hit winning stages — so you can jump straight to projects and verify numbers. List views opened from Zenith include **Open in Projects →** in the drawer footer so you can continue on the full **Projects** page with the **same filters** as the list. Use the **sticky command bar** for **Financial Year**, **Quarter**, and **Month** — KPIs, the funnel, **Revenue forecast**, **Explore the landscape** charts, and project lists loaded for drill-down **all follow those filters**. Data is loaded from the server for your session (not “this browser only”), so what you see stays aligned with CRM after login. Zenith is documented here under **Analytics and Reports** (no separate top-level Help topic).
 
 **In this section:** [Opening Zenith](#opening-zenith) · [Filters and reset](#filters-and-reset) · [AI Insights ticker](#ai-insights-ticker) · [KPI strip and YoY](#kpi-strip-and-year-on-year) · [Your Focus](#your-focus-role-specific) · [Payment radar](#payment-radar-finance) · [Installation pulse](#installation-pulse-operations) · [Executive](#executive-sales-management--admin) · [Deal flow funnel](#deal-flow-funnel-zenith) · [The Board (leaderboard)](#the-board-leaderboard) · [Victory toast](#victory-toast-stage-wins) · [Operations (Zenith)](#operations-zenith) · [Finance (Zenith)](#finance-zenith) · [Revenue Forecast tile](#revenue-forecast-wide-kpi-tile) · [Revenue & profit by FY chart](#revenue-and-profit-by-fy-chart-zenith) · [Customer projects profitability](#customer-projects-profitability-zenith) · [Explore charts & drill-down](#explore-charts-and-drill-down-zenith) · [Quick Actions drawer](#quick-actions-drawer-zenith) · [Layout & Hit List](#layout-stability-and-hit-list-zenith) · [Charts overview](#charts-funnels-and-shortcuts) · [Explorer batch limit](#explorer-batch-limit-zenith) · [Help and tips](#help-and-tips-zenith)
 
@@ -192,6 +192,8 @@ The **top row of KPI cards** summarises key metrics for your role. Each card inc
 
 Cards **stagger in** slightly when the strip appears (animation order by column).
 
+**Availing Loan (clickable KPI)** — On **Finance** Zenith and **executive** Zenith (**Sales**, **Management**, **Admin**), the **Availing Loan** tile is **clickable**. It opens the **Quick Actions** drawer in **list mode** with projects that have **Availing Loan/Financing** set (excluding **Lost**), scoped to your command-bar **FY / Quarter / Month** — the same interaction model as **Explore the landscape** charts and the **Deal flow funnel** (not a direct jump to **Projects**). Use **Open in Projects →** in the drawer footer for the full **Projects** grid with the **Availing Loan** filter applied.
+
 **YoY / comparison behaviour**
 
 - Comparison badges appear when you select **exactly one** Financial Year (and the system can compare to the **prior FY** or the **same quarter/month in the prior FY**, matching dashboard logic).
@@ -221,7 +223,7 @@ If there is nothing to show for the current filters, **Your Focus** may be hidde
 
 **Payment ageing** — Four buckets (**0–30**, **31–60**, **61–90**, **90+** days overdue) show **project count**, **₹ outstanding** in that band, and a bar proportional to share of total outstanding. **Click a bucket** to filter the **Top overdue** table to rows whose days overdue fall in that band; click again (or **Reset ageing filter**) to clear. Colours escalate from neutral to amber, coral, and red for older debt.
 
-**Top overdue** — Sortable columns: **Customer** (name), **Amt** (outstanding), **Since** (reference date), **Days** (overdue). Use **Filter customer…** to narrow by name. **Reset filters** clears both customer text and ageing. Row **Remind** opens a small **Reminder** panel with **WhatsApp** and **Email** options using prefilled copy from the project’s outstanding amount and customer contact fields (opens your device’s apps or `wa.me` / `mailto:` — nothing is sent from Rayenna’s servers).
+**Top overdue** — A short hint under the **Top overdue** heading explains: **click the project name** (under the **Projects** column) to open the project and work on **payment status**; use **Remind** to send a customer reminder. **Sales person** filter and **Filter customer…** narrow the table; **Reset filters** clears customer text, salesperson selection, and ageing. Sortable columns: **Projects** (customer / project name links), **Sales person**, **Amt**, **Since**, **Days**. Row **Remind** opens a small **Reminder** panel with **WhatsApp** and **Email** options using prefilled copy from the project’s outstanding amount and customer contact fields (opens your device’s apps or `wa.me` / `mailto:` — nothing is sent from Rayenna’s servers).
 
 **Right-hand column (wide layouts)** — **Collected vs outstanding** donut (teal / gold / violet for subsidy pending when present) and **Collections — last 6 months** stacked-style bars (collected vs outstanding per month). A short line under the chart compares **last month’s collected** to the **prior month** (up / down / steady).
 
@@ -269,13 +271,13 @@ For the **full explanation** of weights, sort behaviour, and sales tips, open th
 
 ### Executive (Sales, Management & Admin)
 
-**KPI strip** — Typically includes **Total Capacity**, **Total Pipeline**, **Total Revenue**, **Total Profit**, and **Pipeline Conversion** (definitions match the classic dashboard and the sections above).
+**KPI strip** — Typically includes **Total Capacity**, **Total Pipeline**, **Total Revenue**, **Total Profit**, **Pipeline Conversion**, and **Availing Loan** (definitions match the classic dashboard and the sections above). **Availing Loan** is **clickable** → **Quick Actions** list + **Open in Projects →**, like charts and the funnel ([KPI strip](#kpi-strip-and-year-on-year)).
 
 **Your Focus** — See [Your Focus](#your-focus-role-specific); **Sales** sees own pipeline, **Management/Admin** see the combined focus layout.
 
 **Today’s Hit List** — On wide screens, Sales / Management / Admin also see **Today’s Hit List** beside the KPI strip. It is built from the **same zenith-focus pipeline rows** as **Your pipeline today**, but **scored and capped** (up to **seven** deals) for what needs attention **today** — for example **expected commissioning** overdue or within a week (**Overdue** / **Closing soon**), **stalled** proposals, **nudge needed** on site survey, or **going cold** leads (exact rules are role- and data-dependent).
 
-**Layout (desktop / tablet)** — A **filter bar** above the table (**Filter customer…**, **All stages**, **All salespeople** — same controls as **Company pipeline today**), then a **scrollable table** with **sortable** column headers: **Customer**, **Stage**, **Sales person**, **Deal value**, **Last activity** (*N*d ago, coloured pill), **Alert** (the hit-list reason), **Confirmation** (order **confirmation date**, or **—** if not set), **Deal Health** (badge + hover breakdown), and **Open →**.
+**Layout (desktop / tablet)** — A **filter bar** above the table (**Filter customer…**, **All stages**, **All salespeople** — same controls as **Company pipeline today**), then a **scrollable table** with **sortable** column headers: **Customer**, **Stage**, **Sales person**, **Deal value**, **Last activity** (*N*d ago, coloured pill), **Alert** (the hit-list reason), **Confirmation** (order **confirmation date**, or **—** if not set), **Deal Health** (badge + hover breakdown), and **Open →**. When there are deals on the list, a short line under the title may remind you to **scroll horizontally** on tight widths and use **Open →** for the **Quick Actions** drawer.
 
 **Narrow screens** — The same **filters** wrap in the Hit List header area; **stacked cards** show the same deal facts (no wide multi-column row).
 
@@ -291,7 +293,7 @@ If a day has no qualifying deals, the card shows **All clear**.
 
 **Charts and panels** — Then **Explore the landscape**: **Revenue by lead source**, **Pipeline by lead source**, **Revenue vs pipeline by sales team**, **segment donuts** (revenue and pipeline), **Revenue & profit by financial year**, **Projects by stage**, **Projects availing loans by bank**, **Customer projects profitability** (word cloud / Top 10). **Proposal Engine** for executive roles is under **Your focus**, not in the chart grid.
 
-**Links** — Chart drill-downs, **The Board** totals, **funnel** stages and payment pills, and **Proposal Engine** rows under Your Focus open the **Quick Actions** drawer with a **filtered project list** and **Open in Projects →** where applicable (see [Explore charts & drill-down](#explore-charts-and-drill-down-zenith), [The Board](#the-board-leaderboard), [Deal flow funnel](#deal-flow-funnel-zenith), and [Quick Actions drawer](#quick-actions-drawer-zenith)).
+**Links** — Chart drill-downs, **The Board** totals, **funnel** stages and payment pills, **Proposal Engine** rows under Your Focus, and the **Availing Loan** KPI tile (Finance + executive Zenith) open the **Quick Actions** drawer with a **filtered project list** and **Open in Projects →** where applicable (see [Explore charts & drill-down](#explore-charts-and-drill-down-zenith), [The Board](#the-board-leaderboard), [Deal flow funnel](#deal-flow-funnel-zenith), [KPI strip](#kpi-strip-and-year-on-year), and [Quick Actions drawer](#quick-actions-drawer-zenith)).
 
 ### The Board (leaderboard)
 
@@ -346,7 +348,7 @@ Use **Reset** when you want a fresh, unscoped overview before drilling into a si
 
 ### Finance (Zenith)
 
-**KPI strip** — **Total Revenue** (confirmed-order value), **Amount Received**, **Outstanding**, **Total Profit** (gross profit on revenue-eligible projects in scope), and **Availing Loan** count.
+**KPI strip** — **Total Revenue** (confirmed-order value), **Amount Received**, **Outstanding**, **Total Profit** (gross profit on revenue-eligible projects in scope), and **Availing Loan** count. **Click Availing Loan** to open the **Quick Actions** list for that cohort (then **Open in Projects →** if you need the full **Projects** page), same idea as chart drill-down and the funnel — see [KPI strip](#kpi-strip-and-year-on-year).
 
 **Your Focus** — **Payment radar** for **Finance** (see [Your Focus](#your-focus-role-specific)).
 
@@ -411,7 +413,7 @@ Use **Reset** when you want a fresh, unscoped overview before drilling into a si
 
 **Section title** — **Explore the landscape**. Many panels show **Click to explore →** in the header.
 
-**Behaviour** — Clicking a bar, slice, stage, FY point, or bank (where implemented) opens the **Quick Actions** drawer in **list mode**: a **filter label** at the top (e.g. lead source, segment, stage, FY revenue or profit, loan bank) and a **scrollable project list** with **Open →** to jump to **Project detail**. The projects are the same cohort the chart used for that slice, with **Zenith date filters** applied.
+**Behaviour** — Clicking a bar, slice, stage, FY point, or bank (where implemented) opens the **Quick Actions** drawer in **list mode**: a **filter label** at the top (e.g. lead source, segment, stage, FY revenue or profit, loan bank) and a **scrollable project list** with **Open →** to jump to **Project detail**. The projects are the same cohort the chart used for that slice, with **Zenith date filters** applied. The **Availing Loan** KPI tile (**Finance** and **executive** Zenith) uses the same **list mode** for its cohort ([KPI strip](#kpi-strip-and-year-on-year)).
 
 **Open in Projects →** — When the footer link is shown, it opens the **Projects** page with URL parameters aligned to that drill-down (same slice definitions the server uses for **Projects** list filters — e.g. **zenithSlice** for revenue vs pipeline, **zenithFyProfit** for FY profit rows, **peBucket** for Proposal Engine buckets, stage and payment params for the funnel). Use it when you need the full grid, export context, or columns beyond the drawer.
 
@@ -429,7 +431,7 @@ Use **Reset** when you want a fresh, unscoped overview before drilling into a si
 
 ### Quick Actions drawer (Zenith)
 
-**List mode** — Header shows **how many projects** match and a **Total** that matches the **metric of the chart** you came from (for FY **profit**, totals use **gross profit**; otherwise **order value**). **The Board** lists use **order value** for the footer total. Sort with **Order value / Gross profit**, **Health Score**, or **Last Activity** where offered.
+**List mode** — Header shows **how many projects** match and a **Total** that matches the **metric of the chart** you came from (for FY **profit**, totals use **gross profit**; otherwise **order value**). **The Board** lists use **order value** for the footer total. **Availing Loan** (KPI tile on **Finance** and **executive** Zenith) opens the same list mode with **order value** totals. Sort with **Order value / Gross profit**, **Health Score**, or **Last Activity** where offered.
 
 **Open in Projects →** (footer, when shown) — Opens **Projects** in a new navigation context with filters that **match the current list** (same rules the server applies for that slice). Prefer this when you need the complete paginated list, bulk actions, or every column.
 
@@ -451,7 +453,7 @@ The Hit List body **scrolls vertically** when there are several rows (below the 
 
 ### Explorer batch limit (Zenith)
 
-Zenith loads a **batch** of lightweight project rows for **charts**, **The Board** drill-downs, **funnel** lists, and related drawer views (same FY / Quarter / Month as the command bar). The server returns **up to 5,000** projects per load (most recently **updated** first), so **extremely large** portfolios may not place every project in that batch.
+Zenith loads a **batch** of lightweight project rows for **charts**, **The Board** drill-downs, **funnel** lists, the **Availing Loan** KPI list, and related drawer views (same FY / Quarter / Month as the command bar). The server returns **up to 5,000** projects per load (most recently **updated** first), so **extremely large** portfolios may not place every project in that batch.
 
 - **Drawer and chart lists** only include projects that appear in that batch **and** match the slice you clicked. **Counts on tiles** (aggregates from the server) can still reflect **all** projects in scope.
 - **Open in Projects →** uses **Projects** list API filters, **not** the 5,000 batch, so the **Projects** page can show **more rows** than the drawer when you are over the batch limit.
@@ -462,7 +464,7 @@ For typical portfolios this makes **no practical difference**; it matters only w
 
 ### Help and tips (Zenith)
 
-- **Tip of the Day** rotates through dozens of hints, including **The Board**, **Deal flow funnel** and **payment** drill-downs, **Proposal Engine** rows under Your Focus, **Open in Projects →**, **collapsible Your Focus**, **Victory toast**, **Revenue forecast**, **FY chart drill-down**, **Customer profitability**, **Explore** lists, **Today’s Hit List** (filters + sortable table, **Alert** + **confirmation date**), **Recent remarks** in quick drawers, and the rest of Zenith — use **Next tip** in the modal to browse more.
+- **Tip of the Day** rotates through dozens of hints, including **The Board**, **Deal flow funnel** and **payment** drill-downs, **Availing Loan** KPI → drawer, **Payment radar** (**Top overdue** hints and **Remind**), **Proposal Engine** rows under Your Focus, **Open in Projects →**, **collapsible Your Focus**, **Victory toast**, **Revenue forecast**, **FY chart drill-down**, **Customer profitability**, **Explore** lists, **Today’s Hit List** (filters + sortable table, **Alert** + **confirmation date**, scroll-right + **Open →** hint when deals list), **Recent remarks** in quick drawers, and the rest of Zenith — use **Next tip** in the modal to browse more.
 - Optional **Help** tooltips (`zenith.*` keys) exist for reuse in the UI; the full narrative is in the sections above.
 
 **Facilitator / end-user training:** A **presentation-style training guide** for Zenith (all roles, **Sales-first**), with exercises and permission notes, lives under **[Training](/help/training)** in Help.

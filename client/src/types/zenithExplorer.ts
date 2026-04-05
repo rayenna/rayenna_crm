@@ -24,6 +24,8 @@ export type ZenithExplorerProject = {
   financing_bank?: string | null
   /** Matches `availingLoanByBank[].bankLabel` when project avails loan; else "". */
   loan_bank_label?: string
+  /** True when CRM `availingLoan`; used for Availing Loan KPI quick drawer (same slice as count, excluding Lost client-side). */
+  availing_loan?: boolean
   /** Prisma `PaymentStatus` or null stored as PENDING; N/A pill matches stage/cost via `matchesZenithPaymentNaBucket`. */
   payment_status?: string
 }

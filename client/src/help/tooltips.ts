@@ -149,13 +149,13 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.command-center',
     title: 'Zenith Command Center',
     content:
-      'Full-screen analytics with the same FY, Quarter, and Month rules as the Dashboard: AI Insights, The Board leaderboard, collapsible Your Focus, KPIs, Revenue forecast, Deal flow funnel (click stages or payment pills), Proposal Engine under Your Focus, clickable Explore charts, and Quick Actions lists. Single-project Quick Actions show Recent remarks (read-only) above Log activity. List mode includes Open in Projects → for the full Projects page with matching filters. Open Help → Analytics for the full guide.',
+      'Full-screen analytics with the same FY, Quarter, and Month rules as the Dashboard: AI Insights, The Board leaderboard, collapsible Your Focus, KPIs (including clickable Availing Loan on Finance and executive Zenith), Revenue forecast, Deal flow funnel (click stages or payment pills), Proposal Engine under Your Focus, clickable Explore charts, Payment radar Top overdue hints, and Quick Actions lists. Single-project Quick Actions show Recent remarks (read-only) above Log activity. List mode includes Open in Projects → for the full Projects page with matching filters. Open Help → Analytics for the full guide.',
   },
   'zenith.hit-list': {
     key: 'zenith.hit-list',
     title: 'Today’s Hit List',
     content:
-      'Up to seven prioritised deals from the same pipeline data as Your pipeline today. Filter customer, stage, and salesperson; click column headers to sort (including Alert, Confirmation, Health). Columns: customer, stage, sales person, deal value, last activity, Alert, confirmation date, Deal Health, Open →. Open → opens Quick Actions (with Recent remarks above Log activity). On small screens: filters plus stacked cards.',
+      'Up to seven prioritised deals from the same pipeline data as Your pipeline today. Filter customer, stage, and salesperson; click column headers to sort (including Alert, Confirmation, Health). Columns: customer, stage, sales person, deal value, last activity, Alert, confirmation date, Deal Health, Open →. Open → opens Quick Actions (with Recent remarks above Log activity). When deals list, a short hint may remind you to scroll right and use Open → on tight widths. On small screens: filters plus stacked cards.',
   },
   'zenith.quick-drawer-remarks': {
     key: 'zenith.quick-drawer-remarks',
@@ -204,6 +204,18 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     title: 'Deal flow funnel (Zenith)',
     content:
       'Click a stage row or payment status pill to open Quick Actions in list mode with the same cohort as the funnel tile for your FY / Quarter / Month. Open in Projects → opens Projects with matching stage or payment filters.',
+  },
+  'zenith.kpi-availing-loan': {
+    key: 'zenith.kpi-availing-loan',
+    title: 'Availing Loan (Zenith KPI)',
+    content:
+      'Opens Quick Actions in list mode for projects availing loan (excluding Lost), scoped to your Zenith dates — same pattern as Explore charts and the Deal flow funnel. Open in Projects → opens the full Projects list with the Availing Loan filter. Shown on Finance Zenith and executive Zenith (Sales, Management, Admin); not on Operations Zenith KPI row.',
+  },
+  'zenith.payment-radar-top-overdue': {
+    key: 'zenith.payment-radar-top-overdue',
+    title: 'Top overdue (Payment radar)',
+    content:
+      'Click a project name under Projects to open the project and update payment status; use Remind for WhatsApp or Email helpers. Filter by salesperson and customer text; payment ageing buckets above filter this table.',
   },
   'zenith.proposal-engine-focus': {
     key: 'zenith.proposal-engine-focus',

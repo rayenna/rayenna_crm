@@ -360,6 +360,8 @@ async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
       p.availingLoan && p.financingBank?.trim()
         ? BANK_LABELS[p.financingBank] || p.financingBank
         : '',
+    /** Parity with `availingLoanCount` KPI (not Lost, availing loan). */
+    availing_loan: Boolean(p.availingLoan),
     /** Resolved payment enum for dashboard payment pills (null → PENDING); N/A bucket uses `matchesZenithPaymentNaBucket` client-side. */
     payment_status: p.paymentStatus ?? 'PENDING',
   }));

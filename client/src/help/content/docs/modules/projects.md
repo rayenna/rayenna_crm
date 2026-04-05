@@ -901,7 +901,7 @@ The total is the **sum** of five parts. Each part has a **maximum**; the overall
 | :-- | :-- |
 | **Projects** list | A compact **badge** (0–100) next to the project/customer. **Sort** the list by **Deal Health Score** (ascending shows the weakest deals first across the full list — same data the server uses for sorting). |
 | **Project Detail** | A full **Deal Health Score** card with **all factors**, scores, and the insight line. |
-| **Zenith (Executive view)** | **Your pipeline today** (Sales / Management / Admin): each row can show a **Deal Health** badge; **hover** for the breakdown; **Open →** opens **Quick Actions**. **Today’s Hit List** matches that layout with **filters**, **sort**, and **Alert**, for up to seven prioritised deals; **Open →** opens **Quick Actions**, which includes **Recent remarks** (same data as this **Remarks** section, read-only in the drawer) above **Log activity**. |
+| **Zenith (Executive view)** | **Your pipeline today** (Sales / Management / Admin): each row can show a **Deal Health** badge; **hover** for the breakdown; **Open →** opens **Quick Actions**. **Today’s Hit List** matches that layout with **filters**, **sort**, and **Alert**, for up to seven prioritised deals; when deals list, a short hint may remind you to **scroll right** and use **Open →**; **Open →** opens **Quick Actions**, which includes **Recent remarks** (same data as this **Remarks** section, read-only in the drawer) above **Log activity**. |
 | **Tip of the Day** | Occasionally reminds you about Deal Health, sorting, and where to read the full rules (this section). |
 
 #### How each factor is scored (reference tables)
