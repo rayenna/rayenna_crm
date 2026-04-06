@@ -253,7 +253,9 @@ const Zenith = () => {
 
   return (
     <div className="zenith-root zenith-animated-bg">
-      <div className="min-w-0 max-w-full overflow-x-clip max-lg:overscroll-x-none">
+      {/* No overflow-x-clip here: CSS pairs non-visible overflow-x with overflow-y:auto and Chrome/Android PWA
+          clips Recharts SVG while document-scrolling. Width is contained via zenith-root + min-w-0 / max-w-full. */}
+      <div className="min-w-0 max-w-full">
       <CommandBar
         availableFYs={availableFYs}
         selectedFYs={selectedFYs}

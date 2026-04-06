@@ -24,8 +24,8 @@
   position: relative;
   min-height: calc(100vh - 5rem);
   min-height: calc(100dvh - 5rem);
-  /* Horizontal clipping is on Layout main (overflow-x-clip). Avoid overflow-x: hidden here — it forces
-     overflow-y to compute as auto and can trap page scroll in some browsers. */
+  /* Avoid overflow-x: hidden/clip on this root — CSS forces overflow-y: auto and Chrome/Android PWA clips
+     Recharts while scrolling. Layout keeps main without horizontal clip on /zenith. */
   padding-bottom: env(safe-area-inset-bottom, 0px);
   -webkit-tap-highlight-color: transparent;
   background-color: var(--zenith-bg);
@@ -197,14 +197,24 @@
   border-radius: 6px;
 }
 
-/* Mobile / narrow viewports: WebKit often clips Recharts SVG during scroll or overscroll
-   when ancestors use backdrop-filter (Zenith glass). Promote the chart layer and relax
-   wrapper overflow; matches Tailwind lg (1024px). */
+/* Mobile / narrow viewports: Recharts SVG often clips during document scroll on Chrome/Android PWA when
+   zenith-glass uses backdrop-filter, the grid background animates, or chart layers are forced onto their
+   own GPU plane (translate3d). Keep wrappers permissive; matches Tailwind lg (1024px). */
 @media (max-width: 1023px) {
-  .zenith-root .recharts-responsive-container {
-    transform: translate3d(0, 0, 0);
-    -webkit-transform: translate3d(0, 0, 0);
+  .zenith-root.zenith-animated-bg {
+    animation: none;
   }
+
+  /* Same idea as index.css backdrop-blur-sm on mobile — backdrop + SVG compositing is fragile while scrolling */
+  .zenith-root .zenith-glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(255, 255, 255, 0.055);
+    border-color: rgba(255, 255, 255, 0.085);
+  }
+
+  /* Do not promote Recharts to its own layer here — Android often clips the surface against scroll; iOS is
+     covered by removing backdrop blur on .zenith-glass above. */
   .zenith-root .recharts-wrapper {
     overflow: visible !important;
   }
@@ -212,13 +222,7 @@
     overflow: visible;
   }
 
-  /* Segment donuts: lighter glass; avoid GPU layers on the chart (translate3d + isolation) — they often clip
-     the SVG on iOS/Android while scrolling next to backdrop-filter. */
-  .zenith-root .zenith-segment-donut-card.zenith-glass {
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-  }
-
+  /* Segment donuts: keep charts off isolated layers; glass blur already off mobile-wide */
   .zenith-root .zenith-segment-donut-card .recharts-responsive-container {
     transform: none !important;
     -webkit-transform: none !important;

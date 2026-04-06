@@ -13,6 +13,7 @@ import {
   zenithDealRowStagePillClass,
   ZENITH_DEAL_OPEN_BUTTON_CLASS,
 } from './zenithDealCardUi'
+import { zenithSalespersonNameColor } from '../../utils/zenithSalespersonColor'
 
 type SortKey = 'value' | 'health' | 'activity'
 
@@ -143,6 +144,8 @@ export default function DrawerProjectList({
 
       <div className="flex-1 min-h-0 overflow-y-auto -mx-1 px-1">
         {sorted.map((p) => {
+          const assignee = (p.assigned_to_name || '').trim() || null
+          const assigneeColor = zenithSalespersonNameColor(assignee)
           const raw = rowAmount(p, amountMode)
           const dealParts =
             amountMode === 'gross_profit'
@@ -161,12 +164,14 @@ export default function DrawerProjectList({
                   {p.customer_name}
                 </div>
                 <p
-                  className="mt-0.5 truncate text-[10px] leading-tight text-white/42"
-                  style={{ fontFamily: 'var(--zenith-font-body), DM Sans, sans-serif' }}
-                  title={`Sales: ${(p.assigned_to_name || '').trim() || 'Unassigned'}`}
+                  className="mt-0.5 truncate text-[10px] leading-tight font-semibold"
+                  style={{
+                    fontFamily: 'var(--zenith-font-body), DM Sans, sans-serif',
+                    color: assigneeColor,
+                  }}
+                  title={assignee ?? 'Unassigned'}
                 >
-                  <span className="text-white/32">Sales</span>{' '}
-                  <span className="text-white/55">{(p.assigned_to_name || '').trim() || 'Unassigned'}</span>
+                  {assignee ?? 'Unassigned'}
                 </p>
                 <div className="mt-1">
                   <span

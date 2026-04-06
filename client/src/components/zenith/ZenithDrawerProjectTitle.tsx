@@ -1,5 +1,7 @@
+import { zenithSalespersonNameColor } from '../../utils/zenithSalespersonColor'
+
 /**
- * Compact project + assigned salesperson line for Zenith quick drawers.
+ * Compact project title + assigned person (name only, color-coded) for Zenith quick drawers.
  */
 export default function ZenithDrawerProjectTitle({
   title,
@@ -9,6 +11,7 @@ export default function ZenithDrawerProjectTitle({
   salespersonName?: string | null
 }) {
   const sales = salespersonName?.trim() || null
+  const salesColor = zenithSalespersonNameColor(sales)
   const nameTooltip =
     title && title !== '—' && title !== 'Loading…' ? title : undefined
 
@@ -23,15 +26,14 @@ export default function ZenithDrawerProjectTitle({
           {title}
         </span>
         <span
-          className="shrink-0 max-w-[min(11rem,42%)] truncate text-[11px] leading-snug"
-          style={{ fontFamily: 'var(--zenith-font-body), DM Sans, sans-serif' }}
-          title={sales ? `Sales: ${sales}` : 'Salesperson not assigned'}
+          className="shrink-0 max-w-[min(11rem,42%)] truncate text-[11px] leading-snug font-semibold"
+          style={{
+            fontFamily: 'var(--zenith-font-body), DM Sans, sans-serif',
+            color: salesColor,
+          }}
+          title={sales ?? 'Unassigned'}
         >
-          <span className="text-white/28" aria-hidden>
-            ·
-          </span>{' '}
-          <span className="font-medium text-white/38">Sales</span>{' '}
-          <span className="text-white/62">{sales ?? 'Unassigned'}</span>
+          {sales ?? 'Unassigned'}
         </span>
       </div>
     </div>
