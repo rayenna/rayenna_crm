@@ -17,6 +17,7 @@ import { ZENITH_CHARTS_TOUCH_RESET_EVENT, ZENITH_FLOATING_DISMISS_EVENT } from '
 import { fireVictoryToast } from '../../hooks/useVictoryToast'
 import { zenithDrawerStagePillClass } from './zenithDealCardUi'
 import ZenithDrawerRemarksPanel from './ZenithDrawerRemarksPanel'
+import ZenithDrawerProjectTitle from './ZenithDrawerProjectTitle'
 
 const STATUS_ORDER: ProjectStatus[] = [
   ProjectStatus.LEAD,
@@ -236,6 +237,12 @@ export default function QuickActionDrawer({
   const nextStatus = project ? getNextStatus(project.projectStatus) : null
   const nextLabel = nextStatus ? STATUS_LABELS[nextStatus] : null
 
+  const singleDrawerTitle =
+    project?.customer?.firstName?.trim() ||
+    project?.customer?.customerName?.trim() ||
+    (isLoading ? 'Loading…' : '—')
+  const singleDrawerSalesperson = project?.salesperson?.name ?? null
+
   const canAdvance =
     !!project && !TERMINAL_STATUSES.includes(project.projectStatus) && !!nextStatus && !!nextLabel
 
@@ -404,14 +411,8 @@ export default function QuickActionDrawer({
                   ×
                 </button>
               </div>
-              <div className="min-w-0">
-                <div
-                  className="text-white font-bold text-[16px] truncate max-w-[280px]"
-                  style={{ fontFamily: "'Syne', sans-serif" }}
-                  title={project?.customer?.firstName || project?.customer?.customerName || undefined}
-                >
-                  {project?.customer?.firstName || project?.customer?.customerName || (isLoading ? 'Loading…' : '—')}
-                </div>
+              <div className="min-w-0 flex-1 pr-1">
+                <ZenithDrawerProjectTitle title={singleDrawerTitle} salespersonName={singleDrawerSalesperson} />
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <span className={zenithDrawerStagePillClass(stageLabel)}>
                     {stageLabel || '—'}
@@ -424,14 +425,8 @@ export default function QuickActionDrawer({
             </>
           ) : (
             <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <div
-                  className="text-white font-bold text-[16px] truncate max-w-[260px]"
-                  style={{ fontFamily: "'Syne', sans-serif" }}
-                  title={project?.customer?.firstName || project?.customer?.customerName || undefined}
-                >
-                  {project?.customer?.firstName || project?.customer?.customerName || (isLoading ? 'Loading…' : '—')}
-                </div>
+              <div className="min-w-0 flex-1 pr-1">
+                <ZenithDrawerProjectTitle title={singleDrawerTitle} salespersonName={singleDrawerSalesperson} />
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <span className={zenithDrawerStagePillClass(stageLabel)}>
                     {stageLabel || '—'}

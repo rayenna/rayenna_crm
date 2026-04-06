@@ -160,6 +160,14 @@ export default function DrawerProjectList({
                 >
                   {p.customer_name}
                 </div>
+                <p
+                  className="mt-0.5 truncate text-[10px] leading-tight text-white/42"
+                  style={{ fontFamily: 'var(--zenith-font-body), DM Sans, sans-serif' }}
+                  title={`Sales: ${(p.assigned_to_name || '').trim() || 'Unassigned'}`}
+                >
+                  <span className="text-white/32">Sales</span>{' '}
+                  <span className="text-white/55">{(p.assigned_to_name || '').trim() || 'Unassigned'}</span>
+                </p>
                 <div className="mt-1">
                   <span
                     className={zenithDealRowStagePillClass(p.stageLabel)}

@@ -13,6 +13,7 @@ import { projectDetailToHealthProject } from '../../utils/dealHealthScore'
 import { ZENITH_CHARTS_TOUCH_RESET_EVENT, ZENITH_FLOATING_DISMISS_EVENT } from '../../utils/zenithEvents'
 import { zenithDrawerStagePillClass } from './zenithDealCardUi'
 import ZenithDrawerRemarksPanel from './ZenithDrawerRemarksPanel'
+import ZenithDrawerProjectTitle from './ZenithDrawerProjectTitle'
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {
   [ProjectStatus.LEAD]: 'Lead',
@@ -299,14 +300,11 @@ export default function FinanceQuickDrawer({
       >
         <div className="min-h-16 px-5 py-3 flex flex-col gap-2 border-b border-white/[0.08] bg-white/[0.02]">
           <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <div
-                className="text-white font-bold text-[16px] truncate max-w-[260px]"
-                style={{ fontFamily: "'Syne', sans-serif" }}
+            <div className="min-w-0 flex-1 pr-1">
+              <ZenithDrawerProjectTitle
                 title={projectTitle}
-              >
-                {projectTitle}
-              </div>
+                salespersonName={project?.salesperson?.name}
+              />
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <span className={zenithDrawerStagePillClass(stageLabel)}>
                   {stageLabel || '—'}

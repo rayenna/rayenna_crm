@@ -197,7 +197,7 @@ By the end of this session, participants should be able to:
 - **Desktop table columns** align with **Your pipeline today**: **Customer**, **Stage**, **Sales person**, **Deal value**, **Last activity** (*N*d ago, green / amber / red pill), **Alert** (why it landed on the list — e.g. **Overdue**, **Closing soon**, **Stalled**, **Nudge needed**, **Going cold**), **Confirmation** (order **confirmation date** or **—**), **Deal Health** badge, **Open →**.
 - **Overdue** / **Closing soon** use the project’s **expected commissioning** date when set; **stalled** / **nudge** / **going cold** rules use **stage + recency** (see Analytics help for detail).
 - **Open →** opens the **Quick Actions** drawer for that project (not a raw jump past the drawer). Use **Open full project** inside the drawer when you need the full **Project detail** page.
-- When deals are listed, a **short hint** under the Hit List title may ask users to **scroll right** (on tight widths) and tap **Open →** for **Quick Actions**.
+- On **tablet / laptop** widths, when deals are listed, a **short hint** under the Hit List title may ask users to **scroll right** and use **Open →**; on **small phones** the hint is hidden (stacked cards already show **Open →** clearly).
 - **Horizontal scroll** inside the Hit List body if the viewport is tight — same idea as other Zenith tables.
 - **All clear** when nothing qualifies for the list; header may still show **at risk** value context when deals are listed.
 
@@ -280,12 +280,14 @@ By the end of this session, participants should be able to:
 **Key points:**
 
 - **Viewing:** strip; sort by value / profit / health / activity as offered.
+- Each row: **Sales** line under the customer name (who owns the deal, or **Unassigned**).
 - **Open in Projects →** — same logical filters as the list (peBucket, zenithSlice, zenithFyProfit, stage, payment, etc.).
 
 **SLIDE: Single project & permissions**
 
 **Key points:**
 
+- Drawer **header:** customer / project name **+** compact **Sales** + salesperson (or **Unassigned**) — **Quick Actions**, **Operations**, and **Finance** drawers.
 - **Open →** → quick edits; **Open full project** → detail.
 - **Recent remarks** — Above **Log activity** (where shown): **newest-first** thread from **Project → Remarks** (read-only in the drawer). Same API as the project page; use **Open full project** for the full history and to edit/delete remarks. Shown in **Quick Actions** (sales/executive), **Operations**, and **Finance** drawers (finance read-only users still see remarks as **context**).
 - **Management** view-only; **Sales** non-owner view-only; **Admin** per `canEdit`.
@@ -336,7 +338,7 @@ By the end of this session, participants should be able to:
 | 2 | **Mobile:** confirm **Briefing** top-right; **three dropdowns** one line | Layout matches training |
 | 3 | Click one **AI Insight** | Scroll lands correctly |
 | 4 | **Revenue forecast:** switch two tabs | Total unchanged |
-| 4b | **Hit List:** filters + sort; **Open →** → Quick Actions → **Recent remarks** above **Log activity** | Matches talking points |
+| 4b | **Hit List:** filters + sort; **Open →** → Quick Actions → confirm **Sales** + name in header → **Recent remarks** above **Log activity** | Matches talking points |
 | 5 | Expand **Your pipeline**; sort by **Deal Health** | Order updates |
 | 6 | **The Board:** row value → drawer | **Open →** works |
 | 7 | Optional: **Open in Projects →** | Projects URL matches slice |
@@ -397,7 +399,7 @@ A: Same buckets. Zenith → **drawer first**; Dashboard card → **direct Projec
 A: Same filter semantics, different **first step**. On **Finance** and **executive** Zenith (**Sales**, **Management**, **Admin**), **Availing Loan** opens **Quick Actions** (like chart drill-down); use **Open in Projects →** for the full grid. The classic **Dashboard** **Availing Loan** metric tile still links **straight to Projects** with the filter.
 
 **Q: Hit List looks different from “before” — what changed?**  
-A: It uses the **same column pattern** as **Your pipeline today** (including **confirmation date** and **last activity** as *N*d ago), plus an **Alert** column, **filter** row (**customer / stage / salesperson**), and **sortable** headers. **Open →** still goes to **Quick Actions**, which now shows **Recent remarks** above **Log activity** for context.
+A: It uses the **same column pattern** as **Your pipeline today** (including **confirmation date** and **last activity** as *N*d ago), plus an **Alert** column, **filter** row (**customer / stage / salesperson**), and **sortable** headers. **Open →** still goes to **Quick Actions**, which shows **Sales** next to the project name and **Recent remarks** above **Log activity** for context. The **scroll / Open →** hint under the Hit List title appears from **tablet/desktop** widths up, not on the smallest phones.
 
 **Q: Mobile: why dropdowns instead of chips?**  
 A: **Space** — one thin filter row so charts and tables stay usable on small screens.
@@ -473,7 +475,7 @@ Full list: **Help → Getting Started → Keyboard shortcuts**.
 | **Product** | Rayenna CRM — Zenith Command Center |
 | **Audience** | End-user training (Sales-primary); facilitators; slide authors |
 | **Companion** | Help → **Analytics** → **Zenith Command Center** |
-| **Version note** | Includes **mobile** command bar (dropdown filters, briefing top-right). Hit List: pipeline-style **filters + sort**, optional **scroll right / Open →** hint; **Availing Loan** KPI opens drawer; Payment radar **Top overdue** helper text; quick drawers: **Recent remarks** before **Log activity**. |
+| **Version note** | Includes **mobile** command bar (dropdown filters, briefing top-right). Hit List: pipeline-style **filters + sort**; **scroll / Open →** hint on **md+** only; **Availing Loan** KPI opens drawer; Payment radar **Top overdue** helper text; quick drawers: **Sales** next to project name (list + single); **Recent remarks** before **Log activity**. |
 
 ---
 

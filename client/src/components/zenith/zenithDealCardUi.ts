@@ -48,7 +48,7 @@ export function formatZenithDealInrParts(v: number | null | undefined): {
 
 /** Use inside a parent with `group` for hover (Hit List row pattern). */
 export const ZENITH_DEAL_OPEN_BUTTON_CLASS =
-  'inline-block rounded-md border border-white/20 bg-transparent px-2 py-1 text-[10px] text-white/70 transition-all duration-200 ease-out group-hover:border-[#F5A623] group-hover:bg-[rgba(245,166,35,0.08)] group-hover:text-[#F5A623] whitespace-nowrap'
+  'inline-block rounded-md border border-[#F5A623]/50 bg-[rgba(245,166,35,0.14)] px-2.5 py-1 text-[10px] font-semibold text-[#F2DCA8] shadow-sm shadow-black/25 transition-all duration-200 ease-out hover:border-[#F5A623] hover:bg-[rgba(245,166,35,0.26)] hover:text-[#FFFBF2] hover:shadow-md hover:shadow-black/30 group-hover:border-[#F5A623] group-hover:bg-[rgba(245,166,35,0.22)] group-hover:text-[#FFF5E6] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5A623]/45 focus-visible:ring-offset-1 focus-visible:ring-offset-[#101018]'
 
 export const ZENITH_DEAL_OPEN_BUTTON_CLASS_BLOCK =
-  'block w-full rounded-lg border border-white/20 bg-transparent py-1.5 text-center text-[13px] text-white/70 transition-all duration-200 ease-out group-hover:border-[#F5A623] group-hover:bg-[rgba(245,166,35,0.08)] group-hover:text-[#F5A623]'
+  'block w-full rounded-lg border border-[#F5A623]/50 bg-[rgba(245,166,35,0.14)] py-1.5 text-center text-[13px] font-semibold text-[#F2DCA8] shadow-sm shadow-black/25 transition-all duration-200 ease-out hover:border-[#F5A623] hover:bg-[rgba(245,166,35,0.26)] hover:text-[#FFFBF2] hover:shadow-md hover:shadow-black/30 group-hover:border-[#F5A623] group-hover:bg-[rgba(245,166,35,0.22)] group-hover:text-[#FFF5E6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5A623]/45 focus-visible:ring-offset-1 focus-visible:ring-offset-[#101018]'
