@@ -901,7 +901,7 @@ The total is the **sum** of five parts. Each part has a **maximum**; the overall
 | :-- | :-- |
 | **Projects** list | A compact **badge** (0–100) next to the project/customer. **Sort** the list by **Deal Health Score** (ascending shows the weakest deals first across the full list — same data the server uses for sorting). |
 | **Project Detail** | A full **Deal Health Score** card with **all factors**, scores, and the insight line. |
-| **Zenith (Executive view)** | **Your pipeline today** (Sales / Management / Admin): each row can show a **Deal Health** badge; **hover** for the breakdown; **Open →** opens **Quick Actions**. **Today’s Hit List** matches that layout with **filters**, **sort**, and **Alert**, for up to seven prioritised deals; when deals list, a short hint may remind you to **scroll right** and use **Open →**; **Open →** opens **Quick Actions**, which includes **Recent remarks** (same data as this **Remarks** section, read-only in the drawer) above **Log activity**. |
+| **Zenith (Executive view)** | **Your pipeline today** (Sales / Management / Admin): each row can show a **Deal Health** badge; **hover** for the breakdown; **Open →** opens **Quick Actions**. **Today’s Hit List** matches that layout with **filters**, **sort**, and **Alert**, for up to seven prioritised deals; when deals list, a short hint may remind you to **scroll right** and use **Open →**; **Open →** opens **Quick Actions**, which includes **Recent remarks** (same data as this **Remarks** section, read-only in the drawer) above **Log activity**, and a **Payment** snapshot (**status**, **total received**, **balance pending**) after **Deal value** when payment applies (**N/A** otherwise — same rules as **Payment tracking** below). |
 | **Tip of the Day** | Occasionally reminds you about Deal Health, sorting, and where to read the full rules (this section). |
 
 #### How each factor is scored (reference tables)
@@ -1034,7 +1034,7 @@ The total is the **sum** of five parts. Each part has a **maximum**; the overall
 - Internal notes and comments
 - Created by and date
 - View-only on detail page
-- **Zenith:** opening **Quick Actions** for a project shows **Recent remarks** (read-only, newest first) above **Log activity** so you see the same history before adding a line — full edit/delete remains on **Project detail**
+- **Zenith:** opening **Quick Actions** or the **Operations** drawer for a project shows **Recent remarks** (read-only, newest first) above **Log activity** so you see the same history before adding a line — full edit/delete remains on **Project detail**. After **Deal value**, those drawers also show a **Payment** card (**status**, **total amount received**, **balance pending**), aligned with this **Payment tracking** section when amounts apply; **N/A** when order value is missing/zero or the project is in an early / **Lost** stage. The **Finance** drawer from **Payment radar** already includes its own payment block.
 
 **Support / Service Tickets**:
 - List of all tickets for project

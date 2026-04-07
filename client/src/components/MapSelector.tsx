@@ -5,9 +5,11 @@ interface MapSelectorProps {
   latitude?: number | null
   longitude?: number | null
   onLocationChange: (latitude: number | null, longitude: number | null) => void
+  /** When true, show coordinates / map link only (no editing). */
+  readOnly?: boolean
 }
 
-const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps) => {
+const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSelectorProps) => {
   const [inputMode, setInputMode] = useState<'map' | 'coordinates'>('coordinates')
   const [latInput, setLatInput] = useState<string>(latitude?.toString() || '')
   const [lngInput, setLngInput] = useState<string>(longitude?.toString() || '')
@@ -220,6 +222,39 @@ const MapSelector = ({ latitude, longitude, onLocationChange }: MapSelectorProps
     } else {
       setLocationError({ message: 'Geolocation is not supported by your browser.', type: 'info' })
     }
+  }
+
+  if (readOnly) {
+    const hasCoords =
+      latitude != null &&
+      longitude != null &&
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude)
+    const mapHref = hasCoords
+      ? `https://www.google.com/maps?q=${latitude},${longitude}`
+      : ''
+    return (
+      <div className="w-full space-y-2 rounded-lg border border-gray-200 bg-white/80 p-4">
+        <p className="text-sm font-medium text-gray-700">Location (Map Coordinates)</p>
+        {hasCoords ? (
+          <p className="text-sm text-gray-600">
+            Latitude: {latitude}, Longitude: {longitude}
+          </p>
+        ) : (
+          <p className="text-sm text-gray-500">No coordinates set</p>
+        )}
+        {mapHref ? (
+          <a
+            href={mapHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex text-sm font-medium text-primary-600 hover:text-primary-800 underline"
+          >
+            Open in Google Maps
+          </a>
+        ) : null}
+      </div>
+    )
   }
 
   return (

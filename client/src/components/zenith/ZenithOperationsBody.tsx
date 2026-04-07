@@ -43,7 +43,8 @@ import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProject
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
 
-const ZENITH_OPS_CHART_H = 280
+/** Bar chart height in Explore grid — matched to FY chart (240) for a balanced 2×2 on laptop widths */
+const ZENITH_OPS_CHART_H = 240
 
 function ExploreInrTooltip({
   active,
@@ -300,46 +301,52 @@ export default function ZenithOperationsBody({
             drawer.
           </p>
         </header>
-        <div id="zenith-charts-row-1" className="grid grid-cols-1 xl:grid-cols-2 gap-4 scroll-mt-28">
-          <ChartPanel title="Projects by stage" showExploreHint>
-            <ZenithChartTouchReset>
-              {(rk) => (
-                <ResponsiveContainer key={rk} width="100%" height={ZENITH_OPS_CHART_H} minWidth={0}>
-                  <BarChart layout="vertical" data={projectsByStatus} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                    <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
-                    <YAxis type="category" dataKey="statusLabel" width={118} tick={{ fontSize: 10 }} />
-                    <Tooltip content={ExploreCountTooltip} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                    <Bar
-                      dataKey="count"
-                      radius={[0, 6, 6, 0]}
-                      cursor="pointer"
-                      onClick={(_row: unknown, index: number) => {
-                        const row = projectsByStatus[index]
-                        if (row?.statusLabel) drill('stage', row.statusLabel)
-                      }}
-                    >
-                      {projectsByStatus.map((_, i) => (
-                        <Cell
-                          key={i}
-                          fill={getProjectStatusColor(projectsByStatus[i]!.status, i)}
-                          style={{ transition: 'filter 0.15s' }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.filter = 'brightness(1.3)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.filter = 'brightness(1)'
-                          }}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </ZenithChartTouchReset>
-          </ChartPanel>
-          <div id="zenith-sales-team" className="scroll-mt-28 min-w-0">
-            <ChartPanel title="Revenue vs pipeline by sales team" showExploreHint>
+        {/* Single 2×2 grid from lg (1024px): avoids one huge column on typical laptops (xl was 1280px) */}
+        <div
+          id="zenith-charts-grid"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 scroll-mt-28 [&>*]:min-w-0"
+        >
+          <div id="zenith-charts-row-1" className="scroll-mt-28 flex min-h-0 flex-col lg:h-full">
+            <ChartPanel className="min-h-0 flex-1 lg:h-full" title="Projects by stage" showExploreHint>
+              <ZenithChartTouchReset>
+                {(rk) => (
+                  <ResponsiveContainer key={rk} width="100%" height={ZENITH_OPS_CHART_H} minWidth={0}>
+                    <BarChart layout="vertical" data={projectsByStatus} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                      <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
+                      <YAxis type="category" dataKey="statusLabel" width={118} tick={{ fontSize: 10 }} />
+                      <Tooltip content={ExploreCountTooltip} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                      <Bar
+                        dataKey="count"
+                        radius={[0, 6, 6, 0]}
+                        cursor="pointer"
+                        onClick={(_row: unknown, index: number) => {
+                          const row = projectsByStatus[index]
+                          if (row?.statusLabel) drill('stage', row.statusLabel)
+                        }}
+                      >
+                        {projectsByStatus.map((_, i) => (
+                          <Cell
+                            key={i}
+                            fill={getProjectStatusColor(projectsByStatus[i]!.status, i)}
+                            style={{ transition: 'filter 0.15s' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.filter = 'brightness(1.3)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.filter = 'brightness(1)'
+                            }}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </ZenithChartTouchReset>
+            </ChartPanel>
+          </div>
+          <div id="zenith-sales-team" className="scroll-mt-28 flex min-h-0 flex-col lg:h-full">
+            <ChartPanel className="min-h-0 flex-1 lg:h-full" title="Revenue vs pipeline by sales team" showExploreHint>
               <ZenithChartTouchReset>
                 {(rk) => (
                   <ResponsiveContainer key={rk} width="100%" height={ZENITH_OPS_CHART_H} minWidth={0}>
@@ -407,24 +414,27 @@ export default function ZenithOperationsBody({
               </ZenithChartTouchReset>
             </ChartPanel>
           </div>
-        </div>
-        <div id="zenith-segments" className="grid grid-cols-1 xl:grid-cols-2 gap-4 scroll-mt-28">
-          <ChartPanel title="Revenue & profit by financial year" showExploreHint>
-            <ZenithRevenueProfitFyChart
-              data={fyChart}
-              onFyClick={({ fy, metric }) =>
-                drill('fy', fy, { fyMetric: metric === 'profit' ? 'profit' : 'revenue' })
+          <div className="scroll-mt-28 flex min-h-0 flex-col lg:h-full">
+            <ChartPanel className="min-h-0 flex-1 lg:h-full" title="Revenue & profit by financial year" showExploreHint>
+              <ZenithRevenueProfitFyChart
+                data={fyChart}
+                onFyClick={({ fy, metric }) =>
+                  drill('fy', fy, { fyMetric: metric === 'profit' ? 'profit' : 'revenue' })
+                }
+              />
+            </ChartPanel>
+          </div>
+          <div id="zenith-segments" className="scroll-mt-28 flex min-h-0 flex-col lg:h-full">
+            <SegmentDonut
+              title="Revenue by customer segment"
+              showExploreHint
+              stretchToRowHeight
+              data={seg.map((s) => ({ name: s.label, value: s.value, percentage: s.percentage }))}
+              onSegmentClick={(segment) =>
+                drill('customer_segment', segment, { segmentChart: 'revenue' })
               }
             />
-          </ChartPanel>
-          <SegmentDonut
-            title="Revenue by customer segment"
-            showExploreHint
-            data={seg.map((s) => ({ name: s.label, value: s.value, percentage: s.percentage }))}
-            onSegmentClick={(segment) =>
-              drill('customer_segment', segment, { segmentChart: 'revenue' })
-            }
-          />
+          </div>
         </div>
       </section>
     </div>

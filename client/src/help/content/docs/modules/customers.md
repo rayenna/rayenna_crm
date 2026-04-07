@@ -9,9 +9,11 @@ The Customer Master module is your central database for managing all customer in
 ### Who Can Create Customers
 
 - **Sales users**: Can create customers for their own use
-- **Administrators**: Can create customers for any salesperson
+- **Management** and **Administrators**: Can open **New Customer** when the button is shown (Admin can assign any salesperson)
 
 ### Creating a New Customer
+
+**Quick open (same form)** — If your role can create customers, **Ctrl+Shift+M** (Windows/Linux) or **⌘⇧M** (Mac) opens **Customers** with the **New Customer** form ready (see [Keyboard shortcuts](/help/getting-started#keyboard-shortcuts)). You can also open **`/customers?new=1`** after login for the same behaviour.
 
 **Step 1: Access Customer Master**
 1. Go to **Customers** page from the top menu
@@ -357,6 +359,8 @@ Every project in the CRM is linked to a customer. This relationship enables comp
 2. Create new project and select customer
 3. Project linked to existing customer
 4. Customer history updated
+
+**Payment and Zenith** — Detailed **payment status** and amounts live on each **project** (e.g. **Project detail → Payment tracking**), not on the customer list card. In **Zenith**, **Quick Actions** and the **Operations** drawer show a compact **Payment** readout (**status**, **total amount received**, **balance pending**) after **Deal value** when you open a single project; values show **N/A** when the CRM treats payment as not applicable (no positive order value or early / Lost stage). **Payment radar** on Finance Zenith uses the **Finance** drawer, which already includes payment context for that path. Changing payment data still follows your role’s normal **Project** / **Finance** workflows.
 
 **Customer Management**:
 - Keep customer information current

@@ -11,6 +11,8 @@ export const INVERTER_BRAND_OPTIONS = [
   'Livguard',
   'Luminous',
   'Microtek',
+  'Panasonic',
+  'Polycab',
   'Solis',
   'Sungrow',
   'Tata Power Solar',

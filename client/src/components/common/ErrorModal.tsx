@@ -111,6 +111,9 @@ export function ErrorModal({ open, onClose, type, message, technical, actions, a
 
   if (!open) return null
 
+  /** Some call sites pass `\n` as two characters (literal backslash + n); normalize for line breaks. */
+  const displayMessage = message.replace(/\\n/g, '\n')
+
   const config = typeConfig[type]
 
   // Always use fixed overlay with safe-area padding so modal is visible on mobile/iPad portrait and landscape (no clipping)
@@ -163,7 +166,7 @@ export function ErrorModal({ open, onClose, type, message, technical, actions, a
             </div>
           )}
           <p id="error-modal-message" className="text-gray-700 text-sm sm:text-base whitespace-pre-wrap mb-4">
-            {message}
+            {displayMessage}
           </p>
           {technical != null && technical !== '' && (
             <div className="mt-4">

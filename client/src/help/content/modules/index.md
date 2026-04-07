@@ -9,7 +9,7 @@ The Rayenna CRM consists of several key modules designed to manage different asp
 ### Dashboard
 - Role-based dashboards, KPI tiles, and **Quick Access** (metric cards plus **Payment Status**; **Proposal Engine** summary on Sales and Management)
 - **Filters:** Financial Year, Quarter, and Month — see [Analytics & Reports](/help/analytics) for Quick Access layout, Payment rows, Proposal Engine buckets, and charts
-- **[Zenith ✦](/help/analytics#zenith-command-center)** — full-screen command center (same filters), **The Board** leaderboard (Month / Quarter / FY + clickable drill-down lists), **collapsible Your Focus**, **Today’s Hit List** (pipeline-style **filters + sort** on up to seven urgent deals; **scroll / Open →** hint on **tablet/desktop**; **Quick Actions**), **Revenue forecast**, **Explore** chart drill-downs, **Availing Loan** KPI → **Quick Actions** list (Finance + executive Zenith), **Payment radar** **Top overdue** helper text (**project name** vs **Remind**), **Victory** toast on winning stage changes, and **Quick Actions** (**Sales** + salesperson on drawer headers and list rows; **Recent remarks** above **Log activity** in single-project drawers); deep dive under Analytics → Zenith Command Center
+- **[Zenith ✦](/help/analytics#zenith-command-center)** — full-screen command center (same filters), **The Board** leaderboard (Month / Quarter / FY + clickable drill-down lists), **collapsible Your Focus**, **Today’s Hit List** (pipeline-style **filters + sort** on up to seven urgent deals; **scroll / Open →** hint on **tablet/desktop**; **Quick Actions**), **Revenue forecast**, **Explore** chart drill-downs, **Availing Loan** KPI → **Quick Actions** list (Finance + executive Zenith), **Payment radar** **Top overdue** helper text (**project name** vs **Remind**), **Victory** toast on winning stage changes, and **Quick Actions** (**Sales** + salesperson on drawer headers and list rows; **Recent remarks** above **Log activity** in single-project drawers; **Payment** snapshot after **Deal value** on **Quick Actions** and **Operations** drawers when a single project is open — **N/A** when payment does not apply); deep dive under Analytics → Zenith Command Center
 - **[Zenith training guide](/help/training)** — facilitator-led and self-study material for end-user sessions (**Sales-first**; all roles)
 - Visual analytics (charts vary by role)
 
@@ -72,6 +72,8 @@ Each customer is assigned a unique **Customer ID** when created. This ID:
 
 ### From the Customers Page
 
+**Shortcut / deep link:** **Ctrl+Shift+M** (Windows/Linux) or **⌘⇧M** (Mac), or **`/customers?new=1`** after login, opens **Customers** with **New Customer** when your role allows (see [Keyboard shortcuts](/help/getting-started#keyboard-shortcuts)).
+
 1. Navigate to **Customers** from the top menu (Customer Master).
 2. Click the **New Customer** button (top right).
 3. Fill in **name**:
@@ -91,9 +93,8 @@ Each customer is assigned a unique **Customer ID** when created. This ID:
 ### Who Can Create Customers
 
 - **Sales** users can create customers for their own use.
-- **Admin** users can create customers for any salesperson.
-
-**Operations**, **Finance**, and **Management** users do not create customers; they work with customers created by Sales or Admin.
+- **Management** and **Admin** can use **New Customer** when the action is available (Admin can also assign salesperson on the form).
+- **Operations** and **Finance** do not create customers from Customer Master; they use customer data via projects and other modules.
 
 ### Required Fields
 

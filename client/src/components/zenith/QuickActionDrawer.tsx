@@ -18,6 +18,7 @@ import { fireVictoryToast } from '../../hooks/useVictoryToast'
 import { zenithDrawerStagePillClass } from './zenithDealCardUi'
 import ZenithDrawerRemarksPanel from './ZenithDrawerRemarksPanel'
 import ZenithDrawerProjectTitle from './ZenithDrawerProjectTitle'
+import ZenithDrawerPaymentSummary from './ZenithDrawerPaymentSummary'
 
 const STATUS_ORDER: ProjectStatus[] = [
   ProjectStatus.LEAD,
@@ -660,6 +661,12 @@ export default function QuickActionDrawer({
                   ) : null}
                   <div className="my-5 h-px bg-white/[0.06]" />
                 </div>
+
+                {project ? (
+                  <div className="mb-5">
+                    <ZenithDrawerPaymentSummary project={project} />
+                  </div>
+                ) : null}
 
                 <div>
                   <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">

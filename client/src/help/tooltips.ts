@@ -149,7 +149,7 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.command-center',
     title: 'Zenith Command Center',
     content:
-      'Full-screen analytics with the same FY, Quarter, and Month rules as the Dashboard: AI Insights, The Board leaderboard, collapsible Your Focus, KPIs (including clickable Availing Loan on Finance and executive Zenith), Revenue forecast, Deal flow funnel (click stages or payment pills), Proposal Engine under Your Focus, clickable Explore charts, Payment radar Top overdue hints, and Quick Actions lists. Drawer list rows and single-project headers show Sales (assigned salesperson). Single-project Quick Actions show Recent remarks (read-only) above Log activity. List mode includes Open in Projects → for the full Projects page with matching filters. Open Help → Analytics for the full guide.',
+      'Full-screen analytics with the same FY, Quarter, and Month rules as the Dashboard: AI Insights, The Board leaderboard, collapsible Your Focus, KPIs (including clickable Availing Loan on Finance and executive Zenith), Revenue forecast, Deal flow funnel (click stages or payment pills), Proposal Engine under Your Focus, clickable Explore charts, Payment radar Top overdue hints, and Quick Actions lists. Drawer list rows and single-project headers show Sales (assigned salesperson). Single-project Quick Actions and Operations drawers show Recent remarks (read-only) above Log activity and a Payment snapshot (status, total received, balance) after Deal value when payment applies — N/A when not applicable. Finance drawer from Payment radar already includes payment context. List mode includes Open in Projects → for the full Projects page with matching filters. Open Help → Analytics for the full guide.',
   },
   'zenith.hit-list': {
     key: 'zenith.hit-list',
@@ -162,6 +162,12 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     title: 'Recent remarks (Zenith)',
     content:
       'Shows the latest project remarks (same data as Project → Remarks) before you log new activity. Newest first; read-only here. Open full project for the complete history and to edit or delete remarks. Available in Quick Actions, Operations, and Finance Zenith drawers.',
+  },
+  'zenith.quick-drawer-payment': {
+    key: 'zenith.quick-drawer-payment',
+    title: 'Payment snapshot (Zenith)',
+    content:
+      'After Deal value, Quick Actions (Sales / Management / Admin) and the Operations drawer show Payment status, Total amount received, and Balance pending — read-only context aligned with Project detail. N/A when there is no positive order value or the project is in an early or Lost stage. Payment radar opens the Finance drawer, which already has its own payment block.',
   },
   'zenith.the-board': {
     key: 'zenith.the-board',

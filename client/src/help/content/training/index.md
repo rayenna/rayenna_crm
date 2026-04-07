@@ -28,7 +28,7 @@
 
 **What is Zenith?** A full-screen **command center** inside Rayenna CRM. It uses the **same data and date rules** as the classic Dashboard, but adds **click-through analytics**: charts, leaderboard, funnel, **Availing Loan** KPI (Finance + executive Zenith), and Proposal Engine rows open a **Quick Actions** drawer with filtered project lists. Users can jump to the full **Projects** page with matching filters via **Open in Projects →**.
 
-**Why it matters:** Faster prioritisation (**Today’s Hit List** mirrors **Your pipeline today** for columns, **filters**, **sort**, and **Quick Actions** — including **Recent remarks** before you log activity), plus Deal Health and AI Insights; **transparency** (The Board drill-down); **mobility** (compact **mobile** header with FY / Qtr / Mo dropdowns).
+**Why it matters:** Faster prioritisation (**Today’s Hit List** mirrors **Your pipeline today** for columns, **filters**, **sort**, and **Quick Actions** — including **Recent remarks** before you log activity and a **Payment** readout after **Deal value** when you drill into one project), plus Deal Health and AI Insights; **transparency** (The Board drill-down); **mobility** (compact **mobile** header with FY / Qtr / Mo dropdowns).
 
 **Who gets it:** Sales, Operations, Finance, Management, Admin — **layout and scope differ by role** (Sales sees own pipeline on executive Zenith; Management/Admin see company-wide).
 
@@ -290,6 +290,7 @@ By the end of this session, participants should be able to:
 - Drawer **header:** customer / project name **+** compact **Sales** + salesperson (or **Unassigned**) — **Quick Actions**, **Operations**, and **Finance** drawers.
 - **Open →** → quick edits; **Open full project** → detail.
 - **Recent remarks** — Above **Log activity** (where shown): **newest-first** thread from **Project → Remarks** (read-only in the drawer). Same API as the project page; use **Open full project** for the full history and to edit/delete remarks. Shown in **Quick Actions** (sales/executive), **Operations**, and **Finance** drawers (finance read-only users still see remarks as **context**).
+- **Payment** — On **Quick Actions** (Sales / Management / Admin) and **Operations** single-project view, **after Deal value**: **Payment status**, **Total amount received**, **Balance pending** (same idea as **Project detail → Payment tracking**). **N/A** for status and amounts when there is no positive order value or the project is in an **early / Lost** stage. **Payment radar → Finance** drawer already has its own payment summary — no duplicate block there.
 - **Management** view-only; **Sales** non-owner view-only; **Admin** per `canEdit`.
 
 ---
@@ -338,7 +339,7 @@ By the end of this session, participants should be able to:
 | 2 | **Mobile:** confirm **Briefing** top-right; **three dropdowns** one line | Layout matches training |
 | 3 | Click one **AI Insight** | Scroll lands correctly |
 | 4 | **Revenue forecast:** switch two tabs | Total unchanged |
-| 4b | **Hit List:** filters + sort; **Open →** → Quick Actions → confirm **Sales** + name in header → **Recent remarks** above **Log activity** | Matches talking points |
+| 4b | **Hit List:** filters + sort; **Open →** → Quick Actions → confirm **Sales** + name in header → **Recent remarks** above **Log activity** → **Payment** card after **Deal value** (or **N/A** when not applicable) | Matches talking points |
 | 5 | Expand **Your pipeline**; sort by **Deal Health** | Order updates |
 | 6 | **The Board:** row value → drawer | **Open →** works |
 | 7 | Optional: **Open in Projects →** | Projects URL matches slice |
@@ -362,7 +363,7 @@ If you are building slides with screenshots, capture these **labeled** views:
 3. **AI Insights** ribbon (hover paused if possible).
 4. **Revenue forecast** with **Stage** tab selected.
 4b. **Today’s Hit List** with **filter** row and **sort** indicator on a column header.
-5. **Quick Actions** single-project view showing **Recent remarks** above **Log activity**.
+5. **Quick Actions** single-project view showing **Recent remarks** above **Log activity** and **Payment** after **Deal value**.
 6. **The Board** expanded with drill-down drawer **open**.
 7. **Your Focus** expanded — **Proposal Engine** row.
 8. **Explore** chart with tooltip + **Quick Actions** list.
@@ -437,7 +438,7 @@ For **exact point tables** (activity days, momentum multiples, every rupee band,
 | **Weighted forecast** | Σ (order value × stage win probability) for open deals. |
 | **Deal Health** | 0–100: five factors (activity, momentum, deal value bands, confirmation + advance vs order, lead source). Full tables in Help → Projects. |
 | **Drill-down** | Chart / Board / funnel / PE row / **Availing Loan** KPI → **Quick Actions** list. |
-| **Quick Actions** | Side drawer: list mode or single-project quick edits; **Recent remarks** (read-only) above **Log activity** where applicable. |
+| **Quick Actions** | Side drawer: list mode or single-project quick edits; **Recent remarks** (read-only) above **Log activity** where applicable; **Payment** snapshot after **Deal value** on **Quick Actions** and **Operations** (not duplicated on **Payment radar → Finance** drawer). |
 | **Open in Projects →** | Footer link → **Projects** with matching URL filters. |
 | **PE bucket** | PE Ready, PE Draft, PE Not Yet Created, Rest. |
 | **Explorer batch** | Large cap of project rows loaded for Zenith drill-downs (see Analytics help). |
@@ -475,7 +476,7 @@ Full list: **Help → Getting Started → Keyboard shortcuts**.
 | **Product** | Rayenna CRM — Zenith Command Center |
 | **Audience** | End-user training (Sales-primary); facilitators; slide authors |
 | **Companion** | Help → **Analytics** → **Zenith Command Center** |
-| **Version note** | Includes **mobile** command bar (dropdown filters, briefing top-right). Hit List: pipeline-style **filters + sort**; **scroll / Open →** hint on **md+** only; **Availing Loan** KPI opens drawer; Payment radar **Top overdue** helper text; quick drawers: **Sales** next to project name (list + single); **Recent remarks** before **Log activity**. |
+| **Version note** | Includes **mobile** command bar (dropdown filters, briefing top-right). Hit List: pipeline-style **filters + sort**; **scroll / Open →** hint on **md+** only; **Availing Loan** KPI opens drawer; Payment radar **Top overdue** helper text; quick drawers: **Sales** next to project name (list + single); **Recent remarks** before **Log activity**; **Payment** card after **Deal value** on **Quick Actions** and **Operations** single-project view (**N/A** when payment not applicable). **Customer Master:** **Ctrl+Shift+M** / **⌘⇧M** and **`/customers?new=1`** open **New Customer** when allowed. |
 
 ---
 
