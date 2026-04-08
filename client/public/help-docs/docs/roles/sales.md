@@ -61,7 +61,7 @@ A lead is a potential customer who has shown interest in solar energy solutions.
 4. Fill in project details:
    - **Project Type**: Choose Residential Subsidy, Residential Non-Subsidy, or Commercial/Industrial
    - **Project Service Type**: Select EPC Project, Panel Cleaning, Maintenance, etc.
-   - **System Capacity**: Enter the capacity in kilowatts (kW)
+   - **System Capacity (kW)**: Whole-number kW only (integers — e.g. `5`, not `5.5`).
    - **Project Value**: Enter the total project value
    - **Lead Source**: Select where this lead came from (Website, Referral, Google, etc.)
    - **Project Status**: Set to "Lead" for new leads
@@ -184,6 +184,7 @@ The system tracks important dates throughout the project lifecycle. Some dates a
 - Completion Report Submission date
 - Net Meter Installation date
 - Subsidy Credited date
+- Panel / inverter brands, **Panel Capacity (W)**, and **Inverter Capacity (kW)** (defaults from **System Capacity** on the form until changed)
 
 **Viewing Lifecycle Dates**:
 - Go to project detail page

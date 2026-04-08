@@ -77,6 +77,10 @@ The system tracks important dates throughout project execution. You update these
 - **Installation Completion Date**: When installation work was finished
 - **Completion Report Submission Date**: When completion report was submitted
 
+**Equipment (on Edit → Project Lifecycle)**:
+- **Panel Type**, **Panel Capacity (W)**, **Panel Brand**
+- **Inverter Brand** and **Inverter Capacity (kW)** (integer kW; the form **defaults Inverter Capacity from System Capacity** until you override it)
+
 **Subsidy Dates**:
 - **Net Meter Installation Date**: When net meter was installed
 - **Subsidy Credited Date**: When subsidy amount was received

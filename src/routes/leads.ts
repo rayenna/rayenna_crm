@@ -204,7 +204,8 @@ router.post(
           leadId: lead.id,
           type: lead.customer.customerType === 'COMMERCIAL' ? 'COMMERCIAL_INDUSTRIAL' : 'RESIDENTIAL_NON_SUBSIDY',
           year: currentYear,
-          systemCapacity: lead.systemSizeKw || undefined,
+          systemCapacity:
+            lead.systemSizeKw != null ? Math.round(lead.systemSizeKw) : undefined,
           salespersonId: lead.assignedSalesId || undefined,
           projectStage: 'SURVEY',
           stageEnteredAt: new Date(),

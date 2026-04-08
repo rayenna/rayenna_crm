@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useModalEscape } from '../contexts/ModalEscapeContext'
 // Payment Status: Shows N/A in red for projects without Order Value or in early/lost stages
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
@@ -14,6 +14,42 @@ import ProposalPreview from '../components/proposal/ProposalPreview'
 import PageCard from '../components/PageCard'
 import HealthDetail from '../components/zenith/HealthDetail'
 import { FaProjectDiagram } from 'react-icons/fa'
+
+/** Responsive label/value row: stacked on phones, two columns from sm (tablet+). */
+function DetailRow({ label, children, valueClassName = '' }: { label: string; children: ReactNode; valueClassName?: string }) {
+  return (
+    <div className="grid grid-cols-1 gap-y-0.5 border-b border-gray-100 py-3.5 last:border-b-0 sm:grid-cols-[minmax(10rem,38%)_1fr] sm:gap-x-6 md:gap-x-8">
+      <dt className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 sm:pt-0.5">{label}</dt>
+      <dd className={`min-w-0 break-words text-sm leading-snug text-gray-900 ${valueClassName}`}>{children}</dd>
+    </div>
+  )
+}
+
+function InfoSection({
+  title,
+  icon,
+  borderAccentClass,
+  gradientClass,
+  children,
+}: {
+  title: string
+  icon: ReactNode
+  borderAccentClass: string
+  gradientClass: string
+  children: ReactNode
+}) {
+  return (
+    <section
+      className={`flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-gray-200/80 bg-gradient-to-br shadow-sm border-l-4 ${gradientClass} ${borderAccentClass}`}
+    >
+      <div className="flex shrink-0 items-center gap-2.5 border-b border-gray-200/80 px-4 py-3.5 sm:px-6 sm:py-4">
+        <span className="shrink-0 text-gray-600 [&>svg]:h-5 [&>svg]:w-5">{icon}</span>
+        <h2 className="text-xs font-bold uppercase tracking-wider text-gray-800">{title}</h2>
+      </div>
+      <div className="min-h-0 flex-1 px-4 pb-4 pt-1 sm:px-6 sm:pb-5">{children}</div>
+    </section>
+  )
+}
 
 const ProjectDetail = () => {
   const { id } = useParams()
@@ -215,8 +251,9 @@ const ProjectDetail = () => {
         icon={<FaProjectDiagram className="w-5 h-5 text-white" />}
         className="max-w-full"
       >
+      <div className="mx-auto w-full max-w-[min(100%,88rem)] space-y-5 sm:space-y-6 md:space-y-7">
       {/* Header card: stage, status, key financials - same card style as other sections */}
-      <div className="bg-gradient-to-br from-primary-50/50 to-gray-50/60 rounded-xl p-6 mb-6 border-l-4 border-l-primary-500 border border-primary-100/60 shadow-sm">
+      <div className="rounded-xl border border-primary-100/60 border-l-4 border-l-primary-500 bg-gradient-to-br from-primary-50/50 to-gray-50/60 p-5 shadow-sm sm:p-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
           <div>
             <p className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -363,63 +400,55 @@ const ProjectDetail = () => {
         </div>
       </div>
 
-      {/* Content: Info cards (Customer Module style – bg-gray-50/60, section icon + title) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Customer Details - same card style as Project Lifecycle, Payment Tracking */}
-        <div className="bg-gradient-to-br from-teal-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-teal-400 shadow-sm border border-teal-100/60">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Customer Details</h3>
-          </div>
+      {/* Info cards: equal-height columns on tablet/desktop */}
+      <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 md:items-stretch">
+        <InfoSection
+          title="Customer Details"
+          borderAccentClass="border-l-teal-400"
+          gradientClass="from-teal-50/40 to-white"
+          icon={<svg className="text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
+        >
           {project.customer ? (
-            <dl className="space-y-3">
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">Customer ID</dt>
-                <dd className="text-sm font-medium text-gray-900 mt-0.5">{project.customer.customerId}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">Customer Name</dt>
-                <dd className="text-base sm:text-lg font-semibold text-gray-900 mt-0.5">{project.customer.customerName}</dd>
-              </div>
+            <dl>
+              <DetailRow label="Customer ID" valueClassName="font-semibold">
+                {project.customer.customerId}
+              </DetailRow>
+              <DetailRow label="Customer Name" valueClassName="text-base font-semibold sm:text-lg">
+                {project.customer.customerName}
+              </DetailRow>
               {(project.customer.addressLine1 || project.customer.city) && (
-                <div>
-                  <dt className="text-xs text-gray-500 uppercase tracking-wide">Address</dt>
-                  <dd className="text-sm font-medium text-gray-900 mt-0.5">
-                    {[
-                      project.customer.addressLine1,
-                      project.customer.addressLine2,
-                      project.customer.city,
-                      project.customer.state,
-                      project.customer.pinCode
-                    ].filter(Boolean).join(', ')}
-                  </dd>
-                </div>
+                <DetailRow label="Address" valueClassName="font-medium leading-relaxed text-gray-800">
+                  {[
+                    project.customer.addressLine1,
+                    project.customer.addressLine2,
+                    project.customer.city,
+                    project.customer.state,
+                    project.customer.pinCode,
+                  ]
+                    .filter(Boolean)
+                    .join(', ')}
+                </DetailRow>
               )}
               {project.customer.contactNumbers && (
-                <div>
-                  <dt className="text-xs text-gray-500 uppercase tracking-wide">Contact Numbers</dt>
-                  <dd className="text-sm font-medium text-gray-900 mt-0.5">
-                    {(() => {
-                      try {
-                        const parsed = JSON.parse(project.customer.contactNumbers || '');
-                        return Array.isArray(parsed) ? parsed.join(', ') : project.customer.contactNumbers;
-                      } catch {
-                        return project.customer.contactNumbers;
-                      }
-                    })()}
-                  </dd>
-                </div>
+                <DetailRow label="Contact Numbers" valueClassName="font-medium">
+                  {(() => {
+                    try {
+                      const parsed = JSON.parse(project.customer.contactNumbers || '')
+                      return Array.isArray(parsed) ? parsed.join(', ') : project.customer.contactNumbers
+                    } catch {
+                      return project.customer.contactNumbers
+                    }
+                  })()}
+                </DetailRow>
               )}
               {project.customer.consumerNumber && (
-                <div>
-                  <dt className="text-xs text-gray-500 uppercase tracking-wide">Consumer Number</dt>
-                  <dd className="text-sm font-medium text-gray-900 mt-0.5">{project.customer.consumerNumber}</dd>
-                </div>
+                <DetailRow label="Consumer Number" valueClassName="font-medium">
+                  {project.customer.consumerNumber}
+                </DetailRow>
               )}
               {project.leadSource && (
-                <div>
-                  <dt className="text-xs text-gray-500 uppercase tracking-wide">Lead Source</dt>
-                  <dd className="text-sm font-medium text-gray-900 mt-0.5">
+                <DetailRow label="Lead Source" valueClassName="font-medium">
+                  <>
                     {project.leadSource === 'WEBSITE' && 'Website'}
                     {project.leadSource === 'REFERRAL' && 'Referral'}
                     {project.leadSource === 'GOOGLE' && 'Google'}
@@ -429,437 +458,367 @@ const ProjectDetail = () => {
                     {project.leadSource === 'MANAGEMENT_CONNECT' && 'Management Connect'}
                     {project.leadSource === 'OTHER' && 'Other'}
                     {project.leadSourceDetails && (
-                      <span className="ml-2 text-gray-600">
-                        ({project.leadSource === 'CHANNEL_PARTNER' && project.leadSourceDetails}
+                      <span className="mt-1 block text-gray-600 sm:mt-0 sm:inline sm:pl-1">
+                        (
+                        {project.leadSource === 'CHANNEL_PARTNER' && project.leadSourceDetails}
                         {project.leadSource === 'REFERRAL' && project.leadSourceDetails}
                         {project.leadSource === 'OTHER' && project.leadSourceDetails})
                       </span>
                     )}
-                  </dd>
-                </div>
+                  </>
+                </DetailRow>
               )}
             </dl>
           ) : (
-            <p className="text-sm text-gray-500">Customer information not available</p>
+            <p className="py-2 text-sm text-gray-500">Customer information not available</p>
           )}
-        </div>
+        </InfoSection>
 
-        {/* Project Details - same card style as Sales & Commercial, Project Lifecycle */}
-        <div className="bg-gradient-to-br from-sky-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-sky-400 shadow-sm border border-sky-100/60">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Project Details</h3>
-          </div>
-          <dl className="space-y-3">
-            <div>
-              <dt className="text-xs text-gray-500 uppercase tracking-wide">Segment</dt>
-              <dd className="text-sm font-medium text-gray-900 mt-0.5">{project.type.replace(/_/g, ' ')}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-gray-500 uppercase tracking-wide">Project Type</dt>
-              <dd className="text-sm font-medium text-gray-900 mt-0.5">
-                {(() => {
-                  const typeMap: Record<string, string> = {
-                    'EPC_PROJECT': 'EPC Project',
-                    'PANEL_CLEANING': 'Panel Cleaning',
-                    'MAINTENANCE': 'Maintenance',
-                    'REPAIR': 'Repair',
-                    'CONSULTING': 'Consulting',
-                    'RESALE': 'Resale',
-                    'OTHER_SERVICES': 'Other Services',
-                  };
-                  return typeMap[project.projectServiceType] || project.projectServiceType.replace(/_/g, ' ');
-                })()}
-              </dd>
-            </div>
+        <InfoSection
+          title="Project Details"
+          borderAccentClass="border-l-sky-400"
+          gradientClass="from-sky-50/40 to-white"
+          icon={<svg className="text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
+        >
+          <dl>
+            <DetailRow label="Segment" valueClassName="font-medium">
+              {project.type.replace(/_/g, ' ')}
+            </DetailRow>
+            <DetailRow label="Project Type" valueClassName="font-medium">
+              {(() => {
+                const typeMap: Record<string, string> = {
+                  EPC_PROJECT: 'EPC Project',
+                  PANEL_CLEANING: 'Panel Cleaning',
+                  MAINTENANCE: 'Maintenance',
+                  REPAIR: 'Repair',
+                  CONSULTING: 'Consulting',
+                  RESALE: 'Resale',
+                  OTHER_SERVICES: 'Other Services',
+                }
+                return typeMap[project.projectServiceType] || project.projectServiceType.replace(/_/g, ' ')
+              })()}
+            </DetailRow>
             {project.salesperson && (
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">Salesperson</dt>
-                <dd className="text-sm font-medium text-gray-900 mt-0.5">{project.salesperson.name}</dd>
-              </div>
+              <DetailRow label="Salesperson" valueClassName="font-medium">
+                {project.salesperson.name}
+              </DetailRow>
             )}
           </dl>
-        </div>
+        </InfoSection>
 
-        {/* Sales & Commercial */}
-        <div className="bg-gradient-to-br from-emerald-50/50 to-white rounded-xl border-l-4 border-l-emerald-400 border border-emerald-100/60 shadow-sm p-6">
-          <h2 className="text-sm font-semibold text-emerald-800 uppercase tracking-wide mb-4 flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            Sales & Commercial
-          </h2>
-          <dl className="space-y-3">
-            {project.systemCapacity && (
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">System Capacity</dt>
-                <dd className="text-sm font-bold text-orange-800 mt-0.5">{project.systemCapacity} kW</dd>
-              </div>
+        <InfoSection
+          title="Sales & Commercial"
+          borderAccentClass="border-l-emerald-500"
+          gradientClass="from-emerald-50/35 to-white"
+          icon={<svg className="text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+        >
+          <dl>
+            {project.systemCapacity != null && project.systemCapacity !== undefined && (
+              <DetailRow label="System Capacity" valueClassName="font-bold text-orange-800">
+                {project.systemCapacity} kW
+              </DetailRow>
             )}
             {project.roofType && (
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">Roof Type</dt>
-                <dd className="text-sm font-medium text-gray-900 mt-0.5">
-                  {project.roofType}
-                </dd>
-              </div>
+              <DetailRow label="Roof Type" valueClassName="font-medium">
+                {project.roofType}
+              </DetailRow>
             )}
-            {project.projectCost && (
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">Order Value</dt>
-                <dd className="text-sm font-bold text-green-800 mt-0.5">
-                  ₹{project.projectCost.toLocaleString('en-IN')}
-                </dd>
-              </div>
+            {!!project.projectCost && (
+              <DetailRow label="Order Value" valueClassName="font-bold text-green-800">
+                ₹{project.projectCost.toLocaleString('en-IN')}
+              </DetailRow>
             )}
             {project.confirmationDate && (
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">Confirmation Date</dt>
-                <dd className="text-sm font-medium text-gray-900 mt-0.5">
-                  {format(new Date(project.confirmationDate), 'MMM dd, yyyy')}
-                </dd>
-              </div>
+              <DetailRow label="Confirmation Date" valueClassName="font-medium">
+                {format(new Date(project.confirmationDate), 'MMM dd, yyyy')}
+              </DetailRow>
             )}
-            <div>
-              <dt className="text-xs text-gray-500 uppercase tracking-wide">Gross Profit</dt>
-              <dd className={`text-sm font-medium mt-0.5 ${
-                project.grossProfit !== null && project.grossProfit !== undefined
-                  ? (project.grossProfit >= 0 ? 'text-yellow-600' : 'text-red-600')
-                  : 'text-gray-400'
-              }`}>
+            <DetailRow label="Gross Profit" valueClassName="font-semibold">
+              <span
+                className={
+                  project.grossProfit !== null && project.grossProfit !== undefined
+                    ? project.grossProfit >= 0
+                      ? 'text-amber-700'
+                      : 'text-red-600'
+                    : 'font-medium text-gray-400'
+                }
+              >
                 {project.grossProfit !== null && project.grossProfit !== undefined
                   ? `₹${project.grossProfit.toLocaleString('en-IN')}`
                   : 'Not calculated'}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs text-gray-500 uppercase tracking-wide">Availing Loan/Financing?</dt>
-              <dd className="text-sm font-medium text-gray-900 mt-0.5">
-                {project.availingLoan === true
-                  ? 'Yes'
-                  : project.availingLoan === false
-                    ? 'No'
-                    : 'Not captured'}
-              </dd>
-            </div>
-            {project.availingLoan && (
-              <>
-                {(project.financingBank || project.financingBankOther) && (
-                  <div>
-                    <dt className="text-xs text-gray-500 uppercase tracking-wide">Financing Bank</dt>
-                    <dd className="text-sm font-medium text-gray-900 mt-0.5">
-                      {(() => {
-                        const bankMap: Record<string, string> = {
-                          SBI: 'State Bank of India (SBI)',
-                          HDFC_BANK: 'HDFC Bank',
-                          ICICI_BANK: 'ICICI Bank',
-                          AXIS_BANK: 'Axis Bank',
-                          KOTAK_MAHINDRA_BANK: 'Kotak Mahindra Bank',
-                          INDUSIND_BANK: 'IndusInd Bank',
-                          YES_BANK: 'YES Bank',
-                          IDFC_FIRST_BANK: 'IDFC FIRST Bank',
-                          PUNJAB_NATIONAL_BANK: 'Punjab National Bank (PNB)',
-                          BANK_OF_BARODA: 'Bank of Baroda',
-                          CANARA_BANK: 'Canara Bank',
-                          UNION_BANK_OF_INDIA: 'Union Bank of India',
-                          FEDERAL_BANK: 'Federal Bank',
-                          SOUTH_INDIAN_BANK: 'South Indian Bank',
-                          CATHOLIC_SYRIAN_BANK: 'Catholic Syrian Bank',
-                          DHANLAXMI_BANK: 'Dhanlaxmi Bank',
-                          KERALA_GRAMIN_BANK: 'Kerala Gramin Bank',
-                          KERALA_BANK: 'Kerala Bank',
-                          KARNATAKA_BANK: 'Karnataka Bank',
-                          RBL_BANK: 'RBL Bank',
-                          TAMILNADU_MERCANTILE_BANK: 'Tamilnadu Mercantile Bank',
-                          CITY_UNION_BANK: 'City Union Bank',
-                          INDIAN_BANK: 'Indian Bank',
-                          INDIAN_OVERSEAS_BANK: 'Indian Overseas Bank',
-                          DCB_BANK: 'DCB Bank',
-                          KARUR_VYSYA_BANK: 'Karur Vysya Bank',
-                          EQUITAS_SMALL_FINANCE_BANK: 'Equitas Small Finance Bank',
-                          UJJIVAN_SMALL_FINANCE_BANK: 'Ujjivan Small Finance Bank',
-                          JANA_SMALL_FINANCE_BANK: 'Jana Small Finance Bank',
-                          UTKARSH_SMALL_FINANCE_BANK: 'Utkarsh Small Finance Bank',
-                          SHIVALIK_SMALL_FINANCE_BANK: 'Shivalik Small Finance Bank',
-                          AU_SMALL_FINANCE_BANK: 'AU Small Finance Bank',
-                          CAPITAL_SMALL_FINANCE_BANK: 'Capital Small Finance Bank',
-                          BANDHAN_BANK: 'Bandhan Bank',
-                          JAMMU_KASHMIR_BANK: 'Jammu & Kashmir Bank',
-                        }
-                        if (project.financingBank === 'OTHER') {
-                          return project.financingBankOther || 'Other'
-                        }
-                        return bankMap[project.financingBank || ''] || project.financingBank || '—'
-                      })()}
-                    </dd>
-                  </div>
-                )}
-              </>
+              </span>
+            </DetailRow>
+            <DetailRow label="Availing Loan / Financing?" valueClassName="font-medium">
+              {project.availingLoan === true ? 'Yes' : project.availingLoan === false ? 'No' : 'Not captured'}
+            </DetailRow>
+            {project.availingLoan && (project.financingBank || project.financingBankOther) && (
+              <DetailRow label="Financing Bank" valueClassName="font-medium">
+                {(() => {
+                  const bankMap: Record<string, string> = {
+                    SBI: 'State Bank of India (SBI)',
+                    HDFC_BANK: 'HDFC Bank',
+                    ICICI_BANK: 'ICICI Bank',
+                    AXIS_BANK: 'Axis Bank',
+                    KOTAK_MAHINDRA_BANK: 'Kotak Mahindra Bank',
+                    INDUSIND_BANK: 'IndusInd Bank',
+                    YES_BANK: 'YES Bank',
+                    IDFC_FIRST_BANK: 'IDFC FIRST Bank',
+                    PUNJAB_NATIONAL_BANK: 'Punjab National Bank (PNB)',
+                    BANK_OF_BARODA: 'Bank of Baroda',
+                    CANARA_BANK: 'Canara Bank',
+                    UNION_BANK_OF_INDIA: 'Union Bank of India',
+                    FEDERAL_BANK: 'Federal Bank',
+                    SOUTH_INDIAN_BANK: 'South Indian Bank',
+                    CATHOLIC_SYRIAN_BANK: 'Catholic Syrian Bank',
+                    DHANLAXMI_BANK: 'Dhanlaxmi Bank',
+                    KERALA_GRAMIN_BANK: 'Kerala Gramin Bank',
+                    KERALA_BANK: 'Kerala Bank',
+                    KARNATAKA_BANK: 'Karnataka Bank',
+                    RBL_BANK: 'RBL Bank',
+                    TAMILNADU_MERCANTILE_BANK: 'Tamilnadu Mercantile Bank',
+                    CITY_UNION_BANK: 'City Union Bank',
+                    INDIAN_BANK: 'Indian Bank',
+                    INDIAN_OVERSEAS_BANK: 'Indian Overseas Bank',
+                    DCB_BANK: 'DCB Bank',
+                    KARUR_VYSYA_BANK: 'Karur Vysya Bank',
+                    EQUITAS_SMALL_FINANCE_BANK: 'Equitas Small Finance Bank',
+                    UJJIVAN_SMALL_FINANCE_BANK: 'Ujjivan Small Finance Bank',
+                    JANA_SMALL_FINANCE_BANK: 'Jana Small Finance Bank',
+                    UTKARSH_SMALL_FINANCE_BANK: 'Utkarsh Small Finance Bank',
+                    SHIVALIK_SMALL_FINANCE_BANK: 'Shivalik Small Finance Bank',
+                    AU_SMALL_FINANCE_BANK: 'AU Small Finance Bank',
+                    CAPITAL_SMALL_FINANCE_BANK: 'Capital Small Finance Bank',
+                    BANDHAN_BANK: 'Bandhan Bank',
+                    JAMMU_KASHMIR_BANK: 'Jammu & Kashmir Bank',
+                  }
+                  if (project.financingBank === 'OTHER') {
+                    return project.financingBankOther || 'Other'
+                  }
+                  return bankMap[project.financingBank || ''] || project.financingBank || '—'
+                })()}
+              </DetailRow>
             )}
-            <div>
-              <dt className="text-xs text-gray-500 uppercase tracking-wide">Profitability</dt>
-              <dd className={`text-sm font-medium ${
-                project.profitability !== null && project.profitability !== undefined
-                  ? (project.profitability > 10 
-                      ? 'text-yellow-600' 
-                      : project.profitability > 0 
-                        ? 'text-orange-600' 
-                        : 'text-red-600')
-                  : 'text-gray-400'
-              }`}>
+            <DetailRow label="Profitability" valueClassName="font-semibold">
+              <span
+                className={
+                  project.profitability !== null && project.profitability !== undefined
+                    ? project.profitability > 10
+                      ? 'text-amber-700'
+                      : project.profitability > 0
+                        ? 'text-orange-600'
+                        : 'text-red-600'
+                    : 'font-medium text-gray-400'
+                }
+              >
                 {project.profitability !== null && project.profitability !== undefined
                   ? `${project.profitability.toFixed(2)}%`
                   : 'Not calculated'}
-              </dd>
-            </div>
-            {project.finalProfit && (
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">Final Profit</dt>
-                <dd className="text-sm font-medium text-yellow-600 mt-0.5">
-                  ₹{project.finalProfit.toLocaleString('en-IN')}
-                </dd>
-              </div>
+              </span>
+            </DetailRow>
+            {project.finalProfit != null && project.finalProfit !== undefined && !!project.finalProfit && (
+              <DetailRow label="Final Profit" valueClassName="font-semibold text-amber-700">
+                ₹{project.finalProfit.toLocaleString('en-IN')}
+              </DetailRow>
             )}
           </dl>
-        </div>
+        </InfoSection>
 
-        {/* Project Lifecycle */}
-        <div className="bg-gradient-to-br from-violet-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-violet-400">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Project Lifecycle</h3>
-          </div>
-          <dl className="space-y-3">
-            <div>
-              <dt className="text-xs text-gray-500 uppercase tracking-wide">Project Stage</dt>
-              <dd className="text-sm font-medium">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
-                  {(() => {
-                    const stageMap: Record<string, string> = {
-                      'LEAD': 'Lead',
-                      'SITE_SURVEY': 'Site Survey',
-                      'PROPOSAL': 'Proposal',
-                      'CONFIRMED': 'Confirmed Order',
-                      'UNDER_INSTALLATION': 'Installation',
-                      'COMPLETED': 'Completed',
-                      'COMPLETED_SUBSIDY_CREDITED': 'Completed - Subsidy Credited',
-                    };
-                    return stageMap[project.projectStatus] || project.projectStatus.replace(/_/g, ' ');
-                  })()}
-                </span>
-              </dd>
-            </div>
+        <InfoSection
+          title="Project Lifecycle"
+          borderAccentClass="border-l-violet-500"
+          gradientClass="from-violet-50/40 to-white"
+          icon={<svg className="text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>}
+        >
+          <dl>
+            <DetailRow label="Project Stage" valueClassName="font-medium">
+              <span className="inline-flex items-center rounded-full bg-primary-100 px-2.5 py-0.5 text-xs font-medium text-primary-800">
+                {(() => {
+                  const stageMap: Record<string, string> = {
+                    LEAD: 'Lead',
+                    SITE_SURVEY: 'Site Survey',
+                    PROPOSAL: 'Proposal',
+                    CONFIRMED: 'Confirmed Order',
+                    UNDER_INSTALLATION: 'Installation',
+                    COMPLETED: 'Completed',
+                    COMPLETED_SUBSIDY_CREDITED: 'Completed - Subsidy Credited',
+                  }
+                  return stageMap[project.projectStatus] || project.projectStatus.replace(/_/g, ' ')
+                })()}
+              </span>
+            </DetailRow>
             {project.mnrePortalRegistrationDate && (
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">MNRE Portal Registration</dt>
-                <dd className="text-sm font-medium">
-                  {format(new Date(project.mnrePortalRegistrationDate), 'MMM dd, yyyy')}
-                </dd>
-              </div>
+              <DetailRow label="MNRE Portal Registration" valueClassName="font-medium">
+                {format(new Date(project.mnrePortalRegistrationDate), 'MMM dd, yyyy')}
+              </DetailRow>
             )}
             {project.feasibilityDate && (
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">Feasibility Date (DISCOM)</dt>
-                <dd className="text-sm font-medium text-gray-900 mt-0.5">
-                  {format(new Date(project.feasibilityDate), 'MMM dd, yyyy')}
-                </dd>
-              </div>
+              <DetailRow label="Feasibility Date (DISCOM)" valueClassName="font-medium">
+                {format(new Date(project.feasibilityDate), 'MMM dd, yyyy')}
+              </DetailRow>
             )}
             {project.registrationDate && (
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">Registration Date (DISCOM)</dt>
-                <dd className="text-sm font-medium">
-                  {format(new Date(project.registrationDate), 'MMM dd, yyyy')}
-                </dd>
-              </div>
+              <DetailRow label="Registration Date (DISCOM)" valueClassName="font-medium">
+                {format(new Date(project.registrationDate), 'MMM dd, yyyy')}
+              </DetailRow>
             )}
             {project.installationCompletionDate && (
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">Installation Completion</dt>
-                <dd className="text-sm font-medium">
-                  {format(new Date(project.installationCompletionDate), 'MMM dd, yyyy')}
-                </dd>
-              </div>
+              <DetailRow label="Installation Completion" valueClassName="font-medium">
+                {format(new Date(project.installationCompletionDate), 'MMM dd, yyyy')}
+              </DetailRow>
             )}
             {project.completionReportSubmissionDate && (
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">Completion Report Submission</dt>
-                <dd className="text-sm font-medium">
-                  {format(new Date(project.completionReportSubmissionDate), 'MMM dd, yyyy')}
-                </dd>
-              </div>
+              <DetailRow label="Completion Report Submission" valueClassName="font-medium">
+                {format(new Date(project.completionReportSubmissionDate), 'MMM dd, yyyy')}
+              </DetailRow>
             )}
             {project.mnreInstallationDetails && (
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">MNRE Installation Details</dt>
-                <dd className="text-sm font-medium whitespace-pre-line">
-                  {project.mnreInstallationDetails}
-                </dd>
-              </div>
+              <DetailRow label="MNRE Installation Details" valueClassName="whitespace-pre-line font-medium">
+                {project.mnreInstallationDetails}
+              </DetailRow>
             )}
             {project.subsidyRequestDate && (
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">Net Meter Installation Date</dt>
-                <dd className="text-sm font-medium">
-                  {format(new Date(project.subsidyRequestDate), 'MMM dd, yyyy')}
-                </dd>
-              </div>
+              <DetailRow label="Net Meter Installation Date" valueClassName="font-medium">
+                {format(new Date(project.subsidyRequestDate), 'MMM dd, yyyy')}
+              </DetailRow>
             )}
             {project.subsidyCreditedDate && (
-              <div>
-                <dt className="text-sm text-gray-500">Subsidy Credited Date</dt>
-                <dd className="text-sm font-medium text-yellow-600">
-                  {format(new Date(project.subsidyCreditedDate), 'MMM dd, yyyy')}
-                </dd>
-              </div>
+              <DetailRow label="Subsidy Credited Date" valueClassName="font-semibold text-amber-700">
+                {format(new Date(project.subsidyCreditedDate), 'MMM dd, yyyy')}
+              </DetailRow>
             )}
-            {project.totalProjectCost && (
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">Total Project Cost</dt>
-                <dd className="text-sm font-medium">
-                  ₹{project.totalProjectCost.toLocaleString('en-IN')}
-                </dd>
-              </div>
+            {!!project.totalProjectCost && (
+              <DetailRow label="Total Project Cost" valueClassName="font-semibold">
+                ₹{project.totalProjectCost.toLocaleString('en-IN')}
+              </DetailRow>
             )}
             {project.panelBrand && (
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">Panel Brand</dt>
-                <dd className="text-sm font-medium">{project.panelBrand}</dd>
-              </div>
+              <DetailRow label="Panel Brand" valueClassName="font-medium">
+                {project.panelBrand}
+              </DetailRow>
             )}
             {project.inverterBrand && (
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">Inverter Brand</dt>
-                <dd className="text-sm font-medium">{project.inverterBrand}</dd>
-              </div>
+              <DetailRow label="Inverter Brand" valueClassName="font-medium">
+                {project.inverterBrand}
+              </DetailRow>
+            )}
+            {project.inverterCapacityKw != null && (
+              <DetailRow label="Inverter Capacity (kW)" valueClassName="font-medium">
+                {project.inverterCapacityKw} kW
+              </DetailRow>
             )}
             {project.panelType && (
-              <div>
-                <dt className="text-sm text-gray-500">Panel Type</dt>
-                <dd className="text-sm font-medium">{project.panelType}</dd>
-              </div>
+              <DetailRow label="Panel Type" valueClassName="font-medium">
+                {project.panelType}
+              </DetailRow>
             )}
             {project.panelCapacityW != null && (
-              <div>
-                <dt className="text-sm text-gray-500">Panel Capacity (W)</dt>
-                <dd className="text-sm font-medium">{project.panelCapacityW} W</dd>
-              </div>
+              <DetailRow label="Panel Capacity (W)" valueClassName="font-medium">
+                {project.panelCapacityW} W
+              </DetailRow>
             )}
-            {/* Lost Stage Information */}
             {project.projectStatus === ProjectStatus.LOST && (
               <>
                 {project.lostDate && (
-                  <div>
-                    <dt className="text-xs text-gray-500 uppercase tracking-wide">Lost Date</dt>
-                    <dd className="text-sm font-medium text-red-600">
-                      {format(new Date(project.lostDate), 'MMM dd, yyyy')}
-                    </dd>
-                  </div>
+                  <DetailRow label="Lost Date" valueClassName="font-semibold text-red-600">
+                    {format(new Date(project.lostDate), 'MMM dd, yyyy')}
+                  </DetailRow>
                 )}
                 {project.lostReason && (
-                  <div>
-                    <dt className="text-xs text-gray-500 uppercase tracking-wide">Reason for Loss</dt>
-                    <dd className="text-sm font-medium">
-                      {(() => {
-                        const reasonMap: Record<string, string> = {
-                          'LOST_TO_COMPETITION': 'Lost to Competition',
-                          'NO_BUDGET': 'No Budget',
-                          'INDEFINITELY_DELAYED': 'Indefinitely Delayed',
-                          'OTHER': 'Other',
-                        };
-                        return reasonMap[project.lostReason!] || project.lostReason;
-                      })()}
-                    </dd>
-                  </div>
+                  <DetailRow label="Reason for Loss" valueClassName="font-medium">
+                    {(() => {
+                      const reasonMap: Record<string, string> = {
+                        LOST_TO_COMPETITION: 'Lost to Competition',
+                        NO_BUDGET: 'No Budget',
+                        INDEFINITELY_DELAYED: 'Indefinitely Delayed',
+                        OTHER: 'Other',
+                      }
+                      return reasonMap[project.lostReason!] || project.lostReason
+                    })()}
+                  </DetailRow>
                 )}
                 {project.lostReason === 'LOST_TO_COMPETITION' && project.lostToCompetitionReason && (
-                  <div>
-                    <dt className="text-xs text-gray-500 uppercase tracking-wide">Why lost to competition</dt>
-                    <dd className="text-sm font-medium">
-                      {(() => {
-                        const compReasonMap: Record<string, string> = {
-                          'LOST_DUE_TO_PRICE': 'Lost due to Price',
-                          'LOST_DUE_TO_FEATURES': 'Lost due to Features',
-                          'LOST_DUE_TO_RELATIONSHIP_OTHER': 'Lost due to Relationship/Other factors',
-                        };
-                        return compReasonMap[project.lostToCompetitionReason!] || project.lostToCompetitionReason;
-                      })()}
-                    </dd>
-                  </div>
+                  <DetailRow label="Why lost to competition" valueClassName="font-medium">
+                    {(() => {
+                      const compReasonMap: Record<string, string> = {
+                        LOST_DUE_TO_PRICE: 'Lost due to Price',
+                        LOST_DUE_TO_FEATURES: 'Lost due to Features',
+                        LOST_DUE_TO_RELATIONSHIP_OTHER: 'Lost due to Relationship/Other factors',
+                      }
+                      return compReasonMap[project.lostToCompetitionReason!] || project.lostToCompetitionReason
+                    })()}
+                  </DetailRow>
                 )}
                 {project.lostOtherReason && (
-                  <div>
-                    <dt className="text-xs text-gray-500 uppercase tracking-wide">Other Reason Details</dt>
-                    <dd className="text-sm font-medium">{project.lostOtherReason}</dd>
-                  </div>
-                )}
-                {isLost && (
-                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                    <p className="text-sm text-red-700">
-                      <strong>Note:</strong> This project is in Lost stage and cannot be edited. Only Admin can delete it.
-                    </p>
-                  </div>
+                  <DetailRow label="Other Reason Details" valueClassName="font-medium">
+                    {project.lostOtherReason}
+                  </DetailRow>
                 )}
               </>
             )}
           </dl>
-        </div>
+          {project.projectStatus === ProjectStatus.LOST && isLost && (
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3">
+              <p className="text-sm text-red-700">
+                <strong>Note:</strong> This project is in Lost stage and cannot be edited. Only Admin can delete it.
+              </p>
+            </div>
+          )}
+        </InfoSection>
 
       </div>
 
-      {/* Deal Health + Payment + Remarks (side-by-side on laptop) */}
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      {/* Deal Health + Payment + Remarks: stack on phone; 3 columns on large desktop */}
+      <div className="mt-5 grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 md:items-stretch xl:grid-cols-3 xl:gap-6">
         <HealthDetail project={project} />
 
-        {/* Payment Tracking */}
-        <div className="bg-gradient-to-br from-emerald-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-emerald-400 border border-emerald-100/60 shadow-sm">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Payment Tracking</h3>
-          </div>
-          <dl className="space-y-3">
-            <div>
-              <dt className="text-xs text-gray-500 uppercase tracking-wide">Payment Status</dt>
-              <dd className="text-sm font-medium">
-                {(() => {
-                  const projectCost = project?.projectCost
-                  const hasNoOrderValue =
-                    !projectCost ||
-                    projectCost === 0 ||
-                    projectCost === null ||
-                    projectCost === undefined ||
-                    Number(projectCost) <= 0
+        <InfoSection
+          title="Payment Tracking"
+          borderAccentClass="border-l-emerald-500"
+          gradientClass="from-emerald-50/35 to-white"
+          icon={<svg className="text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>}
+        >
+          <dl>
+            <DetailRow label="Payment Status" valueClassName="font-medium">
+              {(() => {
+                const projectCost = project?.projectCost
+                const hasNoOrderValue =
+                  !projectCost ||
+                  projectCost === 0 ||
+                  projectCost === null ||
+                  projectCost === undefined ||
+                  Number(projectCost) <= 0
 
-                  const currentStatus = project?.projectStatus
-                  const isEarlyOrLostStage =
-                    currentStatus === ProjectStatus.LEAD ||
-                    currentStatus === ProjectStatus.SITE_SURVEY ||
-                    currentStatus === ProjectStatus.PROPOSAL ||
-                    currentStatus === ProjectStatus.LOST
+                const currentStatus = project?.projectStatus
+                const isEarlyOrLostStage =
+                  currentStatus === ProjectStatus.LEAD ||
+                  currentStatus === ProjectStatus.SITE_SURVEY ||
+                  currentStatus === ProjectStatus.PROPOSAL ||
+                  currentStatus === ProjectStatus.LOST
 
-                  if (hasNoOrderValue || isEarlyOrLostStage) {
-                    return (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        N/A
-                      </span>
-                    )
-                  }
-
-                  const paymentStatus = project?.paymentStatus || 'PENDING'
+                if (hasNoOrderValue || isEarlyOrLostStage) {
                   return (
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        paymentStatus === 'FULLY_PAID'
-                          ? 'bg-green-100 text-green-800'
-                          : paymentStatus === 'PARTIAL'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {String(paymentStatus).replace(/_/g, ' ')}
+                    <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+                      N/A
                     </span>
                   )
-                })()}
-              </dd>
-            </div>
+                }
+
+                const paymentStatus = project?.paymentStatus || 'PENDING'
+                return (
+                  <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      paymentStatus === 'FULLY_PAID'
+                        ? 'bg-green-100 text-green-800'
+                        : paymentStatus === 'PARTIAL'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                    }`}
+                  >
+                    {String(paymentStatus).replace(/_/g, ' ')}
+                  </span>
+                )
+              })()}
+            </DetailRow>
             {project.projectCost &&
               (() => {
                 const totalReceived =
@@ -871,25 +830,24 @@ const ProjectDetail = () => {
                 const balance = Math.max(0, Number(project.projectCost) - totalReceived)
                 return (
                   <>
-                    <div>
-                      <dt className="text-xs text-gray-500 uppercase tracking-wide">Total Amount Received</dt>
-                      <dd className="text-sm font-medium text-yellow-600">₹{totalReceived.toLocaleString('en-IN')}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-gray-500 uppercase tracking-wide">Balance Amount</dt>
-                      <dd className="text-sm font-medium text-red-600">₹{balance.toLocaleString('en-IN')}</dd>
-                    </div>
+                    <DetailRow label="Total Amount Received" valueClassName="font-semibold text-amber-700">
+                      ₹{totalReceived.toLocaleString('en-IN')}
+                    </DetailRow>
+                    <DetailRow label="Balance Amount" valueClassName="font-semibold text-red-600">
+                      ₹{balance.toLocaleString('en-IN')}
+                    </DetailRow>
                   </>
                 )
               })()}
-            {project.advanceReceived && (
-              <div>
-                <dt className="text-xs text-gray-500 uppercase tracking-wide">Advance Received</dt>
-                <dd className="text-sm font-medium">
-                  ₹{project.advanceReceived.toLocaleString('en-IN')}
-                  {project.advanceReceivedDate && ` (${format(new Date(project.advanceReceivedDate), 'MMM dd, yyyy')})`}
-                </dd>
-              </div>
+            {!!project.advanceReceived && (
+              <DetailRow label="Advance Received" valueClassName="font-medium">
+                ₹{project.advanceReceived.toLocaleString('en-IN')}
+                {project.advanceReceivedDate && (
+                  <span className="mt-0.5 block text-xs font-normal text-gray-600 sm:inline sm:mt-0 sm:pl-1">
+                    ({format(new Date(project.advanceReceivedDate), 'MMM dd, yyyy')})
+                  </span>
+                )}
+              </DetailRow>
             )}
 
             {(() => {
@@ -907,47 +865,59 @@ const ProjectDetail = () => {
               if (!installments.length) return null
 
               return (
-                <div>
-                  <dt className="text-xs text-gray-500 uppercase tracking-wide">Installments Received</dt>
-                  <dd className="mt-1 text-sm text-gray-700 space-y-1">
+                <DetailRow label="Installments Received" valueClassName="block max-w-full p-0 font-normal">
+                  <ul className="mt-1 list-none space-y-2 pl-0 sm:mt-0">
                     {installments.map((p) => {
                       const hasAmount = p.amount != null && Number(p.amount) > 0
                       return (
-                        <div key={p.label} className="flex items-center justify-between gap-3">
-                          <span className="text-xs font-medium text-gray-500">{p.label}</span>
-                          <span className="text-sm font-medium text-gray-900">
+                        <li
+                          key={p.label}
+                          className="rounded-lg border border-gray-100 bg-gray-50/90 px-3 py-2.5"
+                        >
+                          <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                            {p.label}
+                          </div>
+                          <div className="mt-1 text-sm font-semibold text-gray-900">
                             {hasAmount ? `₹${Number(p.amount).toLocaleString('en-IN')}` : '—'}
-                            {p.date && ` (${format(new Date(p.date), 'MMM dd, yyyy')})`}
-                          </span>
-                        </div>
+                            {p.date && (
+                              <span className="mt-0.5 block text-xs font-normal text-gray-600">
+                                {format(new Date(p.date), 'MMM dd, yyyy')}
+                              </span>
+                            )}
+                          </div>
+                        </li>
                       )
                     })}
-                  </dd>
-                </div>
+                  </ul>
+                </DetailRow>
               )
             })()}
           </dl>
-        </div>
+        </InfoSection>
 
-        {/* Remarks - View Only */}
-        <div className="[&>div]:mt-0">
-          <RemarksSection projectId={project.id} isEditMode={false} />
+        <div className="min-h-0 min-w-0 md:col-span-2 xl:col-span-1">
+          <RemarksSection
+            projectId={project.id}
+            isEditMode={false}
+            className="!mt-0 flex h-full min-h-0 flex-col"
+          />
         </div>
       </div>
 
       {/* Support / Service Tickets */}
-      <div className="mt-6">
+      <div className="mt-5 sm:mt-6">
         <SupportTicketsSection projectId={project.id} projectStatus={project.projectStatus} />
       </div>
 
-      {/* Key Artifacts - View Only (Customer Module style) */}
-      <div className="mt-6 bg-gradient-to-br from-sky-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-sky-400">
-        <div className="flex items-center gap-2">
-          <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Key Artifacts</h3>
-        </div>
-        <p className="text-sm text-gray-500 mb-4">
-          To upload new artifacts, please click the <strong>Edit</strong> button above.
+      {/* Key Artifacts - View Only */}
+      <InfoSection
+        title="Key Artifacts"
+        borderAccentClass="border-l-sky-500"
+        gradientClass="from-sky-50/35 to-white"
+        icon={<svg className="text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>}
+      >
+        <p className="mb-4 text-sm text-gray-600">
+          To upload new artifacts, use the <strong>Edit</strong> button above.
         </p>
 
         {/* Documents List - View Only */}
@@ -1024,6 +994,7 @@ const ProjectDetail = () => {
         {(!project.documents || project.documents.length === 0) && (
           <p className="text-sm text-gray-500">No artifacts uploaded yet. Click <strong>Edit</strong> to upload documents.</p>
         )}
+      </InfoSection>
       </div>
       </PageCard>
     </div>

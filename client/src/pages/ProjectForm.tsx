@@ -249,11 +249,14 @@ const ProjectForm = () => {
   const availingLoan = watch('availingLoan')
   const financingBank = watch('financingBank')
   const projectType = watch('type')
+  const systemCapacityWatched = watch('systemCapacity')
   const [customerSearch, setCustomerSearch] = useState('')
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[] | null>(null)
   const [validationErrorSource, setValidationErrorSource] = useState<'file' | 'form' | null>(null)
   const customerDropdownRef = useRef<HTMLDivElement>(null)
+  /** When false, Inverter capacity (kW) tracks System Capacity; set true after user edits that field. */
+  const inverterCapacityKwUserEditedRef = useRef(false)
 
   const clearValidationErrors = () => {
     setValidationErrors(null)
@@ -310,6 +313,41 @@ const ProjectForm = () => {
       }
     }
   }, [projectType, isEdit, setValue])
+
+  // New project: allow inverter kW to track system capacity until user edits it.
+  // Edit: if DB already has inverterCapacityKw, never auto-overwrite; if null, keep tracking system capacity.
+  useEffect(() => {
+    if (!isEdit || !project) {
+      inverterCapacityKwUserEditedRef.current = false
+      return
+    }
+    inverterCapacityKwUserEditedRef.current =
+      project.inverterCapacityKw !== null && project.inverterCapacityKw !== undefined
+  }, [isEdit, project])
+
+  // Mirror System capacity (kW) → Inverter capacity (kW), integer kW, until user changes inverter field.
+  useEffect(() => {
+    if (inverterCapacityKwUserEditedRef.current) return
+    const raw = systemCapacityWatched
+    if (raw === '' || raw === undefined || raw === null) {
+      setValue('inverterCapacityKw', undefined, { shouldValidate: false, shouldDirty: false })
+      return
+    }
+    const n = Number(raw)
+    if (!Number.isFinite(n) || n < 0) return
+    const kw = Number.isInteger(n) ? n : Math.round(n)
+    setValue('inverterCapacityKw', kw, { shouldValidate: false, shouldDirty: false })
+  }, [systemCapacityWatched, setValue])
+
+  const inverterCapacityKwRegister = register('inverterCapacityKw', {
+    setValueAs: (v) => {
+      if (v === '' || v == null) return undefined
+      const n = parseInt(String(v), 10)
+      return Number.isNaN(n) ? undefined : n
+    },
+    validate: (v) =>
+      v === undefined || v === null || (Number.isInteger(v) && v >= 0) || 'Whole number ≥ 0',
+  })
 
   // Filter customers based on search.
   // For Sales users the API already returns only their currently-assigned customers
@@ -543,7 +581,7 @@ const ProjectForm = () => {
     });
     
     // Convert numeric fields from strings to numbers (form inputs return strings)
-    const numericFields = ['systemCapacity', 'projectCost', 'advanceReceived', 'payment1', 'payment2', 'payment3', 'lastPayment'];
+    const numericFields = ['projectCost', 'advanceReceived', 'payment1', 'payment2', 'payment3', 'lastPayment'];
     numericFields.forEach((field) => {
       if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
         const numValue = parseFloat(String(data[field]));
@@ -552,12 +590,26 @@ const ProjectForm = () => {
         data[field] = null;
       }
     });
+    // Integer field: System Capacity (kW)
+    if (data.systemCapacity !== undefined && data.systemCapacity !== null && data.systemCapacity !== '') {
+      const capKw = parseInt(String(data.systemCapacity), 10);
+      data.systemCapacity = Number.isInteger(capKw) && capKw >= 0 ? capKw : null;
+    } else {
+      data.systemCapacity = null;
+    }
     // Integer field: Panel Capacity (W)
     if (data.panelCapacityW !== undefined && data.panelCapacityW !== null && data.panelCapacityW !== '') {
       const intVal = parseInt(String(data.panelCapacityW), 10);
       data.panelCapacityW = Number.isInteger(intVal) && intVal >= 0 ? intVal : null;
     } else {
       data.panelCapacityW = null;
+    }
+    // Integer field: Inverter Capacity (kW)
+    if (data.inverterCapacityKw !== undefined && data.inverterCapacityKw !== null && data.inverterCapacityKw !== '') {
+      const invKw = parseInt(String(data.inverterCapacityKw), 10);
+      data.inverterCapacityKw = Number.isInteger(invKw) && invKw >= 0 ? invKw : null;
+    } else {
+      data.inverterCapacityKw = null;
     }
     
     // Remove customerId from update requests (customer cannot be changed after project creation)
@@ -668,8 +720,18 @@ const ProjectForm = () => {
     const statusesRequiringCapacity = [...proposalAndLaterStages, ProjectStatus.LOST];
     if (statusesRequiringCapacity.includes(data.projectStatus)) {
       const capacityValue = allValues.systemCapacity !== undefined ? allValues.systemCapacity : data.systemCapacity;
-      if (capacityValue === undefined || capacityValue === null || capacityValue === '' || parseFloat(String(capacityValue)) <= 0) {
-        toast.error('System Capacity is required and must be greater than 0 from Proposal stage onwards');
+      const capKw =
+        typeof capacityValue === 'number' && Number.isInteger(capacityValue)
+          ? capacityValue
+          : parseInt(String(capacityValue ?? ''), 10);
+      if (
+        capacityValue === undefined ||
+        capacityValue === null ||
+        capacityValue === '' ||
+        !Number.isInteger(capKw) ||
+        capKw <= 0
+      ) {
+        toast.error('System Capacity is required and must be a whole number greater than 0 from Proposal stage onwards');
         return;
       }
     }
@@ -819,7 +881,7 @@ const ProjectForm = () => {
         'availingLoan', 'financingBank', 'financingBankOther',
         'incentiveEligible', 'leadSource', 'leadSourceDetails',
         'roofType', 'systemType', 'projectStatus', 'lostDate', 'lostReason', 'lostToCompetitionReason', 'lostOtherReason',
-        'leadId', 'assignedOpsId', 'panelBrand', 'inverterBrand',
+        'leadId', 'assignedOpsId', 'panelBrand', 'inverterBrand', 'inverterCapacityKw',
         'siteAddress', 'expectedCommissioningDate', 'internalNotes',
         // Payment fields (optional for new projects)
         'advanceReceived', 'advanceReceivedDate', 'payment1', 'payment1Date',
@@ -1189,8 +1251,15 @@ const ProjectForm = () => {
                 </label>
                 <input
                   type="number"
-                  step="0.01"
+                  inputMode="numeric"
+                  step="1"
+                  min={0}
                   {...register('systemCapacity', {
+                    setValueAs: (v) => {
+                      if (v === '' || v == null) return undefined;
+                      const n = parseInt(String(v), 10);
+                      return Number.isNaN(n) ? undefined : n;
+                    },
                     required: (projectStatus === ProjectStatus.PROPOSAL ||
                       projectStatus === ProjectStatus.CONFIRMED ||
                       projectStatus === ProjectStatus.UNDER_INSTALLATION ||
@@ -1203,11 +1272,16 @@ const ProjectForm = () => {
                     validate: (value) => {
                       const statuses = [ProjectStatus.PROPOSAL, ProjectStatus.CONFIRMED, ProjectStatus.UNDER_INSTALLATION,
                         ProjectStatus.SUBMITTED_FOR_SUBSIDY, ProjectStatus.COMPLETED, ProjectStatus.COMPLETED_SUBSIDY_CREDITED, ProjectStatus.LOST];
-                      if (statuses.includes(projectStatus) && (value === '' || value == null || parseFloat(String(value)) <= 0)) {
-                        return 'System Capacity must be greater than 0 from Proposal stage onwards';
+                      if (value !== undefined && value !== null && value !== '') {
+                        if (!Number.isInteger(value) || value < 0) {
+                          return 'System Capacity must be a whole number (kW)';
+                        }
+                      }
+                      if (statuses.includes(projectStatus) && (value === '' || value == null || !Number.isInteger(value) || value <= 0)) {
+                        return 'System Capacity must be a whole number greater than 0 from Proposal stage onwards';
                       }
                       return true;
-                    }
+                    },
                   })}
                   disabled={!canEditSalesCommercial}
                   className={`${inputCls} ${!canEditSalesCommercial ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
@@ -1871,7 +1945,28 @@ const ProjectForm = () => {
                       </div>
                     ) : null}
                   </div>
-                  <div className="min-w-0 space-y-1.5">
+                  <div className="min-w-0 w-full space-y-1">
+                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                      Inverter capacity (kW)
+                    </label>
+                    <input
+                      type="number"
+                      step={1}
+                      min={0}
+                      inputMode="numeric"
+                      placeholder="Matches system capacity"
+                      {...inverterCapacityKwRegister}
+                      onChange={(e) => {
+                        inverterCapacityKwUserEditedRef.current = true
+                        inverterCapacityKwRegister.onChange(e)
+                      }}
+                      className="block w-full border border-gray-200 rounded-lg px-2.5 py-2 text-sm focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                    />
+                    <p className="text-[11px] text-gray-500 leading-snug">
+                      Defaults to <span className="font-medium text-gray-600">System capacity (kW)</span> (rounded). Edit here if the inverter rating differs.
+                    </p>
+                  </div>
+                  <div className="min-w-0 sm:col-span-2 space-y-1.5 pt-1 border-t border-gray-100 sm:border-0 sm:pt-0">
                     <span className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
                       Panel type
                     </span>

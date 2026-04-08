@@ -58,7 +58,7 @@ The Projects module is the core of Rayenna CRM, managing the complete lifecycle 
 - Other (requires Other Details)
 
 **Project Information**:
-- **System Capacity (kW)**: Solar system capacity in kilowatts
+- **System Capacity (kW)**: DC system size in kilowatts — **whole numbers only** (integer kW, e.g. `5`, not `5.5`)
 - **Order Value (₹)**: Total project value/contract amount
 - **Confirmation Date** (Required): Date when customer confirmed the order
 - **Year (FY)**: Automatically calculated from Confirmation Date (Financial Year format: 2024-25)
@@ -71,6 +71,9 @@ The Projects module is the core of Rayenna CRM, managing the complete lifecycle 
 **Technical Details**:
 - **Roof Type**: Concrete-Flat, Concrete-Sloped, Tile, Thatched, Asbestos, Metal, Others
 - **System Type**: Off-Grid, On-Grid, Hybrid
+
+**Project Lifecycle (when editing)** — **Operations**, **Admin**, and others with access:
+- **Inverter Brand** and **Inverter Capacity (kW)** (integer kW). **Inverter Capacity** **defaults to System Capacity** until you enter a different value; change it when the inverter AC rating differs from the array DC size.
 
 **Lost Status Fields** (if Project Status is "Lost"):
 - **Lost Date** (Required): Date when project was lost
@@ -448,10 +451,10 @@ The Projects module enables seamless collaboration between Sales and Operations 
 - Enter initial project information
 - Set lead source and commercial details
 
-**Sales & Commercial Section** (Sales and Admin can edit; Finance, Operations, and Management can view only):
+**Sales & Commercial Section** (**Sales**, **Operations**, and **Admin** can edit non-payment fields; **Finance** and **Management** view only):
 - **Lead Source**: Track where the lead came from
 - **Availing Loan/Financing**: Whether customer is availing loan; if Yes, **Financing Bank** (and **Other Bank Name** when Other) is required
-- **System Capacity**: Enter solar system capacity
+- **System Capacity (kW)**: Whole-number kW only
 - **Order Value**: Set project contract value
 - **Confirmation Date**: Record when customer confirmed
 - **Project Status**: Update status up to Confirmed Order
@@ -486,6 +489,7 @@ The Projects module enables seamless collaboration between Sales and Operations 
   - **Panel Capacity (W)**: Capacity per panel in watts (optional integer; useful for specs and BOM)
   - **Panel Brand**: Brand of solar panels used
   - **Inverter Brand**: Brand of inverters used
+  - **Inverter Capacity (kW)**: Inverter AC rating in whole kW; defaults from **System Capacity** on the form until overridden
 
 **Status Management**:
 - Update status from Installation onwards
@@ -570,13 +574,13 @@ The Projects module enables seamless collaboration between Sales and Operations 
 
 **Operations Users**:
 - ✅ View all projects
+- ✅ Edit **Sales & Commercial** (non-payment fields: lead source, order value, confirmation date, system capacity, loan/financing flags and banks, roof/system type, and related commercial fields — not **Payment Tracking**)
 - ✅ Edit Project Lifecycle section
 - ✅ Update status (Installation onwards)
 - ✅ Upload documents
 - ✅ Add remarks
 - ✅ Create support tickets
 - ✅ Mark projects as Lost
-- ❌ Edit Sales & Commercial
 - ❌ Edit Payment Tracking
 
 **Finance Users**:
@@ -969,6 +973,8 @@ The total is the **sum** of five parts. Each part has a **maximum**; the overall
 
 ## Project Detail View
 
+The read-only **Individual Project** page uses **cards** with aligned **label / value** rows: on narrow viewports fields **stack**; on **tablet and desktop**, a consistent **two-column** layout makes sections easy to scan. **Payment Tracking** shows each installment (**Payment 1–3**, **Last Payment**) in its **own block** with amount and date.
+
 ### Accessing Project Details
 
 **From Projects List**:
@@ -998,7 +1004,7 @@ The total is the **sum** of five parts. Each part has a **maximum**; the overall
 - Segment (Project Type)
 - Project Type (Service Type)
 - Salesperson assignment
-- System capacity
+- System capacity (whole kW)
 - Order value
 
 **Sales & Commercial**:
@@ -1021,13 +1027,13 @@ The total is the **sum** of five parts. Each part has a **maximum**; the overall
 - Subsidy Credited Date
 - Total Project Cost
 - Panel Type and Panel Capacity (W)
-- Panel Brand and Inverter Brand
+- Panel Brand, Inverter Brand, and Inverter Capacity (kW)
 
 **Payment Tracking**:
 - Payment Status badge
 - Total Amount Received
 - Balance Amount
-- Individual payment details with dates
+- Advance and each installment (**Payment 1–3**, **Last Payment**) with amount and date in separate blocks
 
 **Remarks**:
 - Versioned remarks history
@@ -1055,11 +1061,9 @@ The total is the **sum** of five parts. Each part has a **maximum**; the overall
 - Update sections based on role
 - Save changes
 
-**Generate AI Proposal** (Sales/Operations):
-- Available for Lead, Site Survey, Proposal stages
-- Click **Generate AI Proposal** button
-- AI generates proposal document
-- Download or view proposal
+**Proposals (New)** / Proposal Engine (Sales/Operations/Admin where enabled):
+- Use **Proposals (New)** on **Project Detail** for **Proposal** or **Confirmed** stages (see Proposal Engine help for full flow)
+- Opens Proposal Engine linked to the CRM project
 
 **Back to Projects**:
 - Click **Back** button

@@ -24,6 +24,8 @@ export interface ProposalData {
     roofType?: string;
     panelBrand?: string;
     inverterBrand?: string;
+    /** Whole-number inverter rating in kW */
+    inverterCapacityKw?: number;
     incentiveEligible: boolean;
     loanDetails?: string;
   };
@@ -138,6 +140,7 @@ System Specifications:
 - Roof Type: ${data.project.roofType || 'N/A'}
 - Panel Brand: ${data.project.panelBrand || 'Premium Quality'}
 - Inverter Brand: ${data.project.inverterBrand || 'Premium Quality'}
+- Inverter Capacity: ${data.project.inverterCapacityKw != null ? `${data.project.inverterCapacityKw} kW` : 'N/A'}
 - Installation Type: Roof-mounted
 
 Financial Summary:

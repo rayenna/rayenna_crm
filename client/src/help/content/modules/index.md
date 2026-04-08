@@ -235,11 +235,14 @@ At any stage, a project may be marked **Lost** if the customer does not proceed.
    - **Project Type** (required): EPC Project, Panel Cleaning, Maintenance, Repair, Consulting, Resale, or Other Services
 5. Complete **Sales & Commercial Information**:
    - **Lead Source**: Website, Referral, Google, Channel Partner, Digital Marketing, Sales, Management Connect, or Other (additional details required for some options)
-   - **System Capacity (kW)**, **Order Value (₹)**, **Confirmation Date** (required), **Project Status**
+   - **System Capacity (kW)**: Enter the DC system size as a **whole number** (integer kW only — e.g. `5`, not `5.5`).
+   - **Order Value (₹)**, **Confirmation Date** (required), **Project Status**
    - **Availing Loan/Financing?**: Check if the customer is availing loan/financing. If **Yes**, select **Financing Bank** (required) from the dropdown (e.g. SBI, HDFC Bank, Other). If you select **Other**, enter **Other Bank Name** (required, alphanumeric).
    - **Roof Type** and **System Type** (technical details)
 6. If status is **Lost**, enter **Lost Date** and **Reason for Loss** (required).
 7. Click **Create**. The project is saved, assigned a Project Number, and you are redirected to the Projects list.
+
+**Inverter Brand** and **Inverter Capacity (kW)** (whole kW) live under **Project Lifecycle** when you **Edit** a project. **Inverter Capacity** **defaults from System Capacity** until you type a different value — change it when the inverter rating differs from the array size.
 
 ### Who Can Create Projects
 
@@ -265,7 +268,7 @@ If **Lead Source** is Referral, Channel Partner, or Other, the corresponding det
 ### Status and Lifecycle
 
 - Update **Project Status** as the project progresses. Keep it current so the rest of the team and reports reflect reality.
-- **Operations** use the **Project Lifecycle** section to record: MNRE Portal Registration Date, DISCOM Feasibility/Registration dates, Installation Completion Date, Completion Report Submission Date, Net Meter Installation Date, Total Project Cost, **Panel Type** (DCR/Non-DCR), **Panel Capacity (W)** (per-panel watts), and Panel and Inverter brands.
+- **Operations** (and **Admin**) use the **Project Lifecycle** section to record: MNRE Portal Registration Date, DISCOM Feasibility/Registration dates, Installation Completion Date, Completion Report Submission Date, Net Meter Installation Date, Total Project Cost, **Panel Type** (DCR/Non-DCR), **Panel Capacity (W)** (per-panel watts), **Panel Brand**, **Inverter Brand**, and **Inverter Capacity (kW)** (integer kW; defaults from **System Capacity** until overridden on the form).
 
 ### Financial Tracking
 
@@ -322,17 +325,19 @@ Filters are remembered when you navigate to a project and use **Back** to return
 
 ### Project Detail Page
 
+The read-only **Individual Project** view groups information into **cards** with a consistent **label / value** layout: on **phones**, each field stacks vertically; from **tablet and desktop** widths, labels and values align in a clear **two-column** row pattern so sections are easier to scan. **Payment Tracking** lists **installments** (Payment 1–3, Last Payment) each in its **own block** with amount and date.
+
 The detail page shows:
 
-- **Customer** information, **Project** and **Sales & Commercial** details
-- **Project Lifecycle** (execution dates, costs, equipment)
+- **Customer** information, **Project** and **Sales & Commercial** details (including **System Capacity** in whole kW where set)
+- **Project Lifecycle** (execution dates, costs, equipment — including **Panel / Inverter** brands, **Panel Capacity (W)**, and **Inverter Capacity (kW)** when captured)
 - **Deal Health Score** (0–100) — full **illustration and calculation tables** are in [Deal Health Score](#deal-health-score) below (hidden for completed / subsidy-credited / lost projects).
 - **Payment Tracking** (status, amounts, balance)
 - **Remarks** (versioned history)
 - **Support / Service Tickets** (create, view, manage)
 - **Key Artifacts** (view, download, manage documents)
 
-From here you can **Edit** the project (within your role’s permissions), **Generate AI Proposal** (for Lead, Site Survey, or Proposal stages), or use **Back** to return to the Projects list.
+From here you can **Edit** the project (within your role’s permissions), open **Proposals (New)** / Proposal Engine where your role allows (for **Proposal** or **Confirmed** stages), or use **Back** to return to the Projects list.
 
 ## Deal Health Score
 

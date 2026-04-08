@@ -10,9 +10,11 @@ import { ErrorModal } from '@/components/common/ErrorModal'
 interface RemarksSectionProps {
   projectId: string
   isEditMode?: boolean
+  /** Merged onto the outer card (e.g. `!mt-0 h-full` when embedded in a grid). */
+  className?: string
 }
 
-const RemarksSection = ({ projectId, isEditMode = false }: RemarksSectionProps) => {
+const RemarksSection = ({ projectId, isEditMode = false, className = '' }: RemarksSectionProps) => {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [newRemark, setNewRemark] = useState('')
@@ -124,7 +126,9 @@ const RemarksSection = ({ projectId, isEditMode = false }: RemarksSectionProps) 
 
   if (isLoading) {
     return (
-      <div className="mt-6 bg-gradient-to-br from-amber-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-amber-400 border border-amber-100/60 shadow-sm">
+      <div
+        className={`mt-6 space-y-4 rounded-xl border border-amber-100/60 border-l-4 border-l-amber-400 bg-gradient-to-br from-amber-50/50 to-gray-50/60 p-5 shadow-sm ${className}`.trim()}
+      >
         <div className="flex items-center gap-2">
           <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
           <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Remarks</h3>
@@ -135,7 +139,9 @@ const RemarksSection = ({ projectId, isEditMode = false }: RemarksSectionProps) 
   }
 
   return (
-    <div className="mt-6 bg-gradient-to-br from-amber-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-amber-400 border border-amber-100/60 shadow-sm">
+    <div
+      className={`mt-6 space-y-4 rounded-xl border border-amber-100/60 border-l-4 border-l-amber-400 bg-gradient-to-br from-amber-50/50 to-gray-50/60 p-5 shadow-sm ${className}`.trim()}
+    >
       <div className="flex items-center gap-2">
         <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
         <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Remarks</h3>

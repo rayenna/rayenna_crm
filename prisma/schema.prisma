@@ -262,12 +262,13 @@ model Project {
   count              Int                @default(1)
 
   // System Details (Professional Structure)
-  systemCapacity            Float? // kW
+  systemCapacity            Int? // kW (whole number)
   systemType                SystemType? // On-grid, Off-grid, Hybrid
   panelBrand                String?
   panelType                 String? // DCR, Non-DCR
   panelCapacityW            Int?    // Panel capacity in watts (e.g. 550)
   inverterBrand             String?
+  inverterCapacityKw        Int?    // Inverter rated capacity in kW (whole number)
   roofType                  String? // Concrete-Flat, Concrete-Sloped, Tile, Thatched, Asbestos, Metal, Others
   projectStage              ProjectStage? // Survey, Proposal, Approved, Installation, Billing, Live, AMC, Lost
   stageEnteredAt            DateTime? // When current stage was entered (for SLA tracking)

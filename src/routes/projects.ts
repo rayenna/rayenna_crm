@@ -21,6 +21,14 @@ import * as XLSX from 'xlsx';
 
 const router = express.Router();
 
+/** Project system capacity (kW): non-negative integer; null if empty/invalid. Rounds numeric input. */
+function parseSystemCapacityKw(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.round(n);
+}
+
 /**
  * Zenith "Open in Projects" parity: same slice as `zenithExplorerProjects` client filters
  * (`matchesDashboardRevenueWhere` vs `inDashboardPipelineSlice`), optional FY-profit (`grossProfit` set).
@@ -1173,6 +1181,7 @@ router.post(
         panelType,
         panelCapacityW,
         inverterBrand,
+        inverterCapacityKw,
         siteAddress,
         expectedCommissioningDate,
         internalNotes,
@@ -1247,7 +1256,7 @@ router.post(
       }
 
       // Convert string numbers to floats (form data comes as strings)
-      const systemCapacityNum = systemCapacity ? (isNaN(parseFloat(systemCapacity)) ? null : parseFloat(systemCapacity)) : null;
+      const systemCapacityNum = parseSystemCapacityKw(systemCapacity);
       let projectCostNum = projectCost ? (isNaN(parseFloat(projectCost)) ? null : parseFloat(projectCost)) : null;
 
       // For LOST status: order value is required (stored as lost revenue); project cost is forced to 0
@@ -1411,6 +1420,13 @@ router.post(
           panelType: finalPanelType || null,
           panelCapacityW: panelCapacityW != null && Number.isInteger(Number(panelCapacityW)) && Number(panelCapacityW) >= 0 ? Number(panelCapacityW) : null,
           inverterBrand: inverterBrand || null,
+          inverterCapacityKw:
+            inverterCapacityKw != null &&
+            inverterCapacityKw !== '' &&
+            Number.isInteger(Number(inverterCapacityKw)) &&
+            Number(inverterCapacityKw) >= 0
+              ? Number(inverterCapacityKw)
+              : null,
           siteAddress: siteAddress || null,
           expectedCommissioningDate: convertDate(expectedCommissioningDate),
           internalNotes: internalNotes || null,
@@ -1739,6 +1755,7 @@ router.put(
           'inverterBrand', // Operations can update inverter brand
           'panelType', // Operations can update panel type
           'panelCapacityW', // Operations can update panel capacity (W)
+          'inverterCapacityKw', // Operations can update inverter capacity (kW)
           // Sales & Commercial block (non-payment financials)
           'leadSource',
           'leadSourceDetails',
@@ -1796,8 +1813,8 @@ router.put(
               updateData[field] = value !== null && value !== undefined && value !== '' && value !== 0
                 ? String(value)
                 : null;
-            } else if (field === 'panelCapacityW') {
-              // Handle integer field - panel capacity in watts
+            } else if (field === 'panelCapacityW' || field === 'inverterCapacityKw') {
+              // Integer fields — panel watts, inverter kW
               const value = req.body[field];
               if (value !== null && value !== undefined && value !== '') {
                 const intVal = parseInt(String(value), 10);
@@ -1827,8 +1844,68 @@ router.put(
                 ? (isNaN(parseFloat(String(value))) ? null : parseFloat(String(value)))
                 : null;
               updateData[field] = numValue;
+            } else if (field === 'systemCapacity') {
+              // Int column — raw strings/floats from JSON caused Postgres 22P03 (wrong bind format)
+              updateData[field] = parseSystemCapacityKw(req.body[field]);
+            } else if (field === 'projectCost') {
+              const value = req.body[field];
+              updateData[field] =
+                value !== null && value !== undefined && value !== ''
+                  ? (isNaN(parseFloat(String(value))) ? null : parseFloat(String(value)))
+                  : null;
+            } else if (field === 'loanDetails') {
+              const v = req.body[field];
+              if (v && typeof v === 'object') {
+                updateData[field] = JSON.stringify(v);
+              } else if (v === null || v === undefined || v === '' || v === 'null') {
+                updateData[field] = null;
+              } else {
+                updateData[field] = String(v);
+              }
+            } else if (field === 'year') {
+              const v = req.body[field];
+              updateData[field] =
+                v !== null && v !== undefined && v !== '' && v !== 'null' ? String(v) : null;
+            } else if (field === 'leadSource') {
+              const value = req.body[field];
+              if (value && value !== '' && Object.values(LeadSource).includes(value as LeadSource)) {
+                updateData[field] = value as LeadSource;
+              } else if (value === null || value === '' || value === 'null') {
+                updateData[field] = null;
+              } else {
+                continue;
+              }
+            } else if (field === 'systemType') {
+              const value = req.body[field];
+              if (value && value !== '' && Object.values(SystemType).includes(value as SystemType)) {
+                updateData[field] = value as SystemType;
+              } else if (value === null || value === '' || value === 'null') {
+                updateData[field] = null;
+              } else {
+                continue;
+              }
+            } else if (field === 'availingLoan') {
+              const raw = req.body[field];
+              const truthyValues = ['true', 'YES', 'yes', '1', 'on', true, 1];
+              const falsyValues = ['false', 'NO', 'no', '0', false, 0];
+              if (truthyValues.includes(raw as any)) updateData[field] = true;
+              else if (falsyValues.includes(raw as any) || raw === undefined) updateData[field] = false;
+            } else if (field === 'incentiveEligible') {
+              const raw = req.body[field];
+              updateData[field] = raw === true || raw === 'true' || raw === 1 || raw === '1';
+            } else if (
+              field === 'financingBank' ||
+              field === 'financingBankOther' ||
+              field === 'roofType' ||
+              field === 'leadSourceDetails'
+            ) {
+              const value = req.body[field];
+              updateData[field] =
+                value !== null && value !== undefined && value !== '' && value !== 'null'
+                  ? String(value)
+                  : null;
             } else {
-              updateData[field] = req.body[field];
+              continue;
             }
           }
         }
@@ -1839,6 +1916,13 @@ router.put(
             const calculatedYear = calculateFY(conf);
             if (calculatedYear) updateData.year = calculatedYear;
           }
+        }
+
+        if (updateData.projectCost !== undefined || updateData.systemCapacity !== undefined) {
+          updateData.expectedProfit = calculateExpectedProfit(
+            updateData.projectCost ?? project.projectCost,
+            updateData.systemCapacity ?? project.systemCapacity
+          );
         }
         
         // Recalculate gross profit if Order Value (projectCost) or Total Project Cost (totalProjectCost) changed
@@ -1918,7 +2002,9 @@ router.put(
               }
             } else if (key === 'loanDetails' && typeof req.body[key] === 'object' && req.body[key] !== null) {
               updateData[key] = JSON.stringify(req.body[key]);
-            } else if (key === 'systemCapacity' || key === 'projectCost') {
+            } else if (key === 'systemCapacity') {
+              updateData[key] = parseSystemCapacityKw(req.body[key]);
+            } else if (key === 'projectCost') {
               // Convert numeric fields from string to number
               const value = req.body[key];
               const numValue = value !== null && value !== undefined && value !== ''
@@ -2074,7 +2160,6 @@ router.put(
         
         // Handle numeric fields - convert strings to numbers
         const numericFields = [
-          'systemCapacity',
           'projectCost',
           'lostRevenue',
           'totalProjectCost',
@@ -2094,6 +2179,28 @@ router.put(
             } else {
               const numValue = parseFloat(String(value));
               updateData[field] = isNaN(numValue) ? null : numValue;
+            }
+          }
+        }
+
+        if (updateData.systemCapacity !== undefined) {
+          const value = updateData.systemCapacity;
+          if (value === null || value === undefined || value === '' || value === 'null') {
+            updateData.systemCapacity = null;
+          } else {
+            updateData.systemCapacity = parseSystemCapacityKw(value);
+          }
+        }
+
+        // Non-negative integer fields (Admin updates from form JSON)
+        for (const field of ['panelCapacityW', 'inverterCapacityKw'] as const) {
+          if (updateData[field] !== undefined) {
+            const value = updateData[field];
+            if (value === null || value === undefined || value === '' || value === 'null') {
+              updateData[field] = null;
+            } else {
+              const intVal = parseInt(String(value), 10);
+              updateData[field] = Number.isInteger(intVal) && intVal >= 0 ? intVal : null;
             }
           }
         }
@@ -2472,7 +2579,7 @@ router.post(
   '/suggest-pricing',
   authenticate,
   [
-    body('systemCapacity').isFloat({ min: 0 }),
+    body('systemCapacity').isInt({ min: 0 }),
     body('systemType').optional().isString(),
     body('city').optional().isString(),
     body('customerType').optional().isString(),
@@ -2583,6 +2690,7 @@ router.post(
           roofType: project.roofType || undefined,
           panelBrand: project.panelBrand || undefined,
           inverterBrand: project.inverterBrand || undefined,
+          inverterCapacityKw: project.inverterCapacityKw ?? undefined,
           incentiveEligible: project.incentiveEligible,
           loanDetails: project.loanDetails || undefined,
         },
@@ -2722,6 +2830,7 @@ router.get(
         roofType: project.roofType || undefined,
         panelBrand: project.panelBrand || undefined,
         inverterBrand: project.inverterBrand || undefined,
+        inverterCapacityKw: project.inverterCapacityKw ?? undefined,
         incentiveEligible: project.incentiveEligible,
         loanDetails: project.loanDetails || undefined,
       },
@@ -3004,6 +3113,7 @@ function generateHTMLPreview(
       <tr><td>Installation Type</td><td>${data.project.roofType ? data.project.roofType + ' Roof' : 'Roof-mounted'}</td></tr>
       <tr><td>Panel Brand</td><td>${data.project.panelBrand || 'Premium Quality'}</td></tr>
       <tr><td>Inverter Brand</td><td>${data.project.inverterBrand || 'Premium Quality'}</td></tr>
+      <tr><td>Inverter Capacity (kW)</td><td>${data.project.inverterCapacityKw != null ? String(data.project.inverterCapacityKw) : 'N/A'}</td></tr>
       <tr><td>Estimated Annual Generation</td><td>${financials.estimatedAnnualGeneration.toFixed(0)} kWh</td></tr>
     </table>
   </div>

@@ -32,7 +32,8 @@ const HealthBadge = ({
   showLabel = false,
   tooltipZIndex = 3000,
 }: HealthBadgeProps) => {
-  const health = computeDealHealth(project)
+  // computeDealHealth returns a new object each call; memoize so positioning effect deps stay stable.
+  const health = useMemo(() => computeDealHealth(project), [project])
   const hoverCapable = useHoverCapableForTooltip()
   const [mouseInside, setMouseInside] = useState(false)
   const [tapOpen, setTapOpen] = useState(false)
@@ -248,7 +249,7 @@ const HealthBadge = ({
       window.removeEventListener('scroll', scheduleReposition, true)
       window.removeEventListener('resize', scheduleReposition)
     }
-  }, [health, showCard])
+  }, [showCard, health?.score, health?.grade])
 
   if (!health) return null
 

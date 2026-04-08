@@ -13,10 +13,14 @@ export const INVERTER_BRAND_OPTIONS = [
   'Microtek',
   'Panasonic',
   'Polycab',
+  'Selec',
+  'Seltrik',
+  'Solaire',
   'Solis',
   'Sungrow',
   'Tata Power Solar',
   'UTL Solar',
+  'V-Guard',
   'Others',
 ] as const
 

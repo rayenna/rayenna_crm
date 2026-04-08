@@ -43,7 +43,7 @@ This guide covers the most frequently performed actions in Rayenna Energy CRM. T
    - **Project Details**:
      - Project Type (Residential Subsidy, Residential Non-Subsidy, Commercial/Industrial)
      - Project Service Type (EPC Project, Panel Cleaning, Maintenance, etc.)
-     - System Capacity (in kW)
+     - System Capacity (kW) — **whole numbers only** (integer kW)
      - Project Value
      - Lead Source
    - **Sales & Commercial**:
@@ -142,16 +142,16 @@ This guide covers the most frequently performed actions in Rayenna Energy CRM. T
 6. Click **Save** to apply changes
 
 **Role-Based Editing**:
-- **Sales users**: Can edit their own projects (not in Lost status)
-- **Operations users**: Can edit projects in installation/completion stages
+- **Sales users**: Can edit their own projects (not in Lost status); **Sales & Commercial** and early-stage status; not **Payment Tracking** or full **Lifecycle** alone
+- **Operations users**: Can edit **Sales & Commercial** (non-payment fields), **Project Lifecycle** (dates, equipment, **Inverter Capacity (kW)** defaults from system capacity until changed), and status from installation onward
 - **Admin users**: Can edit all projects
-- **Finance users**: Read-only access
+- **Finance users**: **Payment Tracking** only; otherwise read-only
 - **Management users**: Read-only access
 
 **What can be edited**:
-- Project status and details
-- Financial information
-- Project lifecycle dates
+- Project status and details (by role)
+- Commercial and lifecycle fields (by role); payments by Finance/Admin
+- Project lifecycle dates and equipment specs
 - Salesperson assignment
 - Lead source
 - Documents (upload/delete)

@@ -17,6 +17,7 @@ export const PANEL_BRAND_OPTIONS = [
   'Saatvik',
   'Servotech',
   'Tata Power Solar',
+  'V-Guard',
   'Vikram Solar',
   'Waaree',
   'Others',

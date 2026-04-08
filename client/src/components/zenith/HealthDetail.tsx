@@ -28,7 +28,7 @@ const HealthDetail = ({ project }: HealthDetailProps) => {
 
   return (
     <div
-      className="bg-gradient-to-br from-indigo-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border border-indigo-100/60 shadow-sm"
+      className="flex h-full min-h-0 flex-col space-y-4 rounded-xl border border-indigo-100/60 bg-gradient-to-br from-indigo-50/50 to-gray-50/60 p-5 shadow-sm border-l-4"
       style={{ borderLeftColor: health.color }}
     >
       <div className="flex items-center justify-between gap-3">

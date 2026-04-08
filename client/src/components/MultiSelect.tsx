@@ -47,7 +47,7 @@ const MultiSelect = ({ options, selectedValues, onChange, placeholder = 'Select.
     }
   }
 
-  const clearAll = (e: React.MouseEvent) => {
+  const clearAll = (e: React.SyntheticEvent) => {
     e.stopPropagation()
     onChange([])
   }
@@ -80,14 +80,21 @@ const MultiSelect = ({ options, selectedValues, onChange, placeholder = 'Select.
         <span className={`${selectedValues.length === 0 ? 'text-gray-500' : 'text-gray-700'} whitespace-nowrap mr-2 min-w-0 overflow-hidden text-ellipsis`} title={displayText}>{displayText}</span>
         <div className="flex items-center gap-2 flex-shrink-0">
           {selectedValues.length > 0 && (
-            <button
-              type="button"
+            <span
+              role="button"
+              tabIndex={0}
               onClick={clearAll}
-              className="text-gray-400 hover:text-gray-600 focus:outline-none"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  clearAll(e)
+                }
+              }}
+              className="text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
               title="Clear all"
             >
               ✕
-            </button>
+            </span>
           )}
           <svg
             className={`${compact ? 'w-4 h-4' : 'w-5 h-5'} text-gray-500 transition-transform ${isOpen ? 'transform rotate-180' : ''}`}

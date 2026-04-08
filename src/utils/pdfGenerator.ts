@@ -156,6 +156,10 @@ export function generateProposalPDF(
         ['Installation Type', data.project.roofType ? `${data.project.roofType} Roof` : 'Roof-mounted'],
         ['Panel Brand', data.project.panelBrand || 'Premium Quality'],
         ['Inverter Brand', data.project.inverterBrand || 'Premium Quality'],
+        [
+          'Inverter Capacity (kW)',
+          data.project.inverterCapacityKw != null ? String(data.project.inverterCapacityKw) : 'N/A',
+        ],
         ['Estimated Annual Generation', `${financials.estimatedAnnualGeneration.toFixed(0)} kWh`],
       ];
 

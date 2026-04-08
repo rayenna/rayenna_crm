@@ -177,6 +177,8 @@ export interface Project {
   panelType?: string
   panelCapacityW?: number | null
   inverterBrand?: string
+  /** Whole-number inverter capacity in kW */
+  inverterCapacityKw?: number | null
   roofType?: string
   siteAddress?: string
   expectedCommissioningDate?: string
