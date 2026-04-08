@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { useModalEscape } from '../contexts/ModalEscapeContext'
 // Payment Status: Shows N/A in red for projects without Order Value or in early/lost stages
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
@@ -60,6 +60,18 @@ const ProjectDetail = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   useModalEscape(showDeleteConfirm, () => setShowDeleteConfirm(false))
+
+  // Escape on read-only detail → Projects list. Overlays (proposal preview, delete confirm, ErrorModal children) register Esc first via capture-phase modal stack.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (showDeleteConfirm || showProposal) return
+      e.preventDefault()
+      navigate('/projects')
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [navigate, showDeleteConfirm, showProposal])
 
   const { data: project, isLoading, error } = useQuery({
     queryKey: ['project', id],

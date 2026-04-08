@@ -162,14 +162,16 @@ const ProjectForm = () => {
   const queryClient = useQueryClient()
   const isEdit = !!id
   const isFinanceOnly = user?.role === UserRole.FINANCE && isEdit
+  /** Edit flow: return to project detail. New project: return to list. (ErrorModal uses capture-phase Esc first.) */
+  const exitPath = isEdit && id ? `/projects/${id}` : '/projects'
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') navigate('/projects')
+      if (e.key === 'Escape') navigate(exitPath)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [navigate])
+  }, [navigate, exitPath])
 
   const { data: project } = useQuery({
     queryKey: ['project', id],
@@ -528,7 +530,7 @@ const ProjectForm = () => {
       if (isEdit && id) {
         queryClient.removeQueries({ queryKey: ['project', id] })
       }
-      navigate('/projects')
+      navigate(exitPath)
     },
     onError: (error: unknown) => {
       const err = error as { response?: { data?: { errors?: Array<{ param?: string; msg?: string; message?: string }>; error?: string }; status?: number }; message?: string }
@@ -2038,7 +2040,7 @@ const ProjectForm = () => {
         <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
           <button
             type="button"
-            onClick={() => navigate('/projects')}
+            onClick={() => navigate(exitPath)}
             className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancel
