@@ -134,6 +134,11 @@ function getInitialFiltersFromUrl(): {
   }
 }
 
+function getInitialSearchFromUrl(): string {
+  if (typeof window === 'undefined') return ''
+  return new URLSearchParams(window.location.search).get('search')?.trim() ?? ''
+}
+
 // Payment status badge — balance popover matches Deal Health / Financing Bank (portal + tap handling).
 const PaymentStatusBadge = ({ project }: { project: Project }) => {
   const projectCost = project?.projectCost
@@ -392,8 +397,9 @@ const Projects = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const urlInit = getInitialFiltersFromUrl()
+  const initialSearchFromUrl = getInitialSearchFromUrl()
   const [page, setPage] = useState(1)
-  const [searchInput, setSearchInput] = useState('')
+  const [searchInput, setSearchInput] = useState(initialSearchFromUrl)
   const debouncedSearch = useDebounce(searchInput, 500) // 500ms debounce
   const [showExportConfirm, setShowExportConfirm] = useState(false)
   const [pendingExportType, setPendingExportType] = useState<'excel' | 'csv' | null>(null)
@@ -464,8 +470,8 @@ const Projects = () => {
   }))
 
   // Defer projects query until URL/sessionStorage hydration completes (avoids double fetch on dashboard→projects)
-  const [filtersReady, setFiltersReady] = useState(!!urlInit)
-  const appliedFromUrlRef = useRef(!!urlInit)
+  const [filtersReady, setFiltersReady] = useState(!!urlInit || initialSearchFromUrl !== '')
+  const appliedFromUrlRef = useRef(!!urlInit || initialSearchFromUrl !== '')
 
   // Apply URL params (from Dashboard tile click) or restore from sessionStorage
   useLayoutEffect(() => {
@@ -492,6 +498,8 @@ const Projects = () => {
     const lifecycleSpecsFromUrl = searchParams.get('lifecycleSpecsComplete') === 'true'
     const lifecycleSpecsActiveFromUrl =
       lifecycleSpecsFromUrl || panelBrandFromUrl !== '' || inverterBrandFromUrl !== ''
+    const searchFromUrlTrimmed = searchParams.get('search')?.trim() ?? ''
+    const hasSearchParam = searchFromUrlTrimmed.length > 0
     const hasStatusParams = statusFromUrl.length > 0
     const hasPaymentParams = paymentStatusFromUrl.length > 0
     const hasDateParams = fyFromUrl.length > 0 || quarterFromUrl.length > 0 || monthFromUrl.length > 0
@@ -528,7 +536,8 @@ const Projects = () => {
         validPayment.length > 0 ||
         availingLoanFromUrl ||
         hasDateParams ||
-        hasExtendedTileParams)
+        hasExtendedTileParams ||
+        hasSearchParam)
     ) {
       appliedFromUrlRef.current = true
       setFilters((prev) => ({
@@ -567,6 +576,7 @@ const Projects = () => {
       if (fyFromUrl.length > 0) setSelectedFYs(fyFromUrl)
       if (quarterFromUrl.length > 0) setSelectedQuarters(quarterFromUrl)
       if (monthFromUrl.length > 0) setSelectedMonths(monthFromUrl)
+      if (hasSearchParam) setSearchInput(searchFromUrlTrimmed)
       setPage(1)
       setFiltersReady(true)
       return

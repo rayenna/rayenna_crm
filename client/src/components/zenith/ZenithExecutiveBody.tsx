@@ -157,8 +157,9 @@ function ExploreCountTooltip({
 
 /** Unified chart height — calmer vertical rhythm across Zenith executive view */
 const ZENITH_CHART_H = 240
+/** Align with `DashboardLifecycleBrandBarCharts` (Sales / Management / Admin on classic Dashboard). Operations uses `ZenithOperationsBody`, which always includes the same pair. */
 const showZenithLifecycleBrandChartRole = (r: UserRole) =>
-  r === UserRole.ADMIN || r === UserRole.MANAGEMENT
+  r === UserRole.SALES || r === UserRole.MANAGEMENT || r === UserRole.ADMIN
 
 export default function ZenithExecutiveBody({
   role,
@@ -931,7 +932,7 @@ export default function ZenithExecutiveBody({
           </ChartPanel>
         </div>
         <div className="flex min-h-[320px] h-full min-w-0 flex-col lg:min-h-0">
-          <CustomerProfitabilityRank rows={wordCloud} className="h-full min-h-[320px] flex-1" />
+          <CustomerProfitabilityRank rows={wordCloud} dateFilter={dateFilter} className="h-full min-h-[320px] flex-1" />
         </div>
       </div>
       </section>

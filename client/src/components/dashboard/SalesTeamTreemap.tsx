@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { getSalesTeamColor } from './salesTeamColors'
 import { salesTeamPerformanceQueryKey } from '../../utils/salesTeamPerformanceQuery'
 
@@ -43,6 +45,7 @@ const MONTHS = [
 // Column chart doesn't need custom content component
 
 const SalesTeamTreemap = ({ availableFYs = [], dashboardFilter }: SalesTeamTreemapProps) => {
+  const navigate = useNavigate()
   const filterControlledByParent = !!dashboardFilter
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [selectedMonths, setSelectedMonths] = useState<string[]>([])
@@ -60,6 +63,15 @@ const SalesTeamTreemap = ({ availableFYs = [], dashboardFilter }: SalesTeamTreem
   const effectiveQuarters = filterControlledByParent
     ? (Array.isArray(dashboardFilter?.selectedQuarters) ? dashboardFilter.selectedQuarters : [])
     : []
+
+  const dateFilter = useMemo(
+    () => ({
+      selectedFYs: effectiveFYs,
+      selectedQuarters: effectiveQuarters,
+      selectedMonths: effectiveMonths,
+    }),
+    [effectiveFYs, effectiveQuarters, effectiveMonths],
+  )
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -124,12 +136,14 @@ const SalesTeamTreemap = ({ availableFYs = [], dashboardFilter }: SalesTeamTreem
   }
 
   // Prepare data for treemap (fill by salesperson name so colors match Revenue by Sales Team chart)
-  const treemapData = data?.salesTeamData?.map((item: SalesTeamData, index: number) => ({
-    name: item.salespersonName,
-    value: item.totalOrderValue,
-    projectCount: item.projectCount,
-    fill: getSalesTeamColor(item.salespersonName, index),
-  })) || []
+  const treemapData =
+    data?.salesTeamData?.map((item: SalesTeamData, index: number) => ({
+      name: item.salespersonName,
+      salespersonId: item.salespersonId,
+      value: item.totalOrderValue,
+      projectCount: item.projectCount,
+      fill: getSalesTeamColor(item.salespersonName, index),
+    })) || []
 
   return (
     <div className="h-full flex flex-col min-h-[360px] bg-white shadow-sm rounded-2xl border border-slate-200 p-4 sm:p-5">
@@ -324,14 +338,32 @@ const SalesTeamTreemap = ({ availableFYs = [], dashboardFilter }: SalesTeamTreem
                           <p className="text-gray-600">
                             Projects: <span className="font-medium text-primary-600">{data.projectCount}</span>
                           </p>
+                          <p className="text-xs font-medium text-amber-700 mt-1">Click bar to open Projects →</p>
                         </div>
                       )
                     }
                     return null
                   }}
                 />
-                <Bar dataKey="value" name="Total Order Value" radius={[8, 8, 0, 0]}>
-                  {treemapData.map((entry: any, index: number) => (
+                <Bar
+                  dataKey="value"
+                  name="Total Order Value"
+                  radius={[8, 8, 0, 0]}
+                  cursor="pointer"
+                  onClick={(_row: unknown, index: number) => {
+                    const row = treemapData[index] as
+                      | { salespersonId?: string; name?: string }
+                      | undefined
+                    if (!row) return
+                    const id = row.salespersonId?.trim()
+                    const href =
+                      id && id.length > 0
+                        ? buildProjectsUrl({ salespersonId: [id], zenithSlice: 'pipeline' }, dateFilter)
+                        : buildProjectsUrl({ salespersonUnassigned: true, zenithSlice: 'pipeline' }, dateFilter)
+                    navigate(href)
+                  }}
+                >
+                  {treemapData.map((entry: { fill: string }, index: number) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
                 </Bar>

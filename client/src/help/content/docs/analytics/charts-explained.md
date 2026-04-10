@@ -4,6 +4,13 @@
 
 Analytics charts in Rayenna CRM transform your business data into visual representations that make it easy to understand trends, patterns, and performance. This guide explains each chart type in simple terms and shows you how to interpret the insights they provide.
 
+## Classic Dashboard — opening Projects from a chart
+
+On the **classic Dashboard** (the main role-based home screen), **most charts are clickable**. Click a **bar**, **FY column** (click the **blue** revenue bar or the **green** profit bar separately), **pie slice**, **financing bank bar**, **panel or inverter brand bar**, a **word** in the **Customer profitability** cloud, or a row in **Top 10** to navigate to **Projects** with filters that match that slice and your dashboard **FY / Quarter / Month**.
+
+- Tooltips often say **Click to open Projects →** (or similar).
+- **Zenith** uses the same slice definitions for many charts but usually opens **Quick Actions** first; use **Open in Projects →** there. See [Analytics and Reports → Classic Dashboard chart click-through](/help/analytics#classic-dashboard-chart-click-through-to-projects) and [Zenith Explore charts](/help/analytics#explore-charts-and-drill-down-zenith).
+
 ## Project Value & Profit by Financial Year
 
 ### What This Chart Shows
@@ -26,6 +33,7 @@ This chart displays your total project value (revenue) and total profit across d
 - Two different colors for value vs profit
 - Grid lines for easy reading
 - Tooltip shows exact values on hover
+- On the **classic Dashboard**, click the **revenue** bar or the **profit** bar for an FY to open **Projects** filtered for that year and metric (tooltips include a click hint)
 
 ### How to Read This Chart
 
@@ -115,6 +123,7 @@ This pie chart shows how your total project value is distributed across differen
 - **Colors**: Different colors for each segment
 - **Legend**: Shows what each color represents
 - **Percentages**: Each slice shows percentage of total
+- On the **classic Dashboard**, **click a slice** (revenue segment pie or pipeline segment pie, where your role has that chart) to open **Projects** with the matching segment and analytics slice
 
 **Customer Segments**:
 - **Residential Subsidy**: Residential customers with subsidy
@@ -209,7 +218,7 @@ This word cloud visualization shows your most profitable customers. Customer nam
 - **Word Sizes**: Larger text = more profitable customer
 - **Layout**: Words arranged artistically in cloud formation
 - **Colors**: Different colors for visual distinction
-- **Interactive**: Can filter by Financial Year and Month
+- **Interactive**: Can filter by Financial Year and Month; on the **classic Dashboard** and in **Zenith** (**Customer projects profitability**), **click a word** in the cloud or a **Top 10** row to open **Projects** with a **search** on that customer name and the profitability / revenue slice (plus dashboard / command-bar dates)
 
 **How It Works**:
 - Each customer's name appears as a word
@@ -313,6 +322,8 @@ This column chart shows how many projects have **Availing Loan** selected and ar
 **Availability**: Shown on Sales, Finance, and Management/Admin dashboards. Not shown to Operations.
 
 **Filters**: The chart respects the Dashboard filters (FY, Quarter, Month). Sales users see only their own projects.
+
+**Click-through**: On the **classic Dashboard**, click a **bank bar** to open **Projects** with **Availing Loan** and that **financing bank**, plus dashboard dates.
 
 ### How to Read This Chart
 
@@ -444,8 +455,8 @@ This chart displays the performance of your sales team members, showing how much
 
 **Use Interactive Features**:
 - **Hover**: Hover over elements for details
-- **Click**: Click to filter or drill down
-- **Tooltips**: Read tooltips for exact values
+- **Click**: On the **classic Dashboard**, many charts open **Projects** with matching filters; in **Zenith**, chart clicks usually open **Quick Actions** with **Open in Projects →** in the footer
+- **Tooltips**: Read tooltips for exact values and click hints
 - **Legends**: Use legends to understand colors
 
 ### Comparing Charts
@@ -592,11 +603,15 @@ Contact administrator for:
 - Technical issues
 - Questions about chart interpretation
 
+## Projects by panel brand & inverter brand (Dashboard + Zenith)
+
+On the **classic Dashboard**, **Sales**, **Management**, **Admin**, and **Operations** see a pair of horizontal bar charts: **Projects by panel brand** and **Projects by inverter brand**. The cohort matches **Zenith**: each bar only includes projects that already have **both** brands saved in Project Lifecycle. **Click a bar** to open **Projects** with that brand and the lifecycle completeness filter, plus dashboard dates. **Finance** does not see these charts on the classic Dashboard.
+
 ## Zenith — Projects by panel brand & inverter brand (Explore)
 
-These **horizontal bar charts** appear under **Zenith → Explore the landscape** on **executive** Zenith (**Sales**, **Management**, **Admin**) and **Operations** Zenith. Each bar counts projects that already have **both** **Panel brand** and **Inverter brand** saved (lifecycle completeness).
+The same charts appear under **Zenith → Explore the landscape** on **executive** Zenith (**Sales**, **Management**, **Admin**) and **Operations** Zenith.
 
-**Hover** a bar to see: **brand** name, **project count**, **Order value (sum)**, **System capacity (sum)** in **kW** (total installed capacity recorded on those projects; shows **—** if none), an estimated **panel** or **inverter** cost line, and a hint to **click through** to the project list. Full behaviour: [Analytics and Reports → Panel and inverter brand charts](/help/analytics#panel-and-inverter-brand-charts-zenith).
+**Hover** a bar to see: **brand** name, **project count**, **Order value (sum)**, **System capacity (sum)** in **kW** (total installed capacity recorded on those projects; shows **—** if none), an estimated **panel** or **inverter** cost line, and a hint to **click through**. On **Zenith**, the drill opens **Quick Actions**; on the **classic Dashboard**, the same bars jump straight to **Projects**. Full behaviour: [Analytics and Reports → Panel and inverter brand charts](/help/analytics#panel-and-inverter-brand-charts-zenith).
 
 ---
 
@@ -617,6 +632,7 @@ Analytics charts provide:
 
 **Remember**:
 - Charts make data easy to understand
+- On the **classic Dashboard**, click many chart elements to open a filtered **Projects** list (see [Classic Dashboard — opening Projects from a chart](#classic-dashboard-opening-projects-from-a-chart))
 - Use filters to focus on relevant data
 - Compare periods to identify trends
 - Act on insights to drive improvement

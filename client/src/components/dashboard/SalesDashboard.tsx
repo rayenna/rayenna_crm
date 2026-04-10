@@ -19,6 +19,7 @@ import QuickAccessSection from './QuickAccessSection'
 import KeyMetricsTile from './KeyMetricsTile'
 import ProposalEngineStatusCard from './ProposalEngineStatusCard'
 import DashboardLifecycleBrandReminder from './DashboardLifecycleBrandReminder'
+import DashboardLifecycleBrandBarCharts from './DashboardLifecycleBrandBarCharts'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
 
 interface SalesDashboardProps {
@@ -223,7 +224,7 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths, initial
       {/* Row 1: Projects by Stage / Execution Status, Revenue & Profit by Financial Year – side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
-          <ProjectsByStageChart data={data?.projectsByStatus || []} />
+          <ProjectsByStageChart data={data?.projectsByStatus || []} dashboardFilter={dashboardFilter} />
         </div>
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
           <ProjectValueProfitByFYChart 
@@ -244,7 +245,7 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths, initial
           />
         </div>
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
-          <PipelineByLeadSourceChart data={data?.pipelineByLeadSource || []} />
+          <PipelineByLeadSourceChart data={data?.pipelineByLeadSource || []} dashboardFilter={dashboardFilter} />
         </div>
       </div>
 
@@ -256,10 +257,11 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths, initial
             availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
             dashboardType="sales"
             filterControlledByParent
+            dashboardFilter={dashboardFilter}
           />
         </div>
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
-          <PipelineByCustomerSegmentPieChart data={data?.pipelineByType || []} />
+          <PipelineByCustomerSegmentPieChart data={data?.pipelineByType || []} dashboardFilter={dashboardFilter} />
         </div>
       </div>
 
@@ -271,13 +273,20 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths, initial
               wordCloudData={data?.wordCloudData}
               availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
               filterControlledByParent
+              dashboardFilter={dashboardFilter}
             />
           </Suspense>
         </div>
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
-          <AvailingLoanByBankChart data={data?.availingLoanByBank || []} />
+          <AvailingLoanByBankChart data={data?.availingLoanByBank || []} dashboardFilter={dashboardFilter} />
         </div>
       </div>
+
+      {/* Row 5: Projects by panel / inverter brand (Zenith parity cohort) */}
+      <DashboardLifecycleBrandBarCharts
+        projects={(data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]}
+        tileParams={tileParams}
+      />
     </div>
   )
 }

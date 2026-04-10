@@ -12,6 +12,7 @@ import ProjectsByStageChart from './ProjectsByStageChart'
 import RevenueBySalesTeamChart from './RevenueBySalesTeamChart'
 import MetricCard from './MetricCard'
 import DashboardLifecycleBrandReminder from './DashboardLifecycleBrandReminder'
+import DashboardLifecycleBrandBarCharts from './DashboardLifecycleBrandBarCharts'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
 
 interface OperationsDashboardProps {
@@ -165,7 +166,7 @@ const OperationsDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
       {/* Row 1: Projects by Stage / Execution Status, Revenue by Sales Team Member – 2x2 layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
-          <ProjectsByStageChart data={data?.projectsByStatus || []} />
+          <ProjectsByStageChart data={data?.projectsByStatus || []} dashboardFilter={dashboardFilter} />
         </div>
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
           <RevenueBySalesTeamChart
@@ -191,9 +192,16 @@ const OperationsDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
             availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
             dashboardType="operations"
             filterControlledByParent
+            dashboardFilter={dashboardFilter}
           />
         </div>
       </div>
+
+      {/* Projects by panel / inverter brand (same cohort as Zenith Operations) */}
+      <DashboardLifecycleBrandBarCharts
+        projects={(data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]}
+        tileParams={tileParams}
+      />
     </div>
   )
 }

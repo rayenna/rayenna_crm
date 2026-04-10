@@ -51,6 +51,9 @@ Use the filter bar at the top of the Dashboard to focus on a period. **Financial
 ### What are Quick Access tiles on the Dashboard?
 Quick Access tiles show counts (e.g. leads, open deals, payment status) and link to the **Projects** page with the same date filters (FY, Quarter, Month) plus the tile’s filter already applied. Click a tile to open a filtered project list; use **Clear All** on Projects to remove filters.
 
+### Can I open Projects from Dashboard charts?
+Yes. On the **classic Dashboard**, most **charts are clickable** — bars, FY revenue/profit columns, pie slices, **Availing Loan by Bank** bars, **panel / inverter brand** bars (where your role sees them), and words or **Top 10** rows in **Customer profitability**. Clicking opens **Projects** with filters that match the slice and your dashboard dates. In **Zenith**, **Customer projects profitability** (word cloud / Top 10) does the same — direct to **Projects**. Other Zenith explore charts usually open **Quick Actions** first; use **Open in Projects →** for the full grid. Details: [Analytics → Classic Dashboard chart click-through](/help/analytics#classic-dashboard-chart-click-through-to-projects).
+
 ### What is “Things needing attention” on the Dashboard?
 A compact notice **Sales**, **Operations**, and **Admin** may see **above** the main dashboard metrics when late-stage projects (**Under Installation**, **Completed**, or **Completed – Subsidy Credited**) are missing **panel and/or inverter brand**. **Management** does not see it. It lists a count and customer names and links to **Projects** with the same idea. **Zenith** can show a matching line in the **Smart daily briefing** for **Sales**, **Admin**, and **Operations** only. See [Analytics → Things needing attention](/help/analytics#things-needing-attention-dashboard) and [Daily briefing](/help/analytics#daily-briefing-zenith).
 

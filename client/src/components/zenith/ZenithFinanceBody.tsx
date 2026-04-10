@@ -507,7 +507,7 @@ export default function ZenithFinanceBody({
             />
           </div>
           <div className="flex min-h-[320px] h-full min-w-0 flex-col lg:min-h-0">
-            <CustomerProfitabilityRank rows={wordCloud} className="h-full min-h-[320px] flex-1" />
+            <CustomerProfitabilityRank rows={wordCloud} dateFilter={dateFilter} className="h-full min-h-[320px] flex-1" />
           </div>
         </div>
       </section>

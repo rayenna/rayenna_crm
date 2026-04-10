@@ -1,6 +1,9 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
+import type { ZenithDateFilter } from '../zenith/zenithTypes'
+import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
 import { getProjectStatusColor } from './projectStatusColors'
 
 export interface ProjectsByStageItem {
@@ -11,10 +14,18 @@ export interface ProjectsByStageItem {
 
 interface ProjectsByStageChartProps {
   data?: ProjectsByStageItem[]
+  /** Dashboard FY / Quarter / Month — included in Projects drill URL. */
+  dashboardFilter?: ZenithDateFilter | null
 }
 
-const ProjectsByStageChart = ({ data: chartData = [] }: ProjectsByStageChartProps) => {
+const ProjectsByStageChart = ({ data: chartData = [], dashboardFilter }: ProjectsByStageChartProps) => {
+  const navigate = useNavigate()
   const { user } = useAuth()
+  const dateFilter: ZenithDateFilter = dashboardFilter ?? {
+    selectedFYs: [],
+    selectedQuarters: [],
+    selectedMonths: [],
+  }
   const canView =
     user?.role === UserRole.ADMIN ||
     user?.role === UserRole.MANAGEMENT ||
@@ -92,13 +103,25 @@ const ProjectsByStageChart = ({ data: chartData = [] }: ProjectsByStageChartProp
                               {d.count}
                             </span>
                           </p>
+                          <p className="text-xs font-medium text-amber-700 mt-1">Click bar to open Projects →</p>
                         </div>
                       )
                     }
                     return null
                   }}
                 />
-                <Bar dataKey="count" name="Projects" radius={[4, 4, 0, 0]}>
+                <Bar
+                  dataKey="count"
+                  name="Projects"
+                  radius={[4, 4, 0, 0]}
+                  cursor="pointer"
+                  onClick={(_row: unknown, index: number) => {
+                    const row = chartData[index]
+                    if (!row?.statusLabel) return
+                    const href = buildZenithDrawerListProjectsHref('stage', row.statusLabel, dateFilter)
+                    if (href) navigate(href)
+                  }}
+                >
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={getProjectStatusColor(entry.status, index)} />
                   ))}

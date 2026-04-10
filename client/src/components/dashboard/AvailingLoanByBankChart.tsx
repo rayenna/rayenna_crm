@@ -1,7 +1,10 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
+import type { ZenithDateFilter } from '../zenith/zenithTypes'
+import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { getLoanBankBarColor } from './loanBankChartColors'
 
 export interface AvailingLoanByBankItem {
@@ -12,10 +15,24 @@ export interface AvailingLoanByBankItem {
 
 interface AvailingLoanByBankChartProps {
   data?: AvailingLoanByBankItem[]
+  dashboardFilter?: ZenithDateFilter | null
 }
 
-const AvailingLoanByBankChart = memo(function AvailingLoanByBankChart({ data: chartData = [] }: AvailingLoanByBankChartProps) {
+const AvailingLoanByBankChart = memo(function AvailingLoanByBankChart({
+  data: chartData = [],
+  dashboardFilter,
+}: AvailingLoanByBankChartProps) {
+  const navigate = useNavigate()
   const { user } = useAuth()
+  const dateFilter: ZenithDateFilter = useMemo(
+    () =>
+      dashboardFilter ?? {
+        selectedFYs: [],
+        selectedQuarters: [],
+        selectedMonths: [],
+      },
+    [dashboardFilter],
+  )
   const canView =
     user?.role === UserRole.ADMIN ||
     user?.role === UserRole.MANAGEMENT ||
@@ -74,13 +91,31 @@ const AvailingLoanByBankChart = memo(function AvailingLoanByBankChart({ data: ch
                           <p className="text-sm text-indigo-600">
                             Projects: <span className="font-medium">{d.count}</span>
                           </p>
+                          <p className="text-xs font-medium text-amber-700 mt-1">Click bar to open Projects →</p>
                         </div>
                       )
                     }
                     return null
                   }}
                 />
-                <Bar dataKey="count" name="Projects" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={300}>
+                <Bar
+                  dataKey="count"
+                  name="Projects"
+                  radius={[4, 4, 0, 0]}
+                  isAnimationActive={true}
+                  animationDuration={300}
+                  cursor="pointer"
+                  onClick={(_row: unknown, index: number) => {
+                    const row = chartData[index]
+                    if (!row?.bankKey) return
+                    navigate(
+                      buildProjectsUrl(
+                        { availingLoan: true, financingBank: [row.bankKey] },
+                        dateFilter,
+                      ),
+                    )
+                  }}
+                >
                   {chartData.map((entry, index) => (
                     <Cell
                       key={`cell-${entry.bankKey}-${index}`}

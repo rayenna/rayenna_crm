@@ -28,6 +28,8 @@ export function buildProjectsUrl(
     inverterBrand?: string
     /** Require both panel and inverter brand entered (non-empty), matching Zenith lifecycle chart cohort. */
     lifecycleSpecsComplete?: boolean
+    /** Free-text search (Projects list search box); used e.g. dashboard profitability word cloud drill. */
+    search?: string
   },
   dashboardFilters: { selectedFYs: string[]; selectedQuarters: string[]; selectedMonths: string[] }
 ): string {
@@ -53,6 +55,8 @@ export function buildProjectsUrl(
     search.append('inverterBrand', String(params.inverterBrand).trim())
   }
   if (params.lifecycleSpecsComplete) search.append('lifecycleSpecsComplete', 'true')
+  const q = params.search != null ? String(params.search).trim() : ''
+  if (q !== '') search.append('search', q)
   dashboardFilters.selectedFYs.forEach((fy) => search.append('fy', fy))
   dashboardFilters.selectedQuarters.forEach((q) => search.append('quarter', q))
   dashboardFilters.selectedMonths.forEach((m) => search.append('month', m))

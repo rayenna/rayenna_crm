@@ -190,6 +190,7 @@ const FinanceDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Fin
             availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
             dashboardType="finance"
             filterControlledByParent
+            dashboardFilter={dashboardFilter}
           />
         </div>
       </div>
@@ -202,11 +203,12 @@ const FinanceDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Fin
               wordCloudData={data?.wordCloudData}
               availableFYs={projectValueProfitByFY.map((item: any) => item.fy).filter(Boolean) || []}
               filterControlledByParent
+              dashboardFilter={dashboardFilter}
             />
           </Suspense>
         </div>
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
-          <AvailingLoanByBankChart data={data?.availingLoanByBank || []} />
+          <AvailingLoanByBankChart data={data?.availingLoanByBank || []} dashboardFilter={dashboardFilter} />
         </div>
       </div>
     </div>

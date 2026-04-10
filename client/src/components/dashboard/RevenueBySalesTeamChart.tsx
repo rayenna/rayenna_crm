@@ -1,8 +1,10 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
+import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { getSalesTeamColor } from './salesTeamColors'
 import { salesTeamPerformanceQueryKey } from '../../utils/salesTeamPerformanceQuery'
 
@@ -28,12 +30,18 @@ interface RevenueBySalesTeamChartProps {
 }
 
 const RevenueBySalesTeamChart = ({ dashboardFilter, data: dataProp = [] }: RevenueBySalesTeamChartProps) => {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const canView = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGEMENT || user?.role === UserRole.SALES || user?.role === UserRole.OPERATIONS || user?.role === UserRole.FINANCE
 
-  const effectiveFYs = dashboardFilter?.selectedFYs ?? []
-  const effectiveQuarters = dashboardFilter?.selectedQuarters ?? []
-  const effectiveMonths = dashboardFilter?.selectedMonths ?? []
+  const dateFilter = {
+    selectedFYs: dashboardFilter?.selectedFYs ?? [],
+    selectedQuarters: dashboardFilter?.selectedQuarters ?? [],
+    selectedMonths: dashboardFilter?.selectedMonths ?? [],
+  }
+  const effectiveFYs = dateFilter.selectedFYs
+  const effectiveQuarters = dateFilter.selectedQuarters
+  const effectiveMonths = dateFilter.selectedMonths
 
   const { data: fetchedData, isLoading } = useQuery({
     queryKey: salesTeamPerformanceQueryKey(effectiveFYs, effectiveMonths, effectiveQuarters),
@@ -123,13 +131,29 @@ const RevenueBySalesTeamChart = ({ dashboardFilter, data: dataProp = [] }: Reven
                           <p className="text-sm text-gray-600 mt-1">
                             Projects: <span className="font-medium">{d.projectCount}</span>
                           </p>
+                          <p className="text-xs font-medium text-amber-700 mt-1">Click bar to open Projects →</p>
                         </div>
                       )
                     }
                     return null
                   }}
                 />
-                <Bar dataKey="revenue" name="Revenue (₹)" radius={[4, 4, 0, 0]}>
+                <Bar
+                  dataKey="revenue"
+                  name="Revenue (₹)"
+                  radius={[4, 4, 0, 0]}
+                  cursor="pointer"
+                  onClick={(_row: unknown, index: number) => {
+                    const d = chartData[index] as RevenueBySalesTeamItem | undefined
+                    if (!d) return
+                    const id = d.salespersonId?.trim()
+                    const href =
+                      id && id.length > 0
+                        ? buildProjectsUrl({ salespersonId: [id], zenithSlice: 'revenue' }, dateFilter)
+                        : buildProjectsUrl({ salespersonUnassigned: true, zenithSlice: 'revenue' }, dateFilter)
+                    navigate(href)
+                  }}
+                >
                   {chartData.map((entry: RevenueBySalesTeamItem, index: number) => (
                     <Cell key={`cell-${index}`} fill={getSalesTeamColor(entry.salespersonName, index)} />
                   ))}

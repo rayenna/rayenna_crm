@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import WordCloud from 'wordcloud'
 import { Hash } from 'lucide-react'
+import type { ZenithDateFilter } from './zenithTypes'
+import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 
 export interface ProfitRow {
   text: string
@@ -20,14 +23,27 @@ function tierColor(normalizedWeight: number): string {
   return '#fbbf24'
 }
 
+function wordFromCloudItem(item: unknown): string {
+  if (Array.isArray(item) && typeof item[0] === 'string') return item[0]
+  if (item && typeof item === 'object' && 'word' in item) {
+    const w = (item as { word: unknown }).word
+    return typeof w === 'string' ? w : ''
+  }
+  return ''
+}
+
 export default function CustomerProfitabilityRank({
   rows,
+  dateFilter,
   className = '',
 }: {
   rows: ProfitRow[]
+  /** FY / Q / M for Projects drill — same as classic Dashboard profitability cloud. */
+  dateFilter: ZenithDateFilter
   /** e.g. `h-full min-h-[320px] flex-1` so the card matches a stretched grid row (Executive / Finance Zenith). */
   className?: string
 }) {
+  const navigate = useNavigate()
   const [view, setView] = useState<'cloud' | 'top10'>('cloud')
   const wrapRef = useRef<HTMLDivElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
@@ -137,6 +153,11 @@ export default function CustomerProfitabilityRank({
           if (!item) clearGlow()
           else applyGlow(item)
         },
+        click: (item: unknown) => {
+          const w = wordFromCloudItem(item).trim()
+          if (!w) return
+          navigate(buildProjectsUrl({ search: w, zenithSlice: 'revenue' }, dateFilter))
+        },
       })
     } catch (e) {
       if (import.meta.env.DEV) console.error('Zenith word cloud:', e)
@@ -146,7 +167,7 @@ export default function CustomerProfitabilityRank({
       WordCloud.stop()
       clearGlow()
     }
-  }, [rows, hostSize.w, hostSize.h, view, clearGlow, applyGlow])
+  }, [rows, hostSize.w, hostSize.h, view, clearGlow, applyGlow, dateFilter, navigate])
 
   const top10 = [...rows].sort((a, b) => b.value - a.value).slice(0, 10)
   const maxVal = Math.max(...rows.map((d) => d.value), 1)
@@ -216,12 +237,15 @@ export default function CustomerProfitabilityRank({
             <>
               <div
                 ref={wrapRef}
-                className="zenith-wordcloud-host flex-1 min-h-[280px] w-full rounded-xl border border-white/[0.06] bg-black/20 overflow-visible lg:overflow-hidden"
+                className="zenith-wordcloud-host flex-1 min-h-[280px] w-full rounded-xl border border-white/[0.06] bg-black/20 overflow-visible lg:overflow-hidden cursor-pointer"
               >
                 <div ref={hostRef} className="relative h-full min-h-[280px] w-full" />
               </div>
               <p className="mt-2 text-center text-[11px] text-white/35">
                 Font size represents profitability (larger = higher margin).
+              </p>
+              <p className="mt-0.5 text-center text-[11px] text-[#f5a623]/90 font-medium">
+                Click a word to open Projects →
               </p>
             </>
           )}
@@ -259,7 +283,24 @@ export default function CustomerProfitabilityRank({
                   {top10.map((row, idx) => {
                     const pct = (row.value ?? 0) / maxVal
                     return (
-                      <tr key={`${row.text}-${idx}`} className="hover:bg-white/[0.04] transition-colors">
+                      <tr
+                        key={`${row.text}-${idx}`}
+                        className="hover:bg-white/[0.04] transition-colors cursor-pointer"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          const t = row.text?.trim()
+                          if (!t) return
+                          navigate(buildProjectsUrl({ search: t, zenithSlice: 'revenue' }, dateFilter))
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key !== 'Enter' && e.key !== ' ') return
+                          e.preventDefault()
+                          const t = row.text?.trim()
+                          if (!t) return
+                          navigate(buildProjectsUrl({ search: t, zenithSlice: 'revenue' }, dateFilter))
+                        }}
+                      >
                         <td className="py-2 px-2 text-center">
                           <span
                             className={`inline-flex items-center justify-center min-w-[1.75rem] h-7 px-1 rounded-lg text-xs font-bold tabular-nums ${

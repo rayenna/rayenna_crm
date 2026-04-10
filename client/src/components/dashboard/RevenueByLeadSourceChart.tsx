@@ -1,10 +1,13 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { getLeadSourceColor } from './leadSourceColors'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
+import type { ZenithDateFilter } from '../zenith/zenithTypes'
+import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
 
 interface RevenueByLeadSourceData {
   leadSource: string
@@ -42,6 +45,7 @@ const MONTHS = [
 ]
 
 const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: RevenueByLeadSourceChartProps) => {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const filterControlledByParent = !!dashboardFilter
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
@@ -60,6 +64,15 @@ const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: Revenu
   const effectiveQuarters = filterControlledByParent
     ? (Array.isArray(dashboardFilter?.selectedQuarters) ? dashboardFilter.selectedQuarters : [])
     : []
+
+  const drillDateFilter: ZenithDateFilter = useMemo(
+    () => ({
+      selectedFYs: effectiveFYs,
+      selectedQuarters: effectiveQuarters,
+      selectedMonths: effectiveMonths,
+    }),
+    [effectiveFYs, effectiveQuarters, effectiveMonths],
+  )
 
   // Role-based access: Only show for ADMIN, MANAGEMENT, SALES
   const canView = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGEMENT || user?.role === UserRole.SALES || user?.role === UserRole.OPERATIONS || user?.role === UserRole.FINANCE
@@ -359,16 +372,26 @@ const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: Revenu
                               Month: {effectiveMonths.map(m => MONTHS.find(month => month.value === m)?.label).join(', ')}
                             </p>
                           )}
+                          <p className="text-xs font-medium text-amber-700 mt-1">Click bar to open Projects →</p>
                         </div>
                       )
                     }
                     return null
                   }}
                 />
-                <Bar 
-                  dataKey="revenue" 
-                  name="Revenue (₹)" 
+                <Bar
+                  dataKey="revenue"
+                  name="Revenue (₹)"
                   radius={[4, 4, 0, 0]}
+                  cursor="pointer"
+                  onClick={(_row: unknown, index: number) => {
+                    const row = chartData[index]
+                    if (!row?.leadSourceLabel) return
+                    const href = buildZenithDrawerListProjectsHref('lead_source', row.leadSourceLabel, drillDateFilter, {
+                      leadSourceMetric: 'revenue',
+                    })
+                    if (href) navigate(href)
+                  }}
                 >
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={getLeadSourceColor(entry.leadSourceLabel, index)} />

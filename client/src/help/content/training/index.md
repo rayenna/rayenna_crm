@@ -26,9 +26,9 @@
 
 ## Executive summary (stakeholder brief)
 
-**What is Zenith?** A full-screen **command center** inside Rayenna CRM. It uses the **same data and date rules** as the classic Dashboard, but adds **click-through analytics**: charts, leaderboard, funnel, **Availing Loan** KPI (Finance + executive Zenith), and Proposal Engine rows open a **Quick Actions** drawer with filtered project lists. Users can jump to the full **Projects** page with matching filters via **Open in Projects →**.
+**What is Zenith?** A full-screen **command center** inside Rayenna CRM. It uses the **same data and date rules** as the classic Dashboard, but adds **click-through analytics**: charts, leaderboard, funnel, **Availing Loan** KPI (Finance + executive Zenith), and Proposal Engine rows open a **Quick Actions** drawer with filtered project lists. Users can jump to the full **Projects** page with matching filters via **Open in Projects →**. On the **classic Dashboard**, most **charts are also clickable** and open **Projects** directly (same slice ideas as Zenith; no drawer first).
 
-**Why it matters:** Faster prioritisation (**Today’s Hit List** mirrors **Your pipeline today** for columns, **filters**, **sort**, and **Quick Actions** — including **Recent remarks** before you log activity and a **Payment** readout after **Deal value** when you drill into one project), plus Deal Health and AI Insights; **transparency** (The Board drill-down); **mobility** (compact **mobile** header with FY / Qtr / Mo dropdowns); **data hygiene** (dashboard **Things needing attention** + Zenith **briefing** nudge when lifecycle **panel / inverter** brands are missing on late-stage jobs, and richer **panel / inverter brand** chart tooltips).
+**Why it matters:** Faster prioritisation (**Today’s Hit List** mirrors **Your pipeline today** for columns, **filters**, **sort**, and **Quick Actions** — including **Recent remarks** before you log activity and a **Payment** readout after **Deal value** when you drill into one project), plus Deal Health and AI Insights; **transparency** (The Board drill-down); **mobility** (compact **mobile** header with FY / Qtr / Mo dropdowns); **data hygiene** (dashboard **Things needing attention** + Zenith **briefing** nudge when lifecycle **panel / inverter** brands are missing on late-stage jobs, and richer **panel / inverter brand** chart tooltips); **one workflow from charts to Projects** on the classic Dashboard (**click bars, slices, FY columns, bank bars, cloud words / Top 10**) as well as in Zenith (**drawer → Open in Projects →**).
 
 **Who gets it:** Sales, Operations, Finance, Management, Admin — **layout and scope differ by role** (Sales sees own pipeline on executive Zenith; Management/Admin see company-wide).
 
@@ -81,6 +81,7 @@ By the end of this session, participants should be able to:
 5. **Explore** charts, drill down with correct **metric** (order value vs **gross profit** on FY profit), and use **Open in Projects →** for full-grid work.
 6. **Recognise** role differences (company-wide vs own deals, **view-only** drawer for Management) and when **Victory** toast appears.
 7. **Explain** where **Things needing attention** appears on the classic **Dashboard**, who sees the **Zenith briefing** lifecycle reminder, and what **System capacity (sum)** means on **panel / inverter brand** chart tooltips ([Analytics](/help/analytics)).
+8. **Contrast** classic **Dashboard** chart clicks (**direct to Projects**) with **Zenith** chart clicks (**Quick Actions** list, then **Open in Projects →**), and name one chart that exists on **both** (e.g. **Projects by stage**, **panel / inverter** bars for **Sales** on Dashboard and under **Explore** on Zenith).
 
 ---
 
@@ -133,9 +134,9 @@ By the end of this session, participants should be able to:
 
 - **Classic Dashboard** — **Sales**, **Operations**, and **Admin** may see a small **Things Needing Immediate Attention** strip when projects in **Under Installation**, **Completed**, or **Completed – Subsidy Credited** are missing **panel and/or inverter brand**. It lists a **count** and **names**, and **Open in Projects** respects the same **FY / Quarter / Month** as the dashboard. **Management** does not see this strip.
 - **Zenith briefing** — The **Smart daily briefing** can surface the **same reminder** for **Sales**, **Admin**, and **Operations** (not **Management** or **Finance**). **Don’t show again today** is **browser-only** for that day.
-- **Charts** — In **Explore the landscape**, **Projects by panel brand** / **Projects by inverter brand** tooltips include **System capacity (sum)** (kW) between order value and the cost estimate; bars only include projects that already have **both** brands filled.
+- **Charts** — **Sales**, **Management**, and **Admin** see **Projects by panel brand** / **Projects by inverter brand** on the **classic Dashboard** and again under Zenith **Explore the landscape** (**Operations** see them on Dashboard + Zenith Ops). Tooltips include **System capacity (sum)** (kW) between order value and the cost estimate; bars only include projects that already have **both** brands filled. **Dashboard:** click a bar → **Projects**. **Zenith:** click a bar → **Quick Actions** → **Open in Projects →**.
 
-**Demo (2 min):** If your org has a matching gap, show the dashboard strip and the briefing line; hover a panel-brand bar and read the tooltip.
+**Demo (2 min):** If your org has a matching gap, show the dashboard strip and the briefing line; hover a panel-brand bar and read the tooltip; optional **click** the same bar on Dashboard vs Zenith to show **direct Projects** vs **drawer**.
 
 **Check question:** *Which dashboard role sees the Management-style KPI layout but not the classic “Things needing attention” lifecycle strip?* → **Management** (**Admin** sees the strip; **Management** does not). *Does **Finance** get the lifecycle line in the Zenith briefing?* → **No**.
 
@@ -285,7 +286,8 @@ By the end of this session, participants should be able to:
 - Bars, slices, FY points, banks → drawer **list mode**.
 - **FY chart:** **Orange** = revenue (order value totals); **Teal** = profit (**gross profit** totals).
 - **Segment donuts:** Revenue vs pipeline = **different** definitions.
-- **Panel / inverter brand** horizontal bars: tooltip shows **Order value (sum)**, **System capacity (sum)** (kW), then estimated cost; each bar only includes projects with **both** lifecycle brands filled.
+- **Panel / inverter brand** horizontal bars: tooltip shows **Order value (sum)**, **System capacity (sum)** (kW), then estimated cost; each bar only includes projects with **both** lifecycle brands filled. **Sales** (and other roles with these charts) can use them on the **classic Dashboard** (**click** → **Projects**) and in **Zenith** (**click** → drawer).
+- **Classic Dashboard:** Other clickable charts (stage, lead source, FY revenue vs profit, segment pies, sales team bars, availing loan by bank, profitability cloud / Top 10) also jump to **Projects** with matching URL filters — train users who live on Dashboard to **hover for the hint**, then **click**.
 - **Explorer batch:** up to **~5,000** recently updated projects in Zenith’s explorer; **Open in Projects →** uses full Projects API — rare mismatch at huge volume.
 
 **Exercise (5 min):** Projects by stage → list → **Open →** one project → **Back**; optional **Open in Projects →**.
@@ -397,6 +399,9 @@ If you are building slides with screenshots, capture these **labeled** views:
 **Q: Zenith vs Dashboard — which is correct?**  
 A: Same rules and data; different **layout**. Check **filters** and **scope** (Sales = yours on executive Zenith).
 
+**Q: I clicked a chart on the Dashboard and landed on Projects — is that new?**  
+A: Yes — classic **Dashboard** charts are **clickable** and open **Projects** with the same slice logic as **Zenith** for matching charts. Dashboard = **direct** navigation; Zenith = **Quick Actions** drawer first, then **Open in Projects →**. See Help → **Analytics** → [Classic Dashboard chart click-through](/help/analytics#classic-dashboard-chart-click-through-to-projects).
+
 **Q: Forecast dropped when a deal moved Proposal → Lead?**  
 A: **Lower stage weight** in the weighted total.
 
@@ -495,7 +500,7 @@ Full list: **Help → Getting Started → Keyboard shortcuts**.
 | **Product** | Rayenna CRM — Zenith Command Center |
 | **Audience** | End-user training (Sales-primary); facilitators; slide authors |
 | **Companion** | Help → **Analytics** → **Zenith Command Center** |
-| **Version note** | Includes **mobile** command bar (dropdown filters, briefing top-right). Hit List: pipeline-style **filters + sort**; **scroll / Open →** hint on **md+** only; **Availing Loan** KPI opens drawer; Payment radar **Top overdue** helper text; quick drawers: **Sales** next to project name (list + single); **Recent remarks** before **Log activity**; **Payment** card after **Deal value** on **Quick Actions** and **Operations** single-project view (**N/A** when payment not applicable). **Customer Master:** **Ctrl+Shift+M** / **⌘⇧M** and **`/customers?new=1`** open **New Customer** when allowed. **Projects:** **System Capacity (kW)** is integer-only; **Inverter Capacity (kW)** on **Edit** defaults from it until overridden; **Project Detail** read-only view uses responsive **card** rows and per-installment **Payment Tracking** blocks; **Projects** grid uses **Deal Health**–style dark **popovers** for **Pending/Partial balance** and **financing bank** (hover vs tap — see Help → Modules). **Dashboard + Zenith:** **Things needing attention** strip (**Sales**, **Operations**, **Admin**); **daily briefing** lifecycle reminder (**Sales**, **Admin**, **Operations**); **panel / inverter brand** chart tooltips include **System capacity (sum)**. |
+| **Version note** | Includes **mobile** command bar (dropdown filters, briefing top-right). Hit List: pipeline-style **filters + sort**; **scroll / Open →** hint on **md+** only; **Availing Loan** KPI opens drawer; Payment radar **Top overdue** helper text; quick drawers: **Sales** next to project name (list + single); **Recent remarks** before **Log activity**; **Payment** card after **Deal value** on **Quick Actions** and **Operations** single-project view (**N/A** when payment not applicable). **Customer Master:** **Ctrl+Shift+M** / **⌘⇧M** and **`/customers?new=1`** open **New Customer** when allowed. **Projects:** **System Capacity (kW)** is integer-only; **Inverter Capacity (kW)** on **Edit** defaults from it until overridden; **Project Detail** read-only view uses responsive **card** rows and per-installment **Payment Tracking** blocks; **Projects** grid uses **Deal Health**–style dark **popovers** for **Pending/Partial balance** and **financing bank** (hover vs tap — see Help → Modules). **Dashboard + Zenith:** **Things needing attention** strip (**Sales**, **Operations**, **Admin**); **daily briefing** lifecycle reminder (**Sales**, **Admin**, **Operations**); **panel / inverter brand** chart tooltips include **System capacity (sum)**. **Classic Dashboard:** most charts **click through to Projects** (bars, FY columns, pie slices, loan-by-bank, panel/inverter bars, profitability cloud / Top 10); **Zenith Explore** includes **panel / inverter** for **Sales** on executive Zenith (aligned with Dashboard). |
 
 ---
 

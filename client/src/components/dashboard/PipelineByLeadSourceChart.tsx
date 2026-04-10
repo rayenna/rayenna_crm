@@ -1,6 +1,9 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
+import type { ZenithDateFilter } from '../zenith/zenithTypes'
+import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
 import { getLeadSourceColor } from './leadSourceColors'
 
 export interface PipelineByLeadSourceItem {
@@ -12,10 +15,17 @@ export interface PipelineByLeadSourceItem {
 
 interface PipelineByLeadSourceChartProps {
   data?: PipelineByLeadSourceItem[]
+  dashboardFilter?: ZenithDateFilter | null
 }
 
-const PipelineByLeadSourceChart = ({ data: chartData = [] }: PipelineByLeadSourceChartProps) => {
+const PipelineByLeadSourceChart = ({ data: chartData = [], dashboardFilter }: PipelineByLeadSourceChartProps) => {
+  const navigate = useNavigate()
   const { user } = useAuth()
+  const dateFilter: ZenithDateFilter = dashboardFilter ?? {
+    selectedFYs: [],
+    selectedQuarters: [],
+    selectedMonths: [],
+  }
   const canView = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGEMENT || user?.role === UserRole.SALES
 
   if (!canView) return null
@@ -83,13 +93,27 @@ const PipelineByLeadSourceChart = ({ data: chartData = [] }: PipelineByLeadSourc
                           <p className="text-sm text-gray-600 mt-1">
                             Projects: <span className="font-medium">{d.projectCount}</span>
                           </p>
+                          <p className="text-xs font-medium text-amber-700 mt-1">Click bar to open Projects →</p>
                         </div>
                       )
                     }
                     return null
                   }}
                 />
-                <Bar dataKey="pipeline" name="Pipeline (₹)" radius={[4, 4, 0, 0]}>
+                <Bar
+                  dataKey="pipeline"
+                  name="Pipeline (₹)"
+                  radius={[4, 4, 0, 0]}
+                  cursor="pointer"
+                  onClick={(_row: unknown, index: number) => {
+                    const row = chartData[index]
+                    if (!row?.leadSourceLabel) return
+                    const href = buildZenithDrawerListProjectsHref('lead_source', row.leadSourceLabel, dateFilter, {
+                      leadSourceMetric: 'pipeline',
+                    })
+                    if (href) navigate(href)
+                  }}
+                >
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={getLeadSourceColor(entry.leadSourceLabel, index)} />
                   ))}

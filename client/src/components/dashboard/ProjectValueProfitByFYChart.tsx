@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
 
 interface FYData {
   fy: string
@@ -19,6 +21,7 @@ interface ProjectValueProfitByFYChartProps {
 }
 
 const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'management', filterControlledByParent, selectedFYsFromDashboard }: ProjectValueProfitByFYChartProps) => {
+  const navigate = useNavigate()
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [showFYDropdown, setShowFYDropdown] = useState(false)
   const fyDropdownRef = useRef<HTMLDivElement>(null)
@@ -248,6 +251,7 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
                           </p>
                         )
                       })}
+                      <p className="text-xs font-medium text-amber-700 mt-1">Click a bar to open Projects →</p>
                     </div>
                   )
                 }
@@ -255,17 +259,39 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
               }}
             />
             <Legend />
-            <Bar 
-              dataKey="totalProjectValue" 
-              name="Total Revenue" 
-              fill="#3b82f6" 
+            <Bar
+              dataKey="totalProjectValue"
+              name="Total Revenue"
+              fill="#3b82f6"
               radius={[4, 4, 0, 0]}
+              cursor="pointer"
+              onClick={(_row: unknown, index: number) => {
+                const fy = filteredData[index]?.fy
+                if (!fy) return
+                const href = buildZenithDrawerListProjectsHref('fy', fy, {
+                  selectedFYs: [],
+                  selectedQuarters: [],
+                  selectedMonths: [],
+                }, { fyMetric: 'revenue' })
+                if (href) navigate(href)
+              }}
             />
-            <Bar 
-              dataKey="totalProfit" 
-              name="Total Profit" 
-              fill="#10b981" 
+            <Bar
+              dataKey="totalProfit"
+              name="Total Profit"
+              fill="#10b981"
               radius={[4, 4, 0, 0]}
+              cursor="pointer"
+              onClick={(_row: unknown, index: number) => {
+                const fy = filteredData[index]?.fy
+                if (!fy) return
+                const href = buildZenithDrawerListProjectsHref('fy', fy, {
+                  selectedFYs: [],
+                  selectedQuarters: [],
+                  selectedMonths: [],
+                }, { fyMetric: 'profit' })
+                if (href) navigate(href)
+              }}
             />
           </BarChart>
         </ResponsiveContainer>

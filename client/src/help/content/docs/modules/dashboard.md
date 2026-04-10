@@ -363,7 +363,7 @@ Each user role sees a customized dashboard tailored to their responsibilities an
 
 **What They See**:
 - **KPIs**: Total Leads, Total Capacity, Total Revenue, Total Pipeline, Approved Projects, Site Survey Stage, Proposal Stage, At Risk
-- **Charts**: Project Value and Profit by FY, Project Value by Segment (Pie Chart), Customer Profitability Word Cloud
+- **Charts**: Project Value and Profit by FY, Revenue by Lead Source, Pipeline by Lead Source, Project Value by Segment, Pipeline by Customer Segment, Customer Profitability (word cloud / Top 10), Projects Availing Loans by Bank, **Projects by panel brand** and **Projects by inverter brand** (lifecycle cohort — both brands required)
 - **Data Scope**: Only their own projects and leads
 - **Filters**: Financial Year, Quarter, and Month filters
 
@@ -380,7 +380,7 @@ Each user role sees a customized dashboard tailored to their responsibilities an
 
 **What They See**:
 - **KPIs**: Pending Installation, Submitted for Subsidy, Subsidy Credited
-- **Charts**: Project Value and Profit by FY, Project Value by Segment (Pie Chart)
+- **Charts**: Project Value and Profit by FY, Revenue by Sales Team, Project Value by Segment, **Projects by panel brand** and **Projects by inverter brand**
 - **Additional**: Pending Subsidy list with customer names and days pending
 - **Data Scope**: All projects (company-wide)
 - **Filters**: Financial Year, Quarter, and Month filters
@@ -417,7 +417,7 @@ Each user role sees a customized dashboard tailored to their responsibilities an
 
 **What They See**:
 - **KPIs**: Total Leads, Total Capacity, Total Revenue, Total Pipeline, Total Profit, Pending Installation, Pending Subsidy, Subsidy Credited
-- **Charts**: Project Value and Profit by FY, Project Value by Segment (Pie Chart), Customer Profitability Word Cloud, Sales Team Performance Treemap
+- **Charts**: Project Value and Profit by FY, Revenue by Lead Source, Pipeline by Lead Source, Revenue by Sales Team, Sales Team Performance (column/treemap), Project Value by Segment, Pipeline by Customer Segment, Customer Profitability Word Cloud, Projects Availing Loans by Bank, **Projects by panel brand** and **Projects by inverter brand**
 - **Data Scope**: All projects and all users (company-wide)
 - **Filters**: Financial Year, Quarter, and Month filters
 
@@ -583,7 +583,7 @@ Each user role sees a customized dashboard tailored to their responsibilities an
 
 **Efficient Navigation**:
 - Use filters to focus on relevant data
-- Click on charts for detailed views
+- **Click chart bars, slices, or words** to open a filtered **Projects** list
 - Navigate to modules from dashboard
 - Use browser refresh to update data
 
@@ -631,6 +631,12 @@ Each user role sees a customized dashboard tailored to their responsibilities an
 
 Charts provide visual representations of your data, making it easier to understand trends, patterns, and relationships. Different dashboards show different charts based on role.
 
+### Click-through to Projects (classic Dashboard)
+
+Most dashboard **charts are interactive**: click a **bar**, **grouped FY bar** (blue revenue vs green profit separately), **pie slice**, **word** in the profitability cloud, or a **Top 10** table row to open the **Projects** page with filters that match what you clicked, plus the dashboard **Financial Year**, **Quarter**, and **Month** when applicable. Chart tooltips often remind you with **Click to open Projects →** (or similar).
+
+This uses the **same slice ideas** as **Zenith** where both exist; the difference is that the classic Dashboard navigates **directly** to Projects, while Zenith usually opens **Quick Actions** first and offers **Open in Projects →** in the drawer. For deeper behaviour and edge cases, see **Help → Analytics and Reports → [Classic Dashboard — chart click-through](/help/analytics#classic-dashboard-chart-click-through-to-projects)**.
+
 ### Common Charts
 
 **Project Value and Profit by Financial Year**:
@@ -657,12 +663,18 @@ Charts provide visual representations of your data, making it easier to understa
 - **Usage**: Compare salesperson performance
 - **Available**: Management dashboard only
 
+**Projects by panel brand / Projects by inverter brand**:
+- **Type**: Horizontal bar charts (pair)
+- **Shows**: Counts by brand for projects that already have **both** panel and inverter brands in Project Lifecycle (same cohort as Zenith)
+- **Usage**: See brand mix and estimated component cost; **click a bar** to open **Projects** with that brand and lifecycle filter
+- **Available**: **Sales**, **Management**, **Admin**, **Operations** — not **Finance**
+
 ### Chart Features
 
 **Interactive Elements**:
 - Hover for detailed information
-- Click for drill-down (if available)
-- Filter controls on charts
+- **Click** many chart elements to open **Projects** with matching filters (see **Click-through to Projects** above)
+- Filter controls on some charts (when not controlled only by the top dashboard filter bar)
 - Responsive design
 
 **Filter Integration**:

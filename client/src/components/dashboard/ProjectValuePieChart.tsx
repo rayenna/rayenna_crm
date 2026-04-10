@@ -1,8 +1,11 @@
-import { useState, useEffect, useRef, memo } from 'react'
+import { useState, useEffect, useRef, memo, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { getSegmentColor } from './segmentColors'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
+import type { ZenithDateFilter } from '../zenith/zenithTypes'
+import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
 
 interface ProjectValueByType {
   type: string
@@ -17,6 +20,8 @@ interface ProjectValuePieChartProps {
   availableFYs?: string[] // Available financial years from dashboard
   dashboardType?: 'management' | 'sales' | 'operations' | 'finance'
   filterControlledByParent?: boolean
+  /** When `filterControlledByParent`, FY/Q/M from dashboard for Projects drill URLs. */
+  dashboardFilter?: ZenithDateFilter | null
 }
 
 // Fixed size for stability; percentages shown in Legend/Tooltip only
@@ -24,7 +29,15 @@ const DONUT_SIZE = 200 // diameter
 const OUTER_R = DONUT_SIZE / 2
 const INNER_R = OUTER_R * 0.55
 
-const ProjectValuePieChart = memo(({ data: initialData, availableFYs = [], dashboardType = 'management', filterControlledByParent }: ProjectValuePieChartProps) => {
+const ProjectValuePieChart = memo(
+  ({
+    data: initialData,
+    availableFYs = [],
+    dashboardType = 'management',
+    filterControlledByParent,
+    dashboardFilter,
+  }: ProjectValuePieChartProps) => {
+  const navigate = useNavigate()
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [showFYDropdown, setShowFYDropdown] = useState(false)
   const fyDropdownRef = useRef<HTMLDivElement>(null)
@@ -74,6 +87,21 @@ const ProjectValuePieChart = memo(({ data: initialData, availableFYs = [], dashb
   })
 
   const chartData = filterControlledByParent ? (initialData || []) : (filteredData || initialData || [])
+
+  const drillDateFilter: ZenithDateFilter = useMemo(() => {
+    if (filterControlledByParent && dashboardFilter) {
+      return {
+        selectedFYs: dashboardFilter.selectedFYs ?? [],
+        selectedQuarters: dashboardFilter.selectedQuarters ?? [],
+        selectedMonths: dashboardFilter.selectedMonths ?? [],
+      }
+    }
+    return {
+      selectedFYs: selectedFYs,
+      selectedQuarters: [],
+      selectedMonths: [],
+    }
+  }, [filterControlledByParent, dashboardFilter, selectedFYs])
 
   if (!chartData || chartData.length === 0) {
     return (
@@ -202,6 +230,15 @@ const ProjectValuePieChart = memo(({ data: initialData, availableFYs = [], dashb
                   label={false}
                   fill="#8884d8"
                   dataKey="value"
+                  cursor="pointer"
+                  onClick={(_: unknown, index: number) => {
+                    const slice = displayData[index]
+                    if (!slice?.label) return
+                    const href = buildZenithDrawerListProjectsHref('customer_segment', slice.label, drillDateFilter, {
+                      segmentChart: 'revenue',
+                    })
+                    if (href) navigate(href)
+                  }}
                 >
                   {displayData.map((item: ProjectValueByType, index: number) => (
                     <Cell key={`cell-${index}`} fill={getSegmentColor(item.type, index)} />
@@ -237,6 +274,7 @@ const ProjectValuePieChart = memo(({ data: initialData, availableFYs = [], dashb
                           <p className="text-xs mt-1" style={{ color: '#64748b' }}>
                             Projects: {data.count}
                           </p>
+                          <p className="text-xs font-medium text-amber-700 mt-1">Click slice to open Projects →</p>
                         </div>
                       )
                     }

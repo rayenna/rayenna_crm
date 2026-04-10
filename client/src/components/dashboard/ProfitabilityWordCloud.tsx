@@ -1,7 +1,10 @@
-import { useEffect, useRef, useState, memo } from 'react'
+import { useEffect, useRef, useState, memo, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import WordCloud from 'wordcloud'
+import type { ZenithDateFilter } from '../zenith/zenithTypes'
+import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 
 interface WordCloudData {
   text: string
@@ -14,6 +17,8 @@ interface ProfitabilityWordCloudProps {
   wordCloudData?: WordCloudData[]
   /** When true, filter is the dashboard FY/Qtr/Month; use wordCloudData prop, no chart filter UI */
   filterControlledByParent?: boolean
+  /** Dashboard FY / Q / M for Projects drill when controlled by parent */
+  dashboardFilter?: ZenithDateFilter | null
 }
 
 // Months ordered from April to March (Financial Year order)
@@ -32,7 +37,14 @@ const MONTHS = [
   { value: '03', label: 'March' },
 ]
 
-const ProfitabilityWordCloud = memo(({ availableFYs = [], wordCloudData: wordCloudDataProp, filterControlledByParent }: ProfitabilityWordCloudProps) => {
+const ProfitabilityWordCloud = memo(
+  ({
+    availableFYs = [],
+    wordCloudData: wordCloudDataProp,
+    filterControlledByParent,
+    dashboardFilter,
+  }: ProfitabilityWordCloudProps) => {
+  const navigate = useNavigate()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [view, setView] = useState<'cloud' | 'top10'>('cloud')
   const [dimensions, setDimensions] = useState({ width: 600, height: 400 })
@@ -73,6 +85,21 @@ const ProfitabilityWordCloud = memo(({ availableFYs = [], wordCloudData: wordClo
 
   const cloudData = filterControlledByParent && wordCloudDataProp ? wordCloudDataProp : data?.wordCloudData
   const showLoading = !filterControlledByParent && isLoading
+
+  const drillDateFilter: ZenithDateFilter = useMemo(() => {
+    if (filterControlledByParent) {
+      return {
+        selectedFYs: dashboardFilter?.selectedFYs ?? [],
+        selectedQuarters: dashboardFilter?.selectedQuarters ?? [],
+        selectedMonths: dashboardFilter?.selectedMonths ?? [],
+      }
+    }
+    return {
+      selectedFYs,
+      selectedQuarters: [],
+      selectedMonths,
+    }
+  }, [filterControlledByParent, dashboardFilter, selectedFYs, selectedMonths])
 
   const lastBucketRef = useRef<string | null>(null)
 
@@ -199,11 +226,19 @@ const ProfitabilityWordCloud = memo(({ availableFYs = [], wordCloudData: wordClo
         rotationSteps: 0,
         backgroundColor: 'transparent',
         drawOutOfBound: false,
+        click: (item: [string | number, number, ...unknown[]]) => {
+          const w = item[0]
+          if (typeof w !== 'string' || !w.trim()) return
+          navigate(buildProjectsUrl({ search: w.trim(), zenithSlice: 'revenue' }, drillDateFilter))
+        },
       })
     } catch (error) {
       if (import.meta.env.DEV) console.error('Error generating word cloud:', error)
     }
-  }, [cloudData, dimensions])
+    return () => {
+      WordCloud.stop()
+    }
+  }, [cloudData, dimensions, drillDateFilter, navigate])
 
   const toggleFY = (fy: string) => {
     setSelectedFYs((prev) => {
@@ -424,12 +459,13 @@ const ProfitabilityWordCloud = memo(({ availableFYs = [], wordCloudData: wordClo
             <div className="w-full flex justify-center overflow-hidden flex-1 min-h-0">
               <canvas
                 ref={canvasRef}
-                className="max-w-full h-auto"
+                className="max-w-full h-auto cursor-pointer"
                 style={{ maxWidth: '100%', height: 'auto' }}
               />
             </div>
             <div className="mt-2 text-xs text-gray-500 text-center flex-shrink-0">
               <p>Font size represents profitability percentage</p>
+              <p className="text-amber-700 font-medium mt-0.5">Click a word to open Projects →</p>
             </div>
           </>
         )}
@@ -471,7 +507,24 @@ const ProfitabilityWordCloud = memo(({ availableFYs = [], wordCloudData: wordClo
                       const maxVal = Math.max(...cloudData.map((d: WordCloudData) => d.value ?? 0), 1)
                       const pct = (row.value ?? 0) / maxVal
                       return (
-                        <tr key={`${row.text}-${idx}`} className="hover:bg-primary-50/40 transition-colors">
+                        <tr
+                          key={`${row.text}-${idx}`}
+                          className="hover:bg-primary-50/40 transition-colors cursor-pointer"
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => {
+                            const t = row.text?.trim()
+                            if (!t) return
+                            navigate(buildProjectsUrl({ search: t, zenithSlice: 'revenue' }, drillDateFilter))
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key !== 'Enter' && e.key !== ' ') return
+                            e.preventDefault()
+                            const t = row.text?.trim()
+                            if (!t) return
+                            navigate(buildProjectsUrl({ search: t, zenithSlice: 'revenue' }, drillDateFilter))
+                          }}
+                        >
                           <td className="py-2.5 px-3 text-center">
                             <span className={`inline-flex items-center justify-center w-7 h-7 rounded-lg text-sm font-bold ${
                               idx === 0 ? 'bg-amber-100 text-amber-800' :

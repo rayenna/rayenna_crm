@@ -1,7 +1,10 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
+import type { ZenithDateFilter } from '../zenith/zenithTypes'
+import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
 import { getSegmentColor } from './segmentColors'
 
 export interface PipelineBySegmentItem {
@@ -14,6 +17,7 @@ export interface PipelineBySegmentItem {
 
 interface PipelineByCustomerSegmentPieChartProps {
   data?: PipelineBySegmentItem[]
+  dashboardFilter?: ZenithDateFilter | null
 }
 
 // Fixed size for stability; percentages shown in legend/tooltip only
@@ -21,8 +25,19 @@ const DONUT_SIZE = 200
 const OUTER_R = DONUT_SIZE / 2
 const INNER_R = OUTER_R * 0.55
 
-const PipelineByCustomerSegmentPieChart = memo(({ data: chartData = [] }: PipelineByCustomerSegmentPieChartProps) => {
+const PipelineByCustomerSegmentPieChart = memo(({ data: chartData = [], dashboardFilter }: PipelineByCustomerSegmentPieChartProps) => {
+  const navigate = useNavigate()
   const { user } = useAuth()
+
+  const dateFilter: ZenithDateFilter = useMemo(
+    () =>
+      dashboardFilter ?? {
+        selectedFYs: [],
+        selectedQuarters: [],
+        selectedMonths: [],
+      },
+    [dashboardFilter],
+  )
 
   const canView = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGEMENT || user?.role === UserRole.SALES
 
@@ -80,6 +95,15 @@ const PipelineByCustomerSegmentPieChart = memo(({ data: chartData = [] }: Pipeli
                   label={false}
                   fill="#8884d8"
                   dataKey="value"
+                  cursor="pointer"
+                  onClick={(_: unknown, index: number) => {
+                    const slice = chartData[index]
+                    if (!slice?.label) return
+                    const href = buildZenithDrawerListProjectsHref('customer_segment', slice.label, dateFilter, {
+                      segmentChart: 'pipeline',
+                    })
+                    if (href) navigate(href)
+                  }}
                 >
                   {chartData.map((item: PipelineBySegmentItem, index: number) => (
                     <Cell key={`cell-${index}`} fill={getSegmentColor(item.type, index)} />
@@ -121,6 +145,7 @@ const PipelineByCustomerSegmentPieChart = memo(({ data: chartData = [] }: Pipeli
                           <p className="text-xs mt-1" style={{ color: '#64748b' }}>
                             Projects: {data.count}
                           </p>
+                          <p className="text-xs font-medium text-amber-700 mt-1">Click slice to open Projects →</p>
                         </div>
                       )
                     }
