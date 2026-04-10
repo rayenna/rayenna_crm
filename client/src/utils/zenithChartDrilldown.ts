@@ -66,6 +66,8 @@ export type DrilldownOpts = {
   salesTeamMetric?: 'revenue' | 'pipeline'
   segmentChart?: 'revenue' | 'pipeline'
   fyMetric?: 'revenue' | 'profit'
+  /** Zenith panel/inverter brand chart — slice is scoped to this financial year label. */
+  lifecycleMetricFy?: string
 }
 
 export function buildFilterLabel(
@@ -85,6 +87,16 @@ export function buildFilterLabel(
     }
     return `Payment — ${names[value] ?? value}`
   }
+  if (dimension === 'panel_brand') {
+    return opts?.lifecycleMetricFy
+      ? `FY ${opts.lifecycleMetricFy} · Panel — ${value}`
+      : `Panel — ${value}`
+  }
+  if (dimension === 'inverter_brand') {
+    return opts?.lifecycleMetricFy
+      ? `FY ${opts.lifecycleMetricFy} · Inverter — ${value}`
+      : `Inverter — ${value}`
+  }
   const labels: Record<ZenithChartDrilldownDimension, string> = {
     lead_source: `${value} — Lead Source`,
     assigned_to: `${value} — Sales`,
@@ -94,6 +106,8 @@ export function buildFilterLabel(
     forecast: value,
     loan_bank: `${value} — Loan`,
     payment_status: '',
+    panel_brand: `Panel — ${value}`,
+    inverter_brand: `Inverter — ${value}`,
   }
   return labels[dimension] ?? value
 }
@@ -155,6 +169,22 @@ export function filterProjectsByChartSlice(
         if (matchesZenithPaymentNaBucket(p)) return false
         const ps = p.payment_status ?? 'PENDING'
         return ps === value
+      })
+    }
+    case 'panel_brand': {
+      const fy = opts?.lifecycleMetricFy
+      return all.filter((p) => {
+        if (!(p.panel_brand?.trim() && p.inverter_brand?.trim())) return false
+        if (fy != null && fy !== '' && p.financial_year !== fy) return false
+        return (p.panel_brand || '') === value
+      })
+    }
+    case 'inverter_brand': {
+      const fy = opts?.lifecycleMetricFy
+      return all.filter((p) => {
+        if (!(p.panel_brand?.trim() && p.inverter_brand?.trim())) return false
+        if (fy != null && fy !== '' && p.financial_year !== fy) return false
+        return (p.inverter_brand || '') === value
       })
     }
     default:

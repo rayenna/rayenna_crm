@@ -28,6 +28,12 @@ export type ZenithExplorerProject = {
   availing_loan?: boolean
   /** Prisma `PaymentStatus` or null stored as PENDING; N/A pill matches stage/cost via `matchesZenithPaymentNaBucket`. */
   payment_status?: string
+  /** Project Lifecycle — panel brand when entered (Zenith panel vs inverter chart). */
+  panel_brand?: string | null
+  /** Project Lifecycle — inverter brand when entered. */
+  inverter_brand?: string | null
+  /** Installed system size (kW), whole number when set. */
+  system_capacity_kw?: number | null
 }
 
 export type ZenithChartDrilldownDimension =
@@ -39,3 +45,5 @@ export type ZenithChartDrilldownDimension =
   | 'forecast'
   | 'loan_bank'
   | 'payment_status'
+  | 'panel_brand'
+  | 'inverter_brand'

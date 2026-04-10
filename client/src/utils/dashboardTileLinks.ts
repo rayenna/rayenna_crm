@@ -22,6 +22,12 @@ export function buildProjectsUrl(
     zenithSlice?: 'revenue' | 'pipeline'
     /** With `zenithSlice=revenue` + FY: same as FY profit chart drill (`gross_profit != null`). */
     zenithFyProfit?: boolean
+    /** Exact panel brand (Project Lifecycle); use with `lifecycleSpecsComplete` for Zenith chart parity. */
+    panelBrand?: string
+    /** Exact inverter brand (Project Lifecycle). */
+    inverterBrand?: string
+    /** Require both panel and inverter brand entered (non-empty), matching Zenith lifecycle chart cohort. */
+    lifecycleSpecsComplete?: boolean
   },
   dashboardFilters: { selectedFYs: string[]; selectedQuarters: string[]; selectedMonths: string[] }
 ): string {
@@ -40,6 +46,13 @@ export function buildProjectsUrl(
   if (params.leadSourceIsNull) search.append('leadSourceIsNull', 'true')
   if (params.zenithSlice) search.append('zenithSlice', params.zenithSlice)
   if (params.zenithFyProfit) search.append('zenithFyProfit', 'true')
+  if (params.panelBrand != null && String(params.panelBrand).trim() !== '') {
+    search.append('panelBrand', String(params.panelBrand).trim())
+  }
+  if (params.inverterBrand != null && String(params.inverterBrand).trim() !== '') {
+    search.append('inverterBrand', String(params.inverterBrand).trim())
+  }
+  if (params.lifecycleSpecsComplete) search.append('lifecycleSpecsComplete', 'true')
   dashboardFilters.selectedFYs.forEach((fy) => search.append('fy', fy))
   dashboardFilters.selectedQuarters.forEach((q) => search.append('quarter', q))
   dashboardFilters.selectedMonths.forEach((m) => search.append('month', m))

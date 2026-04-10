@@ -320,6 +320,9 @@ async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
       leadSource: true,
       type: true,
       year: true,
+      systemCapacity: true,
+      panelBrand: true,
+      inverterBrand: true,
       paymentStatus: true,
       updatedAt: true,
       stageEnteredAt: true,
@@ -364,6 +367,10 @@ async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
     availing_loan: Boolean(p.availingLoan),
     /** Resolved payment enum for dashboard payment pills (null → PENDING); N/A bucket uses `matchesZenithPaymentNaBucket` client-side. */
     payment_status: p.paymentStatus ?? 'PENDING',
+    panel_brand: p.panelBrand?.trim() ? p.panelBrand.trim() : null,
+    inverter_brand: p.inverterBrand?.trim() ? p.inverterBrand.trim() : null,
+    system_capacity_kw:
+      p.systemCapacity != null && Number(p.systemCapacity) > 0 ? Number(p.systemCapacity) : null,
   }));
 }
 

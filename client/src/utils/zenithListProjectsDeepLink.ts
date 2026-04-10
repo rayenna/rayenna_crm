@@ -137,6 +137,26 @@ export function buildZenithDrawerListProjectsHref(
       if (!raw) return null
       return buildProjectsUrl({ availingLoan: true, financingBank: [raw] }, dateFilter)
     }
+    case 'panel_brand': {
+      const fy =
+        opts?.lifecycleMetricFy != null && opts.lifecycleMetricFy !== ''
+          ? { selectedFYs: [opts.lifecycleMetricFy], selectedQuarters: [], selectedMonths: [] }
+          : dateFilter
+      return buildProjectsUrl(
+        { panelBrand: value, lifecycleSpecsComplete: true },
+        fy,
+      )
+    }
+    case 'inverter_brand': {
+      const fy =
+        opts?.lifecycleMetricFy != null && opts.lifecycleMetricFy !== ''
+          ? { selectedFYs: [opts.lifecycleMetricFy], selectedQuarters: [], selectedMonths: [] }
+          : dateFilter
+      return buildProjectsUrl(
+        { inverterBrand: value, lifecycleSpecsComplete: true },
+        fy,
+      )
+    }
     default:
       return null
   }

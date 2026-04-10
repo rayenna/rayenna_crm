@@ -6,29 +6,75 @@
 Use your email address and password provided by your administrator.
 
 ### What if I forget my password?
-Contact your system administrator to reset your password.
+Contact your system administrator. An Administrator can generate a password reset link from the **Users** page (Reset Password) and share it with you. The link expires in 24 hours.
 
 ### Can I change my password?
-Yes, click on "Change Password" in the navigation menu after logging in.
+Yes. After logging in, open the user menu (your name, top right) and choose **Change Password**. Enter your current password, then your new password (min 6 characters) and confirm it.
+
+### How do I log out?
+Use the user menu (your name, top right) and select the logout option. For security, log out when you finish on shared or public computers.
+
+### Why was I logged out automatically?
+The system logs you out after a period of inactivity for security. Log in again to continue; consider changing your password if you are concerned about account security.
+
+### How do I get help in the app?
+Press **?** (question mark) from most pages for context-sensitive help, or click **Help** in the navigation menu. Help content is organised by section (Getting Started, Roles, Modules, Analytics & Reports, Security, FAQ). **Zenith** is documented inside **Analytics** — open [Analytics & Reports](/help/analytics) and scroll to **Zenith Command Center**, or use the direct link [Zenith Command Center](/help/analytics#zenith-command-center).
+
+## Roles and Permissions
+
+### What user roles exist?
+The system has **Administrator (Admin)**, **Sales**, **Operations**, **Finance**, and **Management**. Your role determines which menu items and features you see and what you can edit or delete.
+
+### Why can't I see a menu item or feature?
+Menu items and features are shown based on your role. For example, **Users**, **Audit & Security**, and **Tally Export** are only available to certain roles. If you need access, contact your administrator.
+
+### Why can't I edit or delete something?
+Editing and deleting are restricted by role. For example, only Admin can delete users or customers (when the customer has no projects); only Finance can edit payment tracking; Sales can edit only their own customers and projects. Check the module help for your role’s permissions.
 
 ## Navigation
 
 ### How do I navigate between modules?
 Use the top navigation menu. Available options depend on your user role.
 
+### What keyboard shortcuts are available?
+Press **?** (outside text fields) for context-sensitive **Help**. Use **Ctrl+Shift+** a letter on Windows/Linux (**⌘⇧** on Mac) to jump to **Dashboard (D)**, **Customers (C)**, **Projects (P)**, **Support Tickets (K)**, **Zenith (Z)**, open **new customer (M)**, or **new project (E)** — only if your role has access to that screen. **Esc** on a Help page returns to the **Dashboard**. Full tables: [Getting Started → Keyboard shortcuts](/help/getting-started#keyboard-shortcuts) and [Analytics → Keyboard shortcuts](/help/analytics#keyboard-shortcuts).
+
 ### What is the Dashboard?
-The Dashboard provides an overview of key metrics and information relevant to your role.
+The Dashboard provides an overview of key metrics and information relevant to your role (KPIs, charts, Quick Access tiles). Each role sees a different dashboard (Sales, Operations, Finance, Management/Admin).
+
+### What is Zenith?
+**Zenith** is an optional full-screen **Command Center** for analytics. Open it from the **Dashboard** menu (**Zenith ✦**). It uses the same **Financial Year, Quarter, and Month** rules as the classic dashboard, with a sticky command bar, an **AI Insights** scrolling ribbon (plain-English highlights from your data), a **Your Focus** area tailored to **Sales / Finance / Operations / Management**, animated **KPI** cards with sparklines and trend badges, **Today’s Hit List** (Sales / Management / Admin — up to seven urgent deals with **filters** and **sort** like **Your pipeline today**), **Quick Actions** drawers that show **Recent remarks** before **Log activity** where applicable, a **Payment** snapshot (**status**, **total received**, **balance pending**) after **Deal value** on **Quick Actions** and **Operations** single-project drawers (and **N/A** when payment does not apply — same idea as **Project detail**), funnels, and charts. Full documentation: [Analytics & Reports → Zenith Command Center](/help/analytics#zenith-command-center).
+
+### What are the Dashboard filters (FY, Quarter, Month)?
+Use the filter bar at the top of the Dashboard to focus on a period. **Financial Year (FY)** is always available; **Quarter** and **Month** are available when exactly one FY is selected. Tile counts and most charts respect these filters.
+
+### What are Quick Access tiles on the Dashboard?
+Quick Access tiles show counts (e.g. leads, open deals, payment status) and link to the **Projects** page with the same date filters (FY, Quarter, Month) plus the tile’s filter already applied. Click a tile to open a filtered project list; use **Clear All** on Projects to remove filters.
+
+### What is “Things needing attention” on the Dashboard?
+A compact notice **Sales**, **Operations**, and **Admin** may see **above** the main dashboard metrics when late-stage projects (**Under Installation**, **Completed**, or **Completed – Subsidy Credited**) are missing **panel and/or inverter brand**. **Management** does not see it. It lists a count and customer names and links to **Projects** with the same idea. **Zenith** can show a matching line in the **Smart daily briefing** for **Sales**, **Admin**, and **Operations** only. See [Analytics → Things needing attention](/help/analytics#things-needing-attention-dashboard) and [Daily briefing](/help/analytics#daily-briefing-zenith).
+
+## Customers
+
+### How do I create a customer?
+Go to **Customers** (Customer Master) and click **New Customer**, or use **Ctrl+Shift+M** / **⌘⇧M**, or open **`/customers?new=1`** after login (when your role allows). Fill in name (or first/last for individuals), address, at least one contact number, and other optional details. **Sales**, **Management**, and **Admin** can create customers; Sales see **My Customers** and **All Customers** (view-only for others’ customers).
+
+### Who can edit or delete customers?
+Sales can edit their own customers (My Customers); Admin can edit any customer and delete customers who have no projects. Management can edit and change salesperson assignment but cannot create or delete.
 
 ## Projects
 
 ### How do I create a new project?
-Click "New Project" button on the Projects page and fill in the required information.
+Click **New Project** on the Projects page. You must **select a customer** first (search by name, ID, or consumer number); if the customer doesn't exist, create them from **Customers** (Customer Master) first. Fill in required fields (Segment, Project Type, Confirmation Date, etc.) and click **Create**. Sales and Admin can create projects.
 
 ### How do I update project status?
 Navigate to the project detail page and update the status in the appropriate section.
 
 ### Can I upload documents to projects?
-Yes, use the Documents section on the project detail page.
+Yes, use the **Key Artifacts** (documents) section on the project detail page to upload and categorize files.
+
+### Why don't dashboard and project filters match?
+Dashboard filters (FY, Quarter, Month) apply to dashboard tiles and most charts. When you open **Projects** from a Quick Access tile, those filters are passed to the Projects page. If you set different filters on the Projects page, they are independent until you click a dashboard tile again or use **Clear All**.
 
 ## Support Tickets
 
@@ -39,18 +85,32 @@ Navigate to a project and use the Support Tickets section to create a new ticket
 Open the ticket and use the "Add Follow-up" option in the ticket detail drawer.
 
 ### Can I close tickets?
-Yes, if you have the appropriate permissions (SALES, OPERATIONS, or ADMIN).
+Yes, if you have the appropriate permissions (Sales, Operations, or Admin). Once closed, only Admin can add follow-ups. You cannot create tickets for projects in **Lost** status.
 
 ## Data & Reports
 
 ### How do I export data?
-Use the export buttons available in various modules. For financial data, use the Tally Export feature.
+Use the export buttons available in various modules. For financial data, use **Tally Export** (Finance and Admin only). Customers and other modules may offer Excel or CSV export where your role has permission.
+
+### Where is Tally Export and who can use it?
+**Tally Export** is in the top menu. Only **Finance** and **Admin** can access it. You can export Projects, Invoices, or Payments in Excel, CSV, or Tally XML format. Optional date filters and a confirmation step apply; exports are monitored.
 
 ### Can I filter data?
-Yes, most modules include filter options to help you find specific data.
+Yes, most modules include filter options (e.g. status, FY, Quarter, Month on Dashboard and Projects; Sales Person, My/All on Customers) to help you find specific data.
 
 ### How do I search?
-Use the search bar available in most modules to search across relevant fields.
+Use the search bar available in most modules to search across relevant fields (e.g. customer name, ID, or consumer number on Customers; customer or project on Projects).
+
+## Users and Security (Admin)
+
+### Where do I manage users?
+Administrators use the **Users** page (top menu) to create users (email, name, password, role), view all users, **Reset Password** (generates a 24-hour link to share with the user), and delete users. Only Admin can access this page.
+
+### What is the Audit & Security page?
+**Audit & Security** (Admin only) shows login and audit activity: summary tiles (e.g. failed logins, successful logins), Security insights charts, recent failed logins, and an Activity timeline of audit logs (including key actions such as project changes, support ticket events, and proposal generation). You can export logs as CSV, PDF, or signed PDF for compliance.
+
+### How do I export audit logs? (Admin)
+Go to **Audit & Security**, set the date range and filters in the **Activity timeline** section, then use **Export CSV**, **Export PDF**, or **Signed audit export**. The signed PDF includes a footer with date and exporter email for official use.
 
 ## Troubleshooting
 
@@ -67,5 +127,47 @@ Use the search bar available in most modules to search across relevant fields.
 
 ### Data is not updating
 - Try refreshing the page
+- On the Dashboard, change or clear the FY/Quarter/Month filters to refresh data
 - Check if you have the latest permissions
 - Contact support if data seems incorrect
+
+### Help content looks wrong or won't load
+- Refresh the page (F5) and open Help again
+- Use the sidebar to switch to another section (e.g. Getting Started) then back
+- If it persists, try a different browser or clear the cache
+
+### Dashboard numbers don't match what I expect
+- Check the Dashboard filters (FY, Quarter, Month); tile counts and charts use these
+- If you have one FY selected, try clearing filters to see all data, or ensure the correct period is selected
+- Refresh the page to load the latest data from the server
+
+## Proposal Engine & Proposals
+
+### What is the Proposal Engine?
+The Proposal Engine is a companion app that helps you create consistent, auditable proposals for CRM projects. It includes Costing Sheet, BOM Sheet, ROI Calculator, and Proposal, and is tightly integrated with the **Projects** module and **Audit & Security**.
+
+### How do I open the Proposal Engine for a project?
+From the **Project Detail** page in Rayenna CRM (for projects in **Proposal** or **Confirmed** stages), click **Proposals (New)**. This opens the Proposal Engine for that project using your existing login (single sign-on).
+
+### Who can use the Proposal Engine?
+Sales and Admin can work on Costing, BOM, ROI, and Proposal for eligible projects. Operations, Management, and Finance can open Proposal Engine from **Proposals (New)** to review artifacts in read-only mode.
+
+### When does a project show as Proposal Ready?
+A project is marked **Proposal Ready** only when **all four** artifacts are created and saved in Proposal Engine:
+- Costing Sheet
+- BOM Sheet
+- ROI
+- Proposal  
+If any of the four is missing, the project remains in **Draft** status for proposals in both Proposal Engine and the CRM Projects screens.
+
+### Why does my project still show Draft even though I see a proposal?
+You may have saved only some of the artifacts (for example, Proposal but not Costing/BOM/ROI). All four artifacts must be saved in Proposal Engine before the project is considered **Proposal Ready** in CRM.
+
+### How are Costing templates shared?
+When you click **Save as Template** on the Costing Sheet in Proposal Engine, the template is stored in the backend and becomes available to **all Sales and Admin users**. Templates are shared across devices and remain available after you log out and log back in.
+
+### Who can delete Costing templates in Proposal Engine?
+Only **Admin** can delete shared Costing templates. Sales users can create and use templates but cannot delete them. This keeps standard templates consistent while still making them easy to reuse.
+
+### Does clicking “Proposals (New)” affect audit logs?
+Yes. When you click **Proposals (New)** from Project Detail, the system logs a **Proposal generated** action for that project in **Audit & Security** under the **Proposal** entity. This helps track who opened the Proposal Engine for each project and when.

@@ -55,6 +55,9 @@ function getInitialFiltersFromUrl(): {
   leadSourceIsNull: boolean
   zenithSlice: 'revenue' | 'pipeline' | null
   zenithFyProfit: boolean
+  panelBrand: string
+  inverterBrand: string
+  lifecycleSpecsComplete: boolean
 } | null {
   const p = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
   const status = p.getAll('status')
@@ -76,6 +79,10 @@ function getInitialFiltersFromUrl(): {
   const zenithSlice =
     rawZenithSlice === 'revenue' || rawZenithSlice === 'pipeline' ? rawZenithSlice : null
   const zenithFyProfit = p.get('zenithFyProfit') === 'true'
+  const panelBrand = p.get('panelBrand')?.trim() ?? ''
+  const inverterBrand = p.get('inverterBrand')?.trim() ?? ''
+  const lifecycleSpecsComplete =
+    p.get('lifecycleSpecsComplete') === 'true' || panelBrand !== '' || inverterBrand !== ''
   const hasAny =
     status.length > 0 ||
     paymentStatus.length > 0 ||
@@ -93,7 +100,10 @@ function getInitialFiltersFromUrl(): {
     salespersonUnassigned ||
     leadSourceIsNull ||
     zenithSlice != null ||
-    zenithFyProfit
+    zenithFyProfit ||
+    panelBrand !== '' ||
+    inverterBrand !== '' ||
+    p.get('lifecycleSpecsComplete') === 'true'
   if (!hasAny) return null
   const validStatus = status.filter((s) => Object.values(ProjectStatus).includes(s as ProjectStatus))
   const validPayment = paymentStatus.filter((v) => (VALID_PAYMENT_STATUS_VALUES as readonly string[]).includes(v))
@@ -118,6 +128,9 @@ function getInitialFiltersFromUrl(): {
     leadSourceIsNull,
     zenithSlice,
     zenithFyProfit,
+    panelBrand,
+    inverterBrand,
+    lifecycleSpecsComplete,
   }
 }
 
@@ -442,6 +455,9 @@ const Projects = () => {
     leadSourceIsNull: urlInit?.leadSourceIsNull ?? false,
     zenithSlice: urlInit?.zenithSlice ?? null,
     zenithFyProfit: urlInit?.zenithFyProfit ?? false,
+    panelBrand: urlInit?.panelBrand ?? '',
+    inverterBrand: urlInit?.inverterBrand ?? '',
+    lifecycleSpecsComplete: urlInit?.lifecycleSpecsComplete ?? false,
     search: '',
     sortBy: '',
     sortOrder: 'desc',
@@ -471,6 +487,11 @@ const Projects = () => {
     const zenithSliceFromUrl =
       rawZenithSliceUrl === 'revenue' || rawZenithSliceUrl === 'pipeline' ? rawZenithSliceUrl : null
     const zenithFyProfitFromUrl = searchParams.get('zenithFyProfit') === 'true'
+    const panelBrandFromUrl = searchParams.get('panelBrand')?.trim() ?? ''
+    const inverterBrandFromUrl = searchParams.get('inverterBrand')?.trim() ?? ''
+    const lifecycleSpecsFromUrl = searchParams.get('lifecycleSpecsComplete') === 'true'
+    const lifecycleSpecsActiveFromUrl =
+      lifecycleSpecsFromUrl || panelBrandFromUrl !== '' || inverterBrandFromUrl !== ''
     const hasStatusParams = statusFromUrl.length > 0
     const hasPaymentParams = paymentStatusFromUrl.length > 0
     const hasDateParams = fyFromUrl.length > 0 || quarterFromUrl.length > 0 || monthFromUrl.length > 0
@@ -490,7 +511,10 @@ const Projects = () => {
       salespersonUnassignedFromUrl ||
       leadSourceIsNullFromUrl ||
       zenithSliceFromUrl != null ||
-      zenithFyProfitFromUrl
+      zenithFyProfitFromUrl ||
+      panelBrandFromUrl !== '' ||
+      inverterBrandFromUrl !== '' ||
+      lifecycleSpecsFromUrl
     // Wait for statusOptions when we have status in URL (needed to validate status values)
     const canResolveStatus = !hasStatusParams || statusOptions.length > 0
     const validStatus = hasStatusParams && canResolveStatus
@@ -536,6 +560,9 @@ const Projects = () => {
         ...(zenithClosedToUrl?.trim() && { zenithClosedTo: zenithClosedToUrl.trim() }),
         zenithSlice: zenithSliceFromUrl,
         zenithFyProfit: zenithFyProfitFromUrl,
+        panelBrand: panelBrandFromUrl,
+        inverterBrand: inverterBrandFromUrl,
+        lifecycleSpecsComplete: lifecycleSpecsActiveFromUrl,
       }))
       if (fyFromUrl.length > 0) setSelectedFYs(fyFromUrl)
       if (quarterFromUrl.length > 0) setSelectedQuarters(quarterFromUrl)
@@ -646,6 +673,9 @@ const Projects = () => {
     filters.leadSourceIsNull,
     filters.zenithSlice,
     filters.zenithFyProfit,
+    filters.panelBrand,
+    filters.inverterBrand,
+    filters.lifecycleSpecsComplete,
     filters.sortBy,
     selectedFYs,
     selectedQuarters,
@@ -686,6 +716,9 @@ const Projects = () => {
       leadSourceIsNull: false,
       zenithSlice: null,
       zenithFyProfit: false,
+      panelBrand: '',
+      inverterBrand: '',
+      lifecycleSpecsComplete: false,
       search: '',
       sortBy: '',
       sortOrder: 'desc',
@@ -722,7 +755,8 @@ const Projects = () => {
       (filters.salespersonUnassigned ? 1 : 0) +
       (filters.leadSourceIsNull ? 1 : 0) +
       (filters.zenithSlice ? 1 : 0) +
-      (filters.zenithFyProfit ? 1 : 0)
+      (filters.zenithFyProfit ? 1 : 0) +
+      (filters.panelBrand || filters.inverterBrand || filters.lifecycleSpecsComplete ? 1 : 0)
     )
   }, [
     filters.status,
@@ -742,6 +776,9 @@ const Projects = () => {
     filters.leadSourceIsNull,
     filters.zenithSlice,
     filters.zenithFyProfit,
+    filters.panelBrand,
+    filters.inverterBrand,
+    filters.lifecycleSpecsComplete,
     defaultStatusValues,
     user?.role,
   ])
@@ -776,7 +813,10 @@ const Projects = () => {
     searchParams.get('leadSourceIsNull') === 'true' ||
     searchParams.get('zenithSlice') === 'revenue' ||
     searchParams.get('zenithSlice') === 'pipeline' ||
-    searchParams.get('zenithFyProfit') === 'true'
+    searchParams.get('zenithFyProfit') === 'true' ||
+    searchParams.has('panelBrand') ||
+    searchParams.has('inverterBrand') ||
+    searchParams.get('lifecycleSpecsComplete') === 'true'
 
   const { data, isLoading } = useQuery({
     queryKey: [
@@ -813,6 +853,9 @@ const Projects = () => {
       if (filters.leadSourceIsNull) params.append('leadSourceIsNull', 'true')
       if (filters.zenithSlice) params.append('zenithSlice', filters.zenithSlice)
       if (filters.zenithFyProfit) params.append('zenithFyProfit', 'true')
+      if (filters.lifecycleSpecsComplete) params.append('lifecycleSpecsComplete', 'true')
+      if (filters.panelBrand) params.append('panelBrand', filters.panelBrand)
+      if (filters.inverterBrand) params.append('inverterBrand', filters.inverterBrand)
       // Deal Health Score sorts server-side (same /api/projects endpoint) so it works across the full dataset.
       if (filters.sortBy) {
         params.append('sortBy', filters.sortBy)
@@ -948,6 +991,9 @@ const Projects = () => {
       if (filters.leadSourceIsNull) params.append('leadSourceIsNull', 'true')
       if (filters.zenithSlice) params.append('zenithSlice', filters.zenithSlice)
       if (filters.zenithFyProfit) params.append('zenithFyProfit', 'true')
+      if (filters.lifecycleSpecsComplete) params.append('lifecycleSpecsComplete', 'true')
+      if (filters.panelBrand) params.append('panelBrand', filters.panelBrand)
+      if (filters.inverterBrand) params.append('inverterBrand', filters.inverterBrand)
       if (filters.sortBy) {
         params.append('sortBy', filters.sortBy)
         params.append('sortOrder', filters.sortOrder)

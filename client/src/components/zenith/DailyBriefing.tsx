@@ -3,6 +3,11 @@ import { useModalEscape } from '../../contexts/ModalEscapeContext'
 import { motion } from 'framer-motion'
 import { Binoculars } from 'lucide-react'
 import { UserRole } from '../../types'
+import type { ZenithExplorerProject } from '../../types/zenithExplorer'
+import {
+  formatBriefingCustomerNameList,
+  zenithExplorerProjectsMissingLifecycleBrands,
+} from '../../utils/zenithBriefingMissingBrands'
 
 type BriefingLine = { icon: string; text: string; color: string }
 
@@ -144,9 +149,11 @@ function generateBriefing(args: {
       })
     }
   } else if (role === UserRole.OPERATIONS) {
-    const pendingInstallation = Number(
-      (data as { pendingInstallation?: { total?: number } })?.pendingInstallation?.total ?? 0,
-    )
+    const rawPending = (data as { pendingInstallation?: number | { total?: number } }).pendingInstallation
+    const pendingInstallation =
+      typeof rawPending === 'number'
+        ? rawPending
+        : Number((rawPending as { total?: number } | undefined)?.total ?? 0)
     if (pendingInstallation > 0) {
       lines.push({
         icon: '⚡',
@@ -159,6 +166,23 @@ function generateBriefing(args: {
       text: `Use Installation Pulse to spot overdue jobs and unblock the team`,
       color: 'rgba(255,255,255,0.7)',
     })
+  }
+
+  if (role === UserRole.ADMIN || role === UserRole.SALES || role === UserRole.OPERATIONS) {
+    const explorer = (data as { zenithExplorerProjects?: ZenithExplorerProject[] }).zenithExplorerProjects
+    const missing = zenithExplorerProjectsMissingLifecycleBrands(
+      Array.isArray(explorer) ? explorer : [],
+    )
+    if (missing.length > 0) {
+      const nameList = formatBriefingCustomerNameList(missing)
+      lines.unshift({
+        icon: '🏷️',
+        text: `${missing.length} project${missing.length === 1 ? '' : 's'} in Under Installation, Completed, or Completed – Subsidy Credited ${
+          missing.length === 1 ? 'is' : 'are'
+        } missing panel and/or inverter brand${nameList ? `: ${nameList}` : ''}.`,
+        color: '#F5A623',
+      })
+    }
   }
 
   if (lines.length === 0) {

@@ -31,7 +31,8 @@ function parseSystemCapacityKw(value: unknown): number | null {
 
 /**
  * Zenith "Open in Projects" parity: same slice as `zenithExplorerProjects` client filters
- * (`matchesDashboardRevenueWhere` vs `inDashboardPipelineSlice`), optional FY-profit (`grossProfit` set).
+ * (`matchesDashboardRevenueWhere` vs `inDashboardPipelineSlice`), optional FY-profit (`grossProfit` set),
+ * and lifecycle brand drill (`panelBrand` / `inverterBrand` + both brands present).
  */
 function pushZenithExplorerSliceOntoWhere(
   where: Record<string, unknown>,
@@ -168,6 +169,9 @@ router.get(
     query('leadSourceIsNull').optional().isIn(['true']),
     query('zenithSlice').optional().isIn(['revenue', 'pipeline']),
     query('zenithFyProfit').optional().isIn(['true']),
+    query('panelBrand').optional().isString(),
+    query('inverterBrand').optional().isString(),
+    query('lifecycleSpecsComplete').optional().isIn(['true']),
   ],
   async (req: Request, res: Response) => {
     let where: any = {};
@@ -204,6 +208,9 @@ router.get(
         leadSourceIsNull,
         zenithSlice,
         zenithFyProfit,
+        panelBrand,
+        inverterBrand,
+        lifecycleSpecsComplete,
       } = req.query;
 
       const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
@@ -508,6 +515,42 @@ router.get(
       const zenithSliceStr = typeof zenithSlice === 'string' ? zenithSlice : '';
       if (zenithSliceStr === 'revenue' || zenithSliceStr === 'pipeline') {
         pushZenithExplorerSliceOntoWhere(where, zenithSliceStr, zenithSliceStr === 'revenue' && String(zenithFyProfit) === 'true');
+      }
+
+      // Zenith panel/inverter brand chart → Projects: both lifecycle brands required; optional exact match
+      const panelBrandRaw = typeof panelBrand === 'string' ? panelBrand.trim() : '';
+      const inverterBrandRaw = typeof inverterBrand === 'string' ? inverterBrand.trim() : '';
+      const lifecycleSpecsCompleteActive =
+        String(lifecycleSpecsComplete) === 'true' || panelBrandRaw !== '' || inverterBrandRaw !== '';
+      if (lifecycleSpecsCompleteActive) {
+        const lifecycleParts: object[] = [
+          { panelBrand: { not: null } },
+          { NOT: { panelBrand: '' } },
+          { inverterBrand: { not: null } },
+          { NOT: { inverterBrand: '' } },
+        ];
+        if (panelBrandRaw !== '') {
+          lifecycleParts.push({ panelBrand: panelBrandRaw });
+        }
+        if (inverterBrandRaw !== '') {
+          lifecycleParts.push({ inverterBrand: inverterBrandRaw });
+        }
+        const lifecycleClause = { AND: lifecycleParts };
+        if (where.AND && Array.isArray(where.AND)) {
+          where.AND.push(lifecycleClause);
+        } else {
+          const topKeys = Object.keys(where).filter((k) => k !== 'AND' && k !== 'OR');
+          if (topKeys.length > 0) {
+            const existing: any[] = [];
+            topKeys.forEach((key) => {
+              existing.push({ [key]: (where as any)[key] });
+              delete (where as any)[key];
+            });
+            where.AND = [...existing, lifecycleClause];
+          } else {
+            where.AND = [lifecycleClause];
+          }
+        }
       }
       
       // Handle search - combine with existing conditions using AND

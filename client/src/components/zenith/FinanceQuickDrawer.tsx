@@ -14,6 +14,7 @@ import { ZENITH_CHARTS_TOUCH_RESET_EVENT, ZENITH_FLOATING_DISMISS_EVENT } from '
 import { zenithDrawerStagePillClass } from './zenithDealCardUi'
 import ZenithDrawerRemarksPanel from './ZenithDrawerRemarksPanel'
 import ZenithDrawerProjectTitle from './ZenithDrawerProjectTitle'
+import { formatZenithSystemCapacityKw } from '../../utils/zenithSystemCapacityFormat'
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {
   [ProjectStatus.LEAD]: 'Lead',
@@ -363,6 +364,12 @@ export default function FinanceQuickDrawer({
                     <span className="text-white/45">Project value</span>
                     <span className="text-white/90 font-medium tabular-nums text-right">
                       {formatINR(project?.projectCost ?? null)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-3 text-[13px]">
+                    <span className="text-white/45">System capacity</span>
+                    <span className="text-white/90 font-medium tabular-nums text-right">
+                      {formatZenithSystemCapacityKw(project?.systemCapacity, 'notSet')}
                     </span>
                   </div>
                   <div className="flex justify-between gap-3 text-[13px]">

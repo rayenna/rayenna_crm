@@ -592,6 +592,14 @@ Contact administrator for:
 - Technical issues
 - Questions about chart interpretation
 
+## Zenith — Projects by panel brand & inverter brand (Explore)
+
+These **horizontal bar charts** appear under **Zenith → Explore the landscape** on **executive** Zenith (**Sales**, **Management**, **Admin**) and **Operations** Zenith. Each bar counts projects that already have **both** **Panel brand** and **Inverter brand** saved (lifecycle completeness).
+
+**Hover** a bar to see: **brand** name, **project count**, **Order value (sum)**, **System capacity (sum)** in **kW** (total installed capacity recorded on those projects; shows **—** if none), an estimated **panel** or **inverter** cost line, and a hint to **click through** to the project list. Full behaviour: [Analytics and Reports → Panel and inverter brand charts](/help/analytics#panel-and-inverter-brand-charts-zenith).
+
+---
+
 ## Summary
 
 Analytics charts provide:

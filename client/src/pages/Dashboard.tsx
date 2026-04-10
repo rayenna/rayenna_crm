@@ -76,6 +76,7 @@ const Dashboard = () => {
             selectedQuarters={selectedQuarters}
             selectedMonths={selectedMonths}
             initialDataWhenFiltersEmpty={initialDataWhenFiltersEmpty}
+            showLifecycleBrandReminder
           />
         )
       default:

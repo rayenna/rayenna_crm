@@ -20,6 +20,8 @@ import MetricCard from './MetricCard'
 import QuickAccessSection from './QuickAccessSection'
 import KeyMetricsTile from './KeyMetricsTile'
 import ProposalEngineStatusCard from './ProposalEngineStatusCard'
+import DashboardLifecycleBrandReminder from './DashboardLifecycleBrandReminder'
+import type { ZenithExplorerProject } from '../../types/zenithExplorer'
 
 interface ManagementDashboardProps {
   selectedFYs: string[]
@@ -27,9 +29,17 @@ interface ManagementDashboardProps {
   selectedMonths: string[]
   /** When filters are empty, parent already fetched this; skip second request */
   initialDataWhenFiltersEmpty?: unknown
+  /** Admin-only: same lifecycle brand reminder as Zenith briefing (not shown to Management). */
+  showLifecycleBrandReminder?: boolean
 }
 
-const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths, initialDataWhenFiltersEmpty }: ManagementDashboardProps) => {
+const ManagementDashboard = ({
+  selectedFYs,
+  selectedQuarters,
+  selectedMonths,
+  initialDataWhenFiltersEmpty,
+  showLifecycleBrandReminder = false,
+}: ManagementDashboardProps) => {
   const filtersEmpty = selectedFYs.length === 0 && selectedQuarters.length === 0 && selectedMonths.length === 0
   const skipFetch = filtersEmpty && initialDataWhenFiltersEmpty != null
 
@@ -83,6 +93,12 @@ const ManagementDashboard = ({ selectedFYs, selectedQuarters, selectedMonths, in
 
   return (
     <div className="space-y-6 min-w-0 max-w-full">
+      {showLifecycleBrandReminder ? (
+        <DashboardLifecycleBrandReminder
+          projects={(data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]}
+          tileParams={tileParams}
+        />
+      ) : null}
       {/* Year on Year – full width row */}
       <div className="w-full">
         <KeyMetricsTile

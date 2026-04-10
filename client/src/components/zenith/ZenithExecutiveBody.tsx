@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   BarChart,
@@ -52,6 +52,8 @@ import {
   buildZenithDrawerListProjectsHref,
 } from '../../utils/zenithListProjectsDeepLink'
 import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
+import { buildZenithLifecycleBrandBarRows } from '../../utils/zenithPanelInverterBrandChartData'
+import ZenithLifecycleBrandBarCharts from './ZenithLifecycleBrandBarCharts'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent, Landmark]
 const DEFAULT_MONTHLY_TARGET_KW = 50
@@ -155,6 +157,8 @@ function ExploreCountTooltip({
 
 /** Unified chart height — calmer vertical rhythm across Zenith executive view */
 const ZENITH_CHART_H = 240
+const showZenithLifecycleBrandChartRole = (r: UserRole) =>
+  r === UserRole.ADMIN || r === UserRole.MANAGEMENT
 
 export default function ZenithExecutiveBody({
   role,
@@ -371,6 +375,24 @@ export default function ZenithExecutiveBody({
     },
     enabled: !!user && !isLoading,
   })
+
+  const panelBrandBarRows = useMemo(
+    () => buildZenithLifecycleBrandBarRows(explorerProjects, 'panel'),
+    [explorerProjects],
+  )
+  const inverterBrandBarRows = useMemo(
+    () => buildZenithLifecycleBrandBarRows(explorerProjects, 'inverter'),
+    [explorerProjects],
+  )
+
+  const onPanelBrandBarClick = useCallback(
+    (brandLabel: string) => drill('panel_brand', brandLabel),
+    [drill],
+  )
+  const onInverterBrandBarClick = useCallback(
+    (brandLabel: string) => drill('inverter_brand', brandLabel),
+    [drill],
+  )
 
   if (isLoading) return <ZenithSkeleton />
 
@@ -817,6 +839,21 @@ export default function ZenithExecutiveBody({
             </>
           ) : null}
         </div>
+
+        {showZenithLifecycleBrandChartRole(role) ? (
+          <div
+            id="zenith-charts-row-lifecycle"
+            className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 scroll-mt-24 mt-3 lg:mt-4"
+          >
+            <ZenithLifecycleBrandBarCharts
+              panelRows={panelBrandBarRows}
+              inverterRows={inverterBrandBarRows}
+              chartHeight={ZENITH_CHART_H}
+              onPanelBrandClick={onPanelBrandBarClick}
+              onInverterBrandClick={onInverterBrandBarClick}
+            />
+          </div>
+        ) : null}
       </section>
 
       <section className="zenith-exec-section" aria-label="Segments">

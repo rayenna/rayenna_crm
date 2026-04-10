@@ -19,6 +19,7 @@ import { zenithDrawerStagePillClass } from './zenithDealCardUi'
 import ZenithDrawerRemarksPanel from './ZenithDrawerRemarksPanel'
 import ZenithDrawerProjectTitle from './ZenithDrawerProjectTitle'
 import ZenithDrawerPaymentSummary from './ZenithDrawerPaymentSummary'
+import { formatZenithSystemCapacityKw } from '../../utils/zenithSystemCapacityFormat'
 
 const STATUS_ORDER: ProjectStatus[] = [
   ProjectStatus.LEAD,
@@ -659,6 +660,19 @@ export default function QuickActionDrawer({
                       </button>
                     </>
                   ) : null}
+                  <div className="my-5 h-px bg-white/[0.06]" />
+                </div>
+
+                <div>
+                  <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
+                    System capacity
+                  </div>
+                  <div
+                    className="text-[22px] font-bold text-white/88"
+                    style={{ fontFamily: "'Syne', sans-serif" }}
+                  >
+                    {formatZenithSystemCapacityKw(project?.systemCapacity, 'notSet')}
+                  </div>
                   <div className="my-5 h-px bg-white/[0.06]" />
                 </div>
 

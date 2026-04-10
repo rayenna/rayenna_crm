@@ -9,7 +9,8 @@ The Rayenna CRM consists of several key modules designed to manage different asp
 ### Dashboard
 - Role-based dashboards, KPI tiles, and **Quick Access** (metric cards plus **Payment Status**; **Proposal Engine** summary on Sales and Management)
 - **Filters:** Financial Year, Quarter, and Month — see [Analytics & Reports](/help/analytics) for Quick Access layout, Payment rows, Proposal Engine buckets, and charts
-- **[Zenith ✦](/help/analytics#zenith-command-center)** — full-screen command center (same filters), **The Board** leaderboard (Month / Quarter / FY + clickable drill-down lists), **collapsible Your Focus**, **Revenue forecast**, **Explore** chart drill-downs, **Victory** toast on winning stage changes, and **Quick Actions** lists; deep dive under Analytics → Zenith Command Center
+- **Things needing attention** — **Sales**, **Operations**, and **Admin** may see a compact notice on the classic Dashboard when late-stage projects are missing **panel and/or inverter brand**; **Zenith** [daily briefing](/help/analytics#daily-briefing-zenith) can show the same reminder for **Sales**, **Admin**, and **Operations** (not **Management** / **Finance**). Details: [Analytics → Things needing attention](/help/analytics#things-needing-attention-dashboard).
+- **[Zenith ✦](/help/analytics#zenith-command-center)** — full-screen command center (same filters), **The Board** leaderboard (Month / Quarter / FY + clickable drill-down lists), **collapsible Your Focus**, **Today’s Hit List** (pipeline-style **filters + sort** on up to seven urgent deals; **scroll / Open →** hint on **tablet/desktop**; **Quick Actions**), **Revenue forecast**, **Explore** chart drill-downs, **Availing Loan** KPI → **Quick Actions** list (Finance + executive Zenith), **Payment radar** **Top overdue** helper text (**project name** vs **Remind**), **Victory** toast on winning stage changes, and **Quick Actions** (**Sales** + salesperson on drawer headers and list rows; **Recent remarks** above **Log activity** in single-project drawers; **Payment** snapshot after **Deal value** on **Quick Actions** and **Operations** drawers when a single project is open — **N/A** when payment does not apply); deep dive under Analytics → Zenith Command Center
 - **[Zenith training guide](/help/training)** — facilitator-led and self-study material for end-user sessions (**Sales-first**; all roles)
 - Visual analytics (charts vary by role)
 
@@ -72,6 +73,8 @@ Each customer is assigned a unique **Customer ID** when created. This ID:
 
 ### From the Customers Page
 
+**Shortcut / deep link:** **Ctrl+Shift+M** (Windows/Linux) or **⌘⇧M** (Mac), or **`/customers?new=1`** after login, opens **Customers** with **New Customer** when your role allows (see [Keyboard shortcuts](/help/getting-started#keyboard-shortcuts)).
+
 1. Navigate to **Customers** from the top menu (Customer Master).
 2. Click the **New Customer** button (top right).
 3. Fill in **name**:
@@ -91,9 +94,8 @@ Each customer is assigned a unique **Customer ID** when created. This ID:
 ### Who Can Create Customers
 
 - **Sales** users can create customers for their own use.
-- **Admin** users can create customers for any salesperson.
-
-**Operations**, **Finance**, and **Management** users do not create customers; they work with customers created by Sales or Admin.
+- **Management** and **Admin** can use **New Customer** when the action is available (Admin can also assign salesperson on the form).
+- **Operations** and **Finance** do not create customers from Customer Master; they use customer data via projects and other modules.
 
 ### Required Fields
 
@@ -379,7 +381,7 @@ The total is the **sum** of five parts. Each part has a **maximum**; the overall
 | :-- | :-- |
 | **Projects** list | A compact **Deal Health** **badge** (0–100) next to the project/customer — **hover** or **tap** for the factor breakdown **popover**. **Pending** / **Partial** payment pills (with balance) and the **financing bank** icon (loan + bank set) open **matching** dark-card **popovers**. **Sort** by **Deal Health Score** (ascending shows weakest first — same data the server uses). |
 | **Project Detail** | A full **Deal Health Score** card with **all factors**, scores, and the insight line. |
-| **Zenith (Executive view)** | **Your pipeline today** (Sales / Management / Admin): each row can show a **Deal Health** badge; **hover** for the breakdown. **Today’s Hit List** also shows the badge on urgent deals with an **Open** link to the project. |
+| **Zenith (Executive view)** | **Your pipeline today** (Sales / Management / Admin): each row can show a **Deal Health** badge; **hover** for the breakdown; **Open →** opens **Quick Actions**. **Today’s Hit List** matches that table pattern (**filters**, **sort**, **last activity**, **confirmation date**, **Alert**), capped to up to **seven** urgent deals; when deals list, a short hint may remind you to **scroll right** and use **Open →**; **Open →** opens **Quick Actions** with **Recent remarks** (read-only) above **Log activity** where shown. |
 | **Tip of the Day** | Occasionally reminds you about Deal Health, sorting, and these rules. |
 
 ### How each factor is scored (reference tables)

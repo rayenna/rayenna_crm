@@ -34,6 +34,12 @@ The Dashboard is a comprehensive analytics and monitoring interface that display
 - Compare periods and metrics
 - Support strategic planning
 
+## Things needing attention
+
+**Sales**, **Operations**, and **Admin** may see a compact notice **above** the main KPI / Quick Access area titled **Things Needing Immediate Attention** when at least one project in **Under Installation**, **Completed**, or **Completed – Subsidy Credited** is missing **panel brand and/or inverter brand** in **Project Lifecycle**. **Management** users (same executive-style layout as Admin for other tiles) **do not** see this strip.
+
+The notice respects your **Financial Year**, **Quarter**, and **Month** filters, shows how many projects qualify and **customer names** (truncated when there are many), and links to **Open in Projects** with those three statuses and the same dates. For the same data-quality signal inside **Zenith**, see **Help → Analytics → [Daily briefing (Zenith)](/help/analytics#daily-briefing-zenith)** and **[Panel and inverter brand charts](/help/analytics#panel-and-inverter-brand-charts-zenith)**.
+
 ## KPI Tiles
 
 ### Understanding KPI Tiles

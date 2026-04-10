@@ -14,6 +14,7 @@ import {
   ZENITH_DEAL_OPEN_BUTTON_CLASS,
 } from './zenithDealCardUi'
 import { zenithSalespersonNameColor } from '../../utils/zenithSalespersonColor'
+import { formatZenithSystemCapacityKw } from '../../utils/zenithSystemCapacityFormat'
 
 type SortKey = 'value' | 'health' | 'activity'
 
@@ -191,6 +192,13 @@ export default function DrawerProjectList({
                   }}
                 >
                   {dealParts.text}
+                </div>
+                <div
+                  className="mt-0.5 text-[10px] tabular-nums leading-tight text-white/38"
+                  style={{ fontFamily: 'var(--zenith-font-body), DM Sans, sans-serif' }}
+                  title="System capacity"
+                >
+                  {formatZenithSystemCapacityKw(p.system_capacity_kw, 'emDash')}
                 </div>
                 <div className="mt-1 flex justify-end">
                   <HealthBadge project={explorerToHealthProject(p)} size="sm" showLabel={false} />

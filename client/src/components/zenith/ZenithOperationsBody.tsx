@@ -10,7 +10,7 @@ import {
   Cell,
   Legend,
 } from 'recharts'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
@@ -40,6 +40,8 @@ import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../..
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
 import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
+import { buildZenithLifecycleBrandBarRows } from '../../utils/zenithPanelInverterBrandChartData'
+import ZenithLifecycleBrandBarCharts from './ZenithLifecycleBrandBarCharts'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
 
@@ -206,6 +208,24 @@ export default function ZenithOperationsBody({
       })
     },
     [explorerProjects, quickAction.openDrawerListMode],
+  )
+
+  const panelBrandBarRows = useMemo(
+    () => buildZenithLifecycleBrandBarRows(explorerProjects, 'panel'),
+    [explorerProjects],
+  )
+  const inverterBrandBarRows = useMemo(
+    () => buildZenithLifecycleBrandBarRows(explorerProjects, 'inverter'),
+    [explorerProjects],
+  )
+
+  const onPanelBrandBarClick = useCallback(
+    (brandLabel: string) => drill('panel_brand', brandLabel),
+    [drill],
+  )
+  const onInverterBrandBarClick = useCallback(
+    (brandLabel: string) => drill('inverter_brand', brandLabel),
+    [drill],
   )
 
   if (isLoading) {
@@ -435,6 +455,19 @@ export default function ZenithOperationsBody({
               }
             />
           </div>
+        </div>
+
+        <div
+          id="zenith-charts-row-lifecycle"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 scroll-mt-28 mt-3 sm:mt-4 [&>*]:min-w-0"
+        >
+          <ZenithLifecycleBrandBarCharts
+            panelRows={panelBrandBarRows}
+            inverterRows={inverterBrandBarRows}
+            chartHeight={ZENITH_OPS_CHART_H}
+            onPanelBrandClick={onPanelBrandBarClick}
+            onInverterBrandClick={onInverterBrandBarClick}
+          />
         </div>
       </section>
     </div>
