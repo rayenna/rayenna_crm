@@ -234,10 +234,10 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
       ? `https://www.google.com/maps?q=${latitude},${longitude}`
       : ''
     return (
-      <div className="w-full space-y-2 rounded-lg border border-gray-200 bg-white/80 p-4">
-        <p className="text-sm font-medium text-gray-700">Location (Map Coordinates)</p>
+      <div className="w-full space-y-2 rounded-xl border border-sky-200/60 bg-gradient-to-br from-sky-50/40 to-white p-4 shadow-sm ring-1 ring-sky-100/40">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-sky-900/80">Location (map coordinates)</p>
         {hasCoords ? (
-          <p className="text-sm text-gray-600">
+          <p className="font-mono text-sm tabular-nums text-gray-800">
             Latitude: {latitude}, Longitude: {longitude}
           </p>
         ) : (
@@ -248,7 +248,7 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
             href={mapHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex text-sm font-medium text-primary-600 hover:text-primary-800 underline"
+            className="inline-flex items-center gap-1 rounded-lg text-sm font-semibold text-primary-700 transition-colors hover:bg-primary-50 hover:text-primary-900"
           >
             Open in Google Maps
           </a>
@@ -257,20 +257,23 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
     )
   }
 
+  const mapInputCls =
+    'w-full rounded-xl border border-gray-200/90 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm ring-1 ring-gray-100/80 transition-all focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/25'
+
   return (
-    <div className="w-full space-y-3">
-      <div className="flex items-center justify-between">
-        <label className="block text-sm font-medium text-gray-700">
-          Location (Map Coordinates)
+    <div className="w-full space-y-4 rounded-xl border border-sky-200/50 bg-gradient-to-br from-sky-50/25 to-white/80 p-4 shadow-sm ring-1 ring-sky-100/30">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <label className="text-[11px] font-bold uppercase tracking-wider text-sky-900/80">
+          Location (map coordinates)
         </label>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => setInputMode('coordinates')}
-            className={`px-3 py-1 text-xs rounded ${
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
               inputMode === 'coordinates'
-                ? 'bg-primary-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                ? 'bg-primary-600 text-white shadow-sm shadow-primary-900/20'
+                : 'border border-gray-200/90 bg-white text-gray-700 shadow-sm hover:bg-gray-50'
             }`}
           >
             Coordinates
@@ -278,10 +281,10 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
           <button
             type="button"
             onClick={() => setInputMode('map')}
-            className={`px-3 py-1 text-xs rounded ${
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
               inputMode === 'map'
-                ? 'bg-primary-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                ? 'bg-primary-600 text-white shadow-sm shadow-primary-900/20'
+                : 'border border-gray-200/90 bg-white text-gray-700 shadow-sm hover:bg-gray-50'
             }`}
           >
             Map
@@ -293,46 +296,46 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Latitude</label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Latitude</label>
               <input
                 type="number"
                 step="any"
                 value={latInput}
                 onChange={(e) => handleLatChange(e.target.value)}
                 placeholder="e.g., 12.9716"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                className={mapInputCls}
               />
-              <p className="text-xs text-gray-400 mt-1">Range: -90 to 90</p>
+              <p className="mt-1 text-xs text-gray-400">Range: -90 to 90</p>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Longitude</label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Longitude</label>
               <input
                 type="number"
                 step="any"
                 value={lngInput}
                 onChange={(e) => handleLngChange(e.target.value)}
                 placeholder="e.g., 77.5946"
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                className={mapInputCls}
               />
-              <p className="text-xs text-gray-400 mt-1">Range: -180 to 180</p>
+              <p className="mt-1 text-xs text-gray-400">Range: -180 to 180</p>
             </div>
           </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Google Maps Link</label>
-              <div className="flex gap-2">
+              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Google Maps link</label>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
                 <input
                   type="url"
                   value={mapLink}
                   onChange={(e) => handleMapLinkChange(e.target.value)}
                   placeholder="https://www.google.com/maps?q=12.9716,77.5946"
-                  className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  className={`min-w-0 flex-1 ${mapInputCls}`}
                 />
                 {mapLink && (
                   <a
                     href={mapLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2 bg-primary-600 text-white text-sm rounded-md hover:bg-primary-700 transition-colors whitespace-nowrap"
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
                   >
                     Open Map
                   </a>
@@ -350,7 +353,7 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
         </div>
       ) : (
         <div className="space-y-2">
-          <div className="border border-gray-300 rounded-md overflow-hidden" style={{ height: '300px' }}>
+          <div className="overflow-hidden rounded-xl border border-gray-200/90 shadow-inner ring-1 ring-gray-100/80" style={{ height: '300px' }}>
             {mapUrl ? (
               <>
                 <iframe
@@ -366,8 +369,8 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
                 ></iframe>
               </>
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                <p className="text-gray-500 text-sm">Enter coordinates or paste a Google Maps link to view map</p>
+              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100/80">
+                <p className="px-4 text-center text-sm text-gray-500">Enter coordinates or paste a Google Maps link to view map</p>
               </div>
             )}
           </div>
@@ -386,31 +389,31 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Latitude</label>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Latitude</label>
                 <input
                   type="number"
                   step="any"
                   value={latInput}
                   onChange={(e) => handleLatChange(e.target.value)}
                   placeholder="e.g., 12.9716"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  className={mapInputCls}
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Longitude</label>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Longitude</label>
                 <input
                   type="number"
                   step="any"
                   value={lngInput}
                   onChange={(e) => handleLngChange(e.target.value)}
                   placeholder="e.g., 77.5946"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  className={mapInputCls}
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Google Maps Link</label>
-              <div className="flex gap-2">
+              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Google Maps link</label>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
               <input
                 type="text"
                 value={mapLink}
@@ -424,14 +427,14 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
                   }, 10)
                 }}
                 placeholder="https://www.google.com/maps?q=12.9716,77.5946"
-                className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
+                className={`min-w-0 flex-1 ${mapInputCls}`}
               />
                 {mapLink && (
                   <a
                     href={mapLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2 bg-primary-600 text-white text-sm rounded-md hover:bg-primary-700 transition-colors whitespace-nowrap"
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
                   >
                     Open Map
                   </a>
@@ -462,18 +465,18 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
         </div>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2 pt-1">
         <button
           type="button"
           onClick={getCurrentLocation}
-          className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors"
+          className="rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-900/20 transition-all hover:from-indigo-700 hover:to-violet-700 hover:shadow-md"
         >
-          📍 Use Current Location
+          📍 Use current location
         </button>
         <button
           type="button"
           onClick={handleMapClick}
-          className="px-4 py-2 bg-yellow-500 text-white text-sm rounded-md hover:bg-yellow-600 transition-colors"
+          className="rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-amber-900/15 transition-all hover:from-amber-600 hover:to-yellow-600 hover:shadow-md"
         >
           🗺️ Open in Google Maps
         </button>

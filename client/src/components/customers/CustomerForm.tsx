@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
@@ -14,6 +14,36 @@ import { ErrorModal } from '@/components/common/ErrorModal'
 export function getCustomerDisplayName(customer: Customer) {
   const parts = [customer.prefix, customer.firstName, customer.middleName, customer.lastName].filter(Boolean)
   return parts.length > 0 ? parts.join(' ') : customer.customerName || 'Unknown'
+}
+
+/** Section shell aligned with Project Detail `InfoSection`: header strip + body, no floating title row. */
+function CustomerFormSection({
+  title,
+  icon,
+  borderAccentClass,
+  gradientClass,
+  headerExtra,
+  children,
+}: {
+  title: string
+  icon: ReactNode
+  borderAccentClass: string
+  gradientClass: string
+  headerExtra?: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <section
+      className={`flex min-h-0 flex-col overflow-hidden rounded-xl border border-gray-200/80 bg-gradient-to-br shadow-md shadow-gray-900/[0.04] ring-1 ring-gray-100/50 border-l-4 ${gradientClass} ${borderAccentClass}`}
+    >
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-gray-200/70 bg-white/55 px-4 py-3 backdrop-blur-[2px] sm:gap-2.5 sm:px-5 sm:py-3.5">
+        <span className="shrink-0 text-gray-600 [&>svg]:h-5 [&>svg]:w-5">{icon}</span>
+        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-800">{title}</h3>
+        {headerExtra}
+      </div>
+      <div className="min-w-0 flex-1 space-y-4 px-4 pb-5 pt-4 sm:px-5">{children}</div>
+    </section>
+  )
 }
 
 export function CustomerForm({
@@ -312,10 +342,12 @@ export function CustomerForm({
     return () => cancelAnimationFrame(id)
   }, [layout, readOnly])
 
-  // Shared input styles for consistency
-  const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all'
-  const labelCls = 'block text-sm text-gray-500 mb-1.5'
-  const selectCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all'
+  // Shared input styles — white fields, clear focus (matches polished project detail forms)
+  const inputCls =
+    'w-full rounded-xl border border-gray-200/90 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm ring-1 ring-gray-100/80 placeholder:text-gray-400 transition-all focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/25 disabled:bg-gray-50/90 disabled:text-gray-600'
+  const labelCls = 'mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500'
+  const selectCls =
+    'w-full rounded-xl border border-gray-200/90 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm ring-1 ring-gray-100/80 transition-all focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/25 disabled:bg-gray-50/90 disabled:text-gray-600'
 
   // Safe-area padding for notched devices (iPhone, iPad); min padding 1rem
   const overlayStyle: CSSProperties = {
@@ -338,16 +370,16 @@ export function CustomerForm({
         <form
           ref={formContainerRef}
           onSubmit={handleSubmit(onSubmit, onFormInvalid)}
-          className={layout === 'modal' ? 'p-4 sm:p-6 space-y-6 sm:space-y-8' : 'space-y-6 sm:space-y-8'}
+          className={layout === 'modal' ? 'space-y-5 p-4 sm:space-y-6 sm:p-6 md:space-y-7' : 'space-y-5 sm:space-y-6 md:space-y-7'}
         >
           <fieldset disabled={readOnly} className="contents min-w-0 border-0 p-0 m-0">
-          {/* Card 1: Basic Info */}
-          <div className="bg-gradient-to-br from-teal-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-teal-400">
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Basic Info</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <CustomerFormSection
+            title="Basic info"
+            borderAccentClass="border-l-teal-400"
+            gradientClass="from-teal-50/40 to-white"
+            icon={<svg className="text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <label className={labelCls}>Prefix</label>
                 <select {...register('prefix')} className={selectCls}>
@@ -375,14 +407,14 @@ export function CustomerForm({
                 <input {...register('lastName')} className={inputCls} placeholder="Last Name" />
               </div>
             </div>
-          </div>
+          </CustomerFormSection>
 
-          {/* Card 2: Address */}
-          <div className="bg-gradient-to-br from-sky-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-sky-400">
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Address</h3>
-            </div>
+          <CustomerFormSection
+            title="Address"
+            borderAccentClass="border-l-sky-400"
+            gradientClass="from-sky-50/35 to-white"
+            icon={<svg className="text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+          >
             <div className="space-y-4">
               <div>
                 <label className={labelCls}>Address Line 1 <span className="text-red-500">*</span></label>
@@ -441,7 +473,7 @@ export function CustomerForm({
                   </select>
                 </div>
               </div>
-              <div className="max-w-[200px]">
+              <div className="max-w-xs">
                 <label className={labelCls}>Pin Code</label>
                 <input {...register('pinCode')} className={inputCls} placeholder="Postal/ZIP code" maxLength={10} />
               </div>
@@ -455,53 +487,95 @@ export function CustomerForm({
               }}
               readOnly={readOnly}
             />
-          </div>
+          </CustomerFormSection>
 
-          {/* Card 3: Contact */}
-          <div className="bg-gradient-to-br from-emerald-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-emerald-400">
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Contact</h3>
-            </div>
-            <div className="space-y-4">
+          <CustomerFormSection
+            title="Contact"
+            borderAccentClass="border-l-emerald-400"
+            gradientClass="from-emerald-50/40 to-white"
+            icon={<svg className="text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>}
+          >
+            <div className="space-y-5">
               <div>
-                <label className={labelCls}>Contact Numbers <span className="text-red-500">*</span></label>
-                {contactNumbers.map((contact, index) => (
-                  <div key={index} className="flex items-center gap-2 mb-2">
-                    <input type="text" value={contact} onChange={(e) => updateContactNumber(index, e.target.value)} placeholder="Phone number" className={`flex-1 ${inputCls}`} />
-                    {contactNumbers.length > 1 && (
-                      <button type="button" onClick={() => removeContactNumber(index)} className="text-sm text-gray-500 hover:text-red-600 transition-colors">Remove</button>
-                    )}
-                  </div>
-                ))}
-                <button type="button" onClick={addContactNumber} className="text-sm font-medium text-primary-600 hover:text-primary-700">+ Add Contact Number</button>
+                <label className={labelCls}>
+                  Contact numbers <span className="normal-case font-normal text-red-500">*</span>
+                </label>
+                <div className="space-y-2">
+                  {contactNumbers.map((contact, index) => (
+                    <div key={index} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <input
+                        type="text"
+                        value={contact}
+                        onChange={(e) => updateContactNumber(index, e.target.value)}
+                        placeholder="Phone number"
+                        className={`min-w-0 flex-1 ${inputCls}`}
+                      />
+                      {contactNumbers.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeContactNumber(index)}
+                          className="shrink-0 self-end rounded-lg px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 sm:self-center"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addContactNumber}
+                  className="mt-2 inline-flex items-center rounded-lg px-2 py-1.5 text-sm font-semibold text-primary-700 transition-colors hover:bg-primary-50"
+                >
+                  + Add contact number
+                </button>
               </div>
               <div>
                 <label className={labelCls}>E-mail IDs</label>
-                {emails.map((email, index) => (
-                  <div key={index} className="flex items-center gap-2 mb-2">
-                    <input type="email" value={email} onChange={(e) => updateEmail(index, e.target.value)} placeholder="example@email.com" className={`flex-1 ${inputCls}`} />
-                    {emails.length > 1 && (
-                      <button type="button" onClick={() => removeEmail(index)} className="text-sm text-gray-500 hover:text-red-600 transition-colors">Remove</button>
-                    )}
-                  </div>
-                ))}
-                <button type="button" onClick={addEmail} className="text-sm font-medium text-primary-600 hover:text-primary-700">+ Add E-mail ID</button>
+                <div className="space-y-2">
+                  {emails.map((email, index) => (
+                    <div key={index} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => updateEmail(index, e.target.value)}
+                        placeholder="example@email.com"
+                        className={`min-w-0 flex-1 ${inputCls}`}
+                      />
+                      {emails.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeEmail(index)}
+                          className="shrink-0 self-end rounded-lg px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 sm:self-center"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addEmail}
+                  className="mt-2 inline-flex items-center rounded-lg px-2 py-1.5 text-sm font-semibold text-primary-700 transition-colors hover:bg-primary-50"
+                >
+                  + Add e-mail ID
+                </button>
               </div>
               <div>
-                <label className={labelCls}>DISCOM Consumer Number</label>
+                <label className={labelCls}>DISCOM consumer number</label>
                 <input {...register('consumerNumber')} className={inputCls} />
               </div>
             </div>
-          </div>
+          </CustomerFormSection>
 
-          {/* Card 4: Identity & Company */}
-          <div className="bg-gradient-to-br from-violet-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-violet-400">
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Identity & Company</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CustomerFormSection
+            title="Identity & company"
+            borderAccentClass="border-l-violet-400"
+            gradientClass="from-violet-50/40 to-white"
+            icon={<svg className="text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <label className={labelCls}>Id Proof#</label>
                 <input {...register('idProofNumber')} className={inputCls} placeholder="Enter ID proof number" />
@@ -535,18 +609,20 @@ export function CustomerForm({
                 <input {...register('companyGst')} className={inputCls} placeholder="Enter GST number" />
               </div>
             </div>
-          </div>
+          </CustomerFormSection>
 
-          {/* Card 5: Assignment (Management/Admin only) - shown for New Customer (Admin) and Edit (Admin/Management) */}
           {(hasRole([UserRole.MANAGEMENT]) || hasRole([UserRole.ADMIN])) && (
-            <div className="bg-gradient-to-br from-amber-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-amber-400">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Assignment</h3>
-                {!customerData && <span className="text-red-500">*</span>}
-              </div>
+            <CustomerFormSection
+              title="Assignment"
+              borderAccentClass="border-l-amber-400"
+              gradientClass="from-amber-50/45 to-white"
+              headerExtra={!customerData ? <span className="text-sm font-bold text-red-500">*</span> : undefined}
+              icon={<svg className="text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>}
+            >
               <div>
-                <label className={labelCls}>Salesperson {!customerData && <span className="text-red-500">*</span>}</label>
+                <label className={labelCls}>
+                  Salesperson {!customerData && <span className="normal-case font-normal text-red-500">*</span>}
+                </label>
                 <select
                   {...register('salespersonId', {
                     validate: (v) =>
@@ -560,22 +636,22 @@ export function CustomerForm({
                   {salespersons?.map((sp: any) => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
                 </select>
                 {errors.salespersonId && <p className="text-red-500 text-xs mt-1">{errors.salespersonId.message as string}</p>}
-                <p className="text-xs text-gray-500 mt-1.5">
+                <p className="mt-2 rounded-lg border border-amber-100/80 bg-amber-50/40 px-3 py-2 text-xs leading-relaxed text-gray-600">
                   {customerData ? 'Only Management and Admin can change the salesperson for a customer' : 'Admin must assign a Sales Person when creating a new customer'}
                 </p>
               </div>
-            </div>
+            </CustomerFormSection>
           )}
           </fieldset>
 
           {(layout === 'modal' || (layout === 'page' && !readOnly)) && (
           <div className="relative">
-            <div className="flex flex-wrap justify-end gap-3 pt-2 border-t border-gray-100">
+            <div className="flex flex-wrap justify-end gap-3 border-t border-gray-200/80 pt-4">
               {layout === 'modal' && (
               <button
                 type="button"
                 onClick={onClose}
-                className="min-h-[44px] px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation"
+                className="min-h-[44px] touch-manipulation rounded-xl border border-gray-200/90 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100"
               >
                 Cancel
               </button>
@@ -584,7 +660,7 @@ export function CustomerForm({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="min-h-[44px] px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation"
+                  className="min-h-[44px] touch-manipulation rounded-xl border border-gray-200/90 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100"
                 >
                   Cancel
                 </button>
@@ -592,7 +668,7 @@ export function CustomerForm({
               <button
                 type="submit"
                 disabled={mutation.isPending}
-                className="min-h-[44px] px-5 py-3 text-sm font-medium text-white bg-gradient-to-r from-teal-600 to-primary-600 rounded-lg hover:from-teal-700 hover:to-primary-700 disabled:opacity-50 transition-colors shadow-md touch-manipulation"
+                className="min-h-[44px] touch-manipulation rounded-xl bg-gradient-to-r from-teal-600 to-primary-600 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-primary-900/15 transition-all hover:from-teal-700 hover:to-primary-700 hover:shadow-lg disabled:opacity-50"
               >
                 {mutation.isPending ? 'Saving...' : customer ? 'Update' : 'Create'}
               </button>

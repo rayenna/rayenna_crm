@@ -869,6 +869,8 @@ router.get(
         leadSource: true,
         advanceReceived: true,
         availingLoan: true,
+        financingBank: true,
+        financingBankOther: true,
         customer: {
           select: {
             id: true,

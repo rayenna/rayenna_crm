@@ -103,7 +103,7 @@ const CustomerMaster = () => {
         rel="noopener noreferrer"
         title="Open in Google Maps"
         aria-label="Open in Google Maps"
-        className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300 shadow-sm transition"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-gray-200/90 bg-white text-gray-700 shadow-sm transition-all hover:border-primary-200 hover:bg-primary-50/60 hover:shadow"
       >
         {/* Compact Google-Maps-like pin icon */}
         <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
@@ -171,7 +171,7 @@ const CustomerMaster = () => {
 
   if (isLoading) {
     return (
-      <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
+      <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden bg-gradient-to-b from-slate-50/80 via-white to-teal-50/15">
         <div className="animate-pulse space-y-4">
           <div className="h-10 bg-gradient-to-r from-teal-200 to-gray-200 rounded-lg w-64" />
           <div className="h-12 bg-gradient-to-r from-teal-100/50 to-gray-100 rounded-xl w-full max-w-2xl" />
@@ -186,7 +186,7 @@ const CustomerMaster = () => {
   }
 
   return (
-    <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden mobile-paint-fix">
+    <div className="mobile-paint-fix max-w-full min-w-0 overflow-x-hidden bg-gradient-to-b from-slate-50/90 via-white to-teal-50/15 px-0 py-6 sm:px-0">
       <PageCard
         title="Customer Master"
         subtitle="Manage your customer database"
@@ -202,50 +202,50 @@ const CustomerMaster = () => {
         ) : undefined}
         className="max-w-full"
       >
-      <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl shadow-sm border border-primary-100 mb-6 p-4 sm:p-5">
+      <div className="mb-6 rounded-2xl border border-primary-200/50 bg-gradient-to-br from-white via-teal-50/15 to-primary-50/20 p-4 shadow-md shadow-primary-900/[0.06] ring-1 ring-white/80 sm:p-5">
         <div className="space-y-2 sm:space-y-3">
-          {/* Row 1: Search Bar (same look and feel as Projects) */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:gap-4">
+          {/* Row 1: Search Bar (aligned with Projects page styling) */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
             <input
               type="text"
               placeholder="Search by name, ID, or consumer number..."
-              className="w-full sm:flex-1 min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+              className="h-[40px] w-full rounded-xl border border-gray-200/90 bg-white/90 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-gray-100/80 placeholder:text-gray-400 transition-all focus:border-primary-400 focus:ring-2 focus:ring-primary-500/25 sm:flex-1"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
             />
             {/* Filter for Sales users: All Customers / My Customers */}
             {isSalesUser ? (
-              <div className="flex items-center gap-4 min-h-[40px] w-full sm:w-auto sm:ml-auto">
-                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Filter:</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center cursor-pointer">
+              <div className="flex min-h-[40px] w-full flex-col gap-2 rounded-xl border border-primary-100/80 bg-white/70 px-3 py-2.5 shadow-sm sm:ml-auto sm:w-auto sm:flex-row sm:items-center sm:gap-4 sm:py-2">
+                <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-primary-800">Filter</span>
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex cursor-pointer items-center">
                     <input
                       type="radio"
                       name="customerFilter"
                       value="all"
                       checked={customerFilter === 'all'}
                       onChange={(e) => setCustomerFilter(e.target.value as 'all' | 'my')}
-                      className="mr-2"
+                      className="mr-2 text-primary-600 focus:ring-primary-500/30"
                     />
-                    <span className="text-sm text-gray-700">All Customers</span>
+                    <span className="text-sm font-medium text-gray-700">All Customers</span>
                   </label>
-                  <label className="flex items-center cursor-pointer">
+                  <label className="flex cursor-pointer items-center">
                     <input
                       type="radio"
                       name="customerFilter"
                       value="my"
                       checked={customerFilter === 'my'}
                       onChange={(e) => setCustomerFilter(e.target.value as 'all' | 'my')}
-                      className="mr-2"
+                      className="mr-2 text-primary-600 focus:ring-primary-500/30"
                     />
-                    <span className="text-sm text-gray-700">My Customers</span>
+                    <span className="text-sm font-medium text-gray-700">My Customers</span>
                   </label>
                 </div>
               </div>
             ) : (
               /* Filter for other users: Sales Person dropdown - right-aligned on desktop, full width on mobile; wide enough for full name on one line */
-              <div className="w-full sm:w-auto sm:min-w-[260px] sm:ml-auto min-h-[40px] flex items-center sm:justify-end">
+              <div className="flex min-h-[40px] w-full items-center sm:ml-auto sm:w-auto sm:min-w-[260px] sm:justify-end">
                 <MultiSelect
                   className="w-full sm:min-w-[260px]"
                   options={salesUsers?.map((salesUser: any) => ({
@@ -264,10 +264,10 @@ const CustomerMaster = () => {
         
         {/* Export buttons - Only visible to Admin users */}
         {hasRole([UserRole.ADMIN]) && (
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             <button
               onClick={() => handleExportClick('excel')}
-              className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 text-sm font-medium flex items-center gap-2"
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-amber-900/15 transition-all hover:from-amber-600 hover:to-yellow-600 hover:shadow-lg"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -276,7 +276,7 @@ const CustomerMaster = () => {
             </button>
             <button
               onClick={() => handleExportClick('csv')}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-sm font-medium flex items-center gap-2"
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-900/20 transition-all hover:from-indigo-700 hover:to-violet-700 hover:shadow-lg"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -287,9 +287,9 @@ const CustomerMaster = () => {
         )}
       </div>
 
-      {/* Customer list - card-like rows, clean hierarchy, 3-dot actions */}
+      {/* Customer list - card-like rows (visual rhythm aligned with Projects table) */}
       <div className="space-y-3">
-        {data?.customers?.map((customer: Customer) => (
+        {data?.customers?.map((customer: Customer, index: number) => (
           <div
             key={customer.id}
             role="button"
@@ -308,17 +308,21 @@ const CustomerMaster = () => {
                 state: { fromListFilter: isSalesUser ? customerFilter : undefined },
               })
             }}
-            className="bg-white rounded-xl border-l-4 border-l-primary-400 border border-primary-100/60 shadow-sm hover:shadow-md hover:border-primary-200/80 hover:border-l-primary-500 transition-all duration-200 cursor-pointer text-left w-full"
+            className={`group w-full cursor-pointer rounded-2xl border border-primary-100/70 text-left shadow-md shadow-gray-900/[0.04] ring-1 ring-gray-100/60 transition-all duration-200 hover:border-primary-200 hover:shadow-lg hover:shadow-primary-900/10 ${
+              index % 2 === 1
+                ? 'border-l-4 border-l-teal-500 bg-gradient-to-br from-slate-50/80 via-white to-teal-50/20'
+                : 'border-l-4 border-l-primary-500 bg-gradient-to-br from-white via-white to-primary-50/15'
+            }`}
           >
             <div className="px-4 py-4 sm:px-6 sm:py-5">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 {/* Left: Primary info - Who & status */}
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-sm">
+                    <span className="inline-flex items-center rounded-lg bg-gradient-to-r from-primary-600 to-primary-700 px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
                       ID: {customer.customerId}
                     </span>
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
+                    <h3 className="truncate text-base font-semibold text-gray-900 transition-colors group-hover:text-primary-900 sm:text-lg">
                       {getCustomerDisplayName(customer)}
                     </h3>
                     {(customer as any)._count && (customer as any)._count.projects > 0 && (
@@ -400,8 +404,8 @@ const CustomerMaster = () => {
                   </div>
                 </div>
                 {/* Right: created date */}
-                <div className="flex items-center justify-end flex-shrink-0 min-w-0">
-                  <p className="text-xs text-gray-400 truncate">
+                <div className="flex min-w-0 flex-shrink-0 items-center justify-end">
+                  <p className="truncate text-xs font-medium tabular-nums text-gray-500">
                     Created {format(new Date(customer.createdAt), 'MMM dd, yyyy')}
                   </p>
                 </div>
@@ -409,11 +413,19 @@ const CustomerMaster = () => {
             </div>
           </div>
         ))}
+        {data != null && (!data.customers || data.customers.length === 0) && (
+          <div className="rounded-2xl border border-dashed border-gray-200 bg-gradient-to-br from-slate-50/60 to-white px-6 py-14 text-center shadow-sm">
+            <p className="mx-auto max-w-md font-medium text-gray-600">No customers match your search or filters.</p>
+            <p className="mx-auto mt-2 max-w-md text-xs text-gray-500">
+              Try a different search term or widen the salesperson filter.
+            </p>
+          </div>
+        )}
       </div>
 
       {data != null && (
-        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-sm text-gray-500">
+        <div className="mt-5 flex flex-col items-center justify-between gap-4 rounded-2xl border border-gray-200/80 bg-gradient-to-r from-white via-teal-50/15 to-white px-4 py-3 shadow-sm sm:flex-row sm:px-5">
+          <div className="text-sm text-gray-600">
             Showing page {data.page} of {data.totalPages || 1} ({data.total} total)
           </div>
           {data.totalPages != null && data.totalPages > 1 && (
@@ -421,14 +433,14 @@ const CustomerMaster = () => {
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-4 py-2 border border-primary-200 rounded-lg text-sm font-medium text-primary-800 bg-primary-50/80 hover:bg-primary-100/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="rounded-xl border border-primary-200/90 bg-white px-4 py-2 text-sm font-semibold text-primary-800 shadow-sm transition-all hover:border-primary-300 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Previous
               </button>
               <button
                 onClick={() => setPage(p => Math.min(data.totalPages, p + 1))}
                 disabled={page >= data.totalPages}
-                className="px-4 py-2 border border-primary-200 rounded-lg text-sm font-medium text-primary-800 bg-primary-50/80 hover:bg-primary-100/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="rounded-xl border border-primary-200/90 bg-white px-4 py-2 text-sm font-semibold text-primary-800 shadow-sm transition-all hover:border-primary-300 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Next
               </button>

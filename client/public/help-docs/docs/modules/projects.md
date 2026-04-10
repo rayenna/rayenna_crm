@@ -831,7 +831,7 @@ Projects can have multiple support tickets and documents linked to them. These r
 
 **Availing Loan Filter**:
 - Checkbox: **Availing Loan**
-- When checked, shows only projects where Availing Loan/Financing is Yes (and a bank is selected)
+- When checked, shows only projects where Availing Loan/Financing is **Yes**
 - Useful to see all projects tied to financing/loan
 
 **Support Ticket Status Filter**:
@@ -851,6 +851,10 @@ Projects can have multiple support tickets and documents linked to them. These r
 - Pagination resets when filters change
 - Clear filters to see all projects
 
+**Popovers on the Projects list (balance and financing bank)**:
+- **Pending / Partial payment** — When there is a **positive outstanding balance**, **hover** the payment status pill on a **mouse/trackpad**, or **tap** it on **touch** devices, to see **Balance** and the **₹** amount in a **dark popover** styled like the **Deal Health** card on the same page.
+- **Financing bank icon** — Under the salesperson, a **bank** icon appears when **Availing Loan** is **Yes** and a **financing bank** (including **Other** with a name) is saved. **Hover** or **tap** for the **bank name** in the **same popover style**.
+
 ### Sorting Options
 
 **Default Sort**:
@@ -869,7 +873,7 @@ Projects can have multiple support tickets and documents linked to them. These r
 
 **Deal Health Score** is a **0–100** number that estimates how strong an open deal looks **right now**, based on data already on the project. It is **not** a prediction of whether you will win the deal; it is a **prioritisation aid** so you can see which opportunities need attention (follow-up, stage movement, missing data) before others.
 
-The score is **computed in the app** from five factors: **Activity** (last update), **Momentum** (time in stage), **Deal value** (order value bands tuned for typical **3–5 kW** sweet-spot deals), **Close date** (in Rayenna this uses **confirmation date** plus **advance received** vs order value — see tables below), and **Lead source**. When you **hover** a **Deal Health** badge, you see the **five building blocks** and how each one scored. On **Project Detail**, the **Deal Health Score** card shows the same breakdown plus a short **insight** that usually highlights the **weakest** area so you know what to fix first.
+The score is **computed in the app** from five factors: **Activity** (last update), **Momentum** (time in stage), **Deal value** (order value bands tuned for typical **3–5 kW** sweet-spot deals), **Close date** (in Rayenna this uses **confirmation date** plus **advance received** vs order value — see tables below), and **Lead source**. When you **hover** a **Deal Health** badge (or **tap** on touch), you see the **five building blocks** and how each one scored. On **Project Detail**, the **Deal Health Score** card shows the same breakdown plus a short **insight** that usually highlights the **weakest** area so you know what to fix first. On the **Projects** list, **payment balance** and **financing bank** popovers reuse the **same** dark-card look for consistency.
 
 #### Illustration — how the score adds up
 
@@ -903,7 +907,7 @@ The total is the **sum** of five parts. Each part has a **maximum**; the overall
 
 | Location | What you get |
 | :-- | :-- |
-| **Projects** list | A compact **badge** (0–100) next to the project/customer. **Sort** the list by **Deal Health Score** (ascending shows the weakest deals first across the full list — same data the server uses for sorting). |
+| **Projects** list | A compact **Deal Health** **badge** (0–100) — **hover** or **tap** for the breakdown **popover**. **Pending** / **Partial** pills (with balance) and the **financing bank** icon use **matching** dark-card **popovers**. **Sort** by **Deal Health Score** (ascending = weakest first; same server data). |
 | **Project Detail** | A full **Deal Health Score** card with **all factors**, scores, and the insight line. |
 | **Zenith (Executive view)** | **Your pipeline today** (Sales / Management / Admin): each row can show a **Deal Health** badge; **hover** for the breakdown. **Today’s Hit List** also shows the badge on urgent deals with an **Open** link to the project. |
 | **Tip of the Day** | Occasionally reminds you about Deal Health, sorting, and where to read the full rules (this section). |

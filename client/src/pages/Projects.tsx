@@ -12,6 +12,8 @@ import { setSessionStorageItem } from '../lib/safeLocalStorage'
 import { getSalesTeamColor } from '../components/dashboard/salesTeamColors'
 import DashboardFilters from '../components/dashboard/DashboardFilters'
 import HealthBadge from '../components/zenith/HealthBadge'
+import FinancingBankPopoverIcon from '../components/projects/FinancingBankPopoverIcon'
+import { getFinancingBankDisplayName } from '../utils/financingBankDisplay'
 import { FiPaperclip } from 'react-icons/fi'
 import { FaUniversity, FaTicketAlt, FaBriefcase } from 'react-icons/fa'
 import PageCard from '../components/PageCard'
@@ -181,11 +183,59 @@ const PaymentStatusBadge = ({ project }: { project: Project }) => {
       </span>
       {hasBalanceTooltip && showTooltip && (
         <span
-          className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 rounded-lg bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 text-white text-xs font-semibold whitespace-nowrap shadow-xl shadow-slate-900/40 ring-2 ring-blue-400/60 z-[100] pointer-events-none"
+          className="absolute left-1/2 bottom-full z-[3000] mb-2 w-[240px] -translate-x-1/2 pointer-events-none"
           role="tooltip"
         >
-          <span className="text-blue-300 font-medium mr-1.5">Balance:</span>
-          <span className="text-emerald-400 font-bold drop-shadow-sm">₹{balanceFormatted}</span>
+          <div
+            className="relative"
+            style={{
+              background: '#1A1A2E',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: '10px',
+              padding: '12px 14px',
+              fontFamily: 'DM Sans, sans-serif',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '10px',
+                paddingBottom: '8px',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
+              }}
+            >
+              <span style={{ fontSize: '13px', fontWeight: 500, color: '#fff' }}>Balance</span>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#00D4B4' }}>₹{balanceFormatted}</span>
+            </div>
+            <div
+              style={{
+                fontSize: '11px',
+                color: 'rgba(255,255,255,0.45)',
+                fontStyle: 'italic',
+                lineHeight: 1.5,
+              }}
+            >
+              Outstanding amount from payment tracking.
+            </div>
+            <div
+              style={{
+                position: 'absolute',
+                left: '50%',
+                width: '8px',
+                height: '8px',
+                background: '#1A1A2E',
+                border: '1px solid rgba(255,255,255,0.12)',
+                transform: 'translateX(-50%) rotate(45deg)',
+                bottom: '-5px',
+                borderTop: 'none',
+                borderLeft: 'none',
+              }}
+              aria-hidden
+            />
+          </div>
         </span>
       )}
     </span>
@@ -849,7 +899,7 @@ const Projects = () => {
 
   if (!filtersReady || isLoading) {
     return (
-      <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden">
+      <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden bg-gradient-to-b from-slate-50/80 via-white to-amber-50/20">
         <div className="h-8 w-48 bg-gradient-to-r from-amber-200 to-gray-200 rounded animate-pulse mb-4" />
         <div className="h-64 bg-gradient-to-r from-amber-100/50 to-gray-100 rounded-xl animate-pulse" />
       </div>
@@ -857,7 +907,7 @@ const Projects = () => {
   }
 
   return (
-    <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden mobile-paint-fix">
+    <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden mobile-paint-fix bg-gradient-to-b from-slate-50/90 via-white to-primary-50/15">
       <PageCard
         title="Projects"
         subtitle="Manage and track all your solar projects"
@@ -872,14 +922,14 @@ const Projects = () => {
         ) : undefined}
         className="max-w-full"
       >
-      <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl border border-primary-100 mb-4 p-4 sm:p-5 shadow-sm">
+      <div className="mb-4 rounded-2xl border border-primary-200/50 bg-gradient-to-br from-white via-amber-50/20 to-primary-50/25 p-4 sm:p-5 shadow-md shadow-primary-900/[0.06] ring-1 ring-white/80">
         <div className="space-y-2 sm:space-y-3">
           {/* Row 1: Search Bar + Show/Hide Filters toggle (and Clear All on larger screens) */}
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
             <input
               type="text"
               placeholder="Search across all projects..."
-              className="w-full sm:flex-1 min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+              className="w-full sm:flex-1 min-h-[40px] rounded-xl border border-gray-200/90 bg-white/90 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-gray-100/80 placeholder:text-gray-400 transition-all focus:border-primary-400 focus:ring-2 focus:ring-primary-500/25"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
@@ -888,7 +938,7 @@ const Projects = () => {
               <button
                 type="button"
                 onClick={() => setShowMoreFilters((v) => !v)}
-                className="flex-1 min-h-[40px] px-3 py-2 rounded-lg border border-primary-200 bg-white hover:bg-primary-50/80 text-gray-700 font-medium transition-colors flex items-center justify-center gap-2"
+                className="flex min-h-[40px] flex-1 items-center justify-center gap-2 rounded-xl border border-primary-200/80 bg-white/90 px-3 py-2 font-medium text-gray-700 shadow-sm transition-all hover:border-primary-300 hover:bg-primary-50/90 hover:shadow"
                 aria-expanded={showMoreFilters}
                 aria-controls="projects-more-filters"
                 title="Show or hide additional filters"
@@ -911,7 +961,7 @@ const Projects = () => {
               <button
                 type="button"
                 onClick={clearAllFilters}
-                className="flex-1 sm:flex-none inline-flex justify-center items-center min-h-[40px] px-4 py-2 rounded-lg border border-primary-200 bg-white hover:bg-primary-50/80 text-gray-700 font-medium text-sm transition-colors"
+                className="inline-flex min-h-[40px] flex-1 items-center justify-center rounded-xl border border-primary-200/80 bg-white/90 px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all hover:border-primary-300 hover:bg-primary-50/90 hover:shadow sm:flex-none"
                 title="Clear search and all filters"
               >
                 Clear All
@@ -924,7 +974,7 @@ const Projects = () => {
             <div>
               <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1.5">Sort By</label>
               <select
-                className="w-full min-h-[40px] border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-gray-900 text-sm"
+                className="h-[40px] w-full rounded-xl border border-gray-200/90 bg-white/90 px-3 py-2 text-sm text-gray-900 shadow-sm ring-1 ring-gray-100/60 transition-all focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20"
                 value={filters.sortBy}
                 onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
               >
@@ -939,9 +989,9 @@ const Projects = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-gray-500">Sort Order</label>
               <select
-                className="w-full min-h-[40px] border-2 border-primary-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:border-primary-500 bg-gradient-to-r from-white to-primary-50 shadow-md text-gray-700 font-medium text-[13px] disabled:opacity-60 disabled:cursor-not-allowed"
+                className="h-[40px] w-full rounded-xl border-2 border-primary-300/90 bg-gradient-to-r from-white to-primary-50/80 px-3 py-2 text-[13px] font-medium text-gray-800 shadow-md shadow-primary-900/10 transition-all focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
                 value={filters.sortOrder}
                 onChange={(e) => setFilters({ ...filters, sortOrder: e.target.value })}
                 disabled={!filters.sortBy}
@@ -1070,7 +1120,7 @@ const Projects = () => {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleExportClick('excel')}
-                    className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 text-sm font-medium flex items-center gap-2"
+                    className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-amber-900/15 transition-all hover:from-amber-600 hover:to-yellow-600 hover:shadow-lg"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -1079,7 +1129,7 @@ const Projects = () => {
                   </button>
                   <button
                     onClick={() => handleExportClick('csv')}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-sm font-medium flex items-center gap-2"
+                    className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-900/20 transition-all hover:from-indigo-700 hover:to-violet-700 hover:shadow-lg"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -1123,12 +1173,12 @@ Do you want to continue?`}
       />
 
       {/* Projects table - scannable, status-driven, enterprise tone; mobile-paint-anchor prevents sections disappearing on scroll (iOS/Android) */}
-      <div className="mobile-paint-anchor bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="mobile-paint-anchor overflow-hidden rounded-2xl border border-gray-200/90 bg-white shadow-lg shadow-gray-900/5 ring-1 ring-gray-100">
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead>
               {/* Subtotals row - aligned above Capacity and Order Value columns */}
-              <tr className="border-b border-gray-100 bg-primary-50/30">
+              <tr className="border-b border-amber-100/80 bg-gradient-to-r from-primary-50/50 via-amber-50/40 to-primary-50/50">
                 <th className="px-4 py-2" scope="col" />
                 <th className="px-4 py-2 hidden lg:table-cell" scope="col" />
                 <th className="px-4 py-2" scope="col" />
@@ -1156,27 +1206,40 @@ Do you want to continue?`}
                 <th className="px-4 py-2 hidden md:table-cell" scope="col" />
                 <th className="px-4 py-2 hidden sm:table-cell" scope="col" />
               </tr>
-              <tr className="border-b border-gray-200 bg-gradient-to-r from-amber-50 to-amber-100/80">
-                <th className="px-4 py-3 text-left text-sm font-bold text-gray-700 uppercase tracking-wider border-l-4 border-l-amber-400">Project</th>
-                <th className="px-4 py-3 text-left text-sm font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">Segment</th>
-                <th className="px-4 py-3 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Stage</th>
-                <th className="pl-2 pr-4 py-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wider">Capacity</th>
-                <th className="px-4 py-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wider">Order Value</th>
-                <th className="px-4 py-3 text-center text-sm font-bold text-gray-700 uppercase tracking-wider">Payment</th>
-                <th className="pl-6 pr-4 py-3 text-left text-sm font-bold text-gray-700 uppercase tracking-wider hidden md:table-cell">Lead Source</th>
-                <th className="px-4 py-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wider hidden sm:table-cell">Confirmation Date</th>
+              <tr className="border-b border-primary-100/80 bg-gradient-to-r from-primary-100/35 via-amber-50/90 to-primary-50/40">
+                <th className="border-l-4 border-l-amber-500 px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-primary-900 sm:text-sm">
+                  Project
+                </th>
+                <th className="hidden px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-primary-900 sm:text-sm lg:table-cell">
+                  Segment
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-primary-900 sm:text-sm">Stage</th>
+                <th className="py-3 pl-2 pr-4 text-right text-xs font-bold uppercase tracking-wider text-primary-900 sm:text-sm">Capacity</th>
+                <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-primary-900 sm:text-sm">Order Value</th>
+                <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-primary-900 sm:text-sm">Payment</th>
+                <th className="hidden py-3 pl-6 pr-4 text-left text-xs font-bold uppercase tracking-wider text-primary-900 sm:text-sm md:table-cell">
+                  Lead Source
+                </th>
+                <th className="hidden px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-primary-900 sm:table-cell sm:text-sm">
+                  Confirmation Date
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {displayProjects.map((project: Project) => (
+            <tbody className="divide-y divide-gray-100/90">
+              {displayProjects.map((project: Project) => {
+                const financingBankLabel = getFinancingBankDisplayName(
+                  project.financingBank,
+                  project.financingBankOther,
+                )
+                return (
                 <tr
                   key={project.id}
                   onClick={() => navigate(`/projects/${project.id}`)}
-                  className="group transition-colors cursor-pointer bg-white hover:bg-primary-50/50"
+                  className="group cursor-pointer bg-white transition-colors duration-150 ease-out odd:bg-white even:bg-slate-50/45 hover:bg-primary-50/70"
                 >
-                  <td className="px-4 py-3 min-w-0">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <p className="text-base sm:text-lg font-semibold text-gray-900 truncate min-w-0">
+                  <td className="min-w-0 px-4 py-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <p className="min-w-0 truncate text-base font-semibold text-gray-900 transition-colors group-hover:text-primary-900 sm:text-lg">
                         #{project.slNo} · {project.customer?.customerName || 'Unknown Customer'}
                       </p>
                       <div className="shrink-0">
@@ -1199,10 +1262,8 @@ Do you want to continue?`}
                             <FiPaperclip className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
                           </span>
                         )}
-                        {project.availingLoan === true && (
-                          <span className="text-emerald-700" title="Availing Loan / Financing">
-                            <FaUniversity className="w-3.5 h-3.5 shrink-0" />
-                          </span>
+                        {project.availingLoan === true && financingBankLabel && (
+                          <FinancingBankPopoverIcon bankDisplayName={financingBankLabel} />
                         )}
                         {project.supportTickets && project.supportTickets.length > 0 && (
                           <span className="text-amber-600" title="Open or In Progress ticket(s)">
@@ -1245,13 +1306,13 @@ Do you want to continue?`}
                       )}
                     </div>
                   </td>
-                  <td className="pl-2 pr-4 py-3 text-right">
-                    <span className="text-sm font-bold text-orange-800 tabular-nums">
+                  <td className="py-3 pl-2 pr-4 text-right">
+                    <span className="text-sm font-bold tabular-nums text-orange-800 transition-colors group-hover:text-orange-900">
                       {project.systemCapacity ? `${project.systemCapacity} kW` : '—'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <span className="text-sm font-bold text-green-800 tabular-nums">
+                    <span className="text-sm font-bold tabular-nums text-emerald-800 transition-colors group-hover:text-emerald-900">
                       {project.projectCost ? `₹${project.projectCost.toLocaleString('en-IN')}` : '—'}
                     </span>
                   </td>
@@ -1285,21 +1346,37 @@ Do you want to continue?`}
                     )}
                     {!project.leadSource && <span className="text-xs text-gray-400">—</span>}
                   </td>
-                  <td className="px-4 py-3 text-right hidden sm:table-cell">
-                    <span className="text-xs text-gray-500">
+                  <td className="hidden px-4 py-3 text-right sm:table-cell">
+                    <span className="text-xs font-medium tabular-nums text-gray-600">
                       {project.confirmationDate ? format(new Date(project.confirmationDate), 'MMM dd, yyyy') : '—'}
                     </span>
                   </td>
                 </tr>
-              ))}
+                )
+              })}
+              {displayProjects.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-6 py-14 text-center text-sm text-gray-500"
+                  >
+                    <p className="mx-auto max-w-md font-medium text-gray-600">
+                      No projects match your search and filters.
+                    </p>
+                    <p className="mx-auto mt-2 max-w-md text-xs text-gray-500">
+                      Try clearing filters, widening the date range, or changing the search text.
+                    </p>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
       {data?.pagination && (
-        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-sm text-gray-500">
+        <div className="mt-5 flex flex-col items-center justify-between gap-4 rounded-2xl border border-gray-200/80 bg-gradient-to-r from-white via-primary-50/20 to-white px-4 py-3 shadow-sm sm:flex-row sm:px-5">
+          <div className="text-sm text-gray-600">
             Showing page {data.pagination.page} of {data.pagination.pages} ({data.pagination.total} total)
           </div>
           {data.pagination.pages > 1 && (
@@ -1307,14 +1384,14 @@ Do you want to continue?`}
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-4 py-2 border border-primary-200 rounded-lg text-sm font-medium text-primary-800 bg-primary-50/80 hover:bg-primary-100/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="rounded-xl border border-primary-200/90 bg-white px-4 py-2 text-sm font-semibold text-primary-800 shadow-sm transition-all hover:border-primary-300 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Previous
               </button>
               <button
                 onClick={() => setPage(p => Math.min(data.pagination.pages, p + 1))}
                 disabled={page >= data.pagination.pages}
-                className="px-4 py-2 border border-primary-200 rounded-lg text-sm font-medium text-primary-800 bg-primary-50/80 hover:bg-primary-100/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="rounded-xl border border-primary-200/90 bg-white px-4 py-2 text-sm font-semibold text-primary-800 shadow-sm transition-all hover:border-primary-300 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Next
               </button>
@@ -1324,9 +1401,12 @@ Do you want to continue?`}
       )}
 
       {/* Legend: 3 icons + 3 subtotals — single row on laptop, wrap neatly on smaller */}
-      <div className="mt-6 pt-4 border-t border-primary-100">
-        <p className="text-[11px] sm:text-xs font-semibold text-gray-600 mb-2">Legend</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2 sm:gap-y-1.5 text-[11px] sm:text-xs text-gray-500 leading-relaxed items-center">
+      <div className="mt-6 rounded-2xl border border-gray-200/80 bg-gradient-to-br from-slate-50/80 via-white to-primary-50/15 p-4 shadow-sm sm:p-5">
+        <p className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-primary-800 sm:text-xs">
+          <span className="h-1 w-6 rounded-full bg-gradient-to-r from-amber-400 to-primary-500" aria-hidden />
+          Legend
+        </p>
+        <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2 text-[11px] leading-relaxed text-gray-600 sm:grid-cols-3 sm:gap-y-1.5 sm:text-xs lg:grid-cols-6">
           <span className="inline-flex items-center gap-1.5 shrink-0">
             <span className="text-primary-600">
               <FiPaperclip className="w-3.5 h-3.5" strokeWidth={2} />
@@ -1337,7 +1417,7 @@ Do you want to continue?`}
             <span className="text-emerald-700">
               <FaUniversity className="w-3.5 h-3.5" />
             </span>
-            Availing Loan
+            Availing Loan + bank (hover or tap for bank name)
           </span>
           <span className="inline-flex items-center gap-1.5 shrink-0">
             <span className="text-amber-600">
