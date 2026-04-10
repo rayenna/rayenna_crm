@@ -1,4 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
@@ -7,6 +8,8 @@ import { Project, ProjectStatus, ProjectType, ProjectServiceType, UserRole, Lead
 import { format } from 'date-fns'
 import MultiSelect from '../components/MultiSelect'
 import { useDebounce } from '../hooks/useDebounce'
+import { useHoverCapableForTooltip } from '../hooks/useHoverCapableForTooltip'
+import { ZENITH_FLOATING_DISMISS_EVENT } from '../utils/zenithEvents'
 import toast from 'react-hot-toast'
 import { setSessionStorageItem } from '../lib/safeLocalStorage'
 import { getSalesTeamColor } from '../components/dashboard/salesTeamColors'
@@ -118,11 +121,8 @@ function getInitialFiltersFromUrl(): {
   }
 }
 
-// Payment status badge with tooltip - hover (desktop) and tap-to-toggle (mobile)
+// Payment status badge — balance popover matches Deal Health / Financing Bank (portal + tap handling).
 const PaymentStatusBadge = ({ project }: { project: Project }) => {
-  const [showTooltip, setShowTooltip] = useState(false)
-  const badgeRef = useRef<HTMLSpanElement>(null)
-
   const projectCost = project?.projectCost
   const hasNoOrderValue = !projectCost || projectCost === 0 || projectCost === null || projectCost === undefined || Number(projectCost) <= 0
 
@@ -136,16 +136,153 @@ const PaymentStatusBadge = ({ project }: { project: Project }) => {
   const balanceAmount = project.balanceAmount ?? 0
   const hasBalanceTooltip = (paymentStatus === 'PENDING' || paymentStatus === 'PARTIAL') && balanceAmount > 0
 
+  const hoverCapable = useHoverCapableForTooltip()
+  const [mouseInside, setMouseInside] = useState(false)
+  const [tapOpen, setTapOpen] = useState(false)
+  const anchorRef = useRef<HTMLButtonElement>(null)
+  const [pos, setPos] = useState<{ left: number; top: number; place: 'above' | 'below' } | null>(null)
+
+  const tooltipW = 240
+  const tooltipHApprox = 130
+  const gutter = 12
+  const showCard = hoverCapable ? mouseInside : tapOpen
+
   useEffect(() => {
-    if (!hasBalanceTooltip) return
-    const handleClickOutside = (e: MouseEvent) => {
-      if (badgeRef.current && !badgeRef.current.contains(e.target as Node)) {
-        setShowTooltip(false)
-      }
+    const dismissFloating = () => {
+      setTapOpen(false)
+      setMouseInside(false)
     }
-    document.addEventListener('click', handleClickOutside)
-    return () => document.removeEventListener('click', handleClickOutside)
-  }, [hasBalanceTooltip])
+    window.addEventListener(ZENITH_FLOATING_DISMISS_EVENT, dismissFloating)
+    return () => window.removeEventListener(ZENITH_FLOATING_DISMISS_EVENT, dismissFloating)
+  }, [])
+
+  useEffect(() => {
+    if (hoverCapable || !tapOpen) return
+    const close = (e: Event) => {
+      const el = anchorRef.current
+      const t = e.target
+      if (el && t instanceof Node && el.contains(t)) return
+      setTapOpen(false)
+    }
+    document.addEventListener('touchstart', close, { capture: true })
+    document.addEventListener('mousedown', close, { capture: true })
+    return () => {
+      document.removeEventListener('touchstart', close, { capture: true })
+      document.removeEventListener('mousedown', close, { capture: true })
+    }
+  }, [hoverCapable, tapOpen])
+
+  const balanceFormatted = balanceAmount.toLocaleString('en-IN')
+
+  const pillClassName = `inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${
+    paymentStatus === 'FULLY_PAID'
+      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+      : paymentStatus === 'PARTIAL'
+        ? 'bg-amber-50 text-amber-800 border border-amber-200'
+        : 'bg-red-50 text-red-700 border border-red-200'
+  }`
+
+  const tooltipNode = useMemo(() => {
+    if (!hasBalanceTooltip || !showCard || !pos) return null
+    return (
+      <div
+        role="tooltip"
+        style={{
+          position: 'fixed',
+          left: `${pos.left}px`,
+          top: `${pos.top}px`,
+          transform: 'translateX(-50%)',
+          background: '#1A1A2E',
+          border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: '10px',
+          padding: '12px 14px',
+          width: `${tooltipW}px`,
+          zIndex: 3000,
+          pointerEvents: 'none',
+          fontFamily: 'DM Sans, sans-serif',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '10px',
+            paddingBottom: '8px',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+          }}
+        >
+          <span style={{ fontSize: '13px', fontWeight: 500, color: '#fff' }}>Balance</span>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: '#00D4B4' }}>₹{balanceFormatted}</span>
+        </div>
+        <div
+          style={{
+            fontSize: '11px',
+            color: 'rgba(255,255,255,0.45)',
+            fontStyle: 'italic',
+            lineHeight: 1.5,
+          }}
+        >
+          Outstanding amount from payment tracking.
+        </div>
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            width: '8px',
+            height: '8px',
+            background: '#1A1A2E',
+            border: '1px solid rgba(255,255,255,0.12)',
+            transform: 'translateX(-50%) rotate(45deg)',
+            ...(pos.place === 'above'
+              ? { bottom: '-5px', borderTop: 'none', borderLeft: 'none' }
+              : { top: '-5px', borderBottom: 'none', borderRight: 'none' }),
+          }}
+          aria-hidden
+        />
+      </div>
+    )
+  }, [hasBalanceTooltip, showCard, pos, balanceFormatted])
+
+  useEffect(() => {
+    if (!hasBalanceTooltip || !showCard) {
+      setPos(null)
+      return
+    }
+
+    const compute = () => {
+      const el = anchorRef.current
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      let left = r.left + r.width / 2
+      const half = tooltipW / 2
+      left = Math.max(gutter + half, Math.min(window.innerWidth - gutter - half, left))
+      const place: 'above' | 'below' = r.top >= tooltipHApprox + 16 ? 'above' : 'below'
+      const top =
+        place === 'above'
+          ? Math.max(gutter, r.top - 8 - tooltipHApprox)
+          : Math.min(window.innerHeight - gutter - tooltipHApprox, r.bottom + 8)
+      setPos({ left, top, place })
+    }
+
+    compute()
+    let raf = 0
+    const scheduleReposition = () => {
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = 0
+        compute()
+      })
+    }
+    window.addEventListener('scroll', scheduleReposition, { capture: true, passive: true })
+    window.addEventListener('resize', scheduleReposition)
+    return () => {
+      if (raf) cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', scheduleReposition, true)
+      window.removeEventListener('resize', scheduleReposition)
+    }
+  }, [hasBalanceTooltip, showCard, paymentStatus, balanceAmount])
 
   if (hasNoOrderValue || isEarlyOrLostStage) {
     return (
@@ -155,90 +292,49 @@ const PaymentStatusBadge = ({ project }: { project: Project }) => {
     )
   }
 
-  const balanceFormatted = balanceAmount.toLocaleString('en-IN')
+  if (!hasBalanceTooltip) {
+    return <span className={`${pillClassName}`}>{String(paymentStatus).replace(/_/g, ' ')}</span>
+  }
 
   return (
-    <span
-      ref={badgeRef}
-      className="relative inline-flex"
-      onMouseEnter={() => hasBalanceTooltip && setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-      onClick={(e) => {
-        if (hasBalanceTooltip) {
-          e.stopPropagation()
-          setShowTooltip((prev) => !prev)
+    <>
+      <button
+        type="button"
+        ref={anchorRef}
+        style={{
+          position: 'relative',
+          display: 'inline-flex',
+          touchAction: 'manipulation',
+          cursor: hoverCapable ? 'default' : 'pointer',
+          border: 'none',
+          margin: 0,
+          padding: 0,
+          background: 'transparent',
+          font: 'inherit',
+          textAlign: 'inherit',
+          WebkitTapHighlightColor: 'transparent',
+        }}
+        onMouseEnter={() => hoverCapable && setMouseInside(true)}
+        onMouseLeave={() => hoverCapable && setMouseInside(false)}
+        onTouchStart={(e) => {
+          if (!hoverCapable) e.stopPropagation()
+        }}
+        onClick={
+          hoverCapable
+            ? undefined
+            : (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setTapOpen((v) => !v)
+              }
         }
-      }}
-    >
-      <span
-        className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${
-          paymentStatus === 'FULLY_PAID'
-            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-            : paymentStatus === 'PARTIAL'
-            ? 'bg-amber-50 text-amber-800 border border-amber-200'
-            : 'bg-red-50 text-red-700 border border-red-200'
-        } ${hasBalanceTooltip ? 'cursor-help' : ''}`}
+        aria-expanded={hoverCapable ? undefined : tapOpen}
+        aria-label={hoverCapable ? 'Payment status, hover for balance' : 'Payment status, tap for balance'}
       >
-        {String(paymentStatus).replace(/_/g, ' ')}
-      </span>
-      {hasBalanceTooltip && showTooltip && (
-        <span
-          className="absolute left-1/2 bottom-full z-[3000] mb-2 w-[240px] -translate-x-1/2 pointer-events-none"
-          role="tooltip"
-        >
-          <div
-            className="relative"
-            style={{
-              background: '#1A1A2E',
-              border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: '10px',
-              padding: '12px 14px',
-              fontFamily: 'DM Sans, sans-serif',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '10px',
-                paddingBottom: '8px',
-                borderBottom: '1px solid rgba(255,255,255,0.08)',
-              }}
-            >
-              <span style={{ fontSize: '13px', fontWeight: 500, color: '#fff' }}>Balance</span>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#00D4B4' }}>₹{balanceFormatted}</span>
-            </div>
-            <div
-              style={{
-                fontSize: '11px',
-                color: 'rgba(255,255,255,0.45)',
-                fontStyle: 'italic',
-                lineHeight: 1.5,
-              }}
-            >
-              Outstanding amount from payment tracking.
-            </div>
-            <div
-              style={{
-                position: 'absolute',
-                left: '50%',
-                width: '8px',
-                height: '8px',
-                background: '#1A1A2E',
-                border: '1px solid rgba(255,255,255,0.12)',
-                transform: 'translateX(-50%) rotate(45deg)',
-                bottom: '-5px',
-                borderTop: 'none',
-                borderLeft: 'none',
-              }}
-              aria-hidden
-            />
-          </div>
-        </span>
-      )}
-    </span>
+        <span className={pillClassName}>{String(paymentStatus).replace(/_/g, ' ')}</span>
+      </button>
+      {tooltipNode ? createPortal(tooltipNode, document.body) : null}
+    </>
   )
 }
 
