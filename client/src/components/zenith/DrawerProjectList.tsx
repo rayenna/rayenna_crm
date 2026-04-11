@@ -15,6 +15,7 @@ import {
 } from './zenithDealCardUi'
 import { zenithSalespersonNameColor } from '../../utils/zenithSalespersonColor'
 import { formatZenithSystemCapacityKw } from '../../utils/zenithSystemCapacityFormat'
+import { computeDealHealth, zenithExplorerProjectToHealthProject } from '../../utils/dealHealthScore'
 
 type SortKey = 'value' | 'health' | 'activity'
 
@@ -24,17 +25,6 @@ function formatINR(value: number): string {
     currency: 'INR',
     maximumFractionDigits: 0,
   }).format(value)
-}
-
-function explorerToHealthProject(p: ZenithExplorerProject): Record<string, unknown> {
-  return {
-    stage: p.stageLabel,
-    deal_value: p.deal_value,
-    updated_at: p.updated_at,
-    stage_changed_at: p.updated_at,
-    lead_source: p.lead_source,
-    projectStatus: p.projectStatus,
-  }
 }
 
 export default function DrawerProjectList({
@@ -74,8 +64,8 @@ export default function DrawerProjectList({
       )
     } else {
       copy.sort((a, b) => {
-        const sa = computeHealthScore(a)
-        const sb = computeHealthScore(b)
+        const sa = computeDealHealth(zenithExplorerProjectToHealthProject(a))?.score ?? 0
+        const sb = computeDealHealth(zenithExplorerProjectToHealthProject(b))?.score ?? 0
         return (sa - sb) * dir
       })
     }
@@ -201,7 +191,7 @@ export default function DrawerProjectList({
                   {formatZenithSystemCapacityKw(p.system_capacity_kw, 'emDash')}
                 </div>
                 <div className="mt-1 flex justify-end">
-                  <HealthBadge project={explorerToHealthProject(p)} size="sm" showLabel={false} />
+                  <HealthBadge project={zenithExplorerProjectToHealthProject(p)} size="sm" showLabel={false} />
                 </div>
               </div>
               <div className="shrink-0">
@@ -231,20 +221,4 @@ export default function DrawerProjectList({
       </div>
     </div>
   )
-}
-
-/** Approximate sort by health without importing full compute in sort path */
-function computeHealthScore(p: ZenithExplorerProject): number {
-  const days = Math.max(0, (Date.now() - new Date(p.updated_at).getTime()) / 86400000)
-  const v = Number(p.deal_value ?? 0)
-  let s = 0
-  if (days <= 3) s += 30
-  else if (days <= 7) s += 22
-  else if (days <= 14) s += 12
-  else if (days <= 30) s += 5
-  if (v >= 500000) s += 20
-  else if (v >= 200000) s += 15
-  else if (v >= 50000) s += 10
-  else if (v > 0) s += 5
-  return s
 }

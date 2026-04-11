@@ -18,6 +18,8 @@ export type ZenithExplorerProject = {
   /** When current CRM stage was entered — primary leaderboard “closed in period” signal. */
   stage_entered_at?: string | null
   confirmation_date?: string | null
+  /** Payment tracking — same field as project detail for Deal Health factor 4. */
+  advance_received?: number | null
   customer_name: string
   gross_profit?: number | null
   /** Raw `financingBank` when set; used for Projects deep link. */

@@ -95,9 +95,6 @@ function LifecycleBrandBarCard({
           </div>
           <div className="min-w-0">
             <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-tight">{title}</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Projects with both panel and inverter brands set · same scope as Zenith Explore
-            </p>
           </div>
         </div>
       </div>

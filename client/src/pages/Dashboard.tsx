@@ -87,7 +87,7 @@ const Dashboard = () => {
   const announcementProposal =
     'New: Rayenna Proposal Engine is now live — create full solar proposals in one click from any eligible project in the CRM.'
   const announcementZenith =
-    'Zenith is live — your solar CRM, now reimagined as a command center. Try it under Dashboard.'
+    'Zenith is LIVE = Your Solar CRM, now reimagined as a Command Centre. Go to Dashboard Menu and Click on Zenith to Open and Try it.'
 
   const renderMarqueeUnit = () => (
     <>

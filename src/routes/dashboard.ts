@@ -327,6 +327,7 @@ async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
       updatedAt: true,
       stageEnteredAt: true,
       confirmationDate: true,
+      advanceReceived: true,
       grossProfit: true,
       availingLoan: true,
       financingBank: true,
@@ -354,6 +355,7 @@ async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
     /** Leaderboard period gate: stage transition time (preferred over updatedAt, which moves on any edit). */
     stage_entered_at: p.stageEnteredAt?.toISOString() ?? null,
     confirmation_date: p.confirmationDate?.toISOString() ?? null,
+    advance_received: p.advanceReceived != null ? Number(p.advanceReceived) : 0,
     customer_name: p.customer?.firstName?.trim() || p.customer?.customerName?.trim() || 'Unknown',
     gross_profit: p.grossProfit,
     /** Display label aligned with `availingLoanByBank[].bankLabel` (Zenith loans chart). */

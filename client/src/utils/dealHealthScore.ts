@@ -5,6 +5,7 @@
 
 import type { HitListItem } from '../hooks/useHitList'
 import type { Project } from '../types'
+import type { ZenithExplorerProject } from '../types/zenithExplorer'
 
 const EXCLUDED_STAGES = [
   'Completed',
@@ -220,6 +221,34 @@ export function pipelineRowToHealthProject(r: {
     advanceReceived: r.advanceReceived ?? 0,
     advance_received: r.advanceReceived ?? 0,
     lead_source: r.leadSource ?? '',
+  }
+}
+
+/**
+ * Map a Zenith explorer row (`zenithExplorerProjects`) into the shape `computeDealHealth` expects.
+ * Must stay aligned with `projectDetailToHealthProject` for the same inputs the API provides.
+ */
+export function zenithExplorerProjectToHealthProject(p: ZenithExplorerProject): Record<string, unknown> {
+  const stageAnchor = p.stage_entered_at ?? p.updated_at
+  const leadStr = (p.lead_source ?? '').trim()
+  const advance = Number(p.advance_received ?? 0)
+  return {
+    projectStatus: p.projectStatus,
+    stage: p.stageLabel,
+    updated_at: p.updated_at,
+    updatedAt: p.updated_at,
+    last_modified_at: p.updated_at,
+    lastModifiedAt: p.updated_at,
+    stage_changed_at: stageAnchor,
+    stageChangedAt: stageAnchor,
+    deal_value: p.deal_value,
+    projectCost: p.deal_value,
+    confirmation_date: p.confirmation_date ?? null,
+    confirmationDate: p.confirmation_date ?? null,
+    advance_received: advance,
+    advanceReceived: advance,
+    lead_source: leadStr,
+    leadSource: leadStr,
   }
 }
 
