@@ -81,6 +81,167 @@ function pushZenithExplorerSliceOntoWhere(
   }
 }
 
+/**
+ * Shared ORDER BY for GET /projects and admin exports.
+ * `dealHealthSort` means caller must load all matching rows, score in memory, then paginate (list) or return all (export).
+ */
+function buildProjectsTableOrderBy(
+  sortBy: string | undefined,
+  sortOrder: string | undefined,
+): { orderBy: any[]; dealHealthSort: boolean } {
+  const sb = sortBy && String(sortBy).trim() !== '' ? String(sortBy) : '';
+  if (!sb) {
+    return {
+      dealHealthSort: false,
+      orderBy: [{ confirmationDate: 'desc' }, { createdAt: 'desc' }],
+    };
+  }
+  if (sb === 'dealHealthScore') {
+    return { dealHealthSort: true, orderBy: [] };
+  }
+  const order = sortOrder === 'asc' ? 'asc' : 'desc';
+  const nullsAsc = { sort: 'asc' as const, nulls: 'first' as const };
+  const nullsDesc = { sort: 'desc' as const, nulls: 'last' as const };
+  let orderBy: any[] = [];
+  switch (sb) {
+    case 'systemCapacity':
+      orderBy = [
+        { systemCapacity: order === 'asc' ? nullsAsc : nullsDesc },
+        { createdAt: 'desc' },
+      ];
+      break;
+    case 'projectCost':
+      orderBy = [
+        { projectCost: order === 'asc' ? nullsAsc : nullsDesc },
+        { createdAt: 'desc' },
+      ];
+      break;
+    case 'confirmationDate':
+      orderBy = [{ confirmationDate: order }, { createdAt: 'desc' }];
+      break;
+    case 'creationDate':
+      orderBy = [{ createdAt: order }];
+      break;
+    case 'profitability':
+      orderBy = [
+        { profitability: order === 'asc' ? nullsAsc : nullsDesc },
+        { createdAt: 'desc' },
+      ];
+      break;
+    case 'customerName':
+      // Use DB-generated lower(trim(...)) — raw customerName sort is case-sensitive and breaks DESC (e.g. "joy" before "Vishnu").
+      orderBy = [{ customer: { customerNameSortKey: order } }, { createdAt: 'desc' }];
+      break;
+    case 'slNo':
+      orderBy = [{ slNo: order }, { createdAt: 'desc' }];
+      break;
+    case 'projectType':
+      orderBy = [{ type: order }, { createdAt: 'desc' }];
+      break;
+    case 'projectStatus':
+      orderBy = [{ projectStatus: order }, { createdAt: 'desc' }];
+      break;
+    case 'leadSource':
+      orderBy = [
+        { leadSource: order === 'asc' ? nullsAsc : nullsDesc },
+        { createdAt: 'desc' },
+      ];
+      break;
+    case 'paymentStatus':
+      orderBy = [{ paymentStatus: order }, { createdAt: 'desc' }];
+      break;
+    default:
+      orderBy = [{ confirmationDate: 'desc' }, { createdAt: 'desc' }];
+  }
+  return { orderBy, dealHealthSort: false };
+}
+
+/** Same rules as client `dealHealthScore.ts` — used for list/export sort by dealHealthScore. */
+function computeDealHealthScoreForProjectList(p: {
+  projectStatus: ProjectStatus;
+  updatedAt: Date;
+  stageEnteredAt: Date | null;
+  projectCost: number | null;
+  confirmationDate: Date | null;
+  advanceReceived: number | null;
+  leadSource: LeadSource | null;
+}): number | null {
+  if (
+    p.projectStatus === ProjectStatus.COMPLETED ||
+    p.projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED ||
+    p.projectStatus === ProjectStatus.LOST
+  ) {
+    return null;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const daysSince = (d: Date | null | undefined) => {
+    if (!d) return 999;
+    const dd = new Date(d);
+    dd.setHours(0, 0, 0, 0);
+    return Math.max(0, Math.floor((today.getTime() - dd.getTime()) / 86400000));
+  };
+
+  const daysSinceActivity = daysSince(p.updatedAt);
+  let factor1 = 0;
+  if (daysSinceActivity <= 3) factor1 = 30;
+  else if (daysSinceActivity <= 7) factor1 = 22;
+  else if (daysSinceActivity <= 14) factor1 = 12;
+  else if (daysSinceActivity <= 30) factor1 = 5;
+  else factor1 = 0;
+
+  const EXPECTED_DAYS_PER_STATUS: Partial<Record<ProjectStatus, number>> = {
+    [ProjectStatus.LEAD]: 7,
+    [ProjectStatus.SITE_SURVEY]: 14,
+    [ProjectStatus.PROPOSAL]: 21,
+    [ProjectStatus.CONFIRMED]: 30,
+    [ProjectStatus.UNDER_INSTALLATION]: 45,
+    [ProjectStatus.SUBMITTED_FOR_SUBSIDY]: 21,
+  };
+  const expectedDays = EXPECTED_DAYS_PER_STATUS[p.projectStatus] ?? 14;
+  const daysInStage = daysSince(p.stageEnteredAt ?? p.updatedAt);
+  let factor2 = 0;
+  if (daysInStage <= expectedDays) factor2 = 25;
+  else if (daysInStage <= expectedDays * 1.5) factor2 = 15;
+  else if (daysInStage <= expectedDays * 2) factor2 = 8;
+  else factor2 = 0;
+
+  const value = Number(p.projectCost ?? 0);
+  let factor3 = 0;
+  if (!Number.isFinite(value) || value <= 0) factor3 = 0;
+  else if (value >= 500000) factor3 = 5;
+  else if (value >= 300000) factor3 = 10;
+  else if (value >= 175000) factor3 = 20;
+  else if (value >= 150000) factor3 = 10;
+  else factor3 = 5;
+
+  const hasConfirmation =
+    p.confirmationDate != null && !Number.isNaN(new Date(p.confirmationDate).getTime());
+  const advance = Number(p.advanceReceived ?? 0);
+  const orderVal = Number(p.projectCost ?? 0);
+  let factor4 = 0;
+  if (hasConfirmation) factor4 += 5;
+  if (hasConfirmation && advance > 0 && orderVal > 0) {
+    if (advance < orderVal * 0.5) factor4 += 5;
+    else factor4 += 10;
+  }
+  factor4 = Math.min(15, factor4);
+
+  const SOURCE_SCORES: Partial<Record<LeadSource, number>> = {
+    [LeadSource.REFERRAL]: 10,
+    [LeadSource.MANAGEMENT_CONNECT]: 8,
+    [LeadSource.CHANNEL_PARTNER]: 8,
+    [LeadSource.DIGITAL_MARKETING]: 6,
+    [LeadSource.SALES]: 5,
+  };
+  const factor5 = p.leadSource && SOURCE_SCORES[p.leadSource] ? (SOURCE_SCORES[p.leadSource] as number) : 3;
+
+  const raw = factor1 + factor2 + factor3 + factor4 + factor5;
+  return Math.min(100, Math.max(0, raw));
+}
+
 // Get all projects with filters
 router.get(
   '/',
@@ -155,6 +316,11 @@ router.get(
         'profitability',
         'customerName',
         'dealHealthScore',
+        'slNo',
+        'projectType',
+        'projectStatus',
+        'leadSource',
+        'paymentStatus',
       ]),
     query('sortOrder').optional().isIn(['asc', 'desc']),
     query('peBucket').optional().isIn(['proposal-ready', 'draft', 'not-started', 'rest']),
@@ -744,141 +910,10 @@ router.get(
         (where.AND as any[]).push(peBucketClause);
       }
 
-      const computeDealHealthScore = (p: {
-        projectStatus: ProjectStatus;
-        updatedAt: Date;
-        stageEnteredAt: Date | null;
-        projectCost: number | null;
-        confirmationDate: Date | null;
-        advanceReceived: number | null;
-        leadSource: LeadSource | null;
-      }): number | null => {
-        // Excluded (terminal) stages: no score
-        if (
-          p.projectStatus === ProjectStatus.COMPLETED ||
-          p.projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED ||
-          p.projectStatus === ProjectStatus.LOST
-        ) {
-          return null;
-        }
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const daysSince = (d: Date | null | undefined) => {
-          if (!d) return 999;
-          const dd = new Date(d);
-          dd.setHours(0, 0, 0, 0);
-          return Math.max(0, Math.floor((today.getTime() - dd.getTime()) / 86400000));
-        };
-
-        // Factor 1: activity recency (max 30)
-        const daysSinceActivity = daysSince(p.updatedAt);
-        let factor1 = 0;
-        if (daysSinceActivity <= 3) factor1 = 30;
-        else if (daysSinceActivity <= 7) factor1 = 22;
-        else if (daysSinceActivity <= 14) factor1 = 12;
-        else if (daysSinceActivity <= 30) factor1 = 5;
-        else factor1 = 0;
-
-        // Factor 2: stage momentum (max 25)
-        const EXPECTED_DAYS_PER_STATUS: Partial<Record<ProjectStatus, number>> = {
-          [ProjectStatus.LEAD]: 7,
-          [ProjectStatus.SITE_SURVEY]: 14,
-          [ProjectStatus.PROPOSAL]: 21,
-          [ProjectStatus.CONFIRMED]: 30,
-          [ProjectStatus.UNDER_INSTALLATION]: 45,
-          [ProjectStatus.SUBMITTED_FOR_SUBSIDY]: 21,
-        };
-        const expectedDays = EXPECTED_DAYS_PER_STATUS[p.projectStatus] ?? 14;
-        const daysInStage = daysSince(p.stageEnteredAt ?? p.updatedAt);
-        let factor2 = 0;
-        if (daysInStage <= expectedDays) factor2 = 25;
-        else if (daysInStage <= expectedDays * 1.5) factor2 = 15;
-        else if (daysInStage <= expectedDays * 2) factor2 = 8;
-        else factor2 = 0;
-
-        // Factor 3: deal value (max 20) — sweet spot ~3–5 kW; matches client dealHealthScore.ts
-        const value = Number(p.projectCost ?? 0);
-        let factor3 = 0;
-        if (!Number.isFinite(value) || value <= 0) factor3 = 0;
-        else if (value >= 500000) factor3 = 5;
-        else if (value >= 300000) factor3 = 10;
-        else if (value >= 175000) factor3 = 20;
-        else if (value >= 150000) factor3 = 10;
-        else factor3 = 5;
-
-        // Factor 4: confirmation date + advance vs order value (max 15) — matches client dealHealthScore.ts
-        const hasConfirmation =
-          p.confirmationDate != null && !Number.isNaN(new Date(p.confirmationDate).getTime());
-        const advance = Number(p.advanceReceived ?? 0);
-        const orderVal = Number(p.projectCost ?? 0);
-        let factor4 = 0;
-        if (hasConfirmation) factor4 += 5;
-        if (hasConfirmation && advance > 0 && orderVal > 0) {
-          if (advance < orderVal * 0.5) factor4 += 5;
-          else factor4 += 10;
-        }
-        factor4 = Math.min(15, factor4);
-
-        // Factor 5: lead source (max 10)
-        const SOURCE_SCORES: Partial<Record<LeadSource, number>> = {
-          [LeadSource.REFERRAL]: 10,
-          [LeadSource.MANAGEMENT_CONNECT]: 8,
-          [LeadSource.CHANNEL_PARTNER]: 8,
-          [LeadSource.DIGITAL_MARKETING]: 6,
-          [LeadSource.SALES]: 5,
-        };
-        const factor5 = (p.leadSource && SOURCE_SCORES[p.leadSource]) ? (SOURCE_SCORES[p.leadSource] as number) : 3;
-
-        const raw = factor1 + factor2 + factor3 + factor4 + factor5;
-        return Math.min(100, Math.max(0, raw));
-      };
-
-      const wantsHealthSort = sortBy === 'dealHealthScore';
-
-      // Build orderBy based on sortBy parameter (blank/null = zero: asc → nulls first, desc → nulls last)
-      let orderBy: any[] = [];
-      if (sortBy && !wantsHealthSort) {
-        const order = sortOrder === 'asc' ? 'asc' : 'desc';
-        switch (sortBy) {
-          case 'systemCapacity':
-            orderBy = [
-              { systemCapacity: order === 'asc' ? { sort: 'asc', nulls: 'first' } : { sort: 'desc', nulls: 'last' } },
-              { createdAt: 'desc' },
-            ];
-            break;
-          case 'projectCost':
-            orderBy = [
-              { projectCost: order === 'asc' ? { sort: 'asc', nulls: 'first' } : { sort: 'desc', nulls: 'last' } },
-              { createdAt: 'desc' },
-            ];
-            break;
-          case 'confirmationDate':
-            orderBy = [{ confirmationDate: order }, { createdAt: 'desc' }];
-            break;
-          case 'creationDate':
-            orderBy = [{ createdAt: order }];
-            break;
-          case 'profitability':
-            orderBy = [
-              { profitability: order === 'asc' ? { sort: 'asc', nulls: 'first' } : { sort: 'desc', nulls: 'last' } },
-              { createdAt: 'desc' },
-            ];
-            break;
-          case 'customerName':
-            orderBy = [{ customer: { customerName: order } }, { createdAt: 'desc' }];
-            break;
-          default:
-            orderBy = [{ confirmationDate: 'desc' }, { createdAt: 'desc' }];
-        }
-      } else {
-        // Default sorting
-        orderBy = [
-          { confirmationDate: 'desc' },
-          { createdAt: 'desc' }, // Fallback for projects without confirmation date
-        ];
-      }
+      const { orderBy, dealHealthSort: wantsHealthSort } = buildProjectsTableOrderBy(
+        sortBy as string | undefined,
+        sortOrder as string | undefined,
+      );
 
       // Balance subtotal: ONLY sum balanceAmount for projects with paymentStatus PARTIAL or PENDING.
       // Exclude "N/A" projects: no order value OR early/lost stages (UI shows N/A; DB may still have PENDING).
@@ -968,7 +1003,7 @@ router.get(
             const order = sortOrder === 'asc' ? 'asc' : 'desc';
             const scored = (allOrPage as any[]).map((p) => ({
               p,
-              s: computeDealHealthScore({
+              s: computeDealHealthScoreForProjectList({
                 projectStatus: p.projectStatus,
                 updatedAt: p.updatedAt,
                 stageEnteredAt: p.stageEnteredAt,
@@ -3273,68 +3308,63 @@ router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req:
       }
     }
 
-    // Build orderBy based on sortBy parameter (blank/null = zero: asc → nulls first, desc → nulls last)
-    let orderBy: any[] = [];
-    if (sortBy) {
-      const order = sortOrder === 'asc' ? 'asc' : 'desc';
-      switch (sortBy) {
-        case 'systemCapacity':
-          orderBy = [
-            { systemCapacity: order === 'asc' ? { sort: 'asc', nulls: 'first' } : { sort: 'desc', nulls: 'last' } },
-            { createdAt: 'desc' },
-          ];
-          break;
-        case 'projectCost':
-          orderBy = [
-            { projectCost: order === 'asc' ? { sort: 'asc', nulls: 'first' } : { sort: 'desc', nulls: 'last' } },
-            { createdAt: 'desc' },
-          ];
-          break;
-        case 'confirmationDate':
-          orderBy = [{ confirmationDate: order }, { createdAt: 'desc' }];
-          break;
-        case 'creationDate':
-          orderBy = [{ createdAt: order }];
-          break;
-        case 'profitability':
-          orderBy = [
-            { profitability: order === 'asc' ? { sort: 'asc', nulls: 'first' } : { sort: 'desc', nulls: 'last' } },
-            { createdAt: 'desc' },
-          ];
-          break;
-        case 'customerName':
-          orderBy = [{ customer: { customerName: order } }, { createdAt: 'desc' }];
-          break;
-        default:
-          orderBy = [{ confirmationDate: 'desc' }, { createdAt: 'desc' }];
-      }
-    } else {
-      orderBy = [
-        { confirmationDate: 'desc' },
-        { createdAt: 'desc' },
-      ];
-    }
-
-    const projects = await prisma.project.findMany({
-      where,
-      include: {
-        customer: {
-          select: {
-            customerId: true,
-            customerName: true,
-            firstName: true,
-            middleName: true,
-            lastName: true,
-            prefix: true,
-            consumerNumber: true,
-          },
-        },
-        salesperson: {
-          select: { name: true, email: true },
+    const exportInclude = {
+      customer: {
+        select: {
+          customerId: true,
+          customerName: true,
+          firstName: true,
+          middleName: true,
+          lastName: true,
+          prefix: true,
+          consumerNumber: true,
         },
       },
-      orderBy,
-    });
+      salesperson: {
+        select: { name: true, email: true },
+      },
+    } as const;
+
+    const { orderBy: exportOrderBy, dealHealthSort: exportHealthSort } = buildProjectsTableOrderBy(
+      sortBy as string | undefined,
+      sortOrder as string | undefined,
+    );
+
+    let projects: any[];
+    if (exportHealthSort) {
+      const all = await prisma.project.findMany({
+        where,
+        include: exportInclude,
+      });
+      const order = sortOrder === 'asc' ? 'asc' : 'desc';
+      const scored = all.map((p) => ({
+        p,
+        s: computeDealHealthScoreForProjectList({
+          projectStatus: p.projectStatus,
+          updatedAt: p.updatedAt,
+          stageEnteredAt: p.stageEnteredAt,
+          projectCost: p.projectCost,
+          confirmationDate: p.confirmationDate,
+          advanceReceived: p.advanceReceived,
+          leadSource: p.leadSource,
+        }),
+      }));
+      scored.sort((a, b) => {
+        const sa = a.s ?? -1;
+        const sb = b.s ?? -1;
+        if (sa !== sb) return order === 'asc' ? sa - sb : sb - sa;
+        const ac = a.p.createdAt?.getTime?.() ?? 0;
+        const bc = b.p.createdAt?.getTime?.() ?? 0;
+        return bc - ac;
+      });
+      projects = scored.map((x) => x.p);
+    } else {
+      projects = await prisma.project.findMany({
+        where,
+        include: exportInclude,
+        orderBy: exportOrderBy,
+      });
+    }
 
     // Format data for Excel
     const exportData = projects.map((project) => {
@@ -3438,65 +3468,63 @@ router.get('/export/csv', authenticate, authorize(UserRole.ADMIN), async (req: R
       }
     }
 
-    // Build orderBy based on sortBy parameter (blank/null = zero: asc → nulls first, desc → nulls last)
-    let orderBy: any[] = [];
-    if (sortBy) {
-      const order = sortOrder === 'asc' ? 'asc' : 'desc';
-      switch (sortBy) {
-        case 'systemCapacity':
-          orderBy = [
-            { systemCapacity: order === 'asc' ? { sort: 'asc', nulls: 'first' } : { sort: 'desc', nulls: 'last' } },
-            { createdAt: 'desc' },
-          ];
-          break;
-        case 'projectCost':
-          orderBy = [
-            { projectCost: order === 'asc' ? { sort: 'asc', nulls: 'first' } : { sort: 'desc', nulls: 'last' } },
-            { createdAt: 'desc' },
-          ];
-          break;
-        case 'confirmationDate':
-          orderBy = [{ confirmationDate: order }, { createdAt: 'desc' }];
-          break;
-        case 'profitability':
-          orderBy = [
-            { profitability: order === 'asc' ? { sort: 'asc', nulls: 'first' } : { sort: 'desc', nulls: 'last' } },
-            { createdAt: 'desc' },
-          ];
-          break;
-        case 'customerName':
-          orderBy = [{ customer: { customerName: order } }, { createdAt: 'desc' }];
-          break;
-        default:
-          orderBy = [{ confirmationDate: 'desc' }, { createdAt: 'desc' }];
-      }
-    } else {
-      orderBy = [
-        { confirmationDate: 'desc' },
-        { createdAt: 'desc' },
-      ];
-    }
-
-    const projects = await prisma.project.findMany({
-      where,
-      include: {
-        customer: {
-          select: {
-            customerId: true,
-            customerName: true,
-            firstName: true,
-            middleName: true,
-            lastName: true,
-            prefix: true,
-            consumerNumber: true,
-          },
-        },
-        salesperson: {
-          select: { name: true, email: true },
+    const exportIncludeCsv = {
+      customer: {
+        select: {
+          customerId: true,
+          customerName: true,
+          firstName: true,
+          middleName: true,
+          lastName: true,
+          prefix: true,
+          consumerNumber: true,
         },
       },
-      orderBy,
-    });
+      salesperson: {
+        select: { name: true, email: true },
+      },
+    } as const;
+
+    const { orderBy: csvOrderBy, dealHealthSort: csvHealthSort } = buildProjectsTableOrderBy(
+      sortBy as string | undefined,
+      sortOrder as string | undefined,
+    );
+
+    let projects: any[];
+    if (csvHealthSort) {
+      const all = await prisma.project.findMany({
+        where,
+        include: exportIncludeCsv,
+      });
+      const order = sortOrder === 'asc' ? 'asc' : 'desc';
+      const scored = all.map((p) => ({
+        p,
+        s: computeDealHealthScoreForProjectList({
+          projectStatus: p.projectStatus,
+          updatedAt: p.updatedAt,
+          stageEnteredAt: p.stageEnteredAt,
+          projectCost: p.projectCost,
+          confirmationDate: p.confirmationDate,
+          advanceReceived: p.advanceReceived,
+          leadSource: p.leadSource,
+        }),
+      }));
+      scored.sort((a, b) => {
+        const sa = a.s ?? -1;
+        const sb = b.s ?? -1;
+        if (sa !== sb) return order === 'asc' ? sa - sb : sb - sa;
+        const ac = a.p.createdAt?.getTime?.() ?? 0;
+        const bc = b.p.createdAt?.getTime?.() ?? 0;
+        return bc - ac;
+      });
+      projects = scored.map((x) => x.p);
+    } else {
+      projects = await prisma.project.findMany({
+        where,
+        include: exportIncludeCsv,
+        orderBy: csvOrderBy,
+      });
+    }
 
     // Format data for CSV
     const exportData = projects.map((project) => {

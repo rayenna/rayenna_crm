@@ -24,6 +24,19 @@ import { ErrorModal } from '@/components/common/ErrorModal'
 
 const PROJECTS_FILTERS_STORAGE_KEY = 'rayenna_projects_filters'
 
+function defaultOrderForProjectsSortKey(key: string): 'asc' | 'desc' {
+  const descFirst = new Set([
+    'systemCapacity',
+    'projectCost',
+    'confirmationDate',
+    'dealHealthScore',
+    'profitability',
+    'creationDate',
+    'slNo',
+  ])
+  return descFirst.has(key) ? 'desc' : 'asc'
+}
+
 /** Valid paymentStatus URL params (matches paymentStatusOptions values) */
 const VALID_PAYMENT_STATUS_VALUES = ['FULLY_PAID', 'PARTIAL', 'PENDING', 'NA'] as const
 
@@ -140,7 +153,7 @@ function getInitialSearchFromUrl(): string {
 }
 
 // Payment status badge — balance popover matches Deal Health / Financing Bank (portal + tap handling).
-const PaymentStatusBadge = ({ project }: { project: Project }) => {
+const PaymentStatusBadge = ({ project, compact = false }: { project: Project; compact?: boolean }) => {
   const projectCost = project?.projectCost
   const hasNoOrderValue = !projectCost || projectCost === 0 || projectCost === null || projectCost === undefined || Number(projectCost) <= 0
 
@@ -192,7 +205,10 @@ const PaymentStatusBadge = ({ project }: { project: Project }) => {
 
   const balanceFormatted = balanceAmount.toLocaleString('en-IN')
 
-  const pillClassName = `inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${
+  const pillSize = compact
+    ? 'px-1.5 py-0.5 text-[10px] lg:text-[11px]'
+    : 'px-2 py-0.5 text-xs'
+  const pillClassName = `inline-flex items-center rounded-md font-medium ${pillSize} ${
     paymentStatus === 'FULLY_PAID'
       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
       : paymentStatus === 'PARTIAL'
@@ -304,7 +320,11 @@ const PaymentStatusBadge = ({ project }: { project: Project }) => {
 
   if (hasNoOrderValue || isEarlyOrLostStage) {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+      <span
+        className={`inline-flex items-center rounded-md font-medium bg-gray-100 text-gray-600 border border-gray-200 ${
+          compact ? 'px-1.5 py-0.5 text-[10px] lg:text-[11px]' : 'px-2 py-0.5 text-xs'
+        }`}
+      >
         N/A
       </span>
     )
@@ -390,6 +410,33 @@ const getSegmentPillClasses = (type: string): string => {
     default:
       return 'bg-gray-100 text-gray-800 border border-gray-300'
   }
+}
+
+/** Full label + short label for laptop-width tables (tooltip keeps full text). */
+function projectSegmentLabels(type: string): { full: string; compact: string } {
+  let full: string
+  switch (type) {
+    case 'RESIDENTIAL_SUBSIDY':
+      full = 'Residential Subsidy'
+      break
+    case 'RESIDENTIAL_NON_SUBSIDY':
+      full = 'Residential - Non Subsidy'
+      break
+    case 'COMMERCIAL_INDUSTRIAL':
+      full = 'Commercial Industrial'
+      break
+    default:
+      full = String(type).replace(/_/g, ' ')
+  }
+  const compact =
+    type === 'RESIDENTIAL_SUBSIDY'
+      ? 'Res. subsidy'
+      : type === 'RESIDENTIAL_NON_SUBSIDY'
+        ? 'Res. non-subs.'
+        : type === 'COMMERCIAL_INDUSTRIAL'
+          ? 'Commercial'
+          : full
+  return { full, compact }
 }
 
 const Projects = () => {
@@ -1049,6 +1096,64 @@ const Projects = () => {
     return (data?.projects ?? []) as Project[]
   }, [data?.projects])
 
+  const handleProjectsColumnSort = (sortKey: string) => {
+    setFilters((prev) => {
+      if (prev.sortBy === sortKey) {
+        return { ...prev, sortOrder: prev.sortOrder === 'desc' ? 'asc' : 'desc' }
+      }
+      return {
+        ...prev,
+        sortBy: sortKey,
+        sortOrder: defaultOrderForProjectsSortKey(sortKey),
+      }
+    })
+    setPage(1)
+  }
+
+  const projectHeaderAriaSort = (): 'ascending' | 'descending' | 'none' => {
+    if (filters.sortBy === 'customerName') {
+      return filters.sortOrder === 'asc' ? 'ascending' : 'descending'
+    }
+    return 'none'
+  }
+
+  const extraSortSelectValue = filters.sortBy || ''
+
+  /** Same ⇕ icon in every column; reserved box size so narrow cols never clip or overlap the label. */
+  function ProjectsSortGlyph({ sortKey }: { sortKey: string }) {
+    const active = filters.sortBy === sortKey
+    const box = active
+      ? 'border-amber-400/90 bg-amber-400/15 text-amber-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
+      : 'border-white/20 bg-black/15 text-slate-300/90 group-hover:border-amber-300/45 group-hover:bg-white/10 group-hover:text-amber-100'
+    return (
+      <span
+        className={`projects-sort-glyph-box inline-flex size-6 shrink-0 select-none items-center justify-center rounded border transition-colors ${box}`}
+        aria-hidden
+      >
+        <svg
+          className="block size-[14px] shrink-0 text-current opacity-95"
+          viewBox="0 0 24 24"
+          width={14}
+          height={14}
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          stroke="currentColor"
+          strokeWidth={2.25}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          overflow="visible"
+        >
+          <path d="M8 10l4-4 4 4M8 14l4 4 4-4" />
+        </svg>
+      </span>
+    )
+  }
+
+  /** No truncation on labels — wrap to extra lines if needed; glyph stays fixed at end of row. */
+  const sortBtnHeader =
+    'group flex min-h-[2rem] w-full min-w-0 flex-nowrap items-center gap-2 overflow-visible rounded-md px-1.5 py-1 text-left transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/65 focus-visible:ring-offset-1 focus-visible:ring-offset-primary-800 sm:min-h-[2.5rem] sm:gap-2 sm:px-2 sm:py-1.5'
+  const sortLabelLeft =
+    'min-w-0 flex-1 basis-0 whitespace-normal break-words text-left text-[11px] font-bold uppercase leading-snug tracking-wide text-slate-100 sm:text-xs sm:leading-tight sm:tracking-wider'
   if (!filtersReady || isLoading) {
     return (
       <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden bg-gradient-to-b from-slate-50/80 via-white to-amber-50/20">
@@ -1061,6 +1166,8 @@ const Projects = () => {
   return (
     <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden mobile-paint-fix bg-gradient-to-b from-slate-50/90 via-white to-primary-50/15">
       <PageCard
+        dense
+        className="max-w-full !overflow-x-visible"
         title="Projects"
         subtitle="Manage and track all your solar projects"
         icon={<FaBriefcase className="w-5 h-5 text-white" />}
@@ -1072,9 +1179,8 @@ const Projects = () => {
             + New Project
           </Link>
         ) : undefined}
-        className="max-w-full"
       >
-      <div className="mb-4 rounded-2xl border border-primary-200/50 bg-gradient-to-br from-white via-amber-50/20 to-primary-50/25 p-4 sm:p-5 shadow-md shadow-primary-900/[0.06] ring-1 ring-white/80">
+      <div className="mb-3 rounded-2xl border border-primary-200/50 bg-gradient-to-br from-white via-amber-50/20 to-primary-50/25 p-3 sm:p-4 shadow-md shadow-primary-900/[0.06] ring-1 ring-white/80">
         <div className="space-y-2 sm:space-y-3">
           {/* Row 1: Search Bar + Show/Hide Filters toggle (and Clear All on larger screens) */}
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
@@ -1121,44 +1227,11 @@ const Projects = () => {
             </div>
           </div>
 
-          {/* Row 2: Sort controls - always visible */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3">
-            <div>
-              <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1.5">Sort By</label>
-              <select
-                className="h-[40px] w-full rounded-xl border border-gray-200/90 bg-white/90 px-3 py-2 text-sm text-gray-900 shadow-sm ring-1 ring-gray-100/60 transition-all focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20"
-                value={filters.sortBy}
-                onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
-              >
-                <option value="">Default (Confirmation Date)</option>
-                <option value="systemCapacity">System Capacity</option>
-                <option value="projectCost">Order Value</option>
-                <option value="confirmationDate">Confirmation Date</option>
-                <option value="creationDate">Creation Date</option>
-                <option value="profitability">Profitability</option>
-                <option value="customerName">Customer Name</option>
-                <option value="dealHealthScore">Deal Health Score</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-gray-500">Sort Order</label>
-              <select
-                className="h-[40px] w-full rounded-xl border-2 border-primary-300/90 bg-gradient-to-r from-white to-primary-50/80 px-3 py-2 text-[13px] font-medium text-gray-800 shadow-md shadow-primary-900/10 transition-all focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60"
-                value={filters.sortOrder}
-                onChange={(e) => setFilters({ ...filters, sortOrder: e.target.value })}
-                disabled={!filters.sortBy}
-              >
-                <option value="desc">Descending</option>
-                <option value="asc">Ascending</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Additional filters - hidden by default, shown when "Show Filters" is active */}
+          {/* Filter By + Sort By + export — hidden until Show Filters */}
           <div
             id="projects-more-filters"
             className={`${showMoreFilters ? 'overflow-visible' : 'overflow-hidden'} transition-all duration-300 ease-in-out ${
-              showMoreFilters ? 'max-h-[1200px] opacity-100' : 'max-h-0 opacity-0'
+              showMoreFilters ? 'max-h-[1400px] opacity-100' : 'max-h-0 opacity-0'
             }`}
           >
             <div className={`${showMoreFilters ? 'pointer-events-auto' : 'pointer-events-none'} pt-2 space-y-2 sm:space-y-3`}>
@@ -1267,6 +1340,90 @@ const Projects = () => {
                 <span className="text-xs text-gray-500">(only projects where Availing Loan/Financing is Yes)</span>
               </div>
 
+              <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1.5">Sort By</label>
+              <div className="max-w-2xl">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
+                  <select
+                    className="h-[40px] min-h-[40px] w-full min-w-0 flex-1 rounded-xl border border-gray-200/90 bg-white/90 px-3 py-2 text-sm text-gray-900 shadow-sm ring-1 ring-gray-100/60 transition-all focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20 sm:max-w-md"
+                    aria-label="Sort projects by"
+                    value={extraSortSelectValue}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setPage(1)
+                      if (!v) {
+                        setFilters((prev) => ({ ...prev, sortBy: '', sortOrder: 'desc' }))
+                        return
+                      }
+                      setFilters((prev) => ({
+                        ...prev,
+                        sortBy: v,
+                        sortOrder: defaultOrderForProjectsSortKey(v),
+                      }))
+                    }}
+                  >
+                    <option value="">— Default (confirmation date, newest first) —</option>
+                    <optgroup label="Table columns">
+                      <option value="customerName">Project (customer name)</option>
+                      <option value="dealHealthScore">Deal health score</option>
+                      <option value="projectType">Segment</option>
+                      <option value="projectStatus">Stage</option>
+                      <option value="systemCapacity">Capacity</option>
+                      <option value="projectCost">Order value</option>
+                      <option value="paymentStatus">Payment status</option>
+                      <option value="leadSource">Lead source</option>
+                      <option value="confirmationDate">Confirmation date</option>
+                    </optgroup>
+                    <optgroup label="More">
+                      <option value="profitability">Profitability</option>
+                      <option value="creationDate">Creation date</option>
+                      <option value="slNo">Project number (#)</option>
+                    </optgroup>
+                  </select>
+                  <div
+                    className="flex shrink-0 gap-1 rounded-xl border border-gray-200/90 bg-gray-50/80 p-0.5 shadow-sm ring-1 ring-gray-100/60"
+                    role="group"
+                    aria-label="Sort direction"
+                  >
+                    <button
+                      type="button"
+                      title="Ascending: A→Z, low→high, oldest→newest (depends on column). With default sort, uses confirmation date."
+                      onClick={() => {
+                        setPage(1)
+                        setFilters((prev) => {
+                          const by = prev.sortBy || 'confirmationDate'
+                          return { ...prev, sortBy: by, sortOrder: 'asc' }
+                        })
+                      }}
+                      className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${
+                        filters.sortBy && filters.sortOrder === 'asc'
+                          ? 'bg-white text-primary-800 shadow-sm ring-1 ring-primary-200/80'
+                          : 'text-gray-600 hover:bg-white/80 hover:text-gray-900'
+                      }`}
+                    >
+                      Ascending
+                    </button>
+                    <button
+                      type="button"
+                      title="Descending: Z→A, high→low, newest→oldest (depends on column). With default sort, uses confirmation date."
+                      onClick={() => {
+                        setPage(1)
+                        setFilters((prev) => {
+                          const by = prev.sortBy || 'confirmationDate'
+                          return { ...prev, sortBy: by, sortOrder: 'desc' }
+                        })
+                      }}
+                      className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${
+                        filters.sortBy && filters.sortOrder === 'desc'
+                          ? 'bg-white text-primary-800 shadow-sm ring-1 ring-primary-200/80'
+                          : 'text-gray-600 hover:bg-white/80 hover:text-gray-900'
+                      }`}
+                    >
+                      Descending
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {/* Export buttons - Only visible to Admin users */}
               {hasRole([UserRole.ADMIN]) && (
                 <div className="flex gap-2">
@@ -1324,56 +1481,292 @@ Do you want to continue?`}
         ]}
       />
 
-      {/* Projects table - scannable, status-driven, enterprise tone; mobile-paint-anchor prevents sections disappearing on scroll (iOS/Android) */}
-      <div className="mobile-paint-anchor overflow-hidden rounded-2xl border border-gray-200/90 bg-white shadow-lg shadow-gray-900/5 ring-1 ring-gray-100">
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
+      {/* Projects table — DH = deal health badge column; uniform sort controls; fixed col widths (rem) + horizontal scroll when viewport is narrow. */}
+      <div className="mobile-paint-anchor overflow-x-auto rounded-2xl border border-gray-200/90 bg-white shadow-lg shadow-gray-900/5 ring-1 ring-gray-100">
+        <style>
+          {`
+            /*
+             * Colgroup: nine fixed rem widths; their sum must equal --projects-table-total-width so the
+             * table has no extra slack for the browser to assign to arbitrary columns.
+             */
+            .projects-table-fit {
+              --projects-table-total-width: 95rem;
+              table-layout: fixed;
+              width: var(--projects-table-total-width);
+              min-width: var(--projects-table-total-width);
+            }
+            @media (min-width: 1024px) {
+              .projects-table-fit thead tr:nth-child(2) th {
+                overflow: visible;
+                vertical-align: middle;
+              }
+              /* Header mins ≤ matching <col> width so the fixed total is not blown out. */
+              .projects-table-fit thead tr:nth-child(2) th:nth-child(2) { min-width: 5.5rem; }
+              .projects-table-fit thead tr:nth-child(2) th:nth-child(3) { min-width: 10.5rem; }
+              .projects-table-fit thead tr:nth-child(2) th:nth-child(4) { min-width: 8rem; }
+              .projects-table-fit thead tr:nth-child(2) th:nth-child(5) { min-width: 8.5rem; }
+              .projects-table-fit thead tr:nth-child(2) th:nth-child(6) { min-width: 10.5rem; }
+              .projects-table-fit thead tr:nth-child(2) th:nth-child(7) { min-width: 9.5rem; }
+              .projects-table-fit thead tr:nth-child(2) th:nth-child(8) { min-width: 8.5rem; }
+              .projects-table-fit thead tr:nth-child(2) th:nth-child(9) { min-width: 11rem; }
+              .projects-table-fit th:nth-child(2),
+              .projects-table-fit td:nth-child(2) {
+                min-width: 5.75rem;
+              }
+              .projects-table-fit th:nth-child(9),
+              .projects-table-fit td:nth-child(9) {
+                min-width: 9rem;
+              }
+            }
+          `}
+        </style>
+          <table className="projects-table-fit text-sm leading-snug">
+            <colgroup>
+              {/* Sum must match --projects-table-total-width (95rem): 16+6+11+11+9+11+10+9+12 */}
+              <col style={{ width: '16rem' }} />
+              <col style={{ width: '6rem' }} />
+              <col style={{ width: '11rem' }} />
+              <col style={{ width: '11rem' }} />
+              <col style={{ width: '9rem' }} />
+              <col style={{ width: '11rem' }} />
+              <col style={{ width: '10rem' }} />
+              <col style={{ width: '9rem' }} />
+              <col style={{ width: '12rem' }} />
+            </colgroup>
             <thead>
               {/* Subtotals row - aligned above Capacity and Order Value columns */}
-              <tr className="border-b border-amber-100/80 bg-gradient-to-r from-primary-50/50 via-amber-50/40 to-primary-50/50">
-                <th className="px-4 py-2" scope="col" />
-                <th className="px-4 py-2 hidden lg:table-cell" scope="col" />
-                <th className="px-4 py-2" scope="col" />
-                <th className="px-4 py-2 text-right align-bottom min-w-0" scope="col">
-                  <div className="inline-block px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-gradient-to-br from-orange-100 to-amber-200 border-2 border-orange-400 text-xs font-bold text-orange-900 tabular-nums whitespace-nowrap shadow-md shadow-orange-300/40 ring-1 ring-orange-300/50">
+              <tr className="border-b border-slate-300/90 bg-gradient-to-r from-slate-200/95 via-slate-100 to-slate-200/95">
+                <th className="px-2 py-1.5 sm:px-2.5" scope="col" />
+                <th className="px-2 py-1.5 sm:px-2.5" scope="col" />
+                <th className="px-2 py-1.5 sm:px-2.5 hidden lg:table-cell" scope="col" />
+                <th className="px-2 py-1.5 sm:px-2.5" scope="col" />
+                <th className="px-2 py-1.5 text-right align-bottom min-w-0 sm:px-2.5" scope="col">
+                  <div className="inline-block rounded-md border border-orange-400 bg-gradient-to-br from-orange-100 to-amber-200 px-1.5 py-0.5 text-[10px] font-bold text-orange-900 tabular-nums shadow-sm shadow-orange-300/30 ring-1 ring-orange-200/80 sm:px-2 sm:text-xs">
                     {(data?.totals?.capacitySum ?? 0) / 1000 > 0
                       ? `${((data?.totals?.capacitySum ?? 0) / 1000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} MW`
                       : '—'}
                   </div>
                 </th>
-                <th className="px-4 py-2 text-right align-bottom min-w-0" scope="col">
-                  <div className="inline-block px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-gradient-to-br from-emerald-100 to-green-200 border-2 border-emerald-500 text-xs font-bold text-emerald-900 tabular-nums whitespace-nowrap shadow-md shadow-emerald-400/40 ring-1 ring-emerald-400/50">
+                <th className="px-2 py-1.5 text-right align-bottom min-w-0 sm:px-2.5" scope="col">
+                  <div className="inline-block rounded-md border border-emerald-500 bg-gradient-to-br from-emerald-100 to-green-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-900 tabular-nums shadow-sm shadow-emerald-400/30 ring-1 ring-emerald-300/80 sm:px-2 sm:text-xs">
                     {(data?.totals?.costSum ?? 0) > 0
                       ? `₹${((data?.totals?.costSum ?? 0) / 1_000_000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} M`
                       : '—'}
                   </div>
                 </th>
-                <th className="px-4 py-2 text-center align-bottom min-w-0" scope="col">
-                  <div className="inline-block px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-gradient-to-br from-blue-100 to-sky-200 border-2 border-blue-500 text-xs font-bold text-blue-900 tabular-nums whitespace-nowrap shadow-md shadow-blue-400/40 ring-1 ring-blue-400/50">
+                <th className="px-2 py-1.5 text-center align-bottom min-w-0 sm:px-2.5" scope="col">
+                  <div className="inline-block rounded-md border border-blue-500 bg-gradient-to-br from-blue-100 to-sky-200 px-1.5 py-0.5 text-[10px] font-bold text-blue-900 tabular-nums shadow-sm shadow-blue-400/30 ring-1 ring-blue-300/80 sm:px-2 sm:text-xs">
                     {(data?.totals?.balanceSum ?? 0) > 0
                       ? `₹${((data?.totals?.balanceSum ?? 0) / 1_000_000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} M`
                       : '—'}
                   </div>
                 </th>
-                <th className="px-4 py-2 hidden md:table-cell" scope="col" />
-                <th className="px-4 py-2 hidden sm:table-cell" scope="col" />
+                <th className="px-2 py-1.5 hidden md:table-cell sm:px-2.5" scope="col" />
+                <th className="px-2 py-1.5 hidden sm:table-cell sm:px-2.5" scope="col" />
               </tr>
-              <tr className="border-b border-primary-100/80 bg-gradient-to-r from-primary-100/35 via-amber-50/90 to-primary-50/40">
-                <th className="border-l-4 border-l-amber-500 px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-primary-900 sm:text-sm">
-                  Project
+              <tr className="border-b border-primary-900/25 bg-gradient-to-r from-primary-800 via-slate-700 to-primary-900 shadow-sm shadow-black/10">
+                <th
+                  scope="col"
+                  className="px-2.5 py-2 align-middle sm:px-3 sm:py-2"
+                  aria-sort={projectHeaderAriaSort()}
+                >
+                  <button
+                    type="button"
+                    className={sortBtnHeader}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleProjectsColumnSort('customerName')
+                    }}
+                  >
+                    <span className={sortLabelLeft}>Project</span>
+                    <ProjectsSortGlyph sortKey="customerName" />
+                  </button>
                 </th>
-                <th className="hidden px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-primary-900 sm:text-sm lg:table-cell">
-                  Segment
+                <th
+                  scope="col"
+                  className="px-2.5 py-2 align-middle sm:px-3 sm:py-2"
+                  aria-sort={
+                    filters.sortBy === 'dealHealthScore'
+                      ? filters.sortOrder === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : 'none'
+                  }
+                >
+                  <button
+                    type="button"
+                    className={sortBtnHeader}
+                    title="Deal health — click to sort"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleProjectsColumnSort('dealHealthScore')
+                    }}
+                  >
+                    <span className={sortLabelLeft}>DH</span>
+                    <ProjectsSortGlyph sortKey="dealHealthScore" />
+                  </button>
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-primary-900 sm:text-sm">Stage</th>
-                <th className="py-3 pl-2 pr-4 text-right text-xs font-bold uppercase tracking-wider text-primary-900 sm:text-sm">Capacity</th>
-                <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-primary-900 sm:text-sm">Order Value</th>
-                <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-primary-900 sm:text-sm">Payment</th>
-                <th className="hidden py-3 pl-6 pr-4 text-left text-xs font-bold uppercase tracking-wider text-primary-900 sm:text-sm md:table-cell">
-                  Lead Source
+                <th
+                  scope="col"
+                  className="hidden px-2.5 py-2 align-middle lg:table-cell lg:px-3 lg:py-2"
+                  aria-sort={
+                    filters.sortBy === 'projectType'
+                      ? filters.sortOrder === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : 'none'
+                  }
+                >
+                  <button
+                    type="button"
+                    className={sortBtnHeader}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleProjectsColumnSort('projectType')
+                    }}
+                  >
+                    <span className={sortLabelLeft}>Segment</span>
+                    <ProjectsSortGlyph sortKey="projectType" />
+                  </button>
                 </th>
-                <th className="hidden px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-primary-900 sm:table-cell sm:text-sm">
-                  Confirmation Date
+                <th
+                  scope="col"
+                  className="px-2.5 py-2 align-middle sm:px-3 sm:py-2"
+                  aria-sort={
+                    filters.sortBy === 'projectStatus'
+                      ? filters.sortOrder === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : 'none'
+                  }
+                >
+                  <button
+                    type="button"
+                    className={sortBtnHeader}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleProjectsColumnSort('projectStatus')
+                    }}
+                  >
+                    <span className={sortLabelLeft}>Stage</span>
+                    <ProjectsSortGlyph sortKey="projectStatus" />
+                  </button>
+                </th>
+                <th
+                  scope="col"
+                  className="px-2.5 py-2 align-middle sm:px-3 sm:py-2"
+                  aria-sort={
+                    filters.sortBy === 'systemCapacity'
+                      ? filters.sortOrder === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : 'none'
+                  }
+                >
+                  <button
+                    type="button"
+                    className={sortBtnHeader}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleProjectsColumnSort('systemCapacity')
+                    }}
+                  >
+                    <span className={sortLabelLeft}>Capacity</span>
+                    <ProjectsSortGlyph sortKey="systemCapacity" />
+                  </button>
+                </th>
+                <th
+                  scope="col"
+                  className="px-2.5 py-2 align-middle sm:px-3 sm:py-2"
+                  aria-sort={
+                    filters.sortBy === 'projectCost'
+                      ? filters.sortOrder === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : 'none'
+                  }
+                >
+                  <button
+                    type="button"
+                    className={sortBtnHeader}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleProjectsColumnSort('projectCost')
+                    }}
+                  >
+                    <span className={sortLabelLeft}>Order value</span>
+                    <ProjectsSortGlyph sortKey="projectCost" />
+                  </button>
+                </th>
+                <th
+                  scope="col"
+                  className="px-2.5 py-2 align-middle sm:px-3 sm:py-2"
+                  aria-sort={
+                    filters.sortBy === 'paymentStatus'
+                      ? filters.sortOrder === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : 'none'
+                  }
+                >
+                  <button
+                    type="button"
+                    className={sortBtnHeader}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleProjectsColumnSort('paymentStatus')
+                    }}
+                  >
+                    <span className={sortLabelLeft}>Payment</span>
+                    <ProjectsSortGlyph sortKey="paymentStatus" />
+                  </button>
+                </th>
+                <th
+                  scope="col"
+                  className="hidden px-2.5 py-2 align-middle md:table-cell md:px-3 md:py-2"
+                  aria-sort={
+                    filters.sortBy === 'leadSource'
+                      ? filters.sortOrder === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : 'none'
+                  }
+                >
+                  <button
+                    type="button"
+                    className={sortBtnHeader}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleProjectsColumnSort('leadSource')
+                    }}
+                  >
+                    <span className={sortLabelLeft}>Lead source</span>
+                    <ProjectsSortGlyph sortKey="leadSource" />
+                  </button>
+                </th>
+                <th
+                  scope="col"
+                  className="hidden px-2.5 py-2 align-middle sm:table-cell sm:px-3 sm:py-2"
+                  aria-sort={
+                    filters.sortBy === 'confirmationDate'
+                      ? filters.sortOrder === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : 'none'
+                  }
+                >
+                  <button
+                    type="button"
+                    className={sortBtnHeader}
+                    title="Sort by confirmation date"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleProjectsColumnSort('confirmationDate')
+                    }}
+                  >
+                    <span className={sortLabelLeft}>Confirmation date</span>
+                    <ProjectsSortGlyph sortKey="confirmationDate" />
+                  </button>
                 </th>
               </tr>
             </thead>
@@ -1389,20 +1782,11 @@ Do you want to continue?`}
                   onClick={() => navigate(`/projects/${project.id}`)}
                   className="group cursor-pointer bg-white transition-colors duration-150 ease-out odd:bg-white even:bg-slate-50/45 hover:bg-primary-50/70"
                 >
-                  <td className="min-w-0 px-4 py-3">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <p className="min-w-0 truncate text-base font-semibold text-gray-900 transition-colors group-hover:text-primary-900 sm:text-lg">
-                        #{project.slNo} · {project.customer?.customerName || 'Unknown Customer'}
-                      </p>
-                      <div className="shrink-0">
-                        <HealthBadge
-                          project={project as unknown as Record<string, unknown>}
-                          size="sm"
-                          showLabel={false}
-                        />
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[200px] sm:max-w-none">
+                  <td className="min-w-0 px-2 py-2 sm:px-2.5 lg:py-1.5 lg:pl-2 lg:pr-2">
+                    <p className="min-w-0 truncate text-sm font-semibold text-gray-900 transition-colors group-hover:text-primary-900 lg:truncate-none lg:line-clamp-2 lg:leading-snug lg:break-words">
+                      #{project.slNo} · {project.customer?.customerName || 'Unknown Customer'}
+                    </p>
+                    <p className="mt-0.5 max-w-full truncate text-[11px] text-gray-500 lg:text-xs">
                       {project.salesperson && (
                         <span style={{ color: getSalesTeamColor(project.salesperson.name, 0) }}>
                           {project.salesperson.name}
@@ -1425,82 +1809,118 @@ Do you want to continue?`}
                       </span>
                     </p>
                   </td>
-                  <td className="px-4 py-3 hidden lg:table-cell">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${getSegmentPillClasses(project.type)}`}>
-                      {project.type === 'RESIDENTIAL_SUBSIDY'
-                        ? 'Residential Subsidy'
-                        : project.type === 'RESIDENTIAL_NON_SUBSIDY'
-                          ? 'Residential - Non Subsidy'
-                          : project.type === 'COMMERCIAL_INDUSTRIAL'
-                            ? 'Commercial Industrial'
-                            : String(project.type).replace(/_/g, ' ')}
-                    </span>
+                  <td className="px-1 py-2 text-center align-middle sm:px-1.5 lg:py-1.5">
+                    <div className="flex justify-center">
+                      <HealthBadge
+                        project={project as unknown as Record<string, unknown>}
+                        size="sm"
+                        showLabel={false}
+                      />
+                    </div>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${getStagePillClasses(project.projectStatus)}`}>
+                  <td className="hidden min-w-0 px-2 py-2 sm:px-2.5 lg:py-1.5 lg:pl-2 lg:pr-2 lg:table-cell">
+                    {(() => {
+                      const seg = projectSegmentLabels(project.type)
+                      return (
+                        <span
+                          title={seg.full}
+                          className={`inline-flex max-w-full items-center truncate rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight lg:text-[11px] ${getSegmentPillClasses(project.type)}`}
+                        >
+                          <span className="lg:hidden">{seg.full}</span>
+                          <span className="hidden lg:inline">{seg.compact}</span>
+                        </span>
+                      )
+                    })()}
+                  </td>
+                  <td className="min-w-0 px-2 py-2 sm:px-2.5 lg:py-1.5 lg:pl-2 lg:pr-2">
+                    <div className="flex flex-wrap items-center gap-1">
+                      <span
+                        title={project.projectStatus.replace(/_/g, ' ')}
+                        className={`inline-flex max-w-[10rem] items-center truncate rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight lg:max-w-[11rem] lg:text-[11px] ${getStagePillClasses(project.projectStatus)}`}
+                      >
                         {project.projectStatus.replace(/_/g, ' ')}
                       </span>
                       {peStatusByProjectId.get(project.id) === 'not-started' && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gray-50 text-gray-700 border border-gray-200">
-                          Not Yet Created
+                        <span className="inline-flex items-center rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[9px] font-semibold text-gray-700 lg:text-[10px]">
+                          <span className="lg:hidden">Not Yet Created</span>
+                          <span className="hidden lg:inline">Not created</span>
                         </span>
                       )}
                       {peStatusByProjectId.get(project.id) === 'draft' && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-300">
+                        <span className="inline-flex items-center rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-800 lg:text-[10px]">
                           PE Draft
                         </span>
                       )}
                       {peStatusByProjectId.get(project.id) === 'proposal-ready' && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                        <span className="inline-flex items-center rounded border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-800 lg:text-[10px]">
                           PE Ready
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="py-3 pl-2 pr-4 text-right">
-                    <span className="text-sm font-bold tabular-nums text-orange-800 transition-colors group-hover:text-orange-900">
+                  <td className="min-w-0 py-2 pl-1.5 pr-2 text-right tabular-nums sm:px-2 lg:py-1.5">
+                    <span className="text-xs font-bold text-orange-800 transition-colors group-hover:text-orange-900 lg:text-[13px]">
                       {project.systemCapacity ? `${project.systemCapacity} kW` : '—'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <span className="text-sm font-bold tabular-nums text-emerald-800 transition-colors group-hover:text-emerald-900">
+                  <td className="min-w-0 px-2 py-2 text-right tabular-nums sm:px-2.5 lg:py-1.5 lg:pl-2 lg:pr-2">
+                    <span className="text-xs font-bold text-emerald-800 transition-colors group-hover:text-emerald-900 lg:text-[13px]">
                       {project.projectCost ? `₹${project.projectCost.toLocaleString('en-IN')}` : '—'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <PaymentStatusBadge project={project} />
+                  <td className="min-w-0 px-2 py-2 text-center sm:px-2.5 lg:py-1.5 lg:px-2">
+                    <PaymentStatusBadge project={project} compact />
                   </td>
-                  <td className="pl-6 pr-4 py-3 text-left hidden md:table-cell">
+                  <td className="hidden min-w-0 px-2 py-2 pl-2 pr-2 text-center md:table-cell lg:py-1.5 lg:pl-2 lg:pr-2">
                     {project.leadSource === 'WEBSITE' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-300">Website</span>
+                      <span className="inline-flex max-w-full items-center truncate rounded border border-blue-300 bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-800 lg:text-[11px]">
+                        Website
+                      </span>
                     )}
                     {project.leadSource === 'REFERRAL' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-300">Referral</span>
+                      <span className="inline-flex max-w-full items-center truncate rounded border border-emerald-300 bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800 lg:text-[11px]">
+                        Referral
+                      </span>
                     )}
                     {project.leadSource === 'GOOGLE' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">Google</span>
+                      <span className="inline-flex max-w-full items-center truncate rounded border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 lg:text-[11px]">
+                        Google
+                      </span>
                     )}
                     {project.leadSource === 'CHANNEL_PARTNER' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-red-100 text-red-800 border border-red-300">Channel Partner</span>
+                      <span className="inline-flex max-w-full items-center truncate rounded border border-red-300 bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-800 lg:text-[11px]">
+                        <span className="lg:hidden">Channel Partner</span>
+                        <span className="hidden lg:inline">Channel</span>
+                      </span>
                     )}
                     {project.leadSource === 'DIGITAL_MARKETING' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-violet-100 text-violet-800 border border-violet-300">Digital Mktg</span>
+                      <span className="inline-flex max-w-full items-center truncate rounded border border-violet-300 bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-800 lg:text-[11px]">
+                        Digital Mktg
+                      </span>
                     )}
                     {project.leadSource === 'SALES' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-pink-100 text-pink-800 border border-pink-300">Sales</span>
+                      <span className="inline-flex max-w-full items-center truncate rounded border border-pink-300 bg-pink-100 px-1.5 py-0.5 text-[10px] font-medium text-pink-800 lg:text-[11px]">
+                        Sales
+                      </span>
                     )}
                     {project.leadSource === 'MANAGEMENT_CONNECT' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-300">Mgmt Connect</span>
+                      <span className="inline-flex max-w-full items-center truncate rounded border border-cyan-300 bg-cyan-100 px-1.5 py-0.5 text-[10px] font-medium text-cyan-800 lg:text-[11px]">
+                        <span className="lg:hidden">Mgmt Connect</span>
+                        <span className="hidden lg:inline">Mgmt</span>
+                      </span>
                     )}
                     {project.leadSource === 'OTHER' && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-lime-100 text-lime-800 border border-lime-300">Other</span>
+                      <span className="inline-flex max-w-full items-center truncate rounded border border-lime-300 bg-lime-100 px-1.5 py-0.5 text-[10px] font-medium text-lime-800 lg:text-[11px]">
+                        Other
+                      </span>
                     )}
-                    {!project.leadSource && <span className="text-xs text-gray-400">—</span>}
+                    {!project.leadSource && (
+                      <span className="inline-block text-[11px] text-gray-400">—</span>
+                    )}
                   </td>
-                  <td className="hidden px-4 py-3 text-right sm:table-cell">
-                    <span className="text-xs font-medium tabular-nums text-gray-600">
-                      {project.confirmationDate ? format(new Date(project.confirmationDate), 'MMM dd, yyyy') : '—'}
+                  <td className="hidden min-w-0 whitespace-nowrap px-1 py-2 text-center tabular-nums sm:table-cell sm:px-1.5 lg:py-1.5 lg:pl-1 lg:pr-1.5">
+                    <span className="inline-block text-[11px] font-medium text-gray-600 lg:text-xs">
+                      {project.confirmationDate ? format(new Date(project.confirmationDate), 'dd MMM yy') : '—'}
                     </span>
                   </td>
                 </tr>
@@ -1509,7 +1929,7 @@ Do you want to continue?`}
               {displayProjects.length === 0 && (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-6 py-14 text-center text-sm text-gray-500"
                   >
                     <p className="mx-auto max-w-md font-medium text-gray-600">
@@ -1523,7 +1943,6 @@ Do you want to continue?`}
               )}
             </tbody>
           </table>
-        </div>
       </div>
 
       {data?.pagination && (

@@ -219,7 +219,7 @@ const Layout = () => {
   return (
     <div className="min-h-screen bg-gray-50/80">
       <nav className="bg-gradient-to-r from-primary-600 via-primary-500 to-yellow-500 shadow-lg border-b-4 border-primary-400">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
+        <div className="mx-auto w-full max-w-[1600px] px-3 sm:px-4 lg:px-6 xl:px-8">
           <div className="flex justify-between items-center h-20 gap-2 lg:gap-4">
             <div className="flex items-center">
               <Link to="/dashboard" className="flex-shrink-0 flex items-center mr-2 lg:mr-3 xl:mr-4 hover:opacity-80 transition-opacity">
@@ -547,7 +547,7 @@ const Layout = () => {
         className={
           location.pathname.startsWith('/zenith')
             ? 'w-full max-w-none mx-auto py-0 px-0'
-            : 'max-w-7xl mx-auto py-6 px-2 sm:px-4 md:px-6 lg:px-8'
+            : 'mx-auto w-full max-w-[1600px] py-6 px-2 sm:px-4 md:px-6 lg:px-8'
         }
       >
         <Outlet />

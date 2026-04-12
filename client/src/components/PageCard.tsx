@@ -10,13 +10,18 @@ interface PageCardProps {
   children: ReactNode
   /** Optional class for the outer wrapper (e.g. max-w-full for layout). */
   className?: string
+  /** Tighter horizontal padding on the content area (wide data tables). */
+  dense?: boolean
 }
 
 /**
  * Page container with the same color theme and visual styling as the About page:
  * gradient card, primary-to-yellow header strip, and padded content area.
  */
-const PageCard = ({ title, subtitle, icon, headerAction, children, className = '' }: PageCardProps) => {
+const PageCard = ({ title, subtitle, icon, headerAction, children, className = '', dense = false }: PageCardProps) => {
+  const contentPad = dense
+    ? 'px-2 sm:px-3 md:px-4 lg:px-5 py-5 sm:py-6'
+    : 'px-2 sm:px-6 md:px-8 py-6 sm:py-8'
   return (
     <div
       className={`bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-x-hidden backdrop-blur-sm ${className}`}
@@ -46,7 +51,7 @@ const PageCard = ({ title, subtitle, icon, headerAction, children, className = '
         </div>
       </div>
 
-      <div className="px-2 sm:px-6 md:px-8 py-6 sm:py-8 overflow-visible">
+      <div className={`${contentPad} overflow-visible`}>
         {children}
       </div>
     </div>
