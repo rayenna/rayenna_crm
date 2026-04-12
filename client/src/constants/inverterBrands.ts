@@ -2,6 +2,7 @@
 export const INVERTER_BRAND_OPTIONS = [
   'Delta',
   'Deye',
+  'Feston',
   'FIMER',
   'Fronius',
   'GoodWe',
@@ -18,6 +19,7 @@ export const INVERTER_BRAND_OPTIONS = [
   'Solaire',
   'Solis',
   'Sungrow',
+  'Sunways',
   'Tata Power Solar',
   'UTL Solar',
   'V-Guard',

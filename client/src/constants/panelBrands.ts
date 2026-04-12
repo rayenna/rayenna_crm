@@ -13,6 +13,7 @@ export const PANEL_BRAND_OPTIONS = [
   'Moser Baer',
   'Premier Energies',
   'Rayzon Solar',
+  'ReNew',
   'Renewsys',
   'Saatvik',
   'Servotech',
