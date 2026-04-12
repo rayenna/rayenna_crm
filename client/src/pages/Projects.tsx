@@ -439,6 +439,14 @@ function projectSegmentLabels(type: string): { full: string; compact: string } {
   return { full, compact }
 }
 
+/** Visible data columns for thead/tbody (matches Tailwind lg/md/sm on table cells). Used for empty-state colspan below lg. */
+function getProjectsTableVisibleColumnCount(viewportWidth: number): number {
+  if (viewportWidth >= 1024) return 9
+  if (viewportWidth >= 768) return 8
+  if (viewportWidth >= 640) return 7
+  return 6
+}
+
 const Projects = () => {
   const { user, hasRole } = useAuth()
   const navigate = useNavigate()
@@ -452,6 +460,27 @@ const Projects = () => {
   const [pendingExportType, setPendingExportType] = useState<'excel' | 'csv' | null>(null)
   // Always start collapsed (including dashboard tile links with URL params) so mobile users see results first; use "Show Filters" to expand.
   const [showMoreFilters, setShowMoreFilters] = useState(false)
+
+  const [projectsTableVisibleCols, setProjectsTableVisibleCols] = useState(() =>
+    typeof window !== 'undefined' ? getProjectsTableVisibleColumnCount(window.innerWidth) : 9,
+  )
+  useEffect(() => {
+    const update = () => setProjectsTableVisibleCols(getProjectsTableVisibleColumnCount(window.innerWidth))
+    update()
+    window.addEventListener('resize', update)
+    const mq640 = window.matchMedia('(min-width: 640px)')
+    const mq768 = window.matchMedia('(min-width: 768px)')
+    const mq1024 = window.matchMedia('(min-width: 1024px)')
+    mq640.addEventListener('change', update)
+    mq768.addEventListener('change', update)
+    mq1024.addEventListener('change', update)
+    return () => {
+      window.removeEventListener('resize', update)
+      mq640.removeEventListener('change', update)
+      mq768.removeEventListener('change', update)
+      mq1024.removeEventListener('change', update)
+    }
+  }, [])
 
   // Dashboard-style date filters (FY / Quarter / Month)
   const [selectedFYs, setSelectedFYs] = useState<string[]>(() => urlInit?.selectedFYs ?? [])
@@ -1167,7 +1196,7 @@ const Projects = () => {
     <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden mobile-paint-fix bg-gradient-to-b from-slate-50/90 via-white to-primary-50/15">
       <PageCard
         dense
-        className="max-w-full !overflow-x-visible"
+        className="max-w-full min-w-0 !overflow-x-visible"
         title="Projects"
         subtitle="Manage and track all your solar projects"
         icon={<FaBriefcase className="w-5 h-5 text-white" />}
@@ -1482,25 +1511,49 @@ Do you want to continue?`}
       />
 
       {/* Projects table — DH = deal health badge column; uniform sort controls; fixed col widths (rem) + horizontal scroll when viewport is narrow. */}
-      <div className="mobile-paint-anchor overflow-x-auto rounded-2xl border border-gray-200/90 bg-white shadow-lg shadow-gray-900/5 ring-1 ring-gray-100">
+      <div className="mobile-paint-anchor w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-gray-200/90 bg-white shadow-lg shadow-gray-900/5 ring-1 ring-gray-100 [-webkit-overflow-scrolling:touch]">
         <style>
           {`
             /*
-             * Colgroup: nine fixed rem widths; their sum must equal --projects-table-total-width so the
-             * table has no extra slack for the browser to assign to arbitrary columns.
+             * Chrome/Edge do not reliably honor visibility:collapse + width:0 on <col> when sibling cells are display:none.
+             * Below lg: drop colgroup from layout (display:none on col) and use table-layout:auto + width:max-content so only
+             * visible th/td define columns — no ghost horizontal scroll. Desktop keeps fixed colgroup + 95rem total.
              */
             .projects-table-fit {
-              --projects-table-total-width: 95rem;
-              table-layout: fixed;
-              width: var(--projects-table-total-width);
-              min-width: var(--projects-table-total-width);
+              table-layout: auto;
+              width: max-content;
+              min-width: 0;
+              max-width: none;
             }
+            .projects-table-fit col {
+              display: none !important;
+            }
+
             @media (min-width: 1024px) {
+              .projects-table-fit {
+                table-layout: fixed;
+                width: var(--projects-table-total-width);
+                min-width: var(--projects-table-total-width);
+                max-width: var(--projects-table-total-width);
+                --projects-table-total-width: 95rem;
+              }
+              .projects-table-fit col {
+                display: table-column !important;
+              }
+              .projects-col--project { width: 16rem; }
+              .projects-col--dh { width: 6rem; }
+              .projects-col--segment { width: 11rem; }
+              .projects-col--stage { width: 11rem; }
+              .projects-col--capacity { width: 9rem; }
+              .projects-col--order { width: 11rem; }
+              .projects-col--payment { width: 10rem; }
+              .projects-col--lead { width: 9rem; }
+              .projects-col--confirm { width: 12rem; }
+
               .projects-table-fit thead tr:nth-child(2) th {
                 overflow: visible;
                 vertical-align: middle;
               }
-              /* Header mins ≤ matching <col> width so the fixed total is not blown out. */
               .projects-table-fit thead tr:nth-child(2) th:nth-child(2) { min-width: 5.5rem; }
               .projects-table-fit thead tr:nth-child(2) th:nth-child(3) { min-width: 10.5rem; }
               .projects-table-fit thead tr:nth-child(2) th:nth-child(4) { min-width: 8rem; }
@@ -1522,16 +1575,15 @@ Do you want to continue?`}
         </style>
           <table className="projects-table-fit text-sm leading-snug">
             <colgroup>
-              {/* Sum must match --projects-table-total-width (95rem): 16+6+11+11+9+11+10+9+12 */}
-              <col style={{ width: '16rem' }} />
-              <col style={{ width: '6rem' }} />
-              <col style={{ width: '11rem' }} />
-              <col style={{ width: '11rem' }} />
-              <col style={{ width: '9rem' }} />
-              <col style={{ width: '11rem' }} />
-              <col style={{ width: '10rem' }} />
-              <col style={{ width: '9rem' }} />
-              <col style={{ width: '12rem' }} />
+              <col className="projects-col--project" />
+              <col className="projects-col--dh" />
+              <col className="projects-col--segment" />
+              <col className="projects-col--stage" />
+              <col className="projects-col--capacity" />
+              <col className="projects-col--order" />
+              <col className="projects-col--payment" />
+              <col className="projects-col--lead" />
+              <col className="projects-col--confirm" />
             </colgroup>
             <thead>
               {/* Subtotals row - aligned above Capacity and Order Value columns */}
@@ -1929,7 +1981,7 @@ Do you want to continue?`}
               {displayProjects.length === 0 && (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={projectsTableVisibleCols}
                     className="px-6 py-14 text-center text-sm text-gray-500"
                   >
                     <p className="mx-auto max-w-md font-medium text-gray-600">
