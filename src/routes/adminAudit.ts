@@ -168,9 +168,44 @@ function escapeCsvCell(s: string | null | undefined): string {
   return t;
 }
 
+const AUDIT_LOG_SORT_BY = [
+  'time',
+  'userRole',
+  'email',
+  'action',
+  'ip',
+  'entity',
+  'summary',
+] as const;
+type AuditLogSortBy = (typeof AUDIT_LOG_SORT_BY)[number];
+
+/** Server-side sort for paginated audit logs. `email` sorts by userId (stable proxy; email is joined after fetch). */
+function auditLogsOrderBy(sortBy: AuditLogSortBy | undefined, sortOrder: 'asc' | 'desc'): Prisma.SecurityAuditLogOrderByWithRelationInput[] {
+  const o = sortOrder;
+  switch (sortBy) {
+    case 'time':
+      return [{ createdAt: o }];
+    case 'userRole':
+      return [{ userId: o }, { role: o }];
+    case 'email':
+      return [{ userId: o }];
+    case 'action':
+      return [{ actionType: o }];
+    case 'ip':
+      return [{ ip: o }];
+    case 'entity':
+      return [{ entityType: o }, { entityId: o }];
+    case 'summary':
+      return [{ summary: o }];
+    default:
+      return [{ createdAt: 'desc' }];
+  }
+}
+
 /**
  * GET /api/admin/audit/logs
  * Paginated security audit logs. Filters: actionType, entityType, userId, dateFrom, dateTo.
+ * Optional sortBy (time|userRole|email|action|ip|entity|summary) + sortOrder (asc|desc); default time desc.
  */
 router.get(
   '/logs',
@@ -184,6 +219,8 @@ router.get(
     query('userId').optional().isString(),
     query('dateFrom').optional().isISO8601(),
     query('dateTo').optional().isISO8601(),
+    query('sortBy').optional().isIn([...AUDIT_LOG_SORT_BY]),
+    query('sortOrder').optional().isIn(['asc', 'desc']),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -221,10 +258,18 @@ router.get(
         }
       }
 
+      const sortByRaw = req.query.sortBy;
+      const sortBy: AuditLogSortBy | undefined =
+        typeof sortByRaw === 'string' && (AUDIT_LOG_SORT_BY as readonly string[]).includes(sortByRaw)
+          ? (sortByRaw as AuditLogSortBy)
+          : undefined;
+      const sortOrder: 'asc' | 'desc' = req.query.sortOrder === 'asc' ? 'asc' : 'desc';
+      const orderBy = auditLogsOrderBy(sortBy, sortOrder);
+
       const [logs, total] = await Promise.all([
         prisma.securityAuditLog.findMany({
           where,
-          orderBy: { createdAt: 'desc' },
+          orderBy,
           skip,
           take: limit,
         }),

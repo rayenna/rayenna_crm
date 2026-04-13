@@ -8,6 +8,16 @@ import PageCard from '../components/PageCard'
 import { FaUsers } from 'react-icons/fa'
 import { ErrorModal } from '@/components/common/ErrorModal'
 
+/** Full-width table shell; horizontal scroll only when viewport is very narrow. */
+const usersTableScrollShell =
+  'w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-gray-200/90 bg-white shadow-md shadow-gray-900/[0.05] ring-1 ring-gray-100 [-webkit-overflow-scrolling:touch]'
+
+const usersHeaderLabel =
+  'text-left text-[11px] font-bold uppercase leading-snug tracking-wide text-slate-100 sm:text-xs sm:leading-tight sm:tracking-wider'
+
+const usersHeaderInner =
+  'flex min-h-[2rem] w-full min-w-0 items-center px-1.5 py-1 sm:min-h-[2.5rem] sm:px-2 sm:py-1.5'
+
 const Users = () => {
   const { hasRole } = useAuth()
   const queryClient = useQueryClient()
@@ -144,7 +154,7 @@ const Users = () => {
   }
 
   return (
-    <div className="px-0 py-6 sm:px-0">
+    <div className="mobile-paint-fix px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden bg-gradient-to-b from-slate-50/90 via-white to-primary-50/15">
       <PageCard
         title="Users"
         subtitle="Manage user accounts and roles"
@@ -157,7 +167,8 @@ const Users = () => {
             {showForm ? 'Cancel' : 'New User'}
           </button>
         }
-        className="max-w-full"
+        className="max-w-full min-w-0 !overflow-x-visible"
+        dense
       >
       {showForm && (
         <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl border border-primary-100 shadow-sm p-4 sm:p-6 mb-6">
@@ -222,38 +233,70 @@ const Users = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-primary-100 shadow-sm overflow-hidden">
+      <div className="w-full min-w-0">
         {!users || users.length === 0 ? (
-          <div className="px-4 py-8 text-center text-gray-500">
-            No users found. {users === undefined ? 'Loading...' : 'Click "New User" to create one.'}
+          <div className="w-full rounded-2xl border border-dashed border-gray-200 bg-gradient-to-br from-slate-50/80 to-white px-4 py-12 text-center text-gray-500 shadow-inner shadow-slate-900/[0.03] sm:py-14">
+            <p className="text-sm font-medium text-gray-600">
+              No users found. {users === undefined ? 'Loading...' : 'Click "New User" to create one.'}
+            </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
+          <div className={usersTableScrollShell}>
+            {/* min-width so tiny screens scroll instead of crushing columns; table-fixed + % fills row on wider viewports */}
+            <table className="w-full table-fixed border-collapse text-sm leading-snug">
+              <colgroup>
+                <col className="w-[24%]" />
+                <col className="w-[40%]" />
+                <col className="w-[16%]" />
+                <col className="w-[20%]" />
+              </colgroup>
               <thead>
-                <tr className="border-b border-gray-200 bg-white">
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-l-4 border-l-primary-400">Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <tr className="border-b border-primary-900/25 bg-gradient-to-r from-primary-800 via-slate-700 to-primary-900 shadow-sm shadow-black/10">
+                  <th scope="col" className="px-2.5 py-2 text-left align-middle sm:px-3 sm:py-2.5">
+                    <div className={`${usersHeaderInner} w-full`}>
+                      <span className={usersHeaderLabel}>Name</span>
+                    </div>
+                  </th>
+                  <th scope="col" className="px-2.5 py-2 text-left align-middle sm:px-3 sm:py-2.5">
+                    <div className={`${usersHeaderInner} w-full`}>
+                      <span className={usersHeaderLabel}>Email</span>
+                    </div>
+                  </th>
+                  <th scope="col" className="px-2.5 py-2 text-left align-middle sm:px-3 sm:py-2.5">
+                    <div className={`${usersHeaderInner} w-full`}>
+                      <span className={usersHeaderLabel}>Role</span>
+                    </div>
+                  </th>
+                  <th scope="col" className="px-2.5 py-2 text-right align-middle sm:px-3 sm:py-2.5">
+                    <div className={`${usersHeaderInner} w-full justify-end`}>
+                      <span className={`${usersHeaderLabel} text-right`}>Actions</span>
+                    </div>
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100/90">
                 {users.map((user) => (
-                  <tr key={user.id} className="bg-white hover:bg-primary-50/50 transition-colors">
-                    <td className="px-4 py-3">
-                      <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
+                  <tr
+                    key={user.id}
+                    className="bg-white transition-colors duration-150 ease-out odd:bg-white even:bg-slate-50/45 hover:bg-primary-50/70"
+                  >
+                    <td className="min-w-0 px-2 py-2.5 align-middle sm:px-3 sm:py-3">
+                      <p className="truncate text-sm font-semibold text-gray-900" title={user.name}>
+                        {user.name}
+                      </p>
                     </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                    <td className="min-w-0 px-2 py-2.5 align-middle sm:px-3 sm:py-3">
+                      <p className="truncate text-sm text-gray-600" title={user.email}>
+                        {user.email}
+                      </p>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 whitespace-nowrap">
+                    <td className="min-w-0 whitespace-nowrap px-2 py-2.5 align-middle sm:px-3 sm:py-3">
+                      <span className="inline-flex max-w-full items-center truncate rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800 ring-1 ring-slate-200/80">
                         {user.role}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4">
+                    <td className="min-w-0 px-2 py-2.5 text-right align-middle sm:px-3 sm:py-3">
+                      <div className="flex flex-wrap items-center justify-end gap-2 sm:flex-nowrap sm:gap-3">
                         <button
                           onClick={() => handleResetPassword(user)}
                           disabled={resetPasswordMutation.isPending}
