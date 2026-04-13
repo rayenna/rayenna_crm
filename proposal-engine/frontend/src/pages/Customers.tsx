@@ -22,11 +22,13 @@ import { AlertCard } from '../components/AlertCard';
 import {
   fetchProposalEngineProjects,
   fetchProposalEngineEligibleProjects,
+  fetchProposalEngineProjectsStats,
   fetchProjectWithArtifacts,
   applyProposalEngineProjectDetail,
   getCurrentUserRole,
   deleteProjectFromProposalEngine,
   selectProposalEngineProject,
+  type PeProjectsStatsResponse,
   type ProposalEngineProjectFromApi,
 } from '../lib/apiClient';
 
@@ -1056,6 +1058,18 @@ function CustomerCard({
   );
 }
 
+const PROJECTS_PAGE_SIZE = 24;
+
+const PROJECT_LIST_SORT_OPTIONS: { value: string; label: string }[] = [
+  { value: 'selectionUpdatedAt', label: 'Last updated (PE)' },
+  { value: 'projectUpdatedAt', label: 'Project updated' },
+  { value: 'createdAt', label: 'Project created' },
+  { value: 'customerName', label: 'Customer name' },
+  { value: 'systemCapacity', label: 'System size' },
+  { value: 'projectCost', label: 'Order value' },
+  { value: 'confirmationDate', label: 'Confirmation date' },
+];
+
 // ─────────────────────────────────────────────
 // Main page
 // ─────────────────────────────────────────────
@@ -1066,9 +1080,25 @@ export default function Customers() {
   const [customers, setCustomers] = useState<CustomerRecord[]>(() => loadCustomers());
   const [showPicker, setShowPicker] = useState(false);
   const [search, setSearch]       = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const activeId                  = getActiveCustomerId();
 
   const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [projectsTotal, setProjectsTotal] = useState(0);
+  const [projectListPage, setProjectListPage] = useState(0);
+  const [listSortBy, setListSortBy] = useState('selectionUpdatedAt');
+  const [listSortOrder, setListSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [filterStage, setFilterStage] = useState('');
+  const [filterPeStatus, setFilterPeStatus] = useState<
+    '' | 'not-started' | 'draft' | 'proposal-ready'
+  >('');
+  const [projectStats, setProjectStats] = useState<PeProjectsStatsResponse>({
+    total: 0,
+    notStarted: 0,
+    draft: 0,
+    ready: 0,
+    confirmed: 0,
+  });
   const [eligibleProjects, setEligibleProjects] = useState<ProjectOption[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -1098,6 +1128,15 @@ export default function Customers() {
   const customersRef = useRef(customers);
   customersRef.current = customers;
 
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedSearch(search.trim()), 320);
+    return () => window.clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    setProjectListPage(0);
+  }, [debouncedSearch, filterStage, filterPeStatus, listSortBy, listSortOrder]);
+
   const customersByCrmProjectId = useMemo(() => {
     const m = new Map<string, CustomerRecord>();
     for (const c of customers) {
@@ -1120,31 +1159,65 @@ export default function Customers() {
     setProjectsLoading(true);
     setProjectsError(null);
     try {
-      const apiProjects = await fetchProposalEngineProjects();
-      if (!Array.isArray(apiProjects)) {
-        throw new Error('Invalid projects response from server.');
-      }
+      const q = debouncedSearch.trim() || undefined;
+      const stage = filterStage.trim() || undefined;
+      const peStatus = filterPeStatus || undefined;
+      const sharedFilters = {
+        ...(q ? { q } : {}),
+        ...(stage ? { stage } : {}),
+        ...(peStatus ? { peStatus } : {}),
+      };
 
-      const mapped: ProjectOption[] = apiProjects.map((p) => mapApiProjectToProjectOption(p));
+      const [listRes, statsRes] = await Promise.all([
+        fetchProposalEngineProjects({
+          limit: PROJECTS_PAGE_SIZE,
+          offset: projectListPage * PROJECTS_PAGE_SIZE,
+          sortBy: listSortBy,
+          sortOrder: listSortOrder,
+          ...sharedFilters,
+        }),
+        fetchProposalEngineProjectsStats(sharedFilters),
+      ]);
+
+      const mapped: ProjectOption[] = listRes.items.map((p) => mapApiProjectToProjectOption(p));
       setProjects(mapped);
+      setProjectsTotal(listRes.total);
+      setProjectStats(statsRes);
 
-      // Keep local storage consistent with the server-selected list.
-      // If a CRM-linked local record exists for a project that is no longer selected,
-      // remove it so Dashboard/Customers stay consistent (fixes "active project" stuck in Dashboard).
-      const selectedIds = new Set(mapped.map((x) => x.id));
-      const latestCustomers = customersRef.current;
-      const stale = latestCustomers.filter(
-        (c) => c?.master?.crmProjectId && !selectedIds.has(c.master.crmProjectId),
-      );
-      stale.forEach((c) => deleteCustomer(c.id));
-      if (stale.length > 0) {
-        setCustomers((prev) => prev.filter((c) => !stale.some((s) => s.id === c.id)));
-      }
+      const maxPage = Math.max(0, Math.ceil(listRes.total / PROJECTS_PAGE_SIZE) - 1);
+      setProjectListPage((p) => (p > maxPage ? maxPage : p));
+
+      // Do not prune local customers from paginated list results — the current page is not the full
+      // selection set. Removal stays tied to explicit delete / remove-from-list flows.
     } catch (err: any) {
       setProjectsError(err?.message || 'Failed to load projects.');
     } finally {
       setProjectsLoading(false);
     }
+  }, [
+    debouncedSearch,
+    filterPeStatus,
+    filterStage,
+    listSortBy,
+    listSortOrder,
+    projectListPage,
+  ]);
+
+  const hasActiveListFilters =
+    search.trim() !== '' ||
+    filterStage !== '' ||
+    filterPeStatus !== '' ||
+    listSortBy !== 'selectionUpdatedAt' ||
+    listSortOrder !== 'desc';
+
+  const handleResetListFilters = useCallback(() => {
+    setSearch('');
+    setDebouncedSearch('');
+    setFilterStage('');
+    setFilterPeStatus('');
+    setListSortBy('selectionUpdatedAt');
+    setListSortOrder('desc');
+    setProjectListPage(0);
   }, []);
 
   const loadEligibleProjects = useCallback(async () => {
@@ -1376,9 +1449,9 @@ export default function Customers() {
 
         let projectOption: ProjectOption | null = null;
         try {
-          const list = await fetchProposalEngineProjects();
+          const { items } = await fetchProposalEngineProjects({ projectId });
           if (!cancelled) {
-            const row = list.find((x) => x.id === projectId);
+            const row = items.find((x) => x.id === projectId);
             if (row) projectOption = mapApiProjectToProjectOption(row);
           }
         } catch {
@@ -1435,40 +1508,16 @@ export default function Customers() {
   }).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
   const hiddenSet = new Set(hiddenProjectIds);
-  const filteredProjects = projects
-    .filter((p) => !hiddenSet.has(p.id))
-    .filter((p) => {
-      const q = search.toLowerCase();
-      return (
-        (p.customerName || '').toLowerCase().includes(q) ||
-        (p.siteAddress || '').toLowerCase().includes(q) ||
-        (p.city || '').toLowerCase().includes(q) ||
-        (p.contactPerson || '').toLowerCase().includes(q) ||
-        (p.salespersonName || '').toLowerCase().includes(q)
-      );
-    })
-    .sort((a, b) => {
-      const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return db - da;
-    });
+  const filteredProjects = projects.filter((p) => !hiddenSet.has(p.id));
 
-  // In viewAllMode, use effective status per project: local record status when present (matches card),
-  // otherwise normalized API peStatus, so counts match what is shown on cards.
   const statCounts = viewAllMode
-    ? (() => {
-        const effectiveStatus = (p: (typeof projects)[0]) => {
-          const rec = customersByCrmProjectId.get(p.id) ?? null;
-          return rec ? rec.status : normalizeProposalStatus(p.peStatus);
-        };
-        return {
-          total:       projects.length,
-          notStarted:  projects.filter((p) => effectiveStatus(p) === 'not-started').length,
-          draft:       projects.filter((p) => effectiveStatus(p) === 'draft').length,
-          ready:       projects.filter((p) => effectiveStatus(p) === 'proposal-ready').length,
-          confirmed:   projects.filter((p) => (p.projectStage || '').toUpperCase() === 'CONFIRMED').length,
-        };
-      })()
+    ? {
+        total: projectStats.total,
+        notStarted: projectStats.notStarted,
+        draft: projectStats.draft,
+        ready: projectStats.ready,
+        confirmed: projectStats.confirmed,
+      }
     : {
         total:       customers.length,
         notStarted:  customers.filter((c) => c.status === 'not-started').length,
@@ -1476,6 +1525,10 @@ export default function Customers() {
         ready:       customers.filter((c) => c.status === 'proposal-ready').length,
         confirmed:   customers.filter((c) => (c.master.projectStage || '').toUpperCase() === 'CONFIRMED').length,
       };
+
+  const projectPageCount = Math.max(1, Math.ceil(projectsTotal / PROJECTS_PAGE_SIZE));
+  const rangeStart = projectsTotal === 0 ? 0 : projectListPage * PROJECTS_PAGE_SIZE + 1;
+  const rangeEnd = Math.min(projectsTotal, (projectListPage + 1) * PROJECTS_PAGE_SIZE);
 
   return (
     <>
@@ -1652,74 +1705,223 @@ export default function Customers() {
             ))}
           </div>
 
-          {/* Search */}
-          <div className="mb-5 flex flex-col sm:flex-row gap-3">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, location, or contact…"
-              className="flex-1 border border-secondary-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-primary-500 transition-all"
-            />
-            {/* Admin maintenance buttons (restore/clear) intentionally hidden based on latest requirements */}
-            {viewAllMode && hiddenProjectIds.length > 0 && (
-              <button
-                type="button"
-                onClick={handleClearHiddenList}
-                className="text-sm text-secondary-600 hover:text-primary-600 font-medium whitespace-nowrap"
-              >
-                Show {hiddenProjectIds.length} hidden project{hiddenProjectIds.length !== 1 ? 's' : ''}
-              </button>
-            )}
+          {/* Search, filters, sort (server-side for API list) */}
+          <div className="mb-5 space-y-3">
+            <div className="flex flex-col lg:flex-row lg:items-end gap-3">
+              <div className="w-full min-w-0 lg:w-56 lg:flex-shrink-0 xl:w-64">
+                <label className="block text-xs font-semibold text-secondary-500 uppercase tracking-wide mb-1">
+                  Search projects
+                </label>
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Customer, site, city, contact, salesperson…"
+                  className="w-full border border-secondary-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-primary-500 transition-all"
+                />
+              </div>
+              {/* Mobile: 2×2 (CRM|PE, Sort|Order). Laptop: one row of four + reset. */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 flex-1 min-w-0 lg:max-w-none">
+                <div className="min-w-0">
+                  <label className="block text-xs font-semibold text-secondary-500 uppercase tracking-wide mb-1">
+                    CRM stage
+                  </label>
+                  <select
+                    value={filterStage}
+                    onChange={(e) => setFilterStage(e.target.value)}
+                    className="w-full min-w-0 border border-secondary-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-primary-500 bg-white"
+                  >
+                    <option value="">All stages</option>
+                    <option value="PROPOSAL">Proposal</option>
+                    <option value="CONFIRMED">Confirmed</option>
+                    <option value="LEAD">Lead</option>
+                    <option value="SITE_SURVEY">Site survey</option>
+                    <option value="UNDER_INSTALLATION">Under installation</option>
+                    <option value="COMPLETED">Completed</option>
+                  </select>
+                </div>
+                <div className="min-w-0">
+                  <label className="block text-xs font-semibold text-secondary-500 uppercase tracking-wide mb-1">
+                    PE status
+                  </label>
+                  <select
+                    value={filterPeStatus}
+                    onChange={(e) =>
+                      setFilterPeStatus(
+                        (e.target.value || '') as
+                          | ''
+                          | 'not-started'
+                          | 'draft'
+                          | 'proposal-ready',
+                      )
+                    }
+                    className="w-full min-w-0 border border-secondary-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-primary-500 bg-white"
+                  >
+                    <option value="">All</option>
+                    <option value="not-started">Not yet created</option>
+                    <option value="draft">PE draft</option>
+                    <option value="proposal-ready">PE ready</option>
+                  </select>
+                </div>
+                <div className="min-w-0">
+                  <label className="block text-xs font-semibold text-secondary-500 uppercase tracking-wide mb-1">
+                    Sort by
+                  </label>
+                  <select
+                    value={listSortBy}
+                    onChange={(e) => setListSortBy(e.target.value)}
+                    className="w-full min-w-0 border border-secondary-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-primary-500 bg-white"
+                  >
+                    {PROJECT_LIST_SORT_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="min-w-0">
+                  <label className="block text-xs font-semibold text-secondary-500 uppercase tracking-wide mb-1">
+                    Order
+                  </label>
+                  <select
+                    value={listSortOrder}
+                    onChange={(e) =>
+                      setListSortOrder(e.target.value === 'asc' ? 'asc' : 'desc')
+                    }
+                    className="w-full min-w-0 border border-secondary-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-primary-500 bg-white"
+                  >
+                    <option value="desc">Newest / Z→A</option>
+                    <option value="asc">Oldest / A→Z</option>
+                  </select>
+                </div>
+              </div>
+              {viewAllMode && (
+                <div className="flex flex-col justify-end lg:flex-shrink-0 w-full lg:w-auto">
+                  <label className="hidden lg:block text-xs font-semibold text-secondary-500 uppercase tracking-wide mb-1 opacity-0 pointer-events-none select-none" aria-hidden>
+                    Reset
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleResetListFilters}
+                    disabled={!hasActiveListFilters}
+                    title={
+                      hasActiveListFilters
+                        ? 'Clear search, filters, and sort to defaults'
+                        : 'No filters to reset'
+                    }
+                    className={`w-full lg:w-auto text-sm font-semibold px-3 py-2.5 rounded-lg transition-all whitespace-nowrap min-h-[40px] lg:min-h-[42px] ${
+                      hasActiveListFilters
+                        ? 'text-[#0d1b3a] bg-[#eab308] hover:bg-[#ca8a04] border border-amber-800/20 shadow-sm'
+                        : 'text-white bg-[#0d1b3a] hover:bg-[#0a1530] disabled:opacity-45 disabled:hover:bg-[#0d1b3a] disabled:pointer-events-none'
+                    }`}
+                  >
+                    Reset filters
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Customer / Project list */}
           {viewAllMode ? (
-            projectsLoading ? (
-              <div className="rounded-xl border-2 border-dashed border-secondary-200 p-12 text-center">
-                <p className="text-secondary-500 font-semibold text-sm">Loading all project proposals…</p>
-              </div>
-            ) : projectsError ? (
-              <div className="rounded-xl border-2 border-dashed border-secondary-200 p-12 text-center">
-                <p className="text-red-600 font-semibold text-sm">{projectsError}</p>
-                <button type="button" onClick={() => void loadProjects()} className="mt-3 text-sm text-primary-600 hover:underline">Retry</button>
-              </div>
-            ) : filteredProjects.length === 0 ? (
-              <div className="rounded-xl border-2 border-dashed border-secondary-200 p-12 text-center">
-                <p className="text-4xl mb-3">👥</p>
-                <p className="text-secondary-500 font-semibold text-sm">
-                  {search ? 'No projects match your search' : 'No projects in Proposal stage yet'}
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredProjects.map((p) => {
-                  const localRecord = customersByCrmProjectId.get(p.id) ?? null;
-                  const effectiveId = localRecord?.id ?? `crm_${p.id}`;
-                  if (isAdmin && localRecord) {
+            <>
+              {projectsLoading ? (
+                <div className="rounded-xl border-2 border-dashed border-secondary-200 p-12 text-center">
+                  <p className="text-secondary-500 font-semibold text-sm">Loading all project proposals…</p>
+                </div>
+              ) : projectsError ? (
+                <div className="rounded-xl border-2 border-dashed border-secondary-200 p-12 text-center">
+                  <p className="text-red-600 font-semibold text-sm">{projectsError}</p>
+                  <button type="button" onClick={() => void loadProjects()} className="mt-3 text-sm text-primary-600 hover:underline">Retry</button>
+                </div>
+              ) : filteredProjects.length === 0 ? (
+                <div className="rounded-xl border-2 border-dashed border-secondary-200 p-12 text-center">
+                  <p className="text-4xl mb-3">👥</p>
+                  <p className="text-secondary-500 font-semibold text-sm">
+                    {debouncedSearch || filterStage || filterPeStatus
+                      ? 'No projects match your filters'
+                      : 'No projects in Proposal stage yet'}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredProjects.map((p) => {
+                    const localRecord = customersByCrmProjectId.get(p.id) ?? null;
+                    const effectiveId = localRecord?.id ?? `crm_${p.id}`;
+                    if (isAdmin && localRecord) {
+                      return (
+                        <CustomerCard
+                          key={localRecord.id}
+                          record={localRecord}
+                          isActive={activeId === localRecord.id}
+                          onOpen={() => handleOpen(localRecord.id)}
+                          onDelete={() => void handleDelete(localRecord)}
+                        />
+                      );
+                    }
                     return (
-                      <CustomerCard
-                        key={localRecord.id}
+                      <ProjectCard
+                        key={p.id}
+                        project={p}
                         record={localRecord}
-                        isActive={activeId === localRecord.id}
-                        onOpen={() => handleOpen(localRecord.id)}
-                        onDelete={() => void handleDelete(localRecord)}
+                        isActive={activeId === effectiveId}
+                        isReadOnly={isReadOnlyRole}
+                        onOpen={() => void handleOpenProjectFromApi(p)}
+                        onRemoveFromList={isAdmin ? () => setRemoveConfirmProject(p) : undefined}
                       />
                     );
-                  }
-                  return (
-                    <ProjectCard
-                      key={p.id}
-                      project={p}
-                      record={localRecord}
-                      isActive={activeId === effectiveId}
-                      isReadOnly={isReadOnlyRole}
-                      onOpen={() => void handleOpenProjectFromApi(p)}
-                      onRemoveFromList={isAdmin ? () => setRemoveConfirmProject(p) : undefined}
-                    />
-                  );
-                })}
-              </div>
-            )
+                  })}
+                </div>
+              )}
+              {!projectsLoading && projectsError == null && (
+                <div className="mt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-6 border-t border-secondary-100 text-xs text-secondary-500">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="tabular-nums text-sm text-secondary-600">
+                      {projectsTotal === 0
+                        ? 'No matching projects'
+                        : `Showing ${rangeStart}–${rangeEnd} of ${projectsTotal}`}
+                    </p>
+                    {hiddenProjectIds.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearHiddenList}
+                        className="text-sm text-secondary-600 hover:text-primary-600 font-medium whitespace-nowrap"
+                      >
+                        Show {hiddenProjectIds.length} hidden project{hiddenProjectIds.length !== 1 ? 's' : ''}
+                      </button>
+                    )}
+                  </div>
+                  {projectsTotal > PROJECTS_PAGE_SIZE && (
+                    <div className="flex items-center gap-2 sm:ml-auto">
+                      <button
+                        type="button"
+                        disabled={projectListPage <= 0 || projectsLoading}
+                        onClick={() => setProjectListPage((p) => Math.max(0, p - 1))}
+                        className="px-3 py-1.5 rounded-lg border border-secondary-300 text-sm font-medium text-secondary-700 hover:bg-secondary-50 disabled:opacity-40 disabled:pointer-events-none"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-sm text-secondary-600 tabular-nums px-1">
+                        Page {projectListPage + 1} / {projectPageCount}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={
+                          projectListPage >= projectPageCount - 1 || projectsLoading
+                        }
+                        onClick={() =>
+                          setProjectListPage((p) =>
+                            Math.min(projectPageCount - 1, p + 1),
+                          )
+                        }
+                        className="px-3 py-1.5 rounded-lg border border-secondary-300 text-sm font-medium text-secondary-700 hover:bg-secondary-50 disabled:opacity-40 disabled:pointer-events-none"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           ) : filtered.length === 0 ? (
             <div className="rounded-xl border-2 border-dashed border-secondary-200 p-12 text-center">
               <p className="text-4xl mb-3">👥</p>

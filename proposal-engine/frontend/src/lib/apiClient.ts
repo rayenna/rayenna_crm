@@ -437,6 +437,30 @@ import type {
 } from './customerStore';
 import { deriveProposalStatusFromArtifacts, formatEmailForDisplay } from './customerStore';
 
+/** Query params for GET /api/proposal-engine/projects and /projects/stats (shared filters). */
+export type PeProjectsListParams = {
+  limit?: number;
+  offset?: number;
+  page?: number;
+  q?: string;
+  /** Comma-separated CRM stage/status tokens (e.g. PROPOSAL,CONFIRMED) */
+  stage?: string;
+  stages?: string;
+  peStatus?: 'not-started' | 'draft' | 'proposal-ready';
+  salespersonId?: string;
+  projectId?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+};
+
+export type PeProjectsStatsResponse = {
+  total: number;
+  notStarted: number;
+  draft: number;
+  ready: number;
+  confirmed: number;
+};
+
 export interface ProposalEngineProjectFromApi {
   id: string;
   slNo?: number | null;
@@ -481,12 +505,107 @@ export interface ProposalEngineProjectFromApi {
   };
 }
 
-/** Selected projects list (Sales: own selections; Ops/Finance/Management/Admin: all selections). */
-export async function fetchProposalEngineProjects(limit?: number): Promise<ProposalEngineProjectFromApi[]> {
-  const qs = typeof limit === 'number' && Number.isFinite(limit)
-    ? `?limit=${Math.max(1, Math.floor(limit))}`
-    : '';
-  return apiFetch<ProposalEngineProjectFromApi[]>(`/api/proposal-engine/projects${qs}`);
+function buildPeProjectsSearchParams(arg?: number | PeProjectsListParams): URLSearchParams {
+  const params = new URLSearchParams();
+  if (typeof arg === 'number' && Number.isFinite(arg)) {
+    params.set('limit', String(Math.max(1, Math.floor(arg))));
+    return params;
+  }
+  if (arg && typeof arg === 'object') {
+    if (arg.limit != null && Number.isFinite(arg.limit)) {
+      params.set('limit', String(Math.max(1, Math.floor(arg.limit))));
+    }
+    if (arg.offset != null && Number.isFinite(arg.offset)) {
+      params.set('offset', String(Math.max(0, Math.floor(arg.offset))));
+    }
+    if (arg.page != null && Number.isFinite(arg.page)) {
+      params.set('page', String(Math.max(1, Math.floor(arg.page))));
+    }
+    if (arg.q != null && arg.q.trim()) params.set('q', arg.q.trim());
+    if (arg.stage != null && arg.stage.trim()) params.set('stage', arg.stage.trim());
+    if (arg.stages != null && arg.stages.trim()) params.set('stages', arg.stages.trim());
+    if (arg.peStatus) params.set('peStatus', arg.peStatus);
+    if (arg.salespersonId != null && arg.salespersonId.trim()) {
+      params.set('salespersonId', arg.salespersonId.trim());
+    }
+    if (arg.projectId != null && arg.projectId.trim()) {
+      params.set('projectId', arg.projectId.trim());
+    }
+    if (arg.sortBy) params.set('sortBy', arg.sortBy);
+    if (arg.sortOrder) params.set('sortOrder', arg.sortOrder);
+  }
+  return params;
+}
+
+async function fetchPeProjectsRaw(params: URLSearchParams): Promise<{
+  items: ProposalEngineProjectFromApi[];
+  total: number;
+}> {
+  const qs = params.toString();
+  const path = `/api/proposal-engine/projects${qs ? `?${qs}` : ''}`;
+  const url = path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
+  const headers = new Headers();
+  const token = getToken();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  const response = await fetch(url, { headers });
+  if (response.status === 401) {
+    handleUnauthorized();
+    throw new Error('Unauthorized');
+  }
+  const text = await response.text();
+  let parsed: unknown;
+  try {
+    parsed = text ? JSON.parse(text) : [];
+  } catch {
+    parsed = [];
+  }
+  if (!response.ok) {
+    const errMsg =
+      (parsed as { error?: string })?.error ||
+      (parsed as { message?: string })?.message ||
+      response.statusText ||
+      `Request failed (${response.status})`;
+    throw new Error(errMsg);
+  }
+  if (!Array.isArray(parsed)) {
+    throw new Error('Invalid projects response from server.');
+  }
+  const items = parsed as ProposalEngineProjectFromApi[];
+  const totalHeader = response.headers.get('X-Total-Count');
+  const total =
+    totalHeader != null && totalHeader.trim() !== ''
+      ? Math.max(0, parseInt(totalHeader, 10) || 0)
+      : items.length;
+  return { items, total };
+}
+
+/**
+ * Selected projects list (Sales: own selections; Ops/Finance/Management/Admin: all selections).
+ * Server search, pagination, sort — see PeProjectsListParams. Default limit 200 when no params.
+ * Response includes X-Total-Count total matching rows.
+ */
+export async function fetchProposalEngineProjects(
+  arg?: number | PeProjectsListParams,
+): Promise<{ items: ProposalEngineProjectFromApi[]; total: number }> {
+  const params = buildPeProjectsSearchParams(arg);
+  if (!params.has('limit')) params.set('limit', '200');
+  return fetchPeProjectsRaw(params);
+}
+
+/** Stats strip for Customers / Projects (same filters as the list, no pagination). */
+export async function fetchProposalEngineProjectsStats(
+  filters: Omit<PeProjectsListParams, 'limit' | 'offset' | 'page' | 'sortBy' | 'sortOrder'> = {},
+): Promise<PeProjectsStatsResponse> {
+  const params = buildPeProjectsSearchParams(filters);
+  params.delete('limit');
+  params.delete('offset');
+  params.delete('page');
+  params.delete('sortBy');
+  params.delete('sortOrder');
+  const qs = params.toString();
+  return apiFetch<PeProjectsStatsResponse>(
+    `/api/proposal-engine/projects/stats${qs ? `?${qs}` : ''}`,
+  );
 }
 
 /** Eligible CRM projects that can be selected into Proposal Engine. */

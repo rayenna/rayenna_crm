@@ -241,7 +241,7 @@ export default function HelpPage() {
 
         <div className="space-y-5">
           <Step n={1} title="Pick a CRM Project">
-            Go to <Link to="/customers" className="text-indigo-600 underline font-medium">Customers / Projects</Link> and click <strong>+ Select Project</strong>. Use the filters to find a Rayenna CRM project in <em>Proposal</em> or <em>Confirmed</em> stage, then click <strong>Select</strong> in the picker. This creates a Proposal Engine record linked to that CRM project and makes it the <strong>active project</strong> on your Dashboard and across all workflow pages (Costing, BOM, ROI, AI Roof Layout, Proposal).
+            Go to <Link to="/customers" className="text-indigo-600 underline font-medium">Customers / Projects</Link> and click <strong>+ Select Project</strong>. <strong>In the picker</strong>, use its search and filters to find a Rayenna CRM project in <em>Proposal</em> or <em>Confirmed</em> stage, then click <strong>Select</strong>. This creates a Proposal Engine record linked to that CRM project and makes it the <strong>active project</strong> on your Dashboard and across all workflow pages (Costing, BOM, ROI, AI Roof Layout, Proposal).
           </Step>
 
           <Step n={2} title="Build the Costing Sheet">
@@ -275,8 +275,24 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Creating a Customer</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              On the <strong>Customers / Projects</strong> page, click <strong>+ Select Project</strong> to open the CRM project picker. It shows Rayenna CRM projects that are in <em>Proposal</em> or <em>Confirmed</em> stages. When you pick a project, the Proposal Engine creates a linked customer record and pulls in master data such as customer ID, name, full address, contact numbers, email, consumer number, system capacity, segment, sales person, project stage, and panel type from the CRM.
+              On the <strong>Customers / Projects</strong> page, the <strong>card grid</strong> lists CRM projects that are already selected into Proposal Engine. To add another, click <strong>+ Select Project</strong> to open the <strong>CRM project picker</strong> (a separate modal with its own search and filters). The picker shows Rayenna CRM projects in <em>Proposal</em> or <em>Confirmed</em> stages. When you pick a project, the Proposal Engine creates a linked customer record and pulls in master data such as customer ID, name, full address, contact numbers, email, consumer number, system capacity, segment, sales person, project stage, and panel type from the CRM.
             </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Project list — search, filters, sort &amp; pages</h3>
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">
+              The main list is loaded in <strong>pages of 24</strong> projects. <strong>Search projects</strong> finds matches on the server (customer name, site, city, contact, salesperson) — there is a short pause after you type. Use <strong>CRM stage</strong> and <strong>PE status</strong> (Not yet created, PE draft, PE ready) to narrow results. The five <strong>summary</strong> tiles at the top use the <strong>same</strong> search and filters, so counts stay aligned with what you are browsing.
+            </p>
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">
+              <strong>Sort by</strong> and <strong>Order</strong> change how projects are ordered (for example last update in PE, customer name, or project dates). <strong>Reset filters</strong> clears search, both dropdowns, and sort defaults. The button uses the same <strong>navy</strong> style as <strong>Open</strong> when there is nothing to reset; it turns <strong>gold</strong> when anything differs from defaults so you can see at a glance that the list is filtered.
+            </p>
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">
+              At the <strong>bottom</strong> of the page you will see <strong>Showing X–Y of Z</strong> and <strong>Previous</strong> / <strong>Next</strong> when there is more than one page. This is separate from <strong>+ Select Project</strong> and the picker.
+            </p>
+            <Note>
+              Sales users only see projects they are allowed to access in CRM. Operations, Management, Finance, and Admin see all selected projects.
+            </Note>
           </div>
 
           <div>
