@@ -6,6 +6,15 @@ import bcrypt from 'bcryptjs';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
 import { logSecurityAudit } from '../utils/auditLogger';
+import {
+  buildPeSelectedWhere,
+  mergePeSelectedProjectWhere,
+  orderByForPeList,
+  parseStagesFromQuery,
+  PE_PROJECTS_SORT_FIELDS,
+  projectWhereForPeArtifactStatus,
+  type PeProjectsListFilters,
+} from '../utils/peProjectListQuery';
 import crypto from 'crypto';
 
 const router = express.Router();
@@ -147,6 +156,10 @@ async function ensureProjectWriteAccess(project: any, req: Request, res: Respons
 // List projects that have been explicitly selected in Proposal Engine.
 // Sales: projects assigned to them (so Admin-selected projects for Anoop appear for Anoop).
 // Operations/Management/Finance/Admin: all selections.
+//
+// Query: limit (default 200, max 500), offset | page (1-based), q, stage | stages (comma-separated),
+// peStatus (not-started | draft | proposal-ready), salespersonId (non-Sales only), projectId (exact CRM project),
+// sortBy (allowlist), sortOrder (asc|desc). Response body remains a JSON array; total hits in X-Total-Count.
 router.get('/projects', authenticate, async (req: Request, res: Response) => {
   try {
     const role = req.user?.role;
@@ -160,21 +173,51 @@ router.get('/projects', authenticate, async (req: Request, res: Response) => {
       return;
     }
 
-    // Sales: include all PE selections for projects where this user is the assigned salesperson
-    // (so proposals created/selected by Admin for Anoop are visible to Anoop).
-    const selectionWhere: any = {};
-    if (role === UserRole.SALES && userId) {
-      selectionWhere.project = {
-        OR: [{ salespersonId: userId }, { customer: { salespersonId: userId } }],
-      };
-    }
-
-    // Optional limit query param for future tuning; default remains 200 for backward compatibility.
     const limitRaw = req.query.limit;
     const limit =
       typeof limitRaw === 'string'
-        ? Math.min(Math.max(parseInt(limitRaw, 10) || 1, 1), 200)
+        ? Math.min(Math.max(parseInt(limitRaw, 10) || 1, 1), 500)
         : 200;
+
+    const offsetRaw = req.query.offset ?? req.query.skip;
+    let offset = 0;
+    if (typeof offsetRaw === 'string') {
+      offset = Math.max(parseInt(offsetRaw, 10) || 0, 0);
+    }
+    const pageRaw = req.query.page;
+    if (typeof pageRaw === 'string') {
+      const page = Math.max(parseInt(pageRaw, 10) || 1, 1);
+      offset = (page - 1) * limit;
+    }
+
+    const sortByRaw = req.query.sortBy;
+    const sortBy =
+      typeof sortByRaw === 'string' && PE_PROJECTS_SORT_FIELDS.has(sortByRaw)
+        ? sortByRaw
+        : 'selectionUpdatedAt';
+
+    const orderRaw = String(req.query.sortOrder ?? req.query.order ?? 'desc').toLowerCase();
+    const sortOrder = orderRaw === 'asc' ? 'asc' : 'desc';
+
+    const filters: PeProjectsListFilters = {
+      q: typeof req.query.q === 'string' ? req.query.q : undefined,
+      projectId: typeof req.query.projectId === 'string' ? req.query.projectId : undefined,
+      stages:
+        parseStagesFromQuery(req.query.stages) ?? parseStagesFromQuery(req.query.stage),
+    };
+
+    const ps = typeof req.query.peStatus === 'string' ? req.query.peStatus.trim().toLowerCase() : '';
+    if (ps === 'not-started' || ps === 'draft' || ps === 'proposal-ready') {
+      filters.peStatus = ps;
+    }
+
+    if (role !== UserRole.SALES && typeof req.query.salespersonId === 'string') {
+      filters.salespersonId = req.query.salespersonId;
+    }
+
+    const selectionWhere = buildPeSelectedWhere(role, userId, filters);
+
+    const total = await prisma.pESelectedProject.count({ where: selectionWhere });
 
     const selections = await prisma.pESelectedProject.findMany({
       where: selectionWhere,
@@ -188,7 +231,8 @@ router.get('/projects', authenticate, async (req: Request, res: Response) => {
           },
         },
       },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: orderByForPeList(sortBy, sortOrder),
+      skip: offset,
       take: limit,
     });
 
@@ -219,12 +263,12 @@ router.get('/projects', authenticate, async (req: Request, res: Response) => {
         ])
       : [[], [], [], []];
 
-    const hasCosting  = new Set(costings.map((p) => p.projectId));
-    const hasBom      = new Set(boms.map((p) => p.projectId));
-    const hasRoi      = new Set(rois.map((p) => p.projectId));
+    const hasCosting = new Set(costings.map((p) => p.projectId));
+    const hasBom = new Set(boms.map((p) => p.projectId));
+    const hasRoi = new Set(rois.map((p) => p.projectId));
     const hasProposal = new Set(proposals.map((p) => p.projectId));
 
-    let payload = selections
+    const payload = selections
       .map((s) => {
         const hasAny =
           hasCosting.has(s.projectId) ||
@@ -245,21 +289,66 @@ router.get('/projects', authenticate, async (req: Request, res: Response) => {
           peSelectedById: s.selectedById,
         };
       })
-      // All selected projects (including Not Yet Created / no artifacts yet)
-      .filter((p) =>
-        ['not-started', 'draft', 'proposal-ready'].includes(String(p.peStatus)),
-      );
+      .filter((p) => ['not-started', 'draft', 'proposal-ready'].includes(String(p.peStatus)));
 
-    // Sales: project assignee OR customer's assigned salesperson (reassignment on either side drops access).
-    if (role === UserRole.SALES && userId) {
-      payload = payload.filter(
-        (p) => p.salespersonId === userId || p.customer?.salespersonId === userId,
-      );
-    }
-
+    res.setHeader('X-Total-Count', String(total));
     res.json(payload);
   } catch (error: any) {
     reportPeError(error, 'Error fetching proposal engine projects');
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+// Aggregate counts for the Customers / Projects strip (same filters as GET /projects, no pagination).
+router.get('/projects/stats', authenticate, async (req: Request, res: Response) => {
+  try {
+    const role = req.user?.role;
+    const userId = req.user?.id;
+
+    if (!role || (!ROLES_CAN_VIEW_ALL_PROPOSALS.includes(role) && role !== UserRole.SALES)) {
+      res.status(403).json({
+        error: 'Access denied. Proposal Engine projects are visible only to the assigned salesperson and to Operations, Management, Finance, and Admin.',
+      });
+      return;
+    }
+
+    const filters: PeProjectsListFilters = {
+      q: typeof req.query.q === 'string' ? req.query.q : undefined,
+      projectId: typeof req.query.projectId === 'string' ? req.query.projectId : undefined,
+      stages:
+        parseStagesFromQuery(req.query.stages) ?? parseStagesFromQuery(req.query.stage),
+    };
+
+    const ps = typeof req.query.peStatus === 'string' ? req.query.peStatus.trim().toLowerCase() : '';
+    if (ps === 'not-started' || ps === 'draft' || ps === 'proposal-ready') {
+      filters.peStatus = ps;
+    }
+
+    if (role !== UserRole.SALES && typeof req.query.salespersonId === 'string') {
+      filters.salespersonId = req.query.salespersonId;
+    }
+
+    const baseWhere = buildPeSelectedWhere(role, userId, filters);
+
+    const [total, notStarted, draft, ready, confirmed] = await Promise.all([
+      prisma.pESelectedProject.count({ where: baseWhere }),
+      prisma.pESelectedProject.count({
+        where: mergePeSelectedProjectWhere(baseWhere, projectWhereForPeArtifactStatus('not-started')),
+      }),
+      prisma.pESelectedProject.count({
+        where: mergePeSelectedProjectWhere(baseWhere, projectWhereForPeArtifactStatus('draft')),
+      }),
+      prisma.pESelectedProject.count({
+        where: mergePeSelectedProjectWhere(baseWhere, projectWhereForPeArtifactStatus('proposal-ready')),
+      }),
+      prisma.pESelectedProject.count({
+        where: mergePeSelectedProjectWhere(baseWhere, { projectStatus: ProjectStatus.CONFIRMED }),
+      }),
+    ]);
+
+    res.json({ total, notStarted, draft, ready, confirmed });
+  } catch (error: any) {
+    reportPeError(error, 'Error fetching proposal engine project stats');
     res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });

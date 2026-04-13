@@ -107,7 +107,7 @@ const corsOptions = {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Content-Type'],
+  exposedHeaders: ['Content-Type', 'X-Total-Count'],
 };
 
 app.use((req, res, next) => {
