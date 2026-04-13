@@ -30,9 +30,10 @@ const TicketStatusDonutChart = ({ data, onSliceClick, selectedStatus }: TicketSt
   }
 
   return (
-    <div className="w-full bg-white shadow rounded-lg p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Ticket Status Breakdown</h3>
-      <div className="w-full" style={{ height: '350px' }}>
+    <div className="w-full rounded-2xl border border-gray-200/90 bg-white p-6 shadow-lg shadow-gray-900/5 ring-1 ring-gray-100">
+      <h3 className="mb-4 text-lg font-semibold text-gray-900">Ticket Status Breakdown</h3>
+      {/* Fixed height: Pie uses fixed outerRadius; a flex-grown container clips the ring */}
+      <div className="h-[350px] w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%" debounce={250} minWidth={0}>
           <PieChart>
             <Pie
@@ -104,7 +105,7 @@ const TicketStatusDonutChart = ({ data, onSliceClick, selectedStatus }: TicketSt
         </ResponsiveContainer>
       </div>
       {onSliceClick && (
-        <p className="text-xs text-gray-500 text-center mt-2">Click a slice to filter tickets</p>
+        <p className="mt-2 text-center text-xs text-gray-500">Click a slice to filter tickets</p>
       )}
     </div>
   )

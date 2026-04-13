@@ -169,10 +169,11 @@ const SupportTicketsDashboard = () => {
     )
   }
 
+  /** Narrow columns + flex-1/basis-0/break-words on labels caused one-letter-per-line headers with table-fixed */
   const sortBtnHeader =
-    'group flex min-h-[2rem] w-full min-w-0 flex-nowrap items-center gap-2 overflow-visible rounded-md px-1.5 py-1 text-left transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/65 focus-visible:ring-offset-1 focus-visible:ring-offset-primary-800 sm:min-h-[2.5rem] sm:gap-2 sm:px-2 sm:py-1.5'
+    'group flex min-h-[2rem] w-full min-w-0 flex-nowrap items-center gap-2 overflow-hidden rounded-md px-1.5 py-1 text-left transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/65 focus-visible:ring-offset-1 focus-visible:ring-offset-primary-800 sm:min-h-[2.5rem] sm:gap-2 sm:px-2 sm:py-1.5'
   const sortLabelLeft =
-    'min-w-0 flex-1 basis-0 whitespace-normal break-words text-left text-[11px] font-bold uppercase leading-snug tracking-wide text-slate-100 sm:text-xs sm:leading-tight sm:tracking-wider'
+    'min-w-0 flex-1 truncate whitespace-nowrap text-left text-[11px] font-bold uppercase leading-snug tracking-wide text-slate-100 sm:text-xs sm:leading-tight sm:tracking-wider'
 
   const ariaSortFor = (key: SupportTicketsTableSortKey): 'ascending' | 'descending' | 'none' =>
     tableSortBy === key ? (tableSortOrder === 'asc' ? 'ascending' : 'descending') : 'none'
@@ -272,7 +273,7 @@ const SupportTicketsDashboard = () => {
   const hasActiveFilters = selectedStatus !== null || showOverdueOnly
 
   return (
-    <div className="px-0 py-6 sm:px-0">
+    <div className="mobile-paint-fix max-w-full min-w-0 overflow-x-hidden px-0 py-6 sm:px-0">
       <PageCard
         title="Support Tickets Dashboard"
         subtitle="Monitor and manage all support tickets across projects"
@@ -288,9 +289,9 @@ const SupportTicketsDashboard = () => {
             Clear Filters
           </button>
         ) : undefined}
-        className="max-w-full"
+        className="max-w-full min-w-0"
       >
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <button
@@ -339,13 +340,13 @@ const SupportTicketsDashboard = () => {
         </button>
       </div>
 
-      {/* Middle Section - 2 Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column - Donut Chart */}
-        <div>
+      {/* Middle Section — row height follows donut card; table card stretches to match, body scrolls */}
+      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
+        {/* Left — intrinsic height (chart + legend); do not stretch the donut */}
+        <div className="min-w-0 lg:self-start">
           {isLoading ? (
-            <div className="bg-gradient-to-br from-white to-orange-50/20 shadow rounded-xl border border-orange-100/60 p-6 flex items-center justify-center h-[450px]">
-              <div className="text-gray-500">Loading chart...</div>
+            <div className="flex h-[450px] items-center justify-center rounded-2xl border border-gray-200/90 bg-gradient-to-br from-white to-orange-50/20 p-6 shadow-lg shadow-gray-900/5 ring-1 ring-gray-100">
+              <div className="text-gray-500">Loading chart…</div>
             </div>
           ) : (
             <TicketStatusDonutChart
@@ -356,20 +357,27 @@ const SupportTicketsDashboard = () => {
           )}
         </div>
 
-        {/* Right Column - All Support Tickets Table (header row matches Projects table) */}
-        <div className="min-w-0">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">All Support Tickets</h3>
+        {/* Right — stretch to same row height as donut card; scroll rows inside */}
+        <div className="flex min-h-[22rem] min-w-0 flex-col lg:h-full lg:min-h-0">
           {isLoading ? (
-            <div className="text-center py-8 text-gray-500">Loading tickets...</div>
+            <div className="flex min-h-[22rem] flex-1 flex-col overflow-hidden rounded-2xl border border-gray-200/90 bg-white p-6 shadow-lg shadow-gray-900/5 ring-1 ring-gray-100 lg:h-full lg:min-h-0">
+              <h3 className="mb-4 shrink-0 text-lg font-semibold text-gray-900">All Support Tickets</h3>
+              <div className="flex flex-1 items-center justify-center text-gray-500">Loading tickets…</div>
+            </div>
           ) : tableTickets.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <p>No support tickets found</p>
+            <div className="flex min-h-[22rem] flex-1 flex-col overflow-hidden rounded-2xl border border-gray-200/90 bg-white p-6 shadow-lg shadow-gray-900/5 ring-1 ring-gray-100 lg:h-full lg:min-h-0">
+              <h3 className="mb-4 shrink-0 text-lg font-semibold text-gray-900">All Support Tickets</h3>
+              <div className="flex flex-1 flex-col items-center justify-center text-center text-gray-500">
+                <p>No support tickets found</p>
+              </div>
             </div>
           ) : (
-            <div className="w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-gray-200/90 bg-white shadow-lg shadow-gray-900/5 ring-1 ring-gray-100 [-webkit-overflow-scrolling:touch]">
-              {/* w-max: scroll width matches column content — avoids min-w-full stretching past the last column */}
-              <table className="w-max max-w-none text-sm leading-snug">
-                <thead>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-gray-200/90 bg-white p-6 shadow-lg shadow-gray-900/5 ring-1 ring-gray-100 lg:h-full">
+              <h3 className="mb-4 shrink-0 text-lg font-semibold text-gray-900">All Support Tickets</h3>
+              <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto overscroll-x-contain overscroll-y-contain touch-pan-x touch-pan-y rounded-xl border border-gray-200/90 bg-white shadow-md shadow-gray-900/5 ring-1 ring-gray-100 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] [scrollbar-color:rgb(203_213_225)_rgb(248_250_252)]">
+              {/* min-w-full + w-max: at least card width, wider when columns need it — enables horizontal scroll */}
+              <table className="w-max min-w-full table-auto border-collapse text-sm leading-snug">
+                <thead className="sticky top-0 z-10">
                   <tr className="border-b border-primary-900/25 bg-gradient-to-r from-primary-800 via-slate-700 to-primary-900 shadow-sm shadow-black/10">
                     <th scope="col" className="px-2.5 py-2 align-middle sm:px-3 sm:py-2" aria-sort={ariaSortFor('ticketNumber')}>
                       <button
@@ -464,41 +472,40 @@ const SupportTicketsDashboard = () => {
                       key={ticket.id}
                       className="bg-white transition-colors duration-150 ease-out odd:bg-white even:bg-slate-50/45 hover:bg-primary-50/70"
                     >
-                      <td className="min-w-0 whitespace-nowrap px-2 py-2 sm:px-2.5 lg:py-1.5">
+                      <td className="max-w-[9rem] min-w-0 px-2 py-2 sm:max-w-[11rem] sm:px-2.5 lg:py-1.5">
                         <button
                           type="button"
                           onClick={() => handleTicketClick(ticket)}
-                          className="text-sm font-semibold text-primary-600 hover:text-primary-900"
+                          className="block w-full truncate whitespace-nowrap text-left text-sm font-semibold text-primary-600 hover:text-primary-900"
+                          title={ticket.ticketNumber}
                         >
                           {ticket.ticketNumber}
                         </button>
                       </td>
                       <td className="min-w-0 px-2 py-2 sm:px-2.5 lg:py-1.5">
-                        <div
-                          className="max-w-[14rem] truncate text-sm text-gray-900 sm:max-w-xs lg:max-w-[16rem]"
-                          title={projectDisplayLine(ticket)}
-                        >
+                        <div className="truncate text-sm text-gray-900" title={projectDisplayLine(ticket)}>
                           {projectDisplayLine(ticket)}
                         </div>
                       </td>
-                      <td className="min-w-0 whitespace-nowrap px-2 py-2 sm:px-2.5 lg:py-1.5">
+                      <td className="min-w-0 px-2 py-2 sm:px-2.5 lg:py-1.5">
                         <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(ticket.status)}`}
+                          className={`inline-flex min-w-0 max-w-full items-center truncate rounded-full px-2 py-0.5 text-xs font-medium sm:px-2.5 ${getStatusColor(ticket.status)}`}
+                          title={getStatusLabel(ticket.status)}
                         >
                           {getStatusLabel(ticket.status)}
                         </span>
                       </td>
-                      <td className="whitespace-nowrap px-2 py-2 text-sm text-gray-600 tabular-nums sm:px-2.5 lg:py-1.5">
+                      <td className="min-w-0 truncate px-2 py-2 text-sm tabular-nums text-gray-600 sm:px-2.5 lg:py-1.5" title={format(new Date(ticket.createdAt), 'MMM dd, yyyy')}>
                         {format(new Date(ticket.createdAt), 'MMM dd, yyyy')}
                       </td>
-                      <td className="whitespace-nowrap px-2 py-2 text-sm text-gray-600 tabular-nums sm:px-2.5 lg:py-1.5">
+                      <td className="min-w-0 truncate px-2 py-2 text-sm tabular-nums text-gray-600 sm:px-2.5 lg:py-1.5" title={getLastFollowUpDate(ticket)}>
                         {getLastFollowUpDate(ticket)}
                       </td>
-                      <td className="whitespace-nowrap px-2 py-2 text-sm font-medium sm:px-2.5 lg:py-1.5">
+                      <td className="min-w-0 px-2 py-2 text-sm font-medium sm:px-2.5 lg:py-1.5">
                         <button
                           type="button"
                           onClick={() => handleTicketClick(ticket)}
-                          className="text-primary-600 hover:text-primary-900"
+                          className="whitespace-nowrap text-primary-600 hover:text-primary-900"
                         >
                           View
                         </button>
@@ -507,6 +514,7 @@ const SupportTicketsDashboard = () => {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </div>
