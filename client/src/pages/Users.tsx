@@ -8,9 +8,9 @@ import PageCard from '../components/PageCard'
 import { FaUsers } from 'react-icons/fa'
 import { ErrorModal } from '@/components/common/ErrorModal'
 
-/** Full-width table shell; horizontal scroll only when viewport is very narrow. */
+/** Horizontal scroll on narrow viewports so columns are not crushed; lighter shadow matches Audit tables. */
 const usersTableScrollShell =
-  'w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-gray-200/90 bg-white shadow-md shadow-gray-900/[0.05] ring-1 ring-gray-100 [-webkit-overflow-scrolling:touch]'
+  'w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x rounded-2xl border border-gray-200/90 bg-white shadow-sm shadow-gray-900/[0.04] ring-1 ring-gray-100 [-webkit-overflow-scrolling:touch]'
 
 const usersHeaderLabel =
   'text-left text-[11px] font-bold uppercase leading-snug tracking-wide text-slate-100 sm:text-xs sm:leading-tight sm:tracking-wider'
@@ -241,14 +241,21 @@ const Users = () => {
             </p>
           </div>
         ) : (
-          <div className={usersTableScrollShell}>
-            {/* min-width so tiny screens scroll instead of crushing columns; table-fixed + % fills row on wider viewports */}
-            <table className="w-full table-fixed border-collapse text-sm leading-snug">
+          <>
+            <p className="mb-2 text-xs leading-snug text-gray-600 md:hidden" role="note">
+              Swipe sideways to see name, email, role, and actions without overlap.
+            </p>
+            <div className={usersTableScrollShell} role="region" aria-label="User accounts table">
+            {/*
+              Proportions tuned for laptop: Role stays content-sized (narrow % + min-width), Email not overly wide.
+              Below md: min table width + horizontal scroll so mobile stays readable (same data density as desktop).
+            */}
+            <table className="w-full max-md:min-w-[48rem] md:min-w-0 table-fixed border-collapse text-sm leading-snug">
               <colgroup>
-                <col className="w-[24%]" />
-                <col className="w-[40%]" />
-                <col className="w-[16%]" />
-                <col className="w-[20%]" />
+                <col className="w-[22%]" />
+                <col className="w-[36%]" />
+                <col className="min-w-[8.25rem] w-[14%]" />
+                <col className="w-[28%]" />
               </colgroup>
               <thead>
                 <tr className="border-b border-primary-900/25 bg-gradient-to-r from-primary-800 via-slate-700 to-primary-900 shadow-sm shadow-black/10">
@@ -280,33 +287,41 @@ const Users = () => {
                     key={user.id}
                     className="bg-white transition-colors duration-150 ease-out odd:bg-white even:bg-slate-50/45 hover:bg-primary-50/70"
                   >
-                    <td className="min-w-0 px-2 py-2.5 align-middle sm:px-3 sm:py-3">
-                      <p className="truncate text-sm font-semibold text-gray-900" title={user.name}>
+                    <td className="min-w-0 px-2 py-2.5 align-top sm:px-3 sm:py-3 md:align-middle">
+                      <p
+                        className="break-words text-sm font-semibold leading-snug text-gray-900 md:truncate md:leading-normal"
+                        title={user.name}
+                      >
                         {user.name}
                       </p>
                     </td>
-                    <td className="min-w-0 px-2 py-2.5 align-middle sm:px-3 sm:py-3">
-                      <p className="truncate text-sm text-gray-600" title={user.email}>
+                    <td className="min-w-0 px-2 py-2.5 align-top sm:px-3 sm:py-3 md:align-middle">
+                      <p
+                        className="break-all text-sm leading-snug text-gray-600 [overflow-wrap:anywhere] md:break-normal md:truncate md:leading-normal"
+                        title={user.email}
+                      >
                         {user.email}
                       </p>
                     </td>
-                    <td className="min-w-0 whitespace-nowrap px-2 py-2.5 align-middle sm:px-3 sm:py-3">
-                      <span className="inline-flex max-w-full items-center truncate rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800 ring-1 ring-slate-200/80">
+                    <td className="min-w-0 px-2 py-2.5 align-top sm:px-3 sm:py-3 md:align-middle">
+                      <span className="inline-flex w-fit max-w-full items-center whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-800 ring-1 ring-slate-200/80">
                         {user.role}
                       </span>
                     </td>
-                    <td className="min-w-0 px-2 py-2.5 text-right align-middle sm:px-3 sm:py-3">
-                      <div className="flex flex-wrap items-center justify-end gap-2 sm:flex-nowrap sm:gap-3">
+                    <td className="min-w-0 px-2 py-2.5 align-top sm:px-3 sm:py-3 md:align-middle">
+                      <div className="flex flex-col items-end gap-2 md:flex-row md:flex-wrap md:items-center md:justify-end md:gap-x-4 md:gap-y-1">
                         <button
+                          type="button"
                           onClick={() => handleResetPassword(user)}
                           disabled={resetPasswordMutation.isPending}
-                          className="text-blue-600 hover:text-blue-800 text-sm disabled:opacity-50 whitespace-nowrap"
+                          className="min-h-[44px] w-full max-w-[12rem] rounded-lg py-1 text-right text-sm font-medium text-blue-600 hover:bg-blue-50/80 hover:text-blue-800 disabled:opacity-50 md:min-h-0 md:w-auto md:max-w-none md:py-0"
                         >
-                          {resetPasswordMutation.isPending ? 'Generating...' : 'Reset Password'}
+                          {resetPasswordMutation.isPending ? 'Generating…' : 'Reset Password'}
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleDelete(user)}
-                          className="text-red-600 hover:text-red-800 text-sm whitespace-nowrap"
+                          className="min-h-[44px] w-full max-w-[12rem] rounded-lg py-1 text-right text-sm font-medium text-red-600 hover:bg-red-50/80 hover:text-red-800 md:min-h-0 md:w-auto md:max-w-none md:py-0"
                         >
                           Delete
                         </button>
@@ -316,7 +331,8 @@ const Users = () => {
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+          </>
         )}
       </div>
       </PageCard>

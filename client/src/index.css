@@ -24,6 +24,8 @@ body {
   background-attachment: scroll; /* scroll instead of fixed – fixes Chrome flickering/hanging on Windows */
   color: #1e293b;
   user-select: none;
+  /* Firefox: match ::-webkit-scrollbar track/thumb theme (gradient not supported on scrollbar-color) */
+  scrollbar-color: #2563eb #f1f5f9;
 }
 
 @media (prefers-reduced-motion: reduce) {

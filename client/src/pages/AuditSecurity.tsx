@@ -76,8 +76,9 @@ function downloadBlob(blob: Blob, filename: string) {
 /** Match Projects / Support Tickets table header chrome */
 const AUDIT_SORT_BTN_HEADER =
   'group flex min-h-[2rem] w-full min-w-0 flex-nowrap items-center gap-2 overflow-visible rounded-md px-1.5 py-1 text-left transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/65 focus-visible:ring-offset-1 focus-visible:ring-offset-primary-800 sm:min-h-[2.5rem] sm:gap-2 sm:px-2 sm:py-1.5'
+/** nowrap on small screens so headers stay one line when the table scrolls horizontally */
 const AUDIT_SORT_LABEL =
-  'min-w-0 flex-1 basis-0 whitespace-normal break-words text-left text-[11px] font-bold uppercase leading-snug tracking-wide text-slate-100 sm:text-xs sm:leading-tight sm:tracking-wider'
+  'min-w-0 flex-1 basis-0 text-left text-[11px] font-bold uppercase leading-snug tracking-wide text-slate-100 max-sm:shrink-0 max-sm:whitespace-nowrap max-sm:break-normal sm:whitespace-normal sm:break-words sm:text-xs sm:leading-tight sm:tracking-wider'
 
 function AuditTableSortGlyph({ active }: { active: boolean }) {
   const box = active
@@ -114,18 +115,21 @@ const sectionShell =
 const exportFailedPairCardClass = `${sectionShell} flex flex-col min-w-0 overflow-hidden lg:min-h-[min(calc(22rem+0.5in),calc(46vh+0.5in))] lg:max-h-[min(calc(34rem+0.5in),calc(60vh+0.5in))]`
 
 /**
- * Recent failed logins: full-width table-fixed, no horizontal drag.
- * Viewport ≈ sticky header + 5 body rows, then vertical scroll.
+ * Recent failed logins: single scroll container (both axes). Nested outer/inner + w-max + table w-full
+ * caused circular width resolution in browsers → only the first column laid out. Do not reintroduce that pattern.
  */
 const auditTableTightViewport =
-  'touch-pan-y min-h-0 w-full min-w-0 max-w-full shrink-0 overflow-x-hidden overflow-y-auto overscroll-x-contain overscroll-y-contain rounded-2xl border border-gray-200/90 bg-white shadow-md shadow-gray-900/[0.05] ring-1 ring-gray-100 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] [scrollbar-color:rgb(203_213_225)_rgb(248_250_252)] h-[max(12rem,min(20.5rem,calc(100dvh-16rem)))] max-h-[max(12rem,min(20.5rem,calc(100dvh-16rem)))] sm:h-[max(12rem,min(21.25rem,calc(100dvh-14rem)))] sm:max-h-[max(12rem,min(21.25rem,calc(100dvh-14rem)))]'
+  'touch-pan-x touch-pan-y min-h-0 w-full min-w-0 max-w-full shrink-0 overflow-x-auto overflow-y-auto overscroll-x-contain overscroll-y-contain rounded-2xl border border-gray-200/90 bg-white shadow-sm shadow-gray-900/[0.04] ring-1 ring-gray-100 [-webkit-overflow-scrolling:touch] h-[max(12rem,min(20.5rem,calc(100dvh-16rem)))] max-h-[max(12rem,min(20.5rem,calc(100dvh-16rem)))] sm:h-[max(12rem,min(21.25rem,calc(100dvh-14rem)))] sm:max-h-[max(12rem,min(21.25rem,calc(100dvh-14rem)))]'
 
 /**
- * Activity timeline: sized so a full page fits when the window is tall enough (20 ≙ PAGE_SIZE).
+ * Activity timeline: same single scroll container; height sized for ~PAGE_SIZE rows.
  * If you change PAGE_SIZE, update the `20` in calc below.
  */
 const auditTableActivityViewport =
-  'touch-pan-y min-h-0 w-full min-w-0 max-w-full shrink-0 overflow-x-hidden overflow-y-auto overscroll-x-contain overscroll-y-contain rounded-2xl border border-gray-200/90 bg-white shadow-md shadow-gray-900/[0.05] ring-1 ring-gray-100 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] [scrollbar-color:rgb(203_213_225)_rgb(248_250_252)] h-[max(24rem,min(calc(4rem+20*3.5rem),calc(100dvh-5rem)))] max-h-[max(24rem,min(calc(4rem+20*3.5rem),calc(100dvh-5rem)))]'
+  'touch-pan-x touch-pan-y min-h-0 w-full min-w-0 max-w-full shrink-0 overflow-x-auto overflow-y-auto overscroll-x-contain overscroll-y-contain rounded-2xl border border-gray-200/90 bg-white shadow-sm shadow-gray-900/[0.04] ring-1 ring-gray-100 [-webkit-overflow-scrolling:touch] h-[max(24rem,min(calc(4rem+20*3.5rem),calc(100dvh-5rem)))] max-h-[max(24rem,min(calc(4rem+20*3.5rem),calc(100dvh-5rem)))]'
+
+/** Wide layout so Time (PPp), User/role & Entity stay readable; wrapper scrolls horizontally when the card is narrower. */
+const auditActivityTableMinClass = 'min-w-[80rem]'
 
 const sectionHeaderBar =
   'flex flex-col gap-3 border-b border-gray-100/90 bg-gradient-to-r from-slate-50/95 via-white to-primary-50/15 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4'
@@ -470,7 +474,7 @@ export default function AuditSecurity () {
                 </div>
               ) : loginTrendChartData.length ? (
                 <div className="h-full min-w-[min(100%,320px)] sm:min-w-[520px]">
-                  <ResponsiveContainer width="100%" height="100%" debounce={250} minWidth={0}>
+                  <ResponsiveContainer width="100%" height="100%" debounce={400} minWidth={0}>
                     <LineChart data={loginTrendChartData} margin={{ top: 8, right: 8, left: -8, bottom: 4 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                       <XAxis dataKey="label" tickMargin={8} tick={chartAxisTick} axisLine={{ stroke: '#cbd5e1' }} />
@@ -503,7 +507,7 @@ export default function AuditSecurity () {
                     <p className="text-sm font-medium text-gray-400">Loading chart…</p>
                   </div>
                 ) : actionDistributionChartData.length ? (
-                  <ResponsiveContainer width="100%" height="100%" debounce={250} minWidth={0}>
+                  <ResponsiveContainer width="100%" height="100%" debounce={400} minWidth={0}>
                     <BarChart data={actionDistributionChartData} margin={{ top: 8, right: 8, left: -8, bottom: 52 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                       <XAxis
@@ -610,7 +614,7 @@ export default function AuditSecurity () {
         <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-4">
         {failedLoginsData?.logs?.length ? (
           <div className={auditTableTightViewport}>
-            <table className="w-full table-fixed border-collapse text-sm leading-snug">
+            <table className="w-full min-w-[19rem] table-fixed border-collapse bg-white text-sm leading-snug sm:min-w-0">
               <colgroup>
                 <col className="w-[32%]" />
                 <col className="w-[40%]" />
@@ -790,16 +794,23 @@ export default function AuditSecurity () {
           </div>
         ) : logsData?.logs?.length ? (
           <>
-            <div className={auditTableActivityViewport}>
-              <table className="w-full table-fixed border-collapse text-sm leading-snug">
+            <p className="mb-2 text-xs leading-snug text-gray-600" role="note">
+              Scroll the table horizontally to see every column.
+            </p>
+            <div
+              className={auditTableActivityViewport}
+              role="region"
+              aria-label="Activity log table, scroll horizontally for all columns"
+            >
+              <table className={`w-full ${auditActivityTableMinClass} table-fixed border-collapse bg-white text-sm leading-snug`}>
                 <colgroup>
-                  <col className="w-[14%]" />
-                  <col className="w-[12%]" />
-                  <col className="w-[16%]" />
-                  <col className="w-[12%]" />
+                  <col className="min-w-[16rem] w-[16%]" />
+                  <col className="min-w-[13rem] w-[18%]" />
                   <col className="w-[14%]" />
                   <col className="w-[10%]" />
-                  <col className="w-[22%]" />
+                  <col className="w-[12%]" />
+                  <col className="min-w-[11rem] w-[14%]" />
+                  <col className="w-[16%]" />
                 </colgroup>
                 <thead className="sticky top-0 z-10">
                   <tr className="border-b border-primary-900/25 bg-gradient-to-r from-primary-800 via-slate-700 to-primary-900 shadow-sm shadow-black/10">
@@ -915,11 +926,16 @@ export default function AuditSecurity () {
                       key={log.id}
                       className="bg-white transition-colors duration-150 ease-out odd:bg-white even:bg-slate-50/45 hover:bg-primary-50/70"
                     >
-                      <td className="min-w-0 px-2 py-2.5 align-middle text-sm text-gray-700 sm:px-3 sm:py-3">
-                        <span className="block truncate tabular-nums" title={timeStr}>{timeStr}</span>
+                      <td className="min-w-[16rem] max-w-none whitespace-normal px-2 py-2.5 align-top text-sm text-gray-700 sm:px-3 sm:py-3">
+                        <span className="block whitespace-nowrap tabular-nums leading-snug" title={timeStr}>
+                          {timeStr}
+                        </span>
                       </td>
-                      <td className="min-w-0 px-2 py-2.5 align-middle text-sm text-gray-700 sm:px-3 sm:py-3">
-                        <span className="block truncate" title={`${log.userId ?? ''} / ${log.role ?? ''}`}>
+                      <td className="min-w-0 px-2 py-2.5 align-top text-sm text-gray-700 sm:px-3 sm:py-3">
+                        <span
+                          className="block break-words [overflow-wrap:anywhere]"
+                          title={`${log.userId ?? ''} / ${log.role ?? ''}`}
+                        >
                           {log.userId} / {log.role}
                         </span>
                       </td>
@@ -941,12 +957,12 @@ export default function AuditSecurity () {
                           <span>—</span>
                         )}
                       </td>
-                      <td className="min-w-0 px-2 py-2.5 align-middle text-sm text-gray-700 sm:px-3 sm:py-3">
+                      <td className="min-w-0 px-2 py-2.5 align-top text-sm text-gray-700 sm:px-3 sm:py-3">
                         <span
-                          className="block truncate font-mono text-[13px]"
+                          className="block break-words font-mono text-[13px] [overflow-wrap:anywhere]"
                           title={log.entityType && log.entityId ? `${log.entityType}#${log.entityId}` : ''}
                         >
-                          {log.entityType && log.entityId ? `${log.entityType}#${log.entityId.slice(0, 8)}` : '—'}
+                          {log.entityType && log.entityId ? `${log.entityType}#${log.entityId}` : '—'}
                         </span>
                       </td>
                       <td className="min-w-0 px-2 py-2.5 align-middle text-sm text-gray-700 sm:px-3 sm:py-3">
