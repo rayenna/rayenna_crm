@@ -88,7 +88,7 @@ const TipOfTheDay = () => {
             onClick={handleDontShowAgain}
             className="rounded-md py-1 text-left text-xs font-medium text-[color:var(--text-muted)] transition-colors hover:text-[color:var(--text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-muted)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--bg-surface)] touch-manipulation sm:mr-auto sm:text-sm"
           >
-            Don&apos;t show again
+            Don&apos;t show again today
           </button>
           <div className="flex flex-wrap justify-end gap-2">
             <button
@@ -103,7 +103,7 @@ const TipOfTheDay = () => {
               onClick={handleGotIt}
               className="touch-manipulation rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 font-bold text-[color:var(--text-inverse)] shadow-md transition-opacity hover:opacity-95"
             >
-              Got it
+              Close
             </button>
           </div>
         </div>

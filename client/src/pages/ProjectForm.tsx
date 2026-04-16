@@ -8,7 +8,6 @@ import { Project, ProjectType, ProjectServiceType, UserRole, ProjectStatus, Lost
 import toast from 'react-hot-toast'
 import { fireVictoryToast } from '../hooks/useVictoryToast'
 import RemarksSection from '../components/remarks/RemarksSection'
-import PageCard from '../components/PageCard'
 import { FaEdit } from 'react-icons/fa'
 import { ErrorModal } from '@/components/common/ErrorModal'
 import { INVERTER_BRAND_OPTIONS } from '../constants/inverterBrands'
@@ -971,14 +970,35 @@ const ProjectForm = () => {
     hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS]) && canEditOtherSections
 
   return shell(
-    <div className="px-0 py-4 sm:py-6">
-      <PageCard
-        variant="zenith"
-        title={isEdit ? 'Edit Project' : 'New Project'}
-        subtitle={isEdit ? 'Update project details below.' : 'Create a new project and link it to a customer.'}
-        icon={<FaEdit className="h-5 w-5" style={{ color: 'var(--banner-text)' }} />}
-        className="max-w-full"
-      >
+    <>
+      <header className="sticky top-0 z-30 mb-4 border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 94%, transparent)] pb-3 pt-1 backdrop-blur-xl sm:mb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] shadow-inner">
+              <FaEdit className="h-5 w-5 text-[color:var(--accent-gold)]" aria-hidden />
+            </div>
+            <div className="min-w-0">
+              <h1 className="zenith-display text-xl font-bold tracking-tight text-[color:var(--text-primary)] sm:text-2xl">
+                {isEdit ? 'Edit Project' : 'New Project'}
+              </h1>
+              <p className="mt-0.5 text-sm text-[color:var(--text-secondary)]">
+                {isEdit ? 'Update project details below.' : 'Create a new project and link it to a customer.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            <Link
+              to={exitPath}
+              className="inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2.5 text-sm font-bold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)]"
+            >
+              Close
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <div className="px-0 pb-4 sm:pb-6">
       <form onSubmit={handleSubmit(onSubmit, (errors) => {
         if (import.meta.env.DEV) {
           console.error('[PROJECT FORM] Form validation errors:', errors)
@@ -2085,9 +2105,8 @@ const ProjectForm = () => {
           </button>
         </div>
       </form>
-
-      </PageCard>
-    </div>
+      </div>
+    </>
   )
 }
 

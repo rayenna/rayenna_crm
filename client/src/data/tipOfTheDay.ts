@@ -12,7 +12,11 @@ import { setLocalStorageItem } from '../lib/safeLocalStorage'
  */
 
 const STORAGE_KEY_LAST_SHOWN = 'rayenna_tip_last_shown'
-const STORAGE_KEY_DONT_SHOW = 'rayenna_tip_dont_show'
+/**
+ * Suppress tip for the current day only (user opted out "for today").
+ * Stored as `Date.toDateString()` so it naturally resets tomorrow.
+ */
+const STORAGE_KEY_SUPPRESS_TODAY = 'rayenna_tip_suppress_today'
 
 /** Tips – add or edit as needed. Rotates by day of year. */
 export const TIPS: string[] = [
@@ -139,12 +143,21 @@ export function getTipForToday(): string {
  */
 export function shouldShowTip(): boolean {
   if (typeof window === 'undefined') return false
-  if (localStorage.getItem(STORAGE_KEY_DONT_SHOW) === '1') return false
+  const today = new Date().toDateString()
+  try {
+    if (localStorage.getItem(STORAGE_KEY_SUPPRESS_TODAY) === today) return false
+  } catch {
+    // If storage is unavailable, fail open: still show the tip (non-critical).
+  }
 
-  const lastShown = localStorage.getItem(STORAGE_KEY_LAST_SHOWN)
+  let lastShown: string | null = null
+  try {
+    lastShown = localStorage.getItem(STORAGE_KEY_LAST_SHOWN)
+  } catch {
+    lastShown = null
+  }
   if (!lastShown) return true
 
-  const today = new Date().toDateString()
   return lastShown !== today
 }
 
@@ -157,18 +170,22 @@ export function markTipShown(): void {
 }
 
 /**
- * Call when user clicks "Don't show again". Tip will not show until they clear this.
+ * Call when user clicks "Don't show again today". Tip will not show again for the rest of the day.
  */
 export function markDontShowAgain(): void {
   if (typeof window === 'undefined') return
-  setLocalStorageItem(STORAGE_KEY_DONT_SHOW, '1')
+  const today = new Date().toDateString()
+  setLocalStorageItem(STORAGE_KEY_SUPPRESS_TODAY, today)
+  setLocalStorageItem(STORAGE_KEY_LAST_SHOWN, today)
 }
 
 /**
- * Reset "Don't show again" – useful for testing or if user changes mind.
- * Can be called from browser console: localStorage.removeItem('rayenna_tip_dont_show')
+ * Reset tip suppression for today — useful for testing.
+ * Can be called from browser console:
+ * - `localStorage.removeItem('rayenna_tip_last_shown')`
+ * - `localStorage.removeItem('rayenna_tip_suppress_today')`
  */
 export function resetDontShowAgain(): void {
   if (typeof window === 'undefined') return
-  localStorage.removeItem(STORAGE_KEY_DONT_SHOW)
+  localStorage.removeItem(STORAGE_KEY_SUPPRESS_TODAY)
 }
