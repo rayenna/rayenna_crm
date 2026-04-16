@@ -24,25 +24,21 @@ export interface ErrorModalProps {
   surface?: 'default' | 'zenith'
 }
 
-const typeConfig: Record<ErrorModalType, { title: string; headerClass: string; icon: string }> = {
+const typeConfig: Record<ErrorModalType, { title: string; icon: string }> = {
   error: {
     title: 'Error',
-    headerClass: 'bg-red-600',
     icon: 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
   },
   warning: {
     title: 'Warning',
-    headerClass: 'bg-amber-500',
     icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
   },
   info: {
     title: 'Information',
-    headerClass: 'bg-indigo-600',
     icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
   },
   fatal: {
     title: 'Critical',
-    headerClass: 'bg-red-700',
     icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
   },
 }
@@ -127,13 +123,22 @@ export function ErrorModal({
   const displayMessage = message.replace(/\\n/g, '\n')
 
   const config = typeConfig[type]
-  const isZenith = surface === 'zenith'
+  // Make the default modal fully theme-aware as well. Keeping `surface` for compatibility,
+  // but both variants now use tokenized styling so the app looks consistent everywhere.
+  void surface
 
   const zenithHeaderClass: Record<ErrorModalType, string> = {
     error: 'bg-[color:var(--accent-red-muted)] border-b border-[color:var(--accent-red-border)]',
     warning: 'bg-[color:var(--accent-gold-muted)] border-b border-[color:var(--accent-gold-border)]',
     info: 'bg-[color:var(--accent-teal-muted)] border-b border-[color:var(--accent-teal-border)]',
     fatal: 'bg-[color:var(--accent-red-muted)] border-b border-[color:var(--accent-red-border)]',
+  }
+
+  const iconToneByType: Record<ErrorModalType, string> = {
+    error: 'text-[color:var(--accent-red)]',
+    warning: 'text-[color:var(--accent-gold)]',
+    info: 'text-[color:var(--accent-teal)]',
+    fatal: 'text-[color:var(--accent-red)]',
   }
 
   // Always use fixed overlay with safe-area padding so modal is visible on mobile/iPad portrait and landscape (no clipping)
@@ -150,8 +155,8 @@ export function ErrorModal({
       style={overlayStyle}
     >
       <div
-        className={isZenith ? 'absolute inset-0' : 'absolute inset-0 bg-black/50'}
-        style={isZenith ? { background: 'var(--bg-overlay)' } : undefined}
+        className="absolute inset-0"
+        style={{ background: 'var(--bg-overlay)' }}
         role="presentation"
         aria-hidden
         onClick={onClose}
@@ -159,11 +164,7 @@ export function ErrorModal({
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className={
-          isZenith
-            ? 'relative bg-[color:var(--bg-modal)] border border-[color:var(--border-default)] rounded-2xl shadow-[var(--shadow-modal)] w-full max-w-md min-h-0 overflow-hidden flex flex-col outline-none m-auto'
-            : 'relative bg-white rounded-xl shadow-2xl w-full max-w-md min-h-0 overflow-hidden flex flex-col outline-none m-auto'
-        }
+        className="relative bg-[color:var(--bg-modal)] border border-[color:var(--border-default)] rounded-2xl shadow-[var(--shadow-modal)] w-full max-w-md min-h-0 overflow-hidden flex flex-col outline-none m-auto"
         style={{
           // Portrait/landscape: stay within safe height (dvh = dynamic viewport on mobile)
           maxHeight: 'min(90vh, 90dvh)',
@@ -174,18 +175,14 @@ export function ErrorModal({
         aria-describedby="error-modal-message"
       >
         <div
-          className={
-            isZenith
-              ? `${zenithHeaderClass[type]} px-4 sm:px-6 py-3 sm:py-4 shrink-0`
-              : `${config.headerClass} px-4 sm:px-6 py-3 sm:py-4 shrink-0`
-          }
+          className={`${zenithHeaderClass[type]} px-4 sm:px-6 py-3 sm:py-4 shrink-0`}
         >
           <h2
             id="error-modal-title"
-            className={`text-lg sm:text-xl font-bold flex items-center gap-2 ${isZenith ? 'text-[color:var(--text-primary)] tracking-tight' : 'text-white'}`}
+            className="text-lg sm:text-xl font-bold flex items-center gap-2 text-[color:var(--text-primary)] tracking-tight"
           >
             <svg
-              className={`w-5 h-5 sm:w-6 sm:h-6 shrink-0 ${isZenith ? 'text-[color:var(--accent-gold)]' : ''}`}
+              className={`w-5 h-5 sm:w-6 sm:h-6 shrink-0 ${iconToneByType[type]}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -198,24 +195,20 @@ export function ErrorModal({
         <div className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden flex-1 min-h-0 overscroll-contain">
           {countdown != null && (
             <div
-              className={
-                isZenith
-                  ? 'flex flex-col items-center justify-center py-4 mb-4 rounded-xl bg-[color:var(--bg-badge)] border border-[color:var(--border-default)]'
-                  : 'flex flex-col items-center justify-center py-4 mb-4 rounded-lg bg-gray-100/80'
-              }
+              className="flex flex-col items-center justify-center py-4 mb-4 rounded-xl bg-[color:var(--bg-badge)] border border-[color:var(--border-default)]"
             >
               <span
-                className={`text-4xl sm:text-5xl font-bold tabular-nums ${isZenith ? 'text-[color:var(--text-primary)]' : 'text-gray-800'}`}
+                className="text-4xl sm:text-5xl font-bold tabular-nums text-[color:var(--text-primary)]"
                 aria-live="polite"
               >
                 {countdown}
               </span>
-              <span className={`text-sm font-medium mt-1 ${isZenith ? 'text-[color:var(--text-secondary)]' : 'text-gray-600'}`}>seconds</span>
+              <span className="text-sm font-medium mt-1 text-[color:var(--text-secondary)]">seconds</span>
             </div>
           )}
           <p
             id="error-modal-message"
-            className={`text-sm sm:text-base whitespace-pre-wrap mb-4 ${isZenith ? 'text-[color:var(--text-secondary)]' : 'text-gray-700'}`}
+            className="text-sm sm:text-base whitespace-pre-wrap mb-4 text-[color:var(--text-secondary)]"
           >
             {displayMessage}
           </p>
@@ -224,21 +217,13 @@ export function ErrorModal({
               <button
                 type="button"
                 onClick={() => setShowTechnical(!showTechnical)}
-                className={
-                  isZenith
-                    ? 'text-xs text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)] underline min-h-[44px] min-w-[44px] -ml-2 pl-2 touch-manipulation'
-                    : 'text-xs text-gray-500 hover:text-gray-700 underline min-h-[44px] min-w-[44px] -ml-2 pl-2 touch-manipulation'
-                }
+                className="text-xs text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)] underline min-h-[44px] min-w-[44px] -ml-2 pl-2 touch-manipulation"
               >
                 {showTechnical ? 'Hide' : 'Show'} technical details
               </button>
               {showTechnical && (
                 <pre
-                  className={
-                    isZenith
-                      ? 'mt-2 p-3 bg-[color:var(--bg-badge)] border border-[color:var(--border-default)] rounded-lg text-xs text-[color:var(--text-secondary)] overflow-x-auto max-h-32 overflow-y-auto overscroll-contain'
-                      : 'mt-2 p-3 bg-gray-100 rounded text-xs text-gray-800 overflow-x-auto max-h-32 overflow-y-auto overscroll-contain'
-                  }
+                  className="mt-2 p-3 bg-[color:var(--bg-badge)] border border-[color:var(--border-default)] rounded-lg text-xs text-[color:var(--text-secondary)] overflow-x-auto max-h-32 overflow-y-auto overscroll-contain"
                 >
                   {technical}
                 </pre>
@@ -247,11 +232,7 @@ export function ErrorModal({
           )}
         </div>
         <div
-          className={
-            isZenith
-              ? 'flex flex-wrap gap-3 p-4 sm:p-6 pt-0 justify-end border-t border-[color:var(--border-default)] shrink-0'
-              : 'flex flex-wrap gap-3 p-4 sm:p-6 pt-0 justify-end border-t border-gray-100 shrink-0'
-          }
+          className="flex flex-wrap gap-3 p-4 sm:p-6 pt-0 justify-end border-t border-[color:var(--border-default)] shrink-0"
         >
           {actions.map((action, i) => (
             <button
@@ -264,12 +245,8 @@ export function ErrorModal({
               }}
               className={
                 action.variant === 'primary'
-                  ? isZenith
-                    ? 'min-h-[44px] px-4 py-3 rounded-xl font-semibold bg-[color:var(--accent-gold)] text-[color:var(--text-inverse)] hover:opacity-95 active:opacity-95 touch-manipulation'
-                    : 'min-h-[44px] px-4 py-3 rounded-lg font-semibold bg-primary-600 text-white hover:bg-primary-700 active:opacity-90 touch-manipulation'
-                  : isZenith
-                    ? 'min-h-[44px] px-4 py-3 rounded-xl font-semibold border border-[color:var(--border-strong)] text-[color:var(--text-primary)] bg-[color:var(--bg-input)] hover:bg-[color:var(--bg-card-hover)] active:opacity-95 touch-manipulation'
-                    : 'min-h-[44px] px-4 py-3 rounded-lg font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50 active:bg-gray-100 touch-manipulation'
+                  ? 'min-h-[44px] px-4 py-3 rounded-xl font-semibold bg-[color:var(--accent-gold)] text-[color:var(--text-inverse)] hover:opacity-95 active:opacity-95 touch-manipulation'
+                  : 'min-h-[44px] px-4 py-3 rounded-xl font-semibold border border-[color:var(--border-strong)] text-[color:var(--text-primary)] bg-[color:var(--bg-input)] hover:bg-[color:var(--bg-card-hover)] active:opacity-95 touch-manipulation'
               }
             >
               {action.label}
