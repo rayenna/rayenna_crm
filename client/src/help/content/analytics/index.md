@@ -164,7 +164,28 @@ If your role does not see a given chart, that click path is not available on you
 
 ## Zenith Command Center
 
-> **Zenith** is Rayenna CRM’s **command center analytics** experience: the same trusted numbers as the classic **Dashboard**, presented full-screen with a Zenith look and feel in **both Light and Dark themes**, plus **AI Insights**, **The Board** sales leaderboard (with drill-down lists), **collapsible Your Focus** panels, the **Deal flow funnel** (stage and payment shortcuts), **clickable charts** and the **Availing Loan** KPI (**Finance** and **executive** Zenith) that open a **Quick Actions** drawer, **Proposal Engine** readiness rows (Sales / Management / Admin under Your Focus), **Payment radar** with **Top overdue** guidance, and a **Victory** toast when deals hit winning stages — so you can jump straight to projects and verify numbers. List views opened from Zenith include **Open in Projects →** in the drawer footer so you can continue on the full **Projects** page with the **same filters** as the list. Use the **sticky command bar** for **Financial Year**, **Quarter**, and **Month** — KPIs, the funnel, **Revenue forecast**, **Explore the landscape** charts, and project lists loaded for drill-down **all follow those filters**. Data is loaded from the server for your session (not “this browser only”), so what you see stays aligned with CRM after login. Zenith is documented here under **Analytics and Reports** (no separate top-level Help topic).
+**Zenith** is Rayenna CRM’s full-screen **command center for analytics**. It shows the **same trusted numbers and date-filter rules** as the classic **Dashboard**, with Zenith styling in **Light** and **Dark** theme.
+
+### What you’ll see
+
+- **AI Insights** — A scrolling ribbon of short, plain-English highlights from your current data (under the command bar).
+- **The Board** — Sales leaderboard with **clickable totals and rows** that open drill-down lists.
+- **Your Focus** — **Collapsible** panels tailored to your **role** (e.g. pipeline table, **Payment radar** with **Top overdue** guidance, installation pulse, **Proposal Engine** readiness rows for **Sales / Management / Admin** where applicable).
+- **Deal flow funnel** — **Stage** and **payment** shortcuts into cohort lists or **Quick Actions**.
+- **Charts & KPIs** — **Clickable** “Explore” style charts; on **Finance** and **executive** Zenith (**Sales**, **Management**, **Admin**), the **Availing Loan** KPI opens **Quick Actions** in list mode (same pattern as funnel/chart drill-downs).
+- **Victory** — Optional toast when a deal moves to a **winning stage** (from Quick Actions or project save).
+
+### How you move from Zenith to Projects
+
+1. **Quick Actions** — A drawer with a **filtered project list** (and role-specific actions such as remarks / payment snapshot where shown).
+2. **Open in Projects →** — In the drawer **footer**: opens the full **Projects** page with the **same filters** as that list so you can verify numbers in the grid.
+
+### Filters and data
+
+- **Sticky command bar** — **Financial Year**, **Quarter**, and **Month** apply to **KPIs**, the funnel, **Revenue forecast**, **Explore the landscape** charts, and the project batches used for drill-downs.
+- **Server-backed** — Data is loaded from the **CRM for your session** after login (not a “this browser only” copy of the truth).
+
+**Where this is documented** — Zenith is covered **on this Analytics page** (there is **no** separate top-level Help menu item for Zenith). Use the links below or press **?** from Zenith to jump here.
 
 **In this section:** [Opening Zenith](#opening-zenith) · [Filters and reset](#filters-and-reset) · [Daily briefing](#daily-briefing-zenith) · [AI Insights ticker](#ai-insights-ticker) · [KPI strip and YoY](#kpi-strip-and-year-on-year) · [Your Focus](#your-focus-role-specific) · [Payment radar](#payment-radar-finance) · [Installation pulse](#installation-pulse-operations) · [Executive](#executive-sales-management--admin) · [Deal flow funnel](#deal-flow-funnel-zenith) · [The Board (leaderboard)](#the-board-leaderboard) · [Victory toast](#victory-toast-stage-wins) · [Operations (Zenith)](#operations-zenith) · [Finance (Zenith)](#finance-zenith) · [Revenue Forecast tile](#revenue-forecast-wide-kpi-tile) · [Revenue & profit by FY chart](#revenue-and-profit-by-fy-chart-zenith) · [Customer projects profitability](#customer-projects-profitability-zenith) · [Explore charts & drill-down](#explore-charts-and-drill-down-zenith) · [Panel & inverter brand charts](#panel-and-inverter-brand-charts-zenith) · [Quick Actions drawer](#quick-actions-drawer-zenith) · [Layout & Hit List](#layout-stability-and-hit-list-zenith) · [Charts overview](#charts-funnels-and-shortcuts) · [Explorer batch limit](#explorer-batch-limit-zenith) · [Help and tips](#help-and-tips)
 

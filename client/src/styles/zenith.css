@@ -29,15 +29,14 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
   -webkit-tap-highlight-color: transparent;
   background-color: var(--zenith-bg);
-  background-image:
-    radial-gradient(ellipse 70% 45% at 50% -18%, color-mix(in srgb, var(--accent-gold) 12%, transparent), transparent),
-    linear-gradient(color-mix(in srgb, var(--text-primary) 4%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--text-primary) 4%, transparent) 1px, transparent 1px);
-  background-size:
-    100% 100%,
-    48px 48px,
-    48px 48px;
-  background-position: center top, center center, center center;
+  /* Dark: single soft glow — no page grid (grid lines are light-mode–style only via [data-theme='light'] override). */
+  background-image: radial-gradient(
+    ellipse 70% 45% at 50% -18%,
+    color-mix(in srgb, var(--accent-gold) 12%, transparent),
+    transparent
+  );
+  background-size: 100% 100%;
+  background-position: center top;
   color: var(--zenith-text);
   font-family: var(--zenith-font-body);
 }
@@ -204,7 +203,8 @@
 }
 
 .zenith-root.zenith-animated-bg {
-  animation: zenith-grid-drift 120s linear infinite;
+  /* Dark: background has no tile grid to drift — avoid pointless repaint. */
+  animation: none;
 }
 
 [data-theme='light'] .zenith-root.zenith-animated-bg {
@@ -581,7 +581,7 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
 @media (prefers-reduced-motion: reduce) {
   .zenith-root.zenith-animated-bg {
     animation: none;
-    background-position: center top, 0 0, 0 0;
+    background-position: center top;
   }
 
   [data-theme='light'] .zenith-root.zenith-animated-bg {
