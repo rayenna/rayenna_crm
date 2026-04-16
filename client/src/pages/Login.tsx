@@ -98,7 +98,7 @@ const Login = () => {
         style={{ backgroundImage: 'url(/background.jpg)' }}
         aria-hidden
       />
-      <div className="relative z-10 w-full max-w-md space-y-6 rounded-2xl border border-[color:var(--nav-border)] border-l-4 border-l-[color:var(--accent-gold)] bg-[color:color-mix(in_srgb,var(--nav-bg)_95%,transparent)] p-6 shadow-[var(--shadow-modal)] ring-1 ring-[color:var(--border-default)] backdrop-blur-md sm:space-y-8 sm:p-8">
+      <div className="relative z-10 w-full max-w-md space-y-6 rounded-2xl border border-[color:var(--nav-border)] border-l-4 border-l-[color:var(--accent-gold)] bg-[color:color-mix(in_srgb,var(--nav-bg)_95%,transparent)] p-6 text-[color:var(--nav-text-active)] shadow-[var(--shadow-modal)] ring-1 ring-[color:var(--border-default)] backdrop-blur-md sm:space-y-8 sm:p-8">
         {apiNotConfigured && (
           <div className="mb-1 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] p-3 text-sm text-[color:var(--text-primary)]">
             <strong className="text-[color:var(--accent-gold)]">API not configured.</strong> Set{' '}
@@ -140,7 +140,7 @@ const Login = () => {
           <p className="mt-0.5 text-base font-semibold tracking-wide text-[color:var(--accent-gold)] sm:mt-1 sm:text-lg">
             Ver 2.0
           </p>
-          <p className="mt-2 text-sm font-medium text-[color:var(--text-muted)]">Sign in to your account</p>
+          <p className="mt-2 text-sm font-medium text-[color:var(--nav-text)]">Sign in to your account</p>
         </div>
         <form className="mt-6 space-y-4 sm:mt-8" onSubmit={handleSubmit}>
           <div className="space-y-3">
@@ -199,19 +199,19 @@ const Login = () => {
               )}
             </button>
             {isLoading && elapsed > 5 && (
-              <p className="mt-2 text-center text-xs text-[color:var(--text-muted)]">
-                The server may be waking from sleep. <strong className="text-[color:var(--text-secondary)]">Please do not press the button again</strong> — your request is in progress.
+              <p className="mt-2 text-center text-xs text-[color:var(--nav-text)]">
+                The server may be waking from sleep. <strong className="text-[color:var(--nav-text-active)]">Please do not press the button again</strong> — your request is in progress.
               </p>
             )}
           </div>
         </form>
 
         <div className="text-center">
-          <p className="text-xs text-[color:var(--text-muted)]">Forgot your Password? Contact your administrator</p>
+          <p className="text-xs text-[color:var(--nav-text)]">Forgot your Password? Contact your administrator</p>
         </div>
 
         <div className="border-t border-[color:var(--border-default)] pt-6">
-          <p className="text-center text-xs leading-relaxed text-[color:var(--text-muted)]">
+          <p className="text-center text-xs leading-relaxed text-[color:var(--nav-text)]">
             By signing in, you acknowledge and agree to the Credits, Copyright, intellectual property and Terms of Usage of this product. Refer the About section to know more
           </p>
         </div>
