@@ -35,10 +35,66 @@ export const FINANCING_BANK_LABELS: Record<string, string> = {
   CAPITAL_SMALL_FINANCE_BANK: 'Capital Small Finance Bank',
   BANDHAN_BANK: 'Bandhan Bank',
   JAMMU_KASHMIR_BANK: 'Jammu & Kashmir Bank',
+  BANK_OF_INDIA: 'Bank of India',
+  BANK_OF_MAHARASHTRA: 'Bank of Maharashtra',
+  ESAF_SMALL_FINANCE_BANK: 'ESAF Small Finance Bank',
+  IDBI_BANK: 'IDBI Bank',
+  OTHER: 'Other',
 }
 
+/** Same order as the project financing bank picker (values match stored `financingBank`). */
+const FINANCING_BANK_OPTION_ORDER: readonly string[] = [
+  'AXIS_BANK',
+  'AU_SMALL_FINANCE_BANK',
+  'BANDHAN_BANK',
+  'BANK_OF_BARODA',
+  'BANK_OF_INDIA',
+  'BANK_OF_MAHARASHTRA',
+  'CANARA_BANK',
+  'CAPITAL_SMALL_FINANCE_BANK',
+  'KOTAK_MAHINDRA_BANK',
+  'CATHOLIC_SYRIAN_BANK',
+  'CITY_UNION_BANK',
+  'DCB_BANK',
+  'DHANLAXMI_BANK',
+  'EQUITAS_SMALL_FINANCE_BANK',
+  'ESAF_SMALL_FINANCE_BANK',
+  'FEDERAL_BANK',
+  'HDFC_BANK',
+  'ICICI_BANK',
+  'IDBI_BANK',
+  'IDFC_FIRST_BANK',
+  'INDIAN_BANK',
+  'INDIAN_OVERSEAS_BANK',
+  'INDUSIND_BANK',
+  'JAMMU_KASHMIR_BANK',
+  'JANA_SMALL_FINANCE_BANK',
+  'KARNATAKA_BANK',
+  'KARUR_VYSYA_BANK',
+  'KERALA_BANK',
+  'KERALA_GRAMIN_BANK',
+  'PUNJAB_NATIONAL_BANK',
+  'RBL_BANK',
+  'SBI',
+  'SHIVALIK_SMALL_FINANCE_BANK',
+  'SOUTH_INDIAN_BANK',
+  'TAMILNADU_MERCANTILE_BANK',
+  'UJJIVAN_SMALL_FINANCE_BANK',
+  'UNION_BANK_OF_INDIA',
+  'UTKARSH_SMALL_FINANCE_BANK',
+  'YES_BANK',
+  'OTHER',
+]
+
+export const FINANCING_BANK_FORM_OPTIONS: { value: string; label: string }[] = FINANCING_BANK_OPTION_ORDER.map(
+  (value) => ({
+    value,
+    label: FINANCING_BANK_LABELS[value] || value,
+  }),
+)
+
 /** Teal accent aligned with healthy Deal Health styling (`dealHealthScore.ts`). */
-export const FINANCING_BANK_ACCENT = '#00D4B4'
+export const FINANCING_BANK_ACCENT = 'var(--accent-teal)'
 
 /**
  * Human-readable financing bank for display. Returns `null` when nothing to show.

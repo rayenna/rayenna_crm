@@ -6,6 +6,7 @@ import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Project, UserRole, ProjectStatus } from '../types'
+import { projectStatusStagePillClass } from '../components/zenith/zenithDealCardUi'
 import RemarksSection from '../components/remarks/RemarksSection'
 import SupportTicketsSection from '../components/supportTickets/SupportTicketsSection'
 import { format } from 'date-fns'
@@ -19,9 +20,9 @@ import { FaProjectDiagram } from 'react-icons/fa'
 /** Responsive label/value row: stacked on phones, two columns from sm (tablet+). */
 function DetailRow({ label, children, valueClassName = '' }: { label: string; children: ReactNode; valueClassName?: string }) {
   return (
-    <div className="grid grid-cols-1 gap-y-0.5 border-b border-gray-100 py-3.5 last:border-b-0 sm:grid-cols-[minmax(10rem,38%)_1fr] sm:gap-x-6 md:gap-x-8">
-      <dt className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 sm:pt-0.5">{label}</dt>
-      <dd className={`min-w-0 break-words text-sm leading-snug text-gray-900 ${valueClassName}`}>{children}</dd>
+    <div className="grid grid-cols-1 gap-y-0.5 border-b border-[color:var(--border-default)] py-3.5 last:border-b-0 sm:grid-cols-[minmax(10rem,38%)_1fr] sm:gap-x-6 md:gap-x-8">
+      <dt className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-muted)] sm:pt-0.5">{label}</dt>
+      <dd className={`min-w-0 break-words text-sm leading-snug text-[color:var(--text-primary)] ${valueClassName}`}>{children}</dd>
     </div>
   )
 }
@@ -30,22 +31,20 @@ function InfoSection({
   title,
   icon,
   borderAccentClass,
-  gradientClass,
   children,
 }: {
   title: string
   icon: ReactNode
   borderAccentClass: string
-  gradientClass: string
   children: ReactNode
 }) {
   return (
     <section
-      className={`flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-gray-200/80 bg-gradient-to-br shadow-sm border-l-4 ${gradientClass} ${borderAccentClass}`}
+      className={`flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] ${borderAccentClass}`}
     >
-      <div className="flex shrink-0 items-center gap-2.5 border-b border-gray-200/80 px-4 py-3.5 sm:px-6 sm:py-4">
-        <span className="shrink-0 text-gray-600 [&>svg]:h-5 [&>svg]:w-5">{icon}</span>
-        <h2 className="text-xs font-bold uppercase tracking-wider text-gray-800">{title}</h2>
+      <div className="flex shrink-0 items-center gap-2.5 border-b border-[color:var(--border-default)] bg-[color:var(--zenith-table-header-bg)] px-4 py-3.5 sm:px-6 sm:py-4">
+        <span className="shrink-0 [&>svg]:h-5 [&>svg]:w-5">{icon}</span>
+        <h2 className="text-xs font-bold uppercase tracking-wider text-[color:var(--zenith-table-header-fg)]">{title}</h2>
       </div>
       <div className="min-h-0 flex-1 px-4 pb-4 pt-1 sm:px-6 sm:pb-5">{children}</div>
     </section>
@@ -53,6 +52,12 @@ function InfoSection({
 }
 
 const ProjectDetail = () => {
+  const shell = (children: ReactNode) => (
+    <div className="zenith-root zenith-animated-bg w-full max-w-full min-w-0 min-h-[calc(100dvh-5rem)] min-h-[calc(100vh-5rem)] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-[max(0.35rem,env(safe-area-inset-top,0px))] [-webkit-tap-highlight-color:transparent]">
+      <div className="zenith-exec-main mx-auto w-full max-w-full min-w-0 px-3 sm:px-5 pb-10">{children}</div>
+    </div>
+  )
+
   const { id } = useParams()
   const { user, hasRole } = useAuth()
   const navigate = useNavigate()
@@ -179,59 +184,57 @@ const ProjectDetail = () => {
     },
   })
 
-  if (isLoading) return <div className="p-6 text-center">Loading project details...</div>
-  if (error) return <div className="p-6 text-center text-red-600">Error loading project: {(error as any).response?.data?.error || (error as any).message}</div>
-  if (!project) return <div className="p-6 text-center">Project not found</div>
-
-  // Stage pill classes (match Projects list for consistency)
-  const getStagePillClasses = (status: string): string => {
-    switch (status) {
-      case ProjectStatus.LEAD:
-      case ProjectStatus.SITE_SURVEY:
-      case ProjectStatus.PROPOSAL:
-        return 'bg-amber-100 text-amber-800 border border-amber-300'
-      case ProjectStatus.CONFIRMED:
-      case ProjectStatus.UNDER_INSTALLATION:
-        return 'bg-primary-100 text-primary-800 border border-primary-300'
-      case ProjectStatus.SUBMITTED_FOR_SUBSIDY:
-        return 'bg-violet-100 text-violet-800 border border-violet-300'
-      case ProjectStatus.COMPLETED:
-      case ProjectStatus.COMPLETED_SUBSIDY_CREDITED:
-        return 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-      case ProjectStatus.LOST:
-        return 'bg-red-100 text-red-800 border border-red-300'
-      default:
-        return 'bg-gray-100 text-gray-800 border border-gray-300'
-    }
+  if (isLoading) {
+    return shell(
+      <div className="py-16 text-center text-[color:var(--text-secondary)]">
+        <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-[color:var(--border-default)] border-t-[color:var(--accent-gold)]" />
+        <p className="text-sm">Loading project details…</p>
+      </div>
+    )
   }
+  if (error) {
+    return shell(
+      <div className="rounded-2xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] p-6 text-center text-sm text-[color:var(--text-primary)]">
+        Error loading project: {(error as any).response?.data?.error || (error as any).message}
+      </div>
+    )
+  }
+  if (!project) {
+    return shell(
+      <div className="rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-6 text-center text-sm text-[color:var(--text-secondary)] shadow-[var(--shadow-card)]">
+        Project not found
+      </div>
+    )
+  }
+
   // Segment pill classes (match Projects list)
   const getSegmentPillClasses = (type: string): string => {
     switch (type) {
       case 'RESIDENTIAL_SUBSIDY':
-        return 'bg-red-100 text-red-800 border border-red-300'
+        return 'border border-[color:var(--accent-red-border)] bg-[color:color-mix(in srgb,var(--accent-red) 12%, var(--bg-card))] text-[color:var(--text-primary)]'
       case 'RESIDENTIAL_NON_SUBSIDY':
-        return 'bg-sky-100 text-sky-800 border border-sky-300'
+        return 'border border-[color:var(--accent-blue-border)] bg-[color:color-mix(in srgb,var(--accent-blue) 12%, var(--bg-card))] text-[color:var(--text-primary)]'
       case 'COMMERCIAL_INDUSTRIAL':
-        return 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+        return 'border border-emerald-400/35 bg-[color:color-mix(in srgb,var(--accent-green) 12%, var(--bg-card))] text-[color:var(--text-primary)]'
       default:
-        return 'bg-gray-100 text-gray-800 border border-gray-300'
+        return 'border border-[color:var(--border-default)] bg-[color:var(--bg-input)] text-[color:var(--text-secondary)]'
     }
   }
 
-  return (
+  return shell(
     <>
       {showProposal && id && (
         <ProposalPreview projectId={id} onClose={() => setShowProposal(false)} />
       )}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Project</h3>
-            <p className="text-sm text-gray-600 mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 backdrop-blur-sm" style={{ background: 'var(--bg-overlay)' }}>
+          <div className="w-full max-w-md rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-modal)] p-6 shadow-[var(--shadow-modal)]">
+            <h3 className="mb-4 text-lg font-extrabold text-[color:var(--text-primary)]">Delete Project</h3>
+            <p className="mb-4 text-sm text-[color:var(--text-secondary)]">
               Are you sure you want to delete this project? This action cannot be undone.
             </p>
             {supportTickets && Array.isArray(supportTickets) && supportTickets.length > 0 && (
-              <p className="text-sm text-red-600 mb-4">
+              <p className="mb-4 text-sm text-red-200">
                 <strong>Warning:</strong> This will also delete {supportTickets.length} support ticket(s) associated with this project.
               </p>
             )}
@@ -239,7 +242,7 @@ const ProjectDetail = () => {
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={deleteMutation.isPending}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-xl border border-[color:var(--border-strong)] bg-[color:var(--bg-input)] px-4 py-2 font-semibold text-[color:var(--text-primary)] transition-colors hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -249,7 +252,7 @@ const ProjectDetail = () => {
                   setShowDeleteConfirm(false)
                 }}
                 disabled={deleteMutation.isPending}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-xl bg-red-600 px-4 py-2 font-extrabold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
               </button>
@@ -257,26 +260,27 @@ const ProjectDetail = () => {
           </div>
         </div>
       )}
-    <div className="px-0 py-6 sm:px-0 min-h-screen bg-gray-50/80">
+    <div className="px-0 py-4 sm:py-6">
       <PageCard
+        variant="zenith"
         title={`Project #${project.slNo}`}
         subtitle={project.customer?.customerName || 'Unknown Customer'}
-        icon={<FaProjectDiagram className="w-5 h-5 text-white" />}
+        icon={<FaProjectDiagram className="h-5 w-5" style={{ color: 'var(--banner-text)' }} />}
         className="max-w-full"
       >
       <div className="mx-auto w-full max-w-[min(100%,88rem)] space-y-5 sm:space-y-6 md:space-y-7">
       {/* Header card: stage, status, key financials - same card style as other sections */}
-      <div className="rounded-xl border border-primary-100/60 border-l-4 border-l-primary-500 bg-gradient-to-br from-primary-50/50 to-gray-50/60 p-5 shadow-sm sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+      <div className="rounded-xl border border-[color:var(--border-card)] border-l-4 border-l-[color:var(--accent-gold)] bg-[color:var(--bg-card)] p-5 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="flex items-center gap-1.5 text-xs text-gray-500">
+            <p className="flex items-center gap-1.5 text-xs text-[color:var(--text-muted)]">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               Created {format(new Date(project.createdAt), 'MMM dd, yyyy')}
             </p>
             <div className="flex flex-wrap items-center gap-2 mt-3">
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${getStagePillClasses(project.projectStatus)}`}>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${projectStatusStagePillClass(project.projectStatus)}`}>
                 {project.projectStatus.replace(/_/g, ' ')}
               </span>
               <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${getSegmentPillClasses(project.type)}`}>
@@ -289,45 +293,45 @@ const ProjectDetail = () => {
             <div className="flex flex-wrap gap-6 sm:gap-8 justify-end">
               {project.projectCost != null && project.projectCost > 0 && (
                 <div className="text-right">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide">Order Value</p>
-                  <p className="text-sm font-bold text-green-800">₹{project.projectCost.toLocaleString('en-IN')}</p>
+                  <p className="text-xs uppercase tracking-wide text-[color:var(--text-muted)]">Order Value</p>
+                  <p className="text-sm font-bold text-[color:var(--accent-teal)]">₹{project.projectCost.toLocaleString('en-IN')}</p>
                 </div>
               )}
               {project.totalProjectCost != null && project.totalProjectCost > 0 && (
                 <div className="text-right">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide">Total Cost</p>
-                  <p className="text-sm font-semibold text-gray-900">₹{project.totalProjectCost.toLocaleString('en-IN')}</p>
+                  <p className="text-xs uppercase tracking-wide text-[color:var(--text-muted)]">Total Cost</p>
+                  <p className="text-sm font-semibold text-[color:var(--text-primary)]">₹{project.totalProjectCost.toLocaleString('en-IN')}</p>
                 </div>
               )}
               {project.grossProfit != null && project.grossProfit !== undefined && (
                 <div className="text-right">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide">Gross Profit</p>
-                  <p className={`text-sm font-semibold ${project.grossProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  <p className="text-xs uppercase tracking-wide text-[color:var(--text-muted)]">Gross Profit</p>
+                  <p className={`text-sm font-semibold ${project.grossProfit >= 0 ? 'text-[color:var(--accent-teal)]' : 'text-[color:var(--accent-red)]'}`}>
                     ₹{project.grossProfit.toLocaleString('en-IN')}
                   </p>
                 </div>
               )}
             </div>
             {(project.projectStatus === ProjectStatus.PROPOSAL || project.projectStatus === ProjectStatus.CONFIRMED) && (
-              <div className="inline-flex flex-wrap items-center gap-2 px-3 py-2 rounded-xl bg-white/80 border border-primary-200 shadow-sm">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-primary-700">Proposal Engine</span>
+              <div className="inline-flex flex-wrap items-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-badge)] px-3 py-2 shadow-inner">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--accent-gold)]">Proposal Engine</span>
                 {peSummary?.peStatus === 'proposal-ready' && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                  <span className="inline-flex items-center rounded-md border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-2 py-0.5 text-[10px] font-semibold text-[color:var(--accent-teal)]">
                     PE Ready
                   </span>
                 )}
                 {peSummary?.peStatus === 'draft' && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-300">
+                  <span className="inline-flex items-center rounded-md border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-2 py-0.5 text-[10px] font-semibold text-[color:var(--text-primary)]">
                     PE Draft
                   </span>
                 )}
                 {(!peSummary || peSummary.peStatus === 'none') && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-gray-50 text-gray-600 border border-gray-200">
+                  <span className="inline-flex items-center rounded-md border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--text-secondary)]">
                     Not Yet Created
                   </span>
                 )}
                 {peSummary?.lastUpdated && (
-                  <span className="text-[10px] text-gray-500">
+                  <span className="text-[10px] text-[color:var(--text-muted)]">
                     Last updated {format(new Date(peSummary.lastUpdated), 'MMM dd, yyyy HH:mm')}
                   </span>
                 )}
@@ -336,7 +340,7 @@ const ProjectDetail = () => {
           </div>
         </div>
         {/* Action buttons: 2x2 grid on mobile (half width each), row on desktop */}
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-2 mt-4 sm:mt-6 pt-4 border-t border-gray-100">
+        <div className="mt-4 grid grid-cols-2 gap-2 border-t border-[color:var(--border-default)] pt-4 sm:mt-6 sm:flex sm:flex-wrap sm:items-center">
           {(hasRole([UserRole.SALES]) || hasRole([UserRole.OPERATIONS]) || hasRole([UserRole.MANAGEMENT]) || hasRole([UserRole.FINANCE]) || hasRole([UserRole.ADMIN])) &&
             (project.projectStatus === ProjectStatus.PROPOSAL || project.projectStatus === ProjectStatus.CONFIRMED) && (
               <button
@@ -406,7 +410,7 @@ const ProjectDetail = () => {
           )}
           <Link
             to="/projects"
-            className="inline-flex items-center justify-center h-9 sm:h-10 min-w-0 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-all sm:ml-auto sm:w-40"
+            className="inline-flex h-9 min-w-0 items-center justify-center rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-2 py-2 text-xs font-semibold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)] sm:ml-auto sm:h-10 sm:w-40 sm:px-4 sm:text-sm"
           >
             Back
           </Link>
@@ -417,9 +421,8 @@ const ProjectDetail = () => {
       <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 md:items-stretch">
         <InfoSection
           title="Customer Details"
-          borderAccentClass="border-l-teal-400"
-          gradientClass="from-teal-50/40 to-white"
-          icon={<svg className="text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
+          borderAccentClass="border-l-4 border-l-[color:var(--accent-teal)]"
+          icon={<svg className="text-[color:var(--accent-teal)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
         >
           {project.customer ? (
             <dl>
@@ -430,7 +433,7 @@ const ProjectDetail = () => {
                 {project.customer.customerName}
               </DetailRow>
               {(project.customer.addressLine1 || project.customer.city) && (
-                <DetailRow label="Address" valueClassName="font-medium leading-relaxed text-gray-800">
+                <DetailRow label="Address" valueClassName="font-medium leading-relaxed text-[color:var(--text-primary)]">
                   {[
                     project.customer.addressLine1,
                     project.customer.addressLine2,
@@ -471,7 +474,7 @@ const ProjectDetail = () => {
                     {project.leadSource === 'MANAGEMENT_CONNECT' && 'Management Connect'}
                     {project.leadSource === 'OTHER' && 'Other'}
                     {project.leadSourceDetails && (
-                      <span className="mt-1 block text-gray-600 sm:mt-0 sm:inline sm:pl-1">
+                      <span className="mt-1 block text-[color:var(--text-muted)] sm:mt-0 sm:inline sm:pl-1">
                         (
                         {project.leadSource === 'CHANNEL_PARTNER' && project.leadSourceDetails}
                         {project.leadSource === 'REFERRAL' && project.leadSourceDetails}
@@ -483,15 +486,14 @@ const ProjectDetail = () => {
               )}
             </dl>
           ) : (
-            <p className="py-2 text-sm text-gray-500">Customer information not available</p>
+            <p className="py-2 text-sm text-[color:var(--text-muted)]">Customer information not available</p>
           )}
         </InfoSection>
 
         <InfoSection
           title="Project Details"
-          borderAccentClass="border-l-sky-400"
-          gradientClass="from-sky-50/40 to-white"
-          icon={<svg className="text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
+          borderAccentClass="border-l-4 border-l-[color:var(--accent-blue)]"
+          icon={<svg className="text-[color:var(--accent-blue)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
         >
           <dl>
             <DetailRow label="Segment" valueClassName="font-medium">
@@ -521,9 +523,8 @@ const ProjectDetail = () => {
 
         <InfoSection
           title="Sales & Commercial"
-          borderAccentClass="border-l-emerald-500"
-          gradientClass="from-emerald-50/35 to-white"
-          icon={<svg className="text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+          borderAccentClass="border-l-4 border-l-[color:var(--accent-green)]"
+          icon={<svg className="text-[color:var(--accent-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
         >
           <dl>
             {project.systemCapacity != null && project.systemCapacity !== undefined && (
@@ -553,7 +554,7 @@ const ProjectDetail = () => {
                     ? project.grossProfit >= 0
                       ? 'text-amber-700'
                       : 'text-red-600'
-                    : 'font-medium text-gray-400'
+                    : 'font-medium text-[color:var(--text-muted)]'
                 }
               >
                 {project.grossProfit !== null && project.grossProfit !== undefined
@@ -578,7 +579,7 @@ const ProjectDetail = () => {
                       : project.profitability > 0
                         ? 'text-orange-600'
                         : 'text-red-600'
-                    : 'font-medium text-gray-400'
+                    : 'font-medium text-[color:var(--text-muted)]'
                 }
               >
                 {project.profitability !== null && project.profitability !== undefined
@@ -596,9 +597,8 @@ const ProjectDetail = () => {
 
         <InfoSection
           title="Project Lifecycle"
-          borderAccentClass="border-l-violet-500"
-          gradientClass="from-violet-50/40 to-white"
-          icon={<svg className="text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>}
+          borderAccentClass="border-l-4 border-l-[color:var(--accent-purple)]"
+          icon={<svg className="text-[color:var(--accent-purple)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>}
         >
           <dl>
             <DetailRow label="Project Stage" valueClassName="font-medium">
@@ -744,9 +744,8 @@ const ProjectDetail = () => {
 
         <InfoSection
           title="Payment Tracking"
-          borderAccentClass="border-l-emerald-500"
-          gradientClass="from-emerald-50/35 to-white"
-          icon={<svg className="text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>}
+          borderAccentClass="border-l-4 border-l-[color:var(--accent-teal)]"
+          icon={<svg className="text-[color:var(--accent-teal)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>}
         >
           <dl>
             <DetailRow label="Payment Status" valueClassName="font-medium">
@@ -814,7 +813,7 @@ const ProjectDetail = () => {
               <DetailRow label="Advance Received" valueClassName="font-medium">
                 ₹{project.advanceReceived.toLocaleString('en-IN')}
                 {project.advanceReceivedDate && (
-                  <span className="mt-0.5 block text-xs font-normal text-gray-600 sm:inline sm:mt-0 sm:pl-1">
+                  <span className="mt-0.5 block text-xs font-normal text-[color:var(--text-muted)] sm:inline sm:mt-0 sm:pl-1">
                     ({format(new Date(project.advanceReceivedDate), 'MMM dd, yyyy')})
                   </span>
                 )}
@@ -843,15 +842,15 @@ const ProjectDetail = () => {
                       return (
                         <li
                           key={p.label}
-                          className="rounded-lg border border-gray-100 bg-gray-50/90 px-3 py-2.5"
+                          className="rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2.5"
                         >
-                          <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                          <div className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
                             {p.label}
                           </div>
-                          <div className="mt-1 text-sm font-semibold text-gray-900">
+                          <div className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">
                             {hasAmount ? `₹${Number(p.amount).toLocaleString('en-IN')}` : '—'}
                             {p.date && (
-                              <span className="mt-0.5 block text-xs font-normal text-gray-600">
+                              <span className="mt-0.5 block text-xs font-normal text-[color:var(--text-muted)]">
                                 {format(new Date(p.date), 'MMM dd, yyyy')}
                               </span>
                             )}
@@ -883,30 +882,29 @@ const ProjectDetail = () => {
       {/* Key Artifacts - View Only */}
       <InfoSection
         title="Key Artifacts"
-        borderAccentClass="border-l-sky-500"
-        gradientClass="from-sky-50/35 to-white"
-        icon={<svg className="text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>}
+        borderAccentClass="border-l-4 border-l-[color:var(--accent-blue)]"
+        icon={<svg className="text-[color:var(--accent-blue)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>}
       >
-        <p className="mb-4 text-sm text-gray-600">
+        <p className="mb-4 text-sm text-[color:var(--text-secondary)]">
           To upload new artifacts, use the <strong>Edit</strong> button above.
         </p>
 
         {/* Documents List - View Only */}
         {project.documents && project.documents.length > 0 && (
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Uploaded Documents</h3>
-            <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+            <h3 className="mb-4 text-sm font-extrabold uppercase tracking-wide text-[color:var(--text-primary)]">Uploaded Documents</h3>
+            <div className="overflow-x-auto rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-surface)]">
               <table className="min-w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200 bg-white">
-                    <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 border-l-4 border-l-sky-400">Sl No.</th>
-                    <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File Name</th>
-                    <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                    <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">View/Download</th>
-                    <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Delete</th>
+                  <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--zenith-table-header-bg)]">
+                    <th className="w-16 border-l-4 border-l-[color:var(--accent-blue)] px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-[color:var(--zenith-table-header-fg)]">Sl No.</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-[color:var(--zenith-table-header-fg)]">File Name</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-[color:var(--zenith-table-header-fg)]">Description</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wider text-[color:var(--zenith-table-header-fg)]">View/Download</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wider text-[color:var(--zenith-table-header-fg)]">Delete</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-[color:var(--border-default)]">
               {project.documents.map((doc, index) => {
                 // Admin can delete any document
                 // Uploader can delete their own documents (except Proposal PDFs which only admin can delete)
@@ -924,20 +922,20 @@ const ProjectDetail = () => {
                 const canView = isAdmin || isManagement || isOperations || isFinance || salesHasProjectAccess || isUploader
 
                 return (
-                  <tr key={doc.id} className="group bg-white hover:bg-sky-50/50 transition-colors">
-                    <td className="px-3 py-2 text-gray-700 align-middle">{index + 1}</td>
+                  <tr key={doc.id} className="group transition-colors odd:bg-[color:var(--bg-table-alt)] even:bg-[color:var(--bg-card)] hover:bg-[color:var(--bg-table-hover)]">
+                    <td className="px-3 py-2 align-middle text-[color:var(--text-secondary)]">{index + 1}</td>
                     <td className="px-3 py-2 align-middle">
-                      <div className="font-medium text-gray-900 truncate max-w-xs">
+                      <div className="max-w-xs truncate font-medium text-[color:var(--text-primary)]">
                         {doc.fileName}
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-[color:var(--text-muted)]">
                         {doc.category === 'photos_videos' ? 'Photos / Videos' :
                          doc.category === 'documents' ? 'Documents' :
                          doc.category === 'sheets' ? 'Sheets' : doc.category}
                         {doc.uploadedBy && <> • Uploaded by {doc.uploadedBy.name}</>}
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-gray-700 align-middle max-w-xs">
+                    <td className="max-w-xs px-3 py-2 align-middle text-[color:var(--text-secondary)]">
                       <span className="block truncate" title={doc.description || ''}>
                         {doc.description || '—'}
                       </span>
@@ -963,13 +961,13 @@ const ProjectDetail = () => {
         
         {/* Show message if no documents */}
         {(!project.documents || project.documents.length === 0) && (
-          <p className="text-sm text-gray-500">No artifacts uploaded yet. Click <strong>Edit</strong> to upload documents.</p>
+          <p className="text-sm text-[color:var(--text-muted)]">No artifacts uploaded yet. Click <strong className="text-[color:var(--accent-gold)]">Edit</strong> to upload documents.</p>
         )}
       </InfoSection>
       </div>
       </PageCard>
     </div>
-    </>
+    </>,
   )
 }
 
@@ -1076,7 +1074,7 @@ const DocumentDeleteButton = ({ documentId, projectId }: { documentId: string; p
         <button
           onClick={() => setShowConfirm(false)}
           disabled={isDeleting}
-          className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          className="rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-2 py-1 text-xs font-semibold text-[color:var(--text-primary)] hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-45"
         >
           Cancel
         </button>

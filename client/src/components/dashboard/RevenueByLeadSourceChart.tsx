@@ -8,6 +8,16 @@ import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
 import type { ZenithDateFilter } from '../zenith/zenithTypes'
 import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
+import {
+  ZENITH_RECHARTS_TOOLTIP_CURSOR,
+  ZENITH_RECHARTS_TOOLTIP_WRAPPER_STYLE,
+  ZENITH_CHART_TOOLTIP_INSIGHT,
+  ZENITH_CHART_TOOLTIP_LINE,
+  ZENITH_CHART_TOOLTIP_PANEL,
+  ZENITH_CHART_TOOLTIP_TITLE,
+  ZENITH_DASHBOARD_ANALYTICS_CARD,
+} from './zenithRechartsTooltipStyles'
+import { useChartColors } from '../../hooks/useChartColors'
 
 interface RevenueByLeadSourceData {
   leadSource: string
@@ -47,6 +57,7 @@ const MONTHS = [
 const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: RevenueByLeadSourceChartProps) => {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const c = useChartColors()
   const filterControlledByParent = !!dashboardFilter
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [selectedMonths, setSelectedMonths] = useState<string[]>([])
@@ -155,168 +166,167 @@ const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: Revenu
   }
 
   return (
-    <div className="h-full flex flex-col min-h-[360px] bg-white shadow-sm rounded-2xl border border-slate-200 p-4 sm:p-5">
-        <div className="flex flex-col gap-3 mb-4">
+    <div className={`${ZENITH_DASHBOARD_ANALYTICS_CARD} h-full flex-col`}>
+      <div className="mb-4 flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-emerald-600">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="rounded-lg bg-[color:var(--accent-teal)] p-2 text-[color:var(--text-inverse)]">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-900">
-            Revenue by Lead Source
-          </h2>
+          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">Revenue by Lead Source</h2>
         </div>
 
-        {/* Filters - only when not controlled by dashboard (FY, Qtr, Month at top) */}
         {!filterControlledByParent && (
-        <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
-          {/* FY Filter Dropdown */}
-          <div className="relative flex-1" ref={fyDropdownRef}>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Financial Year:
-            </label>
-            <button
-              type="button"
-              onClick={() => setShowFYDropdown(!showFYDropdown)}
-              className="w-full text-left border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 flex items-center justify-between"
-            >
-              <span className={selectedFYs.length === 0 ? 'text-gray-500' : 'text-gray-900'}>
-                {selectedFYs.length === 0
-                  ? 'Select FY'
-                  : selectedFYs.length === 1
-                  ? selectedFYs[0]
-                  : `${selectedFYs.length} selected`}
-              </span>
-              <svg
-                className={`ml-2 h-4 w-4 text-gray-400 transition-transform flex-shrink-0 ${
-                  showFYDropdown ? 'transform rotate-180' : ''
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+            <div className="relative flex-1" ref={fyDropdownRef}>
+              <label className="mb-2 block text-sm font-semibold text-[color:var(--text-secondary)]">Financial Year:</label>
+              <button
+                type="button"
+                onClick={() => setShowFYDropdown(!showFYDropdown)}
+                className="zenith-native-select flex w-full items-center justify-between rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2.5 text-left text-sm text-[color:var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-muted)]"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            {showFYDropdown && (
-              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-                {availableFYs.length > 0 ? (
-                  <>
-                    {availableFYs.map((fy) => (
-                      <label
-                        key={fy}
-                        className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedFYs.includes(fy)}
-                          onChange={() => toggleFY(fy)}
-                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                        />
-                        <span className="ml-2 text-sm text-gray-900">{fy}</span>
-                      </label>
-                    ))}
-                    {selectedFYs.length > 0 && (
-                      <div className="border-t border-gray-200 px-4 py-2">
-                        <button
-                          type="button"
-                          onClick={clearFYFilter}
-                          className="text-xs text-primary-600 hover:text-primary-800"
-                        >
-                          Clear selection
-                        </button>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="px-4 py-2 text-sm text-gray-500">No FYs available</div>
-                )}
-              </div>
-            )}
-          </div>
+                <span className={selectedFYs.length === 0 ? 'text-[color:var(--text-muted)]' : ''}>
+                  {selectedFYs.length === 0
+                    ? 'Select FY'
+                    : selectedFYs.length === 1
+                      ? selectedFYs[0]
+                      : `${selectedFYs.length} selected`}
+                </span>
+                <svg
+                  className={`ml-2 h-4 w-4 flex-shrink-0 text-[color:var(--text-muted)] transition-transform ${
+                    showFYDropdown ? 'rotate-180' : ''
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {showFYDropdown && (
+                <div className="absolute z-10 mt-2 max-h-60 w-full overflow-auto rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)]">
+                  {availableFYs.length > 0 ? (
+                    <>
+                      {availableFYs.map((fy) => (
+                        <label key={fy} className="flex cursor-pointer items-center px-4 py-2 hover:bg-[color:var(--accent-teal-muted)]/40">
+                          <input
+                            type="checkbox"
+                            checked={selectedFYs.includes(fy)}
+                            onChange={() => toggleFY(fy)}
+                            className="rounded border-[color:var(--border-default)] text-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
+                          />
+                          <span className="ml-2 text-sm text-[color:var(--text-primary)]">{fy}</span>
+                        </label>
+                      ))}
+                      {selectedFYs.length > 0 && (
+                        <div className="border-t border-[color:var(--border-default)] px-4 py-2">
+                          <button
+                            type="button"
+                            onClick={clearFYFilter}
+                            className="text-xs font-semibold text-[color:var(--accent-gold)] hover:opacity-90"
+                          >
+                            Clear selection
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="px-4 py-2 text-sm text-[color:var(--text-muted)]">No FYs available</div>
+                  )}
+                </div>
+              )}
+            </div>
 
-          {/* Month Filter Dropdown */}
-          <div className="relative flex-1" ref={monthDropdownRef}>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Month:
-            </label>
-            <button
-              type="button"
-              onClick={() => selectedFYs.length === 1 && setShowMonthDropdown(!showMonthDropdown)}
-              disabled={selectedFYs.length !== 1}
-              className="w-full text-left border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 flex items-center justify-between disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400"
-            >
-              <span className={selectedMonths.length === 0 ? 'text-gray-500' : 'text-gray-900'}>
-                {selectedMonths.length === 0
-                  ? 'Select Month'
-                  : selectedMonths.length === 1
-                  ? MONTHS.find((m) => m.value === selectedMonths[0])?.label
-                  : `${selectedMonths.length} selected`}
-              </span>
-              <svg
-                className={`ml-2 h-4 w-4 text-gray-400 transition-transform flex-shrink-0 ${
-                  showMonthDropdown ? 'transform rotate-180' : ''
+            <div className="relative flex-1" ref={monthDropdownRef}>
+              <label className="mb-2 block text-sm font-semibold text-[color:var(--text-secondary)]">Month:</label>
+              <button
+                type="button"
+                onClick={() => selectedFYs.length === 1 && setShowMonthDropdown(!showMonthDropdown)}
+                disabled={selectedFYs.length !== 1}
+                className={`flex w-full items-center justify-between rounded-xl border border-[color:var(--border-default)] px-3 py-2.5 text-left text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-muted)] ${
+                  selectedFYs.length !== 1
+                    ? 'cursor-not-allowed bg-[color:var(--bg-input)] opacity-50 text-[color:var(--text-muted)]'
+                    : 'bg-[color:var(--bg-input)] text-[color:var(--text-primary)]'
                 }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            {showMonthDropdown && selectedFYs.length === 1 && (
-              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-                {MONTHS.map((month) => (
-                  <label
-                    key={month.value}
-                    className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedMonths.includes(month.value)}
-                      onChange={() => toggleMonth(month.value)}
-                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="ml-2 text-sm text-gray-900">{month.label}</span>
-                  </label>
-                ))}
-                {selectedMonths.length > 0 && (
-                  <div className="border-t border-gray-200 px-4 py-2">
-                    <button
-                      type="button"
-                      onClick={clearMonthFilter}
-                      className="text-xs text-primary-600 hover:text-primary-800"
+                <span className={selectedMonths.length === 0 ? 'text-[color:var(--text-muted)]' : ''}>
+                  {selectedMonths.length === 0
+                    ? 'Select Month'
+                    : selectedMonths.length === 1
+                      ? MONTHS.find((m) => m.value === selectedMonths[0])?.label
+                      : `${selectedMonths.length} selected`}
+                </span>
+                <svg
+                  className={`ml-2 h-4 w-4 flex-shrink-0 text-[color:var(--text-muted)] transition-transform ${
+                    showMonthDropdown ? 'rotate-180' : ''
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {showMonthDropdown && selectedFYs.length === 1 && (
+                <div className="absolute z-10 mt-2 max-h-60 w-full overflow-auto rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)]">
+                  {MONTHS.map((month) => (
+                    <label
+                      key={month.value}
+                      className="flex cursor-pointer items-center px-4 py-2 hover:bg-[color:var(--accent-teal-muted)]/40"
                     >
-                      Clear selection
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-            {selectedFYs.length !== 1 && (
-              <p className="mt-1 text-xs text-gray-500">
-                {selectedFYs.length === 0 ? 'Select one FY to enable month filter' : 'Select only one FY to enable month filter'}
-              </p>
-            )}
+                      <input
+                        type="checkbox"
+                        checked={selectedMonths.includes(month.value)}
+                        onChange={() => toggleMonth(month.value)}
+                        className="rounded border-[color:var(--border-default)] text-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
+                      />
+                      <span className="ml-2 text-sm text-[color:var(--text-primary)]">{month.label}</span>
+                    </label>
+                  ))}
+                  {selectedMonths.length > 0 && (
+                    <div className="border-t border-[color:var(--border-default)] px-4 py-2">
+                      <button
+                        type="button"
+                        onClick={clearMonthFilter}
+                        className="text-xs font-semibold text-[color:var(--accent-gold)] hover:opacity-90"
+                      >
+                        Clear selection
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {selectedFYs.length !== 1 && (
+                <p className="mt-1 text-xs text-[color:var(--text-muted)]">
+                  {selectedFYs.length === 0
+                    ? 'Select one FY to enable month filter'
+                    : 'Select only one FY to enable month filter'}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
         )}
-        </div>
+      </div>
       {/* Chart or Loading/No Data - fixed height so size does not change with empty/loading data */}
       <div className="w-full overflow-x-auto flex flex-col" style={{ height: '320px' }}>
         {isLoading ? (
-          <div className="flex items-center justify-center w-full h-full">
+          <div className="flex h-full w-full items-center justify-center">
             <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-              <p className="mt-4 text-sm text-gray-500">Loading chart data...</p>
+              <div
+                className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--border-default)] border-t-[color:var(--accent-gold)]"
+                aria-hidden
+              />
+              <p className="mt-4 text-sm text-[color:var(--text-muted)]">Loading chart data...</p>
             </div>
           </div>
         ) : !chartData || chartData.length === 0 ? (
-          <div className="flex items-center justify-center w-full h-full">
-            <div className="text-center px-4">
-              <p className="mb-2 text-sm sm:text-base text-gray-500">No data for selected period</p>
-              <p className="text-xs sm:text-sm text-gray-600">Revenue data will appear here when projects are confirmed and completed.</p>
+          <div className="flex h-full w-full items-center justify-center">
+            <div className="px-4 text-center">
+              <p className="mb-2 text-sm text-[color:var(--text-secondary)] sm:text-base">No data for selected period</p>
+              <p className="text-xs text-[color:var(--text-muted)] sm:text-sm">
+                Revenue data will appear here when projects are confirmed and completed.
+              </p>
             </div>
           </div>
         ) : (
@@ -332,16 +342,18 @@ const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: Revenu
                 }}
                 barCategoryGap="4%"
               >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="leadSourceLabel" 
-                  tick={{ fontSize: 12 }}
+                <CartesianGrid strokeDasharray="3 3" stroke={c.grid} />
+                <XAxis
+                  dataKey="leadSourceLabel"
+                  tick={{ fontSize: 12, fill: c.axisText }}
                   angle={-45}
                   textAnchor="end"
                   height={80}
+                  stroke={c.grid}
                 />
-                <YAxis 
-                  tick={{ fontSize: 12 }}
+                <YAxis
+                  tick={{ fontSize: 12, fill: c.axisText }}
+                  stroke={c.grid}
                   tickFormatter={(value) => {
                     if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`
                     if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`
@@ -350,29 +362,33 @@ const RevenueByLeadSourceChart = ({ availableFYs = [], dashboardFilter }: Revenu
                   }}
                 />
                 <Tooltip
+                  wrapperStyle={ZENITH_RECHARTS_TOOLTIP_WRAPPER_STYLE}
+                  cursor={ZENITH_RECHARTS_TOOLTIP_CURSOR}
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload as RevenueByLeadSourceData
                       return (
-                        <div className="bg-gradient-to-br from-white to-primary-50 p-4 border-2 border-primary-200 rounded-xl shadow-2xl backdrop-blur-sm">
-                          <p className="font-semibold text-gray-900 mb-2">
-                            {data.leadSourceLabel}
+                        <div className={ZENITH_CHART_TOOLTIP_PANEL}>
+                          <p className={ZENITH_CHART_TOOLTIP_TITLE}>{data.leadSourceLabel}</p>
+                          <p className={ZENITH_CHART_TOOLTIP_LINE}>
+                            Total Revenue:{' '}
+                            <span className="font-semibold text-[color:var(--accent-gold)]">{formatCurrency(data.revenue)}</span>
                           </p>
-                          <p className="text-sm text-purple-600">
-                            Total Revenue: <span className="font-medium">{formatCurrency(data.revenue)}</span>
-                          </p>
-                          <p className="text-sm text-gray-600 mt-1">
-                            Projects: <span className="font-medium">{data.projectCount}</span>
+                          <p className={`${ZENITH_CHART_TOOLTIP_LINE} mt-1`}>
+                            Projects: <span className="font-semibold text-[color:var(--accent-teal)]">{data.projectCount}</span>
                           </p>
                           {effectiveFYs.length > 0 && (
-                            <p className="text-xs text-gray-500 mt-1">FY: {effectiveFYs.join(', ')}</p>
+                            <p className={`${ZENITH_CHART_TOOLTIP_LINE} mt-1 text-xs`}>FY: {effectiveFYs.join(', ')}</p>
                           )}
                           {effectiveMonths.length > 0 && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              Month: {effectiveMonths.map(m => MONTHS.find(month => month.value === m)?.label).join(', ')}
+                            <p className={`${ZENITH_CHART_TOOLTIP_LINE} mt-1 text-xs`}>
+                              Month:{' '}
+                              {effectiveMonths
+                                .map((m) => MONTHS.find((month) => month.value === m)?.label)
+                                .join(', ')}
                             </p>
                           )}
-                          <p className="text-xs font-medium text-amber-700 mt-1">Click bar to open Projects →</p>
+                          <p className={ZENITH_CHART_TOOLTIP_INSIGHT}>Click bar to open Projects →</p>
                         </div>
                       )
                     }

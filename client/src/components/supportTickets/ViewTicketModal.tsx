@@ -7,6 +7,18 @@ import { SupportTicket, SupportTicketStatus, UserRole } from '../../types'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import { ErrorModal } from '@/components/common/ErrorModal'
+import {
+  stFieldMetaLabelCls,
+  stGhostBtn,
+  stInputCls,
+  stLabelCls,
+  stMutedCls,
+  stPrimaryBtn,
+  stSelectCls,
+  stTimestampCls,
+  supportTicketStatusLabel,
+  supportTicketStatusPillClass,
+} from './supportTicketsZenith'
 
 interface ViewTicketModalProps {
   ticket: SupportTicket
@@ -26,7 +38,6 @@ const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) =
   const canManageTickets = hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS])
   const isAdmin = hasRole([UserRole.ADMIN])
 
-  // Fetch full ticket details with activities
   const { data: fullTicket, isLoading } = useQuery({
     queryKey: ['support-ticket', ticket.id],
     queryFn: async () => {
@@ -79,38 +90,12 @@ const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) =
       toast.success('Ticket deleted successfully')
       queryClient.invalidateQueries({ queryKey: ['support-tickets', ticket.projectId] })
       queryClient.invalidateQueries({ queryKey: ['projects'] })
-      onClose() // Close modal after deletion
+      onClose()
     },
     onError: (error: unknown) => {
       toast.error(getFriendlyApiErrorMessage(error))
     },
   })
-
-  const getStatusColor = (status: SupportTicketStatus) => {
-    switch (status) {
-      case SupportTicketStatus.OPEN:
-        return 'bg-indigo-100 text-indigo-800'
-      case SupportTicketStatus.IN_PROGRESS:
-        return 'bg-yellow-100 text-yellow-800'
-      case SupportTicketStatus.CLOSED:
-        return 'bg-gray-100 text-gray-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getStatusLabel = (status: SupportTicketStatus) => {
-    switch (status) {
-      case SupportTicketStatus.OPEN:
-        return 'Open'
-      case SupportTicketStatus.IN_PROGRESS:
-        return 'In Progress'
-      case SupportTicketStatus.CLOSED:
-        return 'Closed'
-      default:
-        return status
-    }
-  }
 
   const handleAddActivity = (e: React.FormEvent) => {
     e.preventDefault()
@@ -145,113 +130,130 @@ const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) =
   const displayTicket = fullTicket || ticket
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-xl font-semibold">Support Ticket Details</h2>
-              <p className="text-sm text-gray-500 mt-1">Ticket #{displayTicket.ticketNumber}</p>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[color:var(--bg-overlay)] p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="view-ticket-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div
+        className="zenith-root flex max-h-[min(92vh,880px)] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-modal)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] px-5 py-4 sm:px-6 sm:py-5">
+          <div className="min-w-0 border-l-4 border-l-[color:var(--accent-gold)] pl-3">
+            <h2 id="view-ticket-title" className="text-lg font-bold text-[color:var(--text-primary)] sm:text-xl">
+              Support Ticket Details
+            </h2>
+            <p className="mt-1 text-sm font-medium text-[color:var(--accent-gold)]">#{displayTicket.ticketNumber}</p>
           </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-xl p-2 text-[color:var(--text-muted)] transition-colors hover:bg-[color:var(--bg-card-hover)] hover:text-[color:var(--text-primary)]"
+            aria-label="Close"
+          >
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
 
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[color:var(--border-strong)]">
           {isLoading ? (
-            <div className="text-center py-8 text-gray-500">Loading ticket details...</div>
+            <div className="py-12 text-center text-sm text-[color:var(--text-muted)]">Loading ticket details…</div>
           ) : (
             <div className="space-y-6">
-              {/* Ticket Info */}
-              <div className="border-b pb-4">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="border-b border-[color:var(--border-default)] pb-5">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Status</label>
-                    <div className="mt-1">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(displayTicket.status)}`}>
-                        {getStatusLabel(displayTicket.status)}
+                    <p className={stFieldMetaLabelCls}>Status</p>
+                    <div className="mt-1.5">
+                      <span className={supportTicketStatusPillClass(displayTicket.status)}>
+                        {supportTicketStatusLabel(displayTicket.status)}
                       </span>
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Created By</label>
-                    <p className="mt-1 text-sm text-gray-900">{displayTicket.createdBy.name}</p>
+                    <p className={stFieldMetaLabelCls}>Created By</p>
+                    <p className="mt-1.5 text-sm font-medium text-[color:var(--text-primary)]">{displayTicket.createdBy.name}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Created Date</label>
-                    <p className="mt-1 text-sm text-gray-900">{format(new Date(displayTicket.createdAt), 'MMM dd, yyyy HH:mm')}</p>
+                    <p className={stFieldMetaLabelCls}>Created Date</p>
+                    <p className="mt-1.5 text-sm text-[color:var(--text-secondary)]">
+                      {format(new Date(displayTicket.createdAt), 'MMM dd, yyyy HH:mm')}
+                    </p>
                   </div>
                   {displayTicket.closedAt && (
                     <div>
-                      <label className="text-sm font-medium text-gray-500">Closed Date</label>
-                      <p className="mt-1 text-sm text-gray-900">{format(new Date(displayTicket.closedAt), 'MMM dd, yyyy HH:mm')}</p>
+                      <p className={stFieldMetaLabelCls}>Closed Date</p>
+                      <p className="mt-1.5 text-sm text-[color:var(--text-secondary)]">
+                        {format(new Date(displayTicket.closedAt), 'MMM dd, yyyy HH:mm')}
+                      </p>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Title and Description */}
               <div>
-                <label className="text-sm font-medium text-gray-500">Title</label>
-                <p className="mt-1 text-sm text-gray-900">{displayTicket.title}</p>
+                <p className={stFieldMetaLabelCls}>Title</p>
+                <p className="mt-1.5 text-sm font-medium text-[color:var(--text-primary)]">{displayTicket.title}</p>
               </div>
 
               {displayTicket.description && (
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Description</label>
-                  <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{displayTicket.description}</p>
+                  <p className={stFieldMetaLabelCls}>Description</p>
+                  <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--text-secondary)]">{displayTicket.description}</p>
                 </div>
               )}
 
-              {/* Activities/Follow-ups */}
               <div>
-                <div className="flex items-center justify-between mb-4">
-                  <label className="text-sm font-medium text-gray-500">Follow-ups / Activity Log</label>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <p className={stFieldMetaLabelCls}>
+                    Follow-ups / Activity Log
+                  </p>
                   {canManageTickets && displayTicket.status !== SupportTicketStatus.CLOSED && (
                     <button
+                      type="button"
                       onClick={() => setShowAddActivity(!showAddActivity)}
-                      className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center gap-1"
+                      className="text-sm font-semibold text-[color:var(--accent-gold)] hover:opacity-90 hover:underline"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      Add Follow-up
+                      {showAddActivity ? 'Cancel add' : '+ Add follow-up'}
                     </button>
                   )}
                 </div>
 
                 {showAddActivity && (
-                  <form onSubmit={handleAddActivity} className="mb-4 p-4 bg-gray-50 rounded-lg space-y-3">
+                  <form
+                    onSubmit={handleAddActivity}
+                    className="mb-4 space-y-3 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] p-4 ring-1 ring-[color:var(--border-default)]"
+                  >
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Note <span className="text-red-500">*</span>
+                      <label className={stLabelCls}>
+                        Note <span className="text-[color:var(--accent-red)]">*</span>
                       </label>
                       <textarea
                         value={activityNote}
                         onChange={(e) => setActivityNote(e.target.value)}
                         rows={3}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="Enter follow-up notes..."
+                        className={`mt-1.5 ${stInputCls}`}
+                        placeholder="Enter follow-up notes…"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Follow-up Date (Optional)
-                      </label>
+                      <label className={stLabelCls}>Follow-up Date (Optional)</label>
                       <input
                         type="date"
                         value={followUpDate}
                         onChange={(e) => setFollowUpDate(e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
+                        className={`mt-1.5 ${stSelectCls}`}
                       />
                     </div>
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-2 pt-1">
                       <button
                         type="button"
                         onClick={() => {
@@ -259,36 +261,39 @@ const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) =
                           setActivityNote('')
                           setFollowUpDate('')
                         }}
-                        className="px-3 py-1 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                        className={stGhostBtn}
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
-                        className="px-3 py-1 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:bg-gray-300"
+                        className={stPrimaryBtn}
                         disabled={addActivityMutation.isPending || !activityNote.trim()}
                       >
-                        {addActivityMutation.isPending ? 'Adding...' : 'Add Follow-up'}
+                        {addActivityMutation.isPending ? 'Adding…' : 'Add follow-up'}
                       </button>
                     </div>
                   </form>
                 )}
 
                 {!displayTicket.activities || displayTicket.activities.length === 0 ? (
-                  <p className="text-sm text-gray-500 italic">No follow-ups yet</p>
+                  <p className={`${stMutedCls} italic`}>No follow-ups yet</p>
                 ) : (
                   <div className="space-y-3">
                     {displayTicket.activities.map((activity) => (
-                      <div key={activity.id} className="border-l-4 border-primary-500 pl-4 py-2">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-gray-900">{activity.createdBy.name}</span>
-                          <span className="text-xs text-gray-500">
+                      <div
+                        key={activity.id}
+                        className="rounded-xl border border-[color:var(--border-default)] border-l-4 border-l-[color:var(--accent-gold)] bg-[color:var(--bg-input)] py-3 pl-4 pr-3 shadow-inner"
+                      >
+                        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-sm font-semibold text-[color:var(--text-primary)]">{activity.createdBy?.name ?? '—'}</span>
+                          <span className={stTimestampCls}>
                             {format(new Date(activity.createdAt), 'MMM dd, yyyy HH:mm')}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{activity.note}</p>
+                        <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--text-secondary)]">{activity.note}</p>
                         {activity.followUpDate && (
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="mt-2 text-xs font-medium text-[color:var(--accent-gold)]">
                             Follow-up: {format(new Date(activity.followUpDate), 'MMM dd, yyyy')}
                           </p>
                         )}
@@ -298,24 +303,25 @@ const ViewTicketModal = ({ ticket, onClose, onRefresh }: ViewTicketModalProps) =
                 )}
               </div>
 
-              {/* Actions */}
-              <div className="flex justify-end gap-3 pt-4 border-t">
+              <div className="flex flex-wrap justify-end gap-3 border-t border-[color:var(--border-default)] pt-5">
                 {canManageTickets && displayTicket.status !== SupportTicketStatus.CLOSED && (
                   <button
+                    type="button"
                     onClick={handleCloseTicket}
-                    className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    className="rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-4 py-2.5 text-sm font-semibold text-[color:var(--text-primary)] transition-colors hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={closeTicketMutation.isPending}
                   >
-                    {closeTicketMutation.isPending ? 'Closing...' : '✅ Close Ticket'}
+                    {closeTicketMutation.isPending ? 'Closing…' : 'Close ticket'}
                   </button>
                 )}
                 {isAdmin && (
                   <button
+                    type="button"
                     onClick={handleDeleteTicket}
-                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    className="rounded-xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] px-4 py-2.5 text-sm font-semibold text-[color:var(--accent-red)] transition-colors hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={deleteTicketMutation.isPending}
                   >
-                    {deleteTicketMutation.isPending ? 'Deleting...' : '🗑️ Delete Ticket'}
+                    {deleteTicketMutation.isPending ? 'Deleting…' : 'Delete ticket'}
                   </button>
                 )}
               </div>

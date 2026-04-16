@@ -2828,7 +2828,9 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
         const internalTrim = (p.internalNotes ?? '').trim();
         const lastNote = remarksTrim || internalTrim || null;
 
-        const overdue = !!expectedEnd && now > expectedEnd.getTime();
+        /** Past expected end only counts as overdue while install is still open (matches UI progress rules). */
+        const overdue =
+          !installCompleted && !!expectedEnd && now > expectedEnd.getTime();
 
         return {
           projectId: p.id,

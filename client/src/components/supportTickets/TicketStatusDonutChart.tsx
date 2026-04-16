@@ -1,5 +1,12 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import { SupportTicketStatus } from '../../types'
+import {
+  ZENITH_CHART_TOOLTIP_INSIGHT,
+  ZENITH_CHART_TOOLTIP_LINE,
+  ZENITH_CHART_TOOLTIP_PANEL,
+  ZENITH_CHART_TOOLTIP_TITLE,
+  ZENITH_DASHBOARD_ANALYTICS_CARD,
+} from '../dashboard/zenithRechartsTooltipStyles'
 
 interface TicketStatusData {
   status: SupportTicketStatus
@@ -30,10 +37,10 @@ const TicketStatusDonutChart = ({ data, onSliceClick, selectedStatus }: TicketSt
   }
 
   return (
-    <div className="w-full rounded-2xl border border-gray-200/90 bg-white p-6 shadow-lg shadow-gray-900/5 ring-1 ring-gray-100">
-      <h3 className="mb-4 text-lg font-semibold text-gray-900">Ticket Status Breakdown</h3>
+    <div className={`zenith-segment-donut-card w-full p-6 ${ZENITH_DASHBOARD_ANALYTICS_CARD}`}>
+      <h3 className="zenith-display mb-4 text-lg font-semibold text-[color:var(--text-primary)]">Ticket Status Breakdown</h3>
       {/* Fixed height: Pie uses fixed outerRadius; a flex-grown container clips the ring */}
-      <div className="h-[350px] w-full min-w-0">
+      <div className="zenith-chart-slot h-[350px] w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%" debounce={250} minWidth={0}>
           <PieChart>
             <Pie
@@ -52,7 +59,7 @@ const TicketStatusDonutChart = ({ data, onSliceClick, selectedStatus }: TicketSt
                   key={`cell-${index}`}
                   fill={entry.color}
                   opacity={selectedStatus && selectedStatus !== entry.status ? 0.3 : 1}
-                  stroke={selectedStatus === entry.status ? '#000' : 'none'}
+                  stroke={selectedStatus === entry.status ? 'var(--accent-gold)' : 'none'}
                   strokeWidth={selectedStatus === entry.status ? 2 : 0}
                 />
               ))}
@@ -69,22 +76,22 @@ const TicketStatusDonutChart = ({ data, onSliceClick, selectedStatus }: TicketSt
                   const data = payload[0].payload
                   const percentage = total > 0 ? ((data.value / total) * 100).toFixed(1) : 0
                   return (
-                    <div
-                      className="p-3 border border-gray-200 rounded-lg shadow-lg"
-                      style={{
-                        backgroundColor: '#ffffff',
-                        color: '#0f172a',
-                      }}
-                    >
-                      <p className="font-semibold" style={{ color: '#0f172a' }}>
-                        {data.label}
+                    <div className={ZENITH_CHART_TOOLTIP_PANEL}>
+                      <p className={ZENITH_CHART_TOOLTIP_TITLE}>{data.label}</p>
+                      <p className={ZENITH_CHART_TOOLTIP_LINE}>
+                        Count:{' '}
+                        <span className="font-semibold text-[color:var(--text-primary)]">
+                          {data.value}
+                        </span>
                       </p>
-                      <p style={{ color: '#334155' }}>
-                        Count: <span className="font-medium" style={{ color: '#0f172a' }}>{data.value}</span>
-                      </p>
-                      <p style={{ color: '#334155' }}>
+                      <p className={ZENITH_CHART_TOOLTIP_LINE}>
                         Percentage:{' '}
-                        <span className="font-medium" style={{ color: '#0f172a' }}>{percentage}%</span>
+                        <span className="font-semibold text-[color:var(--text-primary)]">
+                          {percentage}%
+                        </span>
+                      </p>
+                      <p className={ZENITH_CHART_TOOLTIP_INSIGHT}>
+                        Click again to clear the filter.
                       </p>
                     </div>
                   )
@@ -96,7 +103,7 @@ const TicketStatusDonutChart = ({ data, onSliceClick, selectedStatus }: TicketSt
               verticalAlign="bottom"
               height={60}
               formatter={(_value, entry: any) => (
-                <span className="text-sm">
+                <span className="text-sm text-[color:var(--text-secondary)]">
                   {entry.payload.label}: {entry.payload.value} ({total > 0 ? ((entry.payload.value / total) * 100).toFixed(1) : 0}%)
                 </span>
               )}
@@ -105,7 +112,7 @@ const TicketStatusDonutChart = ({ data, onSliceClick, selectedStatus }: TicketSt
         </ResponsiveContainer>
       </div>
       {onSliceClick && (
-        <p className="mt-2 text-center text-xs text-gray-500">Click a slice to filter tickets</p>
+        <p className="mt-2 text-center text-xs text-[color:var(--text-muted)]">Click a slice to filter tickets</p>
       )}
     </div>
   )

@@ -18,17 +18,17 @@ import {
 function labelBadgeClass(label: HitListLabel): { className: string; showPulse: boolean } {
   switch (label) {
     case 'OVERDUE':
-      return { className: 'bg-[rgba(255,71,87,0.2)] text-[#FF4757]', showPulse: true }
+      return { className: 'bg-[color:var(--accent-red-muted)] text-[color:var(--accent-red)]', showPulse: true }
     case 'CLOSING SOON':
-      return { className: 'bg-[rgba(255,107,107,0.15)] text-[#FF6B6B]', showPulse: false }
+      return { className: 'bg-[color:var(--accent-red-muted)] text-[color:var(--accent-red)]', showPulse: false }
     case 'STALLED':
-      return { className: 'bg-[rgba(245,166,35,0.15)] text-[#F5A623]', showPulse: false }
+      return { className: 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]', showPulse: false }
     case 'NUDGE NEEDED':
-      return { className: 'bg-[rgba(245,166,35,0.12)] text-[#F5A623]', showPulse: false }
+      return { className: 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]', showPulse: false }
     case 'GOING COLD':
-      return { className: 'bg-[rgba(150,150,150,0.15)] text-[#999]', showPulse: false }
+      return { className: 'bg-[color:var(--bg-badge)] text-[color:var(--text-muted)]', showPulse: false }
     default:
-      return { className: 'bg-[rgba(150,150,150,0.15)] text-[#999]', showPulse: false }
+      return { className: 'bg-[color:var(--bg-badge)] text-[color:var(--text-muted)]', showPulse: false }
   }
 }
 
@@ -74,11 +74,10 @@ function confirmationSortTime(iso: string | null): number {
 }
 
 const cardBase: CSSProperties = {
-  background: 'rgba(255, 255, 255, 0.03)',
-  border: '1px solid rgba(255, 255, 255, 0.08)',
+  background: 'var(--bg-card)',
+  border: '1px solid var(--border-card)',
   borderRadius: 12,
-  backdropFilter: 'blur(12px)',
-  WebkitBackdropFilter: 'blur(12px)',
+  boxShadow: 'var(--shadow-card)',
   padding: 0,
 }
 
@@ -176,48 +175,49 @@ export default function HitList({
     ? `${n} deal${n === 1 ? '' : 's'} need your attention`
     : `${n} deal${n === 1 ? '' : 's'} across your team need attention`
 
-  const borderLeft = allClear ? '3px solid #00D4B4' : '3px solid #FF4757'
+  const borderLeft = allClear ? '3px solid var(--accent-teal)' : '3px solid var(--accent-red)'
 
   return (
     <motion.div
       initial={{ opacity: 0, y: -16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="zenith-hit-list flex h-full min-h-0 w-full flex-col overflow-hidden mb-5 md:mb-6 lg:mb-0 rounded-xl ring-1 ring-white/[0.06] shadow-sm shadow-black/20 md:shadow-md md:shadow-black/25"
+      className="zenith-hit-list mb-5 flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl ring-1 ring-[color:var(--border-default)] md:mb-6 lg:mb-0"
       style={{ ...cardBase, borderLeft }}
     >
       <div
         className="flex shrink-0 flex-wrap items-start justify-between gap-2 md:gap-2 px-5 py-4 md:px-3.5 md:py-2.5"
         style={{
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid var(--border-default)',
         }}
       >
         <div className="min-w-0 flex gap-2.5 md:gap-2">
           <Target
             className="shrink-0 mt-0.5 w-[18px] h-[18px] md:w-4 md:h-4"
             strokeWidth={2}
-            color="#F5A623"
+            color="var(--accent-gold)"
             aria-hidden
           />
           <div>
             <h2
-              className="zenith-hit-list-title text-[18px] md:text-[15px] font-bold text-white leading-tight"
+              className="zenith-hit-list-title text-[18px] font-bold leading-tight text-[color:var(--text-primary)] md:text-[15px]"
               style={{ fontFamily: "'Syne', var(--zenith-font-display), system-ui, sans-serif" }}
             >
               Today&apos;s Hit List
             </h2>
             <p
-              className="mt-1 md:mt-0.5 text-[13px] md:text-[11px] text-white/50 leading-snug"
+              className="mt-1 text-[13px] leading-snug text-[color:var(--text-secondary)] md:mt-0.5 md:text-[11px]"
               style={{ fontFamily: 'var(--zenith-font-body)' }}
             >
               {subtitle}
             </p>
             {!allClear && n > 0 ? (
               <p
-                className="mt-1.5 md:mt-1 max-w-xl text-[12px] md:text-[10px] text-white/40 leading-snug hidden md:block"
+                className="mt-1.5 hidden max-w-xl text-[12px] leading-snug text-[color:var(--text-muted)] md:mt-1 md:block md:text-[10px]"
                 style={{ fontFamily: 'var(--zenith-font-body)' }}
               >
-                Please scroll to the right and click <span className="text-white/55">Open →</span> to open the
+                Please scroll to the right and click{' '}
+                <span className="text-[color:var(--text-secondary)]">Open →</span> to open the
                 Quick Actions drawer and work on the project.
               </p>
             ) : null}
@@ -227,9 +227,9 @@ export default function HitList({
           <span
             className="shrink-0 rounded-[20px] px-3 py-1 md:px-2 md:py-0.5 text-[13px] md:text-[11px] font-medium"
             style={{
-              background: 'rgba(255, 71, 87, 0.15)',
-              border: '1px solid #FF4757',
-              color: '#FF4757',
+              background: 'var(--accent-red-muted)',
+              border: '1px solid var(--accent-red-border)',
+              color: 'var(--accent-red)',
               fontFamily: 'var(--zenith-font-body)',
             }}
           >
@@ -241,16 +241,16 @@ export default function HitList({
       {allClear ? (
         <div className="flex flex-col items-center justify-center gap-1 min-h-[64px] md:min-h-[52px] px-5 md:px-3.5 py-3 md:py-2 lg:min-h-0 lg:flex-1">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-[18px] h-[18px] md:w-4 md:h-4 shrink-0" color="#00D4B4" aria-hidden />
+            <CheckCircle2 className="w-[18px] h-[18px] md:w-4 md:h-4 shrink-0" color="var(--accent-teal)" aria-hidden />
             <span
               className="text-[14px] md:text-[12px] text-center"
-              style={{ color: '#00D4B4', fontFamily: 'var(--zenith-font-body)' }}
+              style={{ color: 'var(--accent-teal)', fontFamily: 'var(--zenith-font-body)' }}
             >
               All clear — no urgent deals today
             </span>
           </div>
           <p
-            className="text-[12px] md:text-[10px] text-white/35"
+            className="text-[12px] text-[color:var(--text-muted)] md:text-[10px]"
             style={{ fontFamily: 'var(--zenith-font-body)' }}
           >
             Check back tomorrow
@@ -259,7 +259,7 @@ export default function HitList({
       ) : (
         <div className="flex h-full min-h-[8rem] w-full max-h-[min(42vh,320px)] flex-col overflow-hidden overscroll-y-contain sm:max-h-[min(44vh,340px)] lg:min-h-0 lg:max-h-none lg:flex-1">
           <div
-            className="shrink-0 border-b border-white/[0.08] px-3 py-2 md:px-2"
+            className="shrink-0 border-b border-[color:var(--border-default)] px-3 py-2 md:px-2"
             style={{ fontFamily: 'var(--zenith-font-body)' }}
           >
             <div className="flex flex-wrap items-center gap-2 min-w-0">
@@ -297,7 +297,7 @@ export default function HitList({
                 ))}
               </select>
               {hasActiveFilters && displayRows.length !== n && (
-                <span className="text-[11px] text-white/45 whitespace-nowrap">
+                <span className="whitespace-nowrap text-[11px] text-[color:var(--text-muted)]">
                   {displayRows.length} of {n} shown
                 </span>
               )}
@@ -306,9 +306,9 @@ export default function HitList({
           <div className="zenith-hit-list-body min-h-0 flex-1 overflow-y-auto">
             <div className="zenith-scroll-x overflow-x-auto px-3 py-1 md:px-2 md:py-0">
             {/* Desktop / tablet — same columns as “Your pipeline today” + alert + confirmation */}
-            <table className="hidden md:table w-full text-left text-[11px] sm:text-xs min-w-[820px]">
+            <table className="zenith-table--data hidden md:table w-full text-left text-[11px] sm:text-xs min-w-[820px]">
               <thead>
-                <tr className="text-white/45 border-b border-white/10">
+                <tr className="border-b border-[color:var(--border-default)]">
                   <th
                     className="py-2 pr-2 font-semibold cursor-pointer select-none"
                     style={{ fontFamily: 'var(--zenith-font-body)' }}
@@ -363,7 +363,6 @@ export default function HitList({
                     style={{
                       fontFamily: 'var(--zenith-font-body)',
                       fontSize: '12px',
-                      color: 'rgba(255,255,255,0.4)',
                       fontWeight: 500,
                       padding: '8px 10px',
                     }}
@@ -377,7 +376,7 @@ export default function HitList({
               <tbody>
                 {displayRows.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-8 text-center text-white/40" style={{ fontFamily: 'var(--zenith-font-body)' }}>
+                    <td colSpan={9} className="py-8 text-center text-[color:var(--text-muted)]" style={{ fontFamily: 'var(--zenith-font-body)' }}>
                       {hasActiveFilters ? 'No deals match your filters.' : 'No rows to show.'}
                     </td>
                   </tr>
@@ -391,14 +390,14 @@ export default function HitList({
                   return (
                     <motion.tr
                       key={project.id}
-                      className="group border-b border-white/[0.06] hover:bg-white/[0.04]"
+                      className="group border-b border-[color:var(--border-default)] hover:bg-[color:var(--bg-table-hover)]"
                       initial={{ opacity: 0, x: -6 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.05, duration: 0.25 }}
                     >
                       <td className="py-2.5 pr-2">
                         <span
-                          className="text-white font-medium truncate max-w-[11rem] inline-block align-bottom"
+                          className="inline-block max-w-[11rem] truncate align-bottom font-medium text-[color:var(--text-primary)]"
                           title={project.customerName}
                           style={{ fontFamily: 'var(--zenith-font-body)' }}
                         >
@@ -411,7 +410,7 @@ export default function HitList({
                         </span>
                       </td>
                       <td
-                        className="py-2.5 pr-2 text-white/80 truncate max-w-[9rem]"
+                        className="max-w-[9rem] truncate py-2.5 pr-2 text-[color:var(--text-secondary)]"
                         title={sp}
                         style={{ fontFamily: 'var(--zenith-font-body)' }}
                       >
@@ -419,7 +418,7 @@ export default function HitList({
                       </td>
                       <td
                         className={`py-2.5 pr-2 text-right tabular-nums font-medium ${
-                          dealParts.muted ? 'text-white/30' : 'text-[#F5A623]'
+                          dealParts.muted ? 'text-[color:var(--text-muted)]' : 'text-[color:var(--accent-gold)]'
                         }`}
                         style={{ fontFamily: 'var(--zenith-font-body)' }}
                       >
@@ -445,7 +444,7 @@ export default function HitList({
                         </span>
                       </td>
                       <td
-                        className="py-2.5 pr-2 text-white/70 tabular-nums whitespace-nowrap"
+                        className="whitespace-nowrap py-2.5 pr-2 tabular-nums text-[color:var(--text-secondary)]"
                         style={{ fontFamily: 'var(--zenith-font-body)' }}
                       >
                         {formatConfirmationShort(project.confirmationDate)}
@@ -480,10 +479,10 @@ export default function HitList({
             </table>
 
             {/* Mobile — same data, no oversized day count column */}
-            <div className="md:hidden divide-y divide-white/[0.06]">
+            <div className="divide-y divide-[color:var(--border-default)] md:hidden">
               {displayRows.length === 0 ? (
                 <p
-                  className="py-8 text-center text-[13px] text-white/40"
+                  className="py-8 text-center text-[13px] text-[color:var(--text-muted)]"
                   style={{ fontFamily: 'var(--zenith-font-body)' }}
                 >
                   {hasActiveFilters ? 'No deals match your filters.' : 'No rows to show.'}
@@ -506,7 +505,7 @@ export default function HitList({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <p
-                        className="min-w-0 flex-1 truncate text-[15px] font-medium text-white"
+                        className="min-w-0 flex-1 truncate text-[15px] font-medium text-[color:var(--text-primary)]"
                         style={{ fontFamily: 'var(--zenith-font-body)' }}
                       >
                         {project.customerName}
@@ -516,7 +515,7 @@ export default function HitList({
                       </span>
                     </div>
                     <p
-                      className="mt-1 text-[12px] text-white/60 truncate"
+                      className="mt-1 truncate text-[12px] text-[color:var(--text-secondary)]"
                       style={{ fontFamily: 'var(--zenith-font-body)' }}
                       title={project.salespersonName}
                     >
@@ -527,7 +526,7 @@ export default function HitList({
                         className="text-[15px] font-medium tabular-nums"
                         style={{
                           fontFamily: 'var(--zenith-font-body)',
-                          color: dealParts.muted ? 'rgba(255,255,255,0.3)' : '#F5A623',
+                          color: dealParts.muted ? 'var(--text-muted)' : 'var(--accent-gold)',
                         }}
                       >
                         {dealParts.text}
@@ -546,11 +545,11 @@ export default function HitList({
                       </span>
                     </div>
                     <p
-                      className="mt-1.5 text-[12px] text-white/50"
+                      className="mt-1.5 text-[12px] text-[color:var(--text-muted)]"
                       style={{ fontFamily: 'var(--zenith-font-body)' }}
                     >
                       Confirmation:{' '}
-                      <span className="text-white/75 tabular-nums">
+                      <span className="tabular-nums text-[color:var(--text-secondary)]">
                         {formatConfirmationShort(project.confirmationDate)}
                       </span>
                     </p>

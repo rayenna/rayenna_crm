@@ -5,12 +5,12 @@ import type { VictoryToastDetail } from '../../hooks/useVictoryToast'
 import { useIsMobile } from '../../hooks/useIsMobile'
 
 const DOTS = [
-  { top: '10%', left: '15%', color: '#F5A623', delay: '0s' },
-  { top: '8%', left: '70%', color: '#00D4B4', delay: '0.1s' },
-  { top: '20%', left: '88%', color: '#8B5CF6', delay: '0.05s' },
-  { top: '12%', left: '40%', color: '#FF6B6B', delay: '0.15s' },
-  { top: '5%', left: '55%', color: '#F5A623', delay: '0.08s' },
-  { top: '18%', left: '25%', color: '#00D4B4', delay: '0.12s' },
+  { top: '10%', left: '15%', color: 'var(--accent-gold)', delay: '0s' },
+  { top: '8%', left: '70%', color: 'var(--accent-teal)', delay: '0.1s' },
+  { top: '20%', left: '88%', color: 'var(--accent-purple)', delay: '0.05s' },
+  { top: '12%', left: '40%', color: 'var(--accent-red)', delay: '0.15s' },
+  { top: '5%', left: '55%', color: 'var(--accent-gold)', delay: '0.08s' },
+  { top: '18%', left: '25%', color: 'var(--accent-teal)', delay: '0.12s' },
 ] as const
 
 function useCountUp(target: number, duration = 1000): number {
@@ -79,11 +79,11 @@ export default function VictoryToast({ toast, onDismiss }: Props) {
 
   const borderColor = toast
     ? isGoldStage(toast.stage)
-      ? 'rgba(245,166,35,0.45)'
-      : 'rgba(0,212,180,0.45)'
-    : 'rgba(255,255,255,0.1)'
+      ? 'var(--accent-gold-border)'
+      : 'var(--accent-teal-border)'
+    : 'var(--border-default)'
 
-  const accent = toast ? (isGoldStage(toast.stage) ? '#F5A623' : '#00D4B4') : '#F5A623'
+  const accent = toast ? (isGoldStage(toast.stage) ? 'var(--accent-gold)' : 'var(--accent-teal)') : 'var(--accent-gold)'
 
   return (
     <div style={containerStyle} aria-live="polite">
@@ -98,9 +98,9 @@ export default function VictoryToast({ toast, onDismiss }: Props) {
             style={{ pointerEvents: 'auto' }}
           >
             <div
-              className="relative overflow-hidden rounded-[14px] border"
+              className="relative overflow-hidden rounded-[14px] border shadow-[var(--shadow-modal)]"
               style={{
-                background: '#0F0F1A',
+                background: 'var(--bg-modal)',
                 borderColor,
                 padding: '18px 18px 0',
               }}
@@ -140,14 +140,17 @@ export default function VictoryToast({ toast, onDismiss }: Props) {
                   >
                     {headlineForStage(toast.stage)}
                   </div>
-                  <div className="mt-0.5 text-xs text-white/45" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                  <div
+                    className="mt-0.5 text-xs text-[color:var(--text-muted)]"
+                    style={{ fontFamily: "'DM Sans', sans-serif" }}
+                  >
                     by {toast.closedBy}
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={onDismiss}
-                  className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/60 transition-colors hover:bg-white/15 hover:text-white"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-input)] text-[color:var(--text-muted)] transition-colors hover:bg-[color:var(--bg-card-hover)] hover:text-[color:var(--text-secondary)]"
                   aria-label="Dismiss"
                 >
                   ×
@@ -155,7 +158,7 @@ export default function VictoryToast({ toast, onDismiss }: Props) {
               </div>
 
               <div className="relative z-[1] mt-3" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-                <div className="text-[15px] font-semibold text-white">{toast.customerName}</div>
+                <div className="text-[15px] font-semibold text-[color:var(--text-primary)]">{toast.customerName}</div>
                 <div
                   className="mt-1 text-2xl font-bold tabular-nums"
                   style={{ fontFamily: "'Syne', sans-serif", color: accent }}
@@ -169,7 +172,7 @@ export default function VictoryToast({ toast, onDismiss }: Props) {
               </div>
 
               <div
-                className="relative z-[1] mt-3.5 -mx-[18px] h-[3px] overflow-hidden rounded-b-[14px] bg-white/[0.07]"
+                className="relative z-[1] mt-3.5 -mx-[18px] h-[3px] overflow-hidden rounded-b-[14px] bg-[color:var(--border-default)]"
               >
                 <div
                   className="zenith-victory-countdown-bar h-full rounded-b-[inherit]"

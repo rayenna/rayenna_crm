@@ -7,6 +7,18 @@ import { useAuth } from '../../contexts/AuthContext'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import { ErrorModal } from '@/components/common/ErrorModal'
+import {
+  stFieldMetaLabelCls,
+  stInputCls,
+  stLabelCls,
+  stMutedCls,
+  stPrimaryBtn,
+  stSectionInner,
+  stSelectCls,
+  stTimestampCls,
+  supportTicketStatusLabel,
+  supportTicketStatusPillClass,
+} from './supportTicketsZenith'
 
 interface TicketDetailDrawerProps {
   ticket: SupportTicket | null
@@ -37,7 +49,6 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh }: TicketDetail
       setNote('')
       setFollowUpDate('')
       onRefresh()
-      // Refresh the ticket data
       queryClient.invalidateQueries({ queryKey: ['support-ticket', ticket!.id] })
     },
     onError: (error: unknown) => {
@@ -85,32 +96,6 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh }: TicketDetail
     setShowCloseConfirm(false)
   }
 
-  const getStatusColor = (status: SupportTicketStatus) => {
-    switch (status) {
-      case SupportTicketStatus.OPEN:
-        return 'bg-indigo-100 text-indigo-800'
-      case SupportTicketStatus.IN_PROGRESS:
-        return 'bg-yellow-100 text-yellow-800'
-      case SupportTicketStatus.CLOSED:
-        return 'bg-gray-100 text-gray-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getStatusLabel = (status: SupportTicketStatus) => {
-    switch (status) {
-      case SupportTicketStatus.OPEN:
-        return 'Open'
-      case SupportTicketStatus.IN_PROGRESS:
-        return 'In Progress'
-      case SupportTicketStatus.CLOSED:
-        return 'Closed'
-      default:
-        return status
-    }
-  }
-
   const getCustomerName = () => {
     if (!ticket?.project?.customer) return 'N/A'
     const customer = ticket.project.customer
@@ -122,186 +107,193 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh }: TicketDetail
 
   return (
     <>
-      {/* Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"
+          className="fixed inset-0 z-40 bg-[color:var(--bg-overlay)] backdrop-blur-sm transition-opacity"
           onClick={onClose}
+          aria-hidden
         />
       )}
 
-      {/* Drawer */}
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-2xl bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`zenith-root fixed top-0 right-0 z-50 h-full w-full max-w-2xl transform border-l border-[color:var(--border-strong)] bg-[color:var(--bg-drawer)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-orange-100/80 bg-gradient-to-r from-orange-50/50 to-white">
-            <div className="border-l-4 border-l-orange-500 pl-4">
-              <h2 className="text-2xl font-bold text-gray-900">Ticket Details</h2>
-              <p className="text-sm text-orange-600/80 mt-0.5">#{ticket.ticketNumber}</p>
+        <div className="flex h-full flex-col">
+          <div className="flex shrink-0 items-center justify-between border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] px-5 py-4 backdrop-blur-xl sm:px-6">
+            <div className="min-w-0 border-l-4 border-l-[color:var(--accent-gold)] pl-3">
+              <h2 className="text-xl font-bold text-[color:var(--text-primary)]">Ticket Details</h2>
+              <p className="mt-0.5 text-sm font-medium text-[color:var(--accent-gold)]">#{ticket.ticketNumber}</p>
             </div>
             <button
+              type="button"
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="shrink-0 rounded-xl p-2 text-[color:var(--text-muted)] transition-colors hover:bg-[color:var(--bg-card-hover)] hover:text-[color:var(--text-primary)]"
               aria-label="Close drawer"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Ticket Info */}
-            <div className="bg-white rounded-xl p-5 space-y-4 border-l-4 border-l-orange-400 border border-orange-100 shadow-sm">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Ticket Info</h3>
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-5 sm:p-6 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[color:var(--border-strong)]">
+            <div className={stSectionInner}>
+              <div className="mb-4 flex items-center gap-2 border-b border-[color:var(--border-default)] pb-3">
+                <svg className="h-5 w-5 text-[color:var(--accent-gold)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
+                  />
+                </svg>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-primary)]">Ticket Info</h3>
               </div>
               <div className="space-y-4">
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide">Status</label>
-                <div className="mt-1">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(ticket.status)}`}>
-                    {getStatusLabel(ticket.status)}
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide">Title</label>
-                <p className="mt-1 text-gray-900 font-medium">{ticket.title}</p>
-              </div>
-
-              {ticket.description && (
                 <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">Description</label>
-                  <p className="mt-1 text-gray-900 whitespace-pre-wrap">{ticket.description}</p>
+                  <p className={stFieldMetaLabelCls}>Status</p>
+                  <div className="mt-1.5">
+                    <span className={supportTicketStatusPillClass(ticket.status)}>
+                      {supportTicketStatusLabel(ticket.status)}
+                    </span>
+                  </div>
                 </div>
-              )}
 
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide">Project</label>
-                <p className="mt-1 text-gray-900">
-                  {ticket.project ? `#${ticket.project.slNo} - ${ticket.project.customer?.customerName || 'Unknown Customer'}` : 'N/A'}
-                </p>
-              </div>
-
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide">Customer</label>
-                <p className="mt-1 text-gray-900">{getCustomerName()}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">Created Date</label>
-                  <p className="mt-1 text-gray-900">{format(new Date(ticket.createdAt), 'MMM dd, yyyy HH:mm')}</p>
+                  <p className={stFieldMetaLabelCls}>Title</p>
+                  <p className="mt-1.5 text-sm font-semibold text-[color:var(--text-primary)]">{ticket.title}</p>
                 </div>
-                {ticket.closedAt && (
+
+                {ticket.description && (
                   <div>
-                    <label className="text-xs text-gray-500 uppercase tracking-wide">Closed Date</label>
-                    <p className="mt-1 text-gray-900">{format(new Date(ticket.closedAt), 'MMM dd, yyyy HH:mm')}</p>
+                    <p className={stFieldMetaLabelCls}>Description</p>
+                    <p className="mt-1.5 whitespace-pre-wrap text-sm text-[color:var(--text-secondary)]">{ticket.description}</p>
                   </div>
                 )}
-              </div>
 
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide">Created By</label>
-                <p className="mt-1 text-sm font-medium text-gray-900">{ticket.createdBy?.name || 'N/A'}</p>
-              </div>
+                <div>
+                  <p className={stFieldMetaLabelCls}>Project</p>
+                  <p className="mt-1.5 text-sm text-[color:var(--text-secondary)]">
+                    {ticket.project
+                      ? `#${ticket.project.slNo} - ${ticket.project.customer?.customerName || 'Unknown Customer'}`
+                      : 'N/A'}
+                  </p>
+                </div>
+
+                <div>
+                  <p className={stFieldMetaLabelCls}>Customer</p>
+                  <p className="mt-1.5 text-sm text-[color:var(--text-secondary)]">{getCustomerName()}</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <p className={stFieldMetaLabelCls}>Created Date</p>
+                    <p className="mt-1.5 text-sm text-[color:var(--text-secondary)]">{format(new Date(ticket.createdAt), 'MMM dd, yyyy HH:mm')}</p>
+                  </div>
+                  {ticket.closedAt && (
+                    <div>
+                      <p className={stFieldMetaLabelCls}>Closed Date</p>
+                      <p className="mt-1.5 text-sm text-[color:var(--text-secondary)]">
+                        {format(new Date(ticket.closedAt), 'MMM dd, yyyy HH:mm')}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <p className={stFieldMetaLabelCls}>Created By</p>
+                  <p className="mt-1.5 text-sm font-medium text-[color:var(--text-primary)]">{ticket.createdBy?.name || 'N/A'}</p>
+                </div>
               </div>
             </div>
 
-            {/* Follow-up Timeline */}
-            <div className="bg-gradient-to-br from-amber-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-amber-400 border border-amber-100/60 shadow-sm">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Follow-up Timeline</h3>
+            <div className="rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-5 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] border-l-4 border-l-[color:var(--accent-gold)]">
+              <div className="mb-4 flex items-center gap-2 border-b border-[color:var(--border-default)] pb-3">
+                <svg className="h-5 w-5 text-[color:var(--accent-gold)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-primary)]">Follow-up Timeline</h3>
               </div>
               {ticket.activities && ticket.activities.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {ticket.activities.map((activity) => (
-                    <div key={activity.id} className="border-l-4 border-amber-400 pl-4 pb-4 bg-white rounded-r-lg py-3 px-3 border border-amber-100">
-                      <div className="flex items-start justify-between mb-2">
+                    <div
+                      key={activity.id}
+                      className="rounded-lg border border-[color:var(--border-default)] border-l-4 border-l-[color:var(--accent-gold)] bg-[color:var(--bg-input)] py-3 pl-3 pr-3"
+                    >
+                      <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{activity.createdBy?.name || 'N/A'}</p>
-                          <p className="text-xs text-gray-500">
-                            {format(new Date(activity.createdAt), 'MMM dd, yyyy HH:mm')}
-                          </p>
+                          <p className="text-sm font-semibold text-[color:var(--text-primary)]">{activity.createdBy?.name || 'N/A'}</p>
+                          <p className={stTimestampCls}>{format(new Date(activity.createdAt), 'MMM dd, yyyy HH:mm')}</p>
                         </div>
                         {activity.followUpDate && (
-                          <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                          <span className="rounded-full bg-[color:var(--accent-gold-muted)] px-2 py-1 text-xs font-semibold text-[color:var(--text-primary)] ring-1 ring-[color:var(--accent-gold-border)]">
                             Follow-up: {format(new Date(activity.followUpDate), 'MMM dd, yyyy')}
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{activity.note}</p>
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--text-secondary)]">{activity.note}</p>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">No follow-ups yet</p>
+                <p className={`${stMutedCls} italic`}>No follow-ups yet</p>
               )}
             </div>
 
-            {/* Add Follow-up Form */}
             {canManageTickets && ticket.status !== SupportTicketStatus.CLOSED && (
-              <div className="bg-white rounded-xl p-5 space-y-4 border-l-4 border-l-sky-400 border border-sky-100 shadow-sm">
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                  <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Add Follow-up</h3>
+              <div className="rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-input)] p-5 ring-1 ring-[color:var(--border-default)] border-l-4 border-l-[color:var(--accent-blue)]">
+                <div className="mb-4 flex items-center gap-2 border-b border-[color:var(--border-default)] pb-3">
+                  <svg className="h-5 w-5 text-[color:var(--accent-blue)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-primary)]">Add Follow-up</h3>
                 </div>
                 <form onSubmit={handleAddFollowUp} className="space-y-4">
                   <div>
-                    <label htmlFor="note" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="note" className={stLabelCls}>
                       Note *
                     </label>
                     <textarea
                       id="note"
                       rows={4}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className={`mt-1.5 ${stInputCls}`}
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
                       required
                     />
                   </div>
                   <div>
-                    <label htmlFor="followUpDate" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="followUpDate" className={stLabelCls}>
                       Follow-up Date (Optional)
                     </label>
                     <input
                       type="date"
                       id="followUpDate"
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className={`mt-1.5 ${stSelectCls}`}
                       value={followUpDate}
                       onChange={(e) => setFollowUpDate(e.target.value)}
                     />
                   </div>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full bg-gradient-to-r from-sky-600 to-primary-600 text-white px-4 py-2 rounded-lg hover:from-sky-700 hover:to-primary-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
-                  >
-                    {isSubmitting ? 'Adding...' : 'Add Follow-up'}
+                  <button type="submit" disabled={isSubmitting} className={`w-full ${stPrimaryBtn}`}>
+                    {isSubmitting ? 'Adding…' : 'Add follow-up'}
                   </button>
                 </form>
               </div>
             )}
           </div>
 
-          {/* Footer Actions */}
           {canManageTickets && ticket.status !== SupportTicketStatus.CLOSED && (
-            <div className="border-t border-orange-100/80 p-6 bg-gradient-to-r from-orange-50/30 to-white">
+            <div className="shrink-0 border-t border-[color:var(--border-default)] bg-[color:var(--bg-surface)] p-5 sm:p-6">
               <button
+                type="button"
                 onClick={handleCloseTicket}
                 disabled={closeTicketMutation.isPending}
-                className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white px-4 py-2 rounded-xl hover:from-amber-600 hover:to-orange-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                className="w-full rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] py-3 text-sm font-semibold text-[color:var(--text-primary)] transition-colors hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {closeTicketMutation.isPending ? 'Closing...' : 'Close Ticket'}
+                {closeTicketMutation.isPending ? 'Closing…' : 'Close ticket'}
               </button>
             </div>
           )}

@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useChartColors } from '../../hooks/useChartColors'
 import { useNavigate } from 'react-router-dom'
 import {
   Bar,
@@ -20,6 +21,15 @@ import {
   type ZenithLifecycleBrandBarRow,
 } from '../../utils/zenithPanelInverterBrandChartData'
 import { formatZenithSystemCapacityKw } from '../../utils/zenithSystemCapacityFormat'
+import {
+  ZENITH_RECHARTS_TOOLTIP_CURSOR,
+  ZENITH_RECHARTS_TOOLTIP_WRAPPER_STYLE,
+  ZENITH_CHART_TOOLTIP_INSIGHT,
+  ZENITH_CHART_TOOLTIP_LINE,
+  ZENITH_CHART_TOOLTIP_PANEL,
+  ZENITH_CHART_TOOLTIP_TITLE,
+  ZENITH_DASHBOARD_ANALYTICS_CARD,
+} from './zenithRechartsTooltipStyles'
 
 type TileParams = { selectedFYs: string[]; selectedQuarters: string[]; selectedMonths: string[] }
 
@@ -40,26 +50,24 @@ function DashboardBrandTooltip({
   const row = payload[0]?.payload
   if (!row) return null
   return (
-    <div
-      className="p-3 sm:p-4 border border-slate-200 rounded-xl shadow-xl max-w-xs"
-      style={{ backgroundColor: '#ffffff', color: '#0f172a', WebkitFontSmoothing: 'antialiased' }}
-    >
-      <p className="font-semibold mb-2 text-slate-900">{row.brandLabel}</p>
-      <p className="text-sm text-slate-700 mb-1">
+    <div className={`${ZENITH_CHART_TOOLTIP_PANEL} max-w-xs`}>
+      <p className={ZENITH_CHART_TOOLTIP_TITLE}>{row.brandLabel}</p>
+      <p className={`${ZENITH_CHART_TOOLTIP_LINE} mb-1`}>
         {row.count} {row.count === 1 ? 'project' : 'projects'}
       </p>
-      <p className="text-xs text-slate-600 mb-1">Order value (sum): {formatInr(row.orderValueSum)}</p>
-      <p className="text-xs text-slate-600 mb-1">
+      <p className={`${ZENITH_CHART_TOOLTIP_LINE} mb-1 text-xs`}>Order value (sum): {formatInr(row.orderValueSum)}</p>
+      <p className={`${ZENITH_CHART_TOOLTIP_LINE} mb-1 text-xs`}>
         System capacity (sum):{' '}
         {formatZenithSystemCapacityKw(
           row.systemCapacitySumKw > 0 ? row.systemCapacitySumKw : null,
           'emDash',
         )}
       </p>
-      <p className="text-sm font-medium text-emerald-700 mb-1">
-        {costTitle}: {formatInr(row.estimatedComponentCost)}
+      <p className="mb-1 text-sm font-extrabold text-[color:var(--accent-gold)]">
+        {costTitle}:{' '}
+        <span className="text-[color:var(--chart-tooltip-fg)]">{formatInr(row.estimatedComponentCost)}</span>
       </p>
-      <p className="text-xs font-medium text-amber-700">Click bar to open Projects →</p>
+      <p className={ZENITH_CHART_TOOLTIP_INSIGHT}>Click bar to open Projects →</p>
     </div>
   )
 }
@@ -79,12 +87,13 @@ function LifecycleBrandBarCard({
   kind: 'panel' | 'inverter'
   onBrandNavigate: (brandLabel: string, kind: 'panel' | 'inverter') => void
 }) {
+  const chartColors = useChartColors()
   return (
-    <div className="h-full flex flex-col min-h-[360px] bg-white shadow-sm rounded-2xl border border-slate-200 p-4 sm:p-5 min-w-0">
-      <div className="flex flex-col gap-2 mb-3 flex-shrink-0">
+    <div className={`${ZENITH_DASHBOARD_ANALYTICS_CARD} h-full min-w-0`}>
+      <div className="mb-3 flex flex-shrink-0 flex-col gap-2">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-indigo-600 shrink-0">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="shrink-0 rounded-lg bg-[color:var(--accent-gold)] p-2 text-[color:var(--text-inverse)]">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -94,38 +103,38 @@ function LifecycleBrandBarCard({
             </svg>
           </div>
           <div className="min-w-0">
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-tight">{title}</h2>
+            <h2 className="text-base font-extrabold leading-tight text-[color:var(--text-primary)] sm:text-lg">{title}</h2>
           </div>
         </div>
       </div>
       <div className="w-full flex flex-col min-w-0 overflow-hidden flex-1" style={{ height: chartHeight }}>
         {rows.length === 0 ? (
-          <div className="flex items-center justify-center w-full h-full rounded-lg border border-dashed border-slate-200 bg-slate-50/80 px-3">
-            <p className="text-center text-sm text-slate-600 max-w-sm">
+          <div className="flex h-full w-full items-center justify-center rounded-xl border border-dashed border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3">
+            <p className="max-w-sm text-center text-sm text-[color:var(--text-muted)]">
               No projects in this period have both panel and inverter brands set in Project Lifecycle.
             </p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%" debounce={300} minWidth={0}>
             <BarChart layout="vertical" data={rows} margin={{ top: 8, right: 12, left: 4, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
               <XAxis
                 type="number"
-                tick={{ fontSize: 10, fill: '#64748b' }}
-                stroke="#94a3b8"
+                tick={{ fontSize: 10, fill: chartColors.axisText }}
+                stroke={chartColors.grid}
                 allowDecimals={false}
               />
               <YAxis
                 type="category"
                 dataKey="brandLabel"
                 width={108}
-                tick={{ fontSize: 9, fill: '#64748b' }}
-                stroke="#94a3b8"
+                tick={{ fontSize: 9, fill: chartColors.axisText }}
+                stroke={chartColors.grid}
               />
               <Tooltip
-                wrapperStyle={{ outline: 'none', zIndex: 100 }}
+                wrapperStyle={ZENITH_RECHARTS_TOOLTIP_WRAPPER_STYLE}
                 content={(props) => <DashboardBrandTooltip {...props} costTitle={costTitle} />}
-                cursor={{ fill: 'rgba(99, 102, 241, 0.06)' }}
+                cursor={ZENITH_RECHARTS_TOOLTIP_CURSOR}
               />
               <Bar
                 dataKey="count"

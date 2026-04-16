@@ -234,21 +234,21 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
       ? `https://www.google.com/maps?q=${latitude},${longitude}`
       : ''
     return (
-      <div className="w-full space-y-2 rounded-xl border border-sky-200/60 bg-gradient-to-br from-sky-50/40 to-white p-4 shadow-sm ring-1 ring-sky-100/40">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-sky-900/80">Location (map coordinates)</p>
+      <div className="w-full space-y-2 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
+        <p className="text-[11px] font-extrabold uppercase tracking-wider text-[color:var(--text-secondary)]">Location (map coordinates)</p>
         {hasCoords ? (
-          <p className="font-mono text-sm tabular-nums text-gray-800">
+          <p className="font-mono text-sm tabular-nums text-[color:var(--text-primary)]">
             Latitude: {latitude}, Longitude: {longitude}
           </p>
         ) : (
-          <p className="text-sm text-gray-500">No coordinates set</p>
+          <p className="text-sm text-[color:var(--text-muted)]">No coordinates set</p>
         )}
         {mapHref ? (
           <a
             href={mapHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 rounded-lg text-sm font-semibold text-primary-700 transition-colors hover:bg-primary-50 hover:text-primary-900"
+            className="inline-flex items-center gap-1 rounded-lg text-sm font-semibold text-[color:var(--accent-blue)] underline-offset-2 transition-colors hover:underline"
           >
             Open in Google Maps
           </a>
@@ -258,12 +258,12 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
   }
 
   const mapInputCls =
-    'w-full rounded-xl border border-gray-200/90 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm ring-1 ring-gray-100/80 transition-all focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/25'
+    'zenith-native-filter-input w-full rounded-xl px-3 py-2 text-sm placeholder:text-[color:var(--text-placeholder)]'
 
   return (
-    <div className="w-full space-y-4 rounded-xl border border-sky-200/50 bg-gradient-to-br from-sky-50/25 to-white/80 p-4 shadow-sm ring-1 ring-sky-100/30">
+    <div className="w-full space-y-4 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <label className="text-[11px] font-bold uppercase tracking-wider text-sky-900/80">
+        <label className="text-[11px] font-extrabold uppercase tracking-wider text-[color:var(--text-secondary)]">
           Location (map coordinates)
         </label>
         <div className="flex gap-2">
@@ -272,8 +272,8 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
             onClick={() => setInputMode('coordinates')}
             className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
               inputMode === 'coordinates'
-                ? 'bg-primary-600 text-white shadow-sm shadow-primary-900/20'
-                : 'border border-gray-200/90 bg-white text-gray-700 shadow-sm hover:bg-gray-50'
+                ? 'bg-[color:var(--accent-gold)] text-[color:var(--text-inverse)] shadow-sm'
+                : 'border border-[color:var(--border-default)] bg-[color:var(--bg-input)] text-[color:var(--text-secondary)] shadow-sm hover:bg-[color:var(--bg-card-hover)]'
             }`}
           >
             Coordinates
@@ -283,8 +283,8 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
             onClick={() => setInputMode('map')}
             className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
               inputMode === 'map'
-                ? 'bg-primary-600 text-white shadow-sm shadow-primary-900/20'
-                : 'border border-gray-200/90 bg-white text-gray-700 shadow-sm hover:bg-gray-50'
+                ? 'bg-[color:var(--accent-gold)] text-[color:var(--text-inverse)] shadow-sm'
+                : 'border border-[color:var(--border-default)] bg-[color:var(--bg-input)] text-[color:var(--text-secondary)] shadow-sm hover:bg-[color:var(--bg-card-hover)]'
             }`}
           >
             Map
@@ -296,7 +296,7 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Latitude</label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">Latitude</label>
               <input
                 type="number"
                 step="any"
@@ -305,10 +305,10 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
                 placeholder="e.g., 12.9716"
                 className={mapInputCls}
               />
-              <p className="mt-1 text-xs text-gray-400">Range: -90 to 90</p>
+              <p className="mt-1 text-xs text-[color:var(--text-muted)]">Range: -90 to 90</p>
             </div>
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Longitude</label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">Longitude</label>
               <input
                 type="number"
                 step="any"
@@ -317,11 +317,11 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
                 placeholder="e.g., 77.5946"
                 className={mapInputCls}
               />
-              <p className="mt-1 text-xs text-gray-400">Range: -180 to 180</p>
+              <p className="mt-1 text-xs text-[color:var(--text-muted)]">Range: -180 to 180</p>
             </div>
           </div>
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Google Maps link</label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">Google Maps link</label>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
                 <input
                   type="url"
@@ -335,16 +335,16 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
                     href={mapLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center whitespace-nowrap rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-xl bg-[color:var(--accent-teal)] px-4 py-2 text-sm font-extrabold text-[color:var(--text-inverse)] shadow-sm transition-colors hover:opacity-95"
                   >
                     Open Map
                   </a>
                 )}
               </div>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="mt-1 text-xs text-[color:var(--text-muted)]">
                 Paste a Google Maps link to auto-fill coordinates and view map
                 {mapLink && isShortLink(mapLink) && (
-                  <span className="block text-amber-600 mt-1 font-medium">
+                  <span className="mt-1 block font-semibold text-[color:var(--accent-gold)]">
                     ⚠️ Short links cannot be parsed automatically. Please use the full URL (right-click on Google Maps → "Copy link address") or enter coordinates manually.
                   </span>
                 )}
@@ -353,7 +353,7 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
         </div>
       ) : (
         <div className="space-y-2">
-          <div className="overflow-hidden rounded-xl border border-gray-200/90 shadow-inner ring-1 ring-gray-100/80" style={{ height: '300px' }}>
+          <div className="overflow-hidden rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-badge)] shadow-inner ring-1 ring-[color:var(--border-default)]" style={{ height: '300px' }}>
             {mapUrl ? (
               <>
                 <iframe
@@ -369,8 +369,8 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
                 ></iframe>
               </>
             ) : (
-              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100/80">
-                <p className="px-4 text-center text-sm text-gray-500">Enter coordinates or paste a Google Maps link to view map</p>
+              <div className="flex h-full w-full items-center justify-center bg-[color:var(--bg-surface)]">
+                <p className="px-4 text-center text-sm text-[color:var(--text-secondary)]">Enter coordinates or paste a Google Maps link to view map</p>
               </div>
             )}
           </div>
@@ -380,7 +380,7 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
                 href={mapLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary-600 hover:text-primary-800 text-sm font-medium underline inline-flex items-center gap-1"
+                className="inline-flex items-center gap-1 text-sm font-semibold text-[color:var(--accent-blue)] underline-offset-2 hover:underline"
               >
                 🗺️ View on Google Maps (opens in new tab)
               </a>
@@ -389,7 +389,7 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Latitude</label>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">Latitude</label>
                 <input
                   type="number"
                   step="any"
@@ -400,7 +400,7 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
                 />
               </div>
               <div>
-                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Longitude</label>
+                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">Longitude</label>
                 <input
                   type="number"
                   step="any"
@@ -412,7 +412,7 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">Google Maps link</label>
+              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">Google Maps link</label>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
               <input
                 type="text"
@@ -434,16 +434,16 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
                     href={mapLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center whitespace-nowrap rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-xl bg-[color:var(--accent-teal)] px-4 py-2 text-sm font-extrabold text-[color:var(--text-inverse)] shadow-sm transition-colors hover:opacity-95"
                   >
                     Open Map
                   </a>
                 )}
               </div>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="mt-1 text-xs text-[color:var(--text-muted)]">
                 Paste a Google Maps link to auto-fill coordinates and view map
                 {mapLink && isShortLink(mapLink) && (
-                  <span className="block text-amber-600 mt-1 font-medium">
+                  <span className="mt-1 block font-semibold text-[color:var(--accent-gold)]">
                     ⚠️ Short links cannot be parsed automatically. Please use the full URL (right-click on Google Maps → "Copy link address") or enter coordinates manually.
                   </span>
                 )}
@@ -454,7 +454,7 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
                     href={mapLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary-600 hover:text-primary-800 text-sm font-medium underline inline-flex items-center gap-1"
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-[color:var(--accent-blue)] underline-offset-2 hover:underline"
                   >
                     🗺️ View on Google Maps (opens in new tab)
                   </a>
@@ -469,14 +469,14 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
         <button
           type="button"
           onClick={getCurrentLocation}
-          className="rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-900/20 transition-all hover:from-indigo-700 hover:to-violet-700 hover:shadow-md"
+          className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-extrabold text-[color:var(--text-primary)] shadow-sm transition-all hover:bg-[color:var(--bg-card-hover)]"
         >
           📍 Use current location
         </button>
         <button
           type="button"
           onClick={handleMapClick}
-          className="rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-amber-900/15 transition-all hover:from-amber-600 hover:to-yellow-600 hover:shadow-md"
+          className="rounded-xl bg-[color:var(--accent-gold)] px-4 py-2 text-sm font-extrabold text-[color:var(--text-inverse)] shadow-md transition-all hover:opacity-95"
         >
           🗺️ Open in Google Maps
         </button>
@@ -487,6 +487,7 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
         onClose={() => setLocationError(null)}
         type={locationError?.type ?? 'error'}
         message={locationError?.message ?? ''}
+        surface="zenith"
         actions={[{ label: 'Dismiss', variant: 'ghost', onClick: () => setLocationError(null) }]}
       />
     </div>

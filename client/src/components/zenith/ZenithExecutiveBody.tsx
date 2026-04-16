@@ -25,6 +25,8 @@ import {
   type ZenithFunnelStage,
 } from './zenithFunnel'
 import type { ZenithDateFilter } from './zenithTypes'
+import { useChartColors } from '../../hooks/useChartColors'
+import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTooltipStyles'
 import KPICard from './KPICard'
 import KPIGauge from './KPIGauge'
 import DealFlowFunnel from './DealFlowFunnel'
@@ -108,20 +110,12 @@ function ExploreInrTooltip({
     item.name != null && String(item.name).trim() !== '' ? String(item.name) : 'Value'
   const cat = label != null && label !== '' ? String(label) : ''
   return (
-    <div
-      style={{
-        background: '#1A1A2E',
-        border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: 8,
-        padding: '8px 12px',
-        fontFamily: 'DM Sans, sans-serif',
-      }}
-    >
-      <div style={{ color: '#fff', fontSize: 13, fontWeight: 500 }}>
+    <div style={ZENITH_CHART_CUSTOM_TOOLTIP_SHELL}>
+      <div style={{ color: 'var(--chart-tooltip-fg)', fontSize: 13, fontWeight: 500 }}>
         {cat ? `${cat} · ` : ''}
         {seriesName}: ₹{Number.isFinite(v) ? v.toLocaleString('en-IN') : '—'}
       </div>
-      <div style={{ color: '#F5A623', fontSize: 11, marginTop: 4 }}>Click to view projects →</div>
+      <div style={{ color: 'var(--accent-gold)', fontSize: 11, marginTop: 4 }}>Click to view projects →</div>
     </div>
   )
 }
@@ -138,19 +132,11 @@ function ExploreCountTooltip({
   if (!active || !payload?.length) return null
   const n = Number(payload[0]?.value)
   return (
-    <div
-      style={{
-        background: '#1A1A2E',
-        border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: 8,
-        padding: '8px 12px',
-        fontFamily: 'DM Sans, sans-serif',
-      }}
-    >
-      <div style={{ color: '#fff', fontSize: 13, fontWeight: 500 }}>
+    <div style={ZENITH_CHART_CUSTOM_TOOLTIP_SHELL}>
+      <div style={{ color: 'var(--chart-tooltip-fg)', fontSize: 13, fontWeight: 500 }}>
         {label}: {Number.isFinite(n) ? n : '—'} projects
       </div>
-      <div style={{ color: '#F5A623', fontSize: 11, marginTop: 4 }}>Click to view projects →</div>
+      <div style={{ color: 'var(--accent-gold)', fontSize: 11, marginTop: 4 }}>Click to view projects →</div>
     </div>
   )
 }
@@ -182,6 +168,7 @@ export default function ZenithExecutiveBody({
   onOpenProjectQuickDrawer: (p: QuickActionProjectRef, section?: ZenithAutoFocusSection | null) => void
 }) {
   const { user } = useAuth()
+  const chartColors = useChartColors()
   const fyRows = (data?.projectValueProfitByFY ?? []) as {
     fy: string
     totalProjectValue: number
@@ -610,13 +597,13 @@ export default function ZenithExecutiveBody({
       <section className="zenith-exec-section space-y-3" aria-label="Analytics charts">
         <header id="zenith-charts" className="scroll-mt-24 px-0.5">
           <h2
-            className="zenith-display text-lg sm:text-xl font-bold text-white tracking-tight"
+            className="zenith-display text-lg sm:text-xl font-bold text-[color:var(--text-primary)] tracking-tight"
             style={{ fontFamily: "'Syne', sans-serif" }}
           >
             Explore the landscape
           </h2>
           <p
-            className="mt-1.5 text-[11px] sm:text-xs text-white/35 italic leading-snug max-w-2xl"
+            className="mt-1.5 text-[11px] sm:text-xs text-[color:var(--text-muted)] italic leading-snug max-w-2xl"
             style={{ fontFamily: 'DM Sans, sans-serif' }}
           >
             These charts are live: click any bar, point, or slice to open matching projects in the quick
@@ -637,15 +624,15 @@ export default function ZenithExecutiveBody({
                       data={projectsByStatus}
                       margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                      <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                      <XAxis type="number" tick={{ fill: chartColors.axisText, fontSize: 10 }} />
                       <YAxis
                         type="category"
                         dataKey="statusLabel"
                         width={118}
-                        tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }}
+                        tick={{ fill: chartColors.axisText, fontSize: 10 }}
                       />
-                      <Tooltip content={ExploreCountTooltip} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                      <Tooltip content={ExploreCountTooltip} cursor={{ fill: chartColors.cursorBand }} />
                       <Bar
                         dataKey="count"
                         radius={[0, 6, 6, 0]}
@@ -700,13 +687,13 @@ export default function ZenithExecutiveBody({
                           data={leadMerge}
                           margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
                         >
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                          <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
-                          <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 9 }} />
+                          <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                          <XAxis type="number" tick={{ fill: chartColors.axisText, fontSize: 10 }} />
+                          <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 9, fill: chartColors.axisText }} />
                           <Tooltip
                             shared={false}
                             content={ExploreInrTooltip}
-                            cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                            cursor={{ fill: chartColors.cursorBand }}
                           />
                           <Legend />
                           <Bar
@@ -722,7 +709,7 @@ export default function ZenithExecutiveBody({
                             {leadMerge.map((_, i) => (
                               <Cell
                                 key={`r-${i}`}
-                                fill="#f5a623"
+                                fill="var(--accent-gold)"
                                 style={{ transition: 'filter 0.15s' }}
                                 onMouseEnter={(e) => {
                                   e.currentTarget.style.filter = 'brightness(1.3)'
@@ -746,7 +733,7 @@ export default function ZenithExecutiveBody({
                             {leadMerge.map((_, i) => (
                               <Cell
                                 key={`p-${i}`}
-                                fill="#00d4b4"
+                                fill="var(--accent-teal)"
                                 style={{ transition: 'filter 0.15s' }}
                                 onMouseEnter={(e) => {
                                   e.currentTarget.style.filter = 'brightness(1.3)'
@@ -774,13 +761,13 @@ export default function ZenithExecutiveBody({
                           data={salesMerge}
                           margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
                         >
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                          <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
-                          <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 9 }} />
+                          <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                          <XAxis type="number" tick={{ fill: chartColors.axisText, fontSize: 10 }} />
+                          <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 9, fill: chartColors.axisText }} />
                           <Tooltip
                             shared={false}
                             content={ExploreInrTooltip}
-                            cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                            cursor={{ fill: chartColors.cursorBand }}
                           />
                           <Legend />
                           <Bar
@@ -796,7 +783,7 @@ export default function ZenithExecutiveBody({
                             {salesMerge.map((_, i) => (
                               <Cell
                                 key={`sr-${i}`}
-                                fill="#f5a623"
+                                fill="var(--accent-gold)"
                                 style={{ transition: 'filter 0.15s' }}
                                 onMouseEnter={(e) => {
                                   e.currentTarget.style.filter = 'brightness(1.3)'
@@ -896,10 +883,10 @@ export default function ZenithExecutiveBody({
                       data={loans}
                       margin={{ top: 8, right: 16, left: 8, bottom: 8 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                      <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
-                      <YAxis dataKey="bankLabel" type="category" width={100} tick={{ fontSize: 9 }} />
-                      <Tooltip content={ExploreCountTooltip} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                      <XAxis type="number" tick={{ fill: chartColors.axisText, fontSize: 10 }} />
+                      <YAxis dataKey="bankLabel" type="category" width={100} tick={{ fontSize: 9, fill: chartColors.axisText }} />
+                      <Tooltip content={ExploreCountTooltip} cursor={{ fill: chartColors.cursorBand }} />
                       <Bar
                         dataKey="count"
                         radius={[0, 4, 4, 0]}

@@ -191,14 +191,36 @@ const SECTION_HEADING_GRADIENTS = [
   'from-violet-600 to-fuchsia-500',
 ]
 
-function renderBlock(b: Block, idx: number) {
+// Dark Zenith background needs brighter ramps (Tailwind indigo/primary can read too dim).
+const SECTION_HEADING_GRADIENTS_ZENITH = [
+  'from-[color:var(--accent-gold)] to-[color:var(--accent-teal)]',
+  'from-[color:var(--accent-teal)] to-[color:var(--accent-blue)]',
+  'from-[color:var(--accent-amber)] to-[color:var(--accent-purple)]',
+  'from-[color:var(--accent-teal)] to-[color:var(--accent-amber)]',
+  'from-[color:var(--accent-red)] to-[color:var(--accent-blue)]',
+  'from-[color:var(--accent-purple)] to-[color:var(--accent-teal)]',
+]
+
+function renderBlock(b: Block, idx: number, zenith: boolean) {
   if (b.type === 'title') {
     return (
       <div key={idx} className="space-y-2">
-        <h3 className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-primary-700 to-primary-600 bg-clip-text text-transparent">
+        <h3
+          className={
+            zenith
+              ? 'zenith-display bg-gradient-to-r from-[color:var(--accent-gold)] via-[color:var(--accent-amber)] to-[color:var(--accent-teal)] bg-clip-text text-lg font-extrabold tracking-tight text-transparent sm:text-xl'
+              : 'text-lg sm:text-xl font-extrabold bg-gradient-to-r from-primary-700 to-primary-600 bg-clip-text text-transparent'
+          }
+        >
           {b.text}
         </h3>
-        <div className="h-1 w-24 rounded-full bg-gradient-to-r from-primary-600 to-yellow-500" />
+        <div
+          className={
+            zenith
+              ? 'h-1 w-24 rounded-full bg-gradient-to-r from-[color:var(--accent-gold)] to-[color:var(--accent-teal)]'
+              : 'h-1 w-24 rounded-full bg-gradient-to-r from-primary-600 to-yellow-500'
+          }
+        />
       </div>
     )
   }
@@ -207,14 +229,19 @@ function renderBlock(b: Block, idx: number) {
     const isNormalWeight = NORMAL_WEIGHT_SUBTITLES.has(b.text)
     const isBold = !isNormalWeight && (!inContentSection || CONTENT_SECTION_HEADINGS.has(b.text))
     return (
-      <h4 key={idx} className={`text-base sm:text-lg ${isBold ? 'font-bold' : 'font-normal'} text-gray-900`}>
+      <h4
+        key={idx}
+        className={`text-base sm:text-lg ${isBold ? 'font-bold' : 'font-normal'} ${
+          zenith ? (isBold ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-secondary)]') : 'text-gray-900'
+        }`}
+      >
         {b.text}
       </h4>
     )
   }
   if (b.type === 'label') {
     return (
-      <p key={idx} className="text-sm sm:text-base text-gray-700 font-normal">
+      <p key={idx} className={`text-sm font-normal sm:text-base ${zenith ? 'text-[color:var(--accent-teal)]' : 'text-gray-700'}`}>
         {b.text}
       </p>
     )
@@ -224,11 +251,19 @@ function renderBlock(b: Block, idx: number) {
       <ul key={idx} className="space-y-2">
         {b.items.map((it, j) => (
           <li key={j} className="flex gap-3">
-            <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-primary-600 to-yellow-500 text-white text-xs shadow">
+            <span
+              className={
+                zenith
+                  ? 'mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[color:var(--accent-gold)] to-[color:var(--accent-teal)] text-[0.65rem] font-bold text-[color:var(--text-inverse)] shadow-md'
+                  : 'mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-primary-600 to-yellow-500 text-white text-xs shadow'
+              }
+            >
               ✓
             </span>
-            <span 
-              className="text-sm sm:text-base text-gray-700 leading-relaxed break-words whitespace-normal max-w-full"
+            <span
+              className={`max-w-full break-words text-sm leading-relaxed whitespace-normal sm:text-base ${
+                zenith ? 'text-[color:var(--text-secondary)]' : 'text-gray-700'
+              }`}
               style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
             >
               {it}
@@ -239,9 +274,11 @@ function renderBlock(b: Block, idx: number) {
     )
   }
   return (
-    <p 
-      key={idx} 
-      className="text-sm sm:text-base text-gray-700 leading-relaxed break-words whitespace-normal max-w-full"
+    <p
+      key={idx}
+      className={`max-w-full break-words text-sm leading-relaxed whitespace-normal sm:text-base ${
+        zenith ? 'text-[color:var(--text-secondary)]' : 'text-gray-700'
+      }`}
       style={{ wordBreak: 'break-word', overflowWrap: 'break-word', hyphens: 'auto' }}
     >
       {b.text}
@@ -252,91 +289,147 @@ function renderBlock(b: Block, idx: number) {
 interface AboutSectionProps {
   /** When true, skip the outer card/header (for use inside PageCard) */
   embedded?: boolean
+  /** Dark Zenith-style presentation (used by /about full-bleed page). */
+  variant?: 'default' | 'zenith'
 }
 
-const AboutSection = ({ embedded }: AboutSectionProps) => {
+const cardShell = (zenith: boolean) =>
+  zenith
+    ? 'w-full rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-5 shadow-[var(--shadow-card)] sm:p-6'
+    : 'w-full rounded-2xl border border-primary-100 bg-white/70 p-5 shadow-lg'
+
+const AboutSection = ({ embedded, variant = 'default' }: AboutSectionProps) => {
+  const isZenith = variant === 'zenith'
+
   const content = (
         <div className={embedded ? '' : 'px-4 sm:px-6 md:px-8 py-6 sm:py-8'}>
           {/* Main heading: full width end-to-end */}
           {mainTitleBlock && (
-            <div className="w-full max-w-full mb-6 sm:mb-8">
+            <div className="mb-6 w-full max-w-full sm:mb-8">
               <div className="space-y-2">
-                <h3 className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-primary-700 to-primary-600 bg-clip-text text-transparent text-center sm:text-left">
+                <h3
+                  className={
+                    isZenith
+                      ? 'zenith-display bg-gradient-to-r from-[color:var(--accent-gold)] via-[color:var(--accent-amber)] to-[color:var(--accent-teal)] bg-clip-text text-center text-lg font-extrabold tracking-tight text-transparent sm:text-left sm:text-xl'
+                      : 'text-lg sm:text-xl font-extrabold bg-gradient-to-r from-primary-700 to-primary-600 bg-clip-text text-transparent text-center sm:text-left'
+                  }
+                >
                   {mainTitleBlock.text}
                 </h3>
-                <div className="h-1 w-24 rounded-full bg-gradient-to-r from-primary-600 to-yellow-500 mx-auto sm:mx-0" />
+                <div
+                  className={
+                    isZenith
+                      ? 'mx-auto h-1 w-24 rounded-full bg-gradient-to-r from-[color:var(--accent-gold)] to-[color:var(--accent-teal)] sm:mx-0'
+                      : 'h-1 w-24 rounded-full bg-gradient-to-r from-primary-600 to-yellow-500 mx-auto sm:mx-0'
+                  }
+                />
               </div>
             </div>
           )}
 
           {/* All cards stacked with consistent gap-6 */}
-          <div className="flex flex-col gap-6 w-full max-w-full">
+          <div className="flex w-full max-w-full flex-col gap-6">
             {/* Quick Summary */}
-            <div className="p-5 rounded-2xl border border-primary-100 bg-white/70 shadow-lg w-full">
-              <h4 className="text-base sm:text-lg font-bold bg-gradient-to-r from-indigo-600 to-cyan-600 bg-clip-text text-transparent mb-3">
+            <div className={cardShell(isZenith)}>
+              <h4
+                className={
+                  isZenith
+                    ? 'zenith-display mb-3 bg-gradient-to-r from-[color:var(--accent-teal)] to-[color:var(--accent-blue)] bg-clip-text text-base font-bold tracking-tight text-transparent sm:text-lg'
+                    : 'mb-3 text-base sm:text-lg font-bold bg-gradient-to-r from-indigo-600 to-cyan-600 bg-clip-text text-transparent'
+                }
+              >
                 Quick Summary
               </h4>
-              <div className="space-y-2 text-sm sm:text-base text-gray-700">
+              <div
+                className={`space-y-2 text-sm sm:text-base ${isZenith ? 'text-[color:var(--text-secondary)]' : 'text-gray-700'}`}
+              >
                 <p>
                   This CRM platform is a custom-built internal system for Rayenna Energy Private Limited, with original workflows, architecture, and UI/UX.
                 </p>
                 <p>
                   The software and its components are protected by applicable intellectual property and software protection laws.
                 </p>
-                <p className="font-semibold text-gray-800">
+                <p className={isZenith ? 'font-semibold text-[color:var(--accent-gold)]' : 'font-semibold text-gray-800'}>
                   Unauthorized use, distribution, or disclosure is prohibited.
                 </p>
               </div>
             </div>
 
             {/* Title Credits */}
-            <div className="p-5 rounded-2xl border border-primary-100 bg-white/70 shadow-lg w-full">
-              <h4 className="text-base sm:text-lg font-bold bg-gradient-to-r from-primary-600 to-amber-500 bg-clip-text text-transparent mb-4">
+            <div className={cardShell(isZenith)}>
+              <h4
+                className={
+                  isZenith
+                    ? 'zenith-display mb-4 bg-gradient-to-r from-[color:var(--accent-gold)] to-[color:var(--accent-amber)] bg-clip-text text-base font-bold tracking-tight text-transparent sm:text-lg'
+                    : 'mb-4 text-base sm:text-lg font-bold bg-gradient-to-r from-primary-600 to-amber-500 bg-clip-text text-transparent'
+                }
+              >
                 Title Credits
               </h4>
-              <div className="space-y-4 text-sm sm:text-base text-gray-700">
-                {titleCreditsBlocks.map((b, i) => renderBlock(b, (mainTitleBlock ? 2 : 1) + i))}
+              <div
+                className={`space-y-4 text-sm sm:text-base ${isZenith ? 'text-[color:var(--text-secondary)]' : 'text-gray-700'}`}
+              >
+                {titleCreditsBlocks.map((b, i) => renderBlock(b, (mainTitleBlock ? 2 : 1) + i, isZenith))}
               </div>
             </div>
 
             {/* Rayenna Identity */}
-            <div className="p-5 rounded-2xl border border-primary-100 bg-gradient-to-br from-white to-primary-50/40 shadow-lg w-full">
-              <h4 className="text-base sm:text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-3">
+            <div
+              className={
+                isZenith ? cardShell(true) : `${cardShell(false)} bg-gradient-to-br from-white to-primary-50/40`
+              }
+            >
+              <h4
+                className={
+                  isZenith
+                    ? 'zenith-display mb-3 text-base font-bold tracking-tight text-transparent sm:text-lg bg-gradient-to-r from-[#c4b5fd] to-[#f472b6] bg-clip-text'
+                    : 'mb-3 text-base sm:text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent'
+                }
+              >
                 Rayenna Identity
               </h4>
-              <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
+              <p className={`text-sm leading-relaxed sm:text-base ${isZenith ? 'text-[color:var(--text-secondary)]' : 'text-gray-700'}`}>
                 Rayenna Energy is a solar EPC focused on quality execution, compliant subsidy handling, and reliable operations. This platform supports end-to-end delivery across Sales, Operations, and Finance.
               </p>
             </div>
 
             {/* Content section cards: Development Background through Confidentiality Notice */}
             {contentSections.map((section, sectionIdx) => {
-                const gradient = SECTION_HEADING_GRADIENTS[sectionIdx % SECTION_HEADING_GRADIENTS.length]
+                const gradient = isZenith
+                  ? SECTION_HEADING_GRADIENTS_ZENITH[sectionIdx % SECTION_HEADING_GRADIENTS_ZENITH.length]
+                  : SECTION_HEADING_GRADIENTS[sectionIdx % SECTION_HEADING_GRADIENTS.length]
                 const contentBlocks = section.blocks.slice(1) // Skip heading (used as card title)
                 return (
-                  <div
-                    key={section.heading}
-                    className="p-5 rounded-2xl border border-primary-100 bg-white/70 shadow-lg w-full"
-                  >
-                    <h4 className={`text-base sm:text-lg font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent mb-4`}>
+                  <div key={section.heading} className={cardShell(isZenith)}>
+                    <h4
+                      className={`mb-4 text-base font-bold sm:text-lg ${
+                        isZenith
+                          ? `zenith-display tracking-tight text-transparent bg-gradient-to-r ${gradient} bg-clip-text`
+                          : `bg-gradient-to-r ${gradient} bg-clip-text text-transparent`
+                      }`}
+                    >
                       {section.heading}
                     </h4>
-                    <div className="space-y-4 text-sm sm:text-base text-gray-700">
-                      {contentBlocks.map((b, i) => renderBlock(b, section.startIdx + 1 + i))}
+                    <div
+                      className={`space-y-4 text-sm sm:text-base ${isZenith ? 'text-[color:var(--text-secondary)]' : 'text-gray-700'}`}
+                    >
+                      {contentBlocks.map((b, i) => renderBlock(b, section.startIdx + 1 + i, isZenith))}
                     </div>
                   </div>
                 )
               })}
           </div>
 
-          <div className="mt-8 pt-8 border-t border-primary-100">
+          <div className={`mt-8 border-t pt-8 ${isZenith ? 'border-[color:var(--border-default)]' : 'border-primary-100'}`}>
             <div className="flex flex-col items-center">
               <img
                 src="/CRM_Logo.jpg"
                 alt="Rayenna CRM"
-                className="w-full max-w-[260px] sm:max-w-[320px] h-auto object-contain drop-shadow-2xl"
+                className={`h-auto w-full max-w-[260px] object-contain sm:max-w-[320px] drop-shadow-2xl`}
               />
-              <p className="mt-3 text-xs sm:text-sm text-gray-500 text-center">
+              <p
+                className={`mt-3 text-center text-xs sm:text-sm ${isZenith ? 'text-[color:var(--text-muted)]' : 'text-gray-500'}`}
+              >
                 ©2026 – Present. Rayenna Energy Private Limited<br />
                 www.rayenna.energy | sales@rayenna.energy
               </p>
@@ -363,7 +456,7 @@ const AboutSection = ({ embedded }: AboutSectionProps) => {
               About
             </h2>
           </div>
-          <p className="mt-2 text-white/90 text-sm sm:text-base">
+          <p className="mt-2 text-white text-sm sm:text-base opacity-90">
             Credits, copyright, intellectual property, and confidentiality notice
           </p>
         </div>

@@ -69,14 +69,14 @@ type FinanceOverdueRow = {
   salespersonName?: string | null
 }
 
-/** Installation pulse: customer name colour by project stage (confirmed vs under installation). */
-const INSTALL_PULSE_NAME_CONFIRMED = '#7dd3fc'
-const INSTALL_PULSE_NAME_UNDER_INSTALLATION = '#f5a623'
+/** Installation pulse: customer name colour by project stage (theme-aware — avoids pastel sky on light cards). */
+const INSTALL_PULSE_NAME_CONFIRMED = 'var(--accent-blue)'
+const INSTALL_PULSE_NAME_UNDER_INSTALLATION = 'var(--accent-gold)'
 
 function installPulseProjectNameColor(projectStatus: string | undefined): string {
   if (projectStatus === ProjectStatus.CONFIRMED) return INSTALL_PULSE_NAME_CONFIRMED
   if (projectStatus === ProjectStatus.UNDER_INSTALLATION) return INSTALL_PULSE_NAME_UNDER_INSTALLATION
-  return 'rgba(255,255,255,0.9)'
+  return 'var(--text-primary)'
 }
 
 const INSTALL_PULSE_STAGE_LABEL: Partial<Record<ProjectStatus, string>> = {
@@ -90,15 +90,15 @@ function installPulseStageLabel(projectStatus: string | undefined): string {
   return INSTALL_PULSE_STAGE_LABEL[ps] ?? projectStatus
 }
 
-/** Payment radar table: project name colour by Prisma payment status (overdue list is PENDING / PARTIAL only). */
-const PAYMENT_RADAR_NAME_PENDING = '#7dd3fc'
-const PAYMENT_RADAR_NAME_PARTIAL = '#f5a623'
+/** Payment radar: name colours follow theme accents (pending = blue, partial = gold). */
+const PAYMENT_RADAR_NAME_PENDING = 'var(--accent-blue)'
+const PAYMENT_RADAR_NAME_PARTIAL = 'var(--accent-gold)'
 
 function paymentRadarProjectNameColor(paymentStatus: string | undefined): string {
   const s = String(paymentStatus ?? 'PENDING').toUpperCase()
   if (s === 'PARTIAL') return PAYMENT_RADAR_NAME_PARTIAL
   if (s === 'PENDING') return PAYMENT_RADAR_NAME_PENDING
-  return 'rgba(255,255,255,0.9)'
+  return 'var(--text-primary)'
 }
 
 type AgeingBucket = {
@@ -181,11 +181,16 @@ function installTimelineOverdue(row: InstallRow, progressPct: number): boolean {
   return today.getTime() > exp.getTime()
 }
 
+/** Row tint / dot / "Overdue only" — same rule as the Progress column (not raw API `overdue` alone). */
+function installPulseRowOverdue(row: InstallRow): boolean {
+  return installTimelineOverdue(row, computeInstallProgress(row))
+}
+
 function getProgressColor(pct: number, isOverdue: boolean): string {
-  if (isOverdue) return '#FF4757'
-  if (pct >= 80) return '#F5A623'
-  if (pct >= 40) return '#00D4B4'
-  return '#3B8BFF'
+  if (isOverdue) return 'var(--accent-red)'
+  if (pct >= 80) return 'var(--accent-gold)'
+  if (pct >= 40) return 'var(--accent-teal)'
+  return 'var(--accent-blue)'
 }
 
 function barWidthPercent(_row: InstallRow, progressPct: number, overdue: boolean): number {
@@ -330,13 +335,13 @@ function SalesPipelineBlock({
 
   const shellClass = embedded
     ? 'overflow-hidden max-lg:overflow-visible lg:overflow-hidden'
-    : `zenith-pipeline-block-shell rounded-2xl border border-white/[0.08] bg-white/[0.03] ${accentClass} pl-4`
+    : `zenith-pipeline-block-shell rounded-2xl ${accentClass} pl-4`
 
   return (
     <section className={shellClass}>
       <div className="p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          {!embedded ? <h3 className="zenith-display text-base font-bold text-white">{title}</h3> : null}
+          {!embedded ? <h3 className="zenith-display text-base font-bold text-[color:var(--text-primary)]">{title}</h3> : null}
           <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
             <input
               value={customerFilter}
@@ -372,15 +377,15 @@ function SalesPipelineBlock({
             </select>
           </div>
           {data.followUpNeeded > 0 && (
-            <span className="inline-flex items-center rounded-full bg-red-500/20 text-red-200 text-xs font-bold px-2.5 py-1 border border-red-400/30">
+            <span className="inline-flex items-center rounded-full bg-red-500/20 text-[color:var(--accent-red)] text-xs font-bold px-2.5 py-1 border border-red-400/30">
               Follow-up needed: {data.followUpNeeded}
             </span>
           )}
         </div>
         <div className="zenith-scroll-x overflow-x-auto -mx-1 max-lg:pb-1">
-          <table className="w-full text-left text-xs sm:text-sm min-w-[760px]">
+          <table className="zenith-table--data w-full text-left text-xs sm:text-sm min-w-[760px]">
             <thead>
-              <tr className="text-white/45 border-b border-white/10">
+              <tr className="border-b border-[color:var(--border-default)]">
                 <th
                   className="py-2 pr-3 font-semibold cursor-pointer select-none"
                   onClick={() => handleSort('customerName')}
@@ -417,7 +422,6 @@ function SalesPipelineBlock({
                     width: '90px',
                     textAlign: 'center',
                     fontSize: '12px',
-                    color: 'rgba(255,255,255,0.4)',
                     fontWeight: 500,
                     padding: '10px 12px',
                     cursor: 'pointer',
@@ -434,7 +438,7 @@ function SalesPipelineBlock({
             <tbody>
               {data.rows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-white/40">
+                  <td colSpan={7} className="py-8 text-center text-[color:var(--text-muted)]">
                     No pipeline rows for this period.
                   </td>
                 </tr>
@@ -444,9 +448,9 @@ function SalesPipelineBlock({
                   const sp = (r.salespersonName ?? '').trim() || 'Unassigned'
                   const dealParts = formatZenithDealInrParts(r.dealValue)
                   return (
-                    <tr key={r.projectId} className="group border-b border-white/[0.06] hover:bg-white/[0.04]">
+                    <tr key={r.projectId} className="group border-b border-[color:var(--border-default)] hover:bg-[color:var(--bg-table-hover)]">
                       <td className="py-2.5 pr-3">
-                        <span className="text-white font-medium">{r.customerName}</span>
+                        <span className="text-[color:var(--text-primary)] font-medium">{r.customerName}</span>
                       </td>
                       <td className="py-2.5 pr-3">
                         <span
@@ -456,12 +460,12 @@ function SalesPipelineBlock({
                           {r.stage}
                         </span>
                       </td>
-                      <td className="py-2.5 pr-3 text-white/80 truncate max-w-[10rem]" title={sp}>
+                      <td className="py-2.5 pr-3 text-[color:var(--text-secondary)] truncate max-w-[10rem]" title={sp}>
                         {sp}
                       </td>
                       <td
                         className={`py-2.5 pr-3 text-right tabular-nums font-medium ${
-                          dealParts.muted ? 'text-white/30' : 'text-[#F5A623]'
+                          dealParts.muted ? 'text-[color:var(--text-muted)]' : 'text-[color:var(--accent-gold)]'
                         }`}
                         style={{ fontFamily: 'var(--zenith-font-body)' }}
                       >
@@ -505,28 +509,28 @@ const AGEING_STYLES: Record<
   { labelColor: string; bar: string; borderActive: string; bgActive: string }
 > = {
   '0-30': {
-    labelColor: 'rgba(255,255,255,0.4)',
-    bar: 'rgba(255,255,255,0.4)',
-    borderActive: 'rgba(255,255,255,0.4)',
-    bgActive: 'rgba(255,255,255,0.08)',
+    labelColor: 'var(--text-secondary)',
+    bar: 'var(--text-muted)',
+    borderActive: 'var(--border-strong)',
+    bgActive: 'var(--bg-card-hover)',
   },
   '31-60': {
-    labelColor: '#F5A623',
-    bar: '#F5A623',
-    borderActive: 'rgba(245,166,35,0.55)',
-    bgActive: 'rgba(245,166,35,0.08)',
+    labelColor: 'var(--accent-gold)',
+    bar: 'var(--accent-gold)',
+    borderActive: 'var(--accent-gold-border)',
+    bgActive: 'var(--accent-gold-muted)',
   },
   '61-90': {
-    labelColor: '#FF6B6B',
-    bar: '#FF6B6B',
-    borderActive: 'rgba(255,107,107,0.55)',
-    bgActive: 'rgba(255,107,107,0.08)',
+    labelColor: 'var(--accent-red)',
+    bar: 'var(--accent-red)',
+    borderActive: 'var(--accent-red-border)',
+    bgActive: 'var(--accent-red-muted)',
   },
   '90+': {
-    labelColor: '#FF4757',
-    bar: '#FF4757',
-    borderActive: 'rgba(255,71,87,0.55)',
-    bgActive: 'rgba(255,71,87,0.08)',
+    labelColor: 'var(--accent-red)',
+    bar: 'var(--accent-red)',
+    borderActive: 'var(--accent-red-border)',
+    bgActive: 'var(--accent-red-muted)',
   },
 }
 
@@ -635,9 +639,9 @@ function FinanceRadarBlock({
   }
 
   const pieData = [
-    { name: 'Collected', value: data.donut.collected, fill: '#00d4b4' },
-    { name: 'Outstanding', value: data.donut.outstanding, fill: '#f5a623' },
-    { name: 'Subsidy pending', value: data.donut.subsidyPending, fill: '#a78bfa' },
+    { name: 'Collected', value: data.donut.collected, fill: 'var(--accent-teal)' },
+    { name: 'Outstanding', value: data.donut.outstanding, fill: 'var(--accent-gold)' },
+    { name: 'Subsidy pending', value: data.donut.subsidyPending, fill: 'var(--accent-purple)' },
   ].filter((d) => d.value > 0)
 
   const latestM = monthlyCollections.length >= 2 ? monthlyCollections[monthlyCollections.length - 1] : null
@@ -647,30 +651,30 @@ function FinanceRadarBlock({
 
   const shellClass = embedded
     ? 'overflow-hidden max-lg:overflow-visible lg:overflow-hidden'
-    : `zenith-finance-radar-section rounded-2xl border border-white/[0.08] bg-white/[0.03] overflow-hidden max-lg:overflow-visible lg:overflow-hidden ${accentClass} pl-4`
+    : `zenith-finance-radar-section rounded-2xl overflow-hidden max-lg:overflow-visible lg:overflow-hidden ${accentClass} pl-4`
 
   return (
     <section className={shellClass}>
       <div className="p-4 sm:p-5">
         {!embedded ? (
-          <h3 className="zenith-display text-base font-bold text-white mb-4">Payment radar</h3>
+          <h3 className="zenith-display text-base font-bold text-[color:var(--text-primary)] mb-4">Payment radar</h3>
         ) : null}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-          <div className="rounded-xl bg-black/25 border border-white/10 px-4 py-3">
-            <p className="text-[10px] uppercase tracking-wider text-white/45 font-bold">Total outstanding</p>
-            <p className="text-lg font-extrabold text-[#f5a623] tabular-nums mt-1">
+          <div className="zenith-stat-well px-4 py-3">
+            <p className="text-[10px] uppercase tracking-wider text-[color:var(--text-muted)] font-bold">Total outstanding</p>
+            <p className="text-lg font-extrabold text-[color:var(--accent-gold)] tabular-nums mt-1">
               ₹{Math.round(data.totalOutstanding).toLocaleString('en-IN')}
             </p>
           </div>
-          <div className="rounded-xl bg-black/25 border border-white/10 px-4 py-3">
-            <p className="text-[10px] uppercase tracking-wider text-white/45 font-bold">Avg collection days</p>
-            <p className="text-lg font-extrabold text-white tabular-nums mt-1">
+          <div className="zenith-stat-well px-4 py-3">
+            <p className="text-[10px] uppercase tracking-wider text-[color:var(--text-muted)] font-bold">Avg collection days</p>
+            <p className="text-lg font-extrabold text-[color:var(--text-primary)] tabular-nums mt-1">
               {data.avgCollectionDays != null ? `${data.avgCollectionDays}d` : '—'}
             </p>
           </div>
-          <div className="rounded-xl bg-black/25 border border-white/10 px-4 py-3">
-            <p className="text-[10px] uppercase tracking-wider text-white/45 font-bold">Subsidy pending</p>
-            <p className="text-lg font-extrabold text-white tabular-nums mt-1">{data.subsidyPendingCount}</p>
+          <div className="zenith-stat-well px-4 py-3">
+            <p className="text-[10px] uppercase tracking-wider text-[color:var(--text-muted)] font-bold">Subsidy pending</p>
+            <p className="text-lg font-extrabold text-[color:var(--text-primary)] tabular-nums mt-1">{data.subsidyPendingCount}</p>
           </div>
         </div>
 
@@ -679,7 +683,7 @@ function FinanceRadarBlock({
             <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
               <p
                 className="text-[10px] uppercase tracking-widest font-bold m-0"
-                style={{ color: 'rgba(255,255,255,0.3)' }}
+                style={{ color: 'var(--text-muted)' }}
               >
                 Payment ageing
               </p>
@@ -687,7 +691,7 @@ function FinanceRadarBlock({
                 <button
                   type="button"
                   onClick={() => setAgeFilter(null)}
-                  className="text-[11px] font-semibold shrink-0 rounded-lg border border-white/15 bg-white/[0.04] px-2.5 py-1 text-white/55 hover:text-white hover:border-[#00d4b4]/40 hover:bg-[#00d4b4]/10 transition-colors"
+                  className="text-[11px] font-semibold shrink-0 rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-2.5 py-1 text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:border-[color:var(--accent-teal-border)] hover:bg-[color:var(--accent-teal-muted)] transition-colors"
                 >
                   Reset ageing filter
                 </button>
@@ -705,8 +709,8 @@ function FinanceRadarBlock({
                     onClick={() => setAgeFilter(active ? null : b.id)}
                     className="text-left rounded-[10px] px-3.5 py-3 transition-all duration-200 cursor-pointer hover:-translate-y-px"
                     style={{
-                      background: active ? st.bgActive : 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${active ? st.borderActive : 'rgba(255,255,255,0.07)'}`,
+                      background: active ? st.bgActive : 'var(--bg-input)',
+                      border: `1px solid ${active ? st.borderActive : 'var(--border-default)'}`,
                     }}
                   >
                     <div className="text-[11px] font-medium" style={{ color: st.labelColor }}>
@@ -715,7 +719,7 @@ function FinanceRadarBlock({
                     <div className="text-[22px] font-bold tabular-nums mt-0.5" style={{ color: st.labelColor }}>
                       {b.count}
                     </div>
-                    <div className="text-[12px] tabular-nums mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                    <div className="text-[12px] tabular-nums mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                       ₹{Math.round(b.amount).toLocaleString('en-IN')}
                     </div>
                     {active ? (
@@ -725,7 +729,7 @@ function FinanceRadarBlock({
                     ) : null}
                     <div
                       className="mt-2 h-[3px] rounded-sm overflow-hidden w-full"
-                      style={{ background: 'rgba(255,255,255,0.06)' }}
+                      style={{ background: 'var(--bg-ticker)' }}
                     >
                       <div
                         className="h-full rounded-sm transition-[width] duration-[600ms] ease-out"
@@ -744,12 +748,12 @@ function FinanceRadarBlock({
           <div className="min-w-0 flex flex-col lg:h-full lg:min-h-0">
             <div className="flex flex-wrap items-end justify-between gap-2 mb-2">
               <div className="flex flex-wrap items-center gap-2 min-w-0">
-                <h4 className="text-xs font-bold text-white/50 uppercase tracking-widest shrink-0">
+                <h4 className="text-xs font-bold text-[color:var(--text-muted)] uppercase tracking-widest shrink-0">
                   Top overdue
                 </h4>
                 {ageFilter ? (
                   <span
-                    className="inline-flex items-center gap-1.5 rounded-full border border-[#00d4b4]/35 bg-[#00d4b4]/10 px-2.5 py-0.5 text-[10px] font-semibold text-[#00d4b4]"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-2.5 py-0.5 text-[10px] font-semibold text-[color:var(--accent-teal)]"
                     title="Filtered by payment ageing bucket"
                   >
                     {ageingBuckets.find((b) => b.id === ageFilter)?.label ?? ageFilter}
@@ -757,7 +761,7 @@ function FinanceRadarBlock({
                       type="button"
                       aria-label="Clear ageing filter"
                       onClick={() => setAgeFilter(null)}
-                      className="ml-0.5 flex h-5 w-5 items-center justify-center rounded-full hover:bg-white/15 text-[#00d4b4] border-0 bg-transparent cursor-pointer p-0 leading-none"
+                      className="ml-0.5 flex h-5 w-5 items-center justify-center rounded-full hover:bg-[color:var(--bg-table-hover)] text-[color:var(--accent-teal)] border-0 bg-transparent cursor-pointer p-0 leading-none"
                     >
                       ×
                     </button>
@@ -773,7 +777,7 @@ function FinanceRadarBlock({
                       setCustomerFilter('')
                       setSalesPersonFilter('ALL')
                     }}
-                    className="h-8 rounded-lg border border-white/15 bg-transparent px-3 text-[11px] font-semibold text-white/45 hover:text-white hover:border-white/25 transition-colors"
+                    className="h-8 rounded-lg border border-[color:var(--border-default)] bg-transparent px-3 text-[11px] font-semibold text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:border-[color:var(--border-strong)] transition-colors"
                   >
                     Reset filters
                   </button>
@@ -800,18 +804,18 @@ function FinanceRadarBlock({
               </div>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-black/20 overflow-hidden flex-1 flex flex-col min-h-[240px] lg:min-h-0">
+            <div className="zenith-stat-well overflow-hidden flex-1 flex flex-col min-h-[240px] lg:min-h-0">
               <p
-                className="shrink-0 m-0 px-2 sm:px-2.5 pt-2.5 pb-2 border-b border-white/[0.06] text-[10px] sm:text-[11px] leading-snug text-white/45"
+                className="shrink-0 m-0 px-2 sm:px-2.5 pt-2.5 pb-2 border-b border-[color:var(--border-default)] text-[10px] sm:text-[11px] leading-snug text-[color:var(--text-muted)]"
                 style={{ fontFamily: 'var(--zenith-font-body)' }}
               >
                 Click the project name to open the project and update the current payment status; use{' '}
-                <span className="text-white/60 font-medium">Remind</span> to send a reminder.
+                <span className="text-[color:var(--text-muted)] font-medium">Remind</span> to send a reminder.
               </p>
               <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 max-h-[min(70vh,520px)] lg:max-h-none zenith-scroll-x">
-                <table className="w-full min-w-[520px] text-left text-[11px] sm:text-xs">
+                <table className="zenith-table--data w-full min-w-[520px] text-left text-[11px] sm:text-xs">
                   <thead>
-                    <tr className="text-white/45 border-b border-white/10">
+                    <tr className="border-b border-[color:var(--border-default)]">
                       <th
                         className="py-2 px-2 sm:px-2.5 font-semibold cursor-pointer select-none max-w-[7rem] sm:max-w-[9rem]"
                         onClick={() => toggleSort('customer')}
@@ -843,7 +847,7 @@ function FinanceRadarBlock({
                   <tbody>
                     {overdueRows.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-6 px-2 text-center text-white/40">
+                        <td colSpan={6} className="py-6 px-2 text-center text-[color:var(--text-muted)]">
                           {ageFilter
                             ? 'No overdue rows in this ageing bucket (adjust filter or customer search).'
                             : 'No overdue rows in top slice.'}
@@ -854,13 +858,13 @@ function FinanceRadarBlock({
                         const sp = (r.salespersonName ?? '').trim() || 'Unassigned'
                         const nameColor = paymentRadarProjectNameColor(r.paymentStatus)
                         return (
-                        <tr key={r.projectId} className="border-b border-white/[0.06] last:border-b-0 hover:bg-white/[0.04]">
+                        <tr key={r.projectId} className="border-b border-[color:var(--border-default)] last:border-b-0 hover:bg-[color:var(--bg-table-hover)]">
                           <td className="py-2 px-2 sm:px-2.5 max-w-[7rem] sm:max-w-[9rem]">
                             {onOpenFinanceDrawer ? (
                               <button
                                 type="button"
                                 onClick={() => onOpenFinanceDrawer(r.projectId)}
-                                className="font-semibold block truncate text-left w-full bg-transparent border-0 cursor-pointer p-0 transition-[filter] hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f5a623]/50 rounded-sm"
+                                className="font-semibold block truncate text-left w-full bg-transparent border-0 cursor-pointer p-0 transition-[filter] hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] rounded-sm"
                                 style={{ color: nameColor }}
                                 title={r.customerName}
                               >
@@ -869,7 +873,7 @@ function FinanceRadarBlock({
                             ) : (
                               <Link
                                 to={`/projects/${r.projectId}`}
-                                className="font-semibold block truncate transition-[filter] hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f5a623]/50 rounded-sm"
+                                className="font-semibold block truncate transition-[filter] hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] rounded-sm"
                                 style={{ color: nameColor }}
                                 title={r.customerName}
                               >
@@ -877,17 +881,17 @@ function FinanceRadarBlock({
                               </Link>
                             )}
                           </td>
-                          <td className="py-2 px-2 text-white/70 truncate max-w-[9rem]" title={sp}>
+                          <td className="py-2 px-2 text-[color:var(--text-secondary)] truncate max-w-[9rem]" title={sp}>
                             {sp}
                           </td>
-                          <td className="py-2 px-2 text-right tabular-nums text-white/85 whitespace-nowrap">
+                          <td className="py-2 px-2 text-right tabular-nums text-[color:var(--text-secondary)] whitespace-nowrap">
                             ₹{Math.round(r.amount).toLocaleString('en-IN')}
                           </td>
-                          <td className="py-2 px-2 text-white/55 whitespace-nowrap">
+                          <td className="py-2 px-2 text-[color:var(--text-muted)] whitespace-nowrap">
                             {format(parseISO(r.dueSince), 'dd MMM yy')}
                           </td>
                           <td className="py-2 px-2 text-right">
-                            <span className="inline-flex items-center rounded-md bg-red-500/25 text-red-200 text-[10px] font-bold px-1 py-0.5 tabular-nums">
+                            <span className="inline-flex items-center rounded-md bg-red-500/25 text-[color:var(--accent-red)] text-[10px] font-bold px-1 py-0.5 tabular-nums">
                               {r.daysOverdue}d
                             </span>
                           </td>
@@ -895,7 +899,7 @@ function FinanceRadarBlock({
                             <button
                               type="button"
                               onClick={() => setReminderProject(r)}
-                              className="text-[10px] sm:text-[11px] font-bold text-[#00d4b4] hover:underline whitespace-nowrap bg-transparent border-0 cursor-pointer p-0"
+                              className="text-[10px] sm:text-[11px] font-bold text-[color:var(--accent-teal)] hover:underline whitespace-nowrap bg-transparent border-0 cursor-pointer p-0"
                             >
                               Remind
                             </button>
@@ -908,7 +912,7 @@ function FinanceRadarBlock({
                 </table>
               </div>
               <p
-                className="shrink-0 border-t border-white/[0.06] px-2 sm:px-2.5 py-2 m-0 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] leading-snug text-white/45"
+                className="shrink-0 border-t border-[color:var(--border-default)] px-2 sm:px-2.5 py-2 m-0 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] leading-snug text-[color:var(--text-muted)]"
                 role="note"
               >
                 <span className="inline-flex items-center gap-1.5">
@@ -932,18 +936,18 @@ function FinanceRadarBlock({
           </div>
 
           <div
-            className="zenith-payment-radar-charts min-w-0 flex flex-col rounded-xl border border-white/10 bg-black/20 overflow-visible lg:overflow-hidden lg:h-full lg:min-h-0"
+            className="zenith-payment-radar-charts zenith-stat-well min-w-0 flex flex-col rounded-xl overflow-visible lg:overflow-hidden lg:h-full lg:min-h-0"
             aria-label="Payment mix and collections trend"
           >
             <div className="flex flex-col max-lg:h-auto lg:h-full min-h-0 lg:min-h-[320px]">
               {/* Upper: on lg split height with bar; on mobile natural height so the bar block keeps room */}
-              <div className="flex flex-col flex-none lg:flex-1 lg:min-h-0 lg:basis-0 border-b border-white/[0.07] p-3 sm:p-4">
-                <h4 className="text-xs font-bold text-white/50 uppercase tracking-widest mb-2 shrink-0">
+              <div className="flex flex-col flex-none lg:flex-1 lg:min-h-0 lg:basis-0 border-b border-[color:var(--border-default)] p-3 sm:p-4">
+                <h4 className="text-xs font-bold text-[color:var(--text-muted)] uppercase tracking-widest mb-2 shrink-0">
                   Collected vs outstanding
                 </h4>
                 <div className="zenith-chart-slot zenith-payment-radar-pie-slot w-full max-lg:h-[200px] max-lg:flex-none lg:flex-1 lg:min-h-[160px] relative">
                   {pieData.length === 0 ? (
-                    <p className="text-sm text-white/40 flex items-center justify-center h-full text-left px-1">
+                    <p className="text-sm text-[color:var(--text-muted)] flex items-center justify-center h-full text-left px-1">
                       No payment mix data
                     </p>
                   ) : (
@@ -974,19 +978,20 @@ function FinanceRadarBlock({
                               paddingAngle={2}
                             >
                               {pieData.map((e, i) => (
-                                <Cell key={i} fill={e.fill} stroke="rgba(0,0,0,0.2)" />
+                                <Cell key={i} fill={e.fill} stroke="var(--border-default)" />
                               ))}
                             </Pie>
                             <Tooltip
                               formatter={(v: number) => `₹${Math.round(v).toLocaleString('en-IN')}`}
                               contentStyle={{
-                                background: 'rgba(10,10,15,0.96)',
-                                border: '1px solid rgba(255,255,255,0.14)',
+                                background: 'var(--chart-tooltip-bg)',
+                                border: '1px solid var(--chart-tooltip-border)',
                                 borderRadius: 10,
-                                color: '#f8fafc',
+                                boxShadow: 'var(--chart-tooltip-shadow)',
+                                color: 'var(--chart-tooltip-fg)',
                               }}
-                              labelStyle={{ color: '#ffffff', fontWeight: 600 }}
-                              itemStyle={{ color: '#f1f5f9' }}
+                              labelStyle={{ color: 'var(--chart-tooltip-fg)', fontWeight: 600 }}
+                              itemStyle={{ color: 'var(--chart-tooltip-fg-muted)' }}
                             />
                             {!narrowPaymentCharts ? (
                               <Legend
@@ -995,7 +1000,7 @@ function FinanceRadarBlock({
                                 align="center"
                                 wrapperStyle={{ paddingTop: 4 }}
                                 formatter={(value) => (
-                                  <span className="text-white/80 text-[10px] sm:text-[11px]">{value}</span>
+                                  <span className="text-[color:var(--text-secondary)] text-[10px] sm:text-[11px]">{value}</span>
                                 )}
                               />
                             ) : null}
@@ -1005,7 +1010,7 @@ function FinanceRadarBlock({
                     </ZenithChartTouchReset>
                   )}
                 </div>
-                <p className="text-[9px] sm:text-[10px] text-left text-white/35 mt-1.5 shrink-0 leading-relaxed">
+                <p className="text-[9px] sm:text-[10px] text-left text-[color:var(--text-muted)] mt-1.5 shrink-0 leading-relaxed">
                   Amounts in ₹ · Collected, outstanding, subsidy pending
                 </p>
               </div>
@@ -1013,7 +1018,7 @@ function FinanceRadarBlock({
               {/* Lower half: bars */}
               {monthlyCollections.length > 0 ? (
                 <div className="flex flex-col flex-none lg:flex-1 lg:min-h-0 lg:basis-0 p-3 sm:p-4 max-lg:pb-4">
-                <h4 className="text-xs font-bold text-white/50 uppercase tracking-widest mb-2 shrink-0 max-lg:leading-snug">
+                <h4 className="text-xs font-bold text-[color:var(--text-muted)] uppercase tracking-widest mb-2 shrink-0 max-lg:leading-snug">
                   <span className="max-lg:block lg:inline">Collections</span>
                   <span className="max-lg:hidden"> — </span>
                   <span className="max-lg:block lg:inline max-lg:mt-0.5">last 6 months</span>
@@ -1039,7 +1044,7 @@ function FinanceRadarBlock({
                           >
                             <XAxis
                               dataKey="label"
-                              tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.35)' }}
+                              tick={{ fontSize: 9, fill: 'var(--chart-axis-text)' }}
                               axisLine={false}
                               tickLine={false}
                             />
@@ -1052,60 +1057,60 @@ function FinanceRadarBlock({
                                 return (
                                   <div
                                     style={{
-                                      background: '#1A1A2E',
-                                      border: '1px solid rgba(255,255,255,0.1)',
+                                      background: 'var(--chart-tooltip-bg)',
+                                      border: '1px solid var(--chart-tooltip-border)',
                                       borderRadius: 8,
                                       padding: '8px 12px',
                                       fontFamily: 'DM Sans, sans-serif',
                                       fontSize: 12,
                                     }}
                                   >
-                                    <div style={{ color: '#fff', marginBottom: 4 }}>{label}</div>
-                                    <div style={{ color: '#00D4B4' }}>
+                                    <div style={{ color: 'var(--text-primary)', marginBottom: 4 }}>{label}</div>
+                                    <div style={{ color: 'var(--accent-teal)' }}>
                                       Collected: ₹{Math.round(Number(col?.value ?? 0)).toLocaleString('en-IN')}
                                     </div>
-                                    <div style={{ color: '#F5A623' }}>
+                                    <div style={{ color: 'var(--accent-gold)' }}>
                                       Outstanding: ₹{Math.round(Number(out?.value ?? 0)).toLocaleString('en-IN')}
                                     </div>
                                   </div>
                                 )
                               }}
                             />
-                            <Bar dataKey="collected" fill="#00D4B4" radius={[3, 3, 0, 0]} maxBarSize={28} />
-                            <Bar dataKey="outstanding" fill="#F5A623" opacity={0.6} radius={[3, 3, 0, 0]} maxBarSize={28} />
+                            <Bar dataKey="collected" fill="var(--accent-teal)" radius={[3, 3, 0, 0]} maxBarSize={28} />
+                            <Bar dataKey="outstanding" fill="var(--accent-gold)" opacity={0.6} radius={[3, 3, 0, 0]} maxBarSize={28} />
                           </BarChart>
                         </ResponsiveContainer>
                       )}
                     </ZenithChartTouchReset>
                   </div>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-[10px] shrink-0" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-[10px] shrink-0 text-[color:var(--text-secondary)]">
                     <span className="inline-flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#00D4B4]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--accent-teal)]" />
                       Collected
                     </span>
                     <span className="inline-flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#F5A623] opacity-80" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--accent-gold)] opacity-80" />
                       Outstanding
                     </span>
                   </div>
                   {latestM && prevM ? (
                     <p className="text-[10px] mt-1.5 shrink-0" style={{ fontFamily: 'DM Sans, sans-serif' }}>
                       {trendDelta > 0 ? (
-                        <span style={{ color: '#00D4B4' }}>
+                        <span style={{ color: 'var(--accent-teal)' }}>
                           ▲ Collections up ₹{Math.abs(Math.round(trendDelta)).toLocaleString('en-IN')} vs last month
                         </span>
                       ) : trendDelta < 0 ? (
-                        <span style={{ color: '#FF4757' }}>
+                        <span style={{ color: 'var(--accent-red)' }}>
                           ▼ Collections down ₹{Math.abs(Math.round(trendDelta)).toLocaleString('en-IN')} vs last month
                         </span>
                       ) : (
-                        <span style={{ color: 'rgba(255,255,255,0.3)' }}>Collections steady vs last month</span>
+                        <span style={{ color: 'var(--text-muted)' }}>Collections steady vs last month</span>
                       )}
                     </p>
                   ) : null}
                 </div>
               ) : (
-                <div className="flex flex-col flex-1 min-h-0 basis-0 items-center justify-center p-4 text-white/30 text-xs border-t border-white/[0.06]">
+                <div className="flex flex-col flex-1 min-h-0 basis-0 items-center justify-center p-4 text-[color:var(--text-muted)] text-xs border-t border-[color:var(--border-default)]">
                   No monthly collections trend for this period.
                 </div>
               )}
@@ -1154,7 +1159,7 @@ function InstallationProgressCell({ row }: { row: InstallRow }) {
         {statusLabel ? (
           <span
             className="text-[9px] font-bold tracking-wide"
-            style={{ color: overdue ? '#FF4757' : 'rgba(255,255,255,0.3)' }}
+            style={{ color: overdue ? 'var(--accent-red)' : 'var(--text-muted)' }}
           >
             {statusLabel}
           </span>
@@ -1163,7 +1168,7 @@ function InstallationProgressCell({ row }: { row: InstallRow }) {
           <span
             title="Expected date is before start date — please update the project record"
             className="text-[10px] cursor-help"
-            style={{ color: '#F5A623' }}
+            style={{ color: 'var(--accent-gold)' }}
           >
             ⚠️
           </span>
@@ -1172,14 +1177,14 @@ function InstallationProgressCell({ row }: { row: InstallRow }) {
       <div className="flex items-center gap-2 min-w-0">
         <div
           className="flex-1 h-[5px] rounded-[3px] overflow-hidden min-w-[48px] sm:min-w-[64px]"
-          style={{ background: 'rgba(255,255,255,0.07)' }}
+          style={{ background: 'var(--bg-ticker)' }}
         >
           <div
             className="h-full rounded-[3px] transition-[width] duration-[800ms] ease-out"
             style={{ width: `${w}%`, background: color }}
           />
         </div>
-        <span className="text-[11px] tabular-nums text-white/55 shrink-0 w-8 sm:w-9 text-right">{displayPct}%</span>
+        <span className="text-[11px] tabular-nums text-[color:var(--text-muted)] shrink-0 w-8 sm:w-9 text-right">{displayPct}%</span>
       </div>
     </div>
   )
@@ -1214,9 +1219,14 @@ function InstallationPulseBlock({
     setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))
   }
 
+  const uiDelayedCount = useMemo(
+    () => data.rows.filter((r) => installPulseRowOverdue(r)).length,
+    [data.rows],
+  )
+
   const displayRows = useMemo(() => {
     let rows = [...data.rows]
-    if (overdueOnly) rows = rows.filter((r) => r.overdue)
+    if (overdueOnly) rows = rows.filter((r) => installPulseRowOverdue(r))
     if (!sortField) return rows
     const dir = sortDir === 'asc' ? 1 : -1
     const ts = (s: string | null) => {
@@ -1247,7 +1257,7 @@ function InstallationPulseBlock({
 
   const shellClass = embedded
     ? 'overflow-hidden'
-    : `rounded-2xl border border-white/[0.08] bg-white/[0.03] overflow-hidden ${accentClass} pl-4`
+    : `zenith-pipeline-block-shell rounded-2xl overflow-hidden ${accentClass} pl-4`
 
   return (
     <section className={shellClass}>
@@ -1255,28 +1265,28 @@ function InstallationPulseBlock({
         <div
           className={`flex flex-wrap items-center gap-2 mb-3 ${embedded ? 'justify-end' : 'justify-between'}`}
         >
-          {!embedded ? <h3 className="zenith-display text-base font-bold text-white">Installation pulse</h3> : null}
+          {!embedded ? <h3 className="zenith-display text-base font-bold text-[color:var(--text-primary)]">Installation pulse</h3> : null}
           <button
             type="button"
             onClick={() => setOverdueOnly((v) => !v)}
             className={`h-9 px-3 rounded-lg border text-xs font-bold transition-colors ${
               overdueOnly
-                ? 'bg-red-500/20 text-red-200 border-red-400/30'
-                : 'bg-black/25 text-white/70 border-white/10 hover:bg-white/[0.05]'
+                ? 'bg-red-500/20 text-[color:var(--accent-red)] border-red-400/30'
+                : 'rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-table-hover)]'
             }`}
             title="Toggle: show only overdue rows"
           >
             {overdueOnly ? 'Overdue only ✓' : 'Overdue only'}
           </button>
         </div>
-        <div className="flex flex-wrap gap-4 text-xs sm:text-sm text-white/70 mb-4">
+        <div className="flex flex-wrap gap-4 text-xs sm:text-sm text-[color:var(--text-secondary)] mb-4">
           <span>
             Avg install days:{' '}
-            <strong className="text-white">{data.avgInstallationDays != null ? `${data.avgInstallationDays}d` : '—'}</strong>
+            <strong className="text-[color:var(--text-primary)]">{data.avgInstallationDays != null ? `${data.avgInstallationDays}d` : '—'}</strong>
           </span>
           <span>
             Delayed:{' '}
-            <strong className={data.delayedCount > 0 ? 'text-red-300' : 'text-emerald-300'}>{data.delayedCount}</strong>
+            <strong className={uiDelayedCount > 0 ? 'text-[color:var(--accent-red)]' : 'text-[color:var(--accent-teal)]'}>{uiDelayedCount}</strong>
           </span>
         </div>
         <div
@@ -1284,9 +1294,9 @@ function InstallationPulseBlock({
           role="region"
           aria-label="Installation projects table, scroll horizontally on small screens"
         >
-          <table className="w-full min-w-[960px] md:min-w-[1020px] xl:min-w-[1080px] text-left text-xs sm:text-sm border-separate border-spacing-0">
+          <table className="zenith-table--data w-full min-w-[960px] md:min-w-[1020px] xl:min-w-[1080px] text-left text-xs sm:text-sm border-separate border-spacing-0">
             <thead>
-              <tr className="text-white/45 border-b border-white/10">
+              <tr className="border-b border-[color:var(--border-default)]">
                 <th
                   className="py-2.5 pr-3 sm:pr-4 font-semibold align-bottom cursor-pointer select-none"
                   onClick={() => handleSort('customerName')}
@@ -1321,7 +1331,6 @@ function InstallationPulseBlock({
                   className="hidden md:table-cell py-2.5 px-3 font-semibold align-bottom w-[200px]"
                   style={{
                     fontSize: '12px',
-                    color: 'rgba(255,255,255,0.4)',
                     fontWeight: 500,
                   }}
                 >
@@ -1339,7 +1348,7 @@ function InstallationPulseBlock({
             <tbody>
               {displayRows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-white/40">
+                  <td colSpan={8} className="py-8 text-center text-[color:var(--text-muted)]">
                     No confirmed or under-installation projects for this period.
                   </td>
                 </tr>
@@ -1350,13 +1359,17 @@ function InstallationPulseBlock({
                   return (
                     <tr
                       key={r.projectId}
-                      className={`border-b border-white/[0.06] ${r.overdue ? 'bg-red-500/5' : 'hover:bg-white/[0.04]'}`}
+                      className={`border-b border-[color:var(--border-default)] ${
+                        installPulseRowOverdue(r) ? 'bg-red-500/5' : 'hover:bg-[color:var(--bg-table-hover)]'
+                      }`}
                     >
                       <td className="py-2.5 pr-3 sm:pr-4 align-middle">
                         <div className="flex items-center gap-2 min-w-0">
                           <span
-                            className={`h-2 w-2 rounded-full flex-shrink-0 ${r.overdue ? 'bg-red-400' : 'bg-emerald-400'}`}
-                            title={r.overdue ? 'Overdue' : 'On track'}
+                            className={`h-2 w-2 rounded-full flex-shrink-0 ${
+                              installPulseRowOverdue(r) ? 'bg-red-400' : 'bg-emerald-400'
+                            }`}
+                            title={installPulseRowOverdue(r) ? 'Overdue (past expected date, install open)' : 'On track'}
                           />
                           <span
                             className="font-medium truncate sm:whitespace-normal sm:break-words"
@@ -1367,16 +1380,16 @@ function InstallationPulseBlock({
                           </span>
                         </div>
                       </td>
-                      <td className="py-2.5 pl-2 pr-5 sm:pr-8 text-right tabular-nums text-white/85 align-middle whitespace-nowrap">
+                      <td className="py-2.5 pl-2 pr-5 sm:pr-8 text-right tabular-nums text-[color:var(--text-secondary)] align-middle whitespace-nowrap">
                         {r.kW != null ? r.kW.toFixed(2) : '—'}
                       </td>
-                      <td className="py-2.5 pl-3 sm:pl-5 pr-3 sm:pr-4 text-white/75 align-middle whitespace-nowrap">
+                      <td className="py-2.5 pl-3 sm:pl-5 pr-3 sm:pr-4 text-[color:var(--text-secondary)] align-middle whitespace-nowrap">
                         {r.salespersonName}
                       </td>
-                      <td className="py-2.5 px-3 sm:px-4 text-white/60 align-middle whitespace-nowrap">
+                      <td className="py-2.5 px-3 sm:px-4 text-[color:var(--text-muted)] align-middle whitespace-nowrap">
                         {r.startDate ? format(parseISO(r.startDate), 'dd MMM yy') : '—'}
                       </td>
-                      <td className="py-2.5 px-3 sm:px-4 text-white/60 align-middle whitespace-nowrap">
+                      <td className="py-2.5 px-3 sm:px-4 text-[color:var(--text-muted)] align-middle whitespace-nowrap">
                         {r.expectedCompletion ? format(parseISO(r.expectedCompletion), 'dd MMM yy') : '—'}
                       </td>
                       <td className="hidden md:table-cell py-2.5 px-3 align-top max-w-[200px]">
@@ -1385,7 +1398,7 @@ function InstallationPulseBlock({
                             <p
                               className="text-[12px] m-0 overflow-hidden"
                               style={{
-                                color: 'rgba(255,255,255,0.65)',
+                                color: 'var(--text-secondary)',
                                 display: '-webkit-box',
                                 WebkitLineClamp: 2,
                                 WebkitBoxOrient: 'vertical',
@@ -1399,7 +1412,7 @@ function InstallationPulseBlock({
                             {note.length > 80 ? (
                               <span
                                 className="text-[10px] block mt-0.5"
-                                style={{ color: 'rgba(255,255,255,0.25)' }}
+                                style={{ color: 'var(--text-muted)' }}
                                 title={note}
                               >
                                 … hover to read more
@@ -1407,7 +1420,7 @@ function InstallationPulseBlock({
                             ) : null}
                           </div>
                         ) : (
-                          <span className="text-[12px] italic" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                          <span className="text-[12px] italic" style={{ color: 'var(--text-muted)' }}>
                             No notes yet
                           </span>
                         )}
@@ -1435,17 +1448,17 @@ function InstallationPulseBlock({
                             }}
                             className="rounded-lg px-3 py-1 text-[12px] transition-all duration-200 bg-transparent cursor-pointer"
                             style={{
-                              border: '1px solid rgba(0,212,180,0.25)',
-                              color: '#00D4B4',
+                              border: '1px solid var(--accent-teal-border)',
+                              color: 'var(--accent-teal)',
                               fontFamily: 'DM Sans, sans-serif',
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.background = 'rgba(0,212,180,0.1)'
-                              e.currentTarget.style.borderColor = 'rgba(0,212,180,0.5)'
+                              e.currentTarget.style.background = 'var(--accent-teal-muted)'
+                              e.currentTarget.style.borderColor = 'var(--accent-teal-border)'
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.background = 'transparent'
-                              e.currentTarget.style.borderColor = 'rgba(0,212,180,0.25)'
+                              e.currentTarget.style.borderColor = 'var(--accent-teal-border)'
                             }}
                           >
                             + Log update
@@ -1460,7 +1473,7 @@ function InstallationPulseBlock({
           </table>
         </div>
         <p
-          className="shrink-0 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] leading-snug text-white/45 mt-3 mb-1 max-w-3xl"
+          className="shrink-0 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] leading-snug text-[color:var(--text-muted)] mt-3 mb-1 max-w-3xl"
           role="note"
         >
           <span className="inline-flex items-center gap-1.5">
@@ -1480,14 +1493,14 @@ function InstallationPulseBlock({
             <span>Customer — under installation</span>
           </span>
         </p>
-        <p className="text-[11px] sm:text-xs text-white/45 leading-relaxed mt-4 max-w-3xl">
-          <span className="text-white/55 font-semibold">Data sources: </span>
-          <strong className="text-white/70">Sales person</strong> is the project’s assigned{' '}
-          <strong className="text-white/70">salesperson</strong>. Rows are <strong className="text-white/70">confirmed order</strong>{' '}
-          and <strong className="text-white/70">under installation</strong>. Start uses installation start date, then{' '}
-          <strong className="text-white/70">stage entered</strong> or <strong className="text-white/70">order confirmation</strong>{' '}
-          date. <strong className="text-white/70">Expected</strong> uses <strong className="text-white/70">expected commissioning</strong>{' '}
-          on the project when set; otherwise <strong className="text-white/70">installation completion date</strong> (same field as
+        <p className="text-[11px] sm:text-xs text-[color:var(--text-muted)] leading-relaxed mt-4 max-w-3xl">
+          <span className="text-[color:var(--text-muted)] font-semibold">Data sources: </span>
+          <strong className="text-[color:var(--text-secondary)]">Sales person</strong> is the project’s assigned{' '}
+          <strong className="text-[color:var(--text-secondary)]">salesperson</strong>. Rows are <strong className="text-[color:var(--text-secondary)]">confirmed order</strong>{' '}
+          and <strong className="text-[color:var(--text-secondary)]">under installation</strong>. Start uses installation start date, then{' '}
+          <strong className="text-[color:var(--text-secondary)]">stage entered</strong> or <strong className="text-[color:var(--text-secondary)]">order confirmation</strong>{' '}
+          date. <strong className="text-[color:var(--text-secondary)]">Expected</strong> uses <strong className="text-[color:var(--text-secondary)]">expected commissioning</strong>{' '}
+          on the project when set; otherwise <strong className="text-[color:var(--text-secondary)]">installation completion date</strong> (same field as
           Project Lifecycle). Progress uses start vs that target (or 100% if install is marked complete).
         </p>
       </div>
@@ -1575,14 +1588,14 @@ export default function ZenithYourFocus({
     <div className="space-y-5 w-full">
       <header className="px-0.5">
         <h2
-          className="zenith-display text-lg sm:text-xl font-bold text-white tracking-tight"
+          className="zenith-display text-lg sm:text-xl font-bold text-[color:var(--text-primary)] tracking-tight"
           style={{ fontFamily: "'Syne', sans-serif" }}
         >
           Your focus
         </h2>
         {role !== UserRole.FINANCE && role !== UserRole.OPERATIONS ? (
           <p
-            className="mt-1.5 text-[11px] text-white/45 leading-snug max-w-2xl"
+            className="mt-1.5 text-[11px] text-[color:var(--text-muted)] leading-snug max-w-2xl"
             style={{ fontFamily: 'DM Sans, sans-serif' }}
           >
             Click on each of the sections to open and work on them.
@@ -1597,7 +1610,7 @@ export default function ZenithYourFocus({
               <SalesPipelineBlock
                 title="Your pipeline today"
                 data={data.salesPipeline}
-                accentClass="border-l-4 border-[#F5A623]"
+                accentClass="border-l-4 border-[color:var(--accent-gold)]"
                 onOpenDrawer={onOpenDrawer}
                 embedded
               />
@@ -1630,7 +1643,7 @@ export default function ZenithYourFocus({
         {data.focusKind === 'FINANCE' && (
           <FinanceRadarBlock
             data={data.financeRadar}
-            accentClass="border-l-4 border-[#00D4B4]"
+            accentClass="border-l-4 border-[color:var(--accent-teal)]"
             onOpenFinanceDrawer={onOpenFinanceDrawer}
           />
         )}
@@ -1650,7 +1663,7 @@ export default function ZenithYourFocus({
               <SalesPipelineBlock
                 title="Company pipeline today"
                 data={data.salesPipeline}
-                accentClass="border-l-4 border-[#F5A623]"
+                accentClass="border-l-4 border-[color:var(--accent-gold)]"
                 onOpenDrawer={onOpenDrawer}
                 embedded
               />
@@ -1658,7 +1671,7 @@ export default function ZenithYourFocus({
             <ZenithFocusCollapsible title="Payment radar" accent="teal" defaultOpen={false}>
               <FinanceRadarBlock
                 data={data.financeRadar}
-                accentClass="border-l-4 border-[#00D4B4]"
+                accentClass="border-l-4 border-[color:var(--accent-teal)]"
                 embedded
                 onOpenFinanceDrawer={onOpenFinanceDrawer}
               />

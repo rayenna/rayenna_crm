@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import SalesDashboard from '../components/dashboard/SalesDashboard'
@@ -8,14 +8,19 @@ import ManagementDashboard from '../components/dashboard/ManagementDashboard'
 import DashboardFilters from '../components/dashboard/DashboardFilters'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
-import PageCard from '../components/PageCard'
-import { FaChartLine } from 'react-icons/fa'
+import { LayoutDashboard } from 'lucide-react'
 
 const Dashboard = () => {
   const { user } = useAuth()
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [selectedQuarters, setSelectedQuarters] = useState<string[]>([])
   const [selectedMonths, setSelectedMonths] = useState<string[]>([])
+
+  const shell = (children: ReactNode) => (
+    <div className="zenith-root zenith-animated-bg w-full max-w-full min-w-0 min-h-[calc(100dvh-5rem)] min-h-[calc(100vh-5rem)] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-[max(0.35rem,env(safe-area-inset-top,0px))] [-webkit-tap-highlight-color:transparent]">
+      <div className="zenith-exec-main mx-auto w-full max-w-full min-w-0 px-3 sm:px-5 pb-10">{children}</div>
+    </div>
+  )
 
   // Fetch available FYs from dashboard data based on user role
   const { data: dashboardData, error: fyError, isError: isFyError, refetch: refetchFYs } = useQuery({
@@ -92,23 +97,24 @@ const Dashboard = () => {
   const renderMarqueeUnit = () => (
     <>
       <span className="inline-flex items-center gap-2">
-        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-300 text-primary-900 shadow-sm shrink-0">
+        <span className="shrink-0 rounded-full bg-[color:var(--accent-gold-muted)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent-gold)] shadow-sm ring-1 ring-[color:var(--accent-gold-border)]">
           New
         </span>
-        <span>{announcementProposal}</span>
+        <span className="text-[color:var(--text-primary)]">{announcementProposal}</span>
       </span>
-      <span className="mx-6 sm:mx-8 text-amber-100/90" aria-hidden>
+      <span className="mx-6 text-[color:var(--text-muted)] sm:mx-8" aria-hidden>
         •
       </span>
-      <span>{announcementZenith}</span>
-      <span className="mx-6 sm:mx-8 text-amber-100/90" aria-hidden>
+      <span className="text-[color:var(--text-primary)]">{announcementZenith}</span>
+      <span className="mx-6 text-[color:var(--text-muted)] sm:mx-8" aria-hidden>
         •
       </span>
     </>
   )
 
   return (
-    <div className="px-0 -mt-6 pt-0 pb-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden dashboard-mobile-no-clip">
+    shell(
+    <div className="max-w-full min-w-0 overflow-x-hidden dashboard-mobile-no-clip">
       {/* Proposal Engine launch banner – tight under header */}
       <style>
         {`@keyframes ray-proposal-marquee {
@@ -116,13 +122,28 @@ const Dashboard = () => {
             100% { transform: translateX(-50%); }
           }`}
       </style>
-      <div className="mb-2 px-3 sm:px-0">
-        <div className="relative overflow-hidden rounded-xl border border-primary-800/70 bg-gradient-to-r from-primary-700 via-primary-600 to-amber-400 text-white shadow-md">
-          <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-amber-300/60 to-transparent pointer-events-none" />
-          <div className="flex items-center px-4 py-2">
+      <header className="sticky top-0 z-30 mb-4 border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 94%, transparent)] pb-3 pt-1 backdrop-blur-xl sm:mb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] shadow-inner">
+              <LayoutDashboard className="h-5 w-5 text-[color:var(--accent-gold)]" strokeWidth={2} aria-hidden />
+            </div>
+            <div className="min-w-0">
+              <h1 className="zenith-display text-xl font-bold tracking-tight text-[color:var(--text-primary)] sm:text-2xl">Dashboard</h1>
+              <p className="mt-0.5 text-sm text-[color:var(--text-secondary)]">Monitor your business performance at a glance</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="mb-4">
+        <div className="relative overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[color:var(--accent-gold-muted)] via-transparent to-[color:var(--accent-teal-muted)]" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[color:var(--accent-gold-muted)] to-transparent" />
+          <div className="relative flex items-center px-4 py-2.5">
             <div className="flex-1 overflow-hidden">
               <div
-                className="inline-block whitespace-nowrap text-[11px] sm:text-sm font-semibold"
+                className="inline-block whitespace-nowrap text-[11px] font-semibold text-[color:var(--text-primary)] sm:text-sm"
                 style={{
                   animation: 'ray-proposal-marquee 32s linear infinite',
                 }}
@@ -135,12 +156,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <PageCard
-        title="Dashboard"
-        subtitle="Monitor your business performance at a glance"
-        icon={<FaChartLine className="w-5 h-5 text-white" />}
-        className="max-w-full page-card-no-clip-mobile"
-      >
+      <div className="mb-5 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5">
       <DashboardFilters
         availableFYs={availableFYs}
         selectedFYs={selectedFYs}
@@ -149,15 +165,17 @@ const Dashboard = () => {
         onFYChange={setSelectedFYs}
         onQuarterChange={setSelectedQuarters}
         onMonthChange={setSelectedMonths}
+        variant="zenith"
       />
+      </div>
       {isFyError && (
-        <div className="w-full min-w-0 max-w-xl rounded-xl border border-amber-200 bg-amber-50 p-4 sm:p-5 md:p-6 text-amber-800 text-sm sm:text-base break-words">
+        <div className="w-full min-w-0 max-w-xl rounded-2xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] p-4 text-sm break-words text-[color:var(--text-primary)] sm:p-5 sm:text-base md:p-6">
           <p className="font-medium">Unable to load dashboard filters.</p>
-          <p className="mt-2 text-amber-700 leading-snug">{getFriendlyApiErrorMessage(fyError)}</p>
+          <p className="mt-2 leading-snug text-[color:var(--text-secondary)]">{getFriendlyApiErrorMessage(fyError)}</p>
           <button
             type="button"
             onClick={() => refetchFYs()}
-            className="mt-4 min-h-[44px] px-4 py-3 sm:py-2.5 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 active:opacity-90 touch-manipulation"
+            className="mt-4 min-h-[44px] touch-manipulation rounded-xl bg-[color:var(--accent-gold)] px-4 py-3 text-sm font-extrabold text-[color:var(--text-inverse)] transition-opacity hover:opacity-95 active:opacity-90 sm:py-2.5"
           >
             Try again
           </button>
@@ -167,9 +185,9 @@ const Dashboard = () => {
 
       {/* Footnote for Operations and Finance views (both include Pending Installation quick tile) */}
       {(user?.role === UserRole.OPERATIONS || user?.role === UserRole.FINANCE) && (
-        <footer className="mt-8 pt-6 border-t border-primary-100 min-w-0 max-w-full bg-gradient-to-br from-primary-50/30 to-transparent rounded-xl p-4">
-          <p className="text-[11px] sm:text-xs text-gray-500 leading-relaxed break-words">
-            <span className="font-semibold text-gray-600">Note:</span>
+        <footer className="mt-8 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
+          <p className="break-words text-[11px] leading-relaxed text-[color:var(--text-secondary)] sm:text-xs">
+            <span className="font-semibold text-[color:var(--text-primary)]">Note:</span>
             <br />
             1. Pending Installation Quick Access Tile displays those projects, which are in Stages "Confirmed" and "Under Installation"
           </p>
@@ -178,9 +196,9 @@ const Dashboard = () => {
 
       {/* Footnote for Admin, Sales and Management views */}
       {(user?.role === UserRole.ADMIN || user?.role === UserRole.SALES || user?.role === UserRole.MANAGEMENT) && (
-        <footer className="mt-8 pt-6 border-t border-primary-100 min-w-0 max-w-full bg-gradient-to-br from-primary-50/30 to-transparent rounded-xl p-4">
-          <p className="text-[11px] sm:text-xs text-gray-500 leading-relaxed break-words">
-            <span className="font-semibold text-gray-600">Note:</span>
+        <footer className="mt-8 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
+          <p className="break-words text-[11px] leading-relaxed text-[color:var(--text-secondary)] sm:text-xs">
+            <span className="font-semibold text-[color:var(--text-primary)]">Note:</span>
             <br />
             1. Revenue = Sum of Order Value of Projects in the Project Stages – a. Confirmed Order, b. Installation, c. Completed and; d. Completed – Subsidy Credited
             <br />
@@ -190,12 +208,12 @@ const Dashboard = () => {
             <br />
             4. Open Deals includes those that are in Lead, Site Survey and Proposal stages.
             <br />
-            5. Rest (Proposal Engine quick tile): projects in Proposal or Confirmed stage that are not yet started in Proposal Engine (not selected in PE). Each row in the Proposal Engine tile opens Projects with the matching pre-filtered view.
+            5. Proposal Engine Quick tile: projects in Proposal or Confirmed stage that are not yet started in Proposal Engine (not selected in PE). Each row in the Proposal Engine tile opens Projects with the matching pre-filtered view.
           </p>
         </footer>
       )}
-      </PageCard>
     </div>
+    )
   )
 }
 

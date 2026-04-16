@@ -569,17 +569,17 @@ Support tickets have three possible statuses:
 ### Open
 - Newly created tickets start in this status
 - Indicates the ticket needs initial attention
-- Shown in blue on the dashboard
+- In lists and on the **Support Tickets** dashboard, **Open** appears as its own **status chip** (distinct cool tint) so it is easy to scan next to other states
 
 ### In Progress
 - Automatically set when you add the first follow-up
 - Indicates active work is being done on the ticket
-- Shown in yellow/orange on the dashboard
+- **In Progress** uses an amber-style chip in the same UI
 
 ### Closed
 - Set when the issue is resolved
 - Tickets can be reopened if needed (Admin only)
-- Shown in gray on the dashboard
+- **Closed** uses a neutral dark chip (still readable on the Zenith-style dark surfaces)
 
 ## Resolving and Closing Tickets
 
@@ -616,7 +616,7 @@ The Support Tickets Dashboard provides a comprehensive view of all tickets:
    - **Overdue**: Tickets with past follow-up dates
 3. Use the metric cards or chart slices to filter the table
 4. View the **Ticket Status Breakdown** donut chart for visual insights
-5. Review the **All Support Tickets** table
+5. Review the **All Support Tickets** table (desktop) or the stacked **card list** on small screens; both respect the same filters
 
 ### Filtering Tickets
 
@@ -666,10 +666,6 @@ Each ticket displays:
 5. **Set follow-up dates** for time-sensitive items
 6. **Close tickets promptly** when issues are resolved
 7. **Review overdue tickets** daily to ensure timely responses
-
-## Permissions Summary
-
-A quick reference showing which features each role can access is described in the bullet lists above.
 
 ## Getting Help
 

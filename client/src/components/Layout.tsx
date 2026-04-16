@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
+import ThemeToggle from './ThemeToggle'
 import TipOfTheDay from './TipOfTheDay'
 import { getHelpSectionForRoute, helpSections } from '../help/sections'
 import { setSessionStorageItem } from '../lib/safeLocalStorage'
@@ -44,8 +45,12 @@ const Layout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [helpDropdownOpen, setHelpDropdownOpen] = useState(false)
   const [dashboardDropdownOpen, setDashboardDropdownOpen] = useState(false)
+  const [moreDropdownOpen, setMoreDropdownOpen] = useState(false)
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false)
   const helpDropdownRef = useRef<HTMLDivElement>(null)
   const dashboardDropdownRef = useRef<HTMLDivElement>(null)
+  const moreDropdownRef = useRef<HTMLDivElement>(null)
+  const profileDropdownRef = useRef<HTMLDivElement>(null)
 
   const dashboardNavRoles = [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE, UserRole.MANAGEMENT]
 
@@ -59,6 +64,24 @@ const Layout = () => {
   ]
 
   const filteredNav = navigation.filter((nav) => hasRole(nav.roles))
+
+  // Keep the header clean: show the 3 most-used links inline; push admin/secondary to "More".
+  const PRIMARY_NAV_ORDER = ['/customers', '/projects', '/support-tickets'] as const
+  const primaryNav = PRIMARY_NAV_ORDER
+    .map((p) => filteredNav.find((n) => n.path === p))
+    .filter(Boolean) as typeof filteredNav
+  const secondaryNav = filteredNav.filter((n) => !PRIMARY_NAV_ORDER.includes(n.path as any))
+
+  const initials = (name?: string | null) => {
+    const parts = String(name ?? '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+    if (!parts.length) return 'U'
+    const a = parts[0]?.[0] ?? 'U'
+    const b = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : ''
+    return (a + b).toUpperCase()
+  }
   
   const helpMenuItems: (
     | { name: string; contextHelp: true }
@@ -81,6 +104,7 @@ const Layout = () => {
   const isDashboardMenuActive =
     location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/zenith')
   const canAccessDashboardMenu = hasRole(dashboardNavRoles)
+  const isMoreActive = secondaryNav.some((n) => location.pathname.startsWith(n.path))
 
   /** Context-sensitive Help path: open the section that matches the current page */
   const getHelpPath = useCallback(() => {
@@ -178,6 +202,25 @@ const Layout = () => {
     }
   }, [location.pathname, navigate, canAccessDashboardMenu, hasRole, getHelpPath])
 
+  // Below lg: hamburger only (all orientations) — avoids landscape cramming with inline nav + menus.
+  useEffect(() => {
+    setHelpDropdownOpen(false)
+    setDashboardDropdownOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [location.pathname, location.search])
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [mobileMenuOpen])
+
   // Prefetch route chunks when mobile menu opens so navigation feels instant when user taps a link
   useEffect(() => {
     if (!mobileMenuOpen) return
@@ -205,46 +248,52 @@ const Layout = () => {
       if (dashboardDropdownRef.current && !dashboardDropdownRef.current.contains(event.target as Node)) {
         setDashboardDropdownOpen(false)
       }
+      if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target as Node)) {
+        setMoreDropdownOpen(false)
+      }
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setProfileDropdownOpen(false)
+      }
     }
 
-    if (helpDropdownOpen || dashboardDropdownOpen) {
+    if (helpDropdownOpen || dashboardDropdownOpen || moreDropdownOpen || profileDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside)
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [helpDropdownOpen, dashboardDropdownOpen])
+  }, [helpDropdownOpen, dashboardDropdownOpen, moreDropdownOpen, profileDropdownOpen])
 
   return (
-    <div className="min-h-screen bg-gray-50/80">
-      <nav className="bg-gradient-to-r from-primary-600 via-primary-500 to-yellow-500 shadow-lg border-b-4 border-primary-400">
+    <div className="min-h-screen min-h-[100dvh] bg-[color:var(--bg-page)] text-[color:var(--text-primary)] [-webkit-tap-highlight-color:transparent]">
+      <nav className="sticky top-0 z-50 border-b border-[color:var(--nav-border)] bg-[color:var(--nav-bg)] pt-[env(safe-area-inset-top,0px)] shadow-lg shadow-black/40 ring-1 ring-[color:var(--nav-border)]">
         <div className="mx-auto w-full max-w-[1600px] px-3 sm:px-4 lg:px-6 xl:px-8">
-          <div className="flex justify-between items-center h-20 gap-2 lg:gap-4">
-            <div className="flex items-center">
-              <Link to="/dashboard" className="flex-shrink-0 flex items-center mr-2 lg:mr-3 xl:mr-4 hover:opacity-80 transition-opacity">
+          <div className="flex min-h-[3.5rem] items-center justify-between gap-2 py-2 sm:min-h-[3.75rem] lg:h-20 lg:min-h-0 lg:gap-4 lg:py-0">
+            <div className="flex min-w-0 flex-1 items-center">
+              <Link to="/dashboard" className="mr-2 flex shrink-0 items-center lg:mr-3 xl:mr-4 hover:opacity-80 transition-opacity">
                 <img 
                   src="/CRM_Logo.jpg" 
                   alt="Rayenna CRM" 
-                  className="h-14 sm:h-14 xl:h-16 2xl:h-[4.25rem] w-auto object-contain"
+                  className="h-10 w-auto max-h-[2.75rem] object-contain sm:h-12 sm:max-h-none md:h-14 lg:h-14 xl:h-16 2xl:h-[4.25rem]"
                 />
               </Link>
-              {/* Desktop Navigation - lg and above; also visible in mobile landscape (left-side nav + Help) */}
-              <div className="hidden lg:ml-4 lg:flex lg:space-x-2 xl:space-x-3 2xl:space-x-4 items-center flex-wrap lg:gap-1.5 xl:gap-0 landscape-nav-visible">
+              {/* Desktop Navigation — lg+ (Windows scaling friendly); below lg use hamburger */}
+              <div className="hidden min-w-0 flex-1 flex-nowrap items-center gap-2 lg:ml-4 lg:flex 2xl:gap-3">
                 {canAccessDashboardMenu && (
                   <div
                     ref={dashboardDropdownRef}
-                    className="relative"
+                    className="relative shrink-0"
                     onMouseEnter={() => setDashboardDropdownOpen(true)}
                     onMouseLeave={() => setDashboardDropdownOpen(false)}
                   >
                     <button
                       type="button"
                       onClick={() => setDashboardDropdownOpen(!dashboardDropdownOpen)}
-                      className={`inline-flex items-center px-3 xl:px-3 2xl:px-4 py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
+                      className={`inline-flex items-center px-3 py-2 rounded-xl text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
                         isDashboardMenuActive
-                          ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40'
-                          : 'text-white/95 hover:bg-white/20 hover:text-white'
+                          ? 'bg-[color:var(--nav-active-bg)] text-[color:var(--nav-text-active)] shadow-md font-bold border-2 border-[color:var(--nav-border)]'
+                          : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
                       }`}
                     >
                       Dashboard
@@ -258,13 +307,18 @@ const Layout = () => {
                       </svg>
                     </button>
                     {dashboardDropdownOpen && (
-                      <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[100]">
+                      <div
+                        className="absolute left-0 top-full z-[250] mt-1 flex w-52 min-w-[12rem] flex-col overflow-hidden rounded-xl border border-[color:var(--nav-border)] bg-[color:color-mix(in_srgb,var(--nav-bg)_92%,#ffffff_8%)] py-1 shadow-2xl shadow-black/60 ring-1 ring-black/40"
+                        role="menu"
+                        aria-label="Dashboard menu"
+                      >
                         <Link
                           to="/dashboard"
-                          className={`block px-4 py-2 text-sm font-medium ${
+                          role="menuitem"
+                          className={`block px-4 py-2.5 text-sm font-medium ${
                             location.pathname.startsWith('/dashboard')
-                              ? 'bg-primary-50 text-primary-700'
-                              : 'text-gray-700 hover:bg-gray-50 hover:text-primary-600'
+                              ? 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
+                              : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
                           }`}
                           onClick={() => setDashboardDropdownOpen(false)}
                         >
@@ -272,11 +326,12 @@ const Layout = () => {
                         </Link>
                         <Link
                           to="/zenith"
+                          role="menuitem"
                           title="Zenith — Ctrl+Shift+Z or ⌘⇧Z"
-                          className={`block px-4 py-2 text-sm font-medium ${
+                          className={`block px-4 py-2.5 text-sm font-medium ${
                             location.pathname.startsWith('/zenith')
-                              ? 'bg-primary-50 text-primary-700'
-                              : 'text-gray-700 hover:bg-gray-50 hover:text-primary-600'
+                              ? 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
+                              : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
                           }`}
                           onClick={() => setDashboardDropdownOpen(false)}
                         >
@@ -286,33 +341,84 @@ const Layout = () => {
                     )}
                   </div>
                 )}
-                {filteredNav.map((item) => (
+                {primaryNav.map((item) => (
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`inline-flex items-center px-3 xl:px-3 2xl:px-4 py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
+                    className={`inline-flex shrink-0 items-center px-3 py-2 rounded-xl text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
                       location.pathname.startsWith(item.path)
-                        ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40'
-                        : 'text-white/95 hover:bg-white/20 hover:text-white'
+                        ? 'bg-[color:var(--nav-active-bg)] text-[color:var(--nav-text-active)] shadow-md font-bold border-2 border-[color:var(--nav-border)]'
+                        : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
                     }`}
                   >
                     {item.name}
                   </Link>
                 ))}
+
+                {/* More (secondary/admin) */}
+                {secondaryNav.length ? (
+                  <div
+                    ref={moreDropdownRef}
+                    className="relative shrink-0"
+                    onMouseEnter={() => setMoreDropdownOpen(true)}
+                    onMouseLeave={() => setMoreDropdownOpen(false)}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setMoreDropdownOpen((v) => !v)}
+                      className={`inline-flex shrink-0 items-center px-3 py-2 rounded-xl text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
+                        isMoreActive
+                          ? 'bg-[color:var(--nav-active-bg)] text-[color:var(--nav-text-active)] shadow-md font-bold border-2 border-[color:var(--nav-border)]'
+                          : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
+                      }`}
+                      aria-expanded={moreDropdownOpen}
+                      aria-label="More menu"
+                    >
+                      More
+                      <svg className={`ml-1 h-4 w-4 transition-transform ${moreDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+
+                    {moreDropdownOpen ? (
+                      <div
+                        className="absolute left-0 top-full z-[250] mt-1 flex w-56 min-w-[12rem] flex-col overflow-hidden rounded-xl border border-[color:var(--nav-border)] bg-[color:color-mix(in_srgb,var(--nav-bg)_92%,#ffffff_8%)] py-1 shadow-2xl shadow-black/60 ring-1 ring-black/40"
+                        role="menu"
+                        aria-label="More menu"
+                      >
+                        {secondaryNav.map((item) => (
+                          <Link
+                            key={item.path}
+                            to={item.path}
+                            role="menuitem"
+                            className={`block px-4 py-2.5 text-sm font-medium ${
+                              location.pathname.startsWith(item.path)
+                                ? 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
+                                : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
+                            }`}
+                            onClick={() => setMoreDropdownOpen(false)}
+                          >
+                            {item.name}
+                          </Link>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
                 
                 {/* Help Dropdown Menu */}
                 <div 
                   ref={helpDropdownRef}
-                  className="relative"
+                  className="relative shrink-0"
                   onMouseEnter={() => setHelpDropdownOpen(true)}
                   onMouseLeave={() => setHelpDropdownOpen(false)}
                 >
                   <button
                     onClick={() => setHelpDropdownOpen(!helpDropdownOpen)}
-                    className={`inline-flex items-center px-3 xl:px-3 2xl:px-4 py-2 xl:py-2.5 rounded-lg xl:rounded-xl text-xs xl:text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
+                    className={`inline-flex items-center px-3 py-2 rounded-xl text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
                       isHelpActive
-                        ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40'
-                        : 'text-white/95 hover:bg-white/20 hover:text-white'
+                        ? 'bg-[color:var(--nav-active-bg)] text-[color:var(--nav-text-active)] shadow-md font-bold border-2 border-[color:var(--nav-border)]'
+                        : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
                     }`}
                   >
                     Help
@@ -323,14 +429,18 @@ const Layout = () => {
                   
                   {/* Dropdown Menu */}
                   {helpDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-1 min-w-[11rem] w-max max-w-[min(100vw,15rem)] bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[100]">
+                    <div
+                      className="absolute left-0 top-full z-[250] mt-1 flex min-w-[12rem] w-max max-w-[min(100vw,16rem)] flex-col overflow-hidden rounded-xl border border-[color:var(--nav-border)] bg-[color:color-mix(in_srgb,var(--nav-bg)_92%,#ffffff_8%)] py-1 shadow-2xl shadow-black/60 ring-1 ring-black/40"
+                      role="menu"
+                      aria-label="Help menu"
+                    >
                       {helpMenuItems.map((item) =>
                         'openTip' in item && item.openTip ? (
                           <button
                             key={item.name}
                             type="button"
                             onClick={openTipOfTheDay}
-                            className="block w-full text-left px-4 py-2 text-sm font-medium transition-colors text-gray-700 hover:bg-gray-50 hover:text-primary-600"
+                            className="block w-full px-4 py-2 text-left text-sm font-medium text-[color:var(--nav-text)] transition-colors hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]"
                           >
                             {item.name}
                           </button>
@@ -339,8 +449,10 @@ const Layout = () => {
                             key={item.name}
                             type="button"
                             onClick={openHelp}
-                            className={`block w-full text-left px-4 py-2 text-sm font-medium transition-colors ${
-                              isHelpActive ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50 hover:text-primary-600'
+                            className={`block w-full px-4 py-2 text-left text-sm font-medium transition-colors ${
+                              isHelpActive
+                                ? 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
+                                : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
                             }`}
                           >
                             {item.name}
@@ -352,8 +464,8 @@ const Layout = () => {
                             onClick={() => setHelpDropdownOpen(false)}
                             className={`block px-4 py-2 text-sm font-medium transition-colors ${
                               isHelpMenuPathActive(item.path, location.pathname, location.hash)
-                                ? 'bg-primary-50 text-primary-700'
-                                : 'text-gray-700 hover:bg-gray-50 hover:text-primary-600'
+                                ? 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
+                                : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
                             }`}
                           >
                             {item.name}
@@ -365,8 +477,8 @@ const Layout = () => {
                             onClick={() => setHelpDropdownOpen(false)}
                             className={`block px-4 py-2 text-sm font-medium transition-colors ${
                               location.pathname.startsWith(item.path.split('?')[0] ?? item.path)
-                                ? 'bg-primary-50 text-primary-700'
-                                : 'text-gray-700 hover:bg-gray-50 hover:text-primary-600'
+                                ? 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
+                                : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
                             }`}
                           >
                             {item.name}
@@ -378,30 +490,78 @@ const Layout = () => {
                 </div>
               </div>
             </div>
-            <div className="flex items-center space-x-1.5 sm:space-x-2 lg:space-x-2.5 xl:space-x-3 flex-shrink-0">
+            <div className="flex shrink-0 items-center space-x-1.5 sm:space-x-2">
               {/* User name next to hamburger when in mobile/tablet view (md up to lg) */}
-              <span className="hidden md:inline lg:hidden text-sm text-white/90 font-medium truncate max-w-[100px]">{user?.name}</span>
-              <span className="hidden lg:inline text-xs xl:text-sm text-white/90 font-medium truncate max-w-[120px] xl:max-w-none">{user?.name}</span>
-              <span className="hidden lg:inline text-xs text-primary-700 bg-gradient-to-r from-white to-primary-50 px-2 xl:px-3 py-1.5 xl:py-2 rounded-full font-bold shadow-lg border-2 border-white/50">
-                {user?.role}
+              <span className="hidden max-w-[min(7rem,28vw)] truncate text-sm font-medium text-[color:var(--nav-text-hover)] md:inline lg:hidden">
+                {user?.name}
               </span>
-              <Link
-                to="/change-password"
-                className="hidden lg:inline text-xs xl:text-sm text-white font-semibold hover:text-white hover:bg-white/20 px-2 xl:px-3 py-1.5 xl:py-2 rounded-lg xl:rounded-xl transition-colors duration-200 shadow-sm border-2 border-white/20 hover:border-white/40 whitespace-nowrap"
-              >
-                Change Password
-              </Link>
+
+              {/* Profile menu — lg+; consolidates role + theme + actions */}
+              <div ref={profileDropdownRef} className="relative hidden lg:block">
+                <button
+                  type="button"
+                  onClick={() => setProfileDropdownOpen((v) => !v)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--nav-border)] bg-[color:var(--nav-active-bg)] px-2.5 py-2 text-sm font-semibold text-[color:var(--nav-text-hover)] shadow-sm transition-colors hover:brightness-105"
+                  aria-expanded={profileDropdownOpen}
+                  aria-label="User menu"
+                >
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] text-xs font-extrabold text-[color:var(--nav-text-active)]">
+                    {initials(user?.name)}
+                  </span>
+                  <span className="hidden 2xl:inline max-w-[14rem] truncate">{user?.name}</span>
+                  <svg className={`h-4 w-4 transition-transform ${profileDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {profileDropdownOpen ? (
+                  <div
+                    className="absolute right-0 top-full z-[250] mt-2 w-[min(92vw,19rem)] overflow-hidden rounded-2xl border border-[color:var(--nav-border)] bg-[color:color-mix(in_srgb,var(--nav-bg)_92%,#ffffff_8%)] p-3 shadow-2xl shadow-black/60 ring-1 ring-black/40"
+                    role="menu"
+                    aria-label="User menu"
+                  >
+                    <div className="px-2 pb-2">
+                      <div className="text-sm font-semibold text-[color:var(--nav-text-active)]">{user?.name}</div>
+                      <div className="mt-1 inline-flex rounded-full border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-2.5 py-1 text-[11px] font-extrabold text-[color:var(--nav-text-active)]">
+                        {user?.role}
+                      </div>
+                    </div>
+                    <div className="px-2 py-2">
+                      <ThemeToggle />
+                    </div>
+                    <div className="mt-2 space-y-1 border-t border-[color:var(--nav-border)] pt-2">
+                      <Link
+                        to="/change-password"
+                        onClick={() => setProfileDropdownOpen(false)}
+                        className="block rounded-xl px-3 py-2 text-sm font-semibold text-[color:var(--nav-text-hover)] transition-colors hover:bg-[color:var(--nav-active-bg)]"
+                        role="menuitem"
+                      >
+                        Change Password
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfileDropdownOpen(false)
+                          logout()
+                        }}
+                        className="block w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-[color:var(--nav-text-hover)] transition-colors hover:bg-[color:var(--nav-active-bg)]"
+                        role="menuitem"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Hamburger menu - below lg */}
               <button
-                onClick={logout}
-                className="hidden lg:inline text-xs xl:text-sm text-white font-semibold hover:text-white hover:bg-white/20 px-2 xl:px-3 py-1.5 xl:py-2 rounded-lg xl:rounded-xl transition-colors duration-200 shadow-sm border-2 border-white/20 hover:border-white/40 whitespace-nowrap"
-              >
-                Logout
-              </button>
-              {/* Hamburger menu - below lg (includes iPad portrait) */}
-              <button
+                type="button"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden ml-2 inline-flex items-center justify-center p-2 rounded-xl text-white hover:bg-white/20 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors duration-200 border-2 border-white/20"
-                aria-label="Toggle menu"
+                className="ml-1 inline-flex min-h-[44px] min-w-[44px] shrink-0 touch-manipulation items-center justify-center rounded-xl border-2 border-[color:var(--nav-border)] p-2 text-[color:var(--nav-text-hover)] transition-colors duration-200 hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)] lg:hidden"
+                aria-expanded={mobileMenuOpen}
+                aria-controls="crm-mobile-nav"
+                aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
               >
                 {mobileMenuOpen ? (
                   <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -417,8 +577,11 @@ const Layout = () => {
           </div>
           {/* Mobile/Tablet menu - below lg; scrollable so Help is reachable in landscape */}
           {mobileMenuOpen && (
-            <div className="lg:hidden pb-4 pt-2 max-h-[min(85vh,400px)] overflow-y-auto overflow-x-hidden overscroll-contain mobile-menu-scroll">
-              <div className="space-y-2">
+            <div
+              id="crm-mobile-nav"
+              className="mobile-menu-scroll max-h-[min(88dvh,calc(100dvh-3.5rem))] overflow-y-auto overflow-x-hidden overscroll-y-contain border-t border-[color:var(--nav-border)] bg-[color:color-mix(in_srgb,var(--nav-bg)_82%,#000000_18%)] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-3 lg:hidden"
+            >
+              <div className="space-y-1.5 px-1 sm:px-0">
                 {canAccessDashboardMenu && (
                   <>
                     <Link
@@ -426,8 +589,8 @@ const Layout = () => {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 ${
                         location.pathname.startsWith('/dashboard')
-                          ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40'
-                          : 'text-white/95 hover:bg-white/20 hover:text-white'
+                          ? 'bg-[color:var(--nav-active-bg)] text-[color:var(--nav-text-active)] shadow-md font-bold border-2 border-[color:var(--nav-border)]'
+                          : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
                       }`}
                     >
                       Dashboard
@@ -438,8 +601,8 @@ const Layout = () => {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 ${
                         location.pathname.startsWith('/zenith')
-                          ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40'
-                          : 'text-white/95 hover:bg-white/20 hover:text-white'
+                          ? 'bg-[color:var(--nav-active-bg)] text-[color:var(--nav-text-active)] shadow-md font-bold border-2 border-[color:var(--nav-border)]'
+                          : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
                       }`}
                     >
                       Zenith ✦
@@ -453,8 +616,8 @@ const Layout = () => {
                     onClick={() => setMobileMenuOpen(false)}
                     className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 ${
                       location.pathname.startsWith(item.path)
-                        ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40'
-                        : 'text-white/95 hover:bg-white/20 hover:text-white'
+                        ? 'bg-[color:var(--nav-active-bg)] text-[color:var(--nav-text-active)] shadow-md font-bold border-2 border-[color:var(--nav-border)]'
+                        : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
                     }`}
                   >
                     {item.name}
@@ -467,7 +630,7 @@ const Layout = () => {
                       key={item.name}
                       type="button"
                       onClick={openTipOfTheDay}
-                      className="block w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 text-white/95 hover:bg-white/20 hover:text-white"
+                      className="block w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]"
                     >
                       {item.name}
                     </button>
@@ -480,7 +643,9 @@ const Layout = () => {
                         openHelp()
                       }}
                       className={`block w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 ${
-                        isHelpActive ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40' : 'text-white/95 hover:bg-white/20 hover:text-white'
+                        isHelpActive
+                          ? 'bg-[color:var(--nav-active-bg)] text-[color:var(--nav-text-active)] shadow-md font-bold border-2 border-[color:var(--nav-border)]'
+                          : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
                       }`}
                     >
                       {item.name}
@@ -492,8 +657,8 @@ const Layout = () => {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 ${
                         isHelpMenuPathActive(item.path, location.pathname, location.hash)
-                          ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40'
-                          : 'text-white/95 hover:bg-white/20 hover:text-white'
+                          ? 'bg-[color:var(--nav-active-bg)] text-[color:var(--nav-text-active)] shadow-md font-bold border-2 border-[color:var(--nav-border)]'
+                          : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
                       }`}
                     >
                       {item.name}
@@ -505,8 +670,8 @@ const Layout = () => {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 ${
                         location.pathname.startsWith(item.path.split('?')[0] ?? item.path)
-                          ? 'bg-white/30 text-white shadow-md font-bold border-2 border-white/40'
-                          : 'text-white/95 hover:bg-white/20 hover:text-white'
+                          ? 'bg-[color:var(--nav-active-bg)] text-[color:var(--nav-text-active)] shadow-md font-bold border-2 border-[color:var(--nav-border)]'
+                          : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
                       }`}
                     >
                       {item.name}
@@ -514,15 +679,18 @@ const Layout = () => {
                   ) : null
                 )}
                 {/* Mobile user info and actions */}
-                <div className="mt-4 pt-4 border-t border-white/20 px-4 space-y-2">
-                  <div className="text-sm text-white/90 font-medium mb-2">{user?.name}</div>
-                  <div className="text-xs text-primary-700 bg-gradient-to-r from-white to-primary-50 px-3 py-1 rounded-full font-bold inline-block border-2 border-white/50">
+                <div className="mt-4 pt-4 border-t border-[color:var(--nav-border)] px-4 space-y-2">
+                  <div className="text-sm text-[color:var(--nav-text-hover)] font-medium mb-2">{user?.name}</div>
+                  <div className="inline-block rounded-full border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-3 py-1 text-xs font-bold text-[color:var(--nav-text-active)]">
                     {user?.role}
+                  </div>
+                  <div className="flex justify-start py-1">
+                    <ThemeToggle />
                   </div>
                   <Link
                     to="/change-password"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-4 py-3 rounded-xl text-sm font-semibold text-white/95 hover:bg-white/20 hover:text-white transition-colors duration-200"
+                    className="block px-4 py-3 rounded-xl text-sm font-semibold text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)] transition-colors duration-200"
                   >
                     Change Password
                   </Link>
@@ -531,7 +699,7 @@ const Layout = () => {
                       setMobileMenuOpen(false)
                       logout()
                     }}
-                    className="block w-full text-left px-4 py-3 rounded-xl text-sm font-semibold text-white/95 hover:bg-white/20 hover:text-white transition-colors duration-200"
+                    className="block w-full text-left px-4 py-3 rounded-xl text-sm font-semibold text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)] transition-colors duration-200"
                   >
                     Logout
                   </button>
@@ -542,10 +710,20 @@ const Layout = () => {
         </div>
       </nav>
 
-      {/* Zenith: avoid overflow-x clip/hidden on main — CSS pairs it with overflow-y: auto and breaks document scroll in Chrome/Edge */}
+      {/* Zenith + Users admin: avoid overflow-x clip/hidden on main — CSS pairs it with overflow-y: auto and breaks document scroll in Chrome/Edge */}
       <main
         className={
-          location.pathname.startsWith('/zenith')
+          location.pathname.startsWith('/zenith') ||
+          location.pathname.startsWith('/users') ||
+          location.pathname.startsWith('/audit-security') ||
+          location.pathname.startsWith('/about') ||
+          location.pathname.startsWith('/help') ||
+          location.pathname.startsWith('/tally-export') ||
+          location.pathname.startsWith('/support-tickets') ||
+          location.pathname.startsWith('/change-password') ||
+          location.pathname.startsWith('/customers') ||
+          location.pathname.startsWith('/projects') ||
+          location.pathname.startsWith('/dashboard')
             ? 'w-full max-w-none mx-auto py-0 px-0'
             : 'mx-auto w-full max-w-[1600px] py-6 px-2 sm:px-4 md:px-6 lg:px-8'
         }

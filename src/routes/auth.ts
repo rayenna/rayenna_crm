@@ -12,6 +12,20 @@ import { logAccess, logSecurityAudit } from '../utils/auditLogger';
 
 const router = express.Router();
 
+type ThemePreferencePayload = 'light' | 'dark';
+
+function dbThemeToUi(theme?: string | null): ThemePreferencePayload | null {
+  if (!theme) return null;
+  const t = String(theme).toUpperCase();
+  if (t === 'LIGHT') return 'light';
+  if (t === 'DARK') return 'dark';
+  return null;
+}
+
+function uiThemeToDb(theme: ThemePreferencePayload): 'LIGHT' | 'DARK' {
+  return theme === 'light' ? 'LIGHT' : 'DARK';
+}
+
 // ── SSO ticket store (one-time, short-lived; in-memory for single-instance) ──
 const SSO_TICKET_TTL_MS = 90_000; // 90 seconds
 const ssoTicketStore = new Map<string, { userId: string; expiresAt: number }>();
@@ -98,6 +112,7 @@ router.post(
           email: user.email,
           name: user.name,
           role: user.role,
+          themePreference: dbThemeToUi((user as any).themePreference),
         },
       });
       logAccess({ userId: user.id, email: user.email, role: user.role, actionType: 'login_success', success: true, req });
@@ -148,6 +163,7 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
         email: true,
         name: true,
         role: true,
+        themePreference: true,
         createdAt: true,
       },
     });
@@ -156,11 +172,53 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(user);
+    res.json({
+      ...user,
+      themePreference: dbThemeToUi((user as any).themePreference),
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Theme preference — per-user and cross-device (stored in DB)
+router.get('/theme', authenticate, async (req: Request, res: Response) => {
+  try {
+    if (!req.user?.id) return res.status(401).json({ error: 'Authentication required' });
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { themePreference: true },
+    });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ theme: dbThemeToUi((user as any).themePreference) ?? 'dark' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.put(
+  '/theme',
+  authenticate,
+  [body('theme').isIn(['light', 'dark']).withMessage('theme must be light or dark')],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+      if (!req.user?.id) return res.status(401).json({ error: 'Authentication required' });
+      const { theme } = req.body as { theme: ThemePreferencePayload };
+      const updated = await prisma.user.update({
+        where: { id: req.user.id },
+        data: { themePreference: uiThemeToDb(theme) as any },
+        select: { id: true, themePreference: true },
+      });
+      res.json({ theme: dbThemeToUi((updated as any).themePreference) ?? theme });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
 
 // ── SSO: issue one-time ticket for Proposal Engine (requires valid CRM JWT) ──
 router.post('/sso-ticket', authenticate, async (req: Request, res: Response) => {

@@ -73,13 +73,14 @@ export default function Leaderboard({
   const currentUserName = currentUser?.name?.trim() ?? ''
 
   const cardStyle: CSSProperties = {
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.09)',
-    borderLeft: '3px solid #F5A623',
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-card)',
+    borderLeft: '3px solid var(--accent-gold)',
     borderRadius: '0 12px 12px 0',
     marginBottom: 16,
     overflow: 'hidden',
     fontFamily: "'DM Sans', sans-serif",
+    boxShadow: 'var(--shadow-card)',
   }
 
   const openPeriodDeals = () => {
@@ -94,6 +95,7 @@ export default function Leaderboard({
   return (
     <div className="w-full min-w-0" style={cardStyle}>
       <div
+        className="zenith-focus-panel__head"
         style={{
           padding: '12px 16px',
           display: 'flex',
@@ -101,7 +103,6 @@ export default function Leaderboard({
           justifyContent: 'space-between',
           gap: 8,
           flexWrap: 'wrap',
-          background: 'rgba(255,255,255,0.02)',
         }}
       >
         <button
@@ -111,16 +112,16 @@ export default function Leaderboard({
           onClick={() => setIsOpen((v) => !v)}
           aria-expanded={isOpen}
         >
-          <Trophy size={16} color="#F5A623" className="shrink-0" aria-hidden />
+          <Trophy size={16} className="shrink-0 text-[color:var(--accent-gold)]" aria-hidden />
           <span className="min-w-0">
             <span
-              className="zenith-display text-lg sm:text-xl font-bold text-white tracking-tight"
+              className="zenith-display text-lg sm:text-xl font-bold text-[color:var(--text-primary)] tracking-tight"
               style={{ fontFamily: "'Syne', sans-serif" }}
             >
               The Board
             </span>
             <span
-              className="text-[11px] text-white/35 ml-1.5 whitespace-nowrap"
+              className="text-[11px] text-[color:var(--text-muted)] ml-1.5 whitespace-nowrap"
               style={{ fontFamily: "'DM Sans', sans-serif" }}
             >
               {getPeriodLabel(period)}
@@ -128,7 +129,7 @@ export default function Leaderboard({
           </span>
           <ChevronDown
             size={14}
-            className="text-white/30 transition-transform duration-300 shrink-0 ml-1"
+            className="text-[color:var(--text-muted)] transition-transform duration-300 shrink-0 ml-1"
             style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
             aria-hidden
           />
@@ -145,9 +146,9 @@ export default function Leaderboard({
               type="button"
               className="rounded-full border px-2.5 py-1 text-[10px] font-medium max-w-[200px] truncate"
               style={{
-                background: 'rgba(245,166,35,0.15)',
-                borderColor: 'rgba(245,166,35,0.4)',
-                color: '#F5A623',
+                background: 'var(--accent-gold-muted)',
+                borderColor: 'var(--accent-gold-border)',
+                color: 'var(--accent-gold)',
               }}
               onClick={() => setPeriod(cyclePeriod)}
               aria-label={`Period ${getPeriodLabel(period)}, tap to change`}
@@ -166,15 +167,15 @@ export default function Leaderboard({
                   style={
                     active
                       ? {
-                          background: 'rgba(245,166,35,0.15)',
-                          border: '1px solid rgba(245,166,35,0.4)',
-                          color: '#F5A623',
+                          background: 'var(--accent-gold-muted)',
+                          border: '1px solid var(--accent-gold-border)',
+                          color: 'var(--accent-gold)',
                           fontWeight: 500,
                         }
                       : {
-                          background: 'rgba(255,255,255,0.05)',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          color: 'rgba(255,255,255,0.4)',
+                          background: 'var(--bg-input)',
+                          border: '1px solid var(--border-default)',
+                          color: 'var(--text-muted)',
                         }
                   }
                 >
@@ -189,26 +190,26 @@ export default function Leaderboard({
           {!isMobile && onOpenListMode ? (
             <button
               type="button"
-              className="text-right rounded-lg border-0 px-2 py-1 transition-colors cursor-pointer bg-transparent hover:bg-white/[0.06]"
+              className="text-right rounded-lg border-0 px-2 py-1 transition-colors cursor-pointer bg-transparent hover:bg-[color:var(--bg-table-hover)]"
               onClick={openPeriodDeals}
               title="Open deals in quick drawer (same as chart drill-down)"
             >
-              <div className="text-xs font-semibold" style={{ color: '#F5A623' }}>
+              <div className="text-xs font-semibold" style={{ color: 'var(--accent-gold)' }}>
                 {formatINR(periodRevenue)}
               </div>
-              <div className="text-[10px] text-white/30">{periodDeals} deals</div>
+              <div className="text-[10px] text-[color:var(--text-muted)]">{periodDeals} deals</div>
             </button>
           ) : !isMobile ? (
             <div className="text-right">
-              <div className="text-xs font-semibold" style={{ color: '#F5A623' }}>
+              <div className="text-xs font-semibold" style={{ color: 'var(--accent-gold)' }}>
                 {formatINR(periodRevenue)}
               </div>
-              <div className="text-[10px] text-white/30">{periodDeals} deals</div>
+              <div className="text-[10px] text-[color:var(--text-muted)]">{periodDeals} deals</div>
             </div>
           ) : onOpenListMode && periodDeals > 0 ? (
             <button
               type="button"
-              className="text-[10px] font-semibold shrink-0 rounded-lg border border-white/15 px-2 py-1 text-[#F5A623] bg-transparent hover:bg-white/[0.06]"
+              className="text-[10px] font-semibold shrink-0 rounded-lg border border-[color:var(--border-default)] px-2 py-1 text-[color:var(--accent-gold)] bg-transparent hover:bg-[color:var(--bg-table-hover)]"
               onClick={openPeriodDeals}
             >
               View {periodDeals} deals
@@ -221,15 +222,16 @@ export default function Leaderboard({
         initial={false}
         animate={{ height: isOpen ? 'auto' : 0 }}
         transition={{ duration: 0.25, ease: 'easeInOut' }}
-        style={{ overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.06)' }}
+        className="border-t border-[color:var(--border-default)]"
+        style={{ overflow: 'hidden' }}
       >
         {ranked.length === 0 ? (
           <div className="text-center px-4" style={{ padding: '28px 16px' }}>
-            <Trophy size={24} className="mx-auto text-white/[0.12]" aria-hidden />
-            <p className="text-[13px] text-white/30 mt-2" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <Trophy size={24} className="mx-auto text-[color:var(--text-muted)] opacity-40" aria-hidden />
+            <p className="text-[13px] text-[color:var(--text-secondary)] mt-2" style={{ fontFamily: "'DM Sans', sans-serif" }}>
               No closed deals in {getPeriodLabel(period)}
             </p>
-            <p className="text-[11px] text-white/20 mt-1" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <p className="text-[11px] text-[color:var(--text-muted)] mt-1" style={{ fontFamily: "'DM Sans', sans-serif" }}>
               Close the first deal to start the board
             </p>
           </div>
@@ -273,10 +275,10 @@ export default function Leaderboard({
 
         {ranked.length > 0 ? (
           <div
-            className="flex justify-between gap-2 px-4 py-2 border-t border-white/[0.04]"
+            className="flex justify-between gap-2 px-4 py-2 border-t border-[color:var(--border-default)]"
             style={{
               fontSize: 9,
-              color: 'rgba(255,255,255,0.18)',
+              color: 'var(--text-muted)',
               fontStyle: 'italic',
               fontFamily: "'DM Sans', sans-serif",
             }}
@@ -310,21 +312,22 @@ function LeaderboardRow({
     entry.name === currentUserName ||
     (firstToken.length > 0 && currentUserName.startsWith(firstToken))
   const fillPct = topRevenue > 0 ? (entry.revenue / topRevenue) * 100 : 0
-  const barColor = isCurrentUser ? '#F5A623' : getAvatarColor(entry.name)
+  const barColor = isCurrentUser ? 'var(--accent-gold)' : getAvatarColor(entry.name)
 
   return (
     <li
-      className="flex items-center gap-3 border-b border-white/[0.04] transition-colors duration-150"
+      className="flex items-center gap-3 border-b border-[color:var(--border-default)] transition-colors duration-150"
       style={{
         padding: '10px 16px',
-        background: isCurrentUser ? 'rgba(245,166,35,0.06)' : undefined,
+        background: isCurrentUser ? 'color-mix(in srgb, var(--accent-gold) 10%, transparent)' : undefined,
       }}
       onMouseEnter={(e) => {
-        if (!isCurrentUser) (e.currentTarget as HTMLLIElement).style.background = 'rgba(255,255,255,0.03)'
+        if (!isCurrentUser)
+          (e.currentTarget as HTMLLIElement).style.background = 'var(--bg-table-hover)'
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget as HTMLLIElement
-        el.style.background = isCurrentUser ? 'rgba(245,166,35,0.06)' : 'transparent'
+        el.style.background = isCurrentUser ? 'color-mix(in srgb, var(--accent-gold) 10%, transparent)' : 'transparent'
       }}
     >
       <div className="w-6 text-center shrink-0" style={{ fontFamily: "'Syne', sans-serif" }}>
@@ -341,16 +344,16 @@ function LeaderboardRow({
             🥉
           </span>
         ) : (
-          <span className="text-[13px] font-bold text-white/30">{entry.rank}</span>
+          <span className="text-[13px] font-bold text-[color:var(--text-muted)]">{entry.rank}</span>
         )}
       </div>
 
       <div
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-[#0A0A0F]"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-[color:var(--text-inverse)]"
         style={{
           background: getAvatarColor(entry.name),
           fontFamily: "'Syne', sans-serif",
-          boxShadow: isCurrentUser ? '0 0 0 2px #F5A623' : undefined,
+          boxShadow: isCurrentUser ? '0 0 0 2px var(--accent-gold)' : undefined,
         }}
       >
         {getInitials(entry.name)}
@@ -362,7 +365,7 @@ function LeaderboardRow({
             className="truncate text-[13px] font-medium"
             style={{
               fontFamily: "'DM Sans', sans-serif",
-              color: isCurrentUser ? '#F5A623' : '#fff',
+              color: isCurrentUser ? 'var(--accent-gold)' : 'var(--text-primary)',
             }}
           >
             {entry.name}
@@ -371,9 +374,9 @@ function LeaderboardRow({
             <span
               className="shrink-0 rounded-[10px] border px-1.5 py-px text-[9px] font-semibold"
               style={{
-                background: 'rgba(245,166,35,0.2)',
-                borderColor: 'rgba(245,166,35,0.4)',
-                color: '#F5A623',
+                background: 'var(--accent-gold-muted)',
+                borderColor: 'var(--accent-gold-border)',
+                color: 'var(--accent-gold)',
               }}
             >
               YOU
@@ -383,7 +386,7 @@ function LeaderboardRow({
         {!isMobile ? (
           <div
             className="mt-1.5 h-[3px] overflow-hidden rounded-sm"
-            style={{ background: 'rgba(255,255,255,0.06)' }}
+            style={{ background: 'var(--bg-ticker)' }}
           >
             <div
               className="h-full rounded-sm"
@@ -402,7 +405,7 @@ function LeaderboardRow({
         {onOpenDeals ? (
           <button
             type="button"
-            className="w-full border-0 bg-transparent p-0 text-right rounded-lg px-1 py-0.5 transition-colors hover:bg-white/[0.06] cursor-pointer"
+            className="w-full border-0 bg-transparent p-0 text-right rounded-lg px-1 py-0.5 transition-colors hover:bg-[color:var(--bg-table-hover)] cursor-pointer"
             onClick={(e) => {
               e.preventDefault()
               onOpenDeals()
@@ -414,12 +417,12 @@ function LeaderboardRow({
               style={{
                 fontFamily: "'Syne', sans-serif",
                 fontSize: isMobile ? 12 : 14,
-                color: isCurrentUser ? '#F5A623' : '#fff',
+                color: isCurrentUser ? 'var(--accent-gold)' : 'var(--text-primary)',
               }}
             >
               {isMobile ? formatINRCompact(entry.revenue) : formatINR(entry.revenue)}
             </div>
-            <div className="text-[10px] text-white/35" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <div className="text-[10px] text-[color:var(--text-muted)]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
               {entry.deals} deal{entry.deals !== 1 ? 's' : ''}
             </div>
           </button>
@@ -430,12 +433,12 @@ function LeaderboardRow({
               style={{
                 fontFamily: "'Syne', sans-serif",
                 fontSize: isMobile ? 12 : 14,
-                color: isCurrentUser ? '#F5A623' : '#fff',
+                color: isCurrentUser ? 'var(--accent-gold)' : 'var(--text-primary)',
               }}
             >
               {isMobile ? formatINRCompact(entry.revenue) : formatINR(entry.revenue)}
             </div>
-            <div className="text-[10px] text-white/35" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            <div className="text-[10px] text-[color:var(--text-muted)]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
               {entry.deals} deal{entry.deals !== 1 ? 's' : ''}
             </div>
           </>

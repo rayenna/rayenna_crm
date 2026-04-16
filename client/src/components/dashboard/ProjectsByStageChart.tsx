@@ -5,6 +5,16 @@ import { UserRole } from '../../types'
 import type { ZenithDateFilter } from '../zenith/zenithTypes'
 import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
 import { getProjectStatusColor } from './projectStatusColors'
+import {
+  ZENITH_RECHARTS_TOOLTIP_CURSOR,
+  ZENITH_RECHARTS_TOOLTIP_WRAPPER_STYLE,
+  ZENITH_CHART_TOOLTIP_INSIGHT,
+  ZENITH_CHART_TOOLTIP_LINE,
+  ZENITH_CHART_TOOLTIP_PANEL,
+  ZENITH_CHART_TOOLTIP_TITLE,
+  ZENITH_DASHBOARD_ANALYTICS_CARD,
+} from './zenithRechartsTooltipStyles'
+import { useChartColors } from '../../hooks/useChartColors'
 
 export interface ProjectsByStageItem {
   status: string
@@ -21,6 +31,7 @@ interface ProjectsByStageChartProps {
 const ProjectsByStageChart = ({ data: chartData = [], dashboardFilter }: ProjectsByStageChartProps) => {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const c = useChartColors()
   const dateFilter: ZenithDateFilter = dashboardFilter ?? {
     selectedFYs: [],
     selectedQuarters: [],
@@ -35,15 +46,15 @@ const ProjectsByStageChart = ({ data: chartData = [], dashboardFilter }: Project
   if (!canView) return null
 
   return (
-    <div className="h-full flex flex-col min-h-[360px] bg-white shadow-sm rounded-2xl border border-slate-200 p-4 sm:p-5">
-      <div className="flex flex-col gap-3 mb-4">
+    <div className={`${ZENITH_DASHBOARD_ANALYTICS_CARD} h-full`}>
+      <div className="mb-4 flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-indigo-600">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="rounded-lg bg-[color:var(--accent-gold)] p-2 text-[color:var(--text-inverse)]">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-900">
+          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">
             Projects by Stage / Execution Status
           </h2>
         </div>
@@ -53,8 +64,8 @@ const ProjectsByStageChart = ({ data: chartData = [], dashboardFilter }: Project
         {!chartData || chartData.length === 0 ? (
           <div className="flex items-center justify-center w-full h-full">
             <div className="text-center px-4">
-              <p className="mb-2 text-sm sm:text-base text-gray-500">No data for selected period</p>
-              <p className="text-xs sm:text-sm text-gray-600">Project counts by stage will appear when projects exist.</p>
+              <p className="mb-2 text-sm text-[color:var(--text-secondary)] sm:text-base">No data for selected period</p>
+              <p className="text-xs text-[color:var(--text-muted)] sm:text-sm">Project counts by stage will appear when projects exist.</p>
             </div>
           </div>
         ) : (
@@ -65,45 +76,35 @@ const ProjectsByStageChart = ({ data: chartData = [], dashboardFilter }: Project
                 margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
                 barCategoryGap="4%"
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke={c.grid} />
                 <XAxis
                   dataKey="statusLabel"
-                  tick={{ fontSize: 11, fill: '#475569' }}
+                  tick={{ fontSize: 11, fill: c.axisText }}
                   angle={-45}
                   textAnchor="end"
                   height={80}
                   interval={0}
-                  stroke="#94a3b8"
+                  stroke={c.grid}
                 />
                 <YAxis
-                  tick={{ fontSize: 12, fill: '#475569' }}
-                  stroke="#94a3b8"
+                  tick={{ fontSize: 12, fill: c.axisText }}
+                  stroke={c.grid}
                   allowDecimals={false}
                 />
                 <Tooltip
-                  wrapperStyle={{ outline: 'none', zIndex: 100 }}
+                  wrapperStyle={ZENITH_RECHARTS_TOOLTIP_WRAPPER_STYLE}
+                  cursor={ZENITH_RECHARTS_TOOLTIP_CURSOR}
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const d = payload[0].payload as ProjectsByStageItem
                       return (
-                        <div
-                          className="p-3 sm:p-4 border border-slate-200 rounded-xl shadow-xl"
-                          style={{
-                            backgroundColor: '#ffffff',
-                            color: '#0f172a',
-                            WebkitFontSmoothing: 'antialiased',
-                          }}
-                        >
-                          <p className="font-semibold mb-2" style={{ color: '#0f172a' }}>
-                            {d.statusLabel}
-                          </p>
-                          <p className="text-sm" style={{ color: '#334155' }}>
+                        <div className={ZENITH_CHART_TOOLTIP_PANEL}>
+                          <p className={ZENITH_CHART_TOOLTIP_TITLE}>{d.statusLabel}</p>
+                          <p className={ZENITH_CHART_TOOLTIP_LINE}>
                             Projects:{' '}
-                            <span className="font-semibold tabular-nums" style={{ color: '#0d1b3a' }}>
-                              {d.count}
-                            </span>
+                            <span className="font-extrabold tabular-nums text-[color:var(--accent-gold)]">{d.count}</span>
                           </p>
-                          <p className="text-xs font-medium text-amber-700 mt-1">Click bar to open Projects →</p>
+                          <p className={ZENITH_CHART_TOOLTIP_INSIGHT}>Click bar to open Projects →</p>
                         </div>
                       )
                     }

@@ -6,6 +6,15 @@ import { UserRole } from '../../types'
 import type { ZenithDateFilter } from '../zenith/zenithTypes'
 import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
 import { getSegmentColor } from './segmentColors'
+import {
+  ZENITH_RECHARTS_TOOLTIP_CURSOR,
+  ZENITH_RECHARTS_TOOLTIP_WRAPPER_STYLE,
+  ZENITH_CHART_TOOLTIP_INSIGHT,
+  ZENITH_CHART_TOOLTIP_LINE,
+  ZENITH_CHART_TOOLTIP_PANEL,
+  ZENITH_CHART_TOOLTIP_TITLE,
+  ZENITH_DASHBOARD_ANALYTICS_CARD,
+} from './zenithRechartsTooltipStyles'
 
 export interface PipelineBySegmentItem {
   type: string
@@ -45,19 +54,17 @@ const PipelineByCustomerSegmentPieChart = memo(({ data: chartData = [], dashboar
 
   if (!chartData || chartData.length === 0) {
     return (
-      <div className="w-full min-h-[360px] flex flex-col bg-white shadow-sm rounded-2xl border border-slate-200 p-4 sm:p-5">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-lg bg-blue-600">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${ZENITH_DASHBOARD_ANALYTICS_CARD} w-full flex-col`}>
+        <div className="mb-4 flex items-center gap-3">
+          <div className="rounded-lg bg-[color:var(--accent-teal)] p-2 text-[color:var(--text-inverse)]">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-900">
-            Pipeline by Customer Segment
-          </h2>
+          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">Pipeline by Customer Segment</h2>
         </div>
-        <div className="flex items-center justify-center text-gray-500" style={{ height: '320px' }}>
+        <div className="flex items-center justify-center text-[color:var(--text-muted)]" style={{ height: '320px' }}>
           <p>No pipeline data available</p>
         </div>
       </div>
@@ -65,18 +72,16 @@ const PipelineByCustomerSegmentPieChart = memo(({ data: chartData = [], dashboar
   }
 
   return (
-    <div className="w-full min-h-[360px] flex flex-col bg-white shadow-sm rounded-2xl border border-slate-200 p-4 sm:p-5">
-      <div className="flex flex-col gap-3 mb-4">
+    <div className={`${ZENITH_DASHBOARD_ANALYTICS_CARD} w-full flex-col`}>
+      <div className="mb-4 flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-blue-600">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="rounded-lg bg-[color:var(--accent-teal)] p-2 text-[color:var(--text-inverse)]">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-900">
-            Pipeline by Customer Segment
-          </h2>
+          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">Pipeline by Customer Segment</h2>
         </div>
       </div>
       {/* On mobile portrait use visible so chart isn’t clipped when page scrolls; from sm up allow horizontal scroll */}
@@ -110,6 +115,8 @@ const PipelineByCustomerSegmentPieChart = memo(({ data: chartData = [], dashboar
                   ))}
                 </Pie>
                 <Tooltip
+                  wrapperStyle={ZENITH_RECHARTS_TOOLTIP_WRAPPER_STYLE}
+                  cursor={ZENITH_RECHARTS_TOOLTIP_CURSOR}
                   content={({
                     active,
                     payload,
@@ -120,32 +127,22 @@ const PipelineByCustomerSegmentPieChart = memo(({ data: chartData = [], dashboar
                     if (active && payload && payload.length && payload[0].payload) {
                       const data = payload[0].payload
                       return (
-                        <div
-                          className="p-2 sm:p-3 border border-gray-200 rounded-lg shadow-lg text-xs sm:text-sm"
-                          style={{
-                            backgroundColor: '#ffffff',
-                            color: '#0f172a',
-                          }}
-                        >
-                          <p className="font-semibold" style={{ color: '#0f172a' }}>
-                            {data.label}
-                          </p>
-                          <p style={{ color: '#334155' }}>
+                        <div className={`${ZENITH_CHART_TOOLTIP_PANEL} text-xs sm:text-sm`}>
+                          <p className={ZENITH_CHART_TOOLTIP_TITLE}>{data.label}</p>
+                          <p className={ZENITH_CHART_TOOLTIP_LINE}>
                             Pipeline:{' '}
-                            <span className="font-medium" style={{ color: '#0d1b3a' }}>
+                            <span className="font-extrabold text-[color:var(--accent-gold)]">
                               ₹{data.value.toLocaleString('en-IN')}
                             </span>
                           </p>
-                          <p style={{ color: '#334155' }}>
+                          <p className={ZENITH_CHART_TOOLTIP_LINE}>
                             Percentage:{' '}
-                            <span className="font-medium" style={{ color: '#0d1b3a' }}>
-                              {data.percentage}%
-                            </span>
+                            <span className="font-extrabold text-[color:var(--accent-teal)]">{data.percentage}%</span>
                           </p>
-                          <p className="text-xs mt-1" style={{ color: '#64748b' }}>
-                            Projects: {data.count}
+                          <p className={`${ZENITH_CHART_TOOLTIP_LINE} mt-1 text-xs`}>
+                            Projects: <span className="font-extrabold text-[color:var(--chart-tooltip-fg)]">{data.count}</span>
                           </p>
-                          <p className="text-xs font-medium text-amber-700 mt-1">Click slice to open Projects →</p>
+                          <p className={ZENITH_CHART_TOOLTIP_INSIGHT}>Click slice to open Projects →</p>
                         </div>
                       )
                     }
@@ -156,7 +153,7 @@ const PipelineByCustomerSegmentPieChart = memo(({ data: chartData = [], dashboar
             </ResponsiveContainer>
           </div>
           {/* Legend below donut: percentages visible; scrolls with chart */}
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-2 px-2 text-sm font-medium text-gray-700 min-w-0 max-w-full">
+          <div className="mt-2 flex min-w-0 max-w-full flex-wrap justify-center gap-x-4 gap-y-1 px-2 text-sm font-semibold text-[color:var(--text-secondary)]">
             {chartData.map((item: PipelineBySegmentItem, index: number) => (
               <span key={item.type} className="inline-flex items-center gap-1.5 whitespace-nowrap">
                 <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: getSegmentColor(item.type, index) }} />

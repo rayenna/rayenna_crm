@@ -18,29 +18,13 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 25%, #fef3c7 50%, #fef9c3 75%, #eff6ff 100%);
-  background-size: 400% 400%;
-  animation: gradientShift 15s ease infinite;
-  background-attachment: scroll; /* scroll instead of fixed – fixes Chrome flickering/hanging on Windows */
-  color: #1e293b;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
   user-select: none;
-  /* Firefox: match ::-webkit-scrollbar track/thumb theme (gradient not supported on scrollbar-color) */
-  scrollbar-color: #2563eb #f1f5f9;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body {
-    animation: none;
-    background-position: 0% 50%;
-  }
-}
-
-/* Disable body gradient animation on mobile/tablet – reduces repaints and improves responsiveness */
-@media (max-width: 1024px) {
-  body {
-    animation: none;
-    background-position: 50% 50%;
-  }
+  transition:
+    background-color 0.25s ease,
+    color 0.2s ease;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 body * {
@@ -67,18 +51,6 @@ textarea,
   user-select: text;
 }
 
-@keyframes gradientShift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
 #root {
   width: 100%;
   min-height: 100vh;
@@ -97,16 +69,6 @@ textarea,
   /* Disable backdrop-blur – reduces compositing cost on mobile/tablet */
   .backdrop-blur-sm {
     backdrop-filter: none;
-  }
-}
-
-/* Mobile landscape: show left-side nav + Help (like iPad landscape) so Help is accessible */
-@media (orientation: landscape) and (max-width: 1023px) {
-  .landscape-nav-visible {
-    display: flex !important;
-    margin-left: 1rem;
-    gap: 0.25rem;
-    flex-wrap: wrap;
   }
 }
 
@@ -165,24 +127,54 @@ textarea,
   }
 }
 
-/* Custom scrollbar styling */
+/* Global scrollbar — uses theme tokens */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 5px;
+  background: var(--scrollbar-track);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #fbbf24 100%);
-  border-radius: 5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #f59e0b 100%);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+/* Zenith page banner: gold left accent only in light theme */
+[data-theme='light'] .theme-page-banner-zenith {
+  border-left: 4px solid var(--accent-gold);
+}
+
+[data-theme='light'] .zenith-victory-shimmer {
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(0, 0, 0, 0.04) 50%,
+    transparent 65%
+  );
+}
+
+/* Recharts tooltips (often portaled to document root — must follow html[data-theme]) */
+.recharts-default-tooltip {
+  background: var(--chart-tooltip-bg) !important;
+  border: 1px solid var(--chart-tooltip-border) !important;
+  box-shadow: var(--chart-tooltip-shadow) !important;
+  color: var(--chart-tooltip-fg) !important;
+}
+
+.recharts-tooltip-label {
+  color: var(--chart-tooltip-fg) !important;
+}
+
+.recharts-tooltip-item-name {
+  color: var(--chart-tooltip-fg-muted) !important;
+}
+
+.recharts-tooltip-item-value,
+.recharts-tooltip-item-separator,
+.recharts-tooltip-item-unit {
+  color: var(--chart-tooltip-fg) !important;
 }

@@ -21,24 +21,22 @@ function CustomerFormSection({
   title,
   icon,
   borderAccentClass,
-  gradientClass,
   headerExtra,
   children,
 }: {
   title: string
   icon: ReactNode
   borderAccentClass: string
-  gradientClass: string
   headerExtra?: ReactNode
   children: ReactNode
 }) {
   return (
     <section
-      className={`flex min-h-0 flex-col overflow-hidden rounded-xl border border-gray-200/80 bg-gradient-to-br shadow-md shadow-gray-900/[0.04] ring-1 ring-gray-100/50 border-l-4 ${gradientClass} ${borderAccentClass}`}
+      className={`flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] ${borderAccentClass}`}
     >
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-gray-200/70 bg-white/55 px-4 py-3 backdrop-blur-[2px] sm:gap-2.5 sm:px-5 sm:py-3.5">
-        <span className="shrink-0 text-gray-600 [&>svg]:h-5 [&>svg]:w-5">{icon}</span>
-        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-800">{title}</h3>
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[color:var(--border-default)] bg-[color:var(--zenith-table-header-bg)] px-4 py-3 sm:gap-2.5 sm:px-5 sm:py-3.5">
+        <span className="shrink-0 [&>svg]:h-5 [&>svg]:w-5">{icon}</span>
+        <h3 className="text-xs font-extrabold uppercase tracking-wider text-[color:var(--zenith-table-header-fg)]">{title}</h3>
         {headerExtra}
       </div>
       <div className="min-w-0 flex-1 space-y-4 px-4 pb-5 pt-4 sm:px-5">{children}</div>
@@ -342,12 +340,11 @@ export function CustomerForm({
     return () => cancelAnimationFrame(id)
   }, [layout, readOnly])
 
-  // Shared input styles — white fields, clear focus (matches polished project detail forms)
   const inputCls =
-    'w-full rounded-xl border border-gray-200/90 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm ring-1 ring-gray-100/80 placeholder:text-gray-400 transition-all focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/25 disabled:bg-gray-50/90 disabled:text-gray-600'
-  const labelCls = 'mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500'
-  const selectCls =
-    'w-full rounded-xl border border-gray-200/90 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm ring-1 ring-gray-100/80 transition-all focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/25 disabled:bg-gray-50/90 disabled:text-gray-600'
+    'zenith-native-filter-input w-full rounded-xl px-3 py-2.5 text-sm disabled:opacity-70 placeholder:text-[color:var(--text-placeholder)]'
+  const labelCls =
+    'mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]'
+  const selectCls = 'zenith-native-select w-full rounded-xl px-3 py-2.5 text-sm disabled:opacity-70'
 
   // Safe-area padding for notched devices (iPhone, iPad); min padding 1rem
   const overlayStyle: CSSProperties = {
@@ -375,9 +372,8 @@ export function CustomerForm({
           <fieldset disabled={readOnly} className="contents min-w-0 border-0 p-0 m-0">
           <CustomerFormSection
             title="Basic info"
-            borderAccentClass="border-l-teal-400"
-            gradientClass="from-teal-50/40 to-white"
-            icon={<svg className="text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
+            borderAccentClass="border-l-[3px] border-l-[color:var(--accent-teal)]"
+            icon={<svg className="text-[color:var(--accent-teal)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
           >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
@@ -411,9 +407,8 @@ export function CustomerForm({
 
           <CustomerFormSection
             title="Address"
-            borderAccentClass="border-l-sky-400"
-            gradientClass="from-sky-50/35 to-white"
-            icon={<svg className="text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+            borderAccentClass="border-l-[3px] border-l-[color:var(--accent-blue)]"
+            icon={<svg className="text-[color:var(--accent-blue)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
           >
             <div className="space-y-4">
               <div>
@@ -491,9 +486,8 @@ export function CustomerForm({
 
           <CustomerFormSection
             title="Contact"
-            borderAccentClass="border-l-emerald-400"
-            gradientClass="from-emerald-50/40 to-white"
-            icon={<svg className="text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>}
+            borderAccentClass="border-l-[3px] border-l-[color:var(--accent-teal)]"
+            icon={<svg className="text-[color:var(--accent-teal)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>}
           >
             <div className="space-y-5">
               <div>
@@ -514,7 +508,7 @@ export function CustomerForm({
                         <button
                           type="button"
                           onClick={() => removeContactNumber(index)}
-                          className="shrink-0 self-end rounded-lg px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 sm:self-center"
+                          className="shrink-0 self-end min-h-[40px] touch-manipulation rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 text-xs font-bold text-[color:var(--text-secondary)] shadow-sm transition-colors hover:border-[color:var(--accent-red-border)] hover:bg-[color:var(--accent-red-muted)] hover:text-[color:var(--accent-red)] sm:self-center"
                         >
                           Remove
                         </button>
@@ -525,9 +519,10 @@ export function CustomerForm({
                 <button
                   type="button"
                   onClick={addContactNumber}
-                  className="mt-2 inline-flex items-center rounded-lg px-2 py-1.5 text-sm font-semibold text-primary-700 transition-colors hover:bg-primary-50"
+                  className="mt-2 inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2.5 text-sm font-extrabold text-[color:var(--text-primary)] shadow-sm transition-colors hover:bg-[color:var(--bg-card-hover)]"
                 >
-                  + Add contact number
+                  <span className="text-[color:var(--accent-teal)]">＋</span>
+                  Add contact number
                 </button>
               </div>
               <div>
@@ -546,7 +541,7 @@ export function CustomerForm({
                         <button
                           type="button"
                           onClick={() => removeEmail(index)}
-                          className="shrink-0 self-end rounded-lg px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 sm:self-center"
+                          className="shrink-0 self-end min-h-[40px] touch-manipulation rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 text-xs font-bold text-[color:var(--text-secondary)] shadow-sm transition-colors hover:border-[color:var(--accent-red-border)] hover:bg-[color:var(--accent-red-muted)] hover:text-[color:var(--accent-red)] sm:self-center"
                         >
                           Remove
                         </button>
@@ -557,9 +552,10 @@ export function CustomerForm({
                 <button
                   type="button"
                   onClick={addEmail}
-                  className="mt-2 inline-flex items-center rounded-lg px-2 py-1.5 text-sm font-semibold text-primary-700 transition-colors hover:bg-primary-50"
+                  className="mt-2 inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2.5 text-sm font-extrabold text-[color:var(--text-primary)] shadow-sm transition-colors hover:bg-[color:var(--bg-card-hover)]"
                 >
-                  + Add e-mail ID
+                  <span className="text-[color:var(--accent-teal)]">＋</span>
+                  Add e-mail ID
                 </button>
               </div>
               <div>
@@ -571,9 +567,8 @@ export function CustomerForm({
 
           <CustomerFormSection
             title="Identity & company"
-            borderAccentClass="border-l-violet-400"
-            gradientClass="from-violet-50/40 to-white"
-            icon={<svg className="text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
+            borderAccentClass="border-l-[3px] border-l-[color:var(--accent-purple)]"
+            icon={<svg className="text-[color:var(--accent-purple)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
           >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
@@ -586,7 +581,7 @@ export function CustomerForm({
                   {...register('idProofType', {
                     validate: (v) => idProofNumber?.trim() && (!v || !v.trim()) ? 'Type of Id Proof is required when Id Proof# is provided' : true
                   })}
-                  className={`${selectCls} ${idProofNumber?.trim() && !watch('idProofType') ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : ''}`}
+                  className={`${selectCls} ${idProofNumber?.trim() && !watch('idProofType') ? 'border-[color:var(--accent-red-border)] focus:border-[color:var(--accent-red)] focus:ring-[color:var(--accent-red-muted)]' : ''}`}
                 >
                   <option value="">Select Type</option>
                   <option value="Aadhaar">Aadhaar</option>
@@ -614,10 +609,9 @@ export function CustomerForm({
           {(hasRole([UserRole.MANAGEMENT]) || hasRole([UserRole.ADMIN])) && (
             <CustomerFormSection
               title="Assignment"
-              borderAccentClass="border-l-amber-400"
-              gradientClass="from-amber-50/45 to-white"
+              borderAccentClass="border-l-[3px] border-l-[color:var(--accent-gold)]"
               headerExtra={!customerData ? <span className="text-sm font-bold text-red-500">*</span> : undefined}
-              icon={<svg className="text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>}
+              icon={<svg className="text-[color:var(--accent-gold)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>}
             >
               <div>
                 <label className={labelCls}>
@@ -630,13 +624,13 @@ export function CustomerForm({
                         ? (v && v.trim() !== '' ? true : 'Sales Person is required for a new customer')
                         : true,
                   })}
-                  className={`${selectCls} ${!customerData && hasRole([UserRole.ADMIN]) && !watch('salespersonId')?.trim() ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : ''}`}
+                  className={`${selectCls} ${!customerData && hasRole([UserRole.ADMIN]) && !watch('salespersonId')?.trim() ? 'border-[color:var(--accent-red-border)] focus:border-[color:var(--accent-red)] focus:ring-[color:var(--accent-red-muted)]' : ''}`}
                 >
                   <option value="">{customerData ? 'No Salesperson Assigned' : 'Select Sales Person'}</option>
                   {salespersons?.map((sp: any) => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
                 </select>
                 {errors.salespersonId && <p className="text-red-500 text-xs mt-1">{errors.salespersonId.message as string}</p>}
-                <p className="mt-2 rounded-lg border border-amber-100/80 bg-amber-50/40 px-3 py-2 text-xs leading-relaxed text-gray-600">
+                <p className="mt-2 rounded-lg border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-3 py-2 text-xs leading-relaxed text-[color:var(--text-secondary)]">
                   {customerData ? 'Only Management and Admin can change the salesperson for a customer' : 'Admin must assign a Sales Person when creating a new customer'}
                 </p>
               </div>
@@ -646,12 +640,12 @@ export function CustomerForm({
 
           {(layout === 'modal' || (layout === 'page' && !readOnly)) && (
           <div className="relative">
-            <div className="flex flex-wrap justify-end gap-3 border-t border-gray-200/80 pt-4">
+            <div className="flex flex-wrap justify-end gap-3 border-t border-[color:var(--border-default)] pt-4">
               {layout === 'modal' && (
               <button
                 type="button"
                 onClick={onClose}
-                className="min-h-[44px] touch-manipulation rounded-xl border border-gray-200/90 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100"
+                className="min-h-[44px] touch-manipulation rounded-xl border border-[color:var(--border-strong)] bg-[color:var(--bg-input)] px-4 py-3 text-sm font-semibold text-[color:var(--text-primary)] shadow-sm transition-colors hover:bg-[color:var(--bg-card-hover)]"
               >
                 Cancel
               </button>
@@ -660,7 +654,7 @@ export function CustomerForm({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="min-h-[44px] touch-manipulation rounded-xl border border-gray-200/90 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100"
+                  className="min-h-[44px] touch-manipulation rounded-xl border border-[color:var(--border-strong)] bg-[color:var(--bg-input)] px-4 py-3 text-sm font-semibold text-[color:var(--text-primary)] shadow-sm transition-colors hover:bg-[color:var(--bg-card-hover)]"
                 >
                   Cancel
                 </button>
@@ -668,7 +662,7 @@ export function CustomerForm({
               <button
                 type="submit"
                 disabled={mutation.isPending}
-                className="min-h-[44px] touch-manipulation rounded-xl bg-gradient-to-r from-teal-600 to-primary-600 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-primary-900/15 transition-all hover:from-teal-700 hover:to-primary-700 hover:shadow-lg disabled:opacity-50"
+                className="min-h-[44px] touch-manipulation rounded-xl bg-[color:var(--accent-gold)] px-5 py-3 text-sm font-extrabold text-[color:var(--text-inverse)] shadow-lg transition-all hover:opacity-95 disabled:opacity-50"
               >
                 {mutation.isPending ? 'Saving...' : customer ? 'Update' : 'Create'}
               </button>
@@ -679,6 +673,7 @@ export function CustomerForm({
               open={!!validationErrors?.length}
               onClose={() => setValidationErrors(null)}
               type="warning"
+              surface="zenith"
               anchor={layout === 'page' ? 'viewport' : 'parent'}
               message={validationErrors?.length ? 'Please fix the following:\n\n' + validationErrors.map((m) => '• ' + m).join('\n') : ''}
               actions={[{ label: 'Dismiss', variant: 'ghost', onClick: () => setValidationErrors(null) }]}
@@ -691,26 +686,29 @@ export function CustomerForm({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 box-border" style={overlayStyle}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 box-border backdrop-blur-[3px]"
+      style={{ ...overlayStyle, background: 'var(--bg-overlay)' }}
+    >
       <div
-        className="bg-white rounded-2xl shadow-xl max-w-3xl w-full overflow-y-auto customer-form-modal-scroll"
+        className="customer-form-modal-scroll w-full max-w-3xl overflow-y-auto rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-modal)] shadow-[var(--shadow-modal)]"
         style={{ maxHeight: 'min(90vh, 90dvh)' }}
       >
-        <div className="customer-form-modal-header px-4 py-4 sm:px-6 sm:py-5 bg-gradient-to-r from-primary-600 via-primary-500 to-yellow-500 border-b border-primary-100">
+        <div className="customer-form-modal-header border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <div className="p-2 sm:p-2.5 rounded-xl bg-white/25 border border-white/40 shadow-lg shadow-black/10 backdrop-blur-md flex-shrink-0">
-                <FaUserFriends className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              <div className="flex-shrink-0 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] p-2 sm:p-2.5 shadow-inner">
+                <FaUserFriends className="h-4 w-4 sm:h-5 sm:w-5 text-[color:var(--accent-gold)]" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-lg sm:text-xl font-extrabold text-white drop-shadow truncate">
+                <h2 className="zenith-display truncate text-lg font-extrabold text-[color:var(--text-primary)] sm:text-xl">
                   {customer ? getCustomerDisplayName(customerData || customer) : 'New Customer'}
                 </h2>
-                <p className="mt-0.5 text-white/90 text-xs sm:text-sm">
+                <p className="mt-0.5 text-xs text-[color:var(--text-secondary)] sm:text-sm">
                   {customer ? 'Edit customer details' : 'Create a new customer and add their details'}
                 </p>
                 {customer && (
-                  <span className="inline-flex items-center px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-xs font-semibold bg-white/25 border border-white/40 text-white mt-1.5 sm:mt-2 shadow-sm">
+                  <span className="mt-1.5 inline-flex items-center rounded-md bg-[color:var(--accent-gold)] px-2 py-0.5 text-xs font-bold text-[color:var(--text-inverse)] shadow-sm sm:mt-2 sm:px-2.5 sm:py-1">
                     ID: {customerData?.customerId || customer.customerId}
                   </span>
                 )}
@@ -719,7 +717,7 @@ export function CustomerForm({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 sm:p-2 rounded-xl text-white/90 hover:text-white hover:bg-white/20 transition-colors flex-shrink-0"
+              className="flex-shrink-0 rounded-xl p-1.5 text-[color:var(--text-muted)] transition-colors hover:bg-[color:var(--bg-card-hover)] hover:text-[color:var(--text-primary)] sm:p-2"
               aria-label="Close"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>

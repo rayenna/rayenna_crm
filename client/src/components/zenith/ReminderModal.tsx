@@ -90,7 +90,7 @@ export default function ReminderModal({
           key="reminder-overlay"
           role="presentation"
           className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}
+          style={{ background: 'var(--bg-overlay)', backdropFilter: 'blur(6px)' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -102,8 +102,8 @@ export default function ReminderModal({
             aria-labelledby="reminder-modal-title"
             className="relative w-full max-w-[480px] rounded-2xl p-6 text-left"
             style={{
-              background: '#0F0F1A',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'var(--bg-modal)',
+              border: '1px solid var(--border-card)',
               fontFamily: 'DM Sans, sans-serif',
             }}
             initial={{ opacity: 0, y: 16, scale: 0.97 }}
@@ -116,22 +116,22 @@ export default function ReminderModal({
               type="button"
               aria-label="Close"
               onClick={requestClose}
-              className="absolute top-4 right-4 p-1 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
+              className="absolute top-4 right-4 p-1 rounded-lg text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-card-hover)] transition-colors"
             >
               <X className="w-5 h-5" strokeWidth={2} />
             </button>
 
             <h2
               id="reminder-modal-title"
-              className="text-[17px] font-bold text-white pr-10"
+              className="text-[17px] font-bold text-[color:var(--text-primary)] pr-10"
               style={{ fontFamily: "'Syne', sans-serif" }}
             >
               Send Payment Reminder
             </h2>
-            <p className="mt-1 text-[13px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
+            <p className="mt-1 text-[13px] text-[color:var(--text-secondary)]">
               {name}
             </p>
-            <p className="mt-0.5 text-[13px] font-medium" style={{ color: '#F5A623' }}>
+            <p className="mt-0.5 text-[13px] font-medium text-[color:var(--accent-gold)]">
               {new Intl.NumberFormat('en-IN', {
                 style: 'currency',
                 currency: 'INR',
@@ -142,7 +142,7 @@ export default function ReminderModal({
 
             {channel === null ? (
               <>
-                <p className="mt-6 text-[12px] mb-3" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                <p className="mt-6 text-[12px] mb-3 text-[color:var(--text-muted)]">
                   Choose how to send:
                 </p>
                 <div className="flex gap-3">
@@ -169,7 +169,7 @@ export default function ReminderModal({
                     <span className="text-[14px] font-semibold block" style={{ color: '#25D366' }}>
                       WhatsApp
                     </span>
-                    <span className="text-[11px] block mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                    <span className="text-[11px] block mt-1 text-[color:var(--text-muted)]">
                       Opens WhatsApp with pre-filled message
                     </span>
                   </button>
@@ -194,7 +194,7 @@ export default function ReminderModal({
                     <span className="text-[14px] font-semibold block" style={{ color: '#3B8BFF' }}>
                       Email
                     </span>
-                    <span className="text-[11px] block mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                    <span className="text-[11px] block mt-1 text-[color:var(--text-muted)]">
                       Opens email client with pre-filled message
                     </span>
                   </button>
@@ -205,29 +205,28 @@ export default function ReminderModal({
                 <button
                   type="button"
                   onClick={() => setChannel(null)}
-                  className="mt-5 mb-4 text-[12px] bg-transparent border-0 cursor-pointer p-0 hover:text-white/70"
-                  style={{ color: 'rgba(255,255,255,0.4)' }}
+                  className="mt-5 mb-4 text-[12px] bg-transparent border-0 cursor-pointer p-0 text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]"
                 >
                   ← Change channel
                 </button>
                 <p
                   className="text-[11px] uppercase tracking-widest mb-2"
-                  style={{ color: 'rgba(255,255,255,0.35)' }}
+                  style={{ color: 'var(--text-muted)' }}
                 >
                   Message Preview
                 </p>
                 <div
                   className="rounded-[10px] p-3.5 text-[13px] leading-relaxed whitespace-pre-wrap overflow-y-auto zenith-reminder-preview-scroll"
                   style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: 'rgba(255,255,255,0.7)',
+                    background: 'var(--bg-input)',
+                    border: '1px solid var(--border-default)',
+                    color: 'var(--text-secondary)',
                     maxHeight: 240,
                   }}
                 >
                   {channel === 'whatsapp' ? getWhatsAppMessage(project) : getEmailBody(project)}
                 </div>
-                <p className="mt-1.5 text-[11px] italic" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                <p className="mt-1.5 text-[11px] italic text-[color:var(--text-muted)]">
                   You can edit the message after it opens
                 </p>
               </>
@@ -235,15 +234,15 @@ export default function ReminderModal({
 
             <div
               className="flex justify-end gap-2.5 mt-5 pt-4"
-              style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
+              style={{ borderTop: '1px solid var(--border-default)' }}
             >
               <button
                 type="button"
                 onClick={requestClose}
                 className="rounded-lg px-[18px] py-2 text-[13px] cursor-pointer transition-opacity bg-transparent"
                 style={{
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  color: 'rgba(255,255,255,0.5)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-secondary)',
                 }}
               >
                 Cancel
@@ -252,7 +251,7 @@ export default function ReminderModal({
                 <button
                   type="button"
                   onClick={handleSend}
-                  className="rounded-lg px-5 py-2 text-[14px] font-semibold text-white cursor-pointer transition-opacity border-0"
+                  className="rounded-lg px-5 py-2 text-[14px] font-semibold text-[color:var(--text-inverse)] cursor-pointer transition-opacity border-0"
                   style={{
                     background: channel === 'whatsapp' ? '#25D366' : '#3B8BFF',
                   }}

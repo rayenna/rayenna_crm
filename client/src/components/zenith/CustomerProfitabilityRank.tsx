@@ -5,6 +5,7 @@ import WordCloud from 'wordcloud'
 import { Hash } from 'lucide-react'
 import type { ZenithDateFilter } from './zenithTypes'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
+import { useTheme } from '../../hooks/useTheme'
 
 export interface ProfitRow {
   text: string
@@ -17,10 +18,19 @@ type WcListItem = {
   attributes: Record<string, string>
 }
 
+const WC_TIER_FALLBACK: Record<string, string> = {
+  '--zenith-wc-tier-high': '#5eead4',
+  '--zenith-wc-tier-mid': '#7dd3fc',
+  '--zenith-wc-tier-low': '#fbbf24',
+}
+
 function tierColor(normalizedWeight: number): string {
-  if (normalizedWeight > 0.66) return '#5eead4'
-  if (normalizedWeight > 0.33) return '#7dd3fc'
-  return '#fbbf24'
+  const nw = Math.max(0, Math.min(1, normalizedWeight))
+  const cssVar =
+    nw > 0.66 ? '--zenith-wc-tier-high' : nw > 0.33 ? '--zenith-wc-tier-mid' : '--zenith-wc-tier-low'
+  if (typeof document === 'undefined') return WC_TIER_FALLBACK[cssVar]
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim()
+  return raw || WC_TIER_FALLBACK[cssVar]
 }
 
 function wordFromCloudItem(item: unknown): string {
@@ -44,6 +54,7 @@ export default function CustomerProfitabilityRank({
   className?: string
 }) {
   const navigate = useNavigate()
+  const { theme } = useTheme()
   const [view, setView] = useState<'cloud' | 'top10'>('cloud')
   const wrapRef = useRef<HTMLDivElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
@@ -167,7 +178,7 @@ export default function CustomerProfitabilityRank({
       WordCloud.stop()
       clearGlow()
     }
-  }, [rows, hostSize.w, hostSize.h, view, clearGlow, applyGlow, dateFilter, navigate])
+  }, [rows, hostSize.w, hostSize.h, view, clearGlow, applyGlow, dateFilter, navigate, theme])
 
   const top10 = [...rows].sort((a, b) => b.value - a.value).slice(0, 10)
   const maxVal = Math.max(...rows.map((d) => d.value), 1)
@@ -176,22 +187,22 @@ export default function CustomerProfitabilityRank({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`zenith-glass rounded-xl p-3 sm:p-4 min-h-[320px] lg:h-full lg:min-h-0 flex flex-col overflow-visible lg:overflow-hidden ${className}`.trim()}
+      className={`rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-4 min-h-[320px] lg:h-full lg:min-h-0 flex flex-col overflow-visible lg:overflow-hidden ${className}`.trim()}
     >
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500/35 to-indigo-600/40 border border-white/10">
-            <Hash className="w-5 h-5 text-violet-200" strokeWidth={2} />
+          <div className="p-2 rounded-xl border border-[color:var(--border-strong)] bg-[color:var(--accent-purple-muted)]">
+            <Hash className="w-5 h-5 text-[color:var(--accent-purple)]" strokeWidth={2} />
           </div>
           <div className="min-w-0">
-            <h3 className="zenith-display text-base sm:text-lg font-bold text-white truncate">
+            <h3 className="zenith-display text-base sm:text-lg font-bold text-[color:var(--text-primary)] truncate">
               Customer Projects Profitability
             </h3>
-            <p className="text-[11px] text-white/40 mt-0.5">Same data as the classic dashboard</p>
+            <p className="text-[11px] text-[color:var(--text-muted)] mt-0.5">Same data as the classic dashboard</p>
           </div>
         </div>
         <div
-          className="flex rounded-xl border border-white/[0.12] bg-black/25 p-0.5 flex-shrink-0"
+          className="flex rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] p-0.5 flex-shrink-0"
           role="tablist"
           aria-label="Profitability view"
         >
@@ -202,8 +213,8 @@ export default function CustomerProfitabilityRank({
             onClick={() => setView('cloud')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
               view === 'cloud'
-                ? 'bg-white/[0.12] text-white shadow-[0_0_20px_rgba(0,212,180,0.12)] border border-[#00d4b4]/30'
-                : 'text-white/45 hover:text-white/75'
+                ? 'bg-[color:var(--accent-teal-muted)] text-[color:var(--text-primary)] border border-[color:var(--accent-teal-border)] shadow-[0_0_16px_color-mix(in_srgb,var(--accent-teal)_18%,transparent)]'
+                : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]'
             }`}
           >
             Word Cloud
@@ -215,8 +226,8 @@ export default function CustomerProfitabilityRank({
             onClick={() => setView('top10')}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
               view === 'top10'
-                ? 'bg-white/[0.12] text-white shadow-[0_0_20px_rgba(245,166,35,0.1)] border border-[#f5a623]/25'
-                : 'text-white/45 hover:text-white/75'
+                ? 'bg-[color:var(--accent-gold-muted)] text-[color:var(--text-primary)] border border-[color:var(--accent-gold-border)] shadow-[0_0_16px_color-mix(in_srgb,var(--accent-gold)_14%,transparent)]'
+                : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]'
             }`}
           >
             Top 10
@@ -230,21 +241,21 @@ export default function CustomerProfitabilityRank({
           aria-hidden={view !== 'cloud'}
         >
           {rows.length === 0 ? (
-            <div className="flex flex-1 items-center justify-center rounded-xl border border-white/[0.06] bg-black/20">
-              <p className="text-sm text-white/45 text-center px-4">No profitability data for this filter.</p>
+            <div className="flex flex-1 items-center justify-center rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-surface)]">
+              <p className="text-sm text-[color:var(--text-muted)] text-center px-4">No profitability data for this filter.</p>
             </div>
           ) : (
             <>
               <div
                 ref={wrapRef}
-                className="zenith-wordcloud-host flex-1 min-h-[280px] w-full rounded-xl border border-white/[0.06] bg-black/20 overflow-visible lg:overflow-hidden cursor-pointer"
+                className="zenith-wordcloud-host flex-1 min-h-[280px] w-full rounded-xl border border-[color:var(--border-default)] overflow-visible lg:overflow-hidden cursor-pointer"
               >
                 <div ref={hostRef} className="relative h-full min-h-[280px] w-full" />
               </div>
-              <p className="mt-2 text-center text-[11px] text-white/35">
+              <p className="mt-2 text-center text-[11px] text-[color:var(--text-muted)]">
                 Font size represents profitability (larger = higher margin).
               </p>
-              <p className="mt-0.5 text-center text-[11px] text-[#f5a623]/90 font-medium">
+              <p className="mt-0.5 text-center text-[11px] text-[color:var(--accent-gold)] font-medium">
                 Click a word to open Projects →
               </p>
             </>
@@ -256,36 +267,36 @@ export default function CustomerProfitabilityRank({
           aria-hidden={view !== 'top10'}
         >
           {rows.length === 0 ? (
-            <div className="flex flex-1 items-center justify-center rounded-xl border border-white/[0.06] bg-black/20">
-              <p className="text-sm text-white/45 text-center px-4">No profitability data for this filter.</p>
+            <div className="flex flex-1 items-center justify-center rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-surface)]">
+              <p className="text-sm text-[color:var(--text-muted)] text-center px-4">No profitability data for this filter.</p>
             </div>
           ) : (
             <div
-              className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden rounded-xl border border-white/[0.08] bg-black/15"
+              className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)]"
               style={{ WebkitOverflowScrolling: 'touch' }}
             >
               <table className="w-full text-sm border-collapse">
-                <thead className="sticky top-0 z-10 border-b border-white/[0.1] bg-[#12121a]/95 backdrop-blur-md">
+                <thead className="sticky top-0 z-10 border-b border-[color:var(--border-default)] bg-[color:var(--bg-card)] backdrop-blur-sm">
                   <tr>
-                    <th className="text-center py-2.5 px-2 w-12 font-bold text-white/70 text-[10px] uppercase tracking-wider">
+                    <th className="w-12 px-2 py-2.5 text-center text-sm font-bold uppercase tracking-wide text-[color:var(--accent-gold)]">
                       #
                     </th>
-                    <th className="text-left py-2.5 px-2 font-bold text-white/70 text-[10px] uppercase tracking-wider">
+                    <th className="px-2 py-2.5 text-left text-sm font-bold uppercase tracking-wide text-[color:var(--accent-gold)]">
                       Project
                     </th>
-                    <th className="text-right py-2.5 px-2 w-[4.5rem] font-bold text-white/70 text-[10px] uppercase tracking-wider">
+                    <th className="w-[4.5rem] px-2 py-2.5 text-right text-sm font-bold uppercase tracking-wide text-[color:var(--accent-gold)]">
                       Margin
                     </th>
                     <th className="py-2.5 pl-1 pr-2 w-24" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/[0.06]">
+                <tbody className="divide-y divide-[color:var(--border-default)]">
                   {top10.map((row, idx) => {
                     const pct = (row.value ?? 0) / maxVal
                     return (
                       <tr
                         key={`${row.text}-${idx}`}
-                        className="hover:bg-white/[0.04] transition-colors cursor-pointer"
+                        className="hover:bg-[color:var(--bg-table-hover)] transition-colors cursor-pointer"
                         role="button"
                         tabIndex={0}
                         onClick={() => {
@@ -305,27 +316,30 @@ export default function CustomerProfitabilityRank({
                           <span
                             className={`inline-flex items-center justify-center min-w-[1.75rem] h-7 px-1 rounded-lg text-xs font-bold tabular-nums ${
                               idx === 0
-                                ? 'bg-[#f5a623]/25 text-[#f5d78a]'
+                                ? 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
                                 : idx === 1
-                                  ? 'bg-white/10 text-white/80'
+                                  ? 'bg-[color:var(--bg-badge)] text-[color:var(--text-secondary)]'
                                   : idx === 2
-                                    ? 'bg-[#f5a623]/15 text-[#f5c76a]'
-                                    : 'bg-[#00d4b4]/12 text-[#7ee8d8]'
+                                    ? 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
+                                    : 'bg-[color:var(--accent-teal-muted)] text-[color:var(--accent-teal)]'
                             }`}
                           >
                             {idx + 1}
                           </span>
                         </td>
-                        <td className="py-2 px-2 font-medium text-white/90 truncate max-w-[140px] sm:max-w-[220px]" title={row.text}>
+                        <td
+                          className="py-2 px-2 font-medium text-[color:var(--text-primary)] truncate max-w-[140px] sm:max-w-[220px]"
+                          title={row.text}
+                        >
                           {row.text}
                         </td>
-                        <td className="py-2 px-2 text-right font-semibold text-[#00d4b4] tabular-nums text-xs">
+                        <td className="py-2 px-2 text-right font-semibold text-[color:var(--accent-teal)] tabular-nums text-xs">
                           {typeof row.value === 'number' ? row.value.toFixed(1) : '—'}%
                         </td>
                         <td className="py-2 pl-1 pr-2 align-middle">
-                          <div className="h-2 rounded-full bg-white/10 overflow-hidden min-w-[3.5rem]">
+                          <div className="h-2 rounded-full bg-[color:var(--bg-ticker)] overflow-hidden min-w-[3.5rem]">
                             <div
-                              className="h-full rounded-full bg-gradient-to-r from-violet-500 via-[#00d4b4] to-[#f5a623] transition-all duration-300"
+                              className="h-full rounded-full bg-gradient-to-r from-[color:var(--accent-purple)] via-[color:var(--accent-teal)] to-[color:var(--accent-gold)] transition-all duration-300"
                               style={{ width: `${Math.round(pct * 100)}%` }}
                             />
                           </div>

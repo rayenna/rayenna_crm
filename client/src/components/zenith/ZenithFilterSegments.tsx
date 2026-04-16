@@ -57,7 +57,7 @@ export default function ZenithFilterSegments({
   return (
     <div className="flex flex-col gap-3 w-full max-w-3xl mx-auto">
       <div className="flex flex-wrap items-center justify-center gap-1.5">
-        <span className="text-[10px] uppercase tracking-widest text-white/40 w-full text-center sm:w-auto sm:mr-2">
+        <span className="text-[10px] uppercase tracking-widest text-[color:var(--text-muted)] w-full text-center sm:w-auto sm:mr-2">
           FY
         </span>
         {fySorted.map((fy) => {
@@ -69,8 +69,8 @@ export default function ZenithFilterSegments({
               onClick={() => toggle(selectedFYs, fy, onFYChange)}
               className={`px-2.5 py-2 sm:py-1.5 rounded-full text-[11px] font-semibold border transition-all tabular-nums tracking-tight ${
                 on
-                  ? 'bg-[#f5a623]/25 text-[#f5a623] border-[#f5a623]/50 shadow-[0_0_16px_rgba(245,166,35,0.2)]'
-                  : 'bg-white/5 text-white/60 border-white/10 hover:border-white/25'
+                  ? 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)] border-[color:var(--accent-gold-border)] shadow-[0_0_14px_color-mix(in_srgb,var(--accent-gold)_22%,transparent)]'
+                  : 'bg-[color:var(--bg-input)] text-[color:var(--text-secondary)] border-[color:var(--border-default)] hover:border-[color:var(--border-strong)]'
               }`}
             >
               {fy}
@@ -81,7 +81,7 @@ export default function ZenithFilterSegments({
           <button
             type="button"
             onClick={onResetAll}
-            className="inline-flex items-center gap-1.5 px-2.5 py-2 sm:py-1.5 rounded-full text-[11px] font-semibold border border-white/20 text-white/80 hover:text-white hover:border-[#00d4b4]/50 hover:bg-[#00d4b4]/10 transition-all"
+            className="inline-flex items-center gap-1.5 px-2.5 py-2 sm:py-1.5 rounded-full text-[11px] font-semibold border border-[color:var(--border-default)] text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:border-[color:var(--accent-teal-border)] hover:bg-[color:var(--accent-teal-muted)] transition-all"
             title="Clear all date filters (show all periods)"
           >
             <RotateCcw className="w-3.5 h-3.5 opacity-80" aria-hidden />
@@ -92,7 +92,7 @@ export default function ZenithFilterSegments({
 
       {singleFY ? (
         <div className="flex flex-wrap items-center justify-center gap-1.5">
-          <span className="text-[10px] uppercase tracking-widest text-white/40 w-full text-center sm:w-auto sm:mr-2">
+          <span className="text-[10px] uppercase tracking-widest text-[color:var(--text-muted)] w-full text-center sm:w-auto sm:mr-2">
             Qtr
           </span>
           {ZENITH_QUARTERS.map((q) => {
@@ -104,8 +104,8 @@ export default function ZenithFilterSegments({
                 onClick={() => toggle(selectedQuarters, q.value, onQuarterChange)}
                 className={`px-3 py-2 sm:py-1.5 rounded-full text-xs font-bold border transition-all ${
                   on
-                    ? 'bg-[#00d4b4]/20 text-[#00d4b4] border-[#00d4b4]/40'
-                    : 'bg-white/5 text-white/60 border-white/10 hover:border-white/25'
+                    ? 'bg-[color:var(--accent-teal-muted)] text-[color:var(--accent-teal)] border-[color:var(--accent-teal-border)]'
+                    : 'bg-[color:var(--bg-input)] text-[color:var(--text-secondary)] border-[color:var(--border-default)] hover:border-[color:var(--border-strong)]'
                 }`}
               >
                 {q.label}
@@ -117,7 +117,7 @@ export default function ZenithFilterSegments({
 
       {singleFY ? (
         <div className="flex flex-wrap items-center justify-center gap-1 max-h-[88px] overflow-y-auto overscroll-y-contain sm:max-h-none [-webkit-overflow-scrolling:touch]">
-          <span className="text-[10px] uppercase tracking-widest text-white/40 w-full text-center sm:w-auto sm:mr-2">
+          <span className="text-[10px] uppercase tracking-widest text-[color:var(--text-muted)] w-full text-center sm:w-auto sm:mr-2">
             Mo
           </span>
           {ZENITH_MONTHS.map((m) => {
@@ -134,8 +134,8 @@ export default function ZenithFilterSegments({
                 onClick={() => toggle(selectedMonths, m.value, onMonthChange)}
                 className={`px-2.5 py-1.5 sm:px-2 sm:py-1 rounded-full text-[10px] font-semibold border transition-all ${
                   on
-                    ? 'bg-white/15 text-white border-white/30'
-                    : 'bg-white/5 text-white/50 border-white/10 hover:border-white/25'
+                    ? 'bg-[color:var(--bg-badge)] text-[color:var(--text-primary)] border-[color:var(--border-strong)]'
+                    : 'bg-[color:var(--bg-input)] text-[color:var(--text-secondary)] border-[color:var(--border-default)] hover:border-[color:var(--border-strong)]'
                 }`}
               >
                 {m.label}

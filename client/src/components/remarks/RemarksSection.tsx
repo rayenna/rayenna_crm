@@ -14,6 +14,18 @@ interface RemarksSectionProps {
   className?: string
 }
 
+const cardShell =
+  'mt-6 space-y-3 rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] border-l-4 border-l-[color:var(--accent-gold)] sm:space-y-4 sm:p-5'
+
+const textareaZenith =
+  'w-full min-h-[4.5rem] resize-y rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2 text-sm text-[color:var(--text-primary)] shadow-inner placeholder:text-[color:var(--text-placeholder)] transition-all focus:border-[color:var(--border-focus)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)] sm:min-h-[5rem]'
+
+const btnPrimary =
+  'rounded-xl bg-[color:var(--accent-gold)] px-4 py-2 text-sm font-extrabold text-[color:var(--text-inverse)] shadow-[var(--shadow-card)] transition-all hover:opacity-95 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40'
+
+const btnSecondary =
+  'rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-1.5 text-sm font-semibold text-[color:var(--text-primary)] shadow-[var(--shadow-card)] transition-colors hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-40'
+
 const RemarksSection = ({ projectId, isEditMode = false, className = '' }: RemarksSectionProps) => {
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -126,65 +138,73 @@ const RemarksSection = ({ projectId, isEditMode = false, className = '' }: Remar
 
   if (isLoading) {
     return (
-      <div
-        className={`mt-6 space-y-4 rounded-xl border border-amber-100/60 border-l-4 border-l-amber-400 bg-gradient-to-br from-amber-50/50 to-gray-50/60 p-5 shadow-sm ${className}`.trim()}
-      >
+      <div className={`${cardShell} ${className}`.trim()}>
         <div className="flex items-center gap-2">
-          <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Remarks</h3>
+          <svg className="h-5 w-5 text-[color:var(--accent-gold)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            />
+          </svg>
+          <h3 className="text-sm font-extrabold uppercase tracking-wide text-[color:var(--text-primary)]">Remarks</h3>
         </div>
-        <div className="text-sm text-gray-500">Loading remarks...</div>
+        <div className="flex items-center gap-2 text-sm text-[color:var(--text-muted)]">
+          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[color:var(--border-default)] border-t-[color:var(--accent-gold)]" aria-hidden />
+          Loading remarks…
+        </div>
       </div>
     )
   }
 
   return (
-    <div
-      className={`mt-6 space-y-4 rounded-xl border border-amber-100/60 border-l-4 border-l-amber-400 bg-gradient-to-br from-amber-50/50 to-gray-50/60 p-5 shadow-sm ${className}`.trim()}
-    >
+    <div className={`${cardShell} ${className}`.trim()}>
       <div className="flex items-center gap-2">
-        <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-        <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Remarks</h3>
+        <svg className="h-5 w-5 text-[color:var(--accent-gold)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+          />
+        </svg>
+        <h3 className="text-sm font-extrabold uppercase tracking-wide text-[color:var(--text-primary)]">Remarks</h3>
       </div>
-      
+
       {/* Add new remark - only in edit mode */}
       {isEditMode && (
-        <div className="mb-6 pb-6 border-b border-amber-200/60">
-          <div className="mb-3">
-            <label htmlFor="newRemark" className="block text-sm font-medium text-gray-700 mb-2">
-              Add a Remark
+        <div className="mb-4 border-b border-[color:var(--border-default)] pb-4 sm:mb-5 sm:pb-5">
+          <div className="mb-2">
+            <label htmlFor="newRemark" className="mb-1.5 block text-xs font-semibold text-[color:var(--text-secondary)] sm:text-sm">
+              Add a remark
             </label>
             <textarea
               id="newRemark"
               value={newRemark}
               onChange={(e) => setNewRemark(e.target.value)}
               onKeyDown={(e) => {
-                // Allow Ctrl+Enter or Cmd+Enter to submit
                 if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                  e.preventDefault();
+                  e.preventDefault()
                   if (newRemark.trim() && !createMutation.isPending) {
-                    handleSubmit(e as any);
+                    handleSubmit()
                   }
                 }
               }}
-              rows={3}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="Enter your remark here..."
+              rows={2}
+              className={textareaZenith}
+              placeholder="Enter your remark here…"
             />
+            <p className="mt-1 text-[11px] text-[color:var(--text-muted)]">Tip: Ctrl+Enter (Windows) or ⌘+Enter (Mac) to submit.</p>
           </div>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={createMutation.isPending || !newRemark.trim()}
-            className="bg-gradient-to-r from-amber-600 to-primary-600 text-white px-4 py-2 rounded-lg hover:from-amber-700 hover:to-primary-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-md"
-          >
-            {createMutation.isPending ? 'Adding...' : 'Add Remark'}
+          <button type="button" onClick={handleSubmit} disabled={createMutation.isPending || !newRemark.trim()} className={btnPrimary}>
+            {createMutation.isPending ? 'Adding…' : 'Add remark'}
           </button>
         </div>
       )}
 
       {/* Remarks feed */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {remarks && remarks.length > 0 ? (
           remarks.map((remark) => {
             const isOwner = remark.userId === user?.id
@@ -193,83 +213,72 @@ const RemarksSection = ({ projectId, isEditMode = false, className = '' }: Remar
             return (
               <div
                 key={remark.id}
-                className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] p-3 transition-colors hover:bg-[color:var(--bg-card-hover)] sm:p-4"
               >
                 {isEditing ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <textarea
                       value={editText}
                       onChange={(e) => setEditText(e.target.value)}
-                      rows={3}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      rows={2}
+                      className={textareaZenith}
                     />
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <button
+                        type="button"
                         onClick={() => handleSaveEdit(remark.id)}
                         disabled={updateMutation.isPending || !editText.trim()}
-                        className="bg-gradient-to-r from-amber-600 to-primary-600 text-white px-3 py-1.5 rounded text-sm hover:from-amber-700 hover:to-primary-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        className={`${btnPrimary} px-3 py-1.5 text-xs sm:text-sm`}
                       >
-                        {updateMutation.isPending ? 'Saving...' : 'Save'}
+                        {updateMutation.isPending ? 'Saving…' : 'Save'}
                       </button>
-                      <button
-                        onClick={handleCancelEdit}
-                        disabled={updateMutation.isPending}
-                        className="bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-sm hover:bg-gray-300 font-medium disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      >
+                      <button type="button" onClick={handleCancelEdit} disabled={updateMutation.isPending} className={`${btnSecondary} text-xs sm:text-sm`}>
                         Cancel
                       </button>
                     </div>
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-sm text-gray-900">
-                            {remark.user?.name || 'Unknown User'}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            ({remark.user?.role || 'N/A'})
-                          </span>
+                    <div className="mb-2 flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-0.5 flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-[color:var(--text-primary)]">{remark.user?.name || 'Unknown User'}</span>
+                          <span className="text-xs text-[color:var(--text-muted)]">({remark.user?.role || 'N/A'})</span>
                         </div>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-[color:var(--text-muted)]">
                           {format(new Date(remark.createdAt), 'MMM dd, yyyy • h:mm a')}
-                          {remark.updatedAt !== remark.createdAt && (
-                            <span className="ml-2 text-gray-400">(edited)</span>
-                          )}
+                          {remark.updatedAt !== remark.createdAt && <span className="ml-2 text-[color:var(--text-muted)]">(edited)</span>}
                         </p>
                       </div>
                       {isOwner && isEditMode && (
-                        <div className="flex gap-2 ml-4">
+                        <div className="ml-2 flex shrink-0 gap-2">
                           <button
+                            type="button"
                             onClick={() => handleEdit(remark)}
-                            className="text-primary-600 hover:text-primary-800 text-sm font-medium"
+                            className="text-xs font-semibold text-[color:var(--accent-gold)] hover:opacity-90 sm:text-sm"
                           >
                             Edit
                           </button>
                           <button
+                            type="button"
                             onClick={() => handleDelete(remark.id)}
                             disabled={deleteMutation.isPending}
-                            className="text-red-600 hover:text-red-800 text-sm font-medium disabled:text-gray-400 disabled:cursor-not-allowed"
+                            className="text-xs font-semibold text-red-300 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
                           >
-                            {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                            {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
                           </button>
                         </div>
                       )}
                     </div>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{remark.remark}</p>
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--text-secondary)]">{remark.remark}</p>
                   </>
                 )}
               </div>
             )
           })
         ) : (
-          <div className="text-center py-8 text-sm text-gray-500">
-            {isEditMode ? (
-              <p>No remarks yet. Add the first remark above.</p>
-            ) : (
-              <p>No remarks yet.</p>
-            )}
+          <div className="py-6 text-center text-sm text-[color:var(--text-muted)] sm:py-5">
+            {isEditMode ? <p>No remarks yet. Add the first remark above.</p> : <p>No remarks yet.</p>}
           </div>
         )}
       </div>

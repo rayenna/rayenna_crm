@@ -7,8 +7,7 @@ import { getHelpContent } from '../help/contentLoader'
 import { searchHelpContent } from '../help/searchHelp'
 import HelpSidebar from '../components/help/HelpSidebar'
 import ErrorBoundary from '../components/ErrorBoundary'
-import PageCard from '../components/PageCard'
-import { FaBook } from 'react-icons/fa'
+import { BookOpen } from 'lucide-react'
 import { slugifyHeadingLabel, textFromChildren } from '../help/markdownHeadingUtils'
 
 /** Normalize markdown string for safe rendering; avoids formatting/crash on hard refresh. */
@@ -143,28 +142,40 @@ const Help = () => {
   // Ensure we have a valid section before rendering
   if (!selectedSection) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="zenith-root flex min-h-[calc(100dvh-5rem)] min-h-[calc(100vh-5rem)] w-full items-center justify-center px-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Initializing help content...</p>
+          <div
+            className="inline-block h-10 w-10 animate-spin rounded-full border-2 border-[color:var(--border-default)] border-t-[color:var(--accent-gold)]"
+            aria-hidden
+          />
+          <p className="mt-4 text-sm font-medium text-[color:var(--text-muted)]">Initializing help content...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="px-0 py-6 sm:px-0">
-      <PageCard
-        title="Help"
-        subtitle="Documentation and guidance for using the CRM"
-        icon={<FaBook className="w-5 h-5 text-white" />}
-        className="max-w-7xl mx-auto"
-      >
+    <div className="zenith-root zenith-animated-bg w-full max-w-full min-w-0 min-h-[calc(100dvh-5rem)] min-h-[calc(100vh-5rem)] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-[max(0.35rem,env(safe-area-inset-top,0px))] [-webkit-tap-highlight-color:transparent]">
+      <div className="zenith-exec-main mx-auto w-full max-w-full min-w-0 px-3 sm:px-5 pb-10">
+        <header className="sticky top-0 z-30 mb-4 border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 94%, transparent)] pb-3 pt-1 backdrop-blur-xl sm:mb-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] shadow-inner">
+                <BookOpen className="h-5 w-5 text-[color:var(--accent-gold)]" strokeWidth={2} aria-hidden />
+              </div>
+              <div className="min-w-0">
+                <h1 className="zenith-display text-xl font-bold tracking-tight text-[color:var(--text-primary)] sm:text-2xl">Help</h1>
+                <p className="mt-0.5 text-sm text-[color:var(--text-secondary)]">Documentation and guidance for using the CRM</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-x-6 gap-y-8 lg:gap-y-6">
           {/* Left Sidebar */}
           <div className="lg:col-span-1 min-h-0 space-y-4">
             {/* Search */}
-            <div className="rounded-2xl border border-primary-100/90 bg-white shadow-md overflow-hidden flex-shrink-0 ring-1 ring-primary-50/80">
+            <div className="flex-shrink-0 overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)]">
               <label htmlFor="help-search" className="sr-only">
                 Search help
               </label>
@@ -174,28 +185,28 @@ const Help = () => {
                 placeholder="Search help…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2.5 text-sm border-0 focus:ring-2 focus:ring-primary-500 focus:ring-inset placeholder-gray-400"
+                className="zenith-native-filter-input w-full rounded-none border-0 px-4 py-3 text-sm placeholder:text-[color:var(--text-placeholder)] focus:ring-0"
                 aria-describedby={searchQuery.length > 0 ? 'help-search-results' : undefined}
               />
               {searchQuery.trim().length > 0 && (
                 <div
                   id="help-search-results"
-                  className="border-t border-primary-100 max-h-64 overflow-y-auto"
+                  className="max-h-64 overflow-y-auto border-t border-[color:var(--border-default)]"
                   role="list"
                 >
                   {searchResults.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-gray-500">No matches</p>
+                    <p className="px-4 py-3 text-sm text-[color:var(--text-muted)]">No matches</p>
                   ) : (
                     searchResults.map((r) => (
                       <button
                         key={r.routeKey}
                         type="button"
                         onClick={() => handleSearchResultClick(r.routeKey)}
-                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-primary-50/80 border-b border-primary-50 last:border-b-0 transition-colors"
+                        className="w-full border-b border-[color:var(--border-default)] px-4 py-3 text-left text-sm transition-colors last:border-b-0 hover:bg-[color:var(--bg-table-hover)]"
                         role="listitem"
                       >
-                        <span className="font-medium text-primary-700 block">{r.sectionTitle}</span>
-                        <span className="text-gray-600 line-clamp-2">{r.snippet}</span>
+                        <span className="block font-semibold text-[color:var(--accent-gold)]">{r.sectionTitle}</span>
+                        <span className="line-clamp-2 text-[color:var(--text-secondary)]">{r.snippet}</span>
                       </button>
                     ))
                   )}
@@ -211,49 +222,54 @@ const Help = () => {
             )}
           </div>
 
-          {/* Right Content Area – clear separation from sidebar on portrait */}
-          <div className="lg:col-span-3 pt-6 lg:pt-0 border-t border-primary-100 lg:border-t-0 lg:pl-1">
-            <div className="rounded-2xl border-2 border-primary-200/45 bg-white shadow-lg shadow-primary-900/5 overflow-hidden backdrop-blur-sm">
-              <div className="h-1.5 bg-gradient-to-r from-primary-600 via-indigo-500 to-amber-500" aria-hidden />
-              <div className="bg-gradient-to-br from-white via-primary-50/20 to-indigo-50/15 px-5 py-6 sm:px-7 sm:py-8 lg:px-9 lg:py-9">
-              {contextLabel && (
-                <div className="mb-6 rounded-xl border border-sky-200/90 bg-gradient-to-r from-sky-50/95 to-indigo-50/50 px-4 py-3 text-sm text-sky-950 shadow-sm">
-                  <span className="font-semibold text-indigo-900">Help for:</span>{' '}
-                  <span className="font-bold text-gray-900">{contextLabel}</span>
-                  {selectedSection && (
-                    <span className="ml-1 text-indigo-800/90">
-                      {' '}— <strong>{selectedSection.title}</strong> section
-                    </span>
-                  )}
-                </div>
-              )}
-              {markdownContent ? (
-                <ErrorBoundary
-                  fallback={
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
-                      <p className="font-semibold mb-2">Error rendering content</p>
-                      <p className="text-sm">Please try refreshing the page.</p>
-                    </div>
-                  }
-                >
-                  <div className="max-w-none">
-                    <Suspense fallback={<div className="text-center py-4">Loading...</div>}>
-                      {markdownContent && markdownContent.trim() ? (
-                        <ErrorBoundary
-                          fallback={
-                            <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
-                              <p className="font-semibold mb-2">Error rendering content</p>
-                              <p className="text-sm">The help content could not be displayed. Please try refreshing the page.</p>
-                            </div>
-                          }
-                        >
-                          <ReactMarkdown
-                            key={selectedSection?.id ?? 'help'}
-                            remarkPlugins={[remarkGfm]}
-                            components={{
+          {/* Right Content Area */}
+          <div className="border-t border-[color:var(--border-default)] pt-6 lg:col-span-3 lg:border-t-0 lg:pl-1 lg:pt-0">
+            <div className="overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)]">
+              <div
+                className="h-1.5 bg-gradient-to-r from-[color:var(--accent-gold)] via-[color:var(--accent-amber)] to-[color:var(--accent-teal)]"
+                aria-hidden
+              />
+              <div className="px-5 py-6 sm:px-7 sm:py-8 lg:px-9 lg:py-9">
+                {contextLabel && (
+                  <div className="mb-6 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-3 text-sm text-[color:var(--text-secondary)] shadow-sm">
+                    <span className="font-semibold text-[color:var(--accent-teal)]">Help for:</span>{' '}
+                    <span className="font-bold text-[color:var(--text-primary)]">{contextLabel}</span>
+                    {selectedSection && (
+                      <span className="ml-1 text-[color:var(--text-muted)]">
+                        {' '}— <strong className="text-[color:var(--text-primary)]">{selectedSection.title}</strong> section
+                      </span>
+                    )}
+                  </div>
+                )}
+                {markdownContent ? (
+                  <ErrorBoundary
+                    fallback={
+                      <div className="rounded-xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] p-4 text-[color:var(--accent-red)]">
+                        <p className="mb-2 font-semibold">Error rendering content</p>
+                        <p className="text-sm text-[color:var(--text-secondary)]">Please try refreshing the page.</p>
+                      </div>
+                    }
+                  >
+                    <div className="max-w-none">
+                      <Suspense fallback={<div className="py-4 text-center text-[color:var(--text-muted)]">Loading…</div>}>
+                        {markdownContent && markdownContent.trim() ? (
+                          <ErrorBoundary
+                            fallback={
+                              <div className="rounded-xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] p-4 text-[color:var(--accent-red)]">
+                                <p className="mb-2 font-semibold">Error rendering content</p>
+                                <p className="text-sm text-[color:var(--text-secondary)]">
+                                  The help content could not be displayed. Please try refreshing the page.
+                                </p>
+                              </div>
+                            }
+                          >
+                            <ReactMarkdown
+                              key={selectedSection?.id ?? 'help'}
+                              remarkPlugins={[remarkGfm]}
+                              components={{
                       h1: ({ children, ...props }) => (
                         <h1
-                          className="text-2xl sm:text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary-700 via-primary-600 to-indigo-600 mb-6 mt-0 pb-4 border-b-2 border-primary-100/90"
+                          className="zenith-display mb-6 mt-0 border-b border-[color:var(--border-default)] bg-gradient-to-r from-[color:var(--accent-gold)] via-[color:var(--accent-amber)] to-[color:var(--accent-teal)] bg-clip-text pb-4 text-2xl font-extrabold tracking-tight text-transparent sm:text-3xl"
                           {...props}
                         >
                           {children}
@@ -264,7 +280,7 @@ const Help = () => {
                         return (
                           <h2
                             id={id}
-                            className="scroll-mt-28 text-lg sm:text-xl font-bold text-gray-800 mb-4 mt-10 flex flex-wrap items-center gap-2 rounded-xl border border-gray-200/90 bg-gradient-to-r from-white via-primary-50/45 to-indigo-50/35 px-4 py-3 shadow-sm ring-1 ring-gray-100/90"
+                            className="zenith-display scroll-mt-28 mb-4 mt-10 flex flex-wrap items-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-3 text-lg font-bold text-[color:var(--text-primary)] shadow-sm sm:text-xl"
                             {...props}
                           >
                             {children}
@@ -276,7 +292,7 @@ const Help = () => {
                         return (
                           <h3
                             id={id}
-                            className="scroll-mt-24 text-base sm:text-lg font-semibold text-indigo-950 mb-2 mt-7 border-l-4 border-indigo-400 pl-3"
+                            className="scroll-mt-24 mb-2 mt-7 border-l-4 border-[color:var(--accent-teal)] pl-3 text-base font-semibold text-[color:var(--text-primary)] sm:text-lg"
                             {...props}
                           >
                             {children}
@@ -288,7 +304,7 @@ const Help = () => {
                         return (
                           <h4
                             id={id}
-                            className="scroll-mt-20 text-base font-semibold text-gray-800 mb-2 mt-5"
+                            className="scroll-mt-20 mb-2 mt-5 text-base font-semibold text-[color:var(--text-primary)]"
                             {...props}
                           >
                             {children}
@@ -296,50 +312,55 @@ const Help = () => {
                         )
                       },
                       p: ({ ...props }) => (
-                        <p className="text-gray-700 mb-4 leading-relaxed text-[15px]" {...props} />
+                        <p className="mb-4 text-[15px] leading-relaxed text-[color:var(--text-secondary)]" {...props} />
                       ),
                       ul: ({ ...props }) => (
                         <ul
-                          className="list-disc list-outside mb-5 space-y-2.5 text-gray-700 pl-5 text-[15px]"
+                          className="mb-5 list-outside list-disc space-y-2.5 pl-5 text-[15px] text-[color:var(--text-secondary)]"
                           {...props}
                         />
                       ),
                       ol: ({ ...props }) => (
                         <ol
-                          className="list-decimal list-outside mb-5 space-y-2.5 text-gray-700 pl-5 text-[15px]"
+                          className="mb-5 list-outside list-decimal space-y-2.5 pl-5 text-[15px] text-[color:var(--text-secondary)]"
                           {...props}
                         />
                       ),
                       li: ({ ...props }) => (
-                        <li className="leading-relaxed pl-1 marker:text-primary-600" {...props} />
+                        <li className="pl-1 leading-relaxed marker:text-[color:var(--accent-gold)]" {...props} />
                       ),
-                      strong: ({ ...props }) => <strong className="font-semibold text-gray-900" {...props} />,
+                      strong: ({ ...props }) => (
+                        <strong className="font-semibold text-[color:var(--text-primary)]" {...props} />
+                      ),
                       hr: () => (
-                        <hr className="my-8 border-0 h-px max-w-lg bg-gradient-to-r from-transparent via-primary-200 to-transparent mx-auto rounded-full" />
+                        <hr className="mx-auto my-8 h-px max-w-lg rounded-full border-0 bg-gradient-to-r from-transparent via-[color:var(--border-strong)] to-transparent" />
                       ),
                       code: ({ inline, ...props }: React.ComponentProps<'code'> & { inline?: boolean }) => {
                         if (inline) {
                           return (
                             <code
-                              className="bg-indigo-50 text-indigo-800 px-1.5 py-0.5 rounded-md text-sm font-mono border border-indigo-100/80"
+                              className="rounded-md border border-[color:var(--border-default)] bg-[color:var(--bg-badge)] px-1.5 py-0.5 font-mono text-sm text-[color:var(--accent-gold)]"
                               {...props}
                             />
                           )
                         }
                         return (
                           <code
-                            className="block bg-slate-900 text-gray-100 p-4 rounded-xl overflow-x-auto text-sm font-mono mb-4 border border-slate-700 shadow-inner"
+                            className="mb-4 block overflow-x-auto rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] p-4 font-mono text-sm text-[color:var(--text-primary)] shadow-inner"
                             {...props}
                           />
                         )
                       },
                       pre: ({ ...props }) => (
-                        <pre className="bg-slate-900 text-gray-100 p-4 rounded-xl overflow-x-auto mb-4 border border-slate-700 shadow-inner" {...props} />
+                        <pre
+                          className="mb-4 overflow-x-auto rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] p-4 text-[color:var(--text-primary)] shadow-inner"
+                          {...props}
+                        />
                       ),
                       a: (props: React.ComponentProps<'a'>) => {
                         const href = props.href ?? ''
                         const linkClass =
-                          'text-primary-600 hover:text-primary-800 font-medium underline decoration-primary-300 underline-offset-2 transition-colors'
+                          'font-semibold text-[color:var(--accent-teal)] underline decoration-[color:var(--border-strong)] underline-offset-2 transition-opacity hover:opacity-90'
                         if (href.startsWith('#') && href.length > 1) {
                           const rawId = href.slice(1)
                           return (
@@ -395,10 +416,10 @@ const Help = () => {
                         const isTip = /^(\*\*)?tip(\*\*)?:/i.test(t)
                         const isNote = /^(\*\*)?note(\*\*)?:/i.test(t)
                         const box = isTip
-                          ? 'bg-amber-50/95 border-amber-200 text-amber-950'
+                          ? 'border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] text-[color:var(--text-primary)]'
                           : isNote
-                            ? 'bg-sky-50/95 border-sky-200 text-sky-950'
-                            : 'bg-gray-50/95 border-gray-200 text-gray-800'
+                            ? 'border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] text-[color:var(--text-primary)]'
+                            : 'border-[color:var(--border-default)] bg-[color:var(--bg-input)] text-[color:var(--text-secondary)]'
                         return (
                           <blockquote
                             className={`rounded-xl border px-4 py-3 my-6 text-sm leading-relaxed not-italic border-l-4 shadow-sm [&_p]:mb-2 [&_p:last-child]:mb-0 ${box}`}
@@ -409,7 +430,7 @@ const Help = () => {
                         )
                       },
                       table: ({ ...props }) => (
-                        <div className="overflow-x-auto mb-6 rounded-xl border-2 border-indigo-100/90 shadow-md ring-1 ring-indigo-50/60 bg-white">
+                        <div className="mb-6 overflow-x-auto rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] shadow-md">
                           <table
                             className="min-w-full border-collapse text-[13px] sm:text-sm"
                             {...props}
@@ -417,20 +438,23 @@ const Help = () => {
                         </div>
                       ),
                       thead: ({ ...props }) => (
-                        <thead className="bg-gradient-to-r from-indigo-600 to-primary-600 text-white" {...props} />
+                        <thead className="bg-[color:var(--zenith-table-header-bg)] text-[color:var(--zenith-table-header-fg)]" {...props} />
                       ),
                       th: ({ ...props }) => (
                         <th
-                          className="px-3 sm:px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-white border-b border-white/20"
+                          className="border-b border-[color:var(--border-default)] px-3 py-3 text-left text-xs font-bold uppercase tracking-wide sm:px-4"
                           {...props}
                         />
                       ),
-                      tbody: ({ ...props }) => <tbody className="divide-y divide-gray-200 bg-white" {...props} />,
+                      tbody: ({ ...props }) => <tbody className="divide-y divide-[color:var(--border-default)]" {...props} />,
                       tr: ({ ...props }) => (
-                        <tr className="even:bg-slate-50/80 hover:bg-primary-50/50 transition-colors" {...props} />
+                        <tr className="bg-[color:var(--bg-card)] transition-colors hover:bg-[color:var(--bg-table-hover)]" {...props} />
                       ),
                       td: ({ ...props }) => (
-                        <td className="px-3 sm:px-4 py-3 text-gray-800 align-top leading-relaxed border-b border-gray-100 last:border-b-0" {...props} />
+                        <td
+                          className="border-b border-[color:var(--border-default)] px-3 py-3 align-top text-[15px] leading-relaxed text-[color:var(--text-secondary)] last:border-b-0 sm:px-4 sm:text-sm"
+                          {...props}
+                        />
                       ),
                       img: (props: React.ComponentProps<'img'>) => {
                         let src = props.src || ''
@@ -445,7 +469,7 @@ const Help = () => {
                             <img
                               {...props}
                               src={src}
-                              className="max-w-full h-auto rounded-lg shadow-lg border-2 border-gray-300 mx-auto"
+                              className="mx-auto h-auto max-w-full rounded-xl border border-[color:var(--border-default)] shadow-lg"
                               alt={props.alt || 'Permission Matrix'}
                               style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
                               loading="lazy"
@@ -461,25 +485,21 @@ const Help = () => {
                   >
                   {markdownContent}
                 </ReactMarkdown>
-                        </ErrorBoundary>
-                      ) : (
-                        <div className="text-center py-8 text-gray-500">
-                          No content available
-                        </div>
-                      )}
-                    </Suspense>
-                  </div>
-                </ErrorBoundary>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  No content available
-                </div>
-              )}
-            </div>
+                          </ErrorBoundary>
+                        ) : (
+                          <div className="py-8 text-center text-[color:var(--text-muted)]">No content available</div>
+                        )}
+                      </Suspense>
+                    </div>
+                  </ErrorBoundary>
+                ) : (
+                  <div className="py-8 text-center text-[color:var(--text-muted)]">No content available</div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </PageCard>
+      </div>
     </div>
   )
 }

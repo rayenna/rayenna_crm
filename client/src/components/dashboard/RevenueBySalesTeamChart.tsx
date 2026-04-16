@@ -7,6 +7,16 @@ import { UserRole } from '../../types'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { getSalesTeamColor } from './salesTeamColors'
 import { salesTeamPerformanceQueryKey } from '../../utils/salesTeamPerformanceQuery'
+import {
+  ZENITH_RECHARTS_TOOLTIP_CURSOR,
+  ZENITH_RECHARTS_TOOLTIP_WRAPPER_STYLE,
+  ZENITH_CHART_TOOLTIP_INSIGHT,
+  ZENITH_CHART_TOOLTIP_LINE,
+  ZENITH_CHART_TOOLTIP_PANEL,
+  ZENITH_CHART_TOOLTIP_TITLE,
+  ZENITH_DASHBOARD_ANALYTICS_CARD,
+} from './zenithRechartsTooltipStyles'
+import { useChartColors } from '../../hooks/useChartColors'
 
 export interface RevenueBySalesTeamItem {
   salespersonId: string | null
@@ -32,6 +42,7 @@ interface RevenueBySalesTeamChartProps {
 const RevenueBySalesTeamChart = ({ dashboardFilter, data: dataProp = [] }: RevenueBySalesTeamChartProps) => {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const c = useChartColors()
   const canView = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGEMENT || user?.role === UserRole.SALES || user?.role === UserRole.OPERATIONS || user?.role === UserRole.FINANCE
 
   const dateFilter = {
@@ -64,15 +75,15 @@ const RevenueBySalesTeamChart = ({ dashboardFilter, data: dataProp = [] }: Reven
   const formatCurrency = (value: number) => `₹${value.toLocaleString('en-IN')}`
 
   return (
-    <div className="h-full flex flex-col bg-white shadow-sm rounded-2xl border border-slate-200 p-4 sm:p-5 min-h-[360px]">
-      <div className="flex flex-col gap-3 mb-4">
+    <div className={`${ZENITH_DASHBOARD_ANALYTICS_CARD} flex-col`}>
+      <div className="mb-4 flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-emerald-600">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="rounded-lg bg-[color:var(--accent-teal)] p-2 text-[color:var(--text-inverse)]">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-900">
+          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">
             Revenue by Sales Team Member
           </h2>
         </div>
@@ -82,15 +93,20 @@ const RevenueBySalesTeamChart = ({ dashboardFilter, data: dataProp = [] }: Reven
         {dashboardFilter && isLoading ? (
           <div className="flex items-center justify-center w-full h-full">
             <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
-              <p className="mt-4 text-sm text-gray-500">Loading chart data...</p>
+              <div
+                className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--border-default)] border-t-[color:var(--accent-gold)]"
+                aria-hidden
+              />
+              <p className="mt-4 text-sm text-[color:var(--text-secondary)]">Loading chart data...</p>
             </div>
           </div>
         ) : !chartData || chartData.length === 0 ? (
           <div className="flex items-center justify-center w-full h-full">
             <div className="text-center px-4">
-              <p className="mb-2 text-sm sm:text-base text-gray-500">No data for selected period</p>
-              <p className="text-xs sm:text-sm text-gray-600">Revenue data will appear when confirmed/completed projects exist.</p>
+              <p className="mb-2 text-sm text-[color:var(--text-secondary)] sm:text-base">No data for selected period</p>
+              <p className="text-xs text-[color:var(--text-muted)] sm:text-sm">
+                Revenue data will appear when confirmed/completed projects exist.
+              </p>
             </div>
           </div>
         ) : (
@@ -101,16 +117,18 @@ const RevenueBySalesTeamChart = ({ dashboardFilter, data: dataProp = [] }: Reven
                 margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                 barCategoryGap="4%"
               >
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke={c.grid} />
                 <XAxis
                   dataKey="salespersonName"
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fill: c.axisText }}
                   angle={-45}
                   textAnchor="end"
                   height={80}
+                  stroke={c.grid}
                 />
                 <YAxis
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fill: c.axisText }}
+                  stroke={c.grid}
                   tickFormatter={(value) => {
                     if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`
                     if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`
@@ -119,19 +137,23 @@ const RevenueBySalesTeamChart = ({ dashboardFilter, data: dataProp = [] }: Reven
                   }}
                 />
                 <Tooltip
+                  wrapperStyle={ZENITH_RECHARTS_TOOLTIP_WRAPPER_STYLE}
+                  cursor={ZENITH_RECHARTS_TOOLTIP_CURSOR}
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const d = payload[0].payload as RevenueBySalesTeamItem
                       return (
-                        <div className="bg-gradient-to-br from-white to-primary-50 p-4 border-2 border-primary-200 rounded-xl shadow-2xl backdrop-blur-sm">
-                          <p className="font-semibold text-gray-900 mb-2">{d.salespersonName}</p>
-                          <p className="text-sm text-emerald-600">
-                            Revenue: <span className="font-medium">{formatCurrency(d.revenue)}</span>
+                        <div className={ZENITH_CHART_TOOLTIP_PANEL}>
+                          <p className={ZENITH_CHART_TOOLTIP_TITLE}>{d.salespersonName}</p>
+                          <p className={ZENITH_CHART_TOOLTIP_LINE}>
+                            Revenue:{' '}
+                            <span className="font-extrabold text-[color:var(--accent-gold)]">{formatCurrency(d.revenue)}</span>
                           </p>
-                          <p className="text-sm text-gray-600 mt-1">
-                            Projects: <span className="font-medium">{d.projectCount}</span>
+                          <p className={`${ZENITH_CHART_TOOLTIP_LINE} mt-1`}>
+                            Projects:{' '}
+                            <span className="font-extrabold text-[color:var(--accent-teal)]">{d.projectCount}</span>
                           </p>
-                          <p className="text-xs font-medium text-amber-700 mt-1">Click bar to open Projects →</p>
+                          <p className={ZENITH_CHART_TOOLTIP_INSIGHT}>Click bar to open Projects →</p>
                         </div>
                       )
                     }

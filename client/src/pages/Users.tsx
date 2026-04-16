@@ -4,16 +4,14 @@ import { useAuth } from '../contexts/AuthContext'
 import { User, UserRole } from '../types'
 import toast from 'react-hot-toast'
 import { useState, useRef, useEffect } from 'react'
-import PageCard from '../components/PageCard'
-import { FaUsers } from 'react-icons/fa'
+import { Users as UsersGroupIcon } from 'lucide-react'
 import { ErrorModal } from '@/components/common/ErrorModal'
 
-/** Horizontal scroll on narrow viewports so columns are not crushed; lighter shadow matches Audit tables. */
 const usersTableScrollShell =
-  'w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x rounded-2xl border border-gray-200/90 bg-white shadow-sm shadow-gray-900/[0.04] ring-1 ring-gray-100 [-webkit-overflow-scrolling:touch]'
+  'zenith-scroll-x w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-card)] [-webkit-overflow-scrolling:touch]'
 
 const usersHeaderLabel =
-  'text-left text-[11px] font-bold uppercase leading-snug tracking-wide text-slate-100 sm:text-xs sm:leading-tight sm:tracking-wider'
+  'text-left text-[11px] font-bold uppercase leading-snug tracking-wide text-[color:var(--zenith-table-header-fg)] sm:text-xs sm:leading-tight sm:tracking-wider'
 
 const usersHeaderInner =
   'flex min-h-[2rem] w-full min-w-0 items-center px-1.5 py-1 sm:min-h-[2.5rem] sm:px-2 sm:py-1.5'
@@ -30,8 +28,29 @@ const Users = () => {
   })
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
-  const [resetPasswordModal, setResetPasswordModal] = useState<{ user: User | null; resetLink: string | null }>({ user: null, resetLink: null })
+  const [resetPasswordModal, setResetPasswordModal] = useState<{ user: User | null; resetLink: string | null }>({
+    user: null,
+    resetLink: null,
+  })
+  const [policyModal, setPolicyModal] = useState<{
+    open: boolean
+    type: 'info' | 'warning' | 'error'
+    title?: string
+    message: string
+  }>({ open: false, type: 'info', message: '' })
   const createFormFirstInputRef = useRef<HTMLInputElement>(null)
+
+  const closePolicyModal = () => setPolicyModal({ open: false, type: 'info', message: '' })
+
+  const getApiErrorMessage = (err: unknown): string => {
+    const anyErr = err as any
+    const msg =
+      anyErr?.response?.data?.error ||
+      anyErr?.response?.data?.message ||
+      anyErr?.message ||
+      ''
+    return typeof msg === 'string' ? msg : ''
+  }
 
   useEffect(() => {
     if (showForm) {
@@ -47,11 +66,11 @@ const Users = () => {
       return res.data as User[]
     },
     retry: 1,
-    staleTime: 60 * 1000, // 1 min – avoid refetch on every focus (reduces flicker)
+    staleTime: 60 * 1000,
   })
 
   const createMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: Record<string, unknown>) => {
       return axiosInstance.post('/api/users', data)
     },
     onSuccess: () => {
@@ -60,8 +79,17 @@ const Users = () => {
       setShowForm(false)
       setFormData({ email: '', name: '', password: '', role: UserRole.SALES })
     },
-    onError: (error: unknown) => {
-      toast.error(getFriendlyApiErrorMessage(error))
+    onError: (err: unknown) => {
+      const apiMsg = getApiErrorMessage(err)
+      if (apiMsg.includes('Only one ADMIN user is allowed')) {
+        setPolicyModal({
+          open: true,
+          type: 'info',
+          message: apiMsg,
+        })
+        return
+      }
+      toast.error(getFriendlyApiErrorMessage(err))
     },
   })
 
@@ -73,8 +101,17 @@ const Users = () => {
       toast.success('User deleted successfully')
       queryClient.invalidateQueries({ queryKey: ['users'] })
     },
-    onError: (error: unknown) => {
-      toast.error(getFriendlyApiErrorMessage(error))
+    onError: (err: unknown) => {
+      const apiMsg = getApiErrorMessage(err)
+      if (apiMsg.includes('Cannot delete your own account')) {
+        setPolicyModal({
+          open: true,
+          type: 'warning',
+          message: apiMsg,
+        })
+        return
+      }
+      toast.error(getFriendlyApiErrorMessage(err))
     },
   })
 
@@ -84,12 +121,12 @@ const Users = () => {
       return res.data
     },
     onSuccess: (data, userId) => {
-      const user = users?.find(u => u.id === userId)
-      setResetPasswordModal({ user: user || null, resetLink: data.resetLink })
+      const u = users?.find((x) => x.id === userId)
+      setResetPasswordModal({ user: u || null, resetLink: data.resetLink })
       toast.success('Password reset token generated successfully')
     },
-    onError: (error: unknown) => {
-      toast.error(getFriendlyApiErrorMessage(error))
+    onError: (err: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(err))
     },
   })
 
@@ -122,7 +159,7 @@ const Users = () => {
 
   const copyResetLink = () => {
     if (resetPasswordModal.resetLink) {
-      navigator.clipboard.writeText(resetPasswordModal.resetLink)
+      void navigator.clipboard.writeText(resetPasswordModal.resetLink)
       toast.success('Reset link copied to clipboard')
     }
   }
@@ -131,87 +168,172 @@ const Users = () => {
     setResetPasswordModal({ user: null, resetLink: null })
   }
 
+  const shell = (children: React.ReactNode) => (
+    <div
+      className="zenith-root zenith-animated-bg w-full max-w-full min-w-0 min-h-[calc(100dvh-5rem)] min-h-[calc(100vh-5rem)] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-[max(0.35rem,env(safe-area-inset-top,0px))] [-webkit-tap-highlight-color:transparent]"
+    >
+      <div className="zenith-exec-main mx-auto w-full max-w-full min-w-0 px-3 sm:px-5 pb-10">{children}</div>
+    </div>
+  )
+
   if (!hasRole([UserRole.ADMIN])) {
-    return <div>Access denied</div>
+    return shell(
+      <div className="flex min-h-[50vh] flex-col items-center justify-center px-2 pt-6 text-center">
+        <div className="w-full max-w-md rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-8 shadow-[var(--shadow-card)]">
+          <p className="zenith-display text-lg font-bold tracking-tight text-[color:var(--text-primary)]">Access denied</p>
+          <p className="mt-3 text-sm leading-relaxed text-[color:var(--text-secondary)]">Administrator privileges are required to manage users.</p>
+        </div>
+      </div>,
+    )
   }
 
-  if (isLoading) return <div>Loading...</div>
+  if (isLoading) {
+    return shell(
+      <div className="w-full max-w-full min-w-0 space-y-5 pt-1">
+        <div className="rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] sm:p-5">
+          <div className="zenith-skeleton mb-3 h-8 w-48 max-w-[70%] rounded-lg" />
+          <div className="zenith-skeleton h-4 w-full max-w-md rounded-md" />
+        </div>
+        <div className="space-y-3 md:hidden">
+          {[1, 2, 3, 4].map((k) => (
+            <div key={k} className="rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)]">
+              <div className="zenith-skeleton mb-3 h-5 w-2/3 rounded-md" />
+              <div className="zenith-skeleton mb-4 h-4 w-full rounded-md" />
+              <div className="flex gap-2">
+                <div className="zenith-skeleton h-9 flex-1 rounded-xl" />
+                <div className="zenith-skeleton h-9 flex-1 rounded-xl" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="hidden overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] md:block">
+          <div className="space-y-0 divide-y divide-[color:var(--border-default)] p-4">
+            {[1, 2, 3, 4, 5].map((k) => (
+              <div key={k} className="flex gap-4 py-3">
+                <div className="zenith-skeleton h-5 w-[22%] rounded-md" />
+                <div className="zenith-skeleton h-5 flex-1 rounded-md" />
+                <div className="zenith-skeleton h-5 w-24 rounded-full" />
+                <div className="zenith-skeleton h-5 w-28 rounded-md" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>,
+    )
+  }
 
   if (error) {
     const err = error as { response?: { status?: number }; message?: string }
     const is404 = err.response?.status === 404
-    return (
-      <div className="px-0 py-6 max-w-lg">
-        <p className="text-red-600 font-medium">Error loading users</p>
-        <p className="text-gray-600 mt-1">{err.message || 'Unknown error'}</p>
-        {is404 && (
-          <p className="text-sm text-amber-700 mt-3 p-3 bg-amber-50 rounded">
-            The Users API returned 404. In production, set <code className="bg-amber-100 px-1">VITE_API_BASE_URL</code> to your backend URL (e.g. your Render API URL) so requests go to <code className="bg-amber-100 px-1">/api/users</code> on the backend.
-          </p>
-        )}
-      </div>
+    return shell(
+      <div className="mx-auto max-w-xl pt-6">
+        <div className="rounded-2xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] p-5 text-sm text-[color:var(--text-primary)]">
+          <p className="font-semibold text-[color:var(--accent-red)]">Error loading users</p>
+          <p className="mt-2 text-[color:var(--text-secondary)]">{err.message || 'Unknown error'}</p>
+          {is404 && (
+            <p className="mt-3 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] p-3 text-xs leading-relaxed text-[color:var(--text-primary)]">
+              The Users API returned 404. In production, set{' '}
+              <code className="rounded border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-1.5 py-0.5 text-[color:var(--accent-gold)]">VITE_API_BASE_URL</code> to your backend URL
+              (e.g. your Render API URL) so requests go to{' '}
+              <code className="rounded border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-1.5 py-0.5 text-[color:var(--accent-gold)]">/api/users</code> on the backend.
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['users'] })}
+            className="mt-5 inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl bg-[color:var(--accent-gold)] px-5 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] transition-opacity hover:opacity-95"
+          >
+            Try again
+          </button>
+        </div>
+      </div>,
     )
   }
 
-  return (
-    <div className="mobile-paint-fix px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden bg-gradient-to-b from-slate-50/90 via-white to-primary-50/15">
-      <PageCard
-        title="Users"
-        subtitle="Manage user accounts and roles"
-        icon={<FaUsers className="w-5 h-5 text-white" />}
-        headerAction={
+  const toggleFormLabel = showForm ? 'Cancel' : 'New User'
+
+  return shell(
+    <>
+      <header className="sticky top-0 z-30 mb-4 border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 94%, transparent)] pb-3 pt-1 backdrop-blur-xl sm:mb-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] shadow-inner">
+              <UsersGroupIcon className="h-5 w-5 text-[color:var(--accent-gold)]" strokeWidth={2} aria-hidden />
+            </div>
+            <div className="min-w-0">
+              <h1 className="zenith-display text-xl font-bold tracking-tight text-[color:var(--text-primary)] sm:text-2xl">Users</h1>
+              <p className="mt-0.5 text-sm text-[color:var(--text-secondary)]">Manage accounts, roles, and password recovery.</p>
+            </div>
+          </div>
           <button
+            type="button"
             onClick={() => setShowForm(!showForm)}
-            className="inline-flex items-center gap-2 bg-white/20 border border-white/40 text-white px-4 py-2.5 rounded-xl hover:bg-white/30 font-medium shadow-md transition-all"
+            className="inline-flex min-h-[44px] w-full touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-4 py-2.5 text-sm font-semibold text-[color:var(--accent-gold)] shadow-sm transition-opacity hover:opacity-95 sm:w-auto sm:shrink-0"
           >
-            {showForm ? 'Cancel' : 'New User'}
+            {toggleFormLabel}
           </button>
-        }
-        className="max-w-full min-w-0 !overflow-x-visible"
-        dense
-      >
+        </div>
+      </header>
+
       {showForm && (
-        <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl border border-primary-100 shadow-sm p-4 sm:p-6 mb-6">
-          <h2 className="text-base sm:text-lg font-semibold mb-4">Create New User</h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <section
+          className="mb-6 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] sm:p-6"
+          aria-labelledby="users-create-heading"
+        >
+          <h2 id="users-create-heading" className="zenith-display mb-4 text-base font-semibold tracking-tight text-[color:var(--text-primary)] sm:text-lg">
+            Create new user
+          </h2>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Email *</label>
+              <label htmlFor="users-new-email" className="block text-sm font-medium text-[color:var(--text-primary)]">
+                Email *
+              </label>
               <input
+                id="users-new-email"
                 ref={createFormFirstInputRef}
                 type="email"
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                className="zenith-native-filter-input mt-1.5 block w-full rounded-xl px-3 py-2.5 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Name *</label>
+              <label htmlFor="users-new-name" className="block text-sm font-medium text-[color:var(--text-primary)]">
+                Name *
+              </label>
               <input
+                id="users-new-name"
                 type="text"
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                className="zenith-native-filter-input mt-1.5 block w-full rounded-xl px-3 py-2.5 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Password *</label>
+              <label htmlFor="users-new-password" className="block text-sm font-medium text-[color:var(--text-primary)]">
+                Password *
+              </label>
               <input
+                id="users-new-password"
                 type="password"
                 required
                 minLength={6}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                className="zenith-native-filter-input mt-1.5 block w-full rounded-xl px-3 py-2.5 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Role *</label>
+              <label htmlFor="users-new-role" className="block text-sm font-medium text-[color:var(--text-primary)]">
+                Role *
+              </label>
               <select
+                id="users-new-role"
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                className="zenith-native-select mt-1.5 block w-full rounded-xl px-3 py-2.5 text-sm"
               >
                 {Object.values(UserRole).map((role) => (
                   <option key={role} value={role}>
@@ -221,127 +343,160 @@ const Users = () => {
               </select>
             </div>
             <div className="md:col-span-2">
-                <button
+              <button
                 type="submit"
                 disabled={createMutation.isPending}
-                className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-4 py-2 rounded-lg hover:from-primary-700 hover:to-primary-800 disabled:opacity-50 font-medium shadow-md transition-all"
+                className="inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl bg-[color:var(--accent-teal)] px-5 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] shadow-md transition-opacity hover:opacity-95 disabled:opacity-45"
               >
-                {createMutation.isPending ? 'Creating...' : 'Create User'}
+                {createMutation.isPending ? 'Creating…' : 'Create user'}
               </button>
             </div>
           </form>
-        </div>
+        </section>
       )}
 
       <div className="w-full min-w-0">
         {!users || users.length === 0 ? (
-          <div className="w-full rounded-2xl border border-dashed border-gray-200 bg-gradient-to-br from-slate-50/80 to-white px-4 py-12 text-center text-gray-500 shadow-inner shadow-slate-900/[0.03] sm:py-14">
-            <p className="text-sm font-medium text-gray-600">
-              No users found. {users === undefined ? 'Loading...' : 'Click "New User" to create one.'}
+          <div className="rounded-2xl border border-dashed border-[color:var(--border-strong)] bg-[color:var(--bg-card)] px-4 py-14 text-center shadow-[var(--shadow-card)] sm:py-16">
+            <UsersGroupIcon className="mx-auto mb-3 h-10 w-10 text-[color:var(--accent-gold)]" strokeWidth={1.5} aria-hidden />
+            <p className="text-sm font-medium text-[color:var(--text-primary)]">No users yet</p>
+            <p className="mx-auto mt-2 max-w-sm text-xs leading-relaxed text-[color:var(--text-muted)]">
+              {users === undefined ? 'Loading…' : 'Invite your team — tap New User to add the first account.'}
             </p>
+            {users && users.length === 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowForm(true)}
+                className="mt-6 inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-5 py-2.5 text-sm font-semibold text-[color:var(--accent-gold)] transition-opacity hover:opacity-95"
+              >
+                New User
+              </button>
+            ) : null}
           </div>
         ) : (
           <>
-            <p className="mb-2 text-xs leading-snug text-gray-600 md:hidden" role="note">
-              Swipe sideways to see name, email, role, and actions without overlap.
-            </p>
-            <div className={usersTableScrollShell} role="region" aria-label="User accounts table">
-            {/*
-              Proportions tuned for laptop: Role stays content-sized (narrow % + min-width), Email not overly wide.
-              Below md: min table width + horizontal scroll so mobile stays readable (same data density as desktop).
-            */}
-            <table className="w-full max-md:min-w-[48rem] md:min-w-0 table-fixed border-collapse text-sm leading-snug">
-              <colgroup>
-                <col className="w-[22%]" />
-                <col className="w-[36%]" />
-                <col className="min-w-[8.25rem] w-[14%]" />
-                <col className="w-[28%]" />
-              </colgroup>
-              <thead>
-                <tr className="border-b border-primary-900/25 bg-gradient-to-r from-primary-800 via-slate-700 to-primary-900 shadow-sm shadow-black/10">
-                  <th scope="col" className="px-2.5 py-2 text-left align-middle sm:px-3 sm:py-2.5">
-                    <div className={`${usersHeaderInner} w-full`}>
-                      <span className={usersHeaderLabel}>Name</span>
-                    </div>
-                  </th>
-                  <th scope="col" className="px-2.5 py-2 text-left align-middle sm:px-3 sm:py-2.5">
-                    <div className={`${usersHeaderInner} w-full`}>
-                      <span className={usersHeaderLabel}>Email</span>
-                    </div>
-                  </th>
-                  <th scope="col" className="px-2.5 py-2 text-left align-middle sm:px-3 sm:py-2.5">
-                    <div className={`${usersHeaderInner} w-full`}>
-                      <span className={usersHeaderLabel}>Role</span>
-                    </div>
-                  </th>
-                  <th scope="col" className="px-2.5 py-2 text-right align-middle sm:px-3 sm:py-2.5">
-                    <div className={`${usersHeaderInner} w-full justify-end`}>
-                      <span className={`${usersHeaderLabel} text-right`}>Actions</span>
-                    </div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100/90">
-                {users.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="bg-white transition-colors duration-150 ease-out odd:bg-white even:bg-slate-50/45 hover:bg-primary-50/70"
-                  >
-                    <td className="min-w-0 px-2 py-2.5 align-top sm:px-3 sm:py-3 md:align-middle">
-                      <p
-                        className="break-words text-sm font-semibold leading-snug text-gray-900 md:truncate md:leading-normal"
-                        title={user.name}
-                      >
-                        {user.name}
-                      </p>
-                    </td>
-                    <td className="min-w-0 px-2 py-2.5 align-top sm:px-3 sm:py-3 md:align-middle">
-                      <p
-                        className="break-all text-sm leading-snug text-gray-600 [overflow-wrap:anywhere] md:break-normal md:truncate md:leading-normal"
-                        title={user.email}
-                      >
-                        {user.email}
-                      </p>
-                    </td>
-                    <td className="min-w-0 px-2 py-2.5 align-top sm:px-3 sm:py-3 md:align-middle">
-                      <span className="inline-flex w-fit max-w-full items-center whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-800 ring-1 ring-slate-200/80">
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="min-w-0 px-2 py-2.5 align-top sm:px-3 sm:py-3 md:align-middle">
-                      <div className="flex flex-col items-end gap-2 md:flex-row md:flex-wrap md:items-center md:justify-end md:gap-x-4 md:gap-y-1">
-                        <button
-                          type="button"
-                          onClick={() => handleResetPassword(user)}
-                          disabled={resetPasswordMutation.isPending}
-                          className="min-h-[44px] w-full max-w-[12rem] rounded-lg py-1 text-right text-sm font-medium text-blue-600 hover:bg-blue-50/80 hover:text-blue-800 disabled:opacity-50 md:min-h-0 md:w-auto md:max-w-none md:py-0"
-                        >
-                          {resetPasswordMutation.isPending ? 'Generating…' : 'Reset Password'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(user)}
-                          className="min-h-[44px] w-full max-w-[12rem] rounded-lg py-1 text-right text-sm font-medium text-red-600 hover:bg-red-50/80 hover:text-red-800 md:min-h-0 md:w-auto md:max-w-none md:py-0"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {/* Mobile-first: card list (full-width actions, document scroll only) */}
+            <ul className="space-y-3 md:hidden" aria-label="User accounts">
+              {users.map((u) => (
+                <li
+                  key={u.id}
+                  className="rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)]"
+                >
+                  <p className="zenith-display break-words text-base font-semibold tracking-tight text-[color:var(--text-primary)]">{u.name}</p>
+                  <p className="mt-1 break-all text-sm leading-snug text-[color:var(--accent-teal)] [overflow-wrap:anywhere]">{u.email}</p>
+                  <span className="mt-3 inline-flex w-fit max-w-full items-center rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-badge)] px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-secondary)]">
+                    {u.role}
+                  </span>
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => handleResetPassword(u)}
+                      disabled={resetPasswordMutation.isPending}
+                      className="inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-4 py-2.5 text-sm font-semibold text-[color:var(--accent-teal)] transition-opacity hover:opacity-95 disabled:opacity-45"
+                    >
+                      {resetPasswordMutation.isPending ? 'Generating…' : 'Reset password'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(u)}
+                      className="inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] px-4 py-2.5 text-sm font-semibold text-[color:var(--accent-red)] transition-opacity hover:opacity-95"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {/* md+: table in horizontal scroll region */}
+            <div className="hidden md:block">
+              <p className="mb-2 hidden text-xs text-[color:var(--text-muted)] lg:block" role="note">
+                Scroll horizontally if the table is wider than your window.
+              </p>
+              <div className={usersTableScrollShell} role="region" aria-label="User accounts table">
+                <table className="w-full min-w-[52rem] table-fixed border-collapse text-sm leading-snug">
+                  <colgroup>
+                    <col className="w-[22%]" />
+                    <col className="w-[36%]" />
+                    <col className="min-w-[8.25rem] w-[14%]" />
+                    <col className="w-[28%]" />
+                  </colgroup>
+                  <thead>
+                    <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--zenith-table-header-bg)]">
+                      <th scope="col" className="px-2.5 py-2 text-left align-middle sm:px-3 sm:py-2.5">
+                        <div className={`${usersHeaderInner} w-full`}>
+                          <span className={usersHeaderLabel}>Name</span>
+                        </div>
+                      </th>
+                      <th scope="col" className="px-2.5 py-2 text-left align-middle sm:px-3 sm:py-2.5">
+                        <div className={`${usersHeaderInner} w-full`}>
+                          <span className={usersHeaderLabel}>Email</span>
+                        </div>
+                      </th>
+                      <th scope="col" className="px-2.5 py-2 text-left align-middle sm:px-3 sm:py-2.5">
+                        <div className={`${usersHeaderInner} w-full`}>
+                          <span className={usersHeaderLabel}>Role</span>
+                        </div>
+                      </th>
+                      <th scope="col" className="px-2.5 py-2 text-right align-middle sm:px-3 sm:py-2.5">
+                        <div className={`${usersHeaderInner} w-full justify-end`}>
+                          <span className={`${usersHeaderLabel} text-right`}>Actions</span>
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[color:var(--border-default)]">
+                    {users.map((u) => (
+                      <tr key={u.id} className="bg-[color:var(--bg-card)] transition-colors hover:bg-[color:var(--bg-table-hover)]">
+                        <td className="min-w-0 px-2 py-2.5 align-middle sm:px-3 sm:py-3">
+                          <p className="truncate text-sm font-semibold text-[color:var(--text-primary)]" title={u.name}>
+                            {u.name}
+                          </p>
+                        </td>
+                        <td className="min-w-0 px-2 py-2.5 align-middle sm:px-3 sm:py-3">
+                          <p className="truncate text-sm text-[color:var(--accent-teal)]" title={u.email}>
+                            {u.email}
+                          </p>
+                        </td>
+                        <td className="min-w-0 px-2 py-2.5 align-middle sm:px-3 sm:py-3">
+                          <span className="inline-flex w-fit max-w-full items-center whitespace-nowrap rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-badge)] px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-[color:var(--text-secondary)]">
+                            {u.role}
+                          </span>
+                        </td>
+                        <td className="min-w-0 px-2 py-2.5 align-middle sm:px-3 sm:py-3">
+                          <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
+                            <button
+                              type="button"
+                              onClick={() => handleResetPassword(u)}
+                              disabled={resetPasswordMutation.isPending}
+                              className="touch-manipulation text-sm font-semibold text-[color:var(--accent-teal)] transition-opacity hover:opacity-90 disabled:opacity-45"
+                            >
+                              {resetPasswordMutation.isPending ? 'Generating…' : 'Reset password'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(u)}
+                              className="touch-manipulation text-sm font-semibold text-[color:var(--accent-red)] transition-opacity hover:opacity-90"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </>
         )}
       </div>
-      </PageCard>
 
-      {/* Delete Confirmation: unified ErrorModal */}
       <ErrorModal
         open={showDeleteConfirm && !!userToDelete}
         onClose={cancelDelete}
         type="warning"
+        surface="zenith"
         message="User Details once deleted cannot be recovered. Are you sure to Proceed?"
         actions={[
           { label: 'Cancel', variant: 'ghost', onClick: cancelDelete },
@@ -349,11 +504,11 @@ const Users = () => {
         ]}
       />
 
-      {/* Reset Password: unified ErrorModal */}
       <ErrorModal
         open={!!(resetPasswordModal.user && resetPasswordModal.resetLink)}
         onClose={closeResetModal}
         type="info"
+        surface="zenith"
         message={
           resetPasswordModal.user && resetPasswordModal.resetLink
             ? `Password Reset Link Generated\n\nReset link for ${resetPasswordModal.user.name} (${resetPasswordModal.user.email}):\n\n${resetPasswordModal.resetLink}\n\nShare this link with the user. The token expires in 24 hours.`
@@ -364,7 +519,16 @@ const Users = () => {
           { label: 'Copy Link', variant: 'primary', onClick: copyResetLink },
         ]}
       />
-    </div>
+
+      <ErrorModal
+        open={policyModal.open}
+        onClose={closePolicyModal}
+        type={policyModal.type}
+        surface="zenith"
+        message={policyModal.message}
+        actions={[{ label: 'OK', variant: 'primary', onClick: closePolicyModal }]}
+      />
+    </>,
   )
 }
 

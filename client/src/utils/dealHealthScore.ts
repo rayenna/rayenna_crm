@@ -389,23 +389,23 @@ export function computeDealHealth(project: Record<string, unknown> | null | unde
   if (score >= 75) {
     grade = 'A'
     label = 'Healthy'
-    color = '#00D4B4'
+    color = 'var(--accent-teal)'
   } else if (score >= 55) {
     grade = 'B'
     label = 'Good'
-    color = '#4CAF50'
+    color = 'var(--accent-green)'
   } else if (score >= 35) {
     grade = 'C'
     label = 'At Risk'
-    color = '#F5A623'
+    color = 'var(--accent-gold)'
   } else if (score >= 15) {
     grade = 'D'
     label = 'Weak'
-    color = '#FF6B6B'
+    color = 'var(--accent-red)'
   } else {
     grade = 'F'
     label = 'Critical'
-    color = '#FF4757'
+    color = 'var(--accent-red)'
   }
 
   const factorScores = [

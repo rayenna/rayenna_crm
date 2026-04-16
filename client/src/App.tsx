@@ -5,6 +5,7 @@ import {
   RAYENNA_BROWSER_STORAGE_ERROR_EVENT,
   type BrowserStorageErrorDetail,
 } from './lib/safeLocalStorage'
+import { ThemeProvider } from './hooks/useTheme'
 import { AuthProvider } from './contexts/AuthContext'
 import { ModalEscapeProvider } from './contexts/ModalEscapeContext'
 import PrivateRoute from './components/PrivateRoute'
@@ -77,10 +78,28 @@ function App() {
   }, [])
 
   return (
+    <ThemeProvider>
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ModalEscapeProvider>
       <AuthProvider>
-        <Toaster position="top-right" />
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            className: 'font-sans',
+            style: {
+              background: 'var(--bg-modal)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-default)',
+              boxShadow: 'var(--shadow-dropdown)',
+            },
+            success: {
+              iconTheme: { primary: 'var(--text-inverse)', secondary: 'var(--accent-gold)' },
+            },
+            error: {
+              iconTheme: { primary: '#fff0f1', secondary: 'var(--accent-red)' },
+            },
+          }}
+        />
         <Routes>
           <Route
             path="/login"
@@ -240,6 +259,7 @@ function App() {
       </AuthProvider>
       </ModalEscapeProvider>
     </BrowserRouter>
+    </ThemeProvider>
   )
 }
 

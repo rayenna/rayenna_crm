@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { apiBaseUrl, isTimeoutOrNetworkError } from '../utils/axios'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import '../styles/zenith.css'
 
 const isProd = typeof window !== 'undefined' && !window.location.hostname.includes('localhost')
 const apiNotConfigured = isProd && !apiBaseUrl
@@ -85,60 +86,64 @@ const Login = () => {
     }
   }
 
+  const fieldCls =
+    'block w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-[color:var(--text-primary)] placeholder:text-[color:var(--text-placeholder)] shadow-inner transition-all focus:border-[color:var(--border-focus)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)] sm:text-sm'
+
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8"
-      style={{
-        backgroundImage: 'url(/background.jpg)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }}
+    <div
+      className="relative flex min-h-screen min-h-[100dvh] items-center justify-center overflow-auto bg-[color:var(--bg-page)] py-12 px-4 sm:px-6 lg:px-8 [-webkit-tap-highlight-color:transparent]"
     >
-      <div className="max-w-md w-full space-y-6 sm:space-y-8 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-6 sm:p-8 border-2 border-white/20 border-l-4 border-l-primary-500">
+      <div
+        className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: 'url(/background.jpg)' }}
+        aria-hidden
+      />
+      <div className="relative z-10 w-full max-w-md space-y-6 rounded-2xl border border-[color:var(--nav-border)] border-l-4 border-l-[color:var(--accent-gold)] bg-[color:color-mix(in_srgb,var(--nav-bg)_95%,transparent)] p-6 shadow-[var(--shadow-modal)] ring-1 ring-[color:var(--border-default)] backdrop-blur-md sm:space-y-8 sm:p-8">
         {apiNotConfigured && (
-          <div className="mb-4 p-3 rounded-lg bg-amber-100 border border-amber-400 text-amber-900 text-sm">
-            <strong>API not configured.</strong> Set <code className="bg-amber-200/60 px-1 rounded">VITE_API_BASE_URL</code> in your deployment (Render: Static Site → Environment; Vercel: Settings → Environment Variables) to your backend URL (e.g. <code className="bg-amber-200/60 px-1 rounded">https://rayenna-crm.onrender.com</code>), then <strong>redeploy</strong>. Login will not work until then.
+          <div className="mb-1 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] p-3 text-sm text-[color:var(--text-primary)]">
+            <strong className="text-[color:var(--accent-gold)]">API not configured.</strong> Set{' '}
+            <code className="rounded bg-[color:var(--bg-input)] px-1.5 py-0.5 text-[color:var(--text-primary)]">VITE_API_BASE_URL</code> in your deployment (Render: Static Site → Environment; Vercel: Settings → Environment Variables) to your backend URL (e.g.{' '}
+            <code className="rounded bg-[color:var(--bg-input)] px-1.5 py-0.5 text-[color:var(--text-primary)]">https://rayenna-crm.onrender.com</code>), then <strong>redeploy</strong>. Login will not work until then.
           </div>
         )}
 
-        {/* Server warm-up status banner */}
         {isProd && !apiNotConfigured && serverStatus === 'checking' && (
-          <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-sm flex items-center gap-2">
-            <svg className="animate-spin h-4 w-4 shrink-0 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          <div className="mb-1 flex items-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] p-3 text-sm text-[color:var(--text-secondary)]">
+            <svg className="h-4 w-4 shrink-0 animate-spin text-[color:var(--accent-gold)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
             </svg>
             <span>Connecting to server — this can take up to 60 s after a period of inactivity. Please wait before signing in.</span>
           </div>
         )}
         {isProd && !apiNotConfigured && serverStatus === 'ready' && (
-          <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-200 text-green-800 text-sm flex items-center gap-2">
-            <svg className="h-4 w-4 shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+          <div className="mb-1 flex items-center gap-2 rounded-xl border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] p-3 text-sm text-[color:var(--text-primary)]">
+            <svg className="h-4 w-4 shrink-0 text-[color:var(--accent-teal)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
             <span>Server is ready.</span>
           </div>
         )}
         {isProd && !apiNotConfigured && serverStatus === 'slow' && !isLoading && (
-          <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+          <div className="mb-1 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] p-3 text-sm text-[color:var(--text-primary)]">
             Server is slow to respond (free-tier wake-up). Try signing in — it may succeed now, or wait a few more seconds and try again.
           </div>
         )}
         <div className="text-center">
-          <div className="flex justify-center items-center py-4 sm:py-6 px-2">
-            <img 
-              src="/CRM_Logo.jpg" 
-              alt="Rayenna CRM" 
-              className="h-36 sm:h-40 md:h-44 w-auto max-w-[85vw] object-contain mx-auto drop-shadow-lg"
+          <div className="flex items-center justify-center px-2 pt-4 pb-0 sm:pt-6 sm:pb-0">
+            <img
+              src="/CRM_Logo.jpg"
+              alt="Rayenna CRM"
+              className="mx-auto h-36 max-h-[44vh] w-auto max-w-[85vw] object-contain drop-shadow-lg sm:h-40 md:h-44"
             />
           </div>
-          <p className="mt-2 text-sm font-medium text-gray-600">
-            Sign in to your account
+          <p className="mt-0.5 text-base font-semibold tracking-wide text-[color:var(--accent-gold)] sm:mt-1 sm:text-lg">
+            Ver 2.0
           </p>
+          <p className="mt-2 text-sm font-medium text-[color:var(--text-muted)]">Sign in to your account</p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
+        <form className="mt-6 space-y-4 sm:mt-8" onSubmit={handleSubmit}>
+          <div className="space-y-3">
             <div>
               <label htmlFor="email" className="sr-only">
                 Email address
@@ -149,7 +154,7 @@ const Login = () => {
                 type="email"
                 autoComplete="email"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-secondary-300 placeholder-secondary-400 text-secondary-900 rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm bg-white"
+                className={fieldCls}
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -165,7 +170,7 @@ const Login = () => {
                 type="password"
                 autoComplete="current-password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-secondary-300 placeholder-secondary-400 text-secondary-900 rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm bg-white"
+                className={fieldCls}
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -173,44 +178,40 @@ const Login = () => {
             </div>
           </div>
 
-          <div>
+          <div className="pt-1">
             <button
               type="submit"
               disabled={isLoading || serverStatus === 'checking'}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="relative flex w-full justify-center rounded-xl bg-[color:var(--accent-gold)] py-3 px-4 text-sm font-extrabold text-[color:var(--text-inverse)] shadow-[var(--shadow-card)] transition-all hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isLoading
-                ? (
-                  <span className="flex items-center gap-2">
-                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                    </svg>
-                    {elapsed > 10
-                      ? `Waking server up… ${elapsed}s — please wait`
-                      : 'Signing in…'}
-                  </span>
-                )
-                : serverStatus === 'checking'
-                  ? 'Connecting to server…'
-                  : 'Sign in'}
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  {elapsed > 10 ? `Waking server up… ${elapsed}s — please wait` : 'Signing in…'}
+                </span>
+              ) : serverStatus === 'checking' ? (
+                'Connecting to server…'
+              ) : (
+                'Sign in'
+              )}
             </button>
             {isLoading && elapsed > 5 && (
-              <p className="mt-2 text-xs text-center text-gray-500">
-                The server may be waking from sleep. <strong>Please do not press the button again</strong> — your request is in progress.
+              <p className="mt-2 text-center text-xs text-[color:var(--text-muted)]">
+                The server may be waking from sleep. <strong className="text-[color:var(--text-secondary)]">Please do not press the button again</strong> — your request is in progress.
               </p>
             )}
           </div>
         </form>
-        
-        <div className="mt-4 text-center">
-          <p className="text-xs text-gray-600">
-            Forgot your Password? Contact your administrator
-          </p>
+
+        <div className="text-center">
+          <p className="text-xs text-[color:var(--text-muted)]">Forgot your Password? Contact your administrator</p>
         </div>
-        
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <p className="text-xs text-gray-500 text-center leading-relaxed">
+
+        <div className="border-t border-[color:var(--border-default)] pt-6">
+          <p className="text-center text-xs leading-relaxed text-[color:var(--text-muted)]">
             By signing in, you acknowledge and agree to the Credits, Copyright, intellectual property and Terms of Usage of this product. Refer the About section to know more
           </p>
         </div>

@@ -3,18 +3,18 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Plus+Jakarta+Sans:ital,wght@0,500;0,600;0,700;0,800;1,500&family=Syne:wght@700&display=swap');
 
 .zenith-root {
-  --zenith-bg: #0a0a0f;
-  --zenith-surface: rgba(255, 255, 255, 0.035);
-  --zenith-border: rgba(255, 255, 255, 0.065);
-  --zenith-gold: #f5a623;
-  --zenith-teal: #00d4b4;
-  --zenith-crimson: #ff4757;
-  --zenith-text: rgba(255, 255, 255, 0.92);
-  --zenith-muted: rgba(255, 255, 255, 0.55);
+  --zenith-bg: var(--bg-page);
+  --zenith-surface: var(--bg-card);
+  --zenith-border: var(--border-default);
+  --zenith-gold: var(--accent-gold);
+  --zenith-teal: var(--accent-teal);
+  --zenith-crimson: var(--accent-red);
+  --zenith-text: var(--text-primary);
+  --zenith-muted: var(--text-muted);
   --zenith-font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
   --zenith-font-body: 'DM Sans', system-ui, sans-serif;
 
-  /* Native inputs / selects: use dark system popups (fixes white text on light grey <option> lists on Windows). */
+  /* Native inputs: dark popups in dark theme; light in light theme (html color-scheme). */
   color-scheme: dark;
 
   /* 100% width: Layout uses full-width main for /zenith (avoids iOS 100vw + padding horizontal scroll) */
@@ -30,9 +30,9 @@
   -webkit-tap-highlight-color: transparent;
   background-color: var(--zenith-bg);
   background-image:
-    radial-gradient(ellipse 70% 45% at 50% -18%, rgba(245, 166, 35, 0.09), transparent),
-    linear-gradient(rgba(255, 255, 255, 0.017) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.017) 1px, transparent 1px);
+    radial-gradient(ellipse 70% 45% at 50% -18%, color-mix(in srgb, var(--accent-gold) 12%, transparent), transparent),
+    linear-gradient(color-mix(in srgb, var(--text-primary) 4%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--text-primary) 4%, transparent) 1px, transparent 1px);
   background-size:
     100% 100%,
     48px 48px,
@@ -42,49 +42,91 @@
   font-family: var(--zenith-font-body);
 }
 
-/* Pipeline / Your focus filters: match page surface; dark native <select> popups + readable <option> rows */
-.zenith-root .zenith-native-filter-input {
+[data-theme='light'] .zenith-root {
+  color-scheme: light;
+  /* Command-center depth: warm pools + teal + subtle purple + silk beam + fine grid */
+  background-image:
+    radial-gradient(ellipse 130% 90% at 50% 118%, color-mix(in srgb, var(--accent-gold) 16%, transparent) 0%, transparent 58%),
+    radial-gradient(ellipse 92% 58% at 100% -8%, color-mix(in srgb, var(--accent-gold) 22%, transparent) 0%, transparent 52%),
+    radial-gradient(ellipse 88% 62% at -8% 102%, color-mix(in srgb, var(--accent-teal) 18%, transparent) 0%, transparent 54%),
+    radial-gradient(ellipse 70% 48% at 50% -12%, color-mix(in srgb, var(--accent-purple) 10%, transparent) 0%, transparent 46%),
+    radial-gradient(ellipse 120% 80% at 50% 50%, transparent 35%, color-mix(in srgb, var(--text-primary) 3.5%, transparent) 100%),
+    linear-gradient(
+      122deg,
+      transparent 0%,
+      transparent 40%,
+      color-mix(in srgb, #ffffff 72%, transparent) 49.2%,
+      color-mix(in srgb, var(--accent-teal) 8%, transparent) 50%,
+      transparent 51%,
+      transparent 100%
+    ),
+    linear-gradient(color-mix(in srgb, var(--text-primary) 2.1%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--text-primary) 2.1%, transparent) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    40px 40px,
+    40px 40px;
+  background-position:
+    center,
+    center,
+    center,
+    center top,
+    center,
+    center,
+    center center,
+    center center;
+}
+
+[data-theme='dark'] .zenith-root {
   color-scheme: dark;
-  background-color: rgba(14, 14, 20, 0.96);
-  color: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+/* Pipeline / Your focus filters: match page surface */
+.zenith-root .zenith-native-filter-input {
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-input);
 }
 
 .zenith-root .zenith-native-filter-input::placeholder {
-  color: rgba(255, 255, 255, 0.38);
+  color: var(--text-placeholder);
 }
 
 .zenith-root .zenith-native-filter-input:hover {
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: var(--border-strong);
 }
 
 .zenith-root .zenith-native-filter-input:focus {
   outline: none;
-  border-color: rgba(0, 212, 180, 0.55);
-  box-shadow: 0 0 0 2px rgba(0, 212, 180, 0.22);
+  border-color: var(--accent-teal);
+  box-shadow: 0 0 0 2px var(--accent-teal-muted);
 }
 
 .zenith-root .zenith-native-select {
-  color-scheme: dark;
-  background-color: rgba(14, 14, 20, 0.96);
-  color: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-input);
 }
 
 .zenith-root .zenith-native-select:hover {
-  background-color: rgba(20, 20, 28, 0.98);
-  border-color: rgba(255, 255, 255, 0.22);
+  background-color: var(--bg-card-hover);
+  border-color: var(--border-strong);
 }
 
 .zenith-root .zenith-native-select:focus {
   outline: none;
-  border-color: rgba(0, 212, 180, 0.55);
-  box-shadow: 0 0 0 2px rgba(0, 212, 180, 0.22);
+  border-color: var(--accent-teal);
+  box-shadow: 0 0 0 2px var(--accent-teal-muted);
 }
 
 .zenith-root .zenith-native-select option {
-  background-color: #0a0a0f;
-  color: rgba(255, 255, 255, 0.92);
+  background-color: var(--bg-dropdown);
+  color: var(--text-primary);
 }
 
 /* Faster taps on iOS; avoid accidental double-tap zoom on controls (links only on real controls — not all anchors, so wheel/touch scroll isn’t affected on large link areas) */
@@ -96,6 +138,14 @@
 .zenith-root .zenith-scroll-x {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
+}
+
+/* Data tables: header band + label colour (tokens — Hit List, pipeline, overdue, installation pulse) */
+.zenith-root table.zenith-table--data > thead > tr {
+  background-color: var(--zenith-table-header-bg);
+}
+.zenith-root table.zenith-table--data > thead > tr > th {
+  color: var(--zenith-table-header-fg);
 }
 
 /* Installation pulse: prefer horizontal pan so the table scrolls cleanly on phones/tablets */
@@ -128,15 +178,99 @@
   }
 }
 
+@keyframes zenith-grid-drift-light {
+  0% {
+    background-position:
+      center,
+      center,
+      center,
+      center top,
+      center,
+      center,
+      0 0,
+      0 0;
+  }
+  100% {
+    background-position:
+      center,
+      center,
+      center,
+      center top,
+      center,
+      center,
+      40px 40px,
+      40px 40px;
+  }
+}
+
 .zenith-root.zenith-animated-bg {
   animation: zenith-grid-drift 120s linear infinite;
 }
 
+[data-theme='light'] .zenith-root.zenith-animated-bg {
+  animation-name: zenith-grid-drift-light;
+  animation-duration: 140s;
+}
+
 .zenith-glass {
-  background: var(--zenith-surface);
-  border: 1px solid var(--zenith-border);
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+
+[data-theme='light'] .zenith-root .zenith-glass {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Portaled Zenith quick drawers — follow `html[data-theme]` (not inside .zenith-root) */
+.zenith-quick-drawer-backdrop {
+  background-color: var(--zenith-drawer-backdrop);
+}
+
+@media (min-width: 1024px) {
+  .zenith-quick-drawer-backdrop {
+    background-color: var(--zenith-drawer-backdrop-lg);
+  }
+}
+
+.zenith-quick-drawer-panel {
+  background-color: var(--bg-drawer);
+  color: var(--text-primary);
+  border-left: 1px solid var(--border-default);
+  box-shadow: var(--zenith-drawer-panel-shadow);
+}
+
+.zenith-quick-drawer-header {
+  border-bottom: 1px solid var(--border-default);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bg-surface) 82%, var(--accent-gold) 12%) 0%,
+    var(--bg-drawer) 100%
+  );
+}
+
+[data-theme='dark'] .zenith-quick-drawer-header {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bg-drawer) 88%, var(--accent-gold) 6%) 0%,
+    var(--bg-drawer) 100%
+  );
+}
+
+.zenith-quick-drawer-footer {
+  border-top: 1px solid var(--border-default);
+  background: color-mix(in srgb, var(--bg-drawer) 75%, var(--bg-surface) 25%);
+}
+
+.zenith-quick-drawer-date {
+  color-scheme: dark;
+}
+
+[data-theme='light'] .zenith-quick-drawer-date {
+  color-scheme: light;
 }
 
 /* Executive Zenith: readable column width + section rhythm (used on main body wrapper) */
@@ -145,7 +279,7 @@
 }
 
 .zenith-root .zenith-exec-section {
-  border-top: 1px solid rgba(255, 255, 255, 0.055);
+  border-top: 1px solid var(--border-default);
   padding-top: 1.25rem;
   margin-top: 0.125rem;
 }
@@ -166,6 +300,74 @@
   );
   background-size: 200% 100%;
   animation: zenith-shimmer 1.5s ease-in-out infinite;
+}
+
+[data-theme='light'] .zenith-root .zenith-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(26, 26, 46, 0.04) 0%,
+    rgba(26, 26, 46, 0.09) 50%,
+    rgba(26, 26, 46, 0.04) 100%
+  );
+}
+
+/* Raised shells: pipeline / payment radar / installation blocks */
+.zenith-root .zenith-pipeline-block-shell,
+.zenith-root .zenith-finance-radar-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-card);
+}
+
+[data-theme='light'] .zenith-root .zenith-pipeline-block-shell,
+[data-theme='light'] .zenith-root .zenith-finance-radar-section {
+  box-shadow:
+    var(--shadow-card),
+    0 1px 0 color-mix(in srgb, #ffffff 70%, transparent) inset;
+}
+
+/* Your focus / Proposal Engine collapsible panels */
+.zenith-root .zenith-focus-panel {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bg-card) 100%, transparent) 0%,
+    color-mix(in srgb, var(--bg-card) 94%, var(--accent-gold) 3%) 100%
+  );
+  border: 1px solid var(--border-card);
+  border-radius: 0 12px 12px 0;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+[data-theme='light'] .zenith-root .zenith-focus-panel {
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    color-mix(in srgb, var(--bg-card) 88%, var(--accent-teal) 4%) 100%
+  );
+}
+
+.zenith-root .zenith-focus-panel__head {
+  background: color-mix(in srgb, var(--bg-card) 88%, var(--bg-surface) 12%);
+  border-bottom: 1px solid var(--border-default);
+}
+
+[data-theme='light'] .zenith-root .zenith-focus-panel__head {
+  background: color-mix(in srgb, var(--bg-surface) 65%, #ffffff 35%);
+}
+
+/* Stat wells inside payment radar (replaces flat black/25) */
+.zenith-root .zenith-stat-well {
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-default);
+  background: color-mix(in srgb, var(--bg-surface) 85%, var(--bg-card) 15%);
+  box-shadow: 0 1px 0 color-mix(in srgb, #ffffff 55%, transparent) inset;
+}
+
+[data-theme='dark'] .zenith-root .zenith-stat-well {
+  background: rgba(0, 0, 0, 0.28);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
 }
 
 @keyframes zenith-shimmer {
@@ -209,8 +411,8 @@
   .zenith-root .zenith-glass {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    background: rgba(255, 255, 255, 0.055);
-    border-color: rgba(255, 255, 255, 0.085);
+    background: var(--bg-card);
+    border-color: var(--border-card);
   }
 
   /* Do not promote Recharts to its own layer here — Android often clips the surface against scroll; iOS is
@@ -277,22 +479,40 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
 }
 
 .zenith-root .recharts-cartesian-axis-tick-value {
-  fill: rgba(255, 255, 255, 0.45) !important;
+  fill: var(--chart-axis-text) !important;
   font-size: 11px;
 }
 
 .zenith-root .recharts-cartesian-axis-tick text {
-  fill: rgba(255, 255, 255, 0.5) !important;
+  fill: var(--chart-axis-text) !important;
 }
 
 .zenith-root .recharts-legend-item-text {
-  color: rgba(255, 255, 255, 0.75) !important;
+  color: var(--text-secondary) !important;
   font-size: 12px !important;
 }
 
 /* Word cloud (DOM spans) — hover glow matches Zenith gold/teal accents */
 .zenith-root .zenith-wordcloud-host {
   position: relative;
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--accent-teal) 12%, rgba(0, 0, 0, 0.45)) 0%,
+    rgba(10, 10, 18, 0.72) 55%,
+    color-mix(in srgb, var(--accent-gold) 10%, rgba(0, 0, 0, 0.5)) 100%
+  );
+  border-color: var(--border-card) !important;
+}
+
+[data-theme='light'] .zenith-root .zenith-wordcloud-host {
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--accent-teal) 7%, var(--bg-card)) 0%,
+    var(--bg-card) 42%,
+    color-mix(in srgb, var(--accent-gold) 10%, var(--bg-card)) 100%
+  );
+  border-color: var(--border-card) !important;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #ffffff 65%, transparent);
 }
 
 .zenith-root .zenith-wordcloud-host .zenith-wc-word {
@@ -338,19 +558,23 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   }
 }
 
-/* Recharts default tooltip: item text used slice fill (entry.color) — dark slices = invisible on dark panel */
+/* Recharts default tooltip — same tokens as index.css (Zenith charts stay consistent) */
 .zenith-root .recharts-default-tooltip {
-  color: rgba(255, 255, 255, 0.95);
+  background: var(--chart-tooltip-bg) !important;
+  border: 1px solid var(--chart-tooltip-border) !important;
+  box-shadow: var(--chart-tooltip-shadow) !important;
+  color: var(--chart-tooltip-fg) !important;
 }
 .zenith-root .recharts-tooltip-label {
-  color: rgba(255, 255, 255, 0.95) !important;
+  color: var(--chart-tooltip-fg) !important;
 }
-.zenith-root .recharts-tooltip-item,
-.zenith-root .recharts-tooltip-item-name,
-.zenith-root .recharts-tooltip-item-separator,
+.zenith-root .recharts-tooltip-item-name {
+  color: var(--chart-tooltip-fg-muted) !important;
+}
 .zenith-root .recharts-tooltip-item-value,
+.zenith-root .recharts-tooltip-item-separator,
 .zenith-root .recharts-tooltip-item-unit {
-  color: rgba(255, 255, 255, 0.92) !important;
+  color: var(--chart-tooltip-fg) !important;
 }
 
 /* Performance + accessibility: stop continuous repaints / heavy blur when user prefers reduced motion */
@@ -358,6 +582,18 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   .zenith-root.zenith-animated-bg {
     animation: none;
     background-position: center top, 0 0, 0 0;
+  }
+
+  [data-theme='light'] .zenith-root.zenith-animated-bg {
+    background-position:
+      center,
+      center,
+      center,
+      center top,
+      center,
+      center,
+      0 0,
+      0 0;
   }
 
   .zenith-skeleton {
@@ -368,7 +604,7 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   .zenith-glass {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    background: rgba(255, 255, 255, 0.055);
+    background: var(--bg-card);
   }
 
   /* Do not disable the AI insights marquee or command “Live” pulse here — product requires continuous ticker scroll. */
@@ -402,7 +638,7 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #ff4757;
+  background: var(--accent-red);
   margin-right: 5px;
   vertical-align: middle;
   animation: pulse-dot 2s ease-in-out infinite;
@@ -417,7 +653,7 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #00d4b4;
+  background: var(--accent-teal);
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
@@ -433,8 +669,12 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
 }
 
 .zenith-root select.zenith-filter-mobile-select option {
-  background-color: #14141c;
-  color: #f1f5f9;
+  background-color: var(--bg-dropdown);
+  color: var(--text-primary);
+}
+
+[data-theme='light'] .zenith-root select.zenith-filter-mobile-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(26,26,46,0.58)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 }
 
 /* Hit List widget: scrollable body on laptop without heavy scrollbar */
@@ -442,6 +682,10 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+[data-theme='light'] .zenith-root .zenith-hit-list-body {
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 
 .zenith-root .zenith-hit-list-body::-webkit-scrollbar {
@@ -505,7 +749,7 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   background: linear-gradient(
     105deg,
     transparent 35%,
-    rgba(255, 255, 255, 0.07) 50%,
+    color-mix(in srgb, var(--text-primary) 8%, transparent) 50%,
     transparent 65%
   );
   animation: zenith-victory-shimmer 0.7s ease-out 0.2s forwards;

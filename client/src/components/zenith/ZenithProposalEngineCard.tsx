@@ -18,10 +18,13 @@ type PeStatusRow = {
 
 const badgeClass: Record<PeStatusRow['key'], string> = {
   'proposal-ready':
-    'bg-emerald-500/15 text-emerald-300 border border-emerald-400/35',
-  draft: 'bg-amber-500/15 text-amber-200 border border-amber-400/35',
-  'not-started': 'bg-white/8 text-white/65 border border-white/15',
-  rest: 'bg-violet-500/15 text-violet-200 border border-violet-400/35',
+    'bg-[color:var(--accent-teal-muted)] text-[color:var(--accent-teal)] border border-[color:var(--accent-teal-border)]',
+  draft:
+    'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)] border border-[color:var(--accent-gold-border)]',
+  'not-started':
+    'bg-[color:var(--bg-badge)] text-[color:var(--text-secondary)] border border-[color:var(--border-default)]',
+  rest:
+    'bg-[color:var(--accent-purple-muted)] text-[color:var(--accent-purple)] border border-[color:var(--accent-purple-border)]',
 }
 
 function formatInr(value: number): string {
@@ -96,7 +99,7 @@ export default function ZenithProposalEngineCard({
       )
     }
     return (
-      <div className="zenith-glass rounded-xl max-lg:overflow-hidden overflow-visible lg:overflow-hidden min-h-[180px]">
+      <div className="rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] max-lg:overflow-hidden overflow-visible lg:overflow-hidden min-h-[180px]">
         <div className="h-10 bg-gradient-to-r from-cyan-600/40 to-indigo-600/50 animate-pulse" />
         <div className="p-3 space-y-2">
           <div className="h-9 rounded-lg zenith-skeleton" />
@@ -110,13 +113,13 @@ export default function ZenithProposalEngineCard({
   if (isError) {
     if (embedded) {
       return (
-        <div className="p-4 border-t border-white/[0.06]">
-          <p className="text-sm font-semibold text-[#ff4757]">Proposal Engine</p>
-          <p className="text-xs text-white/60 mt-1">{getFriendlyApiErrorMessage(error)}</p>
+        <div className="p-4 border-t border-[color:var(--border-default)]">
+          <p className="text-sm font-semibold text-[color:var(--accent-red)]">Proposal Engine</p>
+          <p className="text-xs text-[color:var(--text-muted)] mt-1">{getFriendlyApiErrorMessage(error)}</p>
           <button
             type="button"
             onClick={() => refetch()}
-            className="mt-3 text-xs font-bold px-3 py-1.5 rounded-lg bg-[#f5a623] text-[#0a0a0f]"
+            className="mt-3 text-xs font-bold px-3 py-1.5 rounded-lg bg-[color:var(--accent-gold)] text-[color:var(--text-inverse)]"
           >
             Retry
           </button>
@@ -124,13 +127,13 @@ export default function ZenithProposalEngineCard({
       )
     }
     return (
-      <div className="zenith-glass rounded-xl p-4 border border-[#ff4757]/25 bg-[#ff4757]/5">
-        <p className="text-sm font-semibold text-[#ff4757]">Proposal Engine summary</p>
-        <p className="text-xs text-white/60 mt-1">{getFriendlyApiErrorMessage(error)}</p>
+      <div className="rounded-xl p-4 border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
+        <p className="text-sm font-semibold text-[color:var(--accent-red)]">Proposal Engine summary</p>
+        <p className="text-xs text-[color:var(--text-muted)] mt-1">{getFriendlyApiErrorMessage(error)}</p>
         <button
           type="button"
           onClick={() => refetch()}
-          className="mt-3 text-xs font-bold px-3 py-1.5 rounded-lg bg-[#f5a623] text-[#0a0a0f]"
+          className="mt-3 text-xs font-bold px-3 py-1.5 rounded-lg bg-[color:var(--accent-gold)] text-[color:var(--text-inverse)]"
         >
           Retry
         </button>
@@ -143,7 +146,7 @@ export default function ZenithProposalEngineCard({
   const drawerMode = Boolean(onPeBucketClick && zenithExplorerProjects != null)
 
   const rowShellClass =
-    'flex justify-between items-start gap-2 py-2 px-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-[#f5a623]/35 hover:bg-white/[0.06] transition-all min-w-0 text-inherit'
+    'flex justify-between items-start gap-2 py-2 px-2.5 rounded-xl bg-[color:var(--bg-input)] border border-[color:var(--border-default)] hover:border-[color:var(--accent-gold-border)] hover:bg-[color:var(--bg-table-hover)] transition-all min-w-0 text-inherit'
 
   const linksList = (
     <div className="p-3 sm:p-4 flex-1 min-h-0 space-y-1.5">
@@ -159,12 +162,12 @@ export default function ZenithProposalEngineCard({
               {row.label}
             </span>
             <span className="text-right min-w-0">
-              <span className="block text-xs font-semibold text-white tabular-nums">
+              <span className="block text-xs font-semibold text-[color:var(--text-primary)] tabular-nums">
                 {row.count.toLocaleString('en-IN')}{' '}
-                <span className="text-[#f5a623]">({formatInr(row.crmOrderValue)})</span>
+                <span className="text-[color:var(--accent-gold)]">({formatInr(row.crmOrderValue)})</span>
               </span>
               {row.peOrderValueExGst > 0 ? (
-                <span className="block text-[10px] text-cyan-300/90 font-medium mt-0.5">
+                <span className="block text-[10px] text-[color:var(--accent-teal)] font-medium mt-0.5">
                   PE ex GST {formatInr(row.peOrderValueExGst)}
                 </span>
               ) : null}
@@ -208,13 +211,15 @@ export default function ZenithProposalEngineCard({
   }
 
   const cardClass =
-    'zenith-glass rounded-xl max-lg:overflow-hidden overflow-visible lg:overflow-hidden flex flex-col min-h-0'
+    'rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] max-lg:overflow-hidden overflow-visible lg:overflow-hidden flex flex-col min-h-0'
 
   const cardBody = (
     <>
-      <div className="shrink-0 px-3 py-2 bg-gradient-to-r from-cyan-600/25 via-indigo-600/30 to-[#0a0a0f] border-b border-white/[0.06]">
-        <h3 className="zenith-display text-sm font-semibold text-white tracking-tight">Proposal Engine</h3>
-        <p className="text-[10px] text-white/45 mt-0.5">PE readiness by project bucket</p>
+      <div className="shrink-0 px-3 py-2 bg-gradient-to-r from-[color:var(--accent-teal-muted)] via-[color:var(--accent-purple-muted)] to-[color:var(--bg-surface)] border-b border-[color:var(--border-default)]">
+        <h3 className="zenith-display text-sm font-semibold text-[color:var(--text-primary)] tracking-tight">
+          Proposal Engine
+        </h3>
+        <p className="text-[10px] text-[color:var(--text-muted)] mt-0.5">PE readiness by project bucket</p>
       </div>
       {linksList}
     </>

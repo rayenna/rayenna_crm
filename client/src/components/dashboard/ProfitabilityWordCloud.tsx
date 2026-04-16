@@ -5,6 +5,7 @@ import axiosInstance from '../../utils/axios'
 import WordCloud from 'wordcloud'
 import type { ZenithDateFilter } from '../zenith/zenithTypes'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
+import { ZENITH_DASHBOARD_ANALYTICS_CARD } from './zenithRechartsTooltipStyles'
 
 interface WordCloudData {
   text: string
@@ -269,24 +270,24 @@ const ProfitabilityWordCloud = memo(
   }
 
   return (
-    <div className="w-full min-h-[360px] flex flex-col bg-white shadow-sm rounded-2xl border border-slate-200 p-4 sm:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+    <div className={`${ZENITH_DASHBOARD_ANALYTICS_CARD} w-full`}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-purple-600">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="rounded-lg bg-[color:var(--accent-teal)] p-2 text-[color:var(--text-inverse)]">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-900">
-            Customer Projects Profitability
-          </h2>
+          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">Customer Projects Profitability</h2>
         </div>
-        <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+        <div className="flex rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] p-0.5">
           <button
             type="button"
             onClick={() => setView('cloud')}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              view === 'cloud' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-primary-600'
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              view === 'cloud'
+                ? 'bg-[color:var(--bg-surface)] font-semibold text-[color:var(--text-primary)] shadow-sm ring-1 ring-[color:var(--border-default)]'
+                : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]'
             }`}
           >
             Word Cloud
@@ -294,8 +295,10 @@ const ProfitabilityWordCloud = memo(
           <button
             type="button"
             onClick={() => setView('top10')}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              view === 'top10' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-primary-600'
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              view === 'top10'
+                ? 'bg-[color:var(--bg-surface)] font-semibold text-[color:var(--text-primary)] shadow-sm ring-1 ring-[color:var(--border-default)]'
+                : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]'
             }`}
           >
             Top 10
@@ -319,18 +322,18 @@ const ProfitabilityWordCloud = memo(
             <button
               type="button"
               onClick={() => setShowFYDropdown(!showFYDropdown)}
-              className="w-full text-left border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 flex items-center justify-between"
+              className="zenith-native-select flex w-full items-center justify-between rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2.5 text-left text-sm text-[color:var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-muted)]"
             >
-              <span className={selectedFYs.length === 0 ? 'text-gray-500' : 'text-gray-900'}>
+              <span className={selectedFYs.length === 0 ? 'text-[color:var(--text-muted)]' : ''}>
                 {selectedFYs.length === 0
                   ? 'Select FY'
                   : selectedFYs.length === 1
-                  ? selectedFYs[0]
-                  : `${selectedFYs.length} selected`}
+                    ? selectedFYs[0]
+                    : `${selectedFYs.length} selected`}
               </span>
               <svg
-                className={`ml-2 h-4 w-4 text-gray-400 transition-transform flex-shrink-0 ${
-                  showFYDropdown ? 'transform rotate-180' : ''
+                className={`ml-2 h-4 w-4 flex-shrink-0 text-[color:var(--text-muted)] transition-transform ${
+                  showFYDropdown ? 'rotate-180' : ''
                 }`}
                 fill="none"
                 stroke="currentColor"
@@ -340,29 +343,29 @@ const ProfitabilityWordCloud = memo(
               </svg>
             </button>
             {showFYDropdown && (
-              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+              <div className="absolute z-10 mt-2 max-h-60 w-full overflow-auto rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)]">
                 {availableFYs.length > 0 ? (
                   <>
                     {availableFYs.map((fy) => (
                       <label
                         key={fy}
-                        className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer"
+                        className="flex cursor-pointer items-center px-4 py-2 hover:bg-[color:var(--accent-teal-muted)]/40"
                       >
                         <input
                           type="checkbox"
                           checked={selectedFYs.includes(fy)}
                           onChange={() => toggleFY(fy)}
-                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          className="rounded border-[color:var(--border-default)] text-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
                         />
-                        <span className="ml-2 text-sm text-gray-900">{fy}</span>
+                        <span className="ml-2 text-sm text-[color:var(--text-primary)]">{fy}</span>
                       </label>
                     ))}
                     {selectedFYs.length > 0 && (
-                      <div className="border-t border-gray-200 px-4 py-2">
+                      <div className="border-t border-[color:var(--border-default)] px-4 py-2">
                         <button
                           type="button"
                           onClick={clearFYFilter}
-                          className="text-xs text-primary-600 hover:text-primary-800"
+                          className="text-xs font-semibold text-[color:var(--accent-gold)] hover:opacity-90"
                         >
                           Clear selection
                         </button>
@@ -370,7 +373,7 @@ const ProfitabilityWordCloud = memo(
                     )}
                   </>
                 ) : (
-                  <div className="px-4 py-2 text-sm text-gray-500">No FYs available</div>
+                  <div className="px-4 py-2 text-sm text-[color:var(--text-muted)]">No FYs available</div>
                 )}
               </div>
             )}
@@ -382,18 +385,18 @@ const ProfitabilityWordCloud = memo(
               type="button"
               onClick={() => selectedFYs.length === 1 && setShowMonthDropdown(!showMonthDropdown)}
               disabled={selectedFYs.length !== 1}
-              className="w-full text-left border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 flex items-center justify-between disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400"
+              className="zenith-native-select flex w-full items-center justify-between rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2.5 text-left text-sm text-[color:var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-muted)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <span className={selectedMonths.length === 0 ? 'text-gray-500' : 'text-gray-900'}>
+              <span className={selectedMonths.length === 0 ? 'text-[color:var(--text-muted)]' : ''}>
                 {selectedMonths.length === 0
                   ? 'Select Month'
                   : selectedMonths.length === 1
-                  ? MONTHS.find((m) => m.value === selectedMonths[0])?.label
-                  : `${selectedMonths.length} selected`}
+                    ? MONTHS.find((m) => m.value === selectedMonths[0])?.label
+                    : `${selectedMonths.length} selected`}
               </span>
               <svg
-                className={`ml-2 h-4 w-4 text-gray-400 transition-transform flex-shrink-0 ${
-                  showMonthDropdown ? 'transform rotate-180' : ''
+                className={`ml-2 h-4 w-4 flex-shrink-0 text-[color:var(--text-muted)] transition-transform ${
+                  showMonthDropdown ? 'rotate-180' : ''
                 }`}
                 fill="none"
                 stroke="currentColor"
@@ -403,27 +406,27 @@ const ProfitabilityWordCloud = memo(
               </svg>
             </button>
             {showMonthDropdown && selectedFYs.length === 1 && (
-              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+              <div className="absolute z-10 mt-2 max-h-60 w-full overflow-auto rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)]">
                 {MONTHS.map((month) => (
                   <label
                     key={month.value}
-                    className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer"
+                    className="flex cursor-pointer items-center px-4 py-2 hover:bg-[color:var(--accent-teal-muted)]/40"
                   >
                     <input
                       type="checkbox"
                       checked={selectedMonths.includes(month.value)}
                       onChange={() => toggleMonth(month.value)}
-                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      className="rounded border-[color:var(--border-default)] text-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
                     />
-                    <span className="ml-2 text-sm text-gray-900">{month.label}</span>
+                    <span className="ml-2 text-sm text-[color:var(--text-primary)]">{month.label}</span>
                   </label>
                 ))}
                 {selectedMonths.length > 0 && (
-                  <div className="border-t border-gray-200 px-4 py-2">
+                  <div className="border-t border-[color:var(--border-default)] px-4 py-2">
                     <button
                       type="button"
                       onClick={clearMonthFilter}
-                      className="text-xs text-primary-600 hover:text-primary-800"
+                      className="text-xs font-semibold text-[color:var(--accent-gold)] hover:opacity-90"
                     >
                       Clear selection
                     </button>
@@ -432,7 +435,7 @@ const ProfitabilityWordCloud = memo(
               </div>
             )}
             {selectedFYs.length !== 1 && (
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-[color:var(--text-muted)]">
                 {selectedFYs.length === 0 ? 'Select one FY to enable month filter' : 'Select only one FY to enable month filter'}
               </p>
             )}
@@ -444,15 +447,20 @@ const ProfitabilityWordCloud = memo(
       {/* Fixed height so chart size does not change with empty/loading data */}
       <div className="flex flex-col" style={{ height: '320px' }}>
         {showLoading ? (
-          <div className="flex items-center justify-center w-full h-full">
+          <div className="flex h-full w-full items-center justify-center">
             <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-              <p className="mt-4 text-sm text-gray-500">Loading...</p>
+              <div
+                className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--border-default)] border-t-[color:var(--accent-gold)]"
+                aria-hidden
+              />
+              <p className="mt-4 text-sm text-[color:var(--text-muted)]">Loading...</p>
             </div>
           </div>
         ) : !cloudData || cloudData.length === 0 ? (
-          <div className="flex items-center justify-center w-full h-full">
-            <p className="text-sm text-gray-500 text-center px-4">No profitability data available for selected filters.</p>
+          <div className="flex h-full w-full items-center justify-center">
+            <p className="px-4 text-center text-sm text-[color:var(--text-muted)]">
+              No profitability data available for selected filters.
+            </p>
           </div>
         ) : (
           <>
@@ -463,9 +471,9 @@ const ProfitabilityWordCloud = memo(
                 style={{ maxWidth: '100%', height: 'auto' }}
               />
             </div>
-            <div className="mt-2 text-xs text-gray-500 text-center flex-shrink-0">
+            <div className="mt-2 flex-shrink-0 text-center text-xs text-[color:var(--text-muted)]">
               <p>Font size represents profitability percentage</p>
-              <p className="text-amber-700 font-medium mt-0.5">Click a word to open Projects →</p>
+              <p className="mt-0.5 font-semibold text-[color:var(--accent-teal)]">Click a word to open Projects →</p>
             </div>
           </>
         )}
@@ -478,28 +486,42 @@ const ProfitabilityWordCloud = memo(
           style={{ opacity: view === 'top10' ? 1 : 0, pointerEvents: view === 'top10' ? 'auto' : 'none' }}
         >
           {showLoading ? (
-            <div className="flex items-center justify-center w-full h-full">
+            <div className="flex h-full w-full items-center justify-center">
               <div className="text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
-                <p className="mt-4 text-sm text-gray-500">Loading...</p>
+                <div
+                  className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--border-default)] border-t-[color:var(--accent-gold)]"
+                  aria-hidden
+                />
+                <p className="mt-4 text-sm text-[color:var(--text-muted)]">Loading...</p>
               </div>
             </div>
           ) : !cloudData || cloudData.length === 0 ? (
-            <div className="flex items-center justify-center w-full h-full">
-              <p className="text-sm text-gray-500 text-center px-4">No profitability data available for selected filters.</p>
+            <div className="flex h-full w-full items-center justify-center">
+              <p className="px-4 text-center text-sm text-[color:var(--text-muted)]">
+                No profitability data available for selected filters.
+              </p>
             </div>
           ) : (
-            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden rounded-xl border border-primary-200/50 shadow-inner" style={{ WebkitOverflowScrolling: 'touch' }}>
-              <table className="w-full text-sm border-collapse">
-                <thead className="sticky top-0 z-10 bg-gradient-to-r from-primary-100/90 to-purple-100/80 border-b-2 border-primary-200/70 shadow-sm">
+            <div
+              className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)]"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
+              <table className="w-full border-collapse text-sm">
+                <thead className="sticky top-0 z-10 border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] backdrop-blur-md">
                   <tr>
-                    <th className="text-center py-3 px-3 w-14 font-bold text-primary-800 text-xs uppercase tracking-wider">#</th>
-                    <th className="text-left py-3 px-3 font-bold text-primary-800 text-xs uppercase tracking-wider">Project</th>
-                    <th className="text-right py-3 px-3 w-20 font-bold text-primary-800 text-xs uppercase tracking-wider">Margin</th>
-                    <th className="py-3 pl-2 pr-3 w-28 font-bold text-primary-800 text-xs uppercase tracking-wider"> </th>
+                    <th className="w-12 px-2 py-2.5 text-center text-sm font-bold uppercase tracking-wide text-[color:var(--accent-gold)]">
+                      #
+                    </th>
+                    <th className="px-2 py-2.5 text-left text-sm font-bold uppercase tracking-wide text-[color:var(--accent-gold)]">
+                      Project
+                    </th>
+                    <th className="w-[4.5rem] px-2 py-2.5 text-right text-sm font-bold uppercase tracking-wide text-[color:var(--accent-gold)]">
+                      Margin
+                    </th>
+                    <th className="w-24 py-2.5 pl-1 pr-2" />
                   </tr>
                 </thead>
-                <tbody className="bg-white/80 divide-y divide-primary-100/70">
+                <tbody className="divide-y divide-[color:var(--border-default)]">
                   {[...cloudData]
                     .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
                     .slice(0, 10)
@@ -509,7 +531,7 @@ const ProfitabilityWordCloud = memo(
                       return (
                         <tr
                           key={`${row.text}-${idx}`}
-                          className="hover:bg-primary-50/40 transition-colors cursor-pointer"
+                          className="cursor-pointer transition-colors hover:bg-[color:var(--accent-teal-muted)]/35"
                           role="button"
                           tabIndex={0}
                           onClick={() => {
@@ -525,24 +547,34 @@ const ProfitabilityWordCloud = memo(
                             navigate(buildProjectsUrl({ search: t, zenithSlice: 'revenue' }, drillDateFilter))
                           }}
                         >
-                          <td className="py-2.5 px-3 text-center">
-                            <span className={`inline-flex items-center justify-center w-7 h-7 rounded-lg text-sm font-bold ${
-                              idx === 0 ? 'bg-amber-100 text-amber-800' :
-                              idx === 1 ? 'bg-gray-200 text-gray-700' :
-                              idx === 2 ? 'bg-amber-200/80 text-amber-900' :
-                              'bg-primary-100 text-primary-700'
-                            }`}>
+                          <td className="py-2 px-2 text-center">
+                            <span
+                              className={`inline-flex h-7 min-w-[1.75rem] items-center justify-center rounded-lg px-1 text-xs font-bold tabular-nums ${
+                                idx === 0
+                                  ? 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
+                                  : idx === 1
+                                    ? 'bg-[color:var(--bg-surface)] text-[color:var(--text-secondary)] ring-1 ring-[color:var(--border-default)]'
+                                    : idx === 2
+                                      ? 'bg-[color:var(--accent-gold-muted)]/70 text-[color:var(--accent-gold)]'
+                                      : 'bg-[color:var(--accent-teal-muted)] text-[color:var(--accent-teal)]'
+                              }`}
+                            >
                               {idx + 1}
                             </span>
                           </td>
-                          <td className="py-2.5 px-3 font-medium text-gray-800 truncate max-w-[180px]" title={row.text}>{row.text}</td>
-                          <td className="py-2.5 px-3 text-right font-semibold text-primary-700 tabular-nums">
+                          <td
+                            className="max-w-[140px] truncate px-2 py-2 font-medium text-[color:var(--text-primary)] sm:max-w-[220px]"
+                            title={row.text}
+                          >
+                            {row.text}
+                          </td>
+                          <td className="px-2 py-2 text-right text-xs font-semibold tabular-nums text-[color:var(--accent-teal)]">
                             {typeof row.value === 'number' ? row.value.toFixed(1) : '—'}%
                           </td>
-                          <td className="py-2.5 pl-2 pr-3 align-middle">
-                            <div className="h-2.5 rounded-full bg-primary-100 overflow-hidden min-w-[4rem]">
+                          <td className="py-2 pl-1 pr-2 align-middle">
+                            <div className="h-2 min-w-[3.5rem] overflow-hidden rounded-full bg-[color:var(--border-default)]">
                               <div
-                                className="h-full rounded-full bg-gradient-to-r from-primary-500 via-primary-400 to-purple-500 transition-all duration-300"
+                                className="h-full rounded-full bg-gradient-to-r from-[color:var(--accent-purple)] via-[color:var(--accent-teal)] to-[color:var(--accent-gold)] transition-all duration-300"
                                 style={{ width: `${Math.round(pct * 100)}%` }}
                               />
                             </div>

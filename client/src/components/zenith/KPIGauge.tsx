@@ -34,13 +34,13 @@ export default function KPIGauge({ totalKW, pipelineKW, targetKW }: Props) {
   const pipelineOffset = ARC_LENGTH - ARC_LENGTH * combinedPct
 
   const progressColor =
-    progressPct >= 80 ? '#00D4B4' : progressPct >= 50 ? '#F5A623' : '#FF6B6B'
+    progressPct >= 80 ? 'var(--accent-teal)' : progressPct >= 50 ? 'var(--accent-gold)' : 'var(--accent-red)'
 
   return (
     <div
       style={{
-        background: 'rgba(255, 255, 255, 0.04)',
-        border: '1px solid rgba(245, 166, 35, 0.3)',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--accent-gold-border)',
         borderRadius: 14,
         padding: '14px 16px 10px',
         display: 'flex',
@@ -54,6 +54,7 @@ export default function KPIGauge({ totalKW, pipelineKW, targetKW }: Props) {
         position: 'relative',
         overflow: 'hidden',
         fontFamily: 'DM Sans, sans-serif',
+        boxShadow: 'var(--shadow-card)',
       }}
     >
       <div
@@ -64,8 +65,7 @@ export default function KPIGauge({ totalKW, pipelineKW, targetKW }: Props) {
           transform: 'translateX(-50%)',
           width: 120,
           height: 60,
-          background:
-            'radial-gradient(ellipse, rgba(245,166,35,0.12) 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse, color-mix(in srgb, var(--accent-gold) 14%, transparent) 0%, transparent 70%)',
           pointerEvents: 'none',
         }}
       />
@@ -76,7 +76,7 @@ export default function KPIGauge({ totalKW, pipelineKW, targetKW }: Props) {
           fontSize: 10,
           fontWeight: 500,
           letterSpacing: '0.08em',
-          color: 'rgba(255,255,255,0.38)',
+          color: 'var(--text-muted)',
           textTransform: 'uppercase',
           marginBottom: 4,
         }}
@@ -84,23 +84,18 @@ export default function KPIGauge({ totalKW, pipelineKW, targetKW }: Props) {
         TOTAL CAPACITY
       </div>
 
-      <svg
-        width="110"
-        height="68"
-        viewBox="0 0 110 72"
-        style={{ overflow: 'visible', marginTop: '-2px' }}
-      >
+      <svg width="110" height="68" viewBox="0 0 110 72" style={{ overflow: 'visible', marginTop: '-2px' }}>
         <defs>
           <linearGradient id="kwGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#F5A623" />
-            <stop offset="100%" stopColor="#00D4B4" />
+            <stop offset="0%" stopColor="var(--accent-gold)" />
+            <stop offset="100%" stopColor="var(--accent-teal)" />
           </linearGradient>
         </defs>
 
         <path
           d="M 10 65 A 45 45 0 0 1 100 65"
           fill="none"
-          stroke="rgba(255,255,255,0.07)"
+          stroke="var(--chart-grid)"
           strokeWidth="8"
           strokeLinecap="round"
         />
@@ -108,7 +103,7 @@ export default function KPIGauge({ totalKW, pipelineKW, targetKW }: Props) {
         <path
           d="M 10 65 A 45 45 0 0 1 100 65"
           fill="none"
-          stroke="rgba(0,212,180,0.2)"
+          stroke="var(--accent-teal-muted)"
           strokeWidth="8"
           strokeLinecap="round"
           strokeDasharray={ARC_LENGTH}
@@ -140,7 +135,7 @@ export default function KPIGauge({ totalKW, pipelineKW, targetKW }: Props) {
           y1="22"
           x2="55"
           y2="16"
-          stroke="rgba(255,255,255,0.2)"
+          stroke="var(--border-strong)"
           strokeWidth="1.5"
           strokeLinecap="round"
         />
@@ -148,7 +143,7 @@ export default function KPIGauge({ totalKW, pipelineKW, targetKW }: Props) {
           x="55"
           y="13"
           textAnchor="middle"
-          fill="rgba(255,255,255,0.25)"
+          fill="var(--text-muted)"
           fontSize="7"
           fontFamily="DM Sans, sans-serif"
         >
@@ -159,7 +154,7 @@ export default function KPIGauge({ totalKW, pipelineKW, targetKW }: Props) {
           x="55"
           y="58"
           textAnchor="middle"
-          fill="#ffffff"
+          fill="var(--text-primary)"
           fontSize="21"
           fontWeight="700"
           fontFamily="Syne, sans-serif"
@@ -170,7 +165,7 @@ export default function KPIGauge({ totalKW, pipelineKW, targetKW }: Props) {
           x="55"
           y="68"
           textAnchor="middle"
-          fill="rgba(255,255,255,0.38)"
+          fill="var(--text-muted)"
           fontSize="8"
           fontFamily="DM Sans, sans-serif"
         >
@@ -189,63 +184,56 @@ export default function KPIGauge({ totalKW, pipelineKW, targetKW }: Props) {
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginBottom: 1 }}>
-            Pipeline
-          </span>
+          <span style={{ fontSize: 9, color: 'var(--text-muted)', marginBottom: 1 }}>Pipeline</span>
           {hasTarget ? (
-            <span style={{ fontSize: 12, fontWeight: 600, color: '#00D4B4' }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-teal)' }}>
               +{Math.round(safePipeline)} kW
             </span>
           ) : (
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.35)' }}>N/A</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>N/A</span>
           )}
         </div>
 
         <div
           style={{
             width: 1,
-            background: 'rgba(255,255,255,0.08)',
+            background: 'var(--border-default)',
             height: 28,
             alignSelf: 'center',
           }}
         />
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginBottom: 1 }}>
-            Target
-          </span>
+          <span style={{ fontSize: 9, color: 'var(--text-muted)', marginBottom: 1 }}>Target</span>
           {hasTarget ? (
-            <span style={{ fontSize: 12, fontWeight: 600, color: '#F5A623' }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-gold)' }}>
               {Math.round(safeTarget)} kW
             </span>
           ) : (
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.35)' }}>N/A</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>N/A</span>
           )}
         </div>
 
         <div
           style={{
             width: 1,
-            background: 'rgba(255,255,255,0.08)',
+            background: 'var(--border-default)',
             height: 28,
             alignSelf: 'center',
           }}
         />
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginBottom: 1 }}>
-            Progress
-          </span>
+          <span style={{ fontSize: 9, color: 'var(--text-muted)', marginBottom: 1 }}>Progress</span>
           {hasTarget ? (
             <span style={{ fontSize: 12, fontWeight: 600, color: progressColor }}>
               {Math.min(100, progressPct)}%
             </span>
           ) : (
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.35)' }}>N/A</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>N/A</span>
           )}
         </div>
       </div>
     </div>
   )
 }
-

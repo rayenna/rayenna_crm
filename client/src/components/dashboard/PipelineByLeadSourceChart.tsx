@@ -5,6 +5,16 @@ import { UserRole } from '../../types'
 import type { ZenithDateFilter } from '../zenith/zenithTypes'
 import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
 import { getLeadSourceColor } from './leadSourceColors'
+import {
+  ZENITH_RECHARTS_TOOLTIP_CURSOR,
+  ZENITH_RECHARTS_TOOLTIP_WRAPPER_STYLE,
+  ZENITH_CHART_TOOLTIP_INSIGHT,
+  ZENITH_CHART_TOOLTIP_LINE,
+  ZENITH_CHART_TOOLTIP_PANEL,
+  ZENITH_CHART_TOOLTIP_TITLE,
+  ZENITH_DASHBOARD_ANALYTICS_CARD,
+} from './zenithRechartsTooltipStyles'
+import { useChartColors } from '../../hooks/useChartColors'
 
 export interface PipelineByLeadSourceItem {
   leadSource: string
@@ -21,6 +31,7 @@ interface PipelineByLeadSourceChartProps {
 const PipelineByLeadSourceChart = ({ data: chartData = [], dashboardFilter }: PipelineByLeadSourceChartProps) => {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const c = useChartColors()
   const dateFilter: ZenithDateFilter = dashboardFilter ?? {
     selectedFYs: [],
     selectedQuarters: [],
@@ -33,17 +44,15 @@ const PipelineByLeadSourceChart = ({ data: chartData = [], dashboardFilter }: Pi
   const formatCurrency = (value: number) => `₹${value.toLocaleString('en-IN')}`
 
   return (
-    <div className="h-full flex flex-col bg-white shadow-sm rounded-2xl border border-slate-200 p-4 sm:p-5 min-h-[360px]">
-      <div className="flex flex-col gap-3 mb-4">
+    <div className={ZENITH_DASHBOARD_ANALYTICS_CARD}>
+      <div className="mb-4 flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-blue-600">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="rounded-lg bg-[color:var(--accent-teal)] p-2 text-[color:var(--text-inverse)]">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-900">
-            Pipeline by Lead Source
-          </h2>
+          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">Pipeline by Lead Source</h2>
         </div>
       </div>
       {/* Fixed height so chart size does not change with empty data */}
@@ -51,8 +60,10 @@ const PipelineByLeadSourceChart = ({ data: chartData = [], dashboardFilter }: Pi
         {!chartData || chartData.length === 0 ? (
           <div className="flex items-center justify-center w-full h-full">
             <div className="text-center px-4">
-              <p className="mb-2 text-sm sm:text-base text-gray-500">No data for selected period</p>
-              <p className="text-xs sm:text-sm text-gray-600">Pipeline data will appear when projects (excluding Lost) exist.</p>
+              <p className="mb-2 text-sm text-[color:var(--text-secondary)] sm:text-base">No data for selected period</p>
+              <p className="text-xs text-[color:var(--text-muted)] sm:text-sm">
+                Pipeline data will appear when projects (excluding Lost) exist.
+              </p>
             </div>
           </div>
         ) : (
@@ -63,16 +74,18 @@ const PipelineByLeadSourceChart = ({ data: chartData = [], dashboardFilter }: Pi
                 margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                 barCategoryGap="4%"
               >
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke={c.grid} />
                 <XAxis
                   dataKey="leadSourceLabel"
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fill: c.axisText }}
                   angle={-45}
                   textAnchor="end"
                   height={80}
+                  stroke={c.grid}
                 />
                 <YAxis
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fill: c.axisText }}
+                  stroke={c.grid}
                   tickFormatter={(value) => {
                     if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`
                     if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`
@@ -81,19 +94,23 @@ const PipelineByLeadSourceChart = ({ data: chartData = [], dashboardFilter }: Pi
                   }}
                 />
                 <Tooltip
+                  wrapperStyle={ZENITH_RECHARTS_TOOLTIP_WRAPPER_STYLE}
+                  cursor={ZENITH_RECHARTS_TOOLTIP_CURSOR}
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const d = payload[0].payload as PipelineByLeadSourceItem
                       return (
-                        <div className="bg-gradient-to-br from-white to-primary-50 p-4 border-2 border-primary-200 rounded-xl shadow-2xl backdrop-blur-sm">
-                          <p className="font-semibold text-gray-900 mb-2">{d.leadSourceLabel}</p>
-                          <p className="text-sm text-cyan-600">
-                            Pipeline: <span className="font-medium">{formatCurrency(d.pipeline)}</span>
+                        <div className={ZENITH_CHART_TOOLTIP_PANEL}>
+                          <p className={ZENITH_CHART_TOOLTIP_TITLE}>{d.leadSourceLabel}</p>
+                          <p className={ZENITH_CHART_TOOLTIP_LINE}>
+                            Pipeline:{' '}
+                            <span className="font-extrabold text-[color:var(--accent-gold)]">{formatCurrency(d.pipeline)}</span>
                           </p>
-                          <p className="text-sm text-gray-600 mt-1">
-                            Projects: <span className="font-medium">{d.projectCount}</span>
+                          <p className={`${ZENITH_CHART_TOOLTIP_LINE} mt-1`}>
+                            Projects:{' '}
+                            <span className="font-extrabold text-[color:var(--accent-teal)]">{d.projectCount}</span>
                           </p>
-                          <p className="text-xs font-medium text-amber-700 mt-1">Click bar to open Projects →</p>
+                          <p className={ZENITH_CHART_TOOLTIP_INSIGHT}>Click bar to open Projects →</p>
                         </div>
                       )
                     }

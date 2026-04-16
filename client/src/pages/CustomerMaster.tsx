@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
@@ -8,8 +8,7 @@ import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import { useDebounce } from '../hooks/useDebounce'
 import MultiSelect from '../components/MultiSelect'
-import PageCard from '../components/PageCard'
-import { FaUserFriends } from 'react-icons/fa'
+import { Users, Plus, Download, Search } from 'lucide-react'
 import { ErrorModal } from '@/components/common/ErrorModal'
 import { CustomerForm, getCustomerDisplayName } from '../components/customers/CustomerForm'
 
@@ -31,6 +30,12 @@ const CustomerMaster = () => {
 
   const canCreate = hasRole([UserRole.SALES, UserRole.MANAGEMENT, UserRole.ADMIN])
   const isSalesUser = user?.role === UserRole.SALES
+
+  const shell = (children: ReactNode) => (
+    <div className="zenith-root zenith-animated-bg w-full max-w-full min-w-0 min-h-[calc(100dvh-5rem)] min-h-[calc(100vh-5rem)] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-[max(0.35rem,env(safe-area-inset-top,0px))] [-webkit-tap-highlight-color:transparent]">
+      <div className="zenith-exec-main mx-auto w-full max-w-full min-w-0 px-3 sm:px-5 pb-10">{children}</div>
+    </div>
+  )
 
   // Open "new customer" from global shortcut: /customers?new=1
   useEffect(() => {
@@ -103,7 +108,7 @@ const CustomerMaster = () => {
         rel="noopener noreferrer"
         title="Open in Google Maps"
         aria-label="Open in Google Maps"
-        className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-gray-200/90 bg-white text-gray-700 shadow-sm transition-all hover:border-primary-200 hover:bg-primary-50/60 hover:shadow"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] text-[color:var(--text-secondary)] shadow-sm transition-all hover:bg-[color:var(--bg-card-hover)] hover:shadow"
       >
         {/* Compact Google-Maps-like pin icon */}
         <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
@@ -170,54 +175,92 @@ const CustomerMaster = () => {
   }
 
   if (isLoading) {
-    return (
-      <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden bg-gradient-to-b from-slate-50/80 via-white to-teal-50/15">
-        <div className="animate-pulse space-y-4">
-          <div className="h-10 bg-gradient-to-r from-teal-200 to-gray-200 rounded-lg w-64" />
-          <div className="h-12 bg-gradient-to-r from-teal-100/50 to-gray-100 rounded-xl w-full max-w-2xl" />
-          <div className="space-y-3">
+    return shell(
+      <div className="w-full max-w-full min-w-0 space-y-5 pt-1">
+        <div className="rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5">
+          <div className="zenith-skeleton mb-3 h-8 w-56 max-w-[70%] rounded-lg" />
+          <div className="zenith-skeleton h-4 w-full max-w-md rounded-md" />
+        </div>
+        <div className="rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5">
+          <div className="zenith-skeleton h-12 w-full rounded-xl" />
+          <div className="mt-4 space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-24 bg-gradient-to-r from-teal-50/60 to-white rounded-xl border-l-4 border-l-teal-200" />
+              <div key={i} className="zenith-skeleton h-24 rounded-2xl" />
             ))}
           </div>
         </div>
-      </div>
+      </div>,
     )
   }
 
-  return (
-    <div className="mobile-paint-fix max-w-full min-w-0 overflow-x-hidden bg-gradient-to-b from-slate-50/90 via-white to-teal-50/15 px-0 py-6 sm:px-0">
-      <PageCard
-        title="Customer Master"
-        subtitle="Manage your customer database"
-        icon={<FaUserFriends className="w-5 h-5 text-white" />}
-        headerAction={canCreate ? (
-          <button
-            onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-2 bg-white/20 border border-white/40 text-white px-4 py-2.5 rounded-xl hover:bg-white/30 font-medium shadow-md transition-all"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-            New Customer
-          </button>
-        ) : undefined}
-        className="max-w-full"
-      >
-      <div className="mb-6 rounded-2xl border border-primary-200/50 bg-gradient-to-br from-white via-teal-50/15 to-primary-50/20 p-4 shadow-md shadow-primary-900/[0.06] ring-1 ring-white/80 sm:p-5">
+  return shell(
+    <>
+      <header className="sticky top-0 z-30 mb-4 border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 94%, transparent)] pb-3 pt-1 backdrop-blur-xl sm:mb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] shadow-inner">
+              <Users className="h-5 w-5 text-[color:var(--accent-gold)]" strokeWidth={2} aria-hidden />
+            </div>
+            <div className="min-w-0">
+              <h1 className="zenith-display text-xl font-bold tracking-tight text-[color:var(--text-primary)] sm:text-2xl">Customer Master</h1>
+              <p className="mt-0.5 text-sm text-[color:var(--text-secondary)]">Manage your customer database</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            {hasRole([UserRole.ADMIN]) ? (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleExportClick('excel')}
+                  className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-4 py-2.5 text-sm font-semibold text-[color:var(--accent-gold)] shadow-sm transition-colors hover:opacity-95"
+                >
+                  <Download className="h-4 w-4" aria-hidden />
+                  Export Excel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExportClick('csv')}
+                  className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-4 py-2.5 text-sm font-semibold text-[color:var(--accent-teal)] shadow-sm transition-colors hover:opacity-95"
+                >
+                  <Download className="h-4 w-4" aria-hidden />
+                  Export CSV
+                </button>
+              </div>
+            ) : null}
+            {canCreate ? (
+              <button
+                type="button"
+                onClick={() => setShowForm(true)}
+                className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] shadow-lg transition-all hover:opacity-95"
+              >
+                <Plus className="h-4 w-4" aria-hidden />
+                New Customer
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </header>
+
+      <div className="mb-6 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5">
         <div className="space-y-2 sm:space-y-3">
           {/* Row 1: Search Bar (aligned with Projects page styling) */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-            <input
-              type="text"
-              placeholder="Search by name, ID, or consumer number..."
-              className="h-[40px] w-full rounded-xl border border-gray-200/90 bg-white/90 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-gray-100/80 placeholder:text-gray-400 transition-all focus:border-primary-400 focus:ring-2 focus:ring-primary-500/25 sm:flex-1"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
-            />
+            <div className="relative w-full sm:flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-muted)]" aria-hidden />
+              <input
+                type="text"
+                placeholder="Search by name, ID, or consumer number..."
+                className="zenith-native-filter-input h-[44px] w-full rounded-xl pl-10 pr-3 py-2.5 text-sm placeholder:text-[color:var(--text-placeholder)]"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
+              />
+            </div>
             {/* Filter for Sales users: All Customers / My Customers */}
             {isSalesUser ? (
-              <div className="flex min-h-[40px] w-full flex-col gap-2 rounded-xl border border-primary-100/80 bg-white/70 px-3 py-2.5 shadow-sm sm:ml-auto sm:w-auto sm:flex-row sm:items-center sm:gap-4 sm:py-2">
-                <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-primary-800">Filter</span>
+              <div className="flex min-h-[44px] w-full flex-col gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-3 shadow-sm sm:ml-auto sm:w-auto sm:flex-row sm:items-center sm:gap-4 sm:py-2.5">
+                <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-[color:var(--text-muted)]">Filter</span>
                 <div className="flex flex-wrap gap-4">
                   <label className="flex cursor-pointer items-center">
                     <input
@@ -226,9 +269,9 @@ const CustomerMaster = () => {
                       value="all"
                       checked={customerFilter === 'all'}
                       onChange={(e) => setCustomerFilter(e.target.value as 'all' | 'my')}
-                      className="mr-2 text-primary-600 focus:ring-primary-500/30"
+                      className="mr-2 h-4 w-4 shrink-0 accent-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
                     />
-                    <span className="text-sm font-medium text-gray-700">All Customers</span>
+                    <span className="text-sm font-medium text-[color:var(--text-primary)]">All Customers</span>
                   </label>
                   <label className="flex cursor-pointer items-center">
                     <input
@@ -237,17 +280,18 @@ const CustomerMaster = () => {
                       value="my"
                       checked={customerFilter === 'my'}
                       onChange={(e) => setCustomerFilter(e.target.value as 'all' | 'my')}
-                      className="mr-2 text-primary-600 focus:ring-primary-500/30"
+                      className="mr-2 h-4 w-4 shrink-0 accent-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
                     />
-                    <span className="text-sm font-medium text-gray-700">My Customers</span>
+                    <span className="text-sm font-medium text-[color:var(--text-primary)]">My Customers</span>
                   </label>
                 </div>
               </div>
             ) : (
               /* Filter for other users: Sales Person dropdown - right-aligned on desktop, full width on mobile; wide enough for full name on one line */
-              <div className="flex min-h-[40px] w-full items-center sm:ml-auto sm:w-auto sm:min-w-[260px] sm:justify-end">
+              <div className="flex min-h-[44px] w-full items-center sm:ml-auto sm:w-auto sm:min-w-[260px] sm:justify-end">
                 <MultiSelect
                   className="w-full sm:min-w-[260px]"
+                  variant="zenith"
                   options={salesUsers?.map((salesUser: any) => ({
                     value: salesUser.id,
                     label: salesUser.name,
@@ -261,30 +305,6 @@ const CustomerMaster = () => {
             )}
           </div>
         </div>
-        
-        {/* Export buttons - Only visible to Admin users */}
-        {hasRole([UserRole.ADMIN]) && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              onClick={() => handleExportClick('excel')}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-amber-900/15 transition-all hover:from-amber-600 hover:to-yellow-600 hover:shadow-lg"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Export to Excel
-            </button>
-            <button
-              onClick={() => handleExportClick('csv')}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-900/20 transition-all hover:from-indigo-700 hover:to-violet-700 hover:shadow-lg"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Export to CSV
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Customer list - card-like rows (visual rhythm aligned with Projects table) */}
@@ -308,10 +328,8 @@ const CustomerMaster = () => {
                 state: { fromListFilter: isSalesUser ? customerFilter : undefined },
               })
             }}
-            className={`group w-full cursor-pointer rounded-2xl border border-primary-100/70 text-left shadow-md shadow-gray-900/[0.04] ring-1 ring-gray-100/60 transition-all duration-200 hover:border-primary-200 hover:shadow-lg hover:shadow-primary-900/10 ${
-              index % 2 === 1
-                ? 'border-l-4 border-l-teal-500 bg-gradient-to-br from-slate-50/80 via-white to-teal-50/20'
-                : 'border-l-4 border-l-primary-500 bg-gradient-to-br from-white via-white to-primary-50/15'
+            className={`group w-full cursor-pointer rounded-2xl border border-[color:var(--border-card)] text-left shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] transition-colors duration-150 hover:bg-[color:var(--bg-table-hover)] ${
+              index % 2 === 1 ? 'bg-[color:var(--bg-table-alt)]' : 'bg-[color:var(--bg-card)]'
             }`}
           >
             <div className="px-4 py-4 sm:px-6 sm:py-5">
@@ -319,20 +337,20 @@ const CustomerMaster = () => {
                 {/* Left: Primary info - Who & status */}
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                    <span className="inline-flex items-center rounded-lg bg-gradient-to-r from-primary-600 to-primary-700 px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
+                    <span className="inline-flex items-center rounded-lg bg-[color:var(--accent-gold)] px-2.5 py-1 text-xs font-bold text-[color:var(--text-inverse)] shadow-sm">
                       ID: {customer.customerId}
                     </span>
-                    <h3 className="truncate text-base font-semibold text-gray-900 transition-colors group-hover:text-primary-900 sm:text-lg">
+                    <h3 className="truncate text-base font-semibold text-[color:var(--text-primary)] transition-colors group-hover:text-[color:var(--accent-gold)] sm:text-lg">
                       {getCustomerDisplayName(customer)}
                     </h3>
                     {(customer as any)._count && (customer as any)._count.projects > 0 && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                      <span className="inline-flex items-center rounded-md border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-2 py-0.5 text-xs font-semibold text-[color:var(--accent-teal)]">
                         {(customer as any)._count.projects} Project{(customer as any)._count.projects !== 1 ? 's' : ''}
                       </span>
                     )}
                   </div>
                   {/* Secondary info - muted, easy to scan */}
-                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
+                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[color:var(--text-secondary)]">
                     {(() => {
                       const hasAnyAddress =
                         customer.addressLine1 || customer.addressLine2 || customer.city || customer.state || customer.country || customer.pinCode
@@ -356,10 +374,12 @@ const CustomerMaster = () => {
                       )
                     })()}
                     {customer.consumerNumber && (
-                      <span className="text-purple-600/90">Consumer: {customer.consumerNumber}</span>
+                      <span className="text-[color:var(--text-secondary)]">
+                        <span className="text-[color:var(--text-muted)]">Consumer:</span> {customer.consumerNumber}
+                      </span>
                     )}
                     {customer.contactNumbers && (
-                      <span className="text-emerald-600/90">
+                      <span className="font-medium text-[color:var(--accent-teal)]">
                         {(() => {
                           try {
                             const contacts = JSON.parse(customer.contactNumbers)
@@ -381,7 +401,7 @@ const CustomerMaster = () => {
                             return (
                               <a
                                 href={mailtoHref}
-                                className="text-blue-600/90 hover:text-blue-700 hover:underline"
+                                className="text-[color:var(--accent-blue)] underline-offset-2 hover:underline"
                                 title="Open in email application"
                               >
                                 {emailStr}
@@ -391,7 +411,7 @@ const CustomerMaster = () => {
                             return (
                               <a
                                 href={`mailto:${customer.email}`}
-                                className="text-blue-600/90 hover:text-blue-700 hover:underline"
+                                className="text-[color:var(--accent-blue)] underline-offset-2 hover:underline"
                                 title="Open in email application"
                               >
                                 {customer.email}
@@ -405,7 +425,7 @@ const CustomerMaster = () => {
                 </div>
                 {/* Right: created date */}
                 <div className="flex min-w-0 flex-shrink-0 items-center justify-end">
-                  <p className="truncate text-xs font-medium tabular-nums text-gray-500">
+                  <p className="truncate text-xs font-medium tabular-nums text-[color:var(--text-secondary)]">
                     Created {format(new Date(customer.createdAt), 'MMM dd, yyyy')}
                   </p>
                 </div>
@@ -414,9 +434,9 @@ const CustomerMaster = () => {
           </div>
         ))}
         {data != null && (!data.customers || data.customers.length === 0) && (
-          <div className="rounded-2xl border border-dashed border-gray-200 bg-gradient-to-br from-slate-50/60 to-white px-6 py-14 text-center shadow-sm">
-            <p className="mx-auto max-w-md font-medium text-gray-600">No customers match your search or filters.</p>
-            <p className="mx-auto mt-2 max-w-md text-xs text-gray-500">
+          <div className="rounded-2xl border border-dashed border-[color:var(--border-default)] bg-[color:var(--bg-card)] px-6 py-14 text-center shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
+            <p className="mx-auto max-w-md font-semibold text-[color:var(--text-primary)]">No customers match your search or filters.</p>
+            <p className="mx-auto mt-2 max-w-md text-xs text-[color:var(--text-muted)]">
               Try a different search term or widen the salesperson filter.
             </p>
           </div>
@@ -424,8 +444,8 @@ const CustomerMaster = () => {
       </div>
 
       {data != null && (
-        <div className="mt-5 flex flex-col items-center justify-between gap-4 rounded-2xl border border-gray-200/80 bg-gradient-to-r from-white via-teal-50/15 to-white px-4 py-3 shadow-sm sm:flex-row sm:px-5">
-          <div className="text-sm text-gray-600">
+        <div className="mt-5 flex flex-col items-center justify-between gap-4 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] px-4 py-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:flex-row sm:px-5">
+          <div className="text-sm text-[color:var(--text-secondary)]">
             Showing page {data.page} of {data.totalPages || 1} ({data.total} total)
           </div>
           {data.totalPages != null && data.totalPages > 1 && (
@@ -433,14 +453,14 @@ const CustomerMaster = () => {
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="rounded-xl border border-primary-200/90 bg-white px-4 py-2 text-sm font-semibold text-primary-800 shadow-sm transition-all hover:border-primary-300 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-[44px] touch-manipulation rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] shadow-sm transition-all hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Previous
               </button>
               <button
                 onClick={() => setPage(p => Math.min(data.totalPages, p + 1))}
                 disabled={page >= data.totalPages}
-                className="rounded-xl border border-primary-200/90 bg-white px-4 py-2 text-sm font-semibold text-primary-800 shadow-sm transition-all hover:border-primary-300 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-[44px] touch-manipulation rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] shadow-sm transition-all hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Next
               </button>
@@ -448,7 +468,6 @@ const CustomerMaster = () => {
           )}
         </div>
       )}
-      </PageCard>
 
       {/* Modals rendered outside PageCard to avoid overflow/stacking issues */}
       {showForm && (
@@ -468,6 +487,7 @@ const CustomerMaster = () => {
         open={showExportConfirm}
         onClose={cancelExport}
         type="warning"
+        surface="zenith"
         message={`The Data that is present in the CRM System is the exclusive property of Rayenna Energy Private Limited. Unauthorised Export of any data is prohibited and will be subject to disciplinary measures including and not limited to termination and legal procedures.
 
 By exporting this data, you are confirming that you are authorised to access this data/info and have written approvals from the management.
@@ -478,7 +498,7 @@ Do you want to continue?`}
           { label: 'YES', variant: 'primary', onClick: confirmExport },
         ]}
       />
-    </div>
+    </>,
   )
 }
 

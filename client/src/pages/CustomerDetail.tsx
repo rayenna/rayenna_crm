@@ -1,12 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
 import { useModalEscape } from '../contexts/ModalEscapeContext'
 import { Customer, UserRole } from '../types'
-import PageCard from '../components/PageCard'
-import { FaUserFriends } from 'react-icons/fa'
+import { ArrowLeft, Edit3, Trash2, UserRound } from 'lucide-react'
 import { CustomerForm, getCustomerDisplayName } from '../components/customers/CustomerForm'
 import { ErrorModal } from '@/components/common/ErrorModal'
 import toast from 'react-hot-toast'
@@ -30,6 +29,12 @@ export default function CustomerDetail() {
   const canDelete = hasRole([UserRole.ADMIN])
 
   useModalEscape(showDeleteConfirm, () => setShowDeleteConfirm(false))
+
+  const shell = (children: ReactNode) => (
+    <div className="zenith-root zenith-animated-bg w-full max-w-full min-w-0 min-h-[calc(100dvh-5rem)] min-h-[calc(100vh-5rem)] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-[max(0.35rem,env(safe-area-inset-top,0px))] [-webkit-tap-highlight-color:transparent]">
+      <div className="zenith-exec-main mx-auto w-full max-w-full min-w-0 px-3 sm:px-5 pb-10">{children}</div>
+    </div>
+  )
 
   /** Escape → Customer Master when no modal has registered (capture handler runs first and stops propagation). */
   useEffect(() => {
@@ -62,29 +67,30 @@ export default function CustomerDetail() {
   })
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50/90 via-white to-teal-50/15 px-0 py-6 sm:px-0">
-        <div className="p-6 text-center text-gray-600">Loading customer…</div>
-      </div>
+    return shell(
+      <div className="rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-6 text-center text-[color:var(--text-muted)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
+        Loading customer…
+      </div>,
     )
   }
 
   if (error || !customer) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50/90 via-white to-teal-50/15 px-0 py-6 sm:px-0">
-        <div className="p-6 text-center text-red-600">
+    return shell(
+      <div className="rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-6 text-center shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
+        <div className="text-sm font-semibold text-[color:var(--accent-red)]">
           {error ? getFriendlyApiErrorMessage(error) : 'Customer not found'}
         </div>
-        <div className="text-center">
+        <div className="mt-3">
           <button
             type="button"
             onClick={() => navigate('/customers')}
-            className="text-primary-600 font-medium hover:underline"
+            className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2.5 text-sm font-semibold text-[color:var(--text-primary)] shadow-[var(--shadow-card)] transition-colors hover:bg-[color:var(--bg-card-hover)]"
           >
+            <ArrowLeft className="h-4 w-4" aria-hidden />
             Back to Customer Master
           </button>
         </div>
-      </div>
+      </div>,
     )
   }
 
@@ -94,6 +100,7 @@ export default function CustomerDetail() {
         open={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         type="warning"
+        surface="zenith"
         message={`Once deleted, this customer's details cannot be recovered.
 
 Are you sure you want to proceed?`}
@@ -109,69 +116,67 @@ Are you sure you want to proceed?`}
           },
         ]}
       />
-      <div className="min-h-screen bg-gradient-to-b from-slate-50/90 via-white to-teal-50/15 px-0 py-6 sm:px-0">
-        <PageCard
-          title={getCustomerDisplayName(customer)}
-          subtitle={isEditing ? 'Edit customer details' : 'Customer details'}
-          icon={<FaUserFriends className="w-5 h-5 text-white" />}
-          className="max-w-full"
-        >
-          <div className="mx-auto w-full max-w-[min(100%,88rem)] space-y-5 sm:space-y-6 md:space-y-7">
-          <div className="rounded-xl border border-primary-100/60 border-l-4 border-l-primary-500 bg-gradient-to-br from-primary-50/50 to-gray-50/60 p-4 shadow-md shadow-primary-900/[0.06] ring-1 ring-white/80 sm:p-6">
-            <p className="flex items-center gap-1.5 text-xs text-gray-500">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
+      {shell(
+        <>
+          <header className="sticky top-0 z-30 mb-4 border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 94%, transparent)] pb-3 pt-1 backdrop-blur-xl sm:mb-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] shadow-inner">
+                  <UserRound className="h-5 w-5 text-[color:var(--accent-teal)]" strokeWidth={2} aria-hidden />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="zenith-display truncate text-xl font-bold tracking-tight text-[color:var(--text-primary)] sm:text-2xl">
+                    {getCustomerDisplayName(customer)}
+                  </h1>
+                  <p className="mt-0.5 text-sm text-[color:var(--text-secondary)]">
+                    {isEditing ? 'Edit customer details' : 'Customer details'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                {canEdit && !isEditing ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] shadow-[var(--shadow-card)] transition-colors hover:opacity-95"
+                  >
+                    <Edit3 className="h-4 w-4" aria-hidden />
+                    Edit
+                  </button>
+                ) : null}
+                {canDelete ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] px-4 py-2.5 text-sm font-bold text-[color:var(--accent-red)] transition-colors hover:opacity-95"
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden />
+                    Delete
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => navigate('/customers')}
+                  className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2.5 text-sm font-semibold text-[color:var(--text-primary)] shadow-[var(--shadow-card)] transition-colors hover:bg-[color:var(--bg-card-hover)]"
+                >
+                  <ArrowLeft className="h-4 w-4" aria-hidden />
+                  Back
+                </button>
+              </div>
+            </div>
+          </header>
+
+          <div className="mb-5 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-6">
+            <p className="flex items-center gap-1.5 text-xs text-[color:var(--text-muted)]">
               Created {format(new Date(customer.createdAt), 'MMM dd, yyyy')}
             </p>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-sm mt-3">
+            <span className="mt-3 inline-flex items-center rounded-md bg-[color:var(--accent-gold)] px-2.5 py-1 text-xs font-bold text-[color:var(--text-inverse)] shadow-[var(--shadow-card)]">
               ID: {customer.customerId}
             </span>
-
-            <div className="mt-4 grid grid-cols-2 gap-2 border-t border-gray-200/80 pt-4 sm:mt-6 sm:flex sm:flex-wrap sm:items-center">
-              {canEdit && !isEditing && (
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(true)}
-                  className="inline-flex h-9 min-w-0 items-center justify-center rounded-xl bg-primary-600 px-2 py-2 text-xs font-semibold text-white shadow-md shadow-primary-900/15 transition-all hover:bg-primary-700 hover:shadow sm:h-10 sm:w-40 sm:px-4 sm:text-sm"
-                >
-                  Edit
-                </button>
-              )}
-              {canDelete && (
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-xl bg-red-600 px-2 py-2 text-xs font-semibold text-white shadow-md transition-all hover:bg-red-700 hover:shadow sm:h-10 sm:w-40 sm:gap-1.5 sm:px-4 sm:text-sm"
-                >
-                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                  <span className="hidden sm:inline">Delete</span>
-                  <span className="sm:hidden truncate">Delete</span>
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => navigate('/customers')}
-                className="inline-flex h-9 min-w-0 items-center justify-center rounded-xl border border-gray-200/90 bg-white px-2 py-2 text-xs font-semibold text-gray-700 shadow-sm transition-all hover:border-gray-300 hover:bg-gray-50 sm:h-10 sm:ml-auto sm:w-40 sm:px-4 sm:text-sm"
-              >
-                Cancel
-              </button>
-            </div>
           </div>
 
-          <div className="rounded-2xl border border-gray-200/80 bg-white/85 p-4 shadow-md shadow-gray-900/[0.04] ring-1 ring-gray-100/60 backdrop-blur-[2px] sm:p-6 md:p-7">
+          <div className="rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-6 md:p-7">
             <CustomerForm
               customer={customer}
               layout="page"
@@ -185,9 +190,8 @@ Are you sure you want to proceed?`}
               }}
             />
           </div>
-          </div>
-        </PageCard>
-      </div>
+        </>,
+      )}
     </>
   )
 }

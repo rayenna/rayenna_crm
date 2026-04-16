@@ -18,7 +18,10 @@ Use the user menu (your name, top right) and select the logout option. For secur
 The system logs you out after a period of inactivity for security. Log in again to continue; consider changing your password if you are concerned about account security.
 
 ### How do I get help in the app?
-Press **?** (question mark) from most pages for context-sensitive help, or click **Help** in the navigation menu. Help content is organised by section (Getting Started, Roles, Modules, Analytics & Reports, Security, FAQ). **Zenith** is documented inside **Analytics** — open [Analytics & Reports](/help/analytics) and scroll to **Zenith Command Center**, or use the direct link [Zenith Command Center](/help/analytics#zenith-command-center).
+Press **?** (question mark) when you are not typing in a field, or use **Help (?)** in the **user menu** (top right). Help content is organised by section (Getting Started, Roles, Modules, Analytics & Reports, Training, Security, FAQ). Use **Search help…** in the Help sidebar to find text across sections. **Zenith** is documented inside **Analytics** — open [Analytics & Reports](/help/analytics) and scroll to **Zenith Command Center**, or use [Zenith Command Center](/help/analytics#zenith-command-center). For **Tip of the Day**, **Search help**, **Esc** behaviour, and Support Tickets shortcuts, see [Help and tips](/help/analytics#help-and-tips) under Analytics.
+
+### What is Tip of the Day?
+A rotating library of short hints (Dashboard, Zenith, Projects, shortcuts, and more). It may appear once per day after login. Reopen anytime from the user menu → **Tip of the Day**. Use **Next tip** to browse; **Don’t show again** stops automatic tips until you clear site data for this app (this preference is stored in the browser, not synced across devices). Details: [Analytics → Help and tips](/help/analytics#help-and-tips).
 
 ## Roles and Permissions
 
@@ -50,6 +53,9 @@ Use the filter bar at the top of the Dashboard to focus on a period. **Financial
 
 ### What are Quick Access tiles on the Dashboard?
 Quick Access tiles show counts (e.g. leads, open deals, payment status) and link to the **Projects** page with the same date filters (FY, Quarter, Month) plus the tile’s filter already applied. Click a tile to open a filtered project list; use **Clear All** on Projects to remove filters.
+
+### Can I open Projects from Dashboard charts?
+Yes. On the **classic Dashboard**, most **charts are clickable** — bars, FY revenue/profit columns, pie slices, **Availing Loan by Bank** bars, **panel / inverter brand** bars (where your role sees them), and words or **Top 10** rows in **Customer profitability**. Clicking opens **Projects** with filters that match the slice and your dashboard dates. In **Zenith**, **Customer projects profitability** (word cloud / Top 10) does the same — direct to **Projects**. Other Zenith explore charts usually open **Quick Actions** first; use **Open in Projects →** for the full grid. Details: [Analytics → Classic Dashboard chart click-through](/help/analytics#classic-dashboard-chart-click-through-to-projects).
 
 ### What is “Things needing attention” on the Dashboard?
 A compact notice **Sales**, **Operations**, and **Admin** may see **above** the main dashboard metrics when late-stage projects (**Under Installation**, **Completed**, or **Completed – Subsidy Credited**) are missing **panel and/or inverter brand**. **Management** does not see it. It lists a count and customer names and links to **Projects** with the same idea. **Zenith** can show a matching line in the **Smart daily briefing** for **Sales**, **Admin**, and **Operations** only. See [Analytics → Things needing attention](/help/analytics#things-needing-attention-dashboard) and [Daily briefing](/help/analytics#daily-briefing-zenith).

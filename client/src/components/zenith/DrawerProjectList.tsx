@@ -74,7 +74,7 @@ export default function DrawerProjectList({
 
   const total = useMemo(() => sorted.reduce((s, p) => s + rowAmount(p, amountMode), 0), [sorted, amountMode])
 
-  const valueAccent = amountMode === 'gross_profit' ? '#00D4B4' : '#F5A623'
+  const valueAccent = amountMode === 'gross_profit' ? 'var(--accent-teal)' : 'var(--accent-gold)'
   const valuePillLabel = amountMode === 'gross_profit' ? 'Gross profit' : 'Order value'
 
   const pill = (key: SortKey, label: string) => {
@@ -88,26 +88,13 @@ export default function DrawerProjectList({
         onClick={() => handleSortPill(key)}
         aria-pressed={active}
         aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
-        className="rounded-[20px] px-2.5 py-1 text-[11px] transition-colors cursor-pointer"
-        style={
+        className={`rounded-[20px] px-2.5 py-1 text-[11px] transition-colors cursor-pointer border ${
           active
             ? profitSort
-              ? {
-                  background: 'rgba(0,212,180,0.12)',
-                  border: '1px solid rgba(0,212,180,0.3)',
-                  color: '#00D4B4',
-                }
-              : {
-                  background: 'rgba(245,166,35,0.12)',
-                  border: '1px solid rgba(245,166,35,0.3)',
-                  color: '#F5A623',
-                }
-            : {
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: 'rgba(255,255,255,0.5)',
-              }
-        }
+              ? 'border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] text-[color:var(--accent-teal)]'
+              : 'border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
+            : 'border-[color:var(--border-default)] bg-[color:var(--bg-badge)] text-[color:var(--text-muted)] hover:border-[color:var(--border-strong)]'
+        }`}
       >
         {label}
         {arrow}
@@ -118,9 +105,9 @@ export default function DrawerProjectList({
   if (projects.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center px-5 py-10 text-center">
-        <Inbox className="w-8 h-8 mb-3" style={{ color: 'rgba(255,255,255,0.2)' }} aria-hidden />
-        <p className="text-sm text-white/50">No projects match this filter</p>
-        <p className="text-xs mt-1 text-white/30">{filterLabel}</p>
+        <Inbox className="w-8 h-8 mb-3 text-[color:var(--text-muted)] opacity-50" aria-hidden />
+        <p className="text-sm text-[color:var(--text-secondary)]">No projects match this filter</p>
+        <p className="text-xs mt-1 text-[color:var(--text-muted)]">{filterLabel}</p>
       </div>
     )
   }
@@ -145,11 +132,11 @@ export default function DrawerProjectList({
           return (
             <div
               key={p.id}
-              className="group flex items-center gap-2.5 py-3 border-b border-white/[0.05]"
+              className="group flex items-center gap-2.5 py-3 border-b border-[color:var(--border-default)]"
             >
               <div className="flex-1 min-w-0">
                 <div
-                  className="text-[13px] font-medium text-white truncate"
+                  className="text-[13px] font-medium text-[color:var(--text-primary)] truncate"
                   style={{ fontFamily: 'var(--zenith-font-body), DM Sans, sans-serif' }}
                 >
                   {p.customer_name}
@@ -178,13 +165,13 @@ export default function DrawerProjectList({
                   className="text-[12px] font-medium tabular-nums leading-tight"
                   style={{
                     fontFamily: 'var(--zenith-font-body), DM Sans, sans-serif',
-                    color: dealParts.muted ? 'rgba(255,255,255,0.3)' : valueAccent,
+                    color: dealParts.muted ? 'var(--text-muted)' : valueAccent,
                   }}
                 >
                   {dealParts.text}
                 </div>
                 <div
-                  className="mt-0.5 text-[10px] tabular-nums leading-tight text-white/38"
+                  className="mt-0.5 text-[10px] tabular-nums leading-tight text-[color:var(--text-muted)]"
                   style={{ fontFamily: 'var(--zenith-font-body), DM Sans, sans-serif' }}
                   title="System capacity"
                 >
@@ -211,10 +198,10 @@ export default function DrawerProjectList({
       </div>
 
       <div
-        className="shrink-0 pt-3 mt-1 flex justify-between items-center border-t border-white/[0.08]"
+        className="shrink-0 pt-3 mt-1 flex justify-between items-center border-t border-[color:var(--border-default)]"
         style={{ paddingBottom: 4 }}
       >
-        <span className="text-xs text-white/40">{sorted.length} projects</span>
+        <span className="text-xs text-[color:var(--text-muted)]">{sorted.length} projects</span>
         <span className="text-xs font-medium" style={{ color: valueAccent }}>
           Total: {formatINR(total)}
         </span>

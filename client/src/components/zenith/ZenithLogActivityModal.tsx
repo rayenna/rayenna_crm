@@ -34,32 +34,32 @@ export default function ZenithLogActivityModal({
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-[color:var(--bg-overlay)] p-4 backdrop-blur-sm"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-white/15 bg-[#12121a] shadow-2xl p-5"
+        className="w-full max-w-md rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-modal)] shadow-[var(--shadow-modal)] p-5 ring-1 ring-[color:var(--border-default)]"
         role="dialog"
         aria-labelledby="zenith-log-activity-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="zenith-log-activity-title" className="text-lg font-bold text-white">
+        <h2 id="zenith-log-activity-title" className="text-lg font-bold text-[color:var(--text-primary)]">
           Log activity
         </h2>
-        <p className="text-sm text-white/55 mt-1">{customerLabel}</p>
+        <p className="text-sm text-[color:var(--text-secondary)] mt-1">{customerLabel}</p>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={4}
           placeholder="Note follow-up, call, meeting…"
-          className="mt-4 w-full rounded-xl border border-white/15 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#f5a623]/50"
+          className="mt-4 w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2 text-sm text-[color:var(--text-primary)] placeholder:text-[color:var(--text-placeholder)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)]"
         />
         <div className="mt-4 flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-white/70 hover:bg-white/10"
+            className="px-4 py-2 rounded-xl text-sm font-semibold text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-card-hover)]"
           >
             Cancel
           </button>
@@ -67,7 +67,7 @@ export default function ZenithLogActivityModal({
             type="button"
             disabled={!text.trim() || mutation.isPending}
             onClick={() => mutation.mutate(text.trim())}
-            className="px-4 py-2 rounded-xl text-sm font-bold bg-[#f5a623] text-[#0a0a0f] disabled:opacity-50"
+            className="px-4 py-2 rounded-xl text-sm font-bold bg-[color:var(--accent-gold)] text-[color:var(--text-inverse)] shadow-[var(--shadow-card)] disabled:opacity-50"
           >
             {mutation.isPending ? 'Saving…' : 'Save'}
           </button>

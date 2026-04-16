@@ -3,8 +3,16 @@ import { motion } from 'framer-motion'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import { ZENITH_DONUT_CHART_HEIGHT_PX, ZENITH_DONUT_PIE_ONLY_MOBILE_PX } from './zenithDonutConstants'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
+import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTooltipStyles'
 
-const COLORS = ['#f5a623', '#00d4b4', '#a78bfa', '#38bdf8', '#fb7185', '#fbbf24']
+const COLORS = [
+  'var(--accent-gold)',
+  'var(--accent-teal)',
+  'var(--accent-purple)',
+  'var(--accent-blue)',
+  'var(--accent-red)',
+  'color-mix(in_srgb,var(--accent-gold) 70%, var(--accent-teal))',
+]
 
 function formatSliceInr(value: number): string {
   return `₹${Math.round(value || 0).toLocaleString('en-IN')}`
@@ -65,18 +73,18 @@ export default function SegmentDonut({
   const pieMargin = narrow ? { top: 6, bottom: 6, left: 6, right: 6 } : undefined
 
   const cardClass =
-    'zenith-segment-donut-card zenith-glass rounded-xl p-3 sm:p-4 flex flex-col max-lg:overflow-visible ' +
+    'zenith-segment-donut-card rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] p-3 sm:p-4 flex flex-col max-lg:overflow-visible ' +
     (stretchToRowHeight ? 'h-full min-h-0' : 'shrink-0')
 
   const cardBody = (
     <>
       <div className="flex items-start justify-between gap-2 mb-3 shrink-0">
-        <h3 className="zenith-display text-sm sm:text-[15px] font-semibold text-white/95 min-w-0">
+        <h3 className="zenith-display text-sm sm:text-[15px] font-semibold text-[color:var(--text-primary)] min-w-0">
           {title}
         </h3>
         {showExploreHint ? (
           <span
-            className="shrink-0 pt-0.5 italic text-[10px] text-white/[0.25]"
+            className="shrink-0 pt-0.5 italic text-[10px] text-[color:var(--text-muted)]"
             style={{ fontFamily: 'DM Sans, sans-serif' }}
           >
             Click to explore →
@@ -92,7 +100,7 @@ export default function SegmentDonut({
         style={stretchToRowHeight ? { minHeight: pieSlotHeightPx } : { height: pieSlotHeightPx }}
       >
         {chartData.length === 0 ? (
-          <p className="text-sm text-white/40 text-center flex items-center justify-center h-full">
+          <p className="text-sm text-[color:var(--text-muted)] text-center flex items-center justify-center h-full">
             No data for this period
           </p>
         ) : (
@@ -127,7 +135,7 @@ export default function SegmentDonut({
                       <Cell
                         key={i}
                         fill={COLORS[i % COLORS.length]}
-                        stroke="rgba(0,0,0,0.2)"
+                        stroke="var(--border-default)"
                         style={{
                           cursor: onSegmentClick ? 'pointer' : 'default',
                           filter: 'brightness(1)',
@@ -162,21 +170,13 @@ export default function SegmentDonut({
                       const v = Number(p.value)
                       const pct = (p.payload as { pct?: string } | undefined)?.pct
                       return (
-                        <div
-                          style={{
-                            background: '#1A1A2E',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: 8,
-                            padding: '8px 12px',
-                            fontFamily: 'DM Sans, sans-serif',
-                          }}
-                        >
-                          <div style={{ color: '#fff', fontSize: 13, fontWeight: 500 }}>
+                        <div style={ZENITH_CHART_CUSTOM_TOOLTIP_SHELL}>
+                          <div style={{ color: 'var(--chart-tooltip-fg)', fontSize: 13, fontWeight: 500 }}>
                             {p.name}: ₹{v.toLocaleString('en-IN')}
                             {pct ? ` (${pct}%)` : ''}
                           </div>
                           {onSegmentClick ? (
-                            <div style={{ color: '#F5A623', fontSize: 11, marginTop: 4 }}>
+                            <div style={{ color: 'var(--accent-gold)', fontSize: 11, marginTop: 4 }}>
                               Click to view projects →
                             </div>
                           ) : null}
@@ -190,7 +190,7 @@ export default function SegmentDonut({
                       formatter={(value, entry) => {
                         const pct = (entry?.payload as { pct?: string } | undefined)?.pct
                         return (
-                          <span className="text-white/80 text-xs">
+                          <span className="text-[color:var(--text-secondary)] text-xs">
                             {value}
                             {pct ? ` · ${pct}%` : ''}
                           </span>
@@ -209,7 +209,7 @@ export default function SegmentDonut({
           {chartData.map((d, i) => (
             <li
               key={d.name}
-              className="flex items-start justify-between gap-2 rounded-lg bg-white/[0.04] px-2.5 py-2 border border-white/[0.06]"
+              className="flex items-start justify-between gap-2 rounded-lg bg-[color:var(--bg-input)] px-2.5 py-2 border border-[color:var(--border-default)]"
             >
               <span className="flex min-w-0 flex-1 items-start gap-2">
                 <span
@@ -217,14 +217,14 @@ export default function SegmentDonut({
                   style={{ backgroundColor: COLORS[i % COLORS.length] }}
                   aria-hidden
                 />
-                <span className="text-left text-[12px] font-medium leading-snug text-white/90">
+                <span className="text-left text-[12px] font-medium leading-snug text-[color:var(--text-primary)]">
                   {d.name}
                 </span>
               </span>
-              <span className="shrink-0 text-right text-[12px] font-semibold tabular-nums text-[#f5a623]">
+              <span className="shrink-0 text-right text-[12px] font-semibold tabular-nums text-[color:var(--accent-gold)]">
                 {formatSliceInr(d.value)}
                 {d.pct ? (
-                  <span className="mt-0.5 block text-[11px] font-medium text-white/55">
+                  <span className="mt-0.5 block text-[11px] font-medium text-[color:var(--text-muted)]">
                     {String(d.pct).includes('%') ? String(d.pct) : `${d.pct}%`}
                   </span>
                 ) : null}

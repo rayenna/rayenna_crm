@@ -4,6 +4,16 @@ import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
+import {
+  ZENITH_RECHARTS_TOOLTIP_CURSOR,
+  ZENITH_RECHARTS_TOOLTIP_WRAPPER_STYLE,
+  ZENITH_CHART_TOOLTIP_INSIGHT,
+  ZENITH_CHART_TOOLTIP_LINE,
+  ZENITH_CHART_TOOLTIP_PANEL,
+  ZENITH_CHART_TOOLTIP_TITLE,
+  ZENITH_DASHBOARD_ANALYTICS_CARD,
+} from './zenithRechartsTooltipStyles'
+import { useChartColors } from '../../hooks/useChartColors'
 
 interface FYData {
   fy: string
@@ -22,6 +32,7 @@ interface ProjectValueProfitByFYChartProps {
 
 const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'management', filterControlledByParent, selectedFYsFromDashboard }: ProjectValueProfitByFYChartProps) => {
   const navigate = useNavigate()
+  const c = useChartColors()
   const [selectedFYs, setSelectedFYs] = useState<string[]>([])
   const [showFYDropdown, setShowFYDropdown] = useState(false)
   const fyDropdownRef = useRef<HTMLDivElement>(null)
@@ -58,11 +69,14 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
 
   if (!filterControlledByParent && isLoading) {
     return (
-      <div className="h-full flex flex-col min-h-[360px] bg-white shadow-sm rounded-2xl border border-slate-200 p-4 sm:p-5">
+      <div className={`${ZENITH_DASHBOARD_ANALYTICS_CARD} h-full flex-col`}>
         <div className="flex items-center justify-center" style={{ height: '320px' }}>
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-            <p className="mt-4 text-sm text-gray-500">Loading chart data...</p>
+            <div
+              className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--border-default)] border-t-[color:var(--accent-gold)]"
+              aria-hidden
+            />
+            <p className="mt-4 text-sm text-[color:var(--text-muted)]">Loading chart data...</p>
           </div>
         </div>
       </div>
@@ -71,21 +85,21 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
 
   if (!chartData || chartData.length === 0) {
     return (
-      <div className="h-full flex flex-col min-h-[360px] bg-white shadow-sm rounded-2xl border border-slate-200 p-4 sm:p-5">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-lg bg-emerald-600">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${ZENITH_DASHBOARD_ANALYTICS_CARD} h-full flex-col`}>
+        <div className="mb-4 flex items-center gap-3">
+          <div className="rounded-lg bg-[color:var(--accent-teal)] p-2 text-[color:var(--text-inverse)]">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
-          <h2 className="text-lg font-bold text-slate-900">
+          <h2 className="text-lg font-extrabold text-[color:var(--text-primary)]">
             Total Revenue and Total Profit by Financial Year
           </h2>
         </div>
-      <div className="flex items-center justify-center text-gray-500" style={{ height: '320px' }}>
-        <div className="text-center px-4">
-          <p className="mb-2 text-sm sm:text-base">No data available.</p>
-          <p className="text-xs sm:text-sm text-gray-600">Projects with financial year information will appear here.</p>
+      <div className="flex items-center justify-center text-[color:var(--text-muted)]" style={{ height: '320px' }}>
+        <div className="px-4 text-center">
+          <p className="mb-2 text-sm text-[color:var(--text-secondary)] sm:text-base">No data available.</p>
+          <p className="text-xs text-[color:var(--text-muted)] sm:text-sm">Projects with financial year information will appear here.</p>
         </div>
       </div>
       </div>
@@ -128,15 +142,15 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
   }
 
   return (
-    <div className="h-full flex flex-col min-h-[360px] bg-white shadow-sm rounded-2xl border border-slate-200 p-4 sm:p-5">
-      <div className="flex flex-col gap-3 mb-4">
+    <div className={`${ZENITH_DASHBOARD_ANALYTICS_CARD} h-full flex-col`}>
+      <div className="mb-4 flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-emerald-600">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="rounded-lg bg-[color:var(--accent-teal)] p-2 text-[color:var(--text-inverse)]">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-900">
+          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">
             Revenue & Profit by Financial Year
           </h2>
         </div>
@@ -217,13 +231,11 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
               bottom: 5,
             }}
           >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis 
-              dataKey="fy" 
-              tick={{ fontSize: 12 }}
-            />
-            <YAxis 
-              tick={{ fontSize: 12 }}
+            <CartesianGrid strokeDasharray="3 3" stroke={c.grid} />
+            <XAxis dataKey="fy" tick={{ fontSize: 12, fill: c.axisText }} stroke={c.grid} />
+            <YAxis
+              tick={{ fontSize: 12, fill: c.axisText }}
+              stroke={c.grid}
               tickFormatter={(value) => {
                 if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`
                 if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`
@@ -232,13 +244,13 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
               }}
             />
             <Tooltip
+              wrapperStyle={ZENITH_RECHARTS_TOOLTIP_WRAPPER_STYLE}
+              cursor={ZENITH_RECHARTS_TOOLTIP_CURSOR}
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
                   return (
-                    <div className="bg-gradient-to-br from-white to-primary-50 p-4 border-2 border-primary-200 rounded-xl shadow-2xl backdrop-blur-sm">
-                      <p className="font-semibold text-gray-900 mb-2">
-                        FY: {payload[0].payload.fy}
-                      </p>
+                    <div className={ZENITH_CHART_TOOLTIP_PANEL}>
+                      <p className={ZENITH_CHART_TOOLTIP_TITLE}>FY: {payload[0].payload.fy}</p>
                       {payload.map((entry: any, index: number) => {
                         const isProfit = entry.dataKey === 'totalProfit'
                         const val = Number(entry.value)
@@ -246,23 +258,25 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
                           ? `₹${Math.round(val).toLocaleString('en-IN')}`
                           : formatCurrency(val)
                         return (
-                          <p key={index} className="text-sm" style={{ color: entry.color }}>
-                            {entry.name}: <span className="font-medium">{text}</span>
+                          <p key={index} className={ZENITH_CHART_TOOLTIP_LINE} style={{ color: entry.color }}>
+                            {entry.name}: <span className="font-semibold">{text}</span>
                           </p>
                         )
                       })}
-                      <p className="text-xs font-medium text-amber-700 mt-1">Click a bar to open Projects →</p>
+                      <p className={ZENITH_CHART_TOOLTIP_INSIGHT}>Click a bar to open Projects →</p>
                     </div>
                   )
                 }
                 return null
               }}
             />
-            <Legend />
+            <Legend
+              wrapperStyle={{ paddingTop: 12, color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600 }}
+            />
             <Bar
               dataKey="totalProjectValue"
               name="Total Revenue"
-              fill="#3b82f6"
+              fill={c.blue}
               radius={[4, 4, 0, 0]}
               cursor="pointer"
               onClick={(_row: unknown, index: number) => {
@@ -279,7 +293,7 @@ const ProjectValueProfitByFYChart = ({ data: initialData, dashboardType = 'manag
             <Bar
               dataKey="totalProfit"
               name="Total Profit"
-              fill="#10b981"
+              fill={c.green}
               radius={[4, 4, 0, 0]}
               cursor="pointer"
               onClick={(_row: unknown, index: number) => {

@@ -6,6 +6,16 @@ import { UserRole } from '../../types'
 import type { ZenithDateFilter } from '../zenith/zenithTypes'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { getLoanBankBarColor } from './loanBankChartColors'
+import {
+  ZENITH_RECHARTS_TOOLTIP_CURSOR,
+  ZENITH_RECHARTS_TOOLTIP_WRAPPER_STYLE,
+  ZENITH_CHART_TOOLTIP_INSIGHT,
+  ZENITH_CHART_TOOLTIP_LINE,
+  ZENITH_CHART_TOOLTIP_PANEL,
+  ZENITH_CHART_TOOLTIP_TITLE,
+  ZENITH_DASHBOARD_ANALYTICS_CARD,
+} from './zenithRechartsTooltipStyles'
+import { useChartColors } from '../../hooks/useChartColors'
 
 export interface AvailingLoanByBankItem {
   bankKey: string
@@ -24,6 +34,7 @@ const AvailingLoanByBankChart = memo(function AvailingLoanByBankChart({
 }: AvailingLoanByBankChartProps) {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const c = useChartColors()
   const dateFilter: ZenithDateFilter = useMemo(
     () =>
       dashboardFilter ?? {
@@ -41,15 +52,15 @@ const AvailingLoanByBankChart = memo(function AvailingLoanByBankChart({
   if (!canView) return null
 
   return (
-    <div className="h-full flex flex-col min-h-[360px] bg-white shadow-sm rounded-2xl border border-slate-200 p-4 sm:p-5">
-      <div className="flex flex-col gap-3 mb-4 flex-shrink-0">
+    <div className={`${ZENITH_DASHBOARD_ANALYTICS_CARD} h-full`}>
+      <div className="mb-4 flex flex-shrink-0 flex-col gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-indigo-600">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="rounded-lg bg-[color:var(--accent-teal)] p-2 text-[color:var(--text-inverse)]">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-900">
+          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">
             Projects Availing Loans by Bank
           </h2>
         </div>
@@ -59,8 +70,10 @@ const AvailingLoanByBankChart = memo(function AvailingLoanByBankChart({
         {!chartData || chartData.length === 0 ? (
           <div className="flex items-center justify-center w-full h-full flex-shrink-0">
             <div className="text-center px-4">
-              <p className="mb-2 text-sm sm:text-base text-gray-500">No data for selected period</p>
-              <p className="text-xs sm:text-sm text-gray-600">Project counts by bank will appear when projects have Availing Loan and a bank selected.</p>
+              <p className="mb-2 text-sm text-[color:var(--text-secondary)] sm:text-base">No data for selected period</p>
+              <p className="text-xs text-[color:var(--text-muted)] sm:text-sm">
+                Project counts by bank will appear when projects have Availing Loan and a bank selected.
+              </p>
             </div>
           </div>
         ) : (
@@ -71,27 +84,30 @@ const AvailingLoanByBankChart = memo(function AvailingLoanByBankChart({
                 margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
                 barCategoryGap="4%"
               >
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke={c.grid} />
                 <XAxis
                   dataKey="bankLabel"
-                  tick={{ fontSize: 11 }}
+                  tick={{ fontSize: 11, fill: c.axisText }}
                   angle={-45}
                   textAnchor="end"
                   height={80}
                   interval={0}
+                  stroke={c.grid}
                 />
-                <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                <YAxis tick={{ fontSize: 12, fill: c.axisText }} stroke={c.grid} allowDecimals={false} />
                 <Tooltip
+                  wrapperStyle={ZENITH_RECHARTS_TOOLTIP_WRAPPER_STYLE}
+                  cursor={ZENITH_RECHARTS_TOOLTIP_CURSOR}
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const d = payload[0].payload as AvailingLoanByBankItem
                       return (
-                        <div className="bg-gradient-to-br from-white to-primary-50 p-4 border-2 border-primary-200 rounded-xl shadow-2xl backdrop-blur-sm">
-                          <p className="font-semibold text-gray-900 mb-2">{d.bankLabel}</p>
-                          <p className="text-sm text-indigo-600">
-                            Projects: <span className="font-medium">{d.count}</span>
+                        <div className={ZENITH_CHART_TOOLTIP_PANEL}>
+                          <p className={ZENITH_CHART_TOOLTIP_TITLE}>{d.bankLabel}</p>
+                          <p className={ZENITH_CHART_TOOLTIP_LINE}>
+                            Projects: <span className="font-extrabold text-[color:var(--accent-gold)]">{d.count}</span>
                           </p>
-                          <p className="text-xs font-medium text-amber-700 mt-1">Click bar to open Projects →</p>
+                          <p className={ZENITH_CHART_TOOLTIP_INSIGHT}>Click bar to open Projects →</p>
                         </div>
                       )
                     }

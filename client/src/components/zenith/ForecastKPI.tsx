@@ -76,24 +76,22 @@ export default function ForecastKPI({
 
   return (
     <div
-      className="w-full box-border rounded-[14px] p-3.5 sm:p-4 flex flex-col shrink-0 h-[300px] sm:h-[306px]"
-      style={{
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(0,212,180,0.25)',
-        fontFamily: 'DM Sans, sans-serif',
-      }}
+      className="w-full box-border rounded-[14px] p-3.5 sm:p-4 flex flex-col shrink-0 h-[300px] sm:h-[306px] border border-[color:var(--accent-teal-border)] bg-[color:var(--bg-card)] shadow-[0_1px_0_color-mix(in_srgb,#ffffff_55%,transparent)]"
+      style={{ fontFamily: 'DM Sans, sans-serif' }}
     >
-      <div className="text-[10px] uppercase tracking-[0.08em] text-white/[0.38] shrink-0">Revenue forecast</div>
+      <div className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)] shrink-0">
+        Revenue forecast
+      </div>
       <div
-        className="mt-1 text-[20px] font-bold leading-tight shrink-0"
-        style={{ fontFamily: "'Syne', sans-serif", color: '#00D4B4' }}
+        className="mt-1 text-[20px] font-bold leading-tight shrink-0 text-[color:var(--accent-teal)]"
+        style={{ fontFamily: "'Syne', sans-serif" }}
       >
         {formatINR(displayTotal)}
       </div>
-      <div className="text-[11px] text-white/30 mt-0.5 shrink-0">
+      <div className="text-[11px] text-[color:var(--text-muted)] mt-0.5 shrink-0">
         Expected from {forecast.dealCount} open deals
       </div>
-      <div className="flex items-center gap-1 mt-1 text-[10px] text-white/20 italic shrink-0">
+      <div className="flex items-center gap-1 mt-1 text-[10px] text-[color:var(--text-muted)] italic shrink-0">
         <span
           className="inline-flex items-center gap-1"
           title="Forecast = deal value × win probability by stage (e.g. Lead 10%, Proposal 45%, Confirmed Order 85%, Under Installation 90%, Submitted for Subsidy 95%). Terminal stages are excluded."
@@ -104,7 +102,7 @@ export default function ForecastKPI({
       </div>
 
       <div
-        className="flex flex-nowrap gap-1 mt-2.5 mb-2 pb-2 border-b border-white/[0.06] shrink-0 overflow-x-auto overflow-y-hidden"
+        className="flex flex-nowrap gap-1 mt-2.5 mb-2 pb-2 border-b border-[color:var(--border-default)] shrink-0 overflow-x-auto overflow-y-hidden"
         style={{ scrollbarWidth: 'thin' }}
         role="tablist"
         aria-label="Forecast breakdown"
@@ -123,18 +121,11 @@ export default function ForecastKPI({
             role="tab"
             aria-selected={activeTab === key}
             onClick={() => setActiveTab(key)}
-            className="text-[10px] px-2 py-1 rounded transition-all cursor-pointer shrink-0"
-            style={
+            className={`text-[10px] px-2 py-1 rounded transition-all cursor-pointer shrink-0 ${
               activeTab === key
-                ? {
-                    color: '#00D4B4',
-                    background: 'rgba(0,212,180,0.1)',
-                    borderBottom: '2px solid #00D4B4',
-                    marginBottom: '-9px',
-                    paddingBottom: '6px',
-                  }
-                : { color: 'rgba(255,255,255,0.3)', background: 'transparent' }
-            }
+                ? 'text-[color:var(--accent-teal)] bg-[color:var(--accent-teal-muted)] border-b-2 border-[color:var(--accent-teal)] -mb-2.5 pb-1.5'
+                : 'text-[color:var(--text-muted)] bg-transparent'
+            }`}
           >
             {label}
           </button>
@@ -145,7 +136,7 @@ export default function ForecastKPI({
         <div className="flex flex-col justify-start shrink-0" style={{ height: BREAKDOWN_H }}>
           {activeDimension.length === 0 ? (
             <div className="h-full flex items-center justify-center px-2">
-              <p className="text-xs text-white/35 text-center">No open pipeline in this period.</p>
+              <p className="text-xs text-[color:var(--text-muted)] text-center">No open pipeline in this period.</p>
             </div>
           ) : (
             [0, 1, 2].map((slot) => {
@@ -165,21 +156,20 @@ export default function ForecastKPI({
                 <div key={item.label} className="shrink-0 flex flex-col justify-center" style={{ height: ROW_SLOT_PX }}>
                   <div className="flex justify-between gap-2 mb-0.5">
                     <span
-                      className="text-[11px] text-white/60 truncate max-w-[60%]"
+                      className="text-[11px] text-[color:var(--text-secondary)] truncate max-w-[60%]"
                       title={item.label}
                     >
                       {item.label}
                     </span>
-                    <span className="text-[11px] font-medium shrink-0" style={{ color: '#00D4B4' }}>
+                    <span className="text-[11px] font-medium shrink-0 text-[color:var(--accent-teal)]">
                       {formatINR(item.weighted)}
                     </span>
                   </div>
-                  <div className="h-[3px] rounded-sm bg-white/[0.06] overflow-hidden">
+                  <div className="h-[3px] rounded-sm bg-[color:var(--bg-ticker)] overflow-hidden">
                     <div
-                      className="h-full rounded-sm transition-[width] duration-[600ms] ease-out"
+                      className="h-full rounded-sm transition-[width] duration-[600ms] ease-out bg-[color:var(--accent-teal)]"
                       style={{
                         width: `${top > 0 ? (item.weighted / top) * 100 : 0}%`,
-                        background: '#00D4B4',
                         opacity: 1 - i * 0.25,
                       }}
                     />
@@ -195,13 +185,13 @@ export default function ForecastKPI({
             <button
               type="button"
               onClick={openAllOpenDeals}
-              className="text-[11px] leading-snug text-left w-full cursor-pointer hover:text-white/40 text-white/25 transition-colors"
+              className="text-[11px] leading-snug text-left w-full cursor-pointer hover:text-[color:var(--text-secondary)] text-[color:var(--text-muted)] transition-colors"
             >
               +{remaining} more
             </button>
           ) : (
             <span
-              className="text-[11px] leading-snug text-left w-full text-white/25 opacity-0 pointer-events-none select-none"
+              className="text-[11px] leading-snug text-left w-full text-[color:var(--text-muted)] opacity-0 pointer-events-none select-none"
               aria-hidden
             >
               +

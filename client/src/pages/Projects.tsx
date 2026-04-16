@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
@@ -21,6 +21,7 @@ import { FiPaperclip } from 'react-icons/fi'
 import { FaUniversity, FaTicketAlt, FaBriefcase } from 'react-icons/fa'
 import PageCard from '../components/PageCard'
 import { ErrorModal } from '@/components/common/ErrorModal'
+import { projectStatusStagePillClass } from '../components/zenith/zenithDealCardUi'
 
 const PROJECTS_FILTERS_STORAGE_KEY = 'rayenna_projects_filters'
 
@@ -210,10 +211,10 @@ const PaymentStatusBadge = ({ project, compact = false }: { project: Project; co
     : 'px-2 py-0.5 text-xs'
   const pillClassName = `inline-flex items-center rounded-md font-medium ${pillSize} ${
     paymentStatus === 'FULLY_PAID'
-      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+      ? 'border border-emerald-400/35 bg-[color:color-mix(in srgb,var(--accent-teal) 12%, var(--bg-card))] text-[color:var(--text-primary)]'
       : paymentStatus === 'PARTIAL'
-        ? 'bg-amber-50 text-amber-800 border border-amber-200'
-        : 'bg-red-50 text-red-700 border border-red-200'
+        ? 'border border-[color:var(--accent-gold-border)] bg-[color:color-mix(in srgb,var(--accent-gold) 14%, var(--bg-card))] text-[color:var(--text-primary)]'
+        : 'border border-[color:var(--accent-red-border)] bg-[color:color-mix(in srgb,var(--accent-red) 12%, var(--bg-card))] text-[color:var(--text-primary)]'
   }`
 
   const tooltipNode = useMemo(() => {
@@ -226,15 +227,15 @@ const PaymentStatusBadge = ({ project, compact = false }: { project: Project; co
           left: `${pos.left}px`,
           top: `${pos.top}px`,
           transform: 'translateX(-50%)',
-          background: '#1A1A2E',
-          border: '1px solid rgba(255,255,255,0.12)',
+          background: 'var(--bg-tooltip)',
+          border: '1px solid var(--border-card)',
           borderRadius: '10px',
           padding: '12px 14px',
           width: `${tooltipW}px`,
           zIndex: 3000,
           pointerEvents: 'none',
           fontFamily: 'DM Sans, sans-serif',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          boxShadow: 'var(--shadow-card)',
         }}
       >
         <div
@@ -244,16 +245,16 @@ const PaymentStatusBadge = ({ project, compact = false }: { project: Project; co
             alignItems: 'center',
             marginBottom: '10px',
             paddingBottom: '8px',
-            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            borderBottom: '1px solid var(--border-default)',
           }}
         >
-          <span style={{ fontSize: '13px', fontWeight: 500, color: '#fff' }}>Balance</span>
-          <span style={{ fontSize: '13px', fontWeight: 700, color: '#00D4B4' }}>₹{balanceFormatted}</span>
+          <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>Balance</span>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-teal)' }}>₹{balanceFormatted}</span>
         </div>
         <div
           style={{
             fontSize: '11px',
-            color: 'rgba(255,255,255,0.45)',
+            color: 'var(--text-muted)',
             fontStyle: 'italic',
             lineHeight: 1.5,
           }}
@@ -266,8 +267,8 @@ const PaymentStatusBadge = ({ project, compact = false }: { project: Project; co
             left: '50%',
             width: '8px',
             height: '8px',
-            background: '#1A1A2E',
-            border: '1px solid rgba(255,255,255,0.12)',
+            background: 'var(--bg-tooltip)',
+            border: '1px solid var(--border-card)',
             transform: 'translateX(-50%) rotate(45deg)',
             ...(pos.place === 'above'
               ? { bottom: '-5px', borderTop: 'none', borderLeft: 'none' }
@@ -321,7 +322,7 @@ const PaymentStatusBadge = ({ project, compact = false }: { project: Project; co
   if (hasNoOrderValue || isEarlyOrLostStage) {
     return (
       <span
-        className={`inline-flex items-center rounded-md font-medium bg-gray-100 text-gray-600 border border-gray-200 ${
+        className={`inline-flex items-center rounded-md font-medium border border-[color:var(--border-default)] bg-[color:var(--bg-input)] text-[color:var(--text-muted)] ${
           compact ? 'px-1.5 py-0.5 text-[10px] lg:text-[11px]' : 'px-2 py-0.5 text-xs'
         }`}
       >
@@ -376,39 +377,17 @@ const PaymentStatusBadge = ({ project, compact = false }: { project: Project; co
   )
 }
 
-// Stage pill: clear color coding for quick scanning
-const getStagePillClasses = (status: ProjectStatus): string => {
-  switch (status) {
-    case ProjectStatus.LEAD:
-    case ProjectStatus.SITE_SURVEY:
-    case ProjectStatus.PROPOSAL:
-      return 'bg-amber-100 text-amber-800 border border-amber-300'
-    case ProjectStatus.CONFIRMED:
-    case ProjectStatus.UNDER_INSTALLATION:
-      return 'bg-primary-100 text-primary-800 border border-primary-300'
-    case ProjectStatus.SUBMITTED_FOR_SUBSIDY:
-      return 'bg-violet-100 text-violet-800 border border-violet-300'
-    case ProjectStatus.COMPLETED:
-    case ProjectStatus.COMPLETED_SUBSIDY_CREDITED:
-      return 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-    case ProjectStatus.LOST:
-      return 'bg-red-100 text-red-800 border border-red-300'
-    default:
-      return 'bg-gray-100 text-gray-800 border border-gray-300'
-  }
-}
-
 // Segment pill: distinct color per segment for quick recognition
 const getSegmentPillClasses = (type: string): string => {
   switch (type) {
     case 'RESIDENTIAL_SUBSIDY':
-      return 'bg-red-100 text-red-800 border border-red-300'
+      return 'border border-red-400/35 bg-[color:color-mix(in srgb,var(--accent-red) 12%, var(--bg-card))] text-[color:var(--text-primary)]'
     case 'RESIDENTIAL_NON_SUBSIDY':
-      return 'bg-sky-100 text-sky-800 border border-sky-300'
+      return 'border border-sky-400/35 bg-[color:color-mix(in srgb,var(--accent-blue) 12%, var(--bg-card))] text-[color:var(--text-primary)]'
     case 'COMMERCIAL_INDUSTRIAL':
-      return 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+      return 'border border-emerald-400/35 bg-[color:color-mix(in srgb,var(--accent-green) 12%, var(--bg-card))] text-[color:var(--text-primary)]'
     default:
-      return 'bg-gray-100 text-gray-800 border border-gray-300'
+      return 'border border-[color:var(--border-default)] bg-[color:var(--bg-input)] text-[color:var(--text-secondary)]'
   }
 }
 
@@ -448,6 +427,12 @@ function getProjectsTableVisibleColumnCount(viewportWidth: number): number {
 }
 
 const Projects = () => {
+  const shell = (children: ReactNode) => (
+    <div className="zenith-root zenith-animated-bg w-full max-w-full min-w-0 min-h-[calc(100dvh-5rem)] min-h-[calc(100vh-5rem)] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-[max(0.35rem,env(safe-area-inset-top,0px))] [-webkit-tap-highlight-color:transparent]">
+      <div className="zenith-exec-main mx-auto w-full max-w-full min-w-0 px-3 sm:px-5 pb-10">{children}</div>
+    </div>
+  )
+
   const { user, hasRole } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -1152,8 +1137,8 @@ const Projects = () => {
   function ProjectsSortGlyph({ sortKey }: { sortKey: string }) {
     const active = filters.sortBy === sortKey
     const box = active
-      ? 'border-amber-400/90 bg-amber-400/15 text-amber-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
-      : 'border-white/20 bg-black/15 text-slate-300/90 group-hover:border-amber-300/45 group-hover:bg-white/10 group-hover:text-amber-100'
+      ? 'border-[color:var(--accent-gold-border)] bg-[color:color-mix(in srgb,var(--accent-gold) 18%, transparent)] text-[color:var(--accent-gold)] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
+      : 'border-[color:var(--border-default)] bg-[color:var(--bg-surface)] text-[color:var(--text-muted)] group-hover:border-[color:var(--accent-gold-border)] group-hover:bg-[color:var(--bg-card-hover)] group-hover:text-[color:var(--accent-gold)]'
     return (
       <span
         className={`projects-sort-glyph-box inline-flex size-6 shrink-0 select-none items-center justify-center rounded border transition-colors ${box}`}
@@ -1180,43 +1165,44 @@ const Projects = () => {
 
   /** No truncation on labels — wrap to extra lines if needed; glyph stays fixed at end of row. */
   const sortBtnHeader =
-    'group flex min-h-[2rem] w-full min-w-0 flex-nowrap items-center gap-2 overflow-visible rounded-md px-1.5 py-1 text-left transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/65 focus-visible:ring-offset-1 focus-visible:ring-offset-primary-800 sm:min-h-[2.5rem] sm:gap-2 sm:px-2 sm:py-1.5'
+    'group flex min-h-[2rem] w-full min-w-0 flex-nowrap items-center gap-2 overflow-visible rounded-md px-1.5 py-1 text-left transition-colors hover:bg-[color:var(--bg-table-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] focus-visible:ring-offset-1 focus-visible:ring-offset-[color:var(--bg-page)] sm:min-h-[2.5rem] sm:gap-2 sm:px-2 sm:py-1.5'
   const sortLabelLeft =
-    'min-w-0 flex-1 basis-0 whitespace-normal break-words text-left text-[11px] font-bold uppercase leading-snug tracking-wide text-slate-100 sm:text-xs sm:leading-tight sm:tracking-wider'
+    'min-w-0 flex-1 basis-0 whitespace-normal break-words text-left text-[11px] font-bold uppercase leading-snug tracking-wide text-[color:var(--text-secondary)] sm:text-xs sm:leading-tight sm:tracking-wider'
   if (!filtersReady || isLoading) {
-    return (
-      <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden bg-gradient-to-b from-slate-50/80 via-white to-amber-50/20">
-        <div className="h-8 w-48 bg-gradient-to-r from-amber-200 to-gray-200 rounded animate-pulse mb-4" />
-        <div className="h-64 bg-gradient-to-r from-amber-100/50 to-gray-100 rounded-xl animate-pulse" />
+    return shell(
+      <div className="max-w-full min-w-0 overflow-x-hidden px-0 py-4 sm:py-6">
+        <div className="mb-4 h-8 w-48 animate-pulse rounded-lg bg-[color:var(--bg-ticker)]" />
+        <div className="h-64 animate-pulse rounded-2xl bg-[color:var(--bg-card)] ring-1 ring-[color:var(--border-default)]" />
       </div>
     )
   }
 
-  return (
-    <div className="px-0 py-6 sm:px-0 max-w-full min-w-0 overflow-x-hidden mobile-paint-fix bg-gradient-to-b from-slate-50/90 via-white to-primary-50/15">
+  return shell(
+    <div className="mobile-paint-fix max-w-full min-w-0 overflow-x-hidden px-0 py-4 sm:py-6">
       <PageCard
         dense
+        variant="zenith"
         className="max-w-full min-w-0 !overflow-x-visible"
         title="Projects"
         subtitle="Manage and track all your solar projects"
-        icon={<FaBriefcase className="w-5 h-5 text-white" />}
+        icon={<FaBriefcase className="w-5 h-5" style={{ color: 'var(--banner-text)' }} />}
         headerAction={(user?.role === 'ADMIN' || user?.role === 'SALES') ? (
           <Link
             to="/projects/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/20 border border-white/40 text-white rounded-xl hover:bg-white/30 font-medium text-sm shadow-md transition-all"
+            className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold)] px-4 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] shadow-md transition-all hover:brightness-105"
           >
             + New Project
           </Link>
         ) : undefined}
       >
-      <div className="mb-3 rounded-2xl border border-primary-200/50 bg-gradient-to-br from-white via-amber-50/20 to-primary-50/25 p-3 sm:p-4 shadow-md shadow-primary-900/[0.06] ring-1 ring-white/80">
+      <div className="mb-3 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-4">
         <div className="space-y-2 sm:space-y-3">
           {/* Row 1: Search Bar + Show/Hide Filters toggle (and Clear All on larger screens) */}
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
             <input
               type="text"
               placeholder="Search across all projects..."
-              className="w-full sm:flex-1 min-h-[40px] rounded-xl border border-gray-200/90 bg-white/90 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-gray-100/80 placeholder:text-gray-400 transition-all focus:border-primary-400 focus:ring-2 focus:ring-primary-500/25"
+              className="zenith-native-filter-input min-h-[40px] w-full rounded-xl px-3 py-2 text-sm placeholder:text-[color:var(--text-placeholder)] transition-all focus:border-[color:var(--accent-gold-border)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-muted)] sm:flex-1"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
@@ -1225,7 +1211,7 @@ const Projects = () => {
               <button
                 type="button"
                 onClick={() => setShowMoreFilters((v) => !v)}
-                className="flex min-h-[40px] flex-1 items-center justify-center gap-2 rounded-xl border border-primary-200/80 bg-white/90 px-3 py-2 font-medium text-gray-700 shadow-sm transition-all hover:border-primary-300 hover:bg-primary-50/90 hover:shadow"
+                className="flex min-h-[40px] flex-1 items-center justify-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 text-sm font-semibold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)]"
                 aria-expanded={showMoreFilters}
                 aria-controls="projects-more-filters"
                 title="Show or hide additional filters"
@@ -1235,7 +1221,7 @@ const Projects = () => {
                   {!showMoreFilters && moreFiltersActiveCount > 0 ? ` (${moreFiltersActiveCount})` : ''}
                 </span>
                 <svg
-                  className={`h-4 w-4 text-gray-500 transition-transform ${showMoreFilters ? 'rotate-180' : ''}`}
+                  className={`h-4 w-4 text-[color:var(--text-muted)] transition-transform ${showMoreFilters ? 'rotate-180' : ''}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1248,7 +1234,7 @@ const Projects = () => {
               <button
                 type="button"
                 onClick={clearAllFilters}
-                className="inline-flex min-h-[40px] flex-1 items-center justify-center rounded-xl border border-primary-200/80 bg-white/90 px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all hover:border-primary-300 hover:bg-primary-50/90 hover:shadow sm:flex-none"
+                className="inline-flex min-h-[40px] flex-1 items-center justify-center rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)] sm:flex-none"
                 title="Clear search and all filters"
               >
                 Clear All
@@ -1264,7 +1250,7 @@ const Projects = () => {
             }`}
           >
             <div className={`${showMoreFilters ? 'pointer-events-auto' : 'pointer-events-none'} pt-2 space-y-2 sm:space-y-3`}>
-              <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1.5">Filter By</label>
+              <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Filter By</label>
               {/* Row 1: FY, Quarter, Month (2/3 width), Sales User (1/3 width = same as Project Types) */}
               <div className="pt-1 flex flex-col lg:flex-row lg:items-start gap-2 sm:gap-3">
                 <div className="w-full lg:w-2/3">
@@ -1277,6 +1263,7 @@ const Projects = () => {
                     onQuarterChange={setSelectedQuarters}
                     onMonthChange={setSelectedMonths}
                     compact
+                    variant="zenith"
                   />
                 </div>
                 {user?.role !== UserRole.SALES && (
@@ -1287,6 +1274,7 @@ const Projects = () => {
                       onChange={(values) => setFilters({ ...filters, salespersonId: values })}
                       placeholder="Sales Users"
                       compact
+                      variant="zenith"
                     />
                   </div>
                 )}
@@ -1301,6 +1289,7 @@ const Projects = () => {
                   placeholder="Pipeline"
                   multiSelectedLabel={user?.role === UserRole.OPERATIONS ? 'Confirmed Pipeline' : 'Active Pipeline'}
                   compact
+                  variant="zenith"
                 />
                 <MultiSelect
                   options={typeOptions}
@@ -1308,6 +1297,7 @@ const Projects = () => {
                   onChange={(values) => setFilters({ ...filters, type: values })}
                   placeholder="Segments"
                   compact
+                  variant="zenith"
                 />
                 <MultiSelect
                   options={projectServiceTypeOptions}
@@ -1315,6 +1305,7 @@ const Projects = () => {
                   onChange={(values) => setFilters({ ...filters, projectServiceType: values })}
                   placeholder="Project Types"
                   compact
+                  variant="zenith"
                 />
                 <MultiSelect
                   options={supportTicketStatusOptions}
@@ -1322,6 +1313,7 @@ const Projects = () => {
                   onChange={(values) => setFilters({ ...filters, supportTicketStatus: values })}
                   placeholder="Ticket Statuses"
                   compact
+                  variant="zenith"
                 />
                 {paymentStatusOptions.length > 0 && (
                   <MultiSelect
@@ -1330,6 +1322,7 @@ const Projects = () => {
                     onChange={(values) => setFilters({ ...filters, paymentStatus: values })}
                     placeholder="Payment Statuses"
                     compact
+                    variant="zenith"
                   />
                 )}
                 <MultiSelect
@@ -1338,6 +1331,7 @@ const Projects = () => {
                   onChange={(values) => setFilters({ ...filters, leadSource: values })}
                   placeholder="Lead Sources"
                   compact
+                  variant="zenith"
                 />
               </div>
 
@@ -1348,11 +1342,11 @@ const Projects = () => {
                     type="checkbox"
                     checked={filters.hasDocuments}
                     onChange={(e) => setFilters(prev => ({ ...prev, hasDocuments: e.target.checked }))}
-                    className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/20"
+                    className="h-4 w-4 rounded border-[color:var(--border-input)] bg-[color:var(--bg-input)] accent-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
                   />
-                  <span className="text-sm text-gray-600">Has Artifacts</span>
+                  <span className="text-sm text-[color:var(--text-primary)]">Has Artifacts</span>
                 </label>
-                <span className="text-xs text-gray-500">(only projects with at least one attachment)</span>
+                <span className="text-xs text-[color:var(--text-secondary)]">(only projects with at least one attachment)</span>
               </div>
 
               {/* Availing Loan checkbox */}
@@ -1362,18 +1356,18 @@ const Projects = () => {
                     type="checkbox"
                     checked={filters.availingLoan}
                     onChange={(e) => setFilters(prev => ({ ...prev, availingLoan: e.target.checked }))}
-                    className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500/20"
+                    className="h-4 w-4 rounded border-[color:var(--border-input)] bg-[color:var(--bg-input)] accent-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
                   />
-                  <span className="text-sm text-gray-600">Availing Loan</span>
+                  <span className="text-sm text-[color:var(--text-primary)]">Availing Loan</span>
                 </label>
-                <span className="text-xs text-gray-500">(only projects where Availing Loan/Financing is Yes)</span>
+                <span className="text-xs text-[color:var(--text-secondary)]">(only projects where Availing Loan/Financing is Yes)</span>
               </div>
 
-              <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1.5">Sort By</label>
+              <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Sort By</label>
               <div className="max-w-2xl">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
                   <select
-                    className="h-[40px] min-h-[40px] w-full min-w-0 flex-1 rounded-xl border border-gray-200/90 bg-white/90 px-3 py-2 text-sm text-gray-900 shadow-sm ring-1 ring-gray-100/60 transition-all focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20 sm:max-w-md"
+                    className="zenith-native-select h-[40px] min-h-[40px] w-full min-w-0 flex-1 rounded-xl px-3 py-2 text-sm transition-all focus:border-[color:var(--accent-gold-border)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-muted)] sm:max-w-md"
                     aria-label="Sort projects by"
                     value={extraSortSelectValue}
                     onChange={(e) => {
@@ -1409,7 +1403,7 @@ const Projects = () => {
                     </optgroup>
                   </select>
                   <div
-                    className="flex shrink-0 gap-1 rounded-xl border border-gray-200/90 bg-gray-50/80 p-0.5 shadow-sm ring-1 ring-gray-100/60"
+                    className="flex shrink-0 gap-1 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] p-0.5 shadow-inner ring-1 ring-[color:var(--border-default)]"
                     role="group"
                     aria-label="Sort direction"
                   >
@@ -1425,8 +1419,8 @@ const Projects = () => {
                       }}
                       className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${
                         filters.sortBy && filters.sortOrder === 'asc'
-                          ? 'bg-white text-primary-800 shadow-sm ring-1 ring-primary-200/80'
-                          : 'text-gray-600 hover:bg-white/80 hover:text-gray-900'
+                          ? 'bg-[color:var(--bg-card-hover)] text-[color:var(--text-primary)] shadow-sm ring-1 ring-[color:var(--accent-gold-border)]'
+                          : 'text-[color:var(--text-muted)] hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)]'
                       }`}
                     >
                       Ascending
@@ -1443,8 +1437,8 @@ const Projects = () => {
                       }}
                       className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${
                         filters.sortBy && filters.sortOrder === 'desc'
-                          ? 'bg-white text-primary-800 shadow-sm ring-1 ring-primary-200/80'
-                          : 'text-gray-600 hover:bg-white/80 hover:text-gray-900'
+                          ? 'bg-[color:var(--bg-card-hover)] text-[color:var(--text-primary)] shadow-sm ring-1 ring-[color:var(--accent-gold-border)]'
+                          : 'text-[color:var(--text-muted)] hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)]'
                       }`}
                     >
                       Descending
@@ -1458,7 +1452,7 @@ const Projects = () => {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleExportClick('excel')}
-                    className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-amber-900/15 transition-all hover:from-amber-600 hover:to-yellow-600 hover:shadow-lg"
+                    className="flex items-center gap-2 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2 text-sm font-extrabold text-[color:var(--text-inverse)] shadow-[var(--shadow-card)] transition-all hover:opacity-95 active:scale-[0.99]"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -1467,7 +1461,7 @@ const Projects = () => {
                   </button>
                   <button
                     onClick={() => handleExportClick('csv')}
-                    className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-900/20 transition-all hover:from-indigo-700 hover:to-violet-700 hover:shadow-lg"
+                    className="flex items-center gap-2 rounded-xl border border-[color:var(--border-strong)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-extrabold text-[color:var(--text-primary)] shadow-md transition-all hover:bg-[color:var(--bg-card-hover)] hover:border-[color:var(--accent-gold-border)] active:scale-[0.99]"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -1482,7 +1476,7 @@ const Projects = () => {
                 <button
                   type="button"
                   onClick={clearAllFilters}
-                  className="min-h-[40px] px-4 py-2 rounded-lg border border-primary-200 bg-white hover:bg-primary-50/80 text-gray-700 font-medium text-sm transition-colors w-full"
+                  className="min-h-[40px] w-full rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] transition-colors hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)]"
                   title="Clear search and all filters"
                 >
                   Clear All
@@ -1511,7 +1505,7 @@ Do you want to continue?`}
       />
 
       {/* Projects table — DH = deal health badge column; uniform sort controls; fixed col widths (rem) + horizontal scroll when viewport is narrow. */}
-      <div className="mobile-paint-anchor w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-gray-200/90 bg-white shadow-lg shadow-gray-900/5 ring-1 ring-gray-100 [-webkit-overflow-scrolling:touch]">
+      <div className="mobile-paint-anchor w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] [-webkit-overflow-scrolling:touch]">
         <style>
           {`
             /*
@@ -1587,27 +1581,27 @@ Do you want to continue?`}
             </colgroup>
             <thead>
               {/* Subtotals row - aligned above Capacity and Order Value columns */}
-              <tr className="border-b border-slate-300/90 bg-gradient-to-r from-slate-200/95 via-slate-100 to-slate-200/95">
+              <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)]">
                 <th className="px-2 py-1.5 sm:px-2.5" scope="col" />
                 <th className="px-2 py-1.5 sm:px-2.5" scope="col" />
                 <th className="px-2 py-1.5 sm:px-2.5 hidden lg:table-cell" scope="col" />
                 <th className="px-2 py-1.5 sm:px-2.5" scope="col" />
                 <th className="px-2 py-1.5 text-right align-bottom min-w-0 sm:px-2.5" scope="col">
-                  <div className="inline-block rounded-md border border-orange-400 bg-gradient-to-br from-orange-100 to-amber-200 px-1.5 py-0.5 text-[10px] font-bold text-orange-900 tabular-nums shadow-sm shadow-orange-300/30 ring-1 ring-orange-200/80 sm:px-2 sm:text-xs">
+                  <div className="inline-block rounded-md border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-1.5 py-0.5 text-[10px] font-bold text-[color:var(--text-primary)] tabular-nums shadow-sm sm:px-2 sm:text-xs">
                     {(data?.totals?.capacitySum ?? 0) / 1000 > 0
                       ? `${((data?.totals?.capacitySum ?? 0) / 1000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} MW`
                       : '—'}
                   </div>
                 </th>
                 <th className="px-2 py-1.5 text-right align-bottom min-w-0 sm:px-2.5" scope="col">
-                  <div className="inline-block rounded-md border border-emerald-500 bg-gradient-to-br from-emerald-100 to-green-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-900 tabular-nums shadow-sm shadow-emerald-400/30 ring-1 ring-emerald-300/80 sm:px-2 sm:text-xs">
+                  <div className="inline-block rounded-md border border-emerald-400/40 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-[color:var(--text-primary)] tabular-nums shadow-sm sm:px-2 sm:text-xs">
                     {(data?.totals?.costSum ?? 0) > 0
                       ? `₹${((data?.totals?.costSum ?? 0) / 1_000_000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} M`
                       : '—'}
                   </div>
                 </th>
                 <th className="px-2 py-1.5 text-center align-bottom min-w-0 sm:px-2.5" scope="col">
-                  <div className="inline-block rounded-md border border-blue-500 bg-gradient-to-br from-blue-100 to-sky-200 px-1.5 py-0.5 text-[10px] font-bold text-blue-900 tabular-nums shadow-sm shadow-blue-400/30 ring-1 ring-blue-300/80 sm:px-2 sm:text-xs">
+                  <div className="inline-block rounded-md border border-sky-400/40 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-bold text-[color:var(--text-primary)] tabular-nums shadow-sm sm:px-2 sm:text-xs">
                     {(data?.totals?.balanceSum ?? 0) > 0
                       ? `₹${((data?.totals?.balanceSum ?? 0) / 1_000_000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} M`
                       : '—'}
@@ -1616,7 +1610,7 @@ Do you want to continue?`}
                 <th className="px-2 py-1.5 hidden md:table-cell sm:px-2.5" scope="col" />
                 <th className="px-2 py-1.5 hidden sm:table-cell sm:px-2.5" scope="col" />
               </tr>
-              <tr className="border-b border-primary-900/25 bg-gradient-to-r from-primary-800 via-slate-700 to-primary-900 shadow-sm shadow-black/10">
+              <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] shadow-sm">
                 <th
                   scope="col"
                   className="px-2.5 py-2 align-middle sm:px-3 sm:py-2"
@@ -1822,7 +1816,7 @@ Do you want to continue?`}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100/90">
+            <tbody className="divide-y divide-[color:var(--border-default)]">
               {displayProjects.map((project: Project) => {
                 const financingBankLabel = getFinancingBankDisplayName(
                   project.financingBank,
@@ -1832,13 +1826,13 @@ Do you want to continue?`}
                 <tr
                   key={project.id}
                   onClick={() => navigate(`/projects/${project.id}`)}
-                  className="group cursor-pointer bg-white transition-colors duration-150 ease-out odd:bg-white even:bg-slate-50/45 hover:bg-primary-50/70"
+                  className="group cursor-pointer transition-colors duration-150 ease-out odd:bg-[color:var(--bg-table-alt)] even:bg-[color:var(--bg-card)] hover:bg-[color:var(--bg-table-hover)]"
                 >
                   <td className="min-w-0 px-2 py-2 sm:px-2.5 lg:py-1.5 lg:pl-2 lg:pr-2">
-                    <p className="min-w-0 truncate text-sm font-semibold text-gray-900 transition-colors group-hover:text-primary-900 lg:truncate-none lg:line-clamp-2 lg:leading-snug lg:break-words">
+                    <p className="min-w-0 truncate text-sm font-semibold text-[color:var(--text-primary)] transition-colors group-hover:text-[color:var(--accent-gold)] lg:truncate-none lg:line-clamp-2 lg:leading-snug lg:break-words">
                       #{project.slNo} · {project.customer?.customerName || 'Unknown Customer'}
                     </p>
-                    <p className="mt-0.5 max-w-full truncate text-[11px] text-gray-500 lg:text-xs">
+                    <p className="mt-0.5 max-w-full truncate text-[11px] text-[color:var(--text-muted)] lg:text-xs">
                       {project.salesperson && (
                         <span style={{ color: getSalesTeamColor(project.salesperson.name, 0) }}>
                           {project.salesperson.name}
@@ -1846,7 +1840,7 @@ Do you want to continue?`}
                       )}
                       <span className="inline-flex items-center gap-1.5 ml-1.5">
                         {project._count && project._count.documents > 0 && (
-                          <span className="text-primary-600" title={`${project._count.documents} document(s)`}>
+                          <span className="text-[color:var(--accent-teal)]" title={`${project._count.documents} document(s)`}>
                             <FiPaperclip className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
                           </span>
                         )}
@@ -1854,7 +1848,7 @@ Do you want to continue?`}
                           <FinancingBankPopoverIcon bankDisplayName={financingBankLabel} />
                         )}
                         {project.supportTickets && project.supportTickets.length > 0 && (
-                          <span className="text-amber-600" title="Open or In Progress ticket(s)">
+                          <span className="text-[color:var(--accent-gold)]" title="Open or In Progress ticket(s)">
                             <FaTicketAlt className="w-3.5 h-3.5 shrink-0" />
                           </span>
                         )}
@@ -1888,35 +1882,35 @@ Do you want to continue?`}
                     <div className="flex flex-wrap items-center gap-1">
                       <span
                         title={project.projectStatus.replace(/_/g, ' ')}
-                        className={`inline-flex max-w-[10rem] items-center truncate rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight lg:max-w-[11rem] lg:text-[11px] ${getStagePillClasses(project.projectStatus)}`}
+                        className={`inline-flex max-w-[10rem] items-center truncate rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight lg:max-w-[11rem] lg:text-[11px] ${projectStatusStagePillClass(project.projectStatus)}`}
                       >
                         {project.projectStatus.replace(/_/g, ' ')}
                       </span>
                       {peStatusByProjectId.get(project.id) === 'not-started' && (
-                        <span className="inline-flex items-center rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[9px] font-semibold text-gray-700 lg:text-[10px]">
+                        <span className="inline-flex items-center rounded border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-1.5 py-0.5 text-[9px] font-semibold text-[color:var(--text-secondary)] lg:text-[10px]">
                           <span className="lg:hidden">Not Yet Created</span>
                           <span className="hidden lg:inline">Not created</span>
                         </span>
                       )}
                       {peStatusByProjectId.get(project.id) === 'draft' && (
-                        <span className="inline-flex items-center rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-800 lg:text-[10px]">
+                        <span className="inline-flex items-center rounded border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-1.5 py-0.5 text-[9px] font-semibold text-[color:var(--accent-gold)] lg:text-[10px]">
                           PE Draft
                         </span>
                       )}
                       {peStatusByProjectId.get(project.id) === 'proposal-ready' && (
-                        <span className="inline-flex items-center rounded border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-800 lg:text-[10px]">
+                        <span className="inline-flex items-center rounded border border-emerald-400/35 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-[color:var(--accent-teal)] lg:text-[10px]">
                           PE Ready
                         </span>
                       )}
                     </div>
                   </td>
                   <td className="min-w-0 py-2 pl-1.5 pr-2 text-right tabular-nums sm:px-2 lg:py-1.5">
-                    <span className="text-xs font-bold text-orange-800 transition-colors group-hover:text-orange-900 lg:text-[13px]">
+                    <span className="text-xs font-bold text-[color:var(--accent-gold)] transition-colors group-hover:opacity-90 lg:text-[13px]">
                       {project.systemCapacity ? `${project.systemCapacity} kW` : '—'}
                     </span>
                   </td>
                   <td className="min-w-0 px-2 py-2 text-right tabular-nums sm:px-2.5 lg:py-1.5 lg:pl-2 lg:pr-2">
-                    <span className="text-xs font-bold text-emerald-800 transition-colors group-hover:text-emerald-900 lg:text-[13px]">
+                    <span className="text-xs font-bold text-[color:var(--accent-teal)] transition-colors group-hover:opacity-90 lg:text-[13px]">
                       {project.projectCost ? `₹${project.projectCost.toLocaleString('en-IN')}` : '—'}
                     </span>
                   </td>
@@ -1925,53 +1919,53 @@ Do you want to continue?`}
                   </td>
                   <td className="hidden min-w-0 px-2 py-2 pl-2 pr-2 text-center md:table-cell lg:py-1.5 lg:pl-2 lg:pr-2">
                     {project.leadSource === 'WEBSITE' && (
-                      <span className="inline-flex max-w-full items-center truncate rounded border border-blue-300 bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-800 lg:text-[11px]">
+                      <span className="inline-flex max-w-full items-center truncate rounded border border-blue-400/35 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--accent-blue)] lg:text-[11px]">
                         Website
                       </span>
                     )}
                     {project.leadSource === 'REFERRAL' && (
-                      <span className="inline-flex max-w-full items-center truncate rounded border border-emerald-300 bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800 lg:text-[11px]">
+                      <span className="inline-flex max-w-full items-center truncate rounded border border-emerald-400/35 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--accent-teal)] lg:text-[11px]">
                         Referral
                       </span>
                     )}
                     {project.leadSource === 'GOOGLE' && (
-                      <span className="inline-flex max-w-full items-center truncate rounded border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 lg:text-[11px]">
+                      <span className="inline-flex max-w-full items-center truncate rounded border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--accent-gold)] lg:text-[11px]">
                         Google
                       </span>
                     )}
                     {project.leadSource === 'CHANNEL_PARTNER' && (
-                      <span className="inline-flex max-w-full items-center truncate rounded border border-red-300 bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-800 lg:text-[11px]">
+                      <span className="inline-flex max-w-full items-center truncate rounded border border-red-400/35 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--accent-red)] lg:text-[11px]">
                         <span className="lg:hidden">Channel Partner</span>
                         <span className="hidden lg:inline">Channel</span>
                       </span>
                     )}
                     {project.leadSource === 'DIGITAL_MARKETING' && (
-                      <span className="inline-flex max-w-full items-center truncate rounded border border-violet-300 bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-800 lg:text-[11px]">
+                      <span className="inline-flex max-w-full items-center truncate rounded border border-violet-400/35 bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--accent-purple)] lg:text-[11px]">
                         Digital Mktg
                       </span>
                     )}
                     {project.leadSource === 'SALES' && (
-                      <span className="inline-flex max-w-full items-center truncate rounded border border-pink-300 bg-pink-100 px-1.5 py-0.5 text-[10px] font-medium text-pink-800 lg:text-[11px]">
+                      <span className="inline-flex max-w-full items-center truncate rounded border border-pink-400/35 bg-pink-500/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--text-primary)] lg:text-[11px]">
                         Sales
                       </span>
                     )}
                     {project.leadSource === 'MANAGEMENT_CONNECT' && (
-                      <span className="inline-flex max-w-full items-center truncate rounded border border-cyan-300 bg-cyan-100 px-1.5 py-0.5 text-[10px] font-medium text-cyan-800 lg:text-[11px]">
+                      <span className="inline-flex max-w-full items-center truncate rounded border border-cyan-400/35 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--accent-teal)] lg:text-[11px]">
                         <span className="lg:hidden">Mgmt Connect</span>
                         <span className="hidden lg:inline">Mgmt</span>
                       </span>
                     )}
                     {project.leadSource === 'OTHER' && (
-                      <span className="inline-flex max-w-full items-center truncate rounded border border-lime-300 bg-lime-100 px-1.5 py-0.5 text-[10px] font-medium text-lime-800 lg:text-[11px]">
+                      <span className="inline-flex max-w-full items-center truncate rounded border border-lime-400/35 bg-lime-500/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--text-primary)] lg:text-[11px]">
                         Other
                       </span>
                     )}
                     {!project.leadSource && (
-                      <span className="inline-block text-[11px] text-gray-400">—</span>
+                      <span className="inline-block text-[11px] text-[color:var(--text-muted)]">—</span>
                     )}
                   </td>
                   <td className="hidden min-w-0 whitespace-nowrap px-1 py-2 text-center tabular-nums sm:table-cell sm:px-1.5 lg:py-1.5 lg:pl-1 lg:pr-1.5">
-                    <span className="inline-block text-[11px] font-medium text-gray-600 lg:text-xs">
+                    <span className="inline-block text-[11px] font-medium text-[color:var(--text-secondary)] lg:text-xs">
                       {project.confirmationDate ? format(new Date(project.confirmationDate), 'dd MMM yy') : '—'}
                     </span>
                   </td>
@@ -1982,12 +1976,12 @@ Do you want to continue?`}
                 <tr>
                   <td
                     colSpan={projectsTableVisibleCols}
-                    className="px-6 py-14 text-center text-sm text-gray-500"
+                    className="px-6 py-14 text-center text-sm text-[color:var(--text-muted)]"
                   >
-                    <p className="mx-auto max-w-md font-medium text-gray-600">
+                    <p className="mx-auto max-w-md font-medium text-[color:var(--text-primary)]">
                       No projects match your search and filters.
                     </p>
-                    <p className="mx-auto mt-2 max-w-md text-xs text-gray-500">
+                    <p className="mx-auto mt-2 max-w-md text-xs text-[color:var(--text-muted)]">
                       Try clearing filters, widening the date range, or changing the search text.
                     </p>
                   </td>
@@ -1998,8 +1992,8 @@ Do you want to continue?`}
       </div>
 
       {data?.pagination && (
-        <div className="mt-5 flex flex-col items-center justify-between gap-4 rounded-2xl border border-gray-200/80 bg-gradient-to-r from-white via-primary-50/20 to-white px-4 py-3 shadow-sm sm:flex-row sm:px-5">
-          <div className="text-sm text-gray-600">
+        <div className="mt-5 flex flex-col items-center justify-between gap-4 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] px-4 py-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:flex-row sm:px-5">
+          <div className="text-sm text-[color:var(--text-secondary)]">
             Showing page {data.pagination.page} of {data.pagination.pages} ({data.pagination.total} total)
           </div>
           {data.pagination.pages > 1 && (
@@ -2007,14 +2001,14 @@ Do you want to continue?`}
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="rounded-xl border border-primary-200/90 bg-white px-4 py-2 text-sm font-semibold text-primary-800 shadow-sm transition-all hover:border-primary-300 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-extrabold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-45"
               >
                 Previous
               </button>
               <button
                 onClick={() => setPage(p => Math.min(data.pagination.pages, p + 1))}
                 disabled={page >= data.pagination.pages}
-                className="rounded-xl border border-primary-200/90 bg-white px-4 py-2 text-sm font-semibold text-primary-800 shadow-sm transition-all hover:border-primary-300 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-extrabold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-45"
               >
                 Next
               </button>
@@ -2024,40 +2018,40 @@ Do you want to continue?`}
       )}
 
       {/* Legend: 3 icons + 3 subtotals — single row on laptop, wrap neatly on smaller */}
-      <div className="mt-6 rounded-2xl border border-gray-200/80 bg-gradient-to-br from-slate-50/80 via-white to-primary-50/15 p-4 shadow-sm sm:p-5">
-        <p className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-primary-800 sm:text-xs">
-          <span className="h-1 w-6 rounded-full bg-gradient-to-r from-amber-400 to-primary-500" aria-hidden />
+      <div className="mt-6 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5">
+        <p className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-secondary)] sm:text-xs">
+          <span className="h-1 w-6 rounded-full bg-gradient-to-r from-[color:var(--accent-gold)] to-[color:var(--accent-teal)]" aria-hidden />
           Legend
         </p>
-        <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2 text-[11px] leading-relaxed text-gray-600 sm:grid-cols-3 sm:gap-y-1.5 sm:text-xs lg:grid-cols-6">
+        <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2 text-[11px] leading-relaxed text-[color:var(--text-secondary)] sm:grid-cols-3 sm:gap-y-1.5 sm:text-xs lg:grid-cols-6">
           <span className="inline-flex items-center gap-1.5 shrink-0">
-            <span className="text-primary-600">
+            <span className="text-[color:var(--accent-teal)]">
               <FiPaperclip className="w-3.5 h-3.5" strokeWidth={2} />
             </span>
             Has attachment(s)
           </span>
           <span className="inline-flex items-center gap-1.5 shrink-0">
-            <span className="text-emerald-700">
+            <span className="text-emerald-300">
               <FaUniversity className="w-3.5 h-3.5" />
             </span>
             Availing Loan + bank (hover or tap for bank name)
           </span>
           <span className="inline-flex items-center gap-1.5 shrink-0">
-            <span className="text-amber-600">
+            <span className="text-[color:var(--accent-gold)]">
               <FaTicketAlt className="w-3.5 h-3.5" />
             </span>
             Open/In progress ticket(s)
           </span>
           <span className="inline-flex items-center gap-1.5 shrink-0">
-            <span className="inline-block w-3 h-3 rounded bg-gradient-to-br from-orange-100 to-amber-200 border border-orange-400 shadow-sm" />
+            <span className="inline-block h-3 w-3 rounded border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] shadow-sm" />
             Capacity subtotal
           </span>
           <span className="inline-flex items-center gap-1.5 shrink-0">
-            <span className="inline-block w-3 h-3 rounded bg-gradient-to-br from-emerald-100 to-green-200 border border-emerald-500 shadow-sm" />
+            <span className="inline-block h-3 w-3 rounded border border-emerald-400/50 bg-emerald-500/25 shadow-sm" />
             Order value subtotal
           </span>
           <span className="inline-flex items-center gap-1.5 shrink-0">
-            <span className="inline-block w-3 h-3 rounded bg-gradient-to-br from-blue-100 to-sky-200 border border-blue-500 shadow-sm" />
+            <span className="inline-block h-3 w-3 rounded border border-sky-400/50 bg-sky-500/25 shadow-sm" />
             Balance subtotal
           </span>
         </div>

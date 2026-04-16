@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import toast from 'react-hot-toast'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import '../styles/zenith.css'
 
 interface ResetPasswordForm {
   newPassword: string
@@ -72,6 +73,9 @@ const ResetPassword = () => {
     })
   }
 
+  const fieldCls =
+    'w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 pr-10 text-[color:var(--text-primary)] placeholder:text-[color:var(--text-placeholder)] shadow-inner transition-all focus:border-[color:var(--border-focus)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)] sm:text-sm'
+
   // Redirect if no token
   useEffect(() => {
     if (!token) {
@@ -86,10 +90,10 @@ const ResetPassword = () => {
 
   if (verifyingToken) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen min-h-[100dvh] items-center justify-center bg-[color:var(--bg-page)] px-4 [-webkit-tap-highlight-color:transparent]">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-          <p className="mt-4 text-gray-600">Verifying reset token...</p>
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-[color:var(--border-default)] border-t-[color:var(--accent-gold)]" aria-hidden />
+          <p className="mt-4 text-sm text-[color:var(--text-muted)]">Verifying reset token…</p>
         </div>
       </div>
     )
@@ -97,22 +101,23 @@ const ResetPassword = () => {
 
   if (tokenError || !tokenData?.valid) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md w-full mx-4">
-          <div className="bg-white shadow rounded-lg p-6">
+      <div className="flex min-h-screen min-h-[100dvh] items-center justify-center bg-[color:var(--bg-page)] px-4 py-8 [-webkit-tap-highlight-color:transparent]">
+        <div className="mx-4 w-full max-w-md">
+          <div className="rounded-2xl border border-[color:var(--border-card)] border-l-4 border-l-[color:var(--accent-red)] bg-[color:var(--bg-modal)]/95 p-6 shadow-[var(--shadow-modal)] ring-1 ring-[color:var(--border-default)]">
             <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)]">
+                <svg className="h-6 w-6 text-[color:var(--accent-red)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Invalid or Expired Token</h2>
-              <p className="text-gray-600 mb-6">
+              <h2 className="zenith-display mb-2 text-xl font-bold text-[color:var(--text-primary)]">Invalid or Expired Token</h2>
+              <p className="mb-6 text-sm text-[color:var(--text-secondary)]">
                 This password reset link is invalid or has expired. Please contact your administrator to request a new reset link.
               </p>
               <button
+                type="button"
                 onClick={() => navigate('/login')}
-                className="px-6 py-2 bg-gradient-to-r from-amber-600 to-primary-600 text-white rounded-lg hover:from-amber-700 hover:to-primary-700 font-medium shadow-md"
+                className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-[color:var(--accent-gold)] px-6 py-2.5 text-sm font-extrabold text-[color:var(--text-inverse)] shadow-[var(--shadow-card)] transition-all hover:opacity-95"
               >
                 Go to Login
               </button>
@@ -124,26 +129,26 @@ const ResetPassword = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50/50 to-gray-50 px-4 py-6">
-      <div className="max-w-md w-full">
+    <div
+      className="flex min-h-screen min-h-[100dvh] items-center justify-center bg-[color:var(--bg-page)] px-4 py-8 [-webkit-tap-highlight-color:transparent]"
+    >
+      <div className="w-full max-w-md">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Reset Password
-          </h1>
-          <p className="text-sm text-amber-600/80 mt-0.5">Set a new password for your account</p>
+          <h1 className="zenith-display text-2xl font-bold tracking-tight text-[color:var(--text-primary)] sm:text-3xl">Reset Password</h1>
+          <p className="mt-1 text-sm font-medium text-[color:var(--accent-gold)]">Set a new password for your account</p>
         </div>
 
-        <div className="bg-gradient-to-br from-white to-amber-50/30 rounded-xl border-l-4 border-l-amber-400 border border-amber-100/60 shadow-sm p-6 mt-6">
+        <div className="mt-2 rounded-2xl border border-[color:var(--border-card)] border-l-4 border-l-[color:var(--accent-gold)] bg-[color:var(--bg-modal)]/95 p-6 shadow-[var(--shadow-modal)] ring-1 ring-[color:var(--border-default)]">
           <div className="mb-4">
-            <p className="text-sm text-gray-600 text-center">
-              Reset password for: <span className="font-semibold">{tokenData.name}</span> ({tokenData.email})
+            <p className="text-center text-sm text-[color:var(--text-secondary)]">
+              Reset password for: <span className="font-semibold text-[color:var(--text-primary)]">{tokenData.name}</span> ({tokenData.email})
             </p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* New Password */}
             <div>
-              <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="newPassword" className="mb-1.5 block text-sm font-semibold text-[color:var(--text-secondary)]">
                 New Password *
               </label>
               <div className="relative">
@@ -157,13 +162,13 @@ const ResetPassword = () => {
                       message: 'Password must be at least 6 characters',
                     },
                   })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className={fieldCls}
                   placeholder="Enter new password (min 6 characters)"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword({ ...showPassword, new: !showPassword.new })}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 transform text-[color:var(--text-muted)] transition-colors hover:text-[color:var(--text-primary)]"
                 >
                   {showPassword.new ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -178,13 +183,13 @@ const ResetPassword = () => {
                 </button>
               </div>
               {errors.newPassword && (
-                <p className="text-red-500 text-xs mt-1">{errors.newPassword.message}</p>
+                <p className="mt-1 text-xs text-[color:var(--accent-red)]">{errors.newPassword.message}</p>
               )}
             </div>
 
             {/* Confirm Password */}
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-semibold text-[color:var(--text-secondary)]">
                 Confirm New Password *
               </label>
               <div className="relative">
@@ -196,13 +201,13 @@ const ResetPassword = () => {
                     validate: (value) =>
                       value === newPassword || 'Passwords do not match',
                   })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className={fieldCls}
                   placeholder="Confirm new password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword({ ...showPassword, confirm: !showPassword.confirm })}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 transform text-[color:var(--text-muted)] transition-colors hover:text-[color:var(--text-primary)]"
                 >
                   {showPassword.confirm ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -217,24 +222,24 @@ const ResetPassword = () => {
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</p>
+                <p className="mt-1 text-xs text-[color:var(--accent-red)]">{errors.confirmPassword.message}</p>
               )}
             </div>
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:gap-3">
               <button
                 type="button"
                 onClick={() => navigate('/login')}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                className="min-h-[44px] flex-1 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2.5 text-sm font-semibold text-[color:var(--text-primary)] transition-colors hover:bg-[color:var(--bg-card-hover)]"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={mutation.isPending}
-                className="flex-1 px-4 py-2 bg-gradient-to-r from-amber-600 to-primary-600 text-white rounded-lg hover:from-amber-700 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-md"
+                className="min-h-[44px] flex-1 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 text-sm font-extrabold text-[color:var(--text-inverse)] shadow-[var(--shadow-card)] transition-all hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {mutation.isPending ? 'Resetting...' : 'Reset Password'}
+                {mutation.isPending ? 'Resetting…' : 'Reset Password'}
               </button>
             </div>
           </form>

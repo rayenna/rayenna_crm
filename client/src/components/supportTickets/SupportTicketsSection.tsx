@@ -8,6 +8,13 @@ import toast from 'react-hot-toast'
 import CreateTicketModal from './CreateTicketModal'
 import ViewTicketModal from './ViewTicketModal'
 import { ErrorModal } from '@/components/common/ErrorModal'
+import {
+  stPrimaryBtn,
+  stTableThCls,
+  stLinkAccent,
+  supportTicketStatusLabel,
+  supportTicketStatusPillClass,
+} from './supportTicketsZenith'
 
 interface SupportTicketsSectionProps {
   projectId: string
@@ -62,32 +69,6 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
     },
   })
 
-  const getStatusColor = (status: SupportTicketStatus) => {
-    switch (status) {
-      case SupportTicketStatus.OPEN:
-        return 'bg-indigo-100 text-indigo-800'
-      case SupportTicketStatus.IN_PROGRESS:
-        return 'bg-yellow-100 text-yellow-800'
-      case SupportTicketStatus.CLOSED:
-        return 'bg-gray-100 text-gray-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getStatusLabel = (status: SupportTicketStatus) => {
-    switch (status) {
-      case SupportTicketStatus.OPEN:
-        return 'Open'
-      case SupportTicketStatus.IN_PROGRESS:
-        return 'In Progress'
-      case SupportTicketStatus.CLOSED:
-        return 'Closed'
-      default:
-        return status
-    }
-  }
-
   const handleCloseTicket = (ticket: SupportTicket) => {
     setConfirmState({ action: 'close', ticket })
   }
@@ -108,26 +89,40 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
 
   return (
     <div className="relative">
-      <div className="bg-gradient-to-br from-orange-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-orange-400 shadow-sm">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      <section className="space-y-4 overflow-hidden rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-5 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] border-l-4 border-l-[color:var(--accent-gold)]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <svg
+              className="h-5 w-5 shrink-0 text-[color:var(--accent-gold)]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
             </svg>
-            <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Support / Service Tickets</h2>
+            <h2 className="truncate text-xs font-bold uppercase tracking-wider text-[color:var(--text-primary)]">
+              Support / Service Tickets
+            </h2>
           </div>
           {canManageTickets && (
             <button
+              type="button"
               onClick={() => !isProjectLost && setShowCreateModal(true)}
               disabled={isProjectLost}
-              className={`px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-colors ${
+              className={
                 isProjectLost
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-orange-600 to-primary-600 text-white hover:from-orange-700 hover:to-primary-700 shadow-md'
-              }`}
+                  ? 'cursor-not-allowed rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-semibold text-[color:var(--text-muted)]'
+                  : stPrimaryBtn
+              }
               title={isProjectLost ? 'Cannot create tickets for projects in Lost stage' : 'Create Ticket'}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               Create Ticket
@@ -136,19 +131,16 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
         </div>
 
         {isLoading ? (
-          <div className="text-center py-8 text-gray-500">Loading tickets...</div>
+          <div className="py-10 text-center text-sm text-[color:var(--text-muted)]">Loading tickets…</div>
         ) : !tickets || tickets.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <p>No support tickets found for this project.</p>
+          <div className="py-10 text-center">
+            <p className="text-sm text-[color:var(--text-secondary)]">No support tickets found for this project.</p>
             {canManageTickets && (
               <button
+                type="button"
                 onClick={() => !isProjectLost && setShowCreateModal(true)}
                 disabled={isProjectLost}
-                className={`mt-4 font-medium ${
-                  isProjectLost
-                    ? 'text-gray-400 cursor-not-allowed'
-                    : 'text-primary-600 hover:text-primary-700'
-                }`}
+                className={`mt-4 text-sm ${isProjectLost ? 'cursor-not-allowed text-[color:var(--text-muted)]' : stLinkAccent}`}
                 title={isProjectLost ? 'Cannot create tickets for projects in Lost stage' : 'Create the first ticket'}
               >
                 Create the first ticket
@@ -156,79 +148,82 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="zenith-scroll-x -mx-1 overflow-x-auto rounded-xl border border-[color:var(--border-default)] ring-1 ring-[color:var(--border-default)]">
+            <table className="min-w-full divide-y divide-[color:var(--border-default)]">
+              <thead className="bg-[color:var(--zenith-table-header-bg)]">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className={stTableThCls}>
                     Ticket Number
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className={stTableThCls}>
                     Title
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className={stTableThCls}>
                     Status
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className={stTableThCls}>
                     Created Date
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className={stTableThCls}>
                     Closed Date
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className={stTableThCls}>
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-[color:var(--border-default)]">
                 {tickets.map((ticket) => (
-                  <tr key={ticket.id} className="bg-white hover:bg-orange-50/50 transition-colors">
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-gray-900">{ticket.ticketNumber}</span>
+                  <tr key={ticket.id} className="transition-colors hover:bg-[color:var(--bg-table-hover)]">
+                    <td className="whitespace-nowrap px-4 py-3.5">
+                      <span className="text-sm font-semibold text-[color:var(--text-primary)]">{ticket.ticketNumber}</span>
                     </td>
-                    <td className="px-4 py-4">
-                      <div className="text-sm text-gray-900 max-w-xs truncate" title={ticket.title}>
+                    <td className="max-w-[14rem] px-4 py-3.5 sm:max-w-xs">
+                      <div className="truncate text-sm text-[color:var(--text-secondary)]" title={ticket.title}>
                         {ticket.title}
                       </div>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(ticket.status)}`}>
-                        {getStatusLabel(ticket.status)}
+                    <td className="whitespace-nowrap px-4 py-3.5">
+                      <span className={supportTicketStatusPillClass(ticket.status)}>
+                        {supportTicketStatusLabel(ticket.status)}
                       </span>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="whitespace-nowrap px-4 py-3.5 text-sm text-[color:var(--text-muted)]">
                       {format(new Date(ticket.createdAt), 'MMM dd, yyyy')}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {ticket.closedAt ? format(new Date(ticket.closedAt), 'MMM dd, yyyy') : '-'}
+                    <td className="whitespace-nowrap px-4 py-3.5 text-sm text-[color:var(--text-muted)]">
+                      {ticket.closedAt ? format(new Date(ticket.closedAt), 'MMM dd, yyyy') : '—'}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center gap-2">
+                    <td className="whitespace-nowrap px-4 py-3.5">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-semibold">
                         <button
+                          type="button"
                           onClick={() => setSelectedTicket(ticket)}
-                          className="text-primary-600 hover:text-primary-900"
-                          title="View Ticket"
+                          className="text-[color:var(--accent-gold)] hover:opacity-90 hover:underline"
+                          title="View ticket"
                         >
-                          👁️ View
+                          View
                         </button>
                         {canManageTickets && ticket.status !== SupportTicketStatus.CLOSED && (
                           <button
+                            type="button"
                             onClick={() => handleCloseTicket(ticket)}
-                            className="text-green-600 hover:text-green-900"
-                            title="Close Ticket"
+                            className="text-[color:var(--accent-gold)] hover:underline"
+                            title="Close ticket"
                             disabled={closeTicketMutation.isPending}
                           >
-                            ✅ Close
+                            Close
                           </button>
                         )}
                         {isAdmin && (
                           <button
+                            type="button"
                             onClick={() => handleDeleteTicket(ticket)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Delete Ticket (Admin Only)"
+                            className="text-[color:var(--accent-red)] hover:opacity-90 hover:underline"
+                            title="Delete ticket (Admin only)"
                             disabled={deleteTicketMutation.isPending}
                           >
-                            🗑️ Delete
+                            Delete
                           </button>
                         )}
                       </div>
@@ -239,7 +234,7 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
             </table>
           </div>
         )}
-      </div>
+      </section>
 
       {showCreateModal && (
         <CreateTicketModal

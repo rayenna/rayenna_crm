@@ -6,9 +6,12 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50/80">
-        <div className="inline-block h-10 w-10 animate-spin rounded-full border-2 border-primary-200 border-t-primary-600" aria-hidden />
-        <p className="mt-4 text-sm font-medium text-gray-500">Loading...</p>
+      <div className="flex min-h-screen min-h-[100dvh] flex-col items-center justify-center bg-[color:var(--bg-page)] [-webkit-tap-highlight-color:transparent]">
+        <div
+          className="h-10 w-10 animate-spin rounded-full border-2 border-[color:var(--border-default)] border-t-[color:var(--accent-gold)]"
+          aria-hidden
+        />
+        <p className="mt-4 text-sm font-medium text-[color:var(--text-muted)]">Loading…</p>
       </div>
     )
   }

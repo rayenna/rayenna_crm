@@ -46,20 +46,22 @@ export default function ZenithDrawerRemarksPanel({
 
   return (
     <div
-      className={`rounded-xl border border-white/10 border-l-4 border-l-[#F5A623] bg-white/[0.03] px-3 py-3 ${className}`}
+      className={`rounded-xl border border-[color:var(--border-default)] border-l-4 border-l-[color:var(--accent-gold)] bg-[color:var(--bg-input)] px-3 py-3 ${className}`}
       style={{ fontFamily: 'var(--zenith-font-body)' }}
     >
       <div className="mb-2.5 flex items-center gap-2">
-        <MessageSquare className="h-4 w-4 shrink-0 text-[#F5A623]" strokeWidth={2} aria-hidden />
-        <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/55">Recent remarks</h3>
+        <MessageSquare className="h-4 w-4 shrink-0 text-[color:var(--accent-gold)]" strokeWidth={2} aria-hidden />
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--text-muted)]">
+          Recent remarks
+        </h3>
       </div>
 
       {isLoading ? (
-        <p className="text-[12px] text-white/40">Loading remarks…</p>
+        <p className="text-[12px] text-[color:var(--text-muted)]">Loading remarks…</p>
       ) : isError ? (
-        <p className="text-[12px] text-white/40">Could not load remarks.</p>
+        <p className="text-[12px] text-[color:var(--text-muted)]">Could not load remarks.</p>
       ) : displayed.length === 0 ? (
-        <p className="text-[12px] text-white/40">No remarks yet.</p>
+        <p className="text-[12px] text-[color:var(--text-muted)]">No remarks yet.</p>
       ) : (
         <>
           <div className="max-h-[min(36vh,260px)] space-y-2.5 overflow-y-auto overscroll-y-contain pr-0.5">
@@ -70,23 +72,25 @@ export default function ZenithDrawerRemarksPanel({
               return (
                 <div
                   key={remark.id}
-                  className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2.5"
+                  className="rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-card)] px-3 py-2.5"
                 >
                   <div className="mb-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
-                    <span className="text-[13px] font-semibold text-white">{name}</span>
-                    <span className="text-[11px] text-white/45">({roleLabel})</span>
+                    <span className="text-[13px] font-semibold text-[color:var(--text-primary)]">{name}</span>
+                    <span className="text-[11px] text-[color:var(--text-muted)]">({roleLabel})</span>
                   </div>
-                  <p className="mb-2 text-[11px] text-white/40">
+                  <p className="mb-2 text-[11px] text-[color:var(--text-muted)]">
                     {format(new Date(remark.createdAt), 'MMM d, yyyy • h:mm a')}
-                    {edited ? <span className="ml-2 text-white/35">(edited)</span> : null}
+                    {edited ? <span className="ml-2 text-[color:var(--text-muted)]">(edited)</span> : null}
                   </p>
-                  <p className="text-[13px] leading-relaxed text-white/85 whitespace-pre-wrap">{remark.remark}</p>
+                  <p className="text-[13px] leading-relaxed text-[color:var(--text-primary)] whitespace-pre-wrap">
+                    {remark.remark}
+                  </p>
                 </div>
               )
             })}
           </div>
           {truncated ? (
-            <p className="mt-2 text-[11px] leading-snug text-white/35">
+            <p className="mt-2 text-[11px] leading-snug text-[color:var(--text-muted)]">
               Showing {maxItems} most recent. Open full project for the full remarks history.
             </p>
           ) : null}

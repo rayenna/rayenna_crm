@@ -25,6 +25,11 @@ enum UserRole {
   MANAGEMENT
 }
 
+enum ThemePreference {
+  LIGHT
+  DARK
+}
+
 enum ProjectType {
   RESIDENTIAL_SUBSIDY
   RESIDENTIAL_NON_SUBSIDY
@@ -149,6 +154,7 @@ model User {
   name             String
   password         String
   role             UserRole
+  themePreference  ThemePreference @default(DARK)
   resetToken       String?   @unique
   resetTokenExpiry DateTime?
   createdAt        DateTime  @default(now())

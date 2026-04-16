@@ -269,7 +269,7 @@ export default function OperationsQuickDrawer({
         initial={{ opacity: 0 }}
         animate={{ opacity: isOpen ? 1 : 0 }}
         transition={{ duration: narrowViewport ? 0.18 : 0.25, ease: 'easeOut' }}
-        className="fixed inset-0 z-[6000] bg-black/60 backdrop-blur-none lg:backdrop-blur-sm lg:bg-black/50"
+        className="fixed inset-0 z-[6000] zenith-quick-drawer-backdrop backdrop-blur-none lg:backdrop-blur-sm"
         style={{ pointerEvents: isOpen ? 'auto' : 'none' }}
         onClick={onClose}
         aria-hidden={!isOpen}
@@ -283,7 +283,7 @@ export default function OperationsQuickDrawer({
             ? { type: 'tween', duration: 0.2, ease: [0.22, 1, 0.36, 1] }
             : { type: 'spring', damping: 30, stiffness: 300 }
         }
-        className="fixed top-0 right-0 z-[6001] h-[100dvh] w-full max-w-full lg:w-[420px] lg:max-w-[420px] bg-[#0F0F1A] border-l border-white/10 lg:shadow-[-20px_0_60px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden"
+        className="zenith-quick-drawer-panel fixed top-0 right-0 z-[6001] h-[100dvh] w-full max-w-full lg:w-[420px] lg:max-w-[420px] flex flex-col overflow-hidden"
         style={{
           fontFamily: 'DM Sans, sans-serif',
           paddingBottom: 'max(56px, env(safe-area-inset-bottom, 0px))',
@@ -293,7 +293,7 @@ export default function OperationsQuickDrawer({
         role="dialog"
         aria-label="Operations quick view"
       >
-        <div className="min-h-16 px-5 py-3 flex flex-col gap-2 border-b border-white/[0.08] bg-white/[0.02]">
+        <div className="zenith-quick-drawer-header min-h-16 px-5 py-3 flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 flex-1 pr-1">
               <ZenithDrawerProjectTitle
@@ -312,7 +312,7 @@ export default function OperationsQuickDrawer({
             <button
               type="button"
               onClick={onClose}
-              className="w-8 h-8 shrink-0 rounded-full bg-white/10 text-white/60 hover:bg-white/15 hover:text-white transition-colors"
+              className="w-8 h-8 shrink-0 rounded-full bg-[color:var(--bg-badge)] text-[color:var(--text-muted)] hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)] transition-colors"
               aria-label="Close"
             >
               ×
@@ -335,39 +335,42 @@ export default function OperationsQuickDrawer({
                 className="flex-1 overflow-y-auto -mx-1 px-1 min-h-0"
               >
                 {error ? (
-                  <div className="mb-4 rounded-xl border border-[#ff4757]/30 bg-[#ff4757]/10 px-4 py-3 text-sm text-white/85">
+                  <div className="mb-4 rounded-xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] px-4 py-3 text-sm text-[color:var(--text-primary)]">
                     {error}
                   </div>
                 ) : null}
 
                 {readOnly ? (
-                  <div className="mb-4 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[12px] text-white/55">
-                    Read-only for your role — use <span className="text-white/75">Open full project</span> for the full
-                    record.
+                  <div className="mb-4 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2.5 text-[12px] text-[color:var(--text-muted)]">
+                    Read-only for your role — use{' '}
+                    <span className="text-[color:var(--text-secondary)]">Open full project</span> for the full record.
                   </div>
                 ) : null}
 
                 {project && !canEditProjectInDrawer && !readOnly ? (
-                  <div className="mb-4 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[12px] text-white/55">
+                  <div className="mb-4 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2.5 text-[12px] text-[color:var(--text-muted)]">
                     View-only — stage, activity, value, and dates are shown below; use{' '}
-                    <span className="text-white/75">Open full project</span> when you need the full form.
+                    <span className="text-[color:var(--text-secondary)]">Open full project</span> when you need the full
+                    form.
                   </div>
                 ) : null}
 
                 {canAdvance ? (
                   <div>
-                    <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">Advance stage</div>
+                    <div className="text-[11px] uppercase tracking-[0.08em] text-[color:var(--text-muted)] mb-2">
+                      Advance stage
+                    </div>
                     <div className="flex items-center gap-2">
                       <span className={zenithDrawerStagePillClass(stageLabel)}>
                         {stageLabel}
                       </span>
-                      <span className="text-white/30">→</span>
+                      <span className="text-[color:var(--text-muted)]">→</span>
                       <span
                         className="inline-block rounded-[20px] px-3 py-1 text-[12px]"
                         style={{
-                          background: 'rgba(245,166,35,0.12)',
-                          border: '1px solid #F5A623',
-                          color: '#F5A623',
+                          background: 'var(--accent-gold-muted)',
+                          border: '1px solid var(--accent-gold-border)',
+                          color: 'var(--accent-gold)',
                         }}
                       >
                         {nextLabel}
@@ -404,12 +407,12 @@ export default function OperationsQuickDrawer({
                             setSaving(false)
                           }
                         }}
-                        className="mt-3 w-full rounded-xl bg-[#F5A623] text-[#0A0A0F] text-[14px] font-semibold py-3 transition-all disabled:opacity-60"
+                        className="mt-3 w-full rounded-xl bg-[color:var(--accent-gold)] text-[color:var(--text-inverse)] text-[14px] font-semibold py-3 transition-all disabled:opacity-60"
                       >
                         {saving ? `Moving…` : `Move to ${nextLabel}`}
                       </button>
                     ) : null}
-                    <div className="my-5 h-px bg-white/[0.06]" />
+                    <div className="my-5 h-px bg-[color:var(--border-default)]" />
                   </div>
                 ) : null}
 
@@ -421,17 +424,21 @@ export default function OperationsQuickDrawer({
 
                 {canEditProjectInDrawer ? (
                   <div>
-                    <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">Log activity</div>
+                    <div className="text-[11px] uppercase tracking-[0.08em] text-[color:var(--text-muted)] mb-2">
+                      Log activity
+                    </div>
                     <textarea
                       id="operations-drawer-note-textarea"
                       value={noteText}
                       onChange={(e) => setNoteText(e.target.value.slice(0, 500))}
                       rows={3}
                       placeholder="Site visit, DISCOM update, crew schedule…"
-                      className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[14px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#f5a623]/40"
+                      className="w-full rounded-xl bg-[color:var(--bg-input)] border border-[color:var(--border-input)] px-3 py-3 text-[14px] text-[color:var(--text-primary)] placeholder:text-[color:var(--text-placeholder)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-muted)] focus:border-[color:var(--accent-gold)]"
                       style={{ resize: 'vertical', minHeight: 80 }}
                     />
-                    <div className="mt-1 text-right text-[11px] text-white/25">{noteText.length}/500 characters</div>
+                    <div className="mt-1 text-right text-[11px] text-[color:var(--text-muted)]">
+                      {noteText.length}/500 characters
+                    </div>
                     <button
                       type="button"
                       disabled={saving || !project || !noteText.trim()}
@@ -456,17 +463,22 @@ export default function OperationsQuickDrawer({
                           setSaving(false)
                         }
                       }}
-                      className="mt-2 w-full rounded-xl border border-white/20 bg-transparent px-4 py-2.5 text-[14px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors disabled:opacity-60"
+                      className="mt-2 w-full rounded-xl border border-[color:var(--border-strong)] bg-transparent px-4 py-2.5 text-[14px] text-[color:var(--text-primary)] hover:border-[color:var(--accent-gold-border)] hover:text-[color:var(--accent-gold)] hover:bg-[color:var(--accent-gold-muted)] transition-colors disabled:opacity-60"
                     >
                       {saving ? 'Saving…' : 'Log activity'}
                     </button>
-                    <div className="my-5 h-px bg-white/[0.06]" />
+                    <div className="my-5 h-px bg-[color:var(--border-default)]" />
                   </div>
                 ) : null}
 
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">Deal value</div>
-                  <div className="text-[22px] font-bold" style={{ fontFamily: "'Syne', sans-serif", color: '#F5A623' }}>
+                  <div className="text-[11px] uppercase tracking-[0.08em] text-[color:var(--text-muted)] mb-2">
+                    Deal value
+                  </div>
+                  <div
+                    className="text-[22px] font-bold text-[color:var(--accent-gold)]"
+                    style={{ fontFamily: "'Syne', sans-serif" }}
+                  >
                     {formatINR(project?.projectCost ?? null)}
                   </div>
                   {canEditProjectInDrawer ? (
@@ -476,9 +488,11 @@ export default function OperationsQuickDrawer({
                         value={valueInput}
                         onChange={(e) => setValueInput(e.target.value)}
                         placeholder="Enter amount in ₹"
-                        className="mt-2 w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[15px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#f5a623]/40"
+                        className="mt-2 w-full rounded-xl bg-[color:var(--bg-input)] border border-[color:var(--border-input)] px-3 py-3 text-[15px] text-[color:var(--text-primary)] placeholder:text-[color:var(--text-placeholder)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-muted)] focus:border-[color:var(--accent-gold)]"
                       />
-                      {valuePreview ? <div className="mt-1 text-[12px] text-white/40">{valuePreview}</div> : null}
+                      {valuePreview ? (
+                        <div className="mt-1 text-[12px] text-[color:var(--text-muted)]">{valuePreview}</div>
+                      ) : null}
                       <button
                         type="button"
                         disabled={saving || !project}
@@ -506,26 +520,26 @@ export default function OperationsQuickDrawer({
                             setSaving(false)
                           }
                         }}
-                        className="mt-2 w-full rounded-xl border border-white/20 bg-transparent px-4 py-2.5 text-[14px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors disabled:opacity-60"
+                        className="mt-2 w-full rounded-xl border border-[color:var(--border-strong)] bg-transparent px-4 py-2.5 text-[14px] text-[color:var(--text-primary)] hover:border-[color:var(--accent-gold-border)] hover:text-[color:var(--accent-gold)] hover:bg-[color:var(--accent-gold-muted)] transition-colors disabled:opacity-60"
                       >
                         {saving ? 'Saving…' : 'Update value'}
                       </button>
                     </>
                   ) : null}
-                  <div className="my-5 h-px bg-white/[0.06]" />
+                  <div className="my-5 h-px bg-[color:var(--border-default)]" />
                 </div>
 
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
+                  <div className="text-[11px] uppercase tracking-[0.08em] text-[color:var(--text-muted)] mb-2">
                     System capacity
                   </div>
                   <div
-                    className="text-[22px] font-bold text-white/88"
+                    className="text-[22px] font-bold text-[color:var(--text-primary)]"
                     style={{ fontFamily: "'Syne', sans-serif" }}
                   >
                     {formatZenithSystemCapacityKw(project?.systemCapacity, 'notSet')}
                   </div>
-                  <div className="my-5 h-px bg-white/[0.06]" />
+                  <div className="my-5 h-px bg-[color:var(--border-default)]" />
                 </div>
 
                 {project ? (
@@ -535,10 +549,10 @@ export default function OperationsQuickDrawer({
                 ) : null}
 
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">
+                  <div className="text-[11px] uppercase tracking-[0.08em] text-[color:var(--text-muted)] mb-2">
                     Order & lifecycle dates
                   </div>
-                  <p className="text-[11px] text-white/35 mb-3 leading-snug">
+                  <p className="text-[11px] text-[color:var(--text-muted)] mb-3 leading-snug">
                     Same fields as the project record. Clear a date and save to remove it.
                   </p>
                   <div className="space-y-3">
@@ -554,17 +568,16 @@ export default function OperationsQuickDrawer({
                       ] as const
                     ).map(([label, val, setVal]) => (
                       <div key={label}>
-                        <label className="block text-[12px] text-white/50 mb-1">{label}</label>
+                        <label className="block text-[12px] text-[color:var(--text-secondary)] mb-1">{label}</label>
                         {canEditProjectInDrawer ? (
                           <input
                             type="date"
                             value={val}
                             onChange={(e) => setVal(e.target.value)}
-                            className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2.5 text-[14px] text-white focus:outline-none focus:ring-2 focus:ring-[#f5a623]/40"
-                            style={{ colorScheme: 'dark' }}
+                            className="zenith-quick-drawer-date w-full rounded-xl bg-[color:var(--bg-input)] border border-[color:var(--border-input)] px-3 py-2.5 text-[14px] text-[color:var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-muted)] focus:border-[color:var(--accent-gold)]"
                           />
                         ) : (
-                          <div className="text-[14px] text-white/75 py-1">
+                          <div className="text-[14px] text-[color:var(--text-secondary)] py-1">
                             {val
                               ? new Date(val + 'T12:00:00').toLocaleDateString('en-IN', {
                                   day: '2-digit',
@@ -600,7 +613,7 @@ export default function OperationsQuickDrawer({
                           setSaving(false)
                         }
                       }}
-                      className="mt-4 w-full rounded-xl border border-white/20 bg-transparent px-4 py-2.5 text-[14px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors disabled:opacity-60"
+                      className="mt-4 w-full rounded-xl border border-[color:var(--border-strong)] bg-transparent px-4 py-2.5 text-[14px] text-[color:var(--text-primary)] hover:border-[color:var(--accent-gold-border)] hover:text-[color:var(--accent-gold)] hover:bg-[color:var(--accent-gold-muted)] transition-colors disabled:opacity-60"
                     >
                       {saving ? 'Saving…' : 'Update Dates'}
                     </button>
@@ -612,12 +625,12 @@ export default function OperationsQuickDrawer({
         </div>
 
         <div
-          className="h-14 px-5 flex items-center justify-between border-t border-white/[0.08] bg-black/20"
+          className="zenith-quick-drawer-footer h-14 px-5 flex items-center justify-between"
           style={{ height: 'auto', minHeight: 56 }}
         >
           <button
             type="button"
-            className="text-[13px] font-semibold text-white/70 hover:text-[#F5A623] transition-colors disabled:opacity-40"
+            className="text-[13px] font-semibold text-[color:var(--text-secondary)] hover:text-[color:var(--accent-gold)] transition-colors disabled:opacity-40"
             disabled={!projectId}
             onClick={() => {
               if (projectId) navigate(`/projects/${projectId}`)
@@ -628,7 +641,7 @@ export default function OperationsQuickDrawer({
           </button>
           <button
             type="button"
-            className="rounded-xl border border-white/20 bg-transparent px-4 py-1.5 text-[13px] text-white hover:border-[#F5A623] hover:text-[#F5A623] hover:bg-[rgba(245,166,35,0.06)] transition-colors"
+            className="rounded-xl border border-[color:var(--border-strong)] bg-transparent px-4 py-1.5 text-[13px] text-[color:var(--text-primary)] hover:border-[color:var(--accent-gold-border)] hover:text-[color:var(--accent-gold)] hover:bg-[color:var(--accent-gold-muted)] transition-colors"
             onClick={onClose}
           >
             Close
@@ -643,11 +656,11 @@ export default function OperationsQuickDrawer({
             bottom: 24,
             left: '50%',
             transform: 'translateX(-50%)',
-            background: 'rgba(245,166,35,0.15)',
-            border: '1px solid #F5A623',
+            background: 'var(--accent-gold-muted)',
+            border: '1px solid var(--accent-gold-border)',
             borderRadius: 10,
             padding: '10px 20px',
-            color: '#F5A623',
+            color: 'var(--accent-gold)',
             fontFamily: 'DM Sans, sans-serif',
             fontSize: 14,
             zIndex: 6100,
@@ -666,11 +679,11 @@ export default function OperationsQuickDrawer({
             bottom: toast ? 72 : 24,
             left: '50%',
             transform: 'translateX(-50%)',
-            background: 'rgba(245,166,35,0.1)',
-            border: '1px solid rgba(245,166,35,0.3)',
+            background: 'var(--accent-gold-muted)',
+            border: '1px solid var(--accent-gold-border)',
             borderRadius: 10,
             padding: '10px 20px',
-            color: '#F5A623',
+            color: 'var(--accent-gold)',
             fontFamily: 'DM Sans, sans-serif',
             fontSize: 14,
             zIndex: 6100,

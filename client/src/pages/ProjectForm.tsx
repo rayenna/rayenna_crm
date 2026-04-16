@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState, useMemo, useRef, type ReactNode } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
@@ -13,6 +13,15 @@ import { FaEdit } from 'react-icons/fa'
 import { ErrorModal } from '@/components/common/ErrorModal'
 import { INVERTER_BRAND_OPTIONS } from '../constants/inverterBrands'
 import { PANEL_BRAND_OPTIONS } from '../constants/panelBrands'
+import { FINANCING_BANK_FORM_OPTIONS } from '../utils/financingBankDisplay'
+import { ZenithSingleSelect } from '../components/zenith/ZenithSingleSelect'
+
+const ZENITH_FIELD_LABEL_CLS =
+  'mb-1.5 block text-sm font-semibold leading-snug tracking-tight text-[color:var(--text-primary)]'
+const ZENITH_SUBLABEL_UPPER_CLS =
+  'mb-1 block text-xs font-bold uppercase tracking-[0.08em] text-[color:var(--text-secondary)]'
+const ZENITH_AUX_LABEL_CLS = 'block text-xs font-semibold text-[color:var(--text-secondary)]'
+const ZENITH_FIELD_HINT_CLS = 'mt-1 text-xs leading-relaxed text-[color:var(--text-muted)]'
 
 // File Upload Component
 const FileUploadSection = ({
@@ -105,27 +114,34 @@ const FileUploadSection = ({
     uploadMutation.mutate(formData)
   }
 
+  const uploadTextFieldCls =
+    'zenith-native-filter-input mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm placeholder:text-[color:var(--text-placeholder)] focus:border-[color:var(--accent-gold-border)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-muted)]'
+  const uploadSelectCls =
+    'zenith-native-select mt-1.5 w-full rounded-xl px-3 py-2.5 text-sm focus:border-[color:var(--accent-gold-border)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-muted)]'
+  const uploadFileCls =
+    'block w-full cursor-pointer text-sm text-[color:var(--text-secondary)] file:mr-4 file:cursor-pointer file:rounded-xl file:border file:border-[color:var(--border-strong)] file:bg-[color:var(--bg-input)] file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-[color:var(--text-primary)] file:shadow-inner file:transition-colors hover:file:border-[color:var(--accent-gold-border)] hover:file:bg-[color:var(--bg-card-hover)] disabled:opacity-50'
+
   return (
-    <div className="p-4 bg-gradient-to-br from-violet-50/30 to-white rounded-xl border border-violet-100/60">
-      <p className="text-xs text-gray-500 mb-4">
+    <div className="space-y-4">
+      <p className="text-xs leading-relaxed text-[color:var(--text-muted)]">
         You can upload up to {maxFiles} files per project. Currently uploaded: {existingCount}.
       </p>
       <div className="space-y-4">
         <div>
-          <label className="block text-sm text-gray-500 mb-1.5">File</label>
+          <label className={ZENITH_FIELD_LABEL_CLS}>File</label>
           <input
             type="file"
             onChange={handleFileChange}
             disabled={existingCount >= maxFiles}
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+            className={`mt-1.5 ${uploadFileCls}`}
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-500 mb-1.5">Category *</label>
+          <label className={ZENITH_FIELD_LABEL_CLS}>Category *</label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            className={uploadSelectCls}
           >
             <option value="">Select category</option>
             <option value="photos_videos">Photos / Videos</option>
@@ -134,19 +150,20 @@ const FileUploadSection = ({
           </select>
         </div>
         <div>
-          <label className="block text-sm text-gray-500 mb-1.5">Description (Optional)</label>
+          <label className={ZENITH_FIELD_LABEL_CLS}>Description (Optional)</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            className={`${uploadTextFieldCls} min-h-[4.5rem] resize-y`}
             placeholder="Add a brief description..."
           />
         </div>
         <button
+          type="button"
           onClick={handleUpload}
           disabled={!selectedFile || !category || uploading || existingCount >= maxFiles}
-          className="px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 text-sm font-extrabold text-[color:var(--text-inverse)] shadow-md transition-all hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {uploading ? 'Uploading...' : 'Upload File'}
         </button>
@@ -156,6 +173,12 @@ const FileUploadSection = ({
 }
 
 const ProjectForm = () => {
+  const shell = (children: ReactNode) => (
+    <div className="zenith-root zenith-animated-bg w-full max-w-full min-w-0 min-h-[calc(100dvh-5rem)] min-h-[calc(100vh-5rem)] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-[max(0.35rem,env(safe-area-inset-top,0px))] [-webkit-tap-highlight-color:transparent]">
+      <div className="zenith-exec-main mx-auto w-full max-w-full min-w-0 px-3 sm:px-5 pb-10">{children}</div>
+    </div>
+  )
+
   const { id } = useParams()
   const navigate = useNavigate()
   const { hasRole, user } = useAuth()
@@ -934,20 +957,26 @@ const ProjectForm = () => {
      (hasRole([UserRole.SALES]) && project?.salespersonId === user?.id) ||
      hasRole([UserRole.OPERATIONS]))
 
-  // Customer Module–style shared classes (consistency with New/Edit Customer)
-  const labelCls = 'block text-sm text-gray-500 mb-1.5'
-  const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all'
-  const selectCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all'
+  const labelCls = ZENITH_FIELD_LABEL_CLS
+  const inputCls =
+    'zenith-native-filter-input w-full rounded-xl px-3 py-2.5 text-sm placeholder:text-[color:var(--text-placeholder)] focus:border-[color:var(--accent-gold-border)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-muted)]'
+  const selectCls =
+    'w-full rounded-xl px-3 py-2.5 text-sm focus:border-[color:var(--accent-gold-border)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-muted)]'
+  /** Native selects + read-only/disabled fields on Zenith (replaces old bg-gray-100 / bg-white). */
+  const disabledControlCls =
+    'cursor-not-allowed border-[color:var(--border-default)] bg-[color:var(--bg-badge)] text-[color:var(--text-muted)]'
+  const sublabelUpperCls = ZENITH_SUBLABEL_UPPER_CLS
   // Sales & Commercial section: Admin, Sales, and Operations can edit
   const canEditSalesCommercial =
     hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS]) && canEditOtherSections
 
-  return (
-    <div className="px-0 py-6 sm:px-0 min-h-screen bg-gray-50/80">
+  return shell(
+    <div className="px-0 py-4 sm:py-6">
       <PageCard
+        variant="zenith"
         title={isEdit ? 'Edit Project' : 'New Project'}
         subtitle={isEdit ? 'Update project details below.' : 'Create a new project and link it to a customer.'}
-        icon={<FaEdit className="w-5 h-5 text-white" />}
+        icon={<FaEdit className="h-5 w-5" style={{ color: 'var(--banner-text)' }} />}
         className="max-w-full"
       >
       <form onSubmit={handleSubmit(onSubmit, (errors) => {
@@ -971,22 +1000,24 @@ const ProjectForm = () => {
         <div className="relative">
         {/* Customer & Project Details - Same style as Basic Info / other section cards */}
         {canEditOtherSections && (
-        <div className="bg-gradient-to-br from-teal-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-teal-400 shadow-sm border border-teal-100/60">
+        <div className="space-y-4 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-5 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] border-l-[3px] border-l-[color:var(--accent-teal)]">
           <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Customer & Project Details</h3>
+              <svg className="h-5 w-5 text-[color:var(--accent-teal)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+            <h3 className="text-sm font-extrabold uppercase tracking-wide text-[color:var(--text-primary)]">
+              Customer & Project Details
+            </h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="relative">
               <label className={labelCls}>
-                Customer * {isEdit && <span className="text-xs text-gray-500 font-normal">(Cannot be changed)</span>}
+                Customer * {isEdit && <span className="text-xs font-normal text-[color:var(--text-muted)]">(Cannot be changed)</span>}
               </label>
               {customersLoading ? (
-                <div className="mt-1 text-sm text-gray-500">Loading customers...</div>
+                <div className="mt-1 text-sm text-[color:var(--text-muted)]">Loading customers...</div>
               ) : customersError ? (
                 <div className="mt-1 text-sm text-red-500">
                   Error loading customers: {customersError?.message || 'Unknown error'}. Please try again or{' '}
-                  <Link to="/customers" className="text-primary-600 hover:text-primary-800 underline">
+                  <Link to="/customers" className="text-[color:var(--accent-gold)] underline hover:opacity-90">
                     create a new customer
                   </Link>
                 </div>
@@ -1012,7 +1043,7 @@ const ProjectForm = () => {
                         }}
                         disabled={isEdit}
                         readOnly={isEdit}
-                        className={`${inputCls} pr-10 ${isEdit ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
+                        className={`${inputCls} pr-10 ${isEdit ? 'cursor-not-allowed bg-[color:var(--bg-badge)] text-[color:var(--text-muted)]' : ''}`}
                       />
                       {customerSearch && !isEdit && (
                         <button
@@ -1022,13 +1053,13 @@ const ProjectForm = () => {
                             setShowCustomerDropdown(false)
                             setValue('customerId', '')
                           }}
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 transform text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]"
                         >
                           ✕
                         </button>
                       )}
                       {!isEdit && showCustomerDropdown && filteredCustomers.length > 0 && (
-                        <div className="absolute z-10 left-0 right-0 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-[70vh] sm:max-h-60 overflow-auto">
+                        <div className="absolute left-0 right-0 z-10 mt-1 max-h-[70vh] w-full overflow-auto rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-dropdown)] shadow-2xl shadow-black/40 backdrop-blur-xl sm:max-h-60">
                           {filteredCustomers.map((customer: any) => (
                             <div
                               key={customer.id}
@@ -1038,23 +1069,23 @@ const ProjectForm = () => {
                                 setCustomerSearch(`${customer.customerId} - ${customer.customerName}`)
                                 setShowCustomerDropdown(false)
                               }}
-                              className="px-4 py-3 sm:py-2 hover:bg-primary-50 cursor-pointer border-b border-gray-100 last:border-b-0 touch-manipulation"
+                              className="cursor-pointer border-b border-[color:var(--border-default)] px-4 py-3 last:border-b-0 hover:bg-[color:var(--bg-table-hover)] sm:py-2 touch-manipulation"
                             >
-                              <div className="font-medium text-sm text-gray-900">
+                              <div className="text-sm font-medium text-[color:var(--text-primary)]">
                                 {customer.customerId} - {customer.customerName}
                               </div>
                               {customer.consumerNumber && (
-                                <div className="text-xs text-gray-500">Consumer: {customer.consumerNumber}</div>
+                                <div className="text-xs text-[color:var(--text-muted)]">Consumer: {customer.consumerNumber}</div>
                               )}
                               {customer.address && (
-                                <div className="text-xs text-gray-500 truncate">{customer.address}</div>
+                                <div className="truncate text-xs text-[color:var(--text-muted)]">{customer.address}</div>
                               )}
                             </div>
                           ))}
                         </div>
                       )}
                       {!isEdit && showCustomerDropdown && customerSearch && filteredCustomers.length === 0 && (
-                        <div className="absolute z-10 left-0 right-0 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-4 text-sm text-gray-500">
+                        <div className="absolute left-0 right-0 z-10 mt-1 w-full rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-dropdown)] p-4 text-sm text-[color:var(--text-secondary)] shadow-2xl backdrop-blur-xl">
                           No customers found matching "{customerSearch}"
                         </div>
                       )}
@@ -1083,7 +1114,7 @@ const ProjectForm = () => {
                               }
                             }}
                             disabled={isEdit}
-                            className={`w-full min-w-0 ${selectCls} ${isEdit ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
+                            className={`zenith-native-select w-full min-w-0 ${selectCls} ${isEdit ? disabledControlCls : ''}`}
                           >
                             <option value="">Or select from list</option>
                             {filteredCustomers && filteredCustomers.length > 0 ? (
@@ -1103,7 +1134,7 @@ const ProjectForm = () => {
                   {customers?.customers && customers.customers.length === 0 && (
                     <p className="mt-2 text-xs text-yellow-600">
                       No customers found. Please{' '}
-                      <Link to="/customers" className="text-primary-600 hover:text-primary-800 underline">
+                      <Link to="/customers" className="text-[color:var(--accent-gold)] underline hover:opacity-90">
                         create a customer
                       </Link>{' '}
                       first.
@@ -1113,30 +1144,46 @@ const ProjectForm = () => {
                 </>
               )}
               {selectedCustomerId && filteredCustomers && (
-                <div className="mt-2 p-3 bg-white/60 rounded-lg border border-gray-100 text-sm text-gray-600">
+                <div className="mt-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] p-3 text-sm text-[color:var(--text-secondary)] shadow-inner ring-1 ring-[color:var(--border-default)] sm:p-3.5">
                   {(() => {
                     const customer = filteredCustomers.find((c: any) => c.id === selectedCustomerId);
                     if (customer) {
                       return (
-                        <div>
-                          <p className="font-medium text-gray-900 mb-2">Selected Customer Details:</p>
-                          <p><strong>Customer ID:</strong> {customer.customerId}</p>
-                          <p><strong className="text-gray-500 font-normal">Name:</strong> <span className="text-base sm:text-lg font-semibold text-gray-900">{customer.customerName}</span></p>
+                        <div className="space-y-1.5">
+                          <p className="mb-1 text-xs font-extrabold uppercase tracking-wide text-[color:var(--accent-gold)]">Selected customer</p>
+                          <p>
+                            <span className="text-[color:var(--text-secondary)]">Customer ID:</span>{' '}
+                            <span className="font-semibold text-[color:var(--text-primary)]">{customer.customerId}</span>
+                          </p>
+                          <p>
+                            <span className="text-[color:var(--text-secondary)]">Name:</span>{' '}
+                            <span className="text-base font-semibold text-[color:var(--text-primary)] sm:text-lg">{customer.customerName}</span>
+                          </p>
                           {customer.address && (
-                            <p><strong>Address:</strong> {customer.address}</p>
+                            <p>
+                              <span className="text-[color:var(--text-secondary)]">Address:</span> <span className="text-[color:var(--text-primary)]">{customer.address}</span>
+                            </p>
                           )}
                           {customer.contactNumbers && (
-                            <p><strong>Contact:</strong> {(() => {
-                              try {
-                                const contacts = JSON.parse(customer.contactNumbers);
-                                return Array.isArray(contacts) ? contacts.join(', ') : customer.contactNumbers;
-                              } catch {
-                                return customer.contactNumbers;
-                              }
-                            })()}</p>
+                            <p>
+                              <span className="text-[color:var(--text-secondary)]">Contact:</span>{' '}
+                              <span className="text-[color:var(--text-primary)]">
+                                {(() => {
+                                  try {
+                                    const contacts = JSON.parse(customer.contactNumbers);
+                                    return Array.isArray(contacts) ? contacts.join(', ') : customer.contactNumbers;
+                                  } catch {
+                                    return customer.contactNumbers;
+                                  }
+                                })()}
+                              </span>
+                            </p>
                           )}
                           {customer.consumerNumber && (
-                            <p><strong>Consumer Number:</strong> {customer.consumerNumber}</p>
+                            <p>
+                              <span className="text-[color:var(--text-secondary)]">Consumer number:</span>{' '}
+                              <span className="text-[color:var(--text-primary)]">{customer.consumerNumber}</span>
+                            </p>
                           )}
                         </div>
                       );
@@ -1146,21 +1193,27 @@ const ProjectForm = () => {
                 </div>
               )}
               {!isEdit && (
-                <p className="mt-2 text-xs text-gray-500">
-                  Don't see the customer? <Link to="/customers" className="text-primary-600 hover:text-primary-800">Create a new customer</Link>
+                <p className="mt-2 text-xs text-[color:var(--text-muted)]">
+                  Don&apos;t see the customer?{' '}
+                  <Link to="/customers" className="font-semibold text-[color:var(--accent-gold)] underline hover:opacity-90">
+                    Create a new customer
+                  </Link>
                 </p>
               )}
               {isEdit && (
-                <p className="mt-2 text-xs text-amber-600 bg-amber-50 p-2 rounded">
-                  <strong>Note:</strong> Customer cannot be changed for existing projects. To assign a different customer, please create a new project.
-                </p>
+                <div
+                  className="mt-2 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-3 py-2.5 text-xs leading-relaxed text-[color:var(--text-secondary)] ring-1 ring-[color:var(--accent-gold-border)]"
+                  role="note"
+                >
+                  <span className="font-extrabold text-[#f5d78a]">Note:</span> Customer cannot be changed for an existing project. To use a different customer, create a new project.
+                </div>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Segment *</label>
+              <label className={labelCls}>Segment *</label>
               <select
                 {...register('type', { required: true })}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                className={`zenith-native-select mt-1.5 ${selectCls}`}
               >
                 {Object.values(ProjectType).map((type) => (
                   <option key={type} value={type}>
@@ -1173,7 +1226,7 @@ const ProjectForm = () => {
               <label className={labelCls}>Project Type *</label>
               <select
                 {...register('projectServiceType', { required: true })}
-                className={selectCls}
+                className={`zenith-native-select ${selectCls}`}
                 defaultValue={ProjectServiceType.EPC_PROJECT}
               >
                 <option value={ProjectServiceType.EPC_PROJECT}>EPC Project</option>
@@ -1193,10 +1246,12 @@ const ProjectForm = () => {
         {/* Sales & Commercial - Visible for Sales/Admin users or when editing (except Lost projects and Finance-only mode)
             Also allows Operations and Sales (for their projects) to edit Lost stage fields */}
         {((canEditSales || isEdit || canEditLostFields) && (canEditOtherSections || canEditLostFields)) && (
-          <div className="bg-gradient-to-br from-emerald-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-emerald-400">
+          <div className="space-y-4 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-5 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] border-l-[3px] border-l-[color:var(--accent-green)]">
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Sales & Commercial</h3>
+              <svg className="h-5 w-5 text-[color:var(--accent-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <h3 className="text-sm font-extrabold uppercase tracking-wide text-[color:var(--text-primary)]">
+                Sales & Commercial
+              </h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -1204,7 +1259,7 @@ const ProjectForm = () => {
                 <select
                   {...register('leadSource', { required: 'Please select a lead source' })}
                   disabled={!canEditSalesCommercial}
-                  className={`${selectCls} ${!canEditSalesCommercial ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
+                  className={`zenith-native-select ${selectCls} ${!canEditSalesCommercial ? disabledControlCls : ''}`}
                 >
                   <option value="">Select Lead Source</option>
                   <option value={LeadSource.WEBSITE}>Website</option>
@@ -1231,7 +1286,7 @@ const ProjectForm = () => {
                     type="text"
                     {...register('leadSourceDetails')}
                     disabled={!canEditSalesCommercial}
-                    className={`${inputCls} ${!canEditSalesCommercial ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
+                    className={`${inputCls} ${!canEditSalesCommercial ? disabledControlCls : ''}`}
                     placeholder={
                       watch('leadSource') === LeadSource.CHANNEL_PARTNER ? 'Enter channel partner name' :
                       watch('leadSource') === LeadSource.REFERRAL ? 'Enter referral name' :
@@ -1286,7 +1341,7 @@ const ProjectForm = () => {
                     },
                   })}
                   disabled={!canEditSalesCommercial}
-                  className={`${inputCls} ${!canEditSalesCommercial ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
+                  className={`${inputCls} ${!canEditSalesCommercial ? disabledControlCls : ''}`}
                 />
               </div>
               <div>
@@ -1330,12 +1385,12 @@ const ProjectForm = () => {
                       return true;
                     }
                   })}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className={`${inputCls} ${isLost || !canEditSalesCommercial ? disabledControlCls : ''}`}
                   readOnly={isLost || !canEditSalesCommercial}
                   disabled={!canEditSalesCommercial}
                 />
                 {projectStatus === ProjectStatus.LOST && (
-                  <p className="mt-1 text-xs text-gray-500">Order value (stored as lost revenue for analysis). Project cost will be saved as 0.</p>
+                  <p className={ZENITH_FIELD_HINT_CLS}>Order value (stored as lost revenue for analysis). Project cost will be saved as 0.</p>
                 )}
               </div>
               <div>
@@ -1343,23 +1398,22 @@ const ProjectForm = () => {
                 <input
                   type="date"
                   {...register('confirmationDate', { required: true })}
-                  className={`${inputCls} ${(isLost || !canEditSalesCommercial) ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
+                  className={`${inputCls} ${(isLost || !canEditSalesCommercial) ? disabledControlCls : ''}`}
                   disabled={isLost || !canEditSalesCommercial}
-                  style={(isLost || !canEditSalesCommercial) ? { backgroundColor: '#f3f4f6', cursor: 'not-allowed' } : {}}
                   max={projectStatus === ProjectStatus.LOST ? new Date().toISOString().split('T')[0] : undefined}
                 />
                 {projectStatus === ProjectStatus.LOST && (
-                  <p className="mt-1 text-xs text-gray-500">Confirmation Date is the order lost date (current or past only).</p>
+                  <p className={ZENITH_FIELD_HINT_CLS}>Confirmation Date is the order lost date (current or past only).</p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Year (FY) *</label>
+                <label className={labelCls}>Year (FY) *</label>
                 <input
                   type="text"
                   {...register('year', { required: true })}
                   placeholder="2024-25"
                   readOnly
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 cursor-not-allowed"
+                  className={`${inputCls} ${disabledControlCls}`}
                   title="Automatically calculated from Confirmation Date"
                 />
               </div>
@@ -1367,7 +1421,7 @@ const ProjectForm = () => {
                 <label className={labelCls}>Project Status</label>
                 <select
                   {...register('projectStatus')}
-                  className={`${selectCls} ${(isProjectLost || !canEditSalesCommercial) ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}`}
+                  className={`zenith-native-select ${selectCls} ${(isProjectLost || !canEditSalesCommercial) ? disabledControlCls : ''}`}
                   disabled={isProjectLost || !canEditSalesCommercial}
                 >
                   <option value="LEAD">Lead</option>
@@ -1380,14 +1434,14 @@ const ProjectForm = () => {
                   <option value={ProjectStatus.LOST}>Lost</option>
                 </select>
                 {isLost && (
-                  <p className="mt-1 text-sm text-red-600">This project is in Lost status and cannot be edited. Only Admin can delete it.</p>
+                  <p className="mt-1 text-sm text-red-400/95">This project is in Lost status and cannot be edited. Only Admin can delete it.</p>
                 )}
               </div>
               {/* Lost Status Fields - Show when Lost is selected */}
               {projectStatus === ProjectStatus.LOST && (canEditLostFields || canEditSales || hasRole([UserRole.OPERATIONS])) && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className={labelCls}>
                       Lost Date *
                     </label>
                     <input
@@ -1407,18 +1461,18 @@ const ProjectForm = () => {
                         }
                       })}
                       max={new Date().toISOString().split('T')[0]} // Max date is today
-                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                      className={`mt-1.5 ${inputCls}`}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className={labelCls}>
                       Reason for Loss *
                     </label>
                     <select
                       {...register('lostReason', { 
                         required: projectStatus === ProjectStatus.LOST ? 'Please select a reason' : false 
                       })}
-                      className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                      className={`zenith-native-select mt-1.5 ${selectCls}`}
                     >
                       <option value="">Select reason</option>
                       <option value={LostReason.LOST_TO_COMPETITION}>Lost to Competition</option>
@@ -1429,14 +1483,14 @@ const ProjectForm = () => {
                   </div>
                   {watch('lostReason') === LostReason.LOST_TO_COMPETITION && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className={labelCls}>
                         Why lost to competition *
                       </label>
                       <select
                         {...register('lostToCompetitionReason', { 
                           required: watch('lostReason') === LostReason.LOST_TO_COMPETITION ? 'Please select why the deal was lost to competition' : false 
                         })}
-                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                        className={`zenith-native-select mt-1.5 ${selectCls}`}
                       >
                         <option value="">Select option</option>
                         <option value={LostToCompetitionReason.LOST_DUE_TO_PRICE}>Lost due to Price</option>
@@ -1447,7 +1501,7 @@ const ProjectForm = () => {
                   )}
                   {watch('lostReason') === LostReason.OTHER && (
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className={labelCls}>
                         Other Reason *
                       </label>
                       <textarea
@@ -1455,7 +1509,7 @@ const ProjectForm = () => {
                           required: watch('lostReason') === LostReason.OTHER ? 'Please enter the reason' : false 
                         })}
                         rows={3}
-                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                        className={`mt-1.5 ${inputCls}`}
                         placeholder="Please specify the reason for loss..."
                       />
                     </div>
@@ -1463,10 +1517,10 @@ const ProjectForm = () => {
                 </>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700">Roof Type</label>
+                <label className={labelCls}>Roof Type</label>
                 <select
                   {...register('roofType')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className={`zenith-native-select mt-1.5 ${selectCls}`}
                 >
                   <option value="">Select Roof Type</option>
                   <option value="Concrete-Flat">Concrete-Flat</option>
@@ -1479,48 +1533,48 @@ const ProjectForm = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">System Type</label>
-                <div className="flex gap-4 mt-1">
-                  <label className="inline-flex items-center">
+                <label className={`${labelCls} mb-2`}>System Type</label>
+                <div className="flex flex-wrap gap-4 mt-1">
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
                       {...register('systemType')}
                       value="OFF_GRID"
-                      className="mr-2"
+                      className="h-4 w-4 border-[color:var(--border-input)] bg-[color:var(--bg-input)] text-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
                     />
-                    <span className="text-sm text-gray-700">Off-Grid</span>
+                    <span className="text-sm font-medium text-[color:var(--text-primary)]">Off-Grid</span>
                   </label>
-                  <label className="inline-flex items-center">
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
                       {...register('systemType')}
                       value="ON_GRID"
-                      className="mr-2"
+                      className="h-4 w-4 border-[color:var(--border-input)] bg-[color:var(--bg-input)] text-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
                     />
-                    <span className="text-sm text-gray-700">On-Grid</span>
+                    <span className="text-sm font-medium text-[color:var(--text-primary)]">On-Grid</span>
                   </label>
-                  <label className="inline-flex items-center">
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
                       {...register('systemType')}
                       value="HYBRID"
-                      className="mr-2"
+                      className="h-4 w-4 border-[color:var(--border-input)] bg-[color:var(--bg-input)] text-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
                     />
-                    <span className="text-sm text-gray-700">Hybrid</span>
+                    <span className="text-sm font-medium text-[color:var(--text-primary)]">Hybrid</span>
                   </label>
                 </div>
               {/* Financing / Loan details */}
-              <div className="md:col-span-2 border-t border-emerald-100 pt-3 mt-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="md:col-span-2 border-t border-[color:var(--border-default)] pt-3 mt-1">
+                <label className={`${labelCls} mb-2`}>
                   Availing Loan/Financing?
                 </label>
                 <div className="flex items-center gap-4">
-                  <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                  <label className="inline-flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
                     <input
                       type="checkbox"
                       {...register('availingLoan')}
                       disabled={!canEditFinancing}
-                      className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      className="h-4 w-4 rounded border-[color:var(--border-input)] bg-[color:var(--bg-input)] text-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)] disabled:opacity-50"
                     />
                     <span>Yes (leave unchecked for No)</span>
                   </label>
@@ -1531,61 +1585,32 @@ const ProjectForm = () => {
                       <label className={labelCls}>
                         Financing Bank *
                       </label>
-                      <select
-                        {...register('financingBank', {
+                      <Controller
+                        name="financingBank"
+                        control={control}
+                        rules={{
                           validate: (value) => {
                             if (!availingLoan) return true
-                            if (!value || value.trim() === '') {
+                            if (!value || String(value).trim() === '') {
                               return 'Please select a financing bank'
                             }
                             return true
                           },
-                        })}
-                        disabled={!canEditFinancing}
-                        className={selectCls}
-                      >
-                        <option value="">Select Bank</option>
-                        <option value="AXIS_BANK">Axis Bank</option>
-                        <option value="AU_SMALL_FINANCE_BANK">AU Small Finance Bank</option>
-                        <option value="BANDHAN_BANK">Bandhan Bank</option>
-                        <option value="BANK_OF_BARODA">Bank of Baroda</option>
-                        <option value="BANK_OF_INDIA">Bank of India</option>
-                        <option value="BANK_OF_MAHARASHTRA">Bank of Maharashtra</option>
-                        <option value="CANARA_BANK">Canara Bank</option>
-                        <option value="CAPITAL_SMALL_FINANCE_BANK">Capital Small Finance Bank</option>
-                        <option value="KOTAK_MAHINDRA_BANK">Kotak Mahindra Bank</option>
-                        <option value="CATHOLIC_SYRIAN_BANK">Catholic Syrian Bank</option>
-                        <option value="CITY_UNION_BANK">City Union Bank</option>
-                        <option value="DCB_BANK">DCB Bank</option>
-                        <option value="DHANLAXMI_BANK">Dhanlaxmi Bank</option>
-                        <option value="EQUITAS_SMALL_FINANCE_BANK">Equitas Small Finance Bank</option>
-                        <option value="ESAF_SMALL_FINANCE_BANK">ESAF Small Finance Bank</option>
-                        <option value="FEDERAL_BANK">Federal Bank</option>
-                        <option value="HDFC_BANK">HDFC Bank</option>
-                        <option value="ICICI_BANK">ICICI Bank</option>
-                        <option value="IDBI_BANK">IDBI Bank</option>
-                        <option value="IDFC_FIRST_BANK">IDFC FIRST Bank</option>
-                        <option value="INDIAN_BANK">Indian Bank</option>
-                        <option value="INDIAN_OVERSEAS_BANK">Indian Overseas Bank</option>
-                        <option value="INDUSIND_BANK">IndusInd Bank</option>
-                        <option value="JAMMU_KASHMIR_BANK">Jammu &amp; Kashmir Bank</option>
-                        <option value="JANA_SMALL_FINANCE_BANK">Jana Small Finance Bank</option>
-                        <option value="KARNATAKA_BANK">Karnataka Bank</option>
-                        <option value="KARUR_VYSYA_BANK">Karur Vysya Bank</option>
-                        <option value="KERALA_BANK">Kerala Bank</option>
-                        <option value="KERALA_GRAMIN_BANK">Kerala Gramin Bank</option>
-                        <option value="PUNJAB_NATIONAL_BANK">Punjab National Bank (PNB)</option>
-                        <option value="RBL_BANK">RBL Bank</option>
-                        <option value="SBI">State Bank of India (SBI)</option>
-                        <option value="SHIVALIK_SMALL_FINANCE_BANK">Shivalik Small Finance Bank</option>
-                        <option value="SOUTH_INDIAN_BANK">South Indian Bank</option>
-                        <option value="TAMILNADU_MERCANTILE_BANK">Tamilnadu Mercantile Bank</option>
-                        <option value="UJJIVAN_SMALL_FINANCE_BANK">Ujjivan Small Finance Bank</option>
-                        <option value="UNION_BANK_OF_INDIA">Union Bank of India</option>
-                        <option value="UTKARSH_SMALL_FINANCE_BANK">Utkarsh Small Finance Bank</option>
-                        <option value="YES_BANK">YES Bank</option>
-                        <option value="OTHER">Other</option>
-                      </select>
+                        }}
+                        render={({ field, fieldState }) => (
+                          <ZenithSingleSelect
+                            ref={field.ref}
+                            value={field.value ?? ''}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            disabled={!canEditFinancing}
+                            options={FINANCING_BANK_FORM_OPTIONS}
+                            placeholder="Select Bank"
+                            allowEmpty
+                            aria-invalid={!!fieldState.error}
+                          />
+                        )}
+                      />
                     </div>
                     {financingBank === 'OTHER' && (
                       <div>
@@ -1626,99 +1651,101 @@ const ProjectForm = () => {
         {/* Payment Tracking */}
         {canEditPayments ? (
           <div className="relative">
-            <div className="bg-gradient-to-br from-sky-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-sky-400">
+            <div className="space-y-4 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-5 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] border-l-[3px] border-l-[color:var(--accent-blue)]">
               <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Payment Tracking</h3>
+                <svg className="h-5 w-5 text-[color:var(--accent-blue)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                <h3 className="text-sm font-extrabold uppercase tracking-wide text-[color:var(--text-primary)]">
+                  Payment Tracking
+                </h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className={labelCls}>
                     Advance Received (₹)
                   </label>
                   <input
                     type="number"
                     step="0.01"
                     {...register('advanceReceived')}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                    className={`mt-1.5 ${inputCls}`}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className={labelCls}>
                     Advance Received Date
                   </label>
                   <input
                     type="date"
                     {...register('advanceReceivedDate')}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                    className={`mt-1.5 ${inputCls}`}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Payment 1 (₹)</label>
+                  <label className={labelCls}>Payment 1 (₹)</label>
                   <input
                     type="number"
                     step="0.01"
                     {...register('payment1')}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                    className={`mt-1.5 ${inputCls}`}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Payment 1 Date</label>
+                  <label className={labelCls}>Payment 1 Date</label>
                   <input
                     type="date"
                     {...register('payment1Date')}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                    className={`mt-1.5 ${inputCls}`}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Payment 2 (₹)</label>
+                  <label className={labelCls}>Payment 2 (₹)</label>
                   <input
                     type="number"
                     step="0.01"
                     {...register('payment2')}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                    className={`mt-1.5 ${inputCls}`}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Payment 2 Date</label>
+                  <label className={labelCls}>Payment 2 Date</label>
                   <input
                     type="date"
                     {...register('payment2Date')}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                    className={`mt-1.5 ${inputCls}`}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Payment 3 (₹)</label>
+                  <label className={labelCls}>Payment 3 (₹)</label>
                   <input
                     type="number"
                     step="0.01"
                     {...register('payment3')}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                    className={`mt-1.5 ${inputCls}`}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Payment 3 Date</label>
+                  <label className={labelCls}>Payment 3 Date</label>
                   <input
                     type="date"
                     {...register('payment3Date')}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                    className={`mt-1.5 ${inputCls}`}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Last Payment (₹)</label>
+                  <label className={labelCls}>Last Payment (₹)</label>
                   <input
                     type="number"
                     step="0.01"
                     {...register('lastPayment')}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                    className={`mt-1.5 ${inputCls}`}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Last Payment Date</label>
+                  <label className={labelCls}>Last Payment Date</label>
                   <input
                     type="date"
                     {...register('lastPaymentDate')}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                    className={`mt-1.5 ${inputCls}`}
                   />
                 </div>
               </div>
@@ -1755,112 +1782,114 @@ const ProjectForm = () => {
 
         {/* Project Lifecycle - Hidden for Finance users in edit mode */}
         {canEditExecution && canEditOtherSections && (
-          <div className="bg-gradient-to-br from-violet-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-violet-400">
+          <div className="space-y-4 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-5 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] border-l-[3px] border-l-[color:var(--accent-purple)]">
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Project Lifecycle</h3>
+              <svg className="h-5 w-5 text-[color:var(--accent-purple)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              <h3 className="text-sm font-extrabold uppercase tracking-wide text-[color:var(--text-primary)]">
+                Project Lifecycle
+              </h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className={labelCls}>
                   MNRE Portal Registration Date
                 </label>
                 <input
                   type="date"
                   {...register('mnrePortalRegistrationDate')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className={`mt-1.5 ${inputCls}`}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className={labelCls}>
                   Feasibility Date (DISCOM)
                 </label>
                 <input
                   type="date"
                   {...register('feasibilityDate')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className={`mt-1.5 ${inputCls}`}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className={labelCls}>
                   Registration Date (DISCOM)
                 </label>
                 <input
                   type="date"
                   {...register('registrationDate')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className={`mt-1.5 ${inputCls}`}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className={labelCls}>
                   Expected commissioning date
                 </label>
                 <input
                   type="date"
                   {...register('expectedCommissioningDate')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className={`mt-1.5 ${inputCls}`}
                 />
-                <p className="mt-1 text-xs text-gray-500">
+                <p className={ZENITH_FIELD_HINT_CLS}>
                   Target date for go-live; used in Zenith Installation pulse. If left empty, installation completion date is used
                   there as a fallback.
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className={labelCls}>
                   Installation Completion Date
                 </label>
                 <input
                   type="date"
                   {...register('installationCompletionDate')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className={`mt-1.5 ${inputCls}`}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className={labelCls}>
                   Completion Report Submission Date
                 </label>
                 <input
                   type="date"
                   {...register('completionReportSubmissionDate')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className={`mt-1.5 ${inputCls}`}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className={labelCls}>
                   Net Meter Installation Date
                 </label>
                 <input
                   type="date"
                   {...register('subsidyRequestDate')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className={`mt-1.5 ${inputCls}`}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className={labelCls}>
                   Total Project Cost (₹)
                 </label>
                 <input
                   type="number"
                   step="0.01"
                   {...register('totalProjectCost')}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className={`mt-1.5 ${inputCls} ${projectStatus === ProjectStatus.LOST ? disabledControlCls : ''}`}
                   placeholder="Overall cost incurred in the project"
                   disabled={projectStatus === ProjectStatus.LOST}
                   readOnly={projectStatus === ProjectStatus.LOST}
                 />
                 {projectStatus === ProjectStatus.LOST && (
-                  <p className="mt-1 text-xs text-gray-500">Total Project Cost is set to 0 for Lost projects</p>
+                  <p className={ZENITH_FIELD_HINT_CLS}>Total Project Cost is set to 0 for Lost projects</p>
                 )}
               </div>
               <div className="md:col-span-2 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 items-start">
                   <div className="min-w-0 w-full space-y-1">
-                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    <label className={sublabelUpperCls}>
                       Panel brand
                     </label>
                     <select
                       {...register('panelBrand')}
-                      className="block w-full border border-gray-200 rounded-lg bg-white px-2.5 py-2 text-sm text-gray-900 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                      className={`zenith-native-select ${selectCls} text-sm`}
                     >
                       <option value="">Select…</option>
                       {PANEL_BRAND_OPTIONS.map((brand) => (
@@ -1871,8 +1900,8 @@ const ProjectForm = () => {
                     </select>
                     {panelBrandSelection === 'Others' ? (
                       <div className="pt-2 space-y-1">
-                        <label className="block text-xs font-medium text-gray-600">
-                          Specify brand <span className="text-red-600">*</span>
+                        <label className={ZENITH_AUX_LABEL_CLS}>
+                          Specify brand <span className="text-red-400">*</span>
                         </label>
                         <input
                           type="text"
@@ -1882,7 +1911,7 @@ const ProjectForm = () => {
                               (typeof v === 'string' && v.trim().length > 0) ||
                               'Enter the panel brand name',
                           })}
-                          className="block w-full border border-gray-200 rounded-lg px-2.5 py-2 text-sm focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                          className={inputCls}
                           placeholder="Brand name"
                           autoComplete="off"
                         />
@@ -1890,7 +1919,7 @@ const ProjectForm = () => {
                     ) : null}
                   </div>
                   <div className="min-w-0 w-full space-y-1">
-                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    <label className={sublabelUpperCls}>
                       Panel capacity (W)
                     </label>
                     <input
@@ -1907,18 +1936,18 @@ const ProjectForm = () => {
                         validate: (v) =>
                           v === undefined || v === null || (Number.isInteger(v) && v >= 0) || 'Must be a whole number ≥ 0',
                       })}
-                      className="block w-full border border-gray-200 rounded-lg px-2.5 py-2 text-sm focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                      className={inputCls}
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 items-start border-t border-gray-100 pt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 items-start border-t border-[color:var(--border-default)] pt-4">
                   <div className="min-w-0 w-full space-y-1">
-                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    <label className={sublabelUpperCls}>
                       Inverter brand
                     </label>
                     <select
                       {...register('inverterBrand')}
-                      className="block w-full border border-gray-200 rounded-lg bg-white px-2.5 py-2 text-sm text-gray-900 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                      className={`zenith-native-select ${selectCls} text-sm`}
                     >
                       <option value="">Select…</option>
                       {INVERTER_BRAND_OPTIONS.map((brand) => (
@@ -1929,8 +1958,8 @@ const ProjectForm = () => {
                     </select>
                     {inverterBrandSelection === 'Others' ? (
                       <div className="pt-2 space-y-1">
-                        <label className="block text-xs font-medium text-gray-600">
-                          Specify brand <span className="text-red-600">*</span>
+                        <label className={ZENITH_AUX_LABEL_CLS}>
+                          Specify brand <span className="text-red-400">*</span>
                         </label>
                         <input
                           type="text"
@@ -1940,7 +1969,7 @@ const ProjectForm = () => {
                               (typeof v === 'string' && v.trim().length > 0) ||
                               'Enter the inverter brand name',
                           })}
-                          className="block w-full border border-gray-200 rounded-lg px-2.5 py-2 text-sm focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                          className={inputCls}
                           placeholder="Brand name"
                           autoComplete="off"
                         />
@@ -1948,7 +1977,7 @@ const ProjectForm = () => {
                     ) : null}
                   </div>
                   <div className="min-w-0 w-full space-y-1">
-                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                    <label className={sublabelUpperCls}>
                       Inverter capacity (kW)
                     </label>
                     <input
@@ -1962,14 +1991,14 @@ const ProjectForm = () => {
                         inverterCapacityKwUserEditedRef.current = true
                         inverterCapacityKwRegister.onChange(e)
                       }}
-                      className="block w-full border border-gray-200 rounded-lg px-2.5 py-2 text-sm focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                      className={inputCls}
                     />
-                    <p className="text-[11px] text-gray-500 leading-snug">
-                      Defaults to <span className="font-medium text-gray-600">System capacity (kW)</span> (rounded). Edit here if the inverter rating differs.
+                    <p className="text-[11px] leading-snug text-[color:var(--text-muted)]">
+                      Defaults to <span className="font-medium text-[color:var(--text-secondary)]">System capacity (kW)</span> (rounded). Edit here if the inverter rating differs.
                     </p>
                   </div>
-                  <div className="min-w-0 sm:col-span-2 space-y-1.5 pt-1 border-t border-gray-100 sm:border-0 sm:pt-0">
-                    <span className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                  <div className="min-w-0 sm:col-span-2 space-y-1.5 border-t border-[color:var(--border-default)] pt-3 sm:border-0 sm:pt-0">
+                    <span className={sublabelUpperCls}>
                       Panel type
                     </span>
                     <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 pt-0.5">
@@ -1978,18 +2007,18 @@ const ProjectForm = () => {
                           type="radio"
                           {...register('panelType')}
                           value="DCR"
-                          className="h-3.5 w-3.5 border-gray-300 text-violet-600 focus:ring-violet-500"
+                          className="h-3.5 w-3.5 border-[color:var(--border-input)] bg-[color:var(--bg-input)] text-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
                         />
-                        <span className="text-sm text-gray-800">DCR</span>
+                        <span className="text-sm font-medium text-[color:var(--text-primary)]">DCR</span>
                       </label>
                       <label className="inline-flex items-center gap-2 cursor-pointer">
                         <input
                           type="radio"
                           {...register('panelType')}
                           value="Non-DCR"
-                          className="h-3.5 w-3.5 border-gray-300 text-violet-600 focus:ring-violet-500"
+                          className="h-3.5 w-3.5 border-[color:var(--border-input)] bg-[color:var(--bg-input)] text-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
                         />
-                        <span className="text-sm text-gray-800">Non-DCR</span>
+                        <span className="text-sm font-medium text-[color:var(--text-primary)]">Non-DCR</span>
                       </label>
                     </div>
                   </div>
@@ -2007,10 +2036,12 @@ const ProjectForm = () => {
         {/* File Upload Section - Hidden for Finance users */}
         {isEdit && id && hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS]) && canEditOtherSections && (
           <div className="relative">
-            <div className="bg-gradient-to-br from-violet-50/50 to-gray-50/60 rounded-xl p-5 space-y-4 border-l-4 border-l-violet-400">
+            <div className="space-y-4 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-5 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] border-l-[3px] border-l-[color:var(--accent-purple)]">
               <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">File Uploads</h3>
+                <svg className="h-5 w-5 text-[color:var(--accent-purple)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                <h3 className="text-sm font-extrabold uppercase tracking-wide text-[color:var(--text-primary)]">
+                  File Uploads
+                </h3>
               </div>
               <FileUploadSection
                 projectId={id}
@@ -2037,18 +2068,18 @@ const ProjectForm = () => {
           </div>
         )}
 
-        <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
+        <div className="flex justify-end gap-3 border-t border-[color:var(--border-default)] pt-6">
           <button
             type="button"
             onClick={() => navigate(exitPath)}
-            className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            className="rounded-xl border border-[color:var(--border-strong)] bg-[color:var(--bg-input)] px-4 py-2.5 text-sm font-semibold text-[color:var(--text-primary)] transition-colors hover:border-[color:var(--accent-gold-border)] hover:bg-[color:var(--bg-card-hover)]"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={mutation.isPending || isLost}
-            className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-amber-600 to-primary-600 rounded-lg hover:from-amber-700 hover:to-primary-700 disabled:opacity-50 transition-colors shadow-md"
+            className="rounded-xl bg-[color:var(--accent-gold)] px-5 py-2.5 text-sm font-extrabold text-[color:var(--text-inverse)] shadow-md transition-all hover:opacity-95 disabled:opacity-50"
           >
             {mutation.isPending ? 'Saving...' : isEdit ? (isLost ? 'Cannot Edit Lost Project' : 'Update') : 'Create'}
           </button>

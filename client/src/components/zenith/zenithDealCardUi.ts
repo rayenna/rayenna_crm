@@ -3,14 +3,46 @@
  * Hit List, Pipeline today, and quick-drawer project lists stay visually aligned.
  */
 
+import { ProjectStatus } from '../../types'
+
+/** Projects grid / detail: enum-based pills (same accents as Zenith string pills). */
+export function projectStatusStagePillClass(status: ProjectStatus): string {
+  switch (status) {
+    case ProjectStatus.LEAD:
+      return 'border border-[color:var(--accent-blue-border)] bg-[color:var(--accent-blue-muted)] text-[color:var(--accent-blue)] font-semibold'
+    case ProjectStatus.SITE_SURVEY:
+      return 'border border-[color:var(--accent-purple-border)] bg-[color:var(--accent-purple-muted)] text-[color:var(--accent-purple)] font-semibold'
+    case ProjectStatus.PROPOSAL:
+      return 'border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)] font-semibold'
+    case ProjectStatus.CONFIRMED:
+    case ProjectStatus.UNDER_INSTALLATION:
+      return 'border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] text-[color:var(--accent-teal)] font-semibold'
+    case ProjectStatus.SUBMITTED_FOR_SUBSIDY:
+      return 'border border-[color:var(--accent-purple-border)] bg-[color:var(--accent-purple-muted)] text-[color:var(--accent-purple)] font-semibold'
+    case ProjectStatus.COMPLETED:
+    case ProjectStatus.COMPLETED_SUBSIDY_CREDITED:
+      return 'border border-[color:var(--accent-teal-border)] bg-[color:var(--stage-complete)] text-[color:var(--stage-complete-text)] font-semibold'
+    case ProjectStatus.LOST:
+      return 'border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] text-[color:var(--accent-red)] font-semibold'
+    default:
+      return 'border border-[color:var(--border-default)] bg-[color:var(--bg-badge)] text-[color:var(--text-secondary)] font-medium'
+  }
+}
+
+/** Muted fill + accent text + border — readable on light cards and dark Zenith surfaces. */
 export function zenithStagePillToneClass(stage: string): string {
   const s = stage.trim()
-  if (s === 'Lead') return 'bg-[rgba(56,139,255,0.15)] text-[#3B8BFF]'
-  if (s === 'Site Survey') return 'bg-[rgba(139,92,246,0.15)] text-[#8B5CF6]'
-  if (s === 'Proposal') return 'bg-[rgba(245,166,35,0.15)] text-[#F5A623]'
-  if (s === 'Confirmed Order') return 'bg-[rgba(0,212,180,0.15)] text-[#00D4B4]'
-  if (s === 'Under Installation') return 'bg-[rgba(245,166,35,0.15)] text-[#F5A623]'
-  return 'bg-[rgba(255,255,255,0.08)] text-[rgba(255,255,255,0.6)]'
+  if (s === 'Lead')
+    return 'bg-[color:var(--accent-blue-muted)] text-[color:var(--accent-blue)] border border-[color:var(--accent-blue-border)]'
+  if (s === 'Site Survey')
+    return 'bg-[color:var(--accent-purple-muted)] text-[color:var(--accent-purple)] border border-[color:var(--accent-purple-border)]'
+  if (s === 'Proposal')
+    return 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)] border border-[color:var(--accent-gold-border)]'
+  if (s === 'Confirmed Order')
+    return 'bg-[color:var(--accent-teal-muted)] text-[color:var(--accent-teal)] border border-[color:var(--accent-teal-border)]'
+  if (s === 'Under Installation')
+    return 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)] border border-[color:var(--accent-gold-border)]'
+  return 'bg-[color:var(--bg-badge)] text-[color:var(--text-secondary)] border border-[color:var(--border-default)]'
 }
 
 /** Table / dense list rows (Hit List desktop, pipeline table). */
@@ -30,9 +62,11 @@ export function zenithDrawerStagePillClass(stageLabel: string): string {
 
 /** Same tones as “Your pipeline today” last-activity pill (shared with Hit List). */
 export function zenithLastActivityTone(days: number): { text: string; className: string } {
-  if (days < 3) return { text: 'text-emerald-300', className: 'bg-emerald-500/15' }
-  if (days <= 7) return { text: 'text-amber-300', className: 'bg-amber-500/15' }
-  return { text: 'text-red-300', className: 'bg-red-500/15' }
+  if (days < 3)
+    return { text: 'text-[color:var(--accent-teal)]', className: 'bg-[color:var(--accent-teal-muted)] border border-[color:var(--accent-teal-border)]' }
+  if (days <= 7)
+    return { text: 'text-[color:var(--accent-gold)]', className: 'bg-[color:var(--accent-gold-muted)] border border-[color:var(--accent-gold-border)]' }
+  return { text: 'text-[color:var(--accent-red)]', className: 'bg-[color:var(--accent-red-muted)] border border-[color:var(--accent-red-border)]' }
 }
 
 export function formatZenithDealInrParts(v: number | null | undefined): {
@@ -48,7 +82,7 @@ export function formatZenithDealInrParts(v: number | null | undefined): {
 
 /** Use inside a parent with `group` for hover (Hit List row pattern). */
 export const ZENITH_DEAL_OPEN_BUTTON_CLASS =
-  'inline-block rounded-md border border-[#F5A623]/50 bg-[rgba(245,166,35,0.14)] px-2.5 py-1 text-[10px] font-semibold text-[#F2DCA8] shadow-sm shadow-black/25 transition-all duration-200 ease-out hover:border-[#F5A623] hover:bg-[rgba(245,166,35,0.26)] hover:text-[#FFFBF2] hover:shadow-md hover:shadow-black/30 group-hover:border-[#F5A623] group-hover:bg-[rgba(245,166,35,0.22)] group-hover:text-[#FFF5E6] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5A623]/45 focus-visible:ring-offset-1 focus-visible:ring-offset-[#101018]'
+  'inline-block rounded-md border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-2.5 py-1 text-[10px] font-semibold text-[color:var(--accent-gold)] shadow-sm transition-all duration-200 ease-out hover:border-[color:var(--accent-gold)] hover:bg-[color:color-mix(in srgb,var(--accent-gold) 22%, transparent)] hover:text-[color:var(--text-inverse)] group-hover:border-[color:var(--accent-gold)] group-hover:bg-[color:color-mix(in srgb,var(--accent-gold) 18%, transparent)] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] focus-visible:ring-offset-1 focus-visible:ring-offset-[color:var(--bg-page)]'
 
 export const ZENITH_DEAL_OPEN_BUTTON_CLASS_BLOCK =
-  'block w-full rounded-lg border border-[#F5A623]/50 bg-[rgba(245,166,35,0.14)] py-1.5 text-center text-[13px] font-semibold text-[#F2DCA8] shadow-sm shadow-black/25 transition-all duration-200 ease-out hover:border-[#F5A623] hover:bg-[rgba(245,166,35,0.26)] hover:text-[#FFFBF2] hover:shadow-md hover:shadow-black/30 group-hover:border-[#F5A623] group-hover:bg-[rgba(245,166,35,0.22)] group-hover:text-[#FFF5E6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5A623]/45 focus-visible:ring-offset-1 focus-visible:ring-offset-[#101018]'
+  'block w-full rounded-lg border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] py-1.5 text-center text-[13px] font-semibold text-[color:var(--accent-gold)] shadow-sm transition-all duration-200 ease-out hover:border-[color:var(--accent-gold)] hover:bg-[color:color-mix(in srgb,var(--accent-gold) 22%, transparent)] hover:text-[color:var(--text-inverse)] group-hover:border-[color:var(--accent-gold)] group-hover:bg-[color:color-mix(in srgb,var(--accent-gold) 18%, transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] focus-visible:ring-offset-1 focus-visible:ring-offset-[color:var(--bg-page)]'

@@ -1,0 +1,269 @@
+/* ═══════════════════════════════════════════
+   RAYENNA CRM — THEME TOKENS
+   All colors defined here. Nothing hardcoded elsewhere.
+   ═══════════════════════════════════════════ */
+
+/* ── DARK THEME (default) ────────────────── */
+[data-theme="dark"] {
+
+  /* Page backgrounds */
+  --bg-page:           #0A0A0F;
+  --bg-surface:        #0F0F1A;
+  --bg-card:           rgba(255,255,255,0.04);
+  --bg-card-hover:     rgba(255,255,255,0.07);
+  --bg-input:          rgba(255,255,255,0.05);
+  --bg-dropdown:       #14141F;
+  --bg-modal:          #0F0F1A;
+  --bg-tooltip:        #1A1A2E;
+  --bg-badge:          rgba(255,255,255,0.08);
+  --bg-table-alt:      rgba(255,255,255,0.02);
+  --bg-table-hover:    rgba(255,255,255,0.05);
+  --bg-ticker:         rgba(255,255,255,0.03);
+  --bg-overlay:        rgba(0,0,0,0.65);
+  --bg-drawer:         #0F0F1A;
+
+  /* Borders */
+  --border-default:    rgba(255,255,255,0.09);
+  --border-strong:     rgba(255,255,255,0.15);
+  --border-input:      rgba(255,255,255,0.12);
+  --border-focus:      rgba(245,166,35,0.5);
+  --border-card:       rgba(255,255,255,0.09);
+
+  /* Text */
+  --text-primary:      #FFFFFF;
+  --text-secondary:    rgba(255,255,255,0.55);
+  --text-muted:        rgba(255,255,255,0.28);
+  --text-placeholder:  rgba(255,255,255,0.22);
+  --text-inverse:      #0A0A0F;
+
+  /* Brand accents — these stay consistent */
+  --accent-gold:       #F5A623;
+  --accent-gold-muted: rgba(245,166,35,0.15);
+  --accent-gold-border:rgba(245,166,35,0.3);
+  --accent-teal:       #00D4B4;
+  --accent-teal-muted: rgba(0,212,180,0.15);
+  --accent-teal-border:rgba(0,212,180,0.3);
+  --accent-red:        #FF4757;
+  --accent-red-muted:  rgba(255,71,87,0.15);
+  --accent-red-border: rgba(255,71,87,0.3);
+  --accent-purple:     #8B5CF6;
+  --accent-purple-muted:rgba(139,92,246,0.15);
+  --accent-purple-border:rgba(139,92,246,0.3);
+  --accent-blue:       #3B8BFF;
+  --accent-blue-muted: rgba(59,139,255,0.15);
+  --accent-blue-border:rgba(59,139,255,0.32);
+  --accent-amber:      #F5A623;
+  --accent-green:      #10B981;
+
+  /* Page header banners */
+  --banner-bg:         linear-gradient(
+                         135deg, 
+                         #F5A623 0%, 
+                         #E09520 50%, 
+                         #C87D10 100%
+                       );
+  --banner-text:       #FFFFFF;
+  --banner-subtext:    rgba(255,255,255,0.8);
+
+  /* Navigation (stays dark in both themes) */
+  --nav-bg:            #111118;
+  --nav-border:        rgba(255,255,255,0.08);
+  --nav-text:          rgba(255,255,255,0.75);
+  --nav-text-active:   #FFFFFF;
+  --nav-text-hover:    #FFFFFF;
+  --nav-active-bg:     rgba(255,255,255,0.1);
+
+  /* Stage pill colors */
+  --stage-lead:        rgba(59,139,255,0.2);
+  --stage-lead-text:   #3B8BFF;
+  --stage-survey:      rgba(139,92,246,0.2);
+  --stage-survey-text: #8B5CF6;
+  --stage-proposal:    rgba(245,166,35,0.2);
+  --stage-proposal-text:#F5A623;
+  --stage-confirmed:   rgba(0,212,180,0.2);
+  --stage-confirmed-text:#00D4B4;
+  --stage-install:     rgba(16,185,129,0.2);
+  --stage-install-text:#10B981;
+  --stage-complete:    rgba(0,212,180,0.15);
+  --stage-complete-text:#00D4B4;
+
+  /* Payment status */
+  --pay-paid-bg:       rgba(0,212,180,0.15);
+  --pay-paid-text:     #00D4B4;
+  --pay-partial-bg:    rgba(139,92,246,0.15);
+  --pay-partial-text:  #8B5CF6;
+  --pay-pending-bg:    rgba(59,139,255,0.15);
+  --pay-pending-text:  #3B8BFF;
+  --pay-na-bg:         rgba(255,255,255,0.08);
+  --pay-na-text:       rgba(255,255,255,0.4);
+
+  /* Charts */
+  --chart-grid:        rgba(255,255,255,0.05);
+  --chart-axis-text:   rgba(255,255,255,0.35);
+  --chart-cursor-band: rgba(255,255,255,0.06);
+  --chart-tooltip-bg:  #1A1A2E;
+  --chart-tooltip-border: rgba(255,255,255,0.1);
+  --chart-tooltip-fg:  rgba(255,255,255,0.95);
+  --chart-tooltip-fg-muted: rgba(255,255,255,0.55);
+  --chart-tooltip-shadow: 0 8px 32px rgba(0,0,0,0.45);
+  --chart-tooltip-divider: rgba(255,255,255,0.08);
+  --chart-tooltip-track: rgba(255,255,255,0.08);
+  --chart-tooltip-insight: rgba(255,255,255,0.45);
+
+  /* Zenith word cloud tiers (canvas text — must contrast host background) */
+  --zenith-wc-tier-high: #5eead4;
+  --zenith-wc-tier-mid:  #7dd3fc;
+  --zenith-wc-tier-low:  #fbbf24;
+
+  /* Scrollbar */
+  --scrollbar-track:   rgba(255,255,255,0.03);
+  --scrollbar-thumb:   rgba(255,255,255,0.12);
+
+  /* Shadows — none in dark (borders + opacity do the work) */
+  --shadow-card:       none;
+  --shadow-dropdown:   0 8px 32px rgba(0,0,0,0.5);
+  --shadow-modal:      0 20px 60px rgba(0,0,0,0.6);
+
+  /* Zenith portaled quick drawers */
+  --zenith-drawer-backdrop:        rgba(0, 0, 0, 0.58);
+  --zenith-drawer-backdrop-lg:     rgba(0, 0, 0, 0.48);
+  --zenith-drawer-panel-shadow:    -20px 0 60px rgba(0, 0, 0, 0.55);
+
+  /* Zenith data tables — header row distinct from body (Hit List, pipeline, overdue, install pulse) */
+  --zenith-table-header-bg:  rgba(255,255,255,0.09);
+  --zenith-table-header-fg:  rgba(255,255,255,0.82);
+}
+
+/* ── LIGHT THEME ─────────────────────────── */
+[data-theme="light"] {
+
+  /* Page backgrounds */
+  --bg-page:           #F4F1EC;
+  --bg-surface:        #EDE9E1;
+  --bg-card:           #FFFFFF;
+  --bg-card-hover:     #F9F7F4;
+  --bg-input:          #FFFFFF;
+  --bg-dropdown:       #FFFFFF;
+  --bg-modal:          #FFFFFF;
+  --bg-tooltip:        #FFFFFF;
+  --bg-badge:          rgba(0,0,0,0.06);
+  --bg-table-alt:      rgba(0,0,0,0.02);
+  --bg-table-hover:    rgba(234,88,12,0.06);
+  --bg-ticker:         rgba(26,26,46,0.04);
+  --bg-overlay:        rgba(0,0,0,0.5);
+  --bg-drawer:         #FFFFFF;
+
+  /* Borders */
+  --border-default:    rgba(0,0,0,0.08);
+  --border-strong:     rgba(0,0,0,0.15);
+  --border-input:      rgba(0,0,0,0.15);
+  --border-focus:      rgba(234,88,12,0.55);
+  --border-card:       rgba(0,0,0,0.08);
+
+  /* Text — stronger greys so secondary copy reads on cream / white */
+  --text-primary:      #1A1A2E;
+  --text-secondary:    rgba(26,26,46,0.74);
+  --text-muted:        rgba(26,26,46,0.50);
+  --text-placeholder:  rgba(26,26,46,0.42);
+  --text-inverse:      #FFFFFF;
+
+  /* Brand accents — vivid orange for clear contrast on light surfaces */
+  --accent-gold:       #EA580C;
+  --accent-gold-muted: rgba(234,88,12,0.14);
+  --accent-gold-border:rgba(234,88,12,0.38);
+  --accent-teal:       #0A9E87;
+  --accent-teal-muted: rgba(10,158,135,0.10);
+  --accent-teal-border:rgba(10,158,135,0.25);
+  --accent-red:        #E03040;
+  --accent-red-muted:  rgba(224,48,64,0.10);
+  --accent-red-border: rgba(224,48,64,0.25);
+  --accent-purple:     #6D3EC4;
+  --accent-purple-muted:rgba(109,62,196,0.10);
+  --accent-purple-border:rgba(109,62,196,0.32);
+  --accent-blue:       #1D4ED8;
+  --accent-blue-muted: rgba(29,78,216,0.12);
+  --accent-blue-border:rgba(29,78,216,0.32);
+  --accent-amber:      #EA580C;
+  --accent-green:      #0A8F63;
+
+  /* Page header banners — tinted, not full gradient */
+  --banner-bg:         linear-gradient(
+                         135deg,
+                         rgba(234,88,12,0.16) 0%,
+                         rgba(234,88,12,0.07) 100%
+                       );
+  --banner-text:       #1A1A2E;
+  --banner-subtext:    rgba(26,26,46,0.78);
+
+  /* Navigation — STAYS DARK, hardcoded, not themed */
+  --nav-bg:            #111118;
+  --nav-border:        rgba(255,255,255,0.08);
+  --nav-text:          rgba(255,255,255,0.75);
+  --nav-text-active:   #FFFFFF;
+  --nav-text-hover:    #FFFFFF;
+  --nav-active-bg:     rgba(255,255,255,0.1);
+
+  /* Stage pill colors — same hues, slightly deeper */
+  --stage-lead:        rgba(29,78,216,0.12);
+  --stage-lead-text:   #1D4ED8;
+  --stage-survey:      rgba(109,62,196,0.12);
+  --stage-survey-text: #6D3EC4;
+  --stage-proposal:    rgba(234,88,12,0.14);
+  --stage-proposal-text:#EA580C;
+  --stage-confirmed:   rgba(10,158,135,0.12);
+  --stage-confirmed-text:#0A9E87;
+  --stage-install:     rgba(10,143,99,0.12);
+  --stage-install-text:#0A8F63;
+  --stage-complete:    rgba(10,158,135,0.10);
+  --stage-complete-text:#0A9E87;
+
+  /* Payment status */
+  --pay-paid-bg:       rgba(10,158,135,0.10);
+  --pay-paid-text:     #0A9E87;
+  --pay-partial-bg:    rgba(109,62,196,0.10);
+  --pay-partial-text:  #6D3EC4;
+  --pay-pending-bg:    rgba(29,78,216,0.12);
+  --pay-pending-text:  #1D4ED8;
+  --pay-na-bg:         rgba(0,0,0,0.06);
+  --pay-na-text:       rgba(26,26,46,0.58);
+
+  /* Charts */
+  --chart-grid:        rgba(0,0,0,0.06);
+  --chart-axis-text:   rgba(26,26,46,0.58);
+  --chart-cursor-band: rgba(0,0,0,0.06);
+  --chart-tooltip-bg:  #FFFFFF;
+  --chart-tooltip-border: rgba(0,0,0,0.1);
+  --chart-tooltip-fg:  #1A1A2E;
+  --chart-tooltip-fg-muted: rgba(26,26,46,0.64);
+  --chart-tooltip-shadow: 0 8px 28px rgba(0,0,0,0.1);
+  --chart-tooltip-divider: rgba(0,0,0,0.08);
+  --chart-tooltip-track: rgba(0,0,0,0.08);
+  --chart-tooltip-insight: rgba(26,26,46,0.60);
+
+  /* Zenith word cloud — deeper hues on light card for readability */
+  --zenith-wc-tier-high: #0f766e;
+  --zenith-wc-tier-mid:  #1d4ed8;
+  --zenith-wc-tier-low:  #c2410c;
+
+  /* Scrollbar */
+  --scrollbar-track:   rgba(0,0,0,0.04);
+  --scrollbar-thumb:   rgba(0,0,0,0.15);
+
+  /* Shadows — cards get elevation in light mode */
+  --shadow-card:       0 1px 3px rgba(0,0,0,0.08),
+                       0 4px 12px rgba(0,0,0,0.04);
+  --shadow-dropdown:   0 8px 32px rgba(0,0,0,0.15);
+  --shadow-modal:      0 20px 60px rgba(0,0,0,0.2);
+
+  /* Zenith portaled quick drawers — soft edge + warm lift */
+  --zenith-drawer-backdrop:        rgba(26, 26, 46, 0.32);
+  --zenith-drawer-backdrop-lg:     rgba(26, 26, 46, 0.22);
+  --zenith-drawer-panel-shadow:
+    -16px 0 48px rgba(0, 0, 0, 0.1),
+    -4px 0 28px rgba(234, 88, 12, 0.09),
+    inset 1px 0 0 color-mix(in srgb, #ffffff 55%, transparent);
+
+  /* Zenith data tables — warm band so column titles read on white row cards */
+  --zenith-table-header-bg:  #D2CBC0;
+  --zenith-table-header-fg:  rgba(26,26,46,0.88);
+}

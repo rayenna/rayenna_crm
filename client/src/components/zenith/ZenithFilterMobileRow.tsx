@@ -5,8 +5,8 @@ import { ZENITH_MONTHS, ZENITH_QUARTER_MONTHS, ZENITH_QUARTERS } from './zenithF
 const MULTI = '__multi__'
 
 const selectBase =
-  'zenith-filter-mobile-select min-w-0 flex-1 rounded-lg border border-white/[0.12] bg-white/[0.06] px-2 py-1.5 text-[11px] font-semibold text-white/90 ' +
-  'focus:outline-none focus:ring-2 focus:ring-[#f5a623]/35 focus:border-[#f5a623]/40 ' +
+  'zenith-filter-mobile-select min-w-0 flex-1 rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-2 py-1.5 text-[11px] font-semibold text-[color:var(--text-primary)] ' +
+  'focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-muted)] focus:border-[color:var(--accent-gold-border)] ' +
   'disabled:opacity-45 disabled:cursor-not-allowed'
 
 interface Props {
@@ -176,7 +176,7 @@ export default function ZenithFilterMobileRow({
           type="button"
           onClick={onResetAll}
           title="Clear all date filters"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/20 text-white/75 transition-colors hover:border-[#00d4b4]/50 hover:bg-[#00d4b4]/10 hover:text-white touch-manipulation"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[color:var(--border-default)] text-[color:var(--text-secondary)] transition-colors hover:border-[color:var(--accent-teal-border)] hover:bg-[color:var(--accent-teal-muted)] hover:text-[color:var(--text-primary)] touch-manipulation"
           aria-label="Reset date filters"
         >
           <RotateCcw className="h-4 w-4" aria-hidden />

@@ -5,6 +5,7 @@ import { setAuthErrorCallback } from '../utils/authErrorHandler'
 import { User, UserRole } from '../types'
 import { ErrorModal } from '@/components/common/ErrorModal'
 import { setSessionStorageItem } from '../lib/safeLocalStorage'
+import { useThemeContext } from '../hooks/useTheme'
 
 // Auto-logout time (no activity): 10 minutes
 const IDLE_TIMEOUT_MS = 10 * 60 * 1000
@@ -34,6 +35,7 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const queryClient = useQueryClient()
+  const { setTheme } = useThemeContext()
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -49,10 +51,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(null)
     setUser(null)
     sessionStorage.clear() // Clear all session data (token, filters, etc.) on logout
+    setTheme('dark')
     delete axiosInstance.defaults.headers.common['Authorization']
     // Clear React Query cache so next user sees fresh data (no stale tiles/dashboard from previous user)
     queryClient.clear()
-  }, [queryClient])
+  }, [queryClient, setTheme])
 
   // Reset inactivity timer on user activity
   const resetIdleTimer = useCallback(() => {
@@ -137,7 +140,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       ;(async () => {
         try {
           const response = await axiosInstance.get('/api/auth/me')
-          if (!cancelled) setUser(response.data)
+          if (!cancelled) {
+            const u = response.data as User
+            setUser(u)
+            if (u?.themePreference === 'light' || u?.themePreference === 'dark') {
+              setTheme(u.themePreference)
+            }
+          }
         } catch {
           if (!cancelled) clearAuth()
         } finally {
@@ -157,6 +166,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(newUser)
     setSessionStorageItem('token', newToken)
     axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
+    if (newUser?.themePreference === 'light' || newUser?.themePreference === 'dark') {
+      setTheme(newUser.themePreference)
+    } else {
+      // If user has no preference yet, align the server to current UI theme.
+      // (UI defaults to dark; server default is also dark.)
+      void axiosInstance.put('/api/auth/theme', { theme: 'dark' }).catch(() => {})
+    }
     // Start inactivity timer after login
     resetIdleTimer()
   }

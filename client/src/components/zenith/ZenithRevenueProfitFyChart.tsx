@@ -12,6 +12,8 @@ import {
   Scatter,
 } from 'recharts'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
+import { useChartColors } from '../../hooks/useChartColors'
+import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTooltipStyles'
 
 export type ZenithFyRevenueProfitPoint = { fy: string; revenue: number; profit: number }
 
@@ -55,29 +57,21 @@ function ExploreFyTooltip({
   if (!active || !payload?.length) return null
   const rows = dedupeRevenueProfitTooltipPayload(payload)
   return (
-    <div
-      style={{
-        background: '#1A1A2E',
-        border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: 8,
-        padding: '8px 12px',
-        fontFamily: 'DM Sans, sans-serif',
-      }}
-    >
+    <div style={ZENITH_CHART_CUSTOM_TOOLTIP_SHELL}>
       {rows.map((p) => {
         const v = Number(p.value)
         const isProfit =
           String(p.dataKey) === 'profit' || /total profit/i.test(String(p.name ?? ''))
         const amount = isProfit ? Math.round(v) : v
         return (
-          <div key={String(p.name)} style={{ color: '#fff', fontSize: 13, fontWeight: 500 }}>
+          <div key={String(p.name)} style={{ color: 'var(--chart-tooltip-fg)', fontSize: 13, fontWeight: 500 }}>
             {p.name}: ₹{amount.toLocaleString('en-IN')}
           </div>
         )
       })}
-      <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, marginTop: 6, lineHeight: 1.35 }}>
-        Tap the <span style={{ color: '#f5a623' }}>orange point</span> for revenue, or the{' '}
-        <span style={{ color: '#00d4b4' }}>teal bar</span> for profit (including small or zero bars).
+      <div style={{ color: 'var(--chart-tooltip-fg-muted)', fontSize: 10, marginTop: 6, lineHeight: 1.35 }}>
+        Tap the <span style={{ color: 'var(--accent-gold)' }}>orange point</span> for revenue, or the{' '}
+        <span style={{ color: 'var(--accent-teal)' }}>teal bar</span> for profit (including small or zero bars).
       </div>
     </div>
   )
@@ -103,7 +97,7 @@ function createProfitBarShape(
     const w = Number(props.width ?? 0)
     const h = Number(props.height ?? 0)
     const fy = props.payload?.fy
-    const fill = props.fill ?? '#00d4b4'
+    const fill = props.fill ?? 'var(--accent-teal)'
     const bottom = y + h
     const hitH = Math.max(h, PROFIT_HIT_MIN_PX)
     const hitY = bottom - hitH
@@ -160,6 +154,7 @@ export default function ZenithRevenueProfitFyChart({
   data: ZenithFyRevenueProfitPoint[]
   onFyClick?: (args: { fy: string; metric: 'revenue' | 'profit' }) => void
 }) {
+  const c = useChartColors()
   const onFyClickRef = useRef(onFyClick)
   onFyClickRef.current = onFyClick
 
@@ -198,15 +193,15 @@ export default function ZenithRevenueProfitFyChart({
             cx={cx}
             cy={cy}
             r={5}
-            fill="#f5a623"
-            stroke="rgba(0,0,0,0.25)"
+            fill={c.gold}
+            stroke="var(--border-default)"
             strokeWidth={1}
             pointerEvents="none"
           />
         </g>
       )
     },
-    [],
+    [c.gold],
   )
 
   return (
@@ -215,15 +210,15 @@ export default function ZenithRevenueProfitFyChart({
         {(rk) => (
           <ResponsiveContainer key={rk} width="100%" height={240} minWidth={0}>
             <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-          <XAxis dataKey="fy" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
-          <YAxis tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} />
+          <CartesianGrid strokeDasharray="3 3" stroke={c.grid} />
+          <XAxis dataKey="fy" tick={{ fill: c.axisText, fontSize: 10 }} />
+          <YAxis tick={{ fill: c.axisText, fontSize: 10 }} />
           <Tooltip content={<ExploreFyTooltip />} />
           <Legend
-            wrapperStyle={{ fontSize: 11, color: 'rgba(255,255,255,0.75)' }}
+            wrapperStyle={{ fontSize: 11, color: c.axisText }}
             payload={[
-              { value: 'Total Revenue', type: 'line', id: 'revenue', color: '#f5a623' },
-              { value: 'Total Profit', type: 'rect', id: 'profit', color: '#00d4b4' },
+              { value: 'Total Revenue', type: 'line', id: 'revenue', color: c.gold },
+              { value: 'Total Profit', type: 'rect', id: 'profit', color: c.teal },
             ]}
           />
           {/* 1) Area under bars — fill/curve ignore pointer-events in CSS */}
@@ -231,8 +226,8 @@ export default function ZenithRevenueProfitFyChart({
             type="monotone"
             dataKey="revenue"
             name="Total Revenue"
-            fill="rgba(245,166,35,0.15)"
-            stroke="#f5a623"
+            fill={c.goldSoft}
+            stroke={c.gold}
             strokeWidth={2}
             dot={false}
             activeDot={false}
@@ -242,7 +237,7 @@ export default function ZenithRevenueProfitFyChart({
           <Bar
             dataKey="profit"
             name="Total Profit"
-            fill="#00d4b4"
+            fill={c.teal}
             shape={ProfitShape}
             isAnimationActive={false}
           />
@@ -250,7 +245,7 @@ export default function ZenithRevenueProfitFyChart({
           <Scatter
             dataKey="revenue"
             name=""
-            fill="#f5a623"
+            fill={c.gold}
             isAnimationActive={false}
             legendType="none"
             tooltipType="none"

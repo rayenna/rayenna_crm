@@ -100,15 +100,15 @@ export default function DealFlowFunnel({
   })
 
   return (
-    <div className="zenith-glass rounded-xl p-3 sm:p-4 overflow-visible w-full">
+    <div className="rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-4 overflow-visible w-full">
       <div className="flex items-center justify-between gap-2 mb-2 md:mb-1.5">
         <h3
-          className="zenith-display text-lg sm:text-xl font-bold text-white tracking-tight"
+          className="zenith-display text-lg sm:text-xl font-bold text-[color:var(--text-primary)] tracking-tight"
           style={{ fontFamily: "'Syne', sans-serif" }}
         >
           {title}
         </h3>
-        <span className="text-[9px] uppercase tracking-[0.14em] text-white/38">{badge}</span>
+        <span className="text-[9px] uppercase tracking-[0.14em] text-[color:var(--text-muted)] opacity-80">{badge}</span>
       </div>
 
       {/* Desktop / tablet ≥768px: horizontal SVG funnel */}
@@ -158,13 +158,13 @@ export default function DealFlowFunnel({
                   onClick={() => onDealFlowStageClick(s)}
                   aria-label={`${s.label}: ${s.count} projects, open quick list`}
                 >
-                  <span className="text-[9px] sm:text-[10px] font-bold text-white/95 uppercase tracking-wide leading-tight line-clamp-2 drop-shadow-md">
+                  <span className="text-[9px] sm:text-[10px] font-bold text-[color:var(--text-inverse)] uppercase tracking-wide leading-tight line-clamp-2 drop-shadow-md opacity-95">
                     {s.label}
                   </span>
-                  <span className="text-lg sm:text-xl font-extrabold text-white tabular-nums leading-none my-0.5 drop-shadow-md">
+                  <span className="text-lg sm:text-xl font-extrabold text-[color:var(--text-inverse)] tabular-nums leading-none my-0.5 drop-shadow-md">
                     {s.count}
                   </span>
-                  <span className="text-[9px] sm:text-[10px] text-white/80 tabular-nums drop-shadow">
+                  <span className="text-[9px] sm:text-[10px] text-[color:var(--text-inverse)] tabular-nums drop-shadow opacity-80">
                     {conversionPct(stages, i)} prev
                   </span>
                 </button>
@@ -173,13 +173,13 @@ export default function DealFlowFunnel({
                   to={s.to}
                   className="absolute inset-0 flex flex-col items-center justify-center text-center px-0.5 no-underline group"
                 >
-                  <span className="text-[9px] sm:text-[10px] font-bold text-white/95 uppercase tracking-wide leading-tight line-clamp-2 drop-shadow-md">
+                  <span className="text-[9px] sm:text-[10px] font-bold text-[color:var(--text-inverse)] uppercase tracking-wide leading-tight line-clamp-2 drop-shadow-md opacity-95">
                     {s.label}
                   </span>
-                  <span className="text-lg sm:text-xl font-extrabold text-white tabular-nums leading-none my-0.5 drop-shadow-md">
+                  <span className="text-lg sm:text-xl font-extrabold text-[color:var(--text-inverse)] tabular-nums leading-none my-0.5 drop-shadow-md">
                     {s.count}
                   </span>
-                  <span className="text-[9px] sm:text-[10px] text-white/80 tabular-nums drop-shadow">
+                  <span className="text-[9px] sm:text-[10px] text-[color:var(--text-inverse)] tabular-nums drop-shadow opacity-80">
                     {conversionPct(stages, i)} prev
                   </span>
                 </Link>
@@ -192,24 +192,24 @@ export default function DealFlowFunnel({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 6, scale: 0.98 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-[min(220px,46vw)] rounded-xl border border-white/15 bg-[#0f0f14]/95 backdrop-blur-xl shadow-2xl px-3 py-2.5 text-left pointer-events-auto z-40"
+                    className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-[min(220px,46vw)] rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-modal)]/95 backdrop-blur-xl shadow-[var(--shadow-dropdown)] px-3 py-2.5 text-left pointer-events-auto z-40"
                   >
-                    <p className="text-xs font-bold text-white">{s.label}</p>
-                    <p className="text-sm font-extrabold text-[#f5a623] tabular-nums mt-1">{s.count} projects</p>
-                    <p className="text-[11px] text-white/70 mt-1">
+                    <p className="text-xs font-bold text-[color:var(--text-primary)]">{s.label}</p>
+                    <p className="text-sm font-extrabold text-[color:var(--accent-gold)] tabular-nums mt-1">{s.count} projects</p>
+                    <p className="text-[11px] text-[color:var(--text-secondary)] mt-1">
                       Avg in stage:{' '}
-                      <span className="text-white font-semibold">
+                      <span className="text-[color:var(--text-primary)] font-semibold">
                         {s.avgDaysInStage != null ? `${s.avgDaysInStage} days` : '—'}
                       </span>
                     </p>
-                    <p className="text-[11px] text-white/70">
+                    <p className="text-[11px] text-[color:var(--text-secondary)]">
                       From previous:{' '}
-                      <span className="text-white font-semibold">{conversionPct(stages, i)}</span>
+                      <span className="text-[color:var(--text-primary)] font-semibold">{conversionPct(stages, i)}</span>
                     </p>
                     {onDealFlowStageClick ? (
                       <button
                         type="button"
-                        className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[#00d4b4] hover:text-[#33e0c8] cursor-pointer bg-transparent border-0 p-0"
+                        className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[color:var(--accent-teal)] hover:opacity-90 cursor-pointer bg-transparent border-0 p-0"
                         onClick={() => onDealFlowStageClick(s)}
                       >
                         View Projects →
@@ -217,7 +217,7 @@ export default function DealFlowFunnel({
                     ) : (
                       <Link
                         to={s.to}
-                        className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[#00d4b4] hover:text-[#33e0c8]"
+                        className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[color:var(--accent-teal)] hover:opacity-90"
                       >
                         View Projects →
                       </Link>
@@ -238,7 +238,7 @@ export default function DealFlowFunnel({
             <div key={s.id} className="flex gap-3">
               <div className="flex flex-col items-center w-8 flex-shrink-0">
                 <div
-                  className="w-3 h-3 rounded-full border-2 border-white/30 flex-shrink-0"
+                  className="w-3 h-3 rounded-full border-2 border-[color:var(--border-default)] flex-shrink-0"
                   style={{ backgroundColor: stageColor(i, n) }}
                 />
                 {i < stages.length - 1 && (
@@ -255,32 +255,32 @@ export default function DealFlowFunnel({
                   <button
                     type="button"
                     onClick={() => onDealFlowStageClick(s)}
-                    className="block w-full text-left rounded-xl px-3 py-2.5 border border-white/10 bg-white/[0.06] active:bg-white/10 cursor-pointer"
+                    className="block w-full text-left rounded-xl px-3 py-2.5 border border-[color:var(--border-default)] bg-[color:var(--bg-input)] active:bg-[color:var(--bg-card-hover)] cursor-pointer"
                     aria-label={`${s.label}: ${s.count} projects, open quick list`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="text-xs font-bold text-white/90">{s.label}</p>
-                        <p className="text-[11px] text-white/50 mt-0.5">
+                        <p className="text-xs font-bold text-[color:var(--text-primary)]">{s.label}</p>
+                        <p className="text-[11px] text-[color:var(--text-muted)] mt-0.5">
                           Avg {s.avgDaysInStage != null ? `${s.avgDaysInStage}d` : '—'} · {conv} prev
                         </p>
                       </div>
-                      <span className="text-xl font-extrabold text-white tabular-nums">{s.count}</span>
+                      <span className="text-xl font-extrabold text-[color:var(--text-primary)] tabular-nums">{s.count}</span>
                     </div>
                   </button>
                 ) : (
                   <Link
                     to={s.to}
-                    className="block rounded-xl px-3 py-2.5 border border-white/10 bg-white/[0.06] active:bg-white/10"
+                    className="block rounded-xl px-3 py-2.5 border border-[color:var(--border-default)] bg-[color:var(--bg-input)] active:bg-[color:var(--bg-card-hover)]"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="text-xs font-bold text-white/90">{s.label}</p>
-                        <p className="text-[11px] text-white/50 mt-0.5">
+                        <p className="text-xs font-bold text-[color:var(--text-primary)]">{s.label}</p>
+                        <p className="text-[11px] text-[color:var(--text-muted)] mt-0.5">
                           Avg {s.avgDaysInStage != null ? `${s.avgDaysInStage}d` : '—'} · {conv} prev
                         </p>
                       </div>
-                      <span className="text-xl font-extrabold text-white tabular-nums">{s.count}</span>
+                      <span className="text-xl font-extrabold text-[color:var(--text-primary)] tabular-nums">{s.count}</span>
                     </div>
                   </Link>
                 )}
@@ -291,13 +291,13 @@ export default function DealFlowFunnel({
       </div>
 
       {/* Payment status pills — single row */}
-      <div className="mt-4 pt-3 border-t border-white/[0.08] flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+      <div className="mt-4 pt-3 border-t border-[color:var(--border-default)] flex flex-wrap items-center justify-center gap-2 sm:gap-3">
         {orderedPills.map((p) => {
           const out = formatOutstandingPill(p.outstanding)
           const suffix =
             p.outstanding > 0 && (p.status === 'PARTIAL' || p.status === 'PENDING') ? ` ${out}` : ''
           const pillClass =
-            'inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs sm:text-sm font-semibold border border-white/12 bg-black/25 hover:border-[#f5a623]/45 hover:bg-black/40 transition-colors text-white/90'
+            'inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs sm:text-sm font-semibold border border-[color:var(--border-default)] bg-[color:var(--bg-input)] hover:border-[color:var(--accent-gold-border)] hover:bg-[color:var(--bg-card-hover)] transition-colors text-[color:var(--text-primary)]'
           const projectsHref = buildProjectsUrl({ paymentStatus: [p.param] }, tile)
 
           if (onPaymentStatusClick) {
@@ -314,8 +314,8 @@ export default function DealFlowFunnel({
               >
                 <span aria-hidden>{p.emoji}</span>
                 <span>{p.label}:</span>
-                <span className="tabular-nums font-bold text-white">{p.count}</span>
-                {suffix ? <span className="text-white/70 font-medium tabular-nums">{suffix}</span> : null}
+                <span className="tabular-nums font-bold text-[color:var(--text-primary)]">{p.count}</span>
+                {suffix ? <span className="text-[color:var(--text-muted)] font-medium tabular-nums">{suffix}</span> : null}
               </button>
             )
           }
@@ -328,8 +328,8 @@ export default function DealFlowFunnel({
             >
               <span aria-hidden>{p.emoji}</span>
               <span>{p.label}:</span>
-              <span className="tabular-nums font-bold text-white">{p.count}</span>
-              {suffix ? <span className="text-white/70 font-medium tabular-nums">{suffix}</span> : null}
+              <span className="tabular-nums font-bold text-[color:var(--text-primary)]">{p.count}</span>
+              {suffix ? <span className="text-[color:var(--text-muted)] font-medium tabular-nums">{suffix}</span> : null}
             </Link>
           )
         })}

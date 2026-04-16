@@ -1,26 +1,35 @@
+import { type ReactNode } from 'react'
+import { Info } from 'lucide-react'
 import AboutSection from '../components/AboutSection'
-import PageCard from '../components/PageCard'
-
-const AboutInfoIcon = () => (
-  <svg className="w-5 h-5 text-white drop-shadow-sm" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-    <path fillRule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" clipRule="evenodd" />
-  </svg>
-)
 
 const About = () => {
-  return (
-    <div className="px-0 py-6 sm:px-0">
-      <PageCard
-        title="About"
-        subtitle="Credits, copyright, intellectual property, and confidentiality notice"
-        icon={<AboutInfoIcon />}
-        className="max-w-full"
-      >
-        <AboutSection embedded />
-      </PageCard>
+  const shell = (children: ReactNode) => (
+    <div
+      className="zenith-root zenith-animated-bg w-full max-w-full min-w-0 min-h-[calc(100dvh-5rem)] min-h-[calc(100vh-5rem)] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-[max(0.35rem,env(safe-area-inset-top,0px))] [-webkit-tap-highlight-color:transparent]"
+    >
+      <div className="zenith-exec-main mx-auto w-full max-w-full min-w-0 px-3 sm:px-5 pb-10">{children}</div>
     </div>
+  )
+
+  return shell(
+    <>
+      <header className="sticky top-0 z-30 mb-4 border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 94%, transparent)] pb-3 pt-1 backdrop-blur-xl sm:mb-6">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] shadow-inner">
+            <Info className="h-5 w-5 text-[color:var(--accent-gold)]" strokeWidth={2} aria-hidden />
+          </div>
+          <div className="min-w-0">
+            <h1 className="zenith-display text-xl font-bold tracking-tight text-[color:var(--text-primary)] sm:text-2xl">About</h1>
+            <p className="mt-0.5 text-sm text-[color:var(--text-secondary)]">
+              Credits, copyright, intellectual property, and confidentiality notice
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <AboutSection embedded variant="zenith" />
+    </>,
   )
 }
 
 export default About
-

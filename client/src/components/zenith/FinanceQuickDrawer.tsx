@@ -275,7 +275,7 @@ export default function FinanceQuickDrawer({
         initial={{ opacity: 0 }}
         animate={{ opacity: isOpen ? 1 : 0 }}
         transition={{ duration: narrowViewport ? 0.18 : 0.25, ease: 'easeOut' }}
-        className="fixed inset-0 z-[6000] bg-black/60 backdrop-blur-none lg:backdrop-blur-sm lg:bg-black/50"
+        className="fixed inset-0 z-[6000] zenith-quick-drawer-backdrop backdrop-blur-none lg:backdrop-blur-sm"
         style={{ pointerEvents: isOpen ? 'auto' : 'none' }}
         onClick={onClose}
         aria-hidden={!isOpen}
@@ -289,7 +289,7 @@ export default function FinanceQuickDrawer({
             ? { type: 'tween', duration: 0.2, ease: [0.22, 1, 0.36, 1] }
             : { type: 'spring', damping: 30, stiffness: 300 }
         }
-        className="fixed top-0 right-0 z-[6001] h-[100dvh] w-full max-w-full lg:w-[420px] lg:max-w-[420px] bg-[#0F0F1A] border-l border-white/10 lg:shadow-[-20px_0_60px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden"
+        className="zenith-quick-drawer-panel fixed top-0 right-0 z-[6001] h-[100dvh] w-full max-w-full lg:w-[420px] lg:max-w-[420px] flex flex-col overflow-hidden"
         style={{
           fontFamily: 'DM Sans, sans-serif',
           paddingBottom: 'max(56px, env(safe-area-inset-bottom, 0px))',
@@ -299,7 +299,7 @@ export default function FinanceQuickDrawer({
         role="dialog"
         aria-label="Payment quick view"
       >
-        <div className="min-h-16 px-5 py-3 flex flex-col gap-2 border-b border-white/[0.08] bg-white/[0.02]">
+        <div className="zenith-quick-drawer-header min-h-16 px-5 py-3 flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 flex-1 pr-1">
               <ZenithDrawerProjectTitle
@@ -318,7 +318,7 @@ export default function FinanceQuickDrawer({
             <button
               type="button"
               onClick={onClose}
-              className="w-8 h-8 shrink-0 rounded-full bg-white/10 text-white/60 hover:bg-white/15 hover:text-white transition-colors"
+              className="w-8 h-8 shrink-0 rounded-full bg-[color:var(--bg-badge)] text-[color:var(--text-muted)] hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)] transition-colors"
               aria-label="Close"
             >
               ×
@@ -341,46 +341,47 @@ export default function FinanceQuickDrawer({
                 className="flex-1 overflow-y-auto -mx-1 px-1 min-h-0"
               >
                 {error ? (
-                  <div className="mb-4 rounded-xl border border-[#ff4757]/30 bg-[#ff4757]/10 px-4 py-3 text-sm text-white/85">
+                  <div className="mb-4 rounded-xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] px-4 py-3 text-sm text-[color:var(--text-primary)]">
                     {error}
                   </div>
                 ) : null}
 
                 {readOnly ? (
-                  <div className="mb-4 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[12px] text-white/55">
-                    Read-only for your role — use <span className="text-white/75">Open full project</span> to work
+                  <div className="mb-4 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2.5 text-[12px] text-[color:var(--text-muted)]">
+                    Read-only for your role — use{' '}
+                    <span className="text-[color:var(--text-secondary)]">Open full project</span> to work
                     the record on the project page.
                   </div>
                 ) : null}
 
-                <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 space-y-2.5">
+                <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-3 space-y-2.5">
                   <div className="flex justify-between gap-3 text-[13px]">
-                    <span className="text-white/45">Payment status</span>
-                    <span className="text-white/90 font-medium text-right">
+                    <span className="text-[color:var(--text-muted)]">Payment status</span>
+                    <span className="text-[color:var(--text-primary)] font-medium text-right">
                       {paymentStatusLabel(project?.paymentStatus)}
                     </span>
                   </div>
                   <div className="flex justify-between gap-3 text-[13px]">
-                    <span className="text-white/45">Project value</span>
-                    <span className="text-white/90 font-medium tabular-nums text-right">
+                    <span className="text-[color:var(--text-muted)]">Project value</span>
+                    <span className="text-[color:var(--text-primary)] font-medium tabular-nums text-right">
                       {formatINR(project?.projectCost ?? null)}
                     </span>
                   </div>
                   <div className="flex justify-between gap-3 text-[13px]">
-                    <span className="text-white/45">System capacity</span>
-                    <span className="text-white/90 font-medium tabular-nums text-right">
+                    <span className="text-[color:var(--text-muted)]">System capacity</span>
+                    <span className="text-[color:var(--text-primary)] font-medium tabular-nums text-right">
                       {formatZenithSystemCapacityKw(project?.systemCapacity, 'notSet')}
                     </span>
                   </div>
                   <div className="flex justify-between gap-3 text-[13px]">
-                    <span className="text-white/45">Total amount received</span>
-                    <span className="text-white/90 font-medium tabular-nums text-right">
+                    <span className="text-[color:var(--text-muted)]">Total amount received</span>
+                    <span className="text-[color:var(--text-primary)] font-medium tabular-nums text-right">
                       {formatINR(project?.totalAmountReceived ?? null)}
                     </span>
                   </div>
                   <div className="flex justify-between gap-3 text-[13px]">
-                    <span className="text-white/45">Balance pending</span>
-                    <span className="text-[#f5a623] font-semibold tabular-nums text-right">
+                    <span className="text-[color:var(--text-muted)]">Balance pending</span>
+                    <span className="text-[color:var(--accent-gold)] font-semibold tabular-nums text-right">
                       {formatINR(project?.balanceAmount ?? null)}
                     </span>
                   </div>
@@ -395,17 +396,21 @@ export default function FinanceQuickDrawer({
                 {canEdit && project && project.projectStatus !== ProjectStatus.LOST ? (
                   <>
                     <div className="mt-5">
-                      <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">Log activity</div>
+                      <div className="text-[11px] uppercase tracking-[0.08em] text-[color:var(--text-muted)] mb-2">
+                        Log activity
+                      </div>
                       <textarea
                         id="finance-drawer-remark-textarea"
                         value={noteText}
                         onChange={(e) => setNoteText(e.target.value.slice(0, 500))}
                         rows={3}
                         placeholder="Payment follow-up, receipt reference, customer commitment…"
-                        className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[14px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#00d4b4]/40"
+                        className="w-full rounded-xl bg-[color:var(--bg-input)] border border-[color:var(--border-input)] px-3 py-3 text-[14px] text-[color:var(--text-primary)] placeholder:text-[color:var(--text-placeholder)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-teal-muted)] focus:border-[color:var(--accent-teal)]"
                         style={{ resize: 'vertical', minHeight: 80 }}
                       />
-                      <div className="mt-1 text-right text-[11px] text-white/25">{noteText.length}/500 characters</div>
+                      <div className="mt-1 text-right text-[11px] text-[color:var(--text-muted)]">
+                        {noteText.length}/500 characters
+                      </div>
                       <button
                         type="button"
                         disabled={saving || !noteText.trim()}
@@ -430,17 +435,21 @@ export default function FinanceQuickDrawer({
                             setSaving(false)
                           }
                         }}
-                        className="mt-2 w-full rounded-xl border border-white/20 bg-transparent px-4 py-2.5 text-[14px] text-white hover:border-[#00D4B4] hover:text-[#00D4B4] hover:bg-[rgba(0,212,180,0.06)] transition-colors disabled:opacity-60"
+                        className="mt-2 w-full rounded-xl border border-[color:var(--border-strong)] bg-transparent px-4 py-2.5 text-[14px] text-[color:var(--text-primary)] hover:border-[color:var(--accent-teal-border)] hover:text-[color:var(--accent-teal)] hover:bg-[color:var(--accent-teal-muted)] transition-colors disabled:opacity-60"
                       >
                         {saving ? 'Saving…' : 'Log activity'}
                       </button>
                     </div>
 
-                    <div className="my-5 h-px bg-white/[0.06]" />
+                    <div className="my-5 h-px bg-[color:var(--border-default)]" />
 
                     <div>
-                      <div className="text-[11px] uppercase tracking-[0.08em] text-white/35 mb-2">Record payment</div>
-                      <label className="block text-[12px] text-white/50 mb-1">Payment amount (₹)</label>
+                      <div className="text-[11px] uppercase tracking-[0.08em] text-[color:var(--text-muted)] mb-2">
+                        Record payment
+                      </div>
+                      <label className="block text-[12px] text-[color:var(--text-secondary)] mb-1">
+                        Payment amount (₹)
+                      </label>
                       <input
                         type="number"
                         min={0}
@@ -448,18 +457,21 @@ export default function FinanceQuickDrawer({
                         value={paymentAmountInput}
                         onChange={(e) => setPaymentAmountInput(e.target.value)}
                         placeholder="Amount received"
-                        className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[15px] text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#00d4b4]/40"
+                        className="w-full rounded-xl bg-[color:var(--bg-input)] border border-[color:var(--border-input)] px-3 py-3 text-[15px] text-[color:var(--text-primary)] placeholder:text-[color:var(--text-placeholder)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-teal-muted)] focus:border-[color:var(--accent-teal)]"
                       />
-                      <label className="block text-[12px] text-white/50 mt-3 mb-1">Payment date</label>
+                      <label className="block text-[12px] text-[color:var(--text-secondary)] mt-3 mb-1">
+                        Payment date
+                      </label>
                       <input
                         type="date"
                         value={paymentDateInput}
                         onChange={(e) => setPaymentDateInput(e.target.value)}
-                        className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3 text-[14px] text-white focus:outline-none focus:ring-2 focus:ring-[#00d4b4]/40"
-                        style={{ colorScheme: 'dark' }}
+                        className="zenith-quick-drawer-date w-full rounded-xl bg-[color:var(--bg-input)] border border-[color:var(--border-input)] px-3 py-3 text-[14px] text-[color:var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-teal-muted)] focus:border-[color:var(--accent-teal)]"
                       />
                       {paymentDateMissing ? (
-                        <p className="mt-1.5 text-[12px] text-[#ff4757]">Payment date is required when amount is entered.</p>
+                        <p className="mt-1.5 text-[12px] text-[color:var(--accent-red)]">
+                          Payment date is required when amount is entered.
+                        </p>
                       ) : null}
                       <button
                         type="button"
@@ -495,13 +507,14 @@ export default function FinanceQuickDrawer({
                             setSaving(false)
                           }
                         }}
-                        className="mt-3 w-full rounded-xl bg-[#00D4B4] text-[#0A0A0F] text-[14px] font-semibold py-3 transition-all disabled:opacity-60 hover:brightness-110"
+                        className="mt-3 w-full rounded-xl bg-[color:var(--accent-teal)] text-[color:var(--text-inverse)] text-[14px] font-semibold py-3 transition-all disabled:opacity-60 hover:brightness-110"
                       >
                         {saving ? 'Saving…' : 'Update payment'}
                       </button>
-                      <p className="mt-2 text-[11px] text-white/35 leading-snug">
+                      <p className="mt-2 text-[11px] text-[color:var(--text-muted)] leading-snug">
                         Pending → Advance Received. Partial → Payment 1, then 2, then 3 (same as Payment Tracking on the
-                        project). If this amount is <span className="text-white/50">≥ balance pending</span>, it is recorded
+                        project). If this amount is{' '}
+                        <span className="text-[color:var(--text-secondary)]">≥ balance pending</span>, it is recorded
                         under Last Payment only. Totals and status follow the same rules as the full project form.
                       </p>
                     </div>
@@ -513,12 +526,12 @@ export default function FinanceQuickDrawer({
         </div>
 
         <div
-          className="h-14 px-5 flex items-center justify-between border-t border-white/[0.08] bg-black/20"
+          className="zenith-quick-drawer-footer h-14 px-5 flex items-center justify-between"
           style={{ height: 'auto', minHeight: 56 }}
         >
           <button
             type="button"
-            className="text-[13px] font-semibold text-white/70 hover:text-[#00D4B4] transition-colors disabled:opacity-40"
+            className="text-[13px] font-semibold text-[color:var(--text-secondary)] hover:text-[color:var(--accent-teal)] transition-colors disabled:opacity-40"
             disabled={!projectId}
             onClick={() => {
               if (projectId) navigate(`/projects/${projectId}`)
@@ -529,7 +542,7 @@ export default function FinanceQuickDrawer({
           </button>
           <button
             type="button"
-            className="rounded-xl border border-white/20 bg-transparent px-4 py-1.5 text-[13px] text-white hover:border-[#00D4B4] hover:text-[#00D4B4] hover:bg-[rgba(0,212,180,0.06)] transition-colors"
+            className="rounded-xl border border-[color:var(--border-strong)] bg-transparent px-4 py-1.5 text-[13px] text-[color:var(--text-primary)] hover:border-[color:var(--accent-teal-border)] hover:text-[color:var(--accent-teal)] hover:bg-[color:var(--accent-teal-muted)] transition-colors"
             onClick={onClose}
           >
             Close
@@ -544,11 +557,11 @@ export default function FinanceQuickDrawer({
             bottom: 24,
             left: '50%',
             transform: 'translateX(-50%)',
-            background: 'rgba(0,212,180,0.15)',
-            border: '1px solid #00D4B4',
+            background: 'var(--accent-teal-muted)',
+            border: '1px solid var(--accent-teal-border)',
             borderRadius: 10,
             padding: '10px 20px',
-            color: '#00D4B4',
+            color: 'var(--accent-teal)',
             fontFamily: 'DM Sans, sans-serif',
             fontSize: 14,
             zIndex: 6100,
@@ -567,11 +580,11 @@ export default function FinanceQuickDrawer({
             bottom: toast ? 72 : 24,
             left: '50%',
             transform: 'translateX(-50%)',
-            background: 'rgba(245,166,35,0.1)',
-            border: '1px solid rgba(245,166,35,0.3)',
+            background: 'var(--accent-gold-muted)',
+            border: '1px solid var(--accent-gold-border)',
             borderRadius: 10,
             padding: '10px 20px',
-            color: '#F5A623',
+            color: 'var(--accent-gold)',
             fontFamily: 'DM Sans, sans-serif',
             fontSize: 14,
             zIndex: 6100,

@@ -5,9 +5,8 @@ import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
-import PageCard from '../components/PageCard'
 import { useModalEscape } from '../contexts/ModalEscapeContext'
-import { FaLock } from 'react-icons/fa'
+import { Lock, Eye, EyeOff } from 'lucide-react'
 
 interface ChangePasswordForm {
   currentPassword: string
@@ -68,24 +67,33 @@ const ChangePassword = () => {
   }
 
   return (
-    <div className="px-0 py-6 sm:px-0">
-      <PageCard
-        title="Change Password"
-        subtitle="Update your account password"
-        icon={<FaLock className="w-5 h-5 text-white" />}
-        className="max-w-md mx-auto"
-      >
-        <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-xl border border-primary-100 shadow-sm p-6">
-          <div className="mb-4">
-            <p className="text-sm text-gray-600">
-              Change password for: <span className="font-semibold">{user?.name}</span> ({user?.email})
-            </p>
+    <div className="zenith-root zenith-animated-bg w-full max-w-full min-w-0 min-h-[calc(100dvh-5rem)] min-h-[calc(100vh-5rem)] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-[max(0.35rem,env(safe-area-inset-top,0px))] [-webkit-tap-highlight-color:transparent]">
+      <div className="zenith-exec-main mx-auto w-full max-w-full min-w-0 px-3 sm:px-5 pb-10">
+        <header className="sticky top-0 z-30 mb-4 border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 94%, transparent)] pb-3 pt-1 backdrop-blur-xl sm:mb-6">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] shadow-inner">
+              <Lock className="h-5 w-5 text-[color:var(--accent-gold)]" strokeWidth={2} aria-hidden />
+            </div>
+            <div className="min-w-0">
+              <h1 className="zenith-display text-xl font-bold tracking-tight text-[color:var(--text-primary)] sm:text-2xl">Change Password</h1>
+              <p className="mt-0.5 text-sm text-[color:var(--text-secondary)]">Update your account password</p>
+            </div>
           </div>
+        </header>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <section className="mx-auto w-full max-w-xl">
+          <div className="overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)]">
+            <div className="h-1.5 bg-gradient-to-r from-[color:var(--accent-gold)] via-[color:var(--accent-amber)] to-[color:var(--accent-teal)]" aria-hidden />
+            <div className="p-4 sm:p-6">
+              <div className="mb-5 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-3 text-sm text-[color:var(--text-secondary)]">
+                Change password for: <span className="font-semibold text-[color:var(--text-primary)]">{user?.name}</span>{' '}
+                <span className="text-[color:var(--text-muted)]">({user?.email})</span>
+              </div>
+
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* Current Password */}
             <div>
-              <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="currentPassword" className="mb-1.5 block text-sm font-medium text-[color:var(--text-primary)]">
                 Current Password *
               </label>
               <div className="relative">
@@ -95,34 +103,26 @@ const ChangePassword = () => {
                   {...register('currentPassword', {
                     required: 'Current password is required',
                   })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="zenith-native-filter-input w-full rounded-xl px-3 py-2.5 pr-11 text-sm"
                   placeholder="Enter current password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword({ ...showPassword, current: !showPassword.current })}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-3 top-1/2 flex min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center text-[color:var(--text-muted)] transition-colors hover:text-[color:var(--text-secondary)] touch-manipulation -mr-2"
+                  aria-label={showPassword.current ? 'Hide current password' : 'Show current password'}
                 >
-                  {showPassword.current ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
+                  {showPassword.current ? <EyeOff className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
                 </button>
               </div>
               {errors.currentPassword && (
-                <p className="text-red-500 text-xs mt-1">{errors.currentPassword.message}</p>
+                <p className="mt-1 text-xs text-[color:var(--accent-red)]">{errors.currentPassword.message}</p>
               )}
             </div>
 
             {/* New Password */}
             <div>
-              <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="newPassword" className="mb-1.5 block text-sm font-medium text-[color:var(--text-primary)]">
                 New Password *
               </label>
               <div className="relative">
@@ -136,34 +136,26 @@ const ChangePassword = () => {
                       message: 'Password must be at least 6 characters',
                     },
                   })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="zenith-native-filter-input w-full rounded-xl px-3 py-2.5 pr-11 text-sm"
                   placeholder="Enter new password (min 6 characters)"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword({ ...showPassword, new: !showPassword.new })}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-3 top-1/2 flex min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center text-[color:var(--text-muted)] transition-colors hover:text-[color:var(--text-secondary)] touch-manipulation -mr-2"
+                  aria-label={showPassword.new ? 'Hide new password' : 'Show new password'}
                 >
-                  {showPassword.new ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
+                  {showPassword.new ? <EyeOff className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
                 </button>
               </div>
               {errors.newPassword && (
-                <p className="text-red-500 text-xs mt-1">{errors.newPassword.message}</p>
+                <p className="mt-1 text-xs text-[color:var(--accent-red)]">{errors.newPassword.message}</p>
               )}
             </div>
 
             {/* Confirm Password */}
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-[color:var(--text-primary)]">
                 Confirm New Password *
               </label>
               <div className="relative">
@@ -175,50 +167,44 @@ const ChangePassword = () => {
                     validate: (value) =>
                       value === newPassword || 'Passwords do not match',
                   })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="zenith-native-filter-input w-full rounded-xl px-3 py-2.5 pr-11 text-sm"
                   placeholder="Confirm new password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword({ ...showPassword, confirm: !showPassword.confirm })}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-3 top-1/2 flex min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center text-[color:var(--text-muted)] transition-colors hover:text-[color:var(--text-secondary)] touch-manipulation -mr-2"
+                  aria-label={showPassword.confirm ? 'Hide confirm password' : 'Show confirm password'}
                 >
-                  {showPassword.confirm ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
+                  {showPassword.confirm ? <EyeOff className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</p>
+                <p className="mt-1 text-xs text-[color:var(--accent-red)]">{errors.confirmPassword.message}</p>
               )}
             </div>
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:gap-3">
               <button
                 type="button"
                 onClick={handleCancel}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                className="min-h-[44px] flex-1 touch-manipulation rounded-xl border border-[color:var(--border-strong)] bg-[color:var(--bg-input)] px-4 py-2.5 font-semibold text-[color:var(--text-primary)] transition-colors hover:border-[color:var(--accent-gold-border)] hover:bg-[color:var(--bg-card-hover)]"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={mutation.isPending}
-                className="flex-1 px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-md"
+                className="min-h-[44px] flex-1 touch-manipulation rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 font-bold text-[color:var(--text-inverse)] shadow-lg transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {mutation.isPending ? 'Changing...' : 'Change Password'}
               </button>
             </div>
           </form>
-        </div>
-      </PageCard>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   )
 }

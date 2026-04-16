@@ -235,7 +235,7 @@ const Zenith = () => {
         )
       default:
         return (
-          <div className="px-6 py-20 text-center text-white/60">
+          <div className="px-6 py-20 text-center text-[color:var(--text-muted)]">
             No Zenith view is available for your role.
           </div>
         )
@@ -286,18 +286,18 @@ const Zenith = () => {
         <div
           className="mx-3 sm:mx-5 mt-2 mb-0 flex items-center justify-between rounded-lg border px-4 py-1.5"
           style={{
-            background: 'rgba(245,166,35,0.08)',
-            borderColor: 'rgba(245,166,35,0.2)',
+            background: 'var(--accent-gold-muted)',
+            borderColor: 'var(--accent-gold-border)',
             fontFamily: 'DM Sans, sans-serif',
           }}
         >
-          <span className="text-xs truncate pr-2" style={{ color: '#F5A623' }}>
+          <span className="text-xs truncate pr-2 text-[color:var(--accent-gold)]">
             Viewing: {quickAction.filterLabel}
           </span>
           <button
             type="button"
             onClick={() => quickAction.closeDrawer()}
-            className="shrink-0 text-xs cursor-pointer bg-transparent border-0 text-white/40 hover:text-white/70"
+            className="shrink-0 text-xs cursor-pointer bg-transparent border-0 text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]"
           >
             Clear ×
           </button>
@@ -305,13 +305,13 @@ const Zenith = () => {
       ) : null}
 
       {isFyError && (
-        <div className="max-w-xl mx-auto mt-6 px-4 rounded-2xl border border-[#ff4757]/30 bg-[#ff4757]/10 p-5 text-sm text-white/90">
-          <p className="font-semibold text-[#ff4757]">Unable to load financial years</p>
-          <p className="mt-2 text-white/70">{getFriendlyApiErrorMessage(fyError)}</p>
+        <div className="max-w-xl mx-auto mt-6 px-4 rounded-2xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] p-5 text-sm text-[color:var(--text-primary)]">
+          <p className="font-semibold text-[color:var(--accent-red)]">Unable to load financial years</p>
+          <p className="mt-2 text-[color:var(--text-secondary)]">{getFriendlyApiErrorMessage(fyError)}</p>
           <button
             type="button"
             onClick={() => refetchFYs()}
-            className="mt-4 px-4 py-2 rounded-xl bg-[#f5a623] text-[#0a0a0f] font-bold text-sm"
+            className="mt-4 px-4 py-2 rounded-xl bg-[color:var(--accent-gold)] text-[color:var(--text-inverse)] font-bold text-sm"
           >
             Try again
           </button>
@@ -319,13 +319,13 @@ const Zenith = () => {
       )}
 
       {!isFyError && isError && (
-        <div className="max-w-xl mx-auto mt-6 px-4 rounded-2xl border border-[#ff4757]/30 bg-[#ff4757]/10 p-5 text-sm text-white/90">
-          <p className="font-semibold text-[#ff4757]">Unable to load Zenith data</p>
-          <p className="mt-2 text-white/70">{getFriendlyApiErrorMessage(error)}</p>
+        <div className="max-w-xl mx-auto mt-6 px-4 rounded-2xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] p-5 text-sm text-[color:var(--text-primary)]">
+          <p className="font-semibold text-[color:var(--accent-red)]">Unable to load Zenith data</p>
+          <p className="mt-2 text-[color:var(--text-secondary)]">{getFriendlyApiErrorMessage(error)}</p>
           <button
             type="button"
             onClick={() => refetch()}
-            className="mt-4 px-4 py-2 rounded-xl bg-[#f5a623] text-[#0a0a0f] font-bold text-sm"
+            className="mt-4 px-4 py-2 rounded-xl bg-[color:var(--accent-gold)] text-[color:var(--text-inverse)] font-bold text-sm"
           >
             Try again
           </button>

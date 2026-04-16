@@ -62,15 +62,15 @@ export default function FinancingBankPopoverIcon({
           left: `${pos.left}px`,
           top: `${pos.top}px`,
           transform: 'translateX(-50%)',
-          background: '#1A1A2E',
-          border: '1px solid rgba(255,255,255,0.12)',
+          background: 'var(--chart-tooltip-bg)',
+          border: '1px solid var(--chart-tooltip-border)',
           borderRadius: '10px',
           padding: '12px 14px',
           width: `${tooltipW}px`,
           zIndex: tooltipZIndex,
           pointerEvents: 'none',
           fontFamily: 'DM Sans, sans-serif',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          boxShadow: 'var(--chart-tooltip-shadow)',
         }}
       >
         <div
@@ -81,10 +81,10 @@ export default function FinancingBankPopoverIcon({
             gap: '10px',
             marginBottom: '10px',
             paddingBottom: '8px',
-            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            borderBottom: '1px solid var(--chart-tooltip-divider)',
           }}
         >
-          <span style={{ fontSize: '13px', fontWeight: 500, color: '#fff', flexShrink: 0 }}>
+          <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--chart-tooltip-fg)', flexShrink: 0 }}>
             Financing Bank
           </span>
           <span
@@ -103,7 +103,7 @@ export default function FinancingBankPopoverIcon({
         <div
           style={{
             fontSize: '11px',
-            color: 'rgba(255,255,255,0.45)',
+            color: 'var(--chart-tooltip-insight)',
             fontStyle: 'italic',
             lineHeight: '1.5',
           }}
@@ -116,8 +116,8 @@ export default function FinancingBankPopoverIcon({
             left: '50%',
             width: '8px',
             height: '8px',
-            background: '#1A1A2E',
-            border: '1px solid rgba(255,255,255,0.12)',
+            background: 'var(--chart-tooltip-bg)',
+            border: '1px solid var(--chart-tooltip-border)',
             transform: 'translateX(-50%) rotate(45deg)',
             ...(pos.place === 'above'
               ? { bottom: '-5px', borderTop: 'none', borderLeft: 'none' }

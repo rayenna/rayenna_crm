@@ -1,4 +1,5 @@
-import type { CSSProperties } from 'react'
+import { useChartColors } from '../../hooks/useChartColors'
+import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTooltipStyles'
 import {
   Bar,
   BarChart,
@@ -14,14 +15,6 @@ import ZenithChartTouchReset from './ZenithChartTouchReset'
 import { getLoanBankBarColor } from '../dashboard/loanBankChartColors'
 import type { ZenithLifecycleBrandBarRow } from '../../utils/zenithPanelInverterBrandChartData'
 import { formatZenithSystemCapacityKw } from '../../utils/zenithSystemCapacityFormat'
-
-const TOOLTIP_STYLE: CSSProperties = {
-  background: '#1A1A2E',
-  border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: 8,
-  padding: '8px 12px',
-  fontFamily: 'DM Sans, sans-serif',
-}
 
 function formatInr(n: number): string {
   return Number.isFinite(n) ? `₹${Math.round(n).toLocaleString('en-IN')}` : '—'
@@ -40,25 +33,25 @@ function LifecycleBrandBarTooltip({
   const row = payload[0]?.payload
   if (!row) return null
   return (
-    <div style={TOOLTIP_STYLE}>
-      <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>{row.brandLabel}</div>
-      <div style={{ color: 'rgba(255,255,255,0.88)', fontSize: 12, marginTop: 6 }}>
+    <div style={ZENITH_CHART_CUSTOM_TOOLTIP_SHELL}>
+      <div style={{ color: 'var(--chart-tooltip-fg)', fontSize: 13, fontWeight: 600 }}>{row.brandLabel}</div>
+      <div style={{ color: 'var(--chart-tooltip-fg)', fontSize: 12, marginTop: 6 }}>
         {row.count} {row.count === 1 ? 'project' : 'projects'}
       </div>
-      <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 4 }}>
+      <div style={{ color: 'var(--chart-tooltip-fg-muted)', fontSize: 11, marginTop: 4 }}>
         Order value (sum): {formatInr(row.orderValueSum)}
       </div>
-      <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 4 }}>
+      <div style={{ color: 'var(--chart-tooltip-fg-muted)', fontSize: 11, marginTop: 4 }}>
         System capacity (sum):{' '}
         {formatZenithSystemCapacityKw(
           row.systemCapacitySumKw > 0 ? row.systemCapacitySumKw : null,
           'emDash',
         )}
       </div>
-      <div style={{ color: '#00d4b4', fontSize: 12, marginTop: 4, fontWeight: 500 }}>
+      <div style={{ color: 'var(--accent-teal)', fontSize: 12, marginTop: 4, fontWeight: 500 }}>
         {costTitle}: {formatInr(row.estimatedComponentCost)}
       </div>
-      <div style={{ color: '#F5A623', fontSize: 11, marginTop: 6 }}>Click to view projects →</div>
+      <div style={{ color: 'var(--accent-gold)', fontSize: 11, marginTop: 6 }}>Click to view projects →</div>
     </div>
   )
 }
@@ -74,13 +67,14 @@ function HorizontalBrandBarChart({
   costTitle: string
   onBarClick: (brandLabel: string) => void
 }) {
+  const chartColors = useChartColors()
   if (data.length === 0) {
     return (
       <div
-        className="flex items-center justify-center rounded-lg border border-white/10 bg-white/[0.02] text-center px-3"
+        className="flex items-center justify-center rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] text-center px-3"
         style={{ minHeight: chartHeight, fontFamily: 'DM Sans, sans-serif' }}
       >
-        <p className="text-xs text-white/45 max-w-sm">
+        <p className="max-w-sm text-xs text-[color:var(--text-muted)]">
           No projects in this period have both panel and inverter brands set in Project Lifecycle.
         </p>
       </div>
@@ -90,17 +84,17 @@ function HorizontalBrandBarChart({
   return (
     <ResponsiveContainer width="100%" height={chartHeight} minWidth={0}>
       <BarChart layout="vertical" data={data} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-        <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.45)', fontSize: 10 }} allowDecimals={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+        <XAxis type="number" tick={{ fill: chartColors.axisText, fontSize: 10 }} allowDecimals={false} />
         <YAxis
           type="category"
           dataKey="brandLabel"
           width={118}
-          tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 9 }}
+          tick={{ fill: chartColors.axisText, fontSize: 9 }}
         />
         <Tooltip
           content={(props) => <LifecycleBrandBarTooltip {...props} costTitle={costTitle} />}
-          cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+          cursor={{ fill: chartColors.cursorBand }}
         />
         <Bar
           dataKey="count"

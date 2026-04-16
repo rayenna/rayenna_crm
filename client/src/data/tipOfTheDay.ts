@@ -115,7 +115,7 @@ export const TIPS: string[] = [
   'Use Reset in the Zenith command bar to clear FY, Quarter, and Month and refresh the unscoped summary.',
   'From Zenith, press ? (outside text fields) to open Help on Analytics — full Zenith guide under Zenith Command Center, Revenue forecast, and Explore charts & drill-down.',
   'Zenith Deal flow funnel: click a stage row or payment pill to open Quick Actions with the same cohort as the funnel counts; Open in Projects → opens Projects with matching stage or payment filters.',
-  'Zenith Proposal Engine under Your Focus: each bucket row opens the Quick Actions list (same project IDs the summary used), then Open in Projects → for peBucket + your FY / Quarter / Month.',
+  'Zenith Proposal Engine under Your Focus: each bucket row opens the Quick Actions list (same project IDs the summary used), then Open in Projects → for that PE bucket with your FY / Quarter / Month.',
   'Zenith drawer lists use a server batch (up to about 5,000 recently updated projects). Open in Projects → uses full Projects filters — if you have huge volumes, counts can differ slightly.',
   'Zenith funnel and chart drill-downs use the same date scope as the rest of Zenith — open Help → Analytics for the full behaviour.',
   'Sales Zenith shows your data only (like your Sales dashboard); Management and Admin see company-wide executive metrics.',

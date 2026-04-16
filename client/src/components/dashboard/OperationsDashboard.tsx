@@ -37,13 +37,13 @@ const OperationsDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
 
   if (isError) {
     return (
-      <div className="w-full min-w-0 max-w-xl rounded-xl border border-amber-200 bg-amber-50 p-4 sm:p-5 md:p-6 text-amber-800 text-sm sm:text-base break-words">
+      <div className="w-full min-w-0 max-w-xl rounded-2xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] p-4 text-sm break-words text-[color:var(--text-primary)] sm:p-5 sm:text-base md:p-6">
         <p className="font-medium">Unable to load dashboard</p>
-        <p className="mt-2 text-amber-700 leading-snug">{getFriendlyApiErrorMessage(error)}</p>
+        <p className="mt-2 leading-snug text-[color:var(--text-secondary)]">{getFriendlyApiErrorMessage(error)}</p>
         <button
           type="button"
           onClick={() => refetch()}
-          className="mt-4 min-h-[44px] px-4 py-3 sm:py-2.5 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 active:opacity-90 touch-manipulation"
+          className="mt-4 min-h-[44px] touch-manipulation rounded-xl bg-[color:var(--accent-gold)] px-4 py-3 text-sm font-extrabold text-[color:var(--text-inverse)] transition-opacity hover:opacity-95 active:opacity-90 sm:py-2.5"
         >
           Try again
         </button>
@@ -53,10 +53,13 @@ const OperationsDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[360px] w-full min-w-0">
+      <div className="flex min-h-[360px] w-full min-w-0 items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-primary-200 border-t-primary-600" aria-hidden />
-          <p className="mt-4 text-sm font-medium text-gray-500">Loading dashboard...</p>
+          <div
+            className="inline-block h-10 w-10 animate-spin rounded-full border-2 border-[color:var(--border-default)] border-t-[color:var(--accent-gold)]"
+            aria-hidden
+          />
+          <p className="mt-4 text-sm font-medium text-[color:var(--text-muted)]">Loading dashboard...</p>
         </div>
       </div>
     )
@@ -73,7 +76,7 @@ const OperationsDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
         tileParams={tileParams}
       />
       {/* Quick Access – tiles linking to filtered Projects */}
-      <QuickAccessSection>
+      <QuickAccessSection variant="zenith">
       <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-4 min-w-0">
         <MetricCard
           title="Pending Installation"
@@ -81,6 +84,7 @@ const OperationsDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
           icon={<FaCog />}
           gradient="from-indigo-500 to-indigo-600"
           to={buildProjectsUrl({ status: [ProjectStatus.UNDER_INSTALLATION, ProjectStatus.CONFIRMED] }, tileParams)}
+          variant="zenith"
         />
         <MetricCard
           title="Completed Installation"
@@ -88,6 +92,7 @@ const OperationsDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
           icon={<FaFileInvoice />}
           gradient="from-yellow-500 to-amber-500"
           to={buildProjectsUrl({ status: [ProjectStatus.COMPLETED_SUBSIDY_CREDITED, ProjectStatus.COMPLETED] }, tileParams)}
+          variant="zenith"
         />
         <MetricCard
           title="Subsidy Credited"
@@ -95,42 +100,48 @@ const OperationsDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
           icon={<FaCheckCircle />}
           gradient="from-yellow-500 to-amber-500"
           to={buildProjectsUrl({ status: [ProjectStatus.COMPLETED_SUBSIDY_CREDITED] }, tileParams)}
+          variant="zenith"
         />
         {/* Payment Status tile */}
-        <div className="min-w-0 flex flex-col bg-gradient-to-br from-white via-indigo-50/50 to-white shadow-lg rounded-xl border-2 border-indigo-200/50 overflow-hidden backdrop-blur-sm">
-          <div className="bg-gradient-to-r from-indigo-500 via-cyan-500 to-indigo-600 px-3 py-2 sm:px-4 sm:py-2.5">
-            <h3 className="text-sm sm:text-base font-bold text-white drop-shadow-md truncate">
+        <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
+          <div className="bg-gradient-to-r from-[color:var(--accent-gold)] via-[color:var(--accent-gold)] to-[color:var(--accent-amber)] px-3 py-2 sm:px-4 sm:py-2.5">
+            <h3 className="truncate text-sm font-bold text-[color:var(--text-inverse)] drop-shadow-md sm:text-base">
               Payment Status
             </h3>
           </div>
-          <div className="px-3 py-2 sm:px-4 sm:py-3 overflow-x-hidden">
+          <div className="overflow-x-hidden px-3 py-2 sm:px-4 sm:py-3">
             <div className="space-y-1.5 sm:space-y-2">
               {data?.projectsByPaymentStatus?.map((item: any) => {
                 const statusLabel = item.status === 'N/A' ? 'N/A' : item.status.replace(/_/g, ' ')
                 const paymentParam = item.status === 'N/A' ? 'NA' : item.status
                 const getStatusColor = (status: string) => {
-                  if (status === 'N/A') return 'bg-red-100 text-red-800'
-                  if (status === 'FULLY_PAID') return 'bg-green-100 text-green-800'
-                  if (status === 'PARTIAL') return 'bg-yellow-100 text-yellow-800'
-                  return 'bg-red-100 text-red-800'
+                  if (status === 'N/A')
+                    return 'border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] text-[color:var(--accent-red)]'
+                  if (status === 'FULLY_PAID')
+                    return 'border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] text-[color:var(--accent-teal)]'
+                  if (status === 'PARTIAL')
+                    return 'border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
+                  return 'border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] text-[color:var(--accent-red)]'
                 }
                 return (
                   <Link
                     key={item.status}
                     to={buildProjectsUrl({ paymentStatus: [paymentParam] }, tileParams)}
-                    className="flex justify-between items-center gap-2 py-1.5 px-2 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors min-w-0 cursor-pointer no-underline text-inherit"
+                    className="flex min-w-0 cursor-pointer items-center justify-between gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-2.5 py-2 text-inherit no-underline transition-colors hover:bg-[color:var(--accent-gold-muted)]/40"
                   >
                     <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${getStatusColor(item.status)}`}
+                      className={`inline-flex flex-shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-bold ${getStatusColor(item.status)}`}
                     >
                       {statusLabel}
                     </span>
                     <span
-                      className="text-xs sm:text-sm font-semibold text-gray-900 truncate text-right"
+                      className="truncate text-right text-xs font-extrabold text-[color:var(--text-primary)] sm:text-sm"
                       title={`${item.count} (₹${(item.outstanding ?? 0).toLocaleString('en-IN')})`}
                     >
                       {item.count}{' '}
-                      <span className="text-primary-600">(₹{(item.outstanding ?? 0).toLocaleString('en-IN')})</span>
+                      <span className="text-[color:var(--accent-teal)]">
+                        (₹{(item.outstanding ?? 0).toLocaleString('en-IN')})
+                      </span>
                     </span>
                   </Link>
                 )

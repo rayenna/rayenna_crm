@@ -6,6 +6,15 @@ import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import type { ZenithDateFilter } from '../zenith/zenithTypes'
 import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
+import {
+  ZENITH_RECHARTS_TOOLTIP_CURSOR,
+  ZENITH_RECHARTS_TOOLTIP_WRAPPER_STYLE,
+  ZENITH_CHART_TOOLTIP_INSIGHT,
+  ZENITH_CHART_TOOLTIP_LINE,
+  ZENITH_CHART_TOOLTIP_PANEL,
+  ZENITH_CHART_TOOLTIP_TITLE,
+  ZENITH_DASHBOARD_ANALYTICS_CARD,
+} from './zenithRechartsTooltipStyles'
 
 interface ProjectValueByType {
   type: string
@@ -105,19 +114,17 @@ const ProjectValuePieChart = memo(
 
   if (!chartData || chartData.length === 0) {
     return (
-      <div className="w-full min-h-[360px] flex flex-col bg-white shadow-sm rounded-2xl border border-slate-200 p-4 sm:p-5">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-lg bg-emerald-600">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${ZENITH_DASHBOARD_ANALYTICS_CARD} w-full flex-col`}>
+        <div className="mb-4 flex items-center gap-3">
+          <div className="rounded-lg bg-[color:var(--accent-teal)] p-2 text-[color:var(--text-inverse)]">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-900">
-            Revenue by Customer Segment
-          </h2>
+          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">Revenue by Customer Segment</h2>
         </div>
-        <div className="flex items-center justify-center text-gray-500" style={{ height: '320px' }}>
+        <div className="flex items-center justify-center text-[color:var(--text-muted)]" style={{ height: '320px' }}>
           <p>No project data available</p>
         </div>
       </div>
@@ -128,38 +135,36 @@ const ProjectValuePieChart = memo(
   const displayData = chartData
 
   return (
-    <div className="w-full min-h-[360px] flex flex-col bg-white shadow-sm rounded-2xl border border-slate-200 p-4 sm:p-5">
-      <div className="flex flex-col gap-3 mb-4">
+    <div className={`${ZENITH_DASHBOARD_ANALYTICS_CARD} w-full flex-col`}>
+      <div className="mb-4 flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-emerald-600">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="rounded-lg bg-[color:var(--accent-teal)] p-2 text-[color:var(--text-inverse)]">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
             </svg>
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-900">
-            Revenue by Customer Segment
-          </h2>
+          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">Revenue by Customer Segment</h2>
         </div>
         {!filterControlledByParent && finalAvailableFYs && finalAvailableFYs.length > 0 && (
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="relative w-[192px]" ref={fyDropdownRef}>
               <button
                 type="button"
                 onClick={() => setShowFYDropdown(!showFYDropdown)}
                 disabled={isLoadingFiltered}
-                className="w-full text-left border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 flex items-center justify-between disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400"
+                className="zenith-native-select flex w-full items-center justify-between rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2.5 text-left text-sm text-[color:var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-muted)] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <span className={selectedFYs.length === 0 ? 'text-gray-500' : 'text-gray-900'}>
+                <span className={selectedFYs.length === 0 ? 'text-[color:var(--text-muted)]' : ''}>
                   {selectedFYs.length === 0
                     ? 'Select FY'
                     : selectedFYs.length === 1
-                    ? selectedFYs[0]
-                    : `${selectedFYs.length} selected`}
+                      ? selectedFYs[0]
+                      : `${selectedFYs.length} selected`}
                 </span>
                 <svg
-                  className={`ml-2 h-4 w-4 text-gray-400 transition-transform flex-shrink-0 ${
-                    showFYDropdown ? 'transform rotate-180' : ''
+                  className={`ml-2 h-4 w-4 flex-shrink-0 text-[color:var(--text-muted)] transition-transform ${
+                    showFYDropdown ? 'rotate-180' : ''
                   }`}
                   fill="none"
                   stroke="currentColor"
@@ -169,33 +174,33 @@ const ProjectValuePieChart = memo(
                 </svg>
               </button>
               {showFYDropdown && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                <div className="absolute z-10 mt-2 max-h-60 w-full overflow-auto rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)]">
                   {finalAvailableFYs.length > 0 ? (
                     <>
                       {finalAvailableFYs.map((fy: string) => (
                         <label
                           key={fy}
-                          className="flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer"
+                          className="flex cursor-pointer items-center px-4 py-2 hover:bg-[color:var(--accent-teal-muted)]/40"
                         >
                           <input
                             type="checkbox"
                             checked={selectedFYs.includes(fy)}
                             onChange={() => {
-                              setSelectedFYs((prev) => 
-                                prev.includes(fy) ? prev.filter((f) => f !== fy) : [...prev, fy]
+                              setSelectedFYs((prev) =>
+                                prev.includes(fy) ? prev.filter((f) => f !== fy) : [...prev, fy],
                               )
                             }}
-                            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                            className="rounded border-[color:var(--border-default)] text-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
                           />
-                          <span className="ml-2 text-sm text-gray-900">{fy}</span>
+                          <span className="ml-2 text-sm text-[color:var(--text-primary)]">{fy}</span>
                         </label>
                       ))}
                       {selectedFYs.length > 0 && (
-                        <div className="border-t border-gray-200 px-4 py-2">
+                        <div className="border-t border-[color:var(--border-default)] px-4 py-2">
                           <button
                             type="button"
                             onClick={() => setSelectedFYs([])}
-                            className="text-xs text-primary-600 hover:text-primary-800"
+                            className="text-xs font-semibold text-[color:var(--accent-gold)] hover:opacity-90"
                           >
                             Clear selection
                           </button>
@@ -203,14 +208,12 @@ const ProjectValuePieChart = memo(
                       )}
                     </>
                   ) : (
-                    <div className="px-4 py-2 text-sm text-gray-500">No FYs available</div>
+                    <div className="px-4 py-2 text-sm text-[color:var(--text-muted)]">No FYs available</div>
                   )}
                 </div>
               )}
             </div>
-            {isLoadingFiltered && (
-              <span className="text-xs text-gray-500">Loading...</span>
-            )}
+            {isLoadingFiltered && <span className="text-xs text-[color:var(--text-muted)]">Loading...</span>}
           </div>
         )}
       </div>
@@ -245,36 +248,28 @@ const ProjectValuePieChart = memo(
                   ))}
                 </Pie>
                 <Tooltip
+                  wrapperStyle={ZENITH_RECHARTS_TOOLTIP_WRAPPER_STYLE}
+                  cursor={ZENITH_RECHARTS_TOOLTIP_CURSOR}
                   content={({ active, payload }: { active?: boolean; payload?: Array<{ payload?: ProjectValueByType }> }) => {
                     if (active && payload && payload.length && payload[0].payload) {
                       const data = payload[0].payload
                       return (
-                        <div
-                          className="p-2 sm:p-3 border border-gray-200 rounded-lg shadow-lg text-xs sm:text-sm"
-                          style={{
-                            backgroundColor: '#ffffff',
-                            color: '#0f172a',
-                          }}
-                        >
-                          <p className="font-semibold" style={{ color: '#0f172a' }}>
-                            {data.label}
-                          </p>
-                          <p style={{ color: '#334155' }}>
-                            Value:{' '}
-                            <span className="font-medium" style={{ color: '#0d1b3a' }}>
+                        <div className={`${ZENITH_CHART_TOOLTIP_PANEL} text-xs sm:text-sm`}>
+                          <p className={ZENITH_CHART_TOOLTIP_TITLE}>{data.label}</p>
+                          <p className={ZENITH_CHART_TOOLTIP_LINE}>
+                            Revenue:{' '}
+                            <span className="font-extrabold text-[color:var(--accent-gold)]">
                               ₹{data.value.toLocaleString('en-IN')}
                             </span>
                           </p>
-                          <p style={{ color: '#334155' }}>
+                          <p className={ZENITH_CHART_TOOLTIP_LINE}>
                             Percentage:{' '}
-                            <span className="font-medium" style={{ color: '#0d1b3a' }}>
-                              {data.percentage}%
-                            </span>
+                            <span className="font-extrabold text-[color:var(--accent-teal)]">{data.percentage}%</span>
                           </p>
-                          <p className="text-xs mt-1" style={{ color: '#64748b' }}>
-                            Projects: {data.count}
+                          <p className={`${ZENITH_CHART_TOOLTIP_LINE} mt-1 text-xs`}>
+                            Projects: <span className="font-extrabold text-[color:var(--chart-tooltip-fg)]">{data.count}</span>
                           </p>
-                          <p className="text-xs font-medium text-amber-700 mt-1">Click slice to open Projects →</p>
+                          <p className={ZENITH_CHART_TOOLTIP_INSIGHT}>Click slice to open Projects →</p>
                         </div>
                       )
                     }
@@ -285,7 +280,7 @@ const ProjectValuePieChart = memo(
             </ResponsiveContainer>
           </div>
           {/* Legend below donut: percentages visible; scrolls with chart */}
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-2 px-2 text-sm font-medium text-gray-700 min-w-0 max-w-full">
+          <div className="mt-2 flex min-w-0 max-w-full flex-wrap justify-center gap-x-4 gap-y-1 px-2 text-sm font-semibold text-[color:var(--text-secondary)]">
             {displayData.map((item: ProjectValueByType, index: number) => (
               <span key={item.type} className="inline-flex items-center gap-1.5 whitespace-nowrap">
                 <span className="inline-block w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: getSegmentColor(item.type, index) }} />

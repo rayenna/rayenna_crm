@@ -55,46 +55,53 @@ const TipOfTheDay = () => {
   if (!show) return null
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[100] p-4 sm:p-6">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[color:var(--bg-overlay)] p-4 backdrop-blur-[3px] sm:p-6">
+      {/* Do not use .zenith-root here — it applies min-h ~ viewport and the Zenith page grid to the panel. */}
       <div
-        className="bg-white rounded-2xl shadow-2xl max-w-md sm:max-w-lg w-full border border-primary-100 ring-2 ring-primary-200/60 overflow-hidden"
+        className="mx-auto w-full max-w-md shrink-0 overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-modal)] shadow-[var(--shadow-modal)] ring-1 ring-[color:var(--border-default)] sm:max-w-lg"
         role="dialog"
         aria-labelledby="tip-of-the-day-title"
         aria-describedby="tip-of-the-day-body"
       >
-        <div className="bg-gradient-to-r from-primary-600 via-primary-500 to-amber-500 px-4 sm:px-5 py-3.5 flex items-center gap-3">
-          <span className="text-2xl shrink-0" aria-hidden>
+        <div className="flex items-center gap-3 border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] px-4 py-3.5 sm:px-5">
+          <span className="shrink-0 text-2xl" aria-hidden>
             💡
           </span>
-          <h3 id="tip-of-the-day-title" className="text-lg sm:text-xl font-bold text-white tracking-tight">
+          <h3
+            id="tip-of-the-day-title"
+            className="text-lg font-bold tracking-tight text-[color:var(--text-primary)] sm:text-xl"
+          >
             Tip of the Day
           </h3>
         </div>
-        <div className="px-4 sm:px-6 py-5 sm:py-6 bg-gradient-to-b from-white to-primary-50/30">
+        <div className="max-h-[min(50vh,20rem)] overflow-y-auto bg-[color:var(--bg-card)] px-4 py-5 sm:px-6 sm:py-6">
           <p
             id="tip-of-the-day-body"
-            className="text-gray-800 text-sm sm:text-base leading-relaxed text-pretty"
+            className="text-pretty text-sm leading-relaxed text-[color:var(--text-secondary)] sm:text-base"
           >
             {tip}
           </p>
         </div>
-        <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-primary-50/80 border-t border-primary-100/80 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end sm:items-center">
+        <div className="flex flex-col-reverse gap-2 border-t border-[color:var(--border-default)] bg-[color:var(--bg-surface)] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-end sm:px-6 sm:py-4">
           <button
+            type="button"
             onClick={handleDontShowAgain}
-            className="text-xs sm:text-sm text-primary-700 hover:text-primary-900 font-medium sm:mr-auto py-1 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            className="rounded-md py-1 text-left text-xs font-medium text-[color:var(--text-muted)] transition-colors hover:text-[color:var(--text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-muted)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--bg-surface)] touch-manipulation sm:mr-auto sm:text-sm"
           >
             Don&apos;t show again
           </button>
-          <div className="flex flex-wrap gap-2 sm:justify-end">
+          <div className="flex flex-wrap justify-end gap-2">
             <button
+              type="button"
               onClick={handleNextTip}
-              className="px-4 py-2.5 bg-white border-2 border-primary-200 text-primary-800 hover:bg-primary-50 font-semibold rounded-xl transition-colors shadow-sm"
+              className="touch-manipulation rounded-xl border border-[color:var(--border-strong)] bg-[color:var(--bg-input)] px-4 py-2.5 font-semibold text-[color:var(--text-primary)] shadow-sm transition-colors hover:border-[color:var(--accent-gold-border)] hover:bg-[color:var(--bg-card-hover)]"
             >
               Next tip
             </button>
             <button
+              type="button"
               onClick={handleGotIt}
-              className="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl transition-colors shadow-md"
+              className="touch-manipulation rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 font-bold text-[color:var(--text-inverse)] shadow-md transition-opacity hover:opacity-95"
             >
               Got it
             </button>

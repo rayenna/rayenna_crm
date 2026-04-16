@@ -19,7 +19,7 @@ export default function ZenithDrawerProjectTitle({
     <div className="min-w-0 flex-1">
       <div className="flex items-baseline gap-2 min-w-0">
         <span
-          className="min-w-0 flex-1 truncate text-white font-bold text-[16px]"
+          className="min-w-0 flex-1 truncate text-[color:var(--text-primary)] font-bold text-[16px]"
           style={{ fontFamily: "'Syne', sans-serif" }}
           title={nameTooltip}
         >

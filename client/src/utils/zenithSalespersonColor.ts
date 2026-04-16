@@ -4,10 +4,10 @@
  */
 const PALETTE = [
   '#7dd3fc',
-  '#f5a623',
-  '#00d4b4',
+  'var(--accent-gold)',
+  'var(--accent-teal)',
   '#a78bfa',
-  '#fb7185',
+  'var(--accent-red)',
   '#86efac',
   '#fcd34d',
   '#38bdf8',
@@ -20,7 +20,7 @@ const PALETTE = [
   '#bef264',
 ] as const
 
-const UNASSIGNED = 'rgba(255,255,255,0.48)'
+const UNASSIGNED = 'var(--text-muted)'
 
 function hashName(s: string): number {
   let h = 0

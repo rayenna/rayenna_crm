@@ -31,15 +31,15 @@ function paymentStatusLine(project: Project, isNaBucket: boolean): string {
 }
 
 function statusValueClass(statusText: string, na: boolean): string {
-  if (na) return 'text-white/50'
-  if (statusText === 'Pending') return 'text-rose-300'
-  if (statusText === 'Partial') return 'text-[#f5a623]'
-  if (statusText === 'Fully paid') return 'text-emerald-400'
-  return 'text-white/90'
+  if (na) return 'text-[color:var(--text-muted)]'
+  if (statusText === 'Pending') return 'text-[color:var(--accent-red)]'
+  if (statusText === 'Partial') return 'text-[color:var(--accent-gold)]'
+  if (statusText === 'Fully paid') return 'text-[color:var(--accent-teal)]'
+  return 'text-[color:var(--text-primary)]'
 }
 
 /**
- * Dark Zenith quick-drawer payment summary (matches Finance drawer card rhythm).
+ * Zenith quick-drawer payment summary (theme-aware; matches Finance drawer card rhythm).
  * Omit on Finance / Payment Radar drawer — that screen already includes this block.
  */
 export default function ZenithDrawerPaymentSummary({ project }: { project: Project | null | undefined }) {
@@ -49,22 +49,22 @@ export default function ZenithDrawerPaymentSummary({ project }: { project: Proje
   const statusText = paymentStatusLine(project, na)
 
   return (
-    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-3 space-y-2.5">
-      <div className="text-[11px] uppercase tracking-[0.08em] text-white/35">Payment</div>
+    <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-3 space-y-2.5">
+      <div className="text-[11px] uppercase tracking-[0.08em] text-[color:var(--text-muted)]">Payment</div>
       <div className="flex justify-between gap-3 text-[13px]">
-        <span className="text-white/45 shrink-0">Payment status</span>
+        <span className="text-[color:var(--text-muted)] shrink-0">Payment status</span>
         <span className={`font-medium text-right ${statusValueClass(statusText, na)}`}>{statusText}</span>
       </div>
       <div className="flex justify-between gap-3 text-[13px]">
-        <span className="text-white/45 shrink-0">Total amount received</span>
-        <span className="text-white/90 font-medium tabular-nums text-right">
+        <span className="text-[color:var(--text-muted)] shrink-0">Total amount received</span>
+        <span className="text-[color:var(--text-primary)] font-medium tabular-nums text-right">
           {na ? 'N/A' : formatINR(project.totalAmountReceived)}
         </span>
       </div>
       <div className="flex justify-between gap-3 text-[13px]">
-        <span className="text-white/45 shrink-0">Balance pending</span>
+        <span className="text-[color:var(--text-muted)] shrink-0">Balance pending</span>
         <span
-          className={`font-semibold tabular-nums text-right ${na ? 'text-white/50' : 'text-[#f5a623]'}`}
+          className={`font-semibold tabular-nums text-right ${na ? 'text-[color:var(--text-muted)]' : 'text-[color:var(--accent-gold)]'}`}
         >
           {na ? 'N/A' : formatINR(project.balanceAmount)}
         </span>

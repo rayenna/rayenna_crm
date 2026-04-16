@@ -20,28 +20,36 @@ interface HelpSidebarProps {
 
 const HelpSidebar = ({ sections, selectedSection, onSectionSelect }: HelpSidebarProps) => {
   return (
-    <div className="bg-gradient-to-br from-white via-indigo-50/20 to-sky-50/40 rounded-2xl shadow-md border border-indigo-100/70 flex flex-col h-full max-h-[calc(100vh-8rem)] sticky top-6 overflow-hidden backdrop-blur-sm">
+    <div className="flex h-full max-h-[calc(100vh-8rem)] flex-col overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] sticky top-6">
       {/* Header */}
-      <div className="px-4 py-3.5 border-b border-indigo-100/90 flex-shrink-0 bg-gradient-to-r from-white to-indigo-50/50">
-        <h2 className="text-base font-bold text-gray-900 tracking-tight">Help Topics</h2>
-        <p className="text-xs text-indigo-600/90 mt-1 font-medium">Press <kbd className="px-1 py-0.5 rounded bg-indigo-100/80 border border-indigo-200/80 text-[10px] font-mono text-indigo-800">?</kbd> from any page</p>
+      <div className="flex-shrink-0 border-b border-[color:var(--border-default)] bg-[color:var(--zenith-table-header-bg)] px-4 py-3.5">
+        <h2 className="zenith-display text-base font-bold tracking-tight text-[color:var(--zenith-table-header-fg)]">
+          Help Topics
+        </h2>
+        <p className="mt-1 text-xs font-medium text-[color:var(--text-secondary)]">
+          Press{' '}
+          <kbd className="rounded border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-1 py-0.5 font-mono text-[10px] text-[color:var(--accent-gold)]">
+            ?
+          </kbd>{' '}
+          from any page
+        </p>
       </div>
 
       {/* Scrollable Navigation + About in one list with consistent spacing */}
-      <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5 min-h-0">
+      <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
         {sections.map((section) => {
           const isSelected = selectedSection?.id === section.id
           return (
             <button
               key={section.id}
               onClick={() => onSectionSelect(section)}
-              className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2.5 ${
+              className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 ${
                 isSelected
-                  ? 'bg-primary-50 text-primary-800 border-l-4 border-primary-600 shadow-sm ring-1 ring-primary-100'
-                  : 'text-gray-700 hover:bg-white/90 hover:text-primary-700 border-l-4 border-transparent hover:shadow-sm'
+                  ? 'border-l-4 border-[color:var(--accent-gold)] bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)] shadow-sm ring-1 ring-[color:var(--accent-gold-border)]'
+                  : 'border-l-4 border-transparent text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)]'
               }`}
             >
-              <span className="text-base leading-none flex-shrink-0 w-7 text-center" aria-hidden>
+              <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center text-base leading-none" aria-hidden>
                 {SECTION_EMOJI[section.id] ?? '📄'}
               </span>
               <span>{section.title}</span>
@@ -49,12 +57,12 @@ const HelpSidebar = ({ sections, selectedSection, onSectionSelect }: HelpSidebar
           )
         })}
         {/* About: same vertical rhythm as topics, minimal gap */}
-        <div className="pt-2 mt-1 border-t border-indigo-100/80">
+        <div className="mt-1 border-t border-[color:var(--border-default)] pt-2">
           <Link
             to="/about"
-            className="block w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-white/90 hover:text-indigo-700 transition-all duration-200 border-l-4 border-transparent flex items-center gap-2.5"
+            className="flex w-full items-center gap-2.5 rounded-xl border-l-4 border-transparent px-3 py-2.5 text-left text-sm font-medium text-[color:var(--text-secondary)] transition-all duration-200 hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)]"
           >
-            <span className="text-base leading-none flex-shrink-0 w-7 text-center" aria-hidden>
+            <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center text-base leading-none" aria-hidden>
               ℹ️
             </span>
             About

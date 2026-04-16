@@ -2,7 +2,7 @@
 
 > **Note:** The Dashboard is your main analytics view. Use the filter bar at the top to choose **Financial Year**, **Quarter**, and **Month**; Quick Access counts, the **Payment Status** and **Proposal Engine** summaries, and most KPI tiles follow those filters. Charts may have their own controls where noted.
 
-**Jump to:** [Dashboard filters](#dashboard-filters) · [Things needing attention](#things-needing-attention-dashboard) · [Quick Access tiles](#quick-access-tiles) · [Payment Status](#payment-status-card) · [Proposal Engine](#proposal-engine-card) · [Layout by role](#layout-by-role) · [Charts](#charts-and-visualizations) · [Zenith Command Center](#zenith-command-center) · [Zenith Revenue Forecast](#revenue-forecast-wide-kpi-tile) · [Zenith FY revenue & profit chart](#revenue-and-profit-by-fy-chart-zenith) · [Zenith drill-down](#explore-charts-and-drill-down-zenith) · [Panel & inverter brand charts](#panel-and-inverter-brand-charts-zenith) · [Explorer batch limit](#explorer-batch-limit-zenith)
+**Jump to:** [Dashboard filters](#dashboard-filters) · [Things needing attention](#things-needing-attention-dashboard) · [Quick Access tiles](#quick-access-tiles) · [Payment Status](#payment-status-card) · [Proposal Engine](#proposal-engine-card) · [Layout by role](#layout-by-role) · [Charts](#charts-and-visualizations) · [Dashboard chart click-through](#classic-dashboard-chart-click-through-to-projects) · [Zenith Command Center](#zenith-command-center) · [Zenith Revenue Forecast](#revenue-forecast-wide-kpi-tile) · [Zenith FY revenue & profit chart](#revenue-and-profit-by-fy-chart-zenith) · [Zenith drill-down](#explore-charts-and-drill-down-zenith) · [Panel & inverter brand charts](#panel-and-inverter-brand-charts-zenith) · [Explorer batch limit](#explorer-batch-limit-zenith)
 
 ---
 
@@ -127,10 +127,10 @@ There is **no** Availing Loan tile and **no** Proposal Engine card on this dashb
 
 ## Role-based dashboards (summary)
 
-- **Sales** — Year-on-Year summary, Quick Access (above), Projects by Stage and Revenue & Profit by FY, Revenue by Lead Source, Pipeline by Lead Source, Project Value by Segment, Pipeline by Customer Segment, Customer Profitability word cloud, Projects Availing Loans by Bank. Data is **scoped to the logged-in salesperson**.
-- **Operations** — Quick Access, optional Pending Subsidy list, Projects by Stage, Revenue by Sales Team, Project Value and Profit by FY, Project Value by Segment. **Company-wide** execution view.
+- **Sales** — Year-on-Year summary, Quick Access (above), Projects by Stage and Revenue & Profit by FY, Revenue by Lead Source, Pipeline by Lead Source, Project Value by Segment, Pipeline by Customer Segment, Customer Profitability word cloud, Projects Availing Loans by Bank, **Projects by panel brand** and **Projects by inverter brand** (lifecycle cohort — both brands required per project). Data is **scoped to the logged-in salesperson**.
+- **Operations** — Quick Access, optional Pending Subsidy list, Projects by Stage, Revenue by Sales Team, Project Value and Profit by FY, Project Value by Segment, **Projects by panel brand** and **Projects by inverter brand**. **Company-wide** execution view.
 - **Finance** — Top KPIs (Total Revenue, Amount Received, Outstanding Balance), Quick Access row (above), Revenue by Lead Source, Revenue by Sales Team, Project Value and Profit by FY, Project Value by Segment, Customer Profitability word cloud, Projects Availing Loans by Bank. **Company-wide**.
-- **Management / Admin** — Year-on-Year summary, Quick Access (above), Projects by Stage and Revenue & Profit by FY, Revenue by Lead Source, Pipeline by Lead Source, Revenue by Sales Team, Sales Team treemap, Project Value by Segment, Pipeline by Customer Segment, Customer Profitability word cloud, Projects Availing Loans by Bank. **Company-wide**.
+- **Management / Admin** — Year-on-Year summary, Quick Access (above), Projects by Stage and Revenue & Profit by FY, Revenue by Lead Source, Pipeline by Lead Source, Revenue by Sales Team, Sales Team treemap, Project Value by Segment, Pipeline by Customer Segment, Customer Profitability word cloud, Projects Availing Loans by Bank, **Projects by panel brand** and **Projects by inverter brand**. **Company-wide**.
 
 ---
 
@@ -146,16 +146,27 @@ There is **no** Availing Loan tile and **no** Proposal Engine card on this dashb
 - **Pipeline by Customer Segment** — Pie chart (**Sales**, **Management**).
 - **Customer Profitability word cloud** — **Sales**, **Finance**, **Management**.
 - **Projects Availing Loans by Bank** — **Sales**, **Finance**, **Management** (not **Operations**).
+- **Projects by panel brand** / **Projects by inverter brand** — Horizontal bar charts (**Sales**, **Management**, **Admin**, **Operations**; not **Finance**). Same cohort as Zenith: only projects with **both** panel and inverter brands saved in Project Lifecycle.
 
 Data refreshes when you load the Dashboard or change filters. If numbers look stale, refresh the page.
+
+### Classic Dashboard — chart click-through to Projects
+
+On the **classic Dashboard** (not Zenith), most **charts are clickable**: clicking a **bar**, **FY column** (revenue vs profit separately), **pie slice**, **word** in the profitability cloud, or **Top 10** row opens the **Projects** page with filters that **match the slice** you clicked, plus your dashboard **FY / Quarter / Month** where applicable.
+
+- **Tooltips** often include a line such as **Click to open Projects →** (or **Click slice** / **Click bar**) as a hint.
+- **Semantics** align with **Zenith** drill-downs where the same slice exists (e.g. stage, lead source with revenue vs pipeline, customer segment, FY revenue vs FY profit, availing loan by bank, panel/inverter brand with lifecycle completeness). The classic Dashboard goes **straight to Projects**; Zenith usually opens the **Quick Actions** drawer first, with **Open in Projects →** in the footer.
+- **Customer profitability** — On the **classic Dashboard** and in **Zenith** (**Customer projects profitability**), clicking a **word** or a **Top 10** row opens **Projects** with a **search** term (customer name text) and the **revenue** analytics slice, plus date filters — same behaviour in both places.
+
+If your role does not see a given chart, that click path is not available on your dashboard.
 
 ---
 
 ## Zenith Command Center
 
-> **Zenith** is Rayenna CRM’s **command center analytics** experience: the same trusted numbers as the classic **Dashboard**, presented full-screen with a dark theme, **AI Insights**, **The Board** sales leaderboard (with drill-down lists), **collapsible Your Focus** panels, the **Deal flow funnel** (stage and payment shortcuts), **clickable charts** and the **Availing Loan** KPI (**Finance** and **executive** Zenith) that open a **Quick Actions** drawer, **Proposal Engine** readiness rows (Sales / Management / Admin under Your Focus), **Payment radar** with **Top overdue** guidance, and a **Victory** toast when deals hit winning stages — so you can jump straight to projects and verify numbers. List views opened from Zenith include **Open in Projects →** in the drawer footer so you can continue on the full **Projects** page with the **same filters** as the list. Use the **sticky command bar** for **Financial Year**, **Quarter**, and **Month** — KPIs, the funnel, **Revenue forecast**, **Explore the landscape** charts, and project lists loaded for drill-down **all follow those filters**. Data is loaded from the server for your session (not “this browser only”), so what you see stays aligned with CRM after login. Zenith is documented here under **Analytics and Reports** (no separate top-level Help topic).
+> **Zenith** is Rayenna CRM’s **command center analytics** experience: the same trusted numbers as the classic **Dashboard**, presented full-screen with a Zenith look and feel in **both Light and Dark themes**, plus **AI Insights**, **The Board** sales leaderboard (with drill-down lists), **collapsible Your Focus** panels, the **Deal flow funnel** (stage and payment shortcuts), **clickable charts** and the **Availing Loan** KPI (**Finance** and **executive** Zenith) that open a **Quick Actions** drawer, **Proposal Engine** readiness rows (Sales / Management / Admin under Your Focus), **Payment radar** with **Top overdue** guidance, and a **Victory** toast when deals hit winning stages — so you can jump straight to projects and verify numbers. List views opened from Zenith include **Open in Projects →** in the drawer footer so you can continue on the full **Projects** page with the **same filters** as the list. Use the **sticky command bar** for **Financial Year**, **Quarter**, and **Month** — KPIs, the funnel, **Revenue forecast**, **Explore the landscape** charts, and project lists loaded for drill-down **all follow those filters**. Data is loaded from the server for your session (not “this browser only”), so what you see stays aligned with CRM after login. Zenith is documented here under **Analytics and Reports** (no separate top-level Help topic).
 
-**In this section:** [Opening Zenith](#opening-zenith) · [Filters and reset](#filters-and-reset) · [Daily briefing](#daily-briefing-zenith) · [AI Insights ticker](#ai-insights-ticker) · [KPI strip and YoY](#kpi-strip-and-year-on-year) · [Your Focus](#your-focus-role-specific) · [Payment radar](#payment-radar-finance) · [Installation pulse](#installation-pulse-operations) · [Executive](#executive-sales-management--admin) · [Deal flow funnel](#deal-flow-funnel-zenith) · [The Board (leaderboard)](#the-board-leaderboard) · [Victory toast](#victory-toast-stage-wins) · [Operations (Zenith)](#operations-zenith) · [Finance (Zenith)](#finance-zenith) · [Revenue Forecast tile](#revenue-forecast-wide-kpi-tile) · [Revenue & profit by FY chart](#revenue-and-profit-by-fy-chart-zenith) · [Customer projects profitability](#customer-projects-profitability-zenith) · [Explore charts & drill-down](#explore-charts-and-drill-down-zenith) · [Panel & inverter brand charts](#panel-and-inverter-brand-charts-zenith) · [Quick Actions drawer](#quick-actions-drawer-zenith) · [Layout & Hit List](#layout-stability-and-hit-list-zenith) · [Charts overview](#charts-funnels-and-shortcuts) · [Explorer batch limit](#explorer-batch-limit-zenith) · [Help and tips](#help-and-tips-zenith)
+**In this section:** [Opening Zenith](#opening-zenith) · [Filters and reset](#filters-and-reset) · [Daily briefing](#daily-briefing-zenith) · [AI Insights ticker](#ai-insights-ticker) · [KPI strip and YoY](#kpi-strip-and-year-on-year) · [Your Focus](#your-focus-role-specific) · [Payment radar](#payment-radar-finance) · [Installation pulse](#installation-pulse-operations) · [Executive](#executive-sales-management--admin) · [Deal flow funnel](#deal-flow-funnel-zenith) · [The Board (leaderboard)](#the-board-leaderboard) · [Victory toast](#victory-toast-stage-wins) · [Operations (Zenith)](#operations-zenith) · [Finance (Zenith)](#finance-zenith) · [Revenue Forecast tile](#revenue-forecast-wide-kpi-tile) · [Revenue & profit by FY chart](#revenue-and-profit-by-fy-chart-zenith) · [Customer projects profitability](#customer-projects-profitability-zenith) · [Explore charts & drill-down](#explore-charts-and-drill-down-zenith) · [Panel & inverter brand charts](#panel-and-inverter-brand-charts-zenith) · [Quick Actions drawer](#quick-actions-drawer-zenith) · [Layout & Hit List](#layout-stability-and-hit-list-zenith) · [Charts overview](#charts-funnels-and-shortcuts) · [Explorer batch limit](#explorer-batch-limit-zenith) · [Help and tips](#help-and-tips)
 
 ### Opening Zenith
 
@@ -179,7 +190,7 @@ The command bar stays at the top as you scroll.
 
 ### Daily briefing (Zenith)
 
-Shortly after you open **Zenith**, a **Smart daily briefing** dialog may appear (use **✦ Briefing** in the command bar to open it again where shown). Close it any time, or tick **Don’t show again today** — that preference is stored **in the browser** for the current day only (it does not sync across devices).
+Shortly after you open **Zenith**, a **Smart daily briefing** dialog may appear (use **✦ Briefing** in the command bar to open it again where shown). Close it any time, or tick **Don’t show again today** — that preference is stored **in this browser** for the current day only (it does not sync across devices).
 
 For **Sales**, **Admin**, and **Operations** — not **Management** or **Finance** — if any projects in **Under Installation**, **Completed**, or **Completed – Subsidy Credited** are missing **panel and/or inverter brand**, the briefing can add a **top reminder line** with a **count** and **customer names**, using the same server-backed **Zenith explorer** slice as your command-bar **FY / Quarter / Month**. This mirrors the [Things needing attention](#things-needing-attention-dashboard) idea on the classic Dashboard (Management users do not see the dashboard strip; they also do not see this lifecycle line in the briefing).
 
@@ -417,6 +428,8 @@ Use **Reset** when you want a fresh, unscoped overview before drilling into a si
 
 **Filters** — Respects Zenith **FY / Quarter / Month** like other tiles.
 
+**Click-through** — **Word Cloud** and **Top 10** rows open the **Projects** page directly (same URL rules as the classic Dashboard profitability tile: **search** + **revenue** slice + command-bar dates), not the Quick Actions drawer.
+
 ---
 
 ### Explore charts and drill-down (Zenith)
@@ -480,14 +493,33 @@ For typical portfolios this makes **no practical difference**; it matters only w
 
 ---
 
-### Help and tips (Zenith)
+### Help and tips
 
-- **Tip of the Day** rotates through dozens of hints, including **The Board**, **Deal flow funnel** and **payment** drill-downs, **Availing Loan** KPI → drawer, **Payment radar** (**Top overdue** hints and **Remind**), **Proposal Engine** rows under Your Focus, **Open in Projects →**, **collapsible Your Focus**, **Victory toast**, **Revenue forecast**, **FY chart drill-down**, **Customer profitability**, **Explore** lists (**panel / inverter brand** bars and **System capacity (sum)** in tooltips), **Today’s Hit List** (filters + sortable table, **Alert** + **confirmation date**; **desktop / tablet** scroll + **Open →** hint when deals list), **Smart daily briefing** (lifecycle brand reminder for **Sales**, **Admin**, **Operations**), classic **Dashboard** [Things needing attention](#things-needing-attention-dashboard) strip, **Sales** on quick-drawer headers and list rows, **Recent remarks** in quick drawers, the **Payment** snapshot (**status**, **received**, **balance**) after **Deal value** in **Quick Actions** and **Operations** drawers (with **N/A** when payment does not apply), **Projects** tips (**whole-number System Capacity (kW)**, **Inverter Capacity** defaulting from it, **Project Detail** layout, **Projects** list **payment balance** and **financing bank** popovers aligned with **Deal Health** styling), and the rest of Zenith — use **Next tip** in the modal to browse more.
-- Optional **Help** tooltips (`zenith.*` keys) exist for reuse in the UI; the full narrative is in the sections above.
+This block covers **in-app Help**, **Tip of the Day**, and how **Zenith** fits into both.
+
+#### Help Centre (all pages)
+
+- Press **?** when you are **not** typing in a field (same rule as shortcuts), or choose **Help (?)** from the **user menu** (your name, top right). You land on the **Help** page; when you came from another screen, a **Help for:** banner shows that context.
+- **Search help…** in the Help sidebar searches across all sections; click a result to open that section. Use the section list for **Getting Started**, **Roles**, **Modules**, **Analytics** (includes **Zenith Command Center**), **Training**, **Security**, and **FAQ**.
+- On a **Help** page, **Esc** returns you to the **Dashboard**. Deep links such as `/help/analytics#zenith-command-center` scroll to the matching heading after load.
+- Optional short **Help** tooltips (`zenith.*` and other keys in code) support specific controls; the full narrative is in Help markdown, especially under **Analytics** and **Modules**.
+
+#### Tip of the Day (app-wide)
+
+- **Tip of the Day** is **not** Zenith-only: the modal can appear once per eligible day after login and covers **Dashboard**, **Zenith**, **Projects**, **Customers**, **Support Tickets**, **Proposal Engine**, **Audit & Security**, **Tally Export**, keyboard shortcuts, and more.
+- Reopen anytime from the user menu → **Tip of the Day** (adds `?showTip=1` so the tip can show on your **current** route, not only the Dashboard). Inside the modal: **Next tip** walks the full library in order; **Got it** dismisses until the next day; **Don’t show again** stops automatic tips until you clear site data for this app (note: this preference is stored in the browser, not synced across devices). **Esc** closes the modal while it is open.
+
+#### Zenith-heavy themes inside the tips
+
+The rotation includes many **Zenith**-oriented hints, for example: **The Board**; **Deal flow funnel** and **payment** drill-downs; **Availing Loan** KPI → drawer; **Payment radar** (**Top overdue** hints and **Remind**); **Proposal Engine** rows under **Your Focus**; **Open in Projects →**; **collapsible Your Focus**; **Victory toast**; **Revenue forecast**; **FY chart** drill-down; **Customer profitability**; **Explore** (**panel / inverter brand** bars and **System capacity (sum)** in tooltips); **Today’s Hit List** (filters, sort, **Alert**, **confirmation date**; **desktop / tablet** scroll + **Open →** hint); **Smart daily briefing** (lifecycle **panel / inverter** reminder for **Sales**, **Admin**, **Operations**); classic **Dashboard** [Things needing attention](#things-needing-attention-dashboard); **Sales** on quick-drawer headers and list rows; **Recent remarks** before **Log activity**; **Payment** snapshot (**status**, **received**, **balance**) after **Deal value** in **Quick Actions** and **Operations** drawers (**N/A** when payment does not apply); plus **Projects** tips (**whole-number System Capacity (kW)**, **Inverter Capacity** defaulting from it, **Project Detail** layout, **payment balance** and **financing bank** popovers aligned with **Deal Health** styling).
+
+#### Support Tickets (dashboard + project)
+
+From **[Support Tickets](/help/modules#support-tickets-module)** in **Modules**: the **Support Tickets** page lists every ticket; opening a row uses the same **Ticket Details** drawer pattern as on **Project detail** (dark Zenith-style shell, follow-up timeline, **Close ticket** when your role allows). Shortcut: **Ctrl+Shift+K** / **⌘⇧K** when your role has menu access.
 
 **Facilitator / end-user training:** A **presentation-style training guide** for Zenith (all roles, **Sales-first**), with exercises and permission notes, lives under **[Training](/help/training)** in Help.
 
-For module basics (Customers, Projects, Proposal Engine), see [Modules](/help/modules) and [Getting Started](/help/getting-started).
+For module basics (Customers, Projects, Proposal Engine, Support Tickets), see [Modules](/help/modules) and [Getting Started](/help/getting-started).
 
 ---
 

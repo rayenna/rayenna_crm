@@ -83,21 +83,21 @@ function generateBriefing(args: {
       lines.push({
         icon: '🔴',
         text: `You have ${atRiskCount} open deal${atRiskCount === 1 ? '' : 's'} that need attention today`,
-        color: '#FF4757',
+        color: 'var(--accent-red)',
       })
     }
     if (totalPipeline > 0) {
       lines.push({
         icon: '💼',
         text: `Your pipeline for this period is ${formatINR(totalPipeline)}`,
-        color: '#F5A623',
+        color: 'var(--accent-gold)',
       })
     }
     if (revenueTotal > 0) {
       lines.push({
         icon: '🏆',
         text: `Revenue booked in this period: ${formatINR(revenueTotal)}`,
-        color: '#00D4B4',
+        color: 'var(--accent-teal)',
       })
     }
   } else if (role === UserRole.MANAGEMENT || role === UserRole.ADMIN) {
@@ -105,19 +105,19 @@ function generateBriefing(args: {
       lines.push({
         icon: '🔴',
         text: `${atRiskCount} open deal${atRiskCount === 1 ? '' : 's'} are at risk — review Hit List for quick actions`,
-        color: '#FF4757',
+        color: 'var(--accent-red)',
       })
     }
     lines.push({
       icon: '💰',
       text: `Total pipeline: ${formatINR(totalPipeline)} · Profit: ${formatINR(totalProfit)}`,
-      color: '#F5A623',
+      color: 'var(--accent-gold)',
     })
     if (revenueTotal > 0) {
       lines.push({
         icon: '📈',
         text: `Revenue booked: ${formatINR(revenueTotal)}`,
-        color: 'rgba(255,255,255,0.7)',
+        color: 'var(--text-secondary)',
       })
     }
   } else if (role === UserRole.FINANCE) {
@@ -131,21 +131,21 @@ function generateBriefing(args: {
       lines.push({
         icon: '🔴',
         text: `Outstanding to collect: ${formatINR(outstanding)}`,
-        color: '#FF4757',
+        color: 'var(--accent-red)',
       })
     }
     if (subsidyPending > 0) {
       lines.push({
         icon: '🏛️',
         text: `${subsidyPending} subsidy item${subsidyPending === 1 ? '' : 's'} pending follow-up`,
-        color: '#F5A623',
+        color: 'var(--accent-gold)',
       })
     }
     if (revenueTotal > 0) {
       lines.push({
         icon: '✅',
         text: `Revenue booked: ${formatINR(revenueTotal)}`,
-        color: '#00D4B4',
+        color: 'var(--accent-teal)',
       })
     }
   } else if (role === UserRole.OPERATIONS) {
@@ -158,13 +158,13 @@ function generateBriefing(args: {
       lines.push({
         icon: '⚡',
         text: `${pendingInstallation} project${pendingInstallation === 1 ? '' : 's'} pending installation follow-up`,
-        color: '#F5A623',
+        color: 'var(--accent-gold)',
       })
     }
     lines.push({
       icon: '🧭',
       text: `Use Installation Pulse to spot overdue jobs and unblock the team`,
-      color: 'rgba(255,255,255,0.7)',
+      color: 'var(--text-secondary)',
     })
   }
 
@@ -180,7 +180,7 @@ function generateBriefing(args: {
         text: `${missing.length} project${missing.length === 1 ? '' : 's'} in Under Installation, Completed, or Completed – Subsidy Credited ${
           missing.length === 1 ? 'is' : 'are'
         } missing panel and/or inverter brand${nameList ? `: ${nameList}` : ''}.`,
-        color: '#F5A623',
+        color: 'var(--accent-gold)',
       })
     }
   }
@@ -189,7 +189,7 @@ function generateBriefing(args: {
     lines.push({
       icon: '🧠',
       text: 'No briefing data yet for this period — apply filters and check back.',
-      color: 'rgba(255,255,255,0.45)',
+      color: 'var(--text-muted)',
     })
   }
 
@@ -227,7 +227,8 @@ export default function DailyBriefing({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[950] flex items-center justify-center p-5 bg-black/60 backdrop-blur-md"
+      className="fixed inset-0 z-[950] flex items-center justify-center p-5 backdrop-blur-md"
+      style={{ background: 'var(--bg-overlay)' }}
       onClick={() => onDismiss(false)}
       role="presentation"
     >
@@ -236,7 +237,8 @@ export default function DailyBriefing({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 10, scale: 0.98 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="w-full max-w-[520px] rounded-[20px] border border-[#f5a623]/25 bg-[#0F0F1A] p-7 shadow-2xl"
+        className="w-full max-w-[520px] rounded-[20px] border border-[color:var(--accent-gold-border)] bg-[color:var(--bg-modal)] p-7"
+        style={{ boxShadow: 'var(--shadow-modal)' }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="Smart daily briefing"
@@ -251,25 +253,31 @@ export default function DailyBriefing({
             width: 32,
             height: 32,
             borderRadius: 999,
-            background: 'rgba(255,255,255,0.08)',
-            color: 'rgba(255,255,255,0.7)',
+            background: 'var(--bg-badge)',
+            color: 'var(--text-secondary)',
           }}
           aria-label="Close briefing"
         >
           ×
         </button>
 
-        <div className="pb-4 mb-5 border-b border-white/[0.07]">
+        <div className="pb-4 mb-5 border-b border-[color:var(--border-default)]">
           <div className="flex items-center gap-2">
-            <Binoculars className="w-5 h-5 text-[#f5a623]" aria-hidden />
-            <span className="text-[#f5a623] font-bold" style={{ fontFamily: "'Syne', sans-serif" }}>
+            <Binoculars className="w-5 h-5 text-[color:var(--accent-gold)]" aria-hidden />
+            <span
+              className="font-bold text-[color:var(--accent-gold)]"
+              style={{ fontFamily: "'Syne', sans-serif" }}
+            >
               Zenith
             </span>
           </div>
-          <div className="mt-3 text-[22px] font-bold text-white" style={{ fontFamily: "'Syne', sans-serif" }}>
+          <div
+            className="mt-3 text-[22px] font-bold text-[color:var(--text-primary)]"
+            style={{ fontFamily: "'Syne', sans-serif" }}
+          >
             {briefing.greeting}, {briefing.firstName}.
           </div>
-          <div className="mt-1 text-[13px] text-white/35">{formatDateLine(today)}</div>
+          <div className="mt-1 text-[13px] text-[color:var(--text-muted)]">{formatDateLine(today)}</div>
         </div>
 
         <div>
@@ -287,7 +295,7 @@ export default function DailyBriefing({
                     width: 28,
                     height: 28,
                     borderRadius: 999,
-                    background: 'rgba(255,255,255,0.06)',
+                    background: 'var(--bg-badge)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -302,20 +310,20 @@ export default function DailyBriefing({
           ))}
         </div>
 
-        <div className="mt-6 pt-4 border-t border-white/[0.07] flex items-center justify-between gap-3">
-          <label className="flex items-center gap-2 text-[13px] text-white/45 cursor-pointer select-none">
+        <div className="mt-6 pt-4 border-t border-[color:var(--border-default)] flex items-center justify-between gap-3">
+          <label className="flex items-center gap-2 text-[13px] text-[color:var(--text-muted)] cursor-pointer select-none">
             <input
               type="checkbox"
               checked={dontShowToday}
               onChange={(e) => setDontShowToday(e.target.checked)}
-              style={{ accentColor: '#F5A623', cursor: 'pointer' }}
+              style={{ accentColor: 'var(--accent-gold)', cursor: 'pointer' }}
             />
             Don&apos;t show again today
           </label>
           <button
             type="button"
             onClick={() => onDismiss(dontShowToday)}
-            className="rounded-xl bg-[#f5a623] px-6 py-2.5 text-sm font-bold text-[#0a0a0f]"
+            className="rounded-xl bg-[color:var(--accent-gold)] px-6 py-2.5 text-sm font-bold text-[color:var(--text-inverse)]"
           >
             Got it →
           </button>
