@@ -178,3 +178,13 @@ textarea,
 .recharts-tooltip-item-unit {
   color: var(--chart-tooltip-fg) !important;
 }
+
+/* Native <select> popups: force correct dark/light rendering.
+   Without this, Edge/Chrome can show bright/low-contrast option menus in dark mode. */
+[data-theme='dark'] .zenith-native-select {
+  color-scheme: dark;
+}
+
+[data-theme='light'] .zenith-native-select {
+  color-scheme: light;
+}

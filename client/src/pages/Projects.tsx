@@ -22,6 +22,7 @@ import { FaUniversity, FaTicketAlt, FaBriefcase } from 'react-icons/fa'
 import PageCard from '../components/PageCard'
 import { ErrorModal } from '@/components/common/ErrorModal'
 import { projectStatusStagePillClass } from '../components/zenith/zenithDealCardUi'
+import { ZenithSingleSelect } from '../components/zenith/ZenithSingleSelect'
 
 const PROJECTS_FILTERS_STORAGE_KEY = 'rayenna_projects_filters'
 
@@ -1366,12 +1367,9 @@ const Projects = () => {
               <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Sort By</label>
               <div className="max-w-2xl">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
-                  <select
-                    className="zenith-native-select h-[40px] min-h-[40px] w-full min-w-0 flex-1 rounded-xl px-3 py-2 text-sm transition-all focus:border-[color:var(--accent-gold-border)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-muted)] sm:max-w-md"
-                    aria-label="Sort projects by"
+                  <ZenithSingleSelect
                     value={extraSortSelectValue}
-                    onChange={(e) => {
-                      const v = e.target.value
+                    onChange={(v) => {
                       setPage(1)
                       if (!v) {
                         setFilters((prev) => ({ ...prev, sortBy: '', sortOrder: 'desc' }))
@@ -1383,25 +1381,24 @@ const Projects = () => {
                         sortOrder: defaultOrderForProjectsSortKey(v),
                       }))
                     }}
-                  >
-                    <option value="">— Default (confirmation date, newest first) —</option>
-                    <optgroup label="Table columns">
-                      <option value="customerName">Project (customer name)</option>
-                      <option value="dealHealthScore">Deal health score</option>
-                      <option value="projectType">Segment</option>
-                      <option value="projectStatus">Stage</option>
-                      <option value="systemCapacity">Capacity</option>
-                      <option value="projectCost">Order value</option>
-                      <option value="paymentStatus">Payment status</option>
-                      <option value="leadSource">Lead source</option>
-                      <option value="confirmationDate">Confirmation date</option>
-                    </optgroup>
-                    <optgroup label="More">
-                      <option value="profitability">Profitability</option>
-                      <option value="creationDate">Creation date</option>
-                      <option value="slNo">Project number (#)</option>
-                    </optgroup>
-                  </select>
+                    placeholder="— Default (confirmation date, newest first) —"
+                    options={[
+                      { value: 'customerName', label: 'Project (customer name)' },
+                      { value: 'dealHealthScore', label: 'Deal health score' },
+                      { value: 'projectType', label: 'Segment' },
+                      { value: 'projectStatus', label: 'Stage' },
+                      { value: 'systemCapacity', label: 'Capacity' },
+                      { value: 'projectCost', label: 'Order value' },
+                      { value: 'paymentStatus', label: 'Payment status' },
+                      { value: 'leadSource', label: 'Lead source' },
+                      { value: 'confirmationDate', label: 'Confirmation date' },
+                      { value: 'profitability', label: 'Profitability' },
+                      { value: 'creationDate', label: 'Creation date' },
+                      { value: 'slNo', label: 'Project number (#)' },
+                    ]}
+                    allowEmpty
+                    className="w-full min-w-0 flex-1 sm:max-w-md"
+                  />
                   <div
                     className="flex shrink-0 gap-1 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] p-0.5 shadow-inner ring-1 ring-[color:var(--border-default)]"
                     role="group"
