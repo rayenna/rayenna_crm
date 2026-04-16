@@ -100,15 +100,15 @@ const Login = () => {
       />
       <div className="relative z-10 w-full max-w-md space-y-6 rounded-2xl border border-[color:var(--nav-border)] border-l-4 border-l-[color:var(--accent-gold)] bg-[color:color-mix(in_srgb,var(--nav-bg)_95%,transparent)] p-6 text-[color:var(--nav-text-active)] shadow-[var(--shadow-modal)] ring-1 ring-[color:var(--border-default)] backdrop-blur-md sm:space-y-8 sm:p-8">
         {apiNotConfigured && (
-          <div className="mb-1 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] p-3 text-sm text-[color:var(--text-primary)]">
+          <div className="mb-1 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:color-mix(in_srgb,var(--nav-bg)_88%,var(--accent-gold)_12%)] p-3 text-sm text-[color:var(--nav-text-active)]">
             <strong className="text-[color:var(--accent-gold)]">API not configured.</strong> Set{' '}
-            <code className="rounded bg-[color:var(--bg-input)] px-1.5 py-0.5 text-[color:var(--text-primary)]">VITE_API_BASE_URL</code> in your deployment (Render: Static Site → Environment; Vercel: Settings → Environment Variables) to your backend URL (e.g.{' '}
-            <code className="rounded bg-[color:var(--bg-input)] px-1.5 py-0.5 text-[color:var(--text-primary)]">https://rayenna-crm.onrender.com</code>), then <strong>redeploy</strong>. Login will not work until then.
+            <code className="rounded bg-[color:color-mix(in_srgb,var(--nav-bg)_85%,transparent)] px-1.5 py-0.5 text-[color:var(--nav-text-active)]">VITE_API_BASE_URL</code> in your deployment (Render: Static Site → Environment; Vercel: Settings → Environment Variables) to your backend URL (e.g.{' '}
+            <code className="rounded bg-[color:color-mix(in_srgb,var(--nav-bg)_85%,transparent)] px-1.5 py-0.5 text-[color:var(--nav-text-active)]">https://rayenna-crm.onrender.com</code>), then <strong>redeploy</strong>. Login will not work until then.
           </div>
         )}
 
         {isProd && !apiNotConfigured && serverStatus === 'checking' && (
-          <div className="mb-1 flex items-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] p-3 text-sm text-[color:var(--text-secondary)]">
+          <div className="mb-1 flex items-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:color-mix(in_srgb,var(--nav-bg)_92%,transparent)] p-3 text-sm text-[color:var(--nav-text)]">
             <svg className="h-4 w-4 shrink-0 animate-spin text-[color:var(--accent-gold)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
@@ -117,7 +117,7 @@ const Login = () => {
           </div>
         )}
         {isProd && !apiNotConfigured && serverStatus === 'ready' && (
-          <div className="mb-1 flex items-center gap-2 rounded-xl border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] p-3 text-sm text-[color:var(--text-primary)]">
+          <div className="mb-1 flex items-center gap-2 rounded-xl border border-[color:var(--accent-teal-border)] bg-[color:color-mix(in_srgb,var(--nav-bg)_88%,var(--accent-teal)_12%)] p-3 text-sm text-[color:var(--nav-text-active)]">
             <svg className="h-4 w-4 shrink-0 text-[color:var(--accent-teal)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
@@ -125,7 +125,7 @@ const Login = () => {
           </div>
         )}
         {isProd && !apiNotConfigured && serverStatus === 'slow' && !isLoading && (
-          <div className="mb-1 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] p-3 text-sm text-[color:var(--text-primary)]">
+          <div className="mb-1 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:color-mix(in_srgb,var(--nav-bg)_88%,var(--accent-gold)_12%)] p-3 text-sm text-[color:var(--nav-text-active)]">
             Server is slow to respond (free-tier wake-up). Try signing in — it may succeed now, or wait a few more seconds and try again.
           </div>
         )}
