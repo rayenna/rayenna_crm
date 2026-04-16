@@ -19,7 +19,6 @@ import FinancingBankPopoverIcon from '../components/projects/FinancingBankPopove
 import { getFinancingBankDisplayName } from '../utils/financingBankDisplay'
 import { FiPaperclip } from 'react-icons/fi'
 import { FaUniversity, FaTicketAlt, FaBriefcase } from 'react-icons/fa'
-import PageCard from '../components/PageCard'
 import { ErrorModal } from '@/components/common/ErrorModal'
 import { projectStatusStagePillClass } from '../components/zenith/zenithDealCardUi'
 import { ZenithSingleSelect } from '../components/zenith/ZenithSingleSelect'
@@ -1179,23 +1178,33 @@ const Projects = () => {
   }
 
   return shell(
-    <div className="mobile-paint-fix max-w-full min-w-0 overflow-x-hidden px-0 py-4 sm:py-6">
-      <PageCard
-        dense
-        variant="zenith"
-        className="max-w-full min-w-0 !overflow-x-visible"
-        title="Projects"
-        subtitle="Manage and track all your solar projects"
-        icon={<FaBriefcase className="w-5 h-5" style={{ color: 'var(--banner-text)' }} />}
-        headerAction={(user?.role === 'ADMIN' || user?.role === 'SALES') ? (
-          <Link
-            to="/projects/new"
-            className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold)] px-4 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] shadow-md transition-all hover:brightness-105"
-          >
-            + New Project
-          </Link>
-        ) : undefined}
-      >
+    <>
+      <header className="sticky top-0 z-30 mb-4 border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 94%, transparent)] pb-3 pt-1 backdrop-blur-xl sm:mb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] shadow-inner">
+              <FaBriefcase className="h-5 w-5 text-[color:var(--accent-gold)]" aria-hidden />
+            </div>
+            <div className="min-w-0">
+              <h1 className="zenith-display text-xl font-bold tracking-tight text-[color:var(--text-primary)] sm:text-2xl">Projects</h1>
+              <p className="mt-0.5 text-sm text-[color:var(--text-secondary)]">Manage and track all your solar projects</p>
+            </div>
+          </div>
+
+          {(user?.role === 'ADMIN' || user?.role === 'SALES') ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <Link
+                to="/projects/new"
+                className="inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] shadow-lg transition-all hover:opacity-95"
+              >
+                + New Project
+              </Link>
+            </div>
+          ) : null}
+        </div>
+      </header>
+
+      <div className="mobile-paint-fix max-w-full min-w-0 overflow-x-hidden px-0 pb-4 sm:pb-6">
       <div className="mb-3 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-4">
         <div className="space-y-2 sm:space-y-3">
           {/* Row 1: Search Bar + Show/Hide Filters toggle (and Clear All on larger screens) */}
@@ -1500,6 +1509,24 @@ Do you want to continue?`}
           { label: 'YES', variant: 'primary', onClick: confirmExport },
         ]}
       />
+
+      {/* Results summary */}
+      <div className="mb-2 mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-[color:var(--text-secondary)]">
+          <span className="font-semibold text-[color:var(--text-primary)]">
+            Showing {displayProjects.length} of {data?.pagination?.total ?? displayProjects.length}
+          </span>
+          {(Boolean(filters.search) || moreFiltersActiveCount > 0) && (
+            <span className="inline-flex items-center rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-card)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--text-secondary)]">
+              {moreFiltersActiveCount + (filters.search ? 1 : 0)} active
+            </span>
+          )}
+        </div>
+        <div className="text-xs text-[color:var(--text-muted)]">
+          <span className="hidden sm:inline">Tip: Shift + scroll to move horizontally</span>
+          <span className="sm:hidden">Tip: swipe left/right on the table</span>
+        </div>
+      </div>
 
       {/* Projects table — DH = deal health badge column; uniform sort controls; fixed col widths (rem) + horizontal scroll when viewport is narrow. */}
       <div className="mobile-paint-anchor w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] [-webkit-overflow-scrolling:touch]">
@@ -1975,12 +2002,39 @@ Do you want to continue?`}
                     colSpan={projectsTableVisibleCols}
                     className="px-6 py-14 text-center text-sm text-[color:var(--text-muted)]"
                   >
-                    <p className="mx-auto max-w-md font-medium text-[color:var(--text-primary)]">
-                      No projects match your search and filters.
-                    </p>
-                    <p className="mx-auto mt-2 max-w-md text-xs text-[color:var(--text-muted)]">
-                      Try clearing filters, widening the date range, or changing the search text.
-                    </p>
+                    <div className="mx-auto flex max-w-md flex-col items-center">
+                      <div className="mb-3 inline-flex size-11 items-center justify-center rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] text-[color:var(--text-secondary)] shadow-sm">
+                        <FaBriefcase className="h-5 w-5" aria-hidden="true" />
+                      </div>
+                      <p className="font-semibold text-[color:var(--text-primary)]">
+                        No projects match your search and filters.
+                      </p>
+                      <p className="mt-2 text-xs text-[color:var(--text-muted)]">
+                        Try clearing filters, widening the date range, or changing the search text.
+                      </p>
+                      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-center">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            clearAllFilters()
+                          }}
+                          className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-bold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)]"
+                        >
+                          Clear filters
+                        </button>
+                        {(user?.role === 'ADMIN' || user?.role === 'SALES') && (
+                          <Link
+                            to="/projects/new"
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold)] px-4 py-2 text-sm font-bold text-[color:var(--text-inverse)] shadow-md transition-all hover:brightness-105"
+                          >
+                            + New Project
+                          </Link>
+                        )}
+                      </div>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -2053,8 +2107,8 @@ Do you want to continue?`}
           </span>
         </div>
       </div>
-      </PageCard>
-    </div>
+      </div>
+    </>
   )
 }
 
