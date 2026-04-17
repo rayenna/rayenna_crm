@@ -207,8 +207,6 @@ const Dashboard = () => {
             3. Pipeline Conversion (%) = (Total Revenue / Total Pipeline) × 100
             <br />
             4. Open Deals includes those that are in Lead, Site Survey and Proposal stages.
-            <br />
-            5. Proposal Engine Quick tile: projects in Proposal or Confirmed stage that are not yet started in Proposal Engine (not selected in PE). Each row in the Proposal Engine tile opens Projects with the matching pre-filtered view.
           </p>
         </footer>
       )}
