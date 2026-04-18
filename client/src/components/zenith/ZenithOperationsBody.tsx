@@ -16,6 +16,7 @@ import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTo
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
+import { ProjectStatus } from '../../types'
 import { getProjectStatusColor } from '../dashboard/projectStatusColors'
 import { buildOperationsZenithKpis } from './zenithKpi'
 import {
@@ -41,6 +42,7 @@ import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChar
 import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../../types/zenithExplorer'
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
+import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
 import { buildZenithLifecycleBrandBarRows } from '../../utils/zenithPanelInverterBrandChartData'
 import ZenithLifecycleBrandBarCharts from './ZenithLifecycleBrandBarCharts'
@@ -135,6 +137,59 @@ export default function ZenithOperationsBody({
   })
 
   const explorerProjects = (data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]
+
+  const pendingInstallationProjectsUrl = buildProjectsUrl(
+    { status: [ProjectStatus.CONFIRMED, ProjectStatus.UNDER_INSTALLATION] },
+    dateFilter,
+  )
+  const completedInstallationProjectsUrl = buildProjectsUrl(
+    { status: [ProjectStatus.COMPLETED, ProjectStatus.COMPLETED_SUBSIDY_CREDITED] },
+    dateFilter,
+  )
+  const subsidyCreditedProjectsUrl = buildProjectsUrl(
+    { status: [ProjectStatus.COMPLETED_SUBSIDY_CREDITED] },
+    dateFilter,
+  )
+
+  /** Same status sets as `/api/dashboard/operations` counts (pending / completed installation, subsidy credited). */
+  const onPendingInstallationKpiClick = useCallback(() => {
+    const filtered = explorerProjects.filter(
+      (p) =>
+        p.projectStatus === ProjectStatus.CONFIRMED || p.projectStatus === ProjectStatus.UNDER_INSTALLATION,
+    )
+    quickAction.openDrawerListMode({
+      filterLabel: 'Pending installation',
+      filteredProjects: filtered,
+      listAmountMode: 'deal_value',
+      projectsPageHref: pendingInstallationProjectsUrl,
+    })
+  }, [explorerProjects, quickAction.openDrawerListMode, pendingInstallationProjectsUrl])
+
+  const onCompletedInstallationKpiClick = useCallback(() => {
+    const filtered = explorerProjects.filter(
+      (p) =>
+        p.projectStatus === ProjectStatus.COMPLETED ||
+        p.projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
+    )
+    quickAction.openDrawerListMode({
+      filterLabel: 'Completed installation',
+      filteredProjects: filtered,
+      listAmountMode: 'deal_value',
+      projectsPageHref: completedInstallationProjectsUrl,
+    })
+  }, [explorerProjects, quickAction.openDrawerListMode, completedInstallationProjectsUrl])
+
+  const onSubsidyCreditedKpiClick = useCallback(() => {
+    const filtered = explorerProjects.filter(
+      (p) => p.projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
+    )
+    quickAction.openDrawerListMode({
+      filterLabel: 'Subsidy credited',
+      filteredProjects: filtered,
+      listAmountMode: 'deal_value',
+      projectsPageHref: subsidyCreditedProjectsUrl,
+    })
+  }, [explorerProjects, quickAction.openDrawerListMode, subsidyCreditedProjectsUrl])
 
   const drill = useCallback(
     (dimension: ZenithChartDrilldownDimension, value: string, opts?: DrilldownOpts) => {
@@ -269,7 +324,20 @@ export default function ZenithOperationsBody({
       >
         {kpis.map((k, i) => (
           <div key={k.key} className="min-w-0">
-            <KPICard item={k} index={i} icon={icons[i] ?? Zap} />
+            <KPICard
+              item={k}
+              index={i}
+              icon={icons[i] ?? Zap}
+              onClick={
+                k.key === 'pend'
+                  ? onPendingInstallationKpiClick
+                  : k.key === 'done'
+                    ? onCompletedInstallationKpiClick
+                    : k.key === 'cred'
+                      ? onSubsidyCreditedKpiClick
+                      : undefined
+              }
+            />
           </div>
         ))}
       </div>
