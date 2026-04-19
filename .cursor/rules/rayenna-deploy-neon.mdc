@@ -1,0 +1,44 @@
+---
+description: Rayenna deploy topology — two static frontends, one CRM API, shared Neon DB
+alwaysApply: true
+---
+
+# Rayenna CRM + Proposal Engine — deployment and data (authoritative)
+
+Follow this when changing deploy config, env vars, CORS, API URLs, or database/migration work.
+
+## Frontends (two separate apps)
+
+- **Rayenna CRM UI:** static site from repo `client/` — deployed separately on **Render** and **Vercel** (each has its own static project).
+- **Proposal Engine UI:** static site from repo `proposal-engine/frontend/` — deployed separately on **Render** and **Vercel** (each has its own static project).
+
+They are **not** a single combined frontend build.
+
+## Backend API (one service)
+
+- **Single shared backend:** the **Rayenna CRM** API on **Render** (one Web Service). It serves the CRM REST API and the Proposal Engine routes mounted on the same server (e.g. `/api/proposal-engine` from `src/server.ts`).
+- Both static frontends point at this **same** API base URL (e.g. `VITE_API_BASE_URL` for CRM client; Proposal Engine frontend must be configured to the same API host as appropriate for that app).
+
+Do **not** assume a separate Render Web Service for `proposal-engine/backend` unless the user explicitly says they added one.
+
+## Database
+
+- **Development and production use the same Neon database** for this project. Treat every migration, seed, and destructive SQL as **production-impacting**. Prefer `prisma migrate deploy` discipline over casual `migrate dev` against that URL; never run risky seeds without explicit intent.
+
+## Compatibility reminder (Render + Vercel)
+
+- Any change to frontend build, env (`VITE_*`), or static config must remain valid for **both** Render and Vercel for that app, per existing dual-frontend rules in the repo.
+
+## Local development (authoritative — matches repo Vite config)
+
+Use **one** backend on port **3000** (CRM root `npm run dev`). Do **not** run `proposal-engine/backend` for local dev unless explicitly debugging that standalone app; PE UI is wired to proxy `/api` and `/health` to `http://localhost:3000`.
+
+| Piece | URL / port | How to start |
+|-------|------------|----------------|
+| Rayenna CRM UI | http://localhost:5173 | From repo root: `npm run dev` (starts API + client together) |
+| Shared CRM API (CRM + PE routes) | http://localhost:3000 | Same `npm run dev` from root |
+| Proposal Engine UI | http://localhost:5174 | Second terminal: `cd proposal-engine/frontend && npm run dev` (after 3000 is up) |
+
+- Root: `cd` to repo, `npm install`, `cd client && npm install && cd ..`, then `npm run dev`.
+- PE frontend only: `cd proposal-engine/frontend`, `npm install`, `npm run dev`.
+- For CRM local dev, do not set `VITE_API_BASE_URL` when using the Vite proxy to the API on 3000.
