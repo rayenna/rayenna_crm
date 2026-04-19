@@ -914,7 +914,7 @@ export default function BOMSheet() {
                   <button
                     type="submit"
                     disabled={saveStatus === 'saving'}
-                    className="flex-1 sm:flex-none text-sm disabled:opacity-50 text-white px-6 py-2.5 rounded-xl transition-all font-semibold shadow-lg hover:shadow-xl flex items-center justify-center gap-2 min-h-[44px]"
+                    className="flex-1 sm:flex-none text-sm disabled:opacity-50 text-white px-6 py-2.5 rounded-xl transition-all font-semibold shadow-md hover:shadow-lg sm:shadow-lg sm:hover:shadow-xl flex items-center justify-center gap-2 min-h-[44px] touch-manipulation"
                     style={{ background: '#0d1b3a' }}
                     onMouseEnter={e => (e.currentTarget.style.background = '#0a1530')}
                     onMouseLeave={e => (e.currentTarget.style.background = '#0d1b3a')}
@@ -935,26 +935,36 @@ export default function BOMSheet() {
             <GstSummaryPanel rows={liveRows} />
           )}
 
-          {/* Info panel */}
+          {/* Info panel — relative z-[1] avoids mobile WebKit painting stray shadows from action buttons above */}
           {!loading && !fetchError && (
-            <div className="mt-8 bg-gradient-to-br from-primary-50/30 to-transparent border-t border-primary-100 rounded-xl p-5">
+            <div className="relative z-[1] mt-8 bg-gradient-to-br from-primary-50/30 to-transparent border-t border-primary-100 rounded-xl p-5">
               <h3 className="text-sm font-semibold text-secondary-600 mb-3">How BOM generation works</h3>
               <ol className="space-y-2 text-xs text-secondary-500">
-                <li className="flex items-start gap-2">
+                <li className="flex items-start gap-2 [-webkit-tap-highlight-color:transparent]">
                   <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-primary-600 text-white shadow-sm flex-shrink-0">1</span>
-                  Costing items with the same name and category are grouped and their quantities summed.
+                  <span className="min-w-0 flex-1">
+                    Costing items with the same name and category are grouped and their quantities summed.
+                  </span>
                 </li>
-                <li className="flex items-start gap-2">
+                <li className="flex items-start gap-2 [-webkit-tap-highlight-color:transparent]">
                   <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-primary-600 text-white shadow-sm flex-shrink-0">2</span>
-                  Default specifications (including typical makes/models) are filled from solar-industry standards per category.
+                  <span className="min-w-0 flex-1">
+                    Default specifications (including typical makes/models) are filled from solar-industry standards per category.
+                  </span>
                 </li>
-                <li className="flex items-start gap-2">
+                <li className="flex items-start gap-2 [-webkit-tap-highlight-color:transparent]">
                   <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-primary-600 text-white shadow-sm flex-shrink-0">3</span>
-                  Edit any field and click <strong className="text-secondary-700">Save BOM</strong> — your overrides are persisted and won't be overwritten on the next load.
+                  <span className="min-w-0 flex-1">
+                    Edit any field and click{' '}
+                    <span className="inline font-semibold text-secondary-800 whitespace-nowrap">Save BOM</span>
+                    {" — your overrides are persisted and won't be overwritten on the next load."}
+                  </span>
                 </li>
-                <li className="flex items-start gap-2">
+                <li className="flex items-start gap-2 [-webkit-tap-highlight-color:transparent]">
                   <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-primary-600 text-white shadow-sm flex-shrink-0">4</span>
-                  Add manual rows for items not in the costing sheet (accessories, transport, etc.).
+                  <span className="min-w-0 flex-1">
+                    Add manual rows for items not in the costing sheet (accessories, transport, etc.).
+                  </span>
                 </li>
               </ol>
             </div>
