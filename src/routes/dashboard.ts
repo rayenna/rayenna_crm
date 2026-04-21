@@ -2555,6 +2555,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
         where: w,
         select: {
           id: true,
+          slNo: true,
           projectStatus: true,
           projectCost: true,
           createdAt: true,
@@ -2581,6 +2582,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
           p.salesperson?.name?.trim() || (p.salespersonId ? '—' : 'Unassigned');
         return {
           projectId: p.id,
+          projectSerialNumber: p.slNo,
           customerName: p.customer?.customerName?.trim() || '—',
           stage: PROJECT_STATUS_LABELS[p.projectStatus] || p.projectStatus,
           dealValue: p.projectCost ?? 0,
@@ -2606,7 +2608,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
         projectStatus: { notIn: ZENITH_FINANCE_EARLY_OR_LOST },
       };
 
-      const [outstandingAgg, settled, subsidyPendingCount, overdueList, collectedAgg, subsidyValAgg] =
+      const [outstandingAgg, settled, subsidyPendingCount, overdueList, collectedAgg, subsidyValAgg, recentPaymentProjects] =
         await Promise.all([
           prisma.project.aggregate({
             where: {
@@ -2638,6 +2640,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
             },
             select: {
               id: true,
+              slNo: true,
               balanceAmount: true,
               confirmationDate: true,
               totalAmountReceived: true,
@@ -2658,6 +2661,40 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
           prisma.project.aggregate({
             where: { ...where, projectStatus: ProjectStatus.SUBMITTED_FOR_SUBSIDY },
             _sum: { projectCost: true },
+          }),
+          prisma.project.findMany({
+            where: {
+              ...where,
+              projectCost: { gt: 0 },
+              OR: [
+                { advanceReceivedDate: { not: null } },
+                { payment1Date: { not: null } },
+                { payment2Date: { not: null } },
+                { payment3Date: { not: null } },
+                { lastPaymentDate: { not: null } },
+              ],
+            },
+            select: {
+              id: true,
+              slNo: true,
+              paymentStatus: true,
+              projectStatus: true,
+              advanceReceived: true,
+              advanceReceivedDate: true,
+              payment1: true,
+              payment1Date: true,
+              payment2: true,
+              payment2Date: true,
+              payment3: true,
+              payment3Date: true,
+              lastPayment: true,
+              lastPaymentDate: true,
+              salespersonId: true,
+              salesperson: { select: { name: true } },
+              customer: { select: { customerName: true } },
+            },
+            orderBy: { updatedAt: 'desc' },
+            take: 500,
           }),
         ]);
 
@@ -2683,6 +2720,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
           p.salesperson?.name?.trim() || (p.salespersonId ? '—' : 'Unassigned');
         return {
           projectId: p.id,
+          projectSerialNumber: p.slNo,
           customerName: p.customer?.customerName?.trim() || '—',
           amount: p.balanceAmount ?? 0,
           dueSince: conf.toISOString(),
@@ -2758,11 +2796,55 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
         outstanding: Math.round(m.outstanding),
       }));
 
+      type LatestPaymentEvent = {
+        projectId: string;
+        projectSerialNumber: number | null;
+        customerName: string;
+        salespersonName: string;
+        amount: number;
+        receivedAt: string;
+        installmentType: 'ADVANCE' | 'PAYMENT_1' | 'PAYMENT_2' | 'PAYMENT_3' | 'LAST_PAYMENT';
+        paymentStatus: PaymentStatus | null;
+        projectStatus: ProjectStatus;
+      };
+      const paymentEvents: LatestPaymentEvent[] = [];
+      const pushEvent = (
+        p: typeof recentPaymentProjects[number],
+        installmentType: LatestPaymentEvent['installmentType'],
+        amount: unknown,
+        date: Date | null | undefined,
+      ) => {
+        if (!date) return;
+        const amt = Number(amount ?? 0);
+        if (!Number.isFinite(amt) || amt <= 0) return;
+        paymentEvents.push({
+          projectId: p.id,
+          projectSerialNumber: typeof p.slNo === 'number' ? p.slNo : null,
+          customerName: p.customer?.customerName?.trim() || '—',
+          salespersonName: p.salesperson?.name?.trim() || (p.salespersonId ? '—' : 'Unassigned'),
+          amount: amt,
+          receivedAt: date.toISOString(),
+          installmentType,
+          paymentStatus: p.paymentStatus ?? PaymentStatus.PENDING,
+          projectStatus: p.projectStatus,
+        });
+      };
+      for (const p of recentPaymentProjects) {
+        pushEvent(p, 'ADVANCE', p.advanceReceived, p.advanceReceivedDate);
+        pushEvent(p, 'PAYMENT_1', p.payment1, p.payment1Date);
+        pushEvent(p, 'PAYMENT_2', p.payment2, p.payment2Date);
+        pushEvent(p, 'PAYMENT_3', p.payment3, p.payment3Date);
+        pushEvent(p, 'LAST_PAYMENT', p.lastPayment, p.lastPaymentDate);
+      }
+      paymentEvents.sort((a, b) => Date.parse(b.receivedAt) - Date.parse(a.receivedAt));
+      const latestPayments = paymentEvents.slice(0, 10);
+
       return {
         totalOutstanding,
         avgCollectionDays,
         subsidyPendingCount,
         overdueTop5,
+        latestPayments,
         ageingBuckets,
         monthlyCollections,
         donut: {
@@ -2781,6 +2863,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
         },
         select: {
           id: true,
+          slNo: true,
           systemCapacity: true,
           expectedCommissioningDate: true,
           stageEnteredAt: true,
@@ -2834,6 +2917,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
 
         return {
           projectId: p.id,
+          projectSerialNumber: p.slNo,
           customerName: p.customer?.customerName?.trim() || '—',
           kW: p.systemCapacity ?? null,
           salespersonName,

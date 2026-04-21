@@ -11,6 +11,7 @@ import ZenithExecutiveBody from '../components/zenith/ZenithExecutiveBody'
 import ZenithOperationsBody from '../components/zenith/ZenithOperationsBody'
 import ZenithFinanceBody from '../components/zenith/ZenithFinanceBody'
 import ZenithAiInsightsTicker from '../components/zenith/ZenithAiInsightsTicker'
+import SolarNewsTicker from '../components/zenith/SolarNewsTicker'
 import { buildZenithAiInsights } from '../components/zenith/zenithAiInsights'
 import { AnimatePresence } from 'framer-motion'
 import { useDailyBriefing } from '../hooks/useDailyBriefing'
@@ -277,6 +278,9 @@ const Zenith = () => {
         onSyncNow={syncNow}
         showOnlineAck={showOnlineAck}
       />
+
+      {/* Solar news — place above AI insights bar */}
+      {user?.role ? <SolarNewsTicker /> : null}
 
       {!isFyError && !isError && user?.role ? (
         <ZenithAiInsightsTicker insights={insights} isLoading={isLoading} />

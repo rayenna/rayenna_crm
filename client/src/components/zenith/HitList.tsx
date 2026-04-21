@@ -306,9 +306,16 @@ export default function HitList({
           <div className="zenith-hit-list-body min-h-0 flex-1 overflow-y-auto">
             <div className="zenith-scroll-x overflow-x-auto px-3 py-1 md:px-2 md:py-0">
             {/* Desktop / tablet — same columns as “Your pipeline today” + alert + confirmation */}
-            <table className="zenith-table--data hidden md:table w-full text-left text-[11px] sm:text-xs min-w-[820px]">
+            <table className="zenith-table--data hidden md:table w-full text-left text-[11px] sm:text-xs min-w-[880px]">
               <thead>
                 <tr className="border-b border-[color:var(--border-default)]">
+                  <th
+                    className="py-2 pr-2 font-semibold text-right tabular-nums whitespace-nowrap w-[56px]"
+                    style={{ fontFamily: 'var(--zenith-font-body)' }}
+                  >
+                    <span className="hidden sm:inline">Sl No.</span>
+                    <span className="sm:hidden">Prj #</span>
+                  </th>
                   <th
                     className="py-2 pr-2 font-semibold cursor-pointer select-none"
                     style={{ fontFamily: 'var(--zenith-font-body)' }}
@@ -376,7 +383,7 @@ export default function HitList({
               <tbody>
                 {displayRows.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-8 text-center text-[color:var(--text-muted)]" style={{ fontFamily: 'var(--zenith-font-body)' }}>
+                    <td colSpan={10} className="py-8 text-center text-[color:var(--text-muted)]" style={{ fontFamily: 'var(--zenith-font-body)' }}>
                       {hasActiveFilters ? 'No deals match your filters.' : 'No rows to show.'}
                     </td>
                   </tr>
@@ -395,6 +402,9 @@ export default function HitList({
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.05, duration: 0.25 }}
                     >
+                      <td className="py-2.5 pr-2 text-right tabular-nums text-[color:var(--text-muted)] whitespace-nowrap">
+                        {project.projectSerialNumber != null ? project.projectSerialNumber : '—'}
+                      </td>
                       <td className="py-2.5 pr-2">
                         <span
                           className="inline-block max-w-[11rem] truncate align-bottom font-medium text-[color:var(--text-primary)]"
@@ -504,12 +514,20 @@ export default function HitList({
                     aria-label={project.customerName}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p
-                        className="min-w-0 flex-1 truncate text-[15px] font-medium text-[color:var(--text-primary)]"
-                        style={{ fontFamily: 'var(--zenith-font-body)' }}
-                      >
-                        {project.customerName}
-                      </p>
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className="truncate text-[15px] font-medium text-[color:var(--text-primary)]"
+                          style={{ fontFamily: 'var(--zenith-font-body)' }}
+                        >
+                          {project.customerName}
+                        </p>
+                        <p
+                          className="mt-0.5 text-[11px] tabular-nums text-[color:var(--text-muted)]"
+                          style={{ fontFamily: 'var(--zenith-font-body)' }}
+                        >
+                          Sl No.: {project.projectSerialNumber != null ? project.projectSerialNumber : '—'}
+                        </p>
+                      </div>
                       <span className={spMobile} style={{ fontFamily: 'var(--zenith-font-body)' }}>
                         {project.stage}
                       </span>

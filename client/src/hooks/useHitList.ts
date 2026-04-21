@@ -4,6 +4,8 @@ import { UserRole } from '../types'
 /** Same rows as “Your pipeline today” (zenith-focus sales pipeline). */
 export type HitListProjectRow = {
   projectId: string
+  /** CRM Project serial number (projects.slNo) */
+  projectSerialNumber?: number
   customerName: string
   stage: string
   dealValue: number
@@ -22,6 +24,8 @@ export type HitListLabel = 'OVERDUE' | 'CLOSING SOON' | 'STALLED' | 'NUDGE NEEDE
 
 export type HitListItem = {
   id: string
+  /** CRM Project serial number (projects.slNo) */
+  projectSerialNumber?: number
   customerName: string
   stage: string
   dealValue: number
@@ -59,6 +63,7 @@ function pipelineFieldsFromRow(p: HitListProjectRow) {
     advanceReceived: p.advanceReceived ?? 0,
     leadSource: p.leadSource ?? null,
     expectedCloseDate: p.expectedCloseDate ?? null,
+    projectSerialNumber: p.projectSerialNumber,
   }
 }
 

@@ -36,6 +36,7 @@ import {
 
 type SalesPipelineRow = {
   projectId: string
+  projectSerialNumber?: number
   customerName: string
   stage: string
   dealValue: number
@@ -54,6 +55,7 @@ type SalesPipelineRow = {
 
 type FinanceOverdueRow = {
   projectId: string
+  projectSerialNumber?: number
   customerName: string
   amount: number
   dueSince: string
@@ -67,6 +69,18 @@ type FinanceOverdueRow = {
   paymentStatus?: string
   salespersonId?: string | null
   salespersonName?: string | null
+}
+
+type LatestPaymentRow = {
+  projectId: string
+  projectSerialNumber?: number | null
+  customerName: string
+  salespersonName: string
+  amount: number
+  receivedAt: string
+  installmentType: 'ADVANCE' | 'PAYMENT_1' | 'PAYMENT_2' | 'PAYMENT_3' | 'LAST_PAYMENT'
+  paymentStatus?: string | null
+  projectStatus?: string
 }
 
 /** Installation pulse: customer name colour by project stage (theme-aware — avoids pastel sky on light cards). */
@@ -93,9 +107,13 @@ function installPulseStageLabel(projectStatus: string | undefined): string {
 /** Payment radar: name colours follow theme accents (pending = blue, partial = gold). */
 const PAYMENT_RADAR_NAME_PENDING = 'var(--accent-blue)'
 const PAYMENT_RADAR_NAME_PARTIAL = 'var(--accent-gold)'
+const PAYMENT_RADAR_NAME_FULLY_PAID = 'var(--accent-teal)'
 
-function paymentRadarProjectNameColor(paymentStatus: string | undefined): string {
+function paymentRadarProjectNameColor(
+  paymentStatus: string | undefined,
+): string {
   const s = String(paymentStatus ?? 'PENDING').toUpperCase()
+  if (s === 'FULLY_PAID') return PAYMENT_RADAR_NAME_FULLY_PAID
   if (s === 'PARTIAL') return PAYMENT_RADAR_NAME_PARTIAL
   if (s === 'PENDING') return PAYMENT_RADAR_NAME_PENDING
   return 'var(--text-primary)'
@@ -112,6 +130,7 @@ type MonthlyCollectionPoint = { label: string; collected: number; outstanding: n
 
 type InstallRow = {
   projectId: string
+  projectSerialNumber?: number
   customerName: string
   kW: number | null
   salespersonName: string
@@ -387,6 +406,13 @@ function SalesPipelineBlock({
             <thead>
               <tr className="border-b border-[color:var(--border-default)]">
                 <th
+                  className="py-2 pr-2 font-semibold text-right tabular-nums whitespace-nowrap w-[56px]"
+                  title="Project serial number (Sl No.)"
+                >
+                  <span className="hidden sm:inline">Sl No.</span>
+                  <span className="sm:hidden">Prj #</span>
+                </th>
+                <th
                   className="py-2 pr-3 font-semibold cursor-pointer select-none"
                   onClick={() => handleSort('customerName')}
                 >
@@ -438,7 +464,7 @@ function SalesPipelineBlock({
             <tbody>
               {data.rows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-[color:var(--text-muted)]">
+                  <td colSpan={8} className="py-8 text-center text-[color:var(--text-muted)]">
                     No pipeline rows for this period.
                   </td>
                 </tr>
@@ -449,6 +475,9 @@ function SalesPipelineBlock({
                   const dealParts = formatZenithDealInrParts(r.dealValue)
                   return (
                     <tr key={r.projectId} className="group border-b border-[color:var(--border-default)] hover:bg-[color:var(--bg-table-hover)]">
+                      <td className="py-2.5 pr-2 text-right tabular-nums text-[color:var(--text-muted)] whitespace-nowrap">
+                        {r.projectSerialNumber != null ? r.projectSerialNumber : '—'}
+                      </td>
                       <td className="py-2.5 pr-3">
                         <span className="text-[color:var(--text-primary)] font-medium">{r.customerName}</span>
                       </td>
@@ -554,6 +583,7 @@ function FinanceRadarBlock({
     avgCollectionDays: number | null
     subsidyPendingCount: number
     overdueTop5: FinanceOverdueRow[]
+    latestPayments?: LatestPaymentRow[]
     ageingBuckets?: AgeingBucket[]
     monthlyCollections?: MonthlyCollectionPoint[]
     donut: { collected: number; outstanding: number; subsidyPending: number }
@@ -586,6 +616,7 @@ function FinanceRadarBlock({
   const ageingBuckets = data.ageingBuckets ?? []
   const monthlyCollections = data.monthlyCollections ?? []
   const totalOut = Math.max(1, data.totalOutstanding)
+  const latestPayments = data.latestPayments ?? []
 
   const overdueSalesPersonOptions = useMemo(() => {
     const labels = new Set<string>()
@@ -595,6 +626,72 @@ function FinanceRadarBlock({
     }
     return Array.from(labels).sort((a, b) => a.localeCompare(b))
   }, [data.overdueTop5])
+
+  const paymentSalesPersonOptions = useMemo(() => {
+    const labels = new Set<string>()
+    for (const r of latestPayments) {
+      const n = (r.salespersonName ?? '').trim() || 'Unassigned'
+      labels.add(n)
+    }
+    return Array.from(labels).sort((a, b) => a.localeCompare(b))
+  }, [latestPayments])
+
+  const [paymentSortField, setPaymentSortField] = useState<
+    'receivedAt' | 'amount' | 'customer' | 'salesperson' | 'type' | null
+  >('receivedAt')
+  const [paymentSortDir, setPaymentSortDir] = useState<'asc' | 'desc'>('desc')
+  const [paymentCustomerFilter, setPaymentCustomerFilter] = useState<string>('')
+  const [paymentSalesPersonFilter, setPaymentSalesPersonFilter] = useState<string>('ALL')
+
+  const togglePaymentSort = (f: NonNullable<typeof paymentSortField>) => {
+    if (paymentSortField !== f) {
+      setPaymentSortField(f)
+      setPaymentSortDir(f === 'customer' || f === 'salesperson' || f === 'type' ? 'asc' : 'desc')
+      return
+    }
+    setPaymentSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))
+  }
+
+  const paymentRows = useMemo(() => {
+    const q = paymentCustomerFilter.trim().toLowerCase()
+    let rows = [...latestPayments]
+    if (q) rows = rows.filter((r) => (r.customerName || '').toLowerCase().includes(q))
+    if (paymentSalesPersonFilter !== 'ALL') {
+      rows = rows.filter((r) => {
+        const n = (r.salespersonName ?? '').trim() || 'Unassigned'
+        return n === paymentSalesPersonFilter
+      })
+    }
+    if (!paymentSortField) return rows
+    const dir = paymentSortDir === 'asc' ? 1 : -1
+    const ts = (s: string) => {
+      const t = Date.parse(s)
+      return Number.isFinite(t) ? t : 0
+    }
+    rows.sort((a, b) => {
+      switch (paymentSortField) {
+        case 'receivedAt':
+          return (ts(a.receivedAt) - ts(b.receivedAt)) * dir
+        case 'amount':
+          return ((a.amount ?? 0) - (b.amount ?? 0)) * dir
+        case 'customer':
+          return (a.customerName || '').localeCompare(b.customerName || '') * dir
+        case 'salesperson':
+          return (a.salespersonName || '').localeCompare(b.salespersonName || '') * dir
+        case 'type':
+          return (a.installmentType || '').localeCompare(b.installmentType || '') * dir
+        default:
+          return 0
+      }
+    })
+    return rows
+  }, [
+    latestPayments,
+    paymentCustomerFilter,
+    paymentSalesPersonFilter,
+    paymentSortDir,
+    paymentSortField,
+  ])
 
   const overdueRows = useMemo(() => {
     const q = customerFilter.trim().toLowerCase()
@@ -743,32 +840,42 @@ function FinanceRadarBlock({
           </div>
         ) : null}
 
-        {/* lg: row at least ~620px so chart column never collapses when few overdue rows; table body scrolls inside */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 lg:items-stretch lg:[grid-auto-rows:minmax(640px,auto)] gap-8 lg:gap-6 xl:gap-8">
+        {/* lg: keep tables readable + chart column stable; allow 2 tables + charts side-by-side */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 lg:items-stretch lg:[grid-auto-rows:minmax(640px,auto)] gap-8 lg:gap-5 xl:gap-6">
           <div className="min-w-0 flex flex-col lg:h-full lg:min-h-0">
-            <div className="flex flex-wrap items-end justify-between gap-2 mb-2">
-              <div className="flex flex-wrap items-center gap-2 min-w-0">
-                <h4 className="text-xs font-bold text-[color:var(--text-muted)] uppercase tracking-widest shrink-0">
-                  Top overdue
-                </h4>
-                {ageFilter ? (
-                  <span
-                    className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-2.5 py-0.5 text-[10px] font-semibold text-[color:var(--accent-teal)]"
-                    title="Filtered by payment ageing bucket"
-                  >
-                    {ageingBuckets.find((b) => b.id === ageFilter)?.label ?? ageFilter}
-                    <button
-                      type="button"
-                      aria-label="Clear ageing filter"
-                      onClick={() => setAgeFilter(null)}
-                      className="ml-0.5 flex h-5 w-5 items-center justify-center rounded-full hover:bg-[color:var(--bg-table-hover)] text-[color:var(--accent-teal)] border-0 bg-transparent cursor-pointer p-0 leading-none"
+            <div className="grid gap-2 mb-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
+                  <h4 className="text-xs font-bold text-[color:var(--text-muted)] uppercase tracking-widest shrink-0">
+                    Top overdue
+                  </h4>
+                  {ageFilter ? (
+                    <span
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-2.5 py-0.5 text-[10px] font-semibold text-[color:var(--accent-teal)]"
+                      title="Filtered by payment ageing bucket"
                     >
-                      ×
-                    </button>
-                  </span>
-                ) : null}
+                      {ageingBuckets.find((b) => b.id === ageFilter)?.label ?? ageFilter}
+                      <button
+                        type="button"
+                        aria-label="Clear ageing filter"
+                        onClick={() => setAgeFilter(null)}
+                        className="ml-0.5 flex h-5 w-5 items-center justify-center rounded-full hover:bg-[color:var(--bg-table-hover)] text-[color:var(--accent-teal)] border-0 bg-transparent cursor-pointer p-0 leading-none"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ) : (
+                    /* Placeholder keeps header height aligned with Latest payments block */
+                    <span
+                      className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold opacity-0 select-none pointer-events-none"
+                      aria-hidden
+                    >
+                      —
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center justify-end gap-2">
                 {ageFilter || customerFilter.trim() || salesPersonFilter !== 'ALL' ? (
                   <button
                     type="button"
@@ -817,6 +924,13 @@ function FinanceRadarBlock({
                   <thead>
                     <tr className="border-b border-[color:var(--border-default)]">
                       <th
+                        className="py-2 px-2 sm:px-2.5 font-semibold text-right tabular-nums whitespace-nowrap w-[54px]"
+                        title="Project serial number (Sl No.)"
+                      >
+                        <span className="hidden sm:inline">Sl No.</span>
+                        <span className="sm:hidden">Prj #</span>
+                      </th>
+                      <th
                         className="py-2 px-2 sm:px-2.5 font-semibold cursor-pointer select-none max-w-[7rem] sm:max-w-[9rem]"
                         onClick={() => toggleSort('customer')}
                       >
@@ -847,7 +961,7 @@ function FinanceRadarBlock({
                   <tbody>
                     {overdueRows.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-6 px-2 text-center text-[color:var(--text-muted)]">
+                        <td colSpan={7} className="py-6 px-2 text-center text-[color:var(--text-muted)]">
                           {ageFilter
                             ? 'No overdue rows in this ageing bucket (adjust filter or customer search).'
                             : 'No overdue rows in top slice.'}
@@ -859,6 +973,9 @@ function FinanceRadarBlock({
                         const nameColor = paymentRadarProjectNameColor(r.paymentStatus)
                         return (
                         <tr key={r.projectId} className="border-b border-[color:var(--border-default)] last:border-b-0 hover:bg-[color:var(--bg-table-hover)]">
+                          <td className="py-2 px-2 sm:px-2.5 text-right tabular-nums text-[color:var(--text-muted)] whitespace-nowrap">
+                            {r.projectSerialNumber != null ? r.projectSerialNumber : '—'}
+                          </td>
                           <td className="py-2 px-2 sm:px-2.5 max-w-[7rem] sm:max-w-[9rem]">
                             {onOpenFinanceDrawer ? (
                               <button
@@ -911,27 +1028,180 @@ function FinanceRadarBlock({
                   </tbody>
                 </table>
               </div>
+              {/* Legend moved below the whole Payment radar grid (shared by both tables). */}
+            </div>
+          </div>
+
+          <div className="min-w-0 flex flex-col lg:h-full lg:min-h-0">
+            <div className="grid gap-2 mb-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
+                  <h4 className="text-xs font-bold text-[color:var(--text-muted)] uppercase tracking-widest shrink-0">
+                    Latest payments received
+                  </h4>
+                  {/* Placeholder chip keeps header baseline aligned with Top overdue (age bucket chip). */}
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold opacity-0 select-none pointer-events-none"
+                    aria-hidden
+                  >
+                    —
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {paymentCustomerFilter.trim() || paymentSalesPersonFilter !== 'ALL' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentCustomerFilter('')
+                      setPaymentSalesPersonFilter('ALL')
+                    }}
+                    className="h-8 rounded-lg border border-[color:var(--border-default)] bg-transparent px-3 text-[11px] font-semibold text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:border-[color:var(--border-strong)] transition-colors"
+                  >
+                    Reset filters
+                  </button>
+                ) : null}
+                <select
+                  value={paymentSalesPersonFilter}
+                  onChange={(e) => setPaymentSalesPersonFilter(e.target.value)}
+                  className="zenith-native-select h-8 rounded-lg px-2.5 text-xs focus:outline-none min-w-[7.5rem] max-w-[11rem]"
+                  aria-label="Filter latest payments by sales person"
+                >
+                  <option value="ALL">All salespeople</option>
+                  {paymentSalesPersonOptions.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={paymentCustomerFilter}
+                  onChange={(e) => setPaymentCustomerFilter(e.target.value)}
+                  placeholder="Filter project…"
+                  className="zenith-native-filter-input h-8 rounded-lg px-3 text-xs focus:outline-none min-w-[120px] lg:max-w-[9rem]"
+                />
+              </div>
+            </div>
+
+            <div className="zenith-stat-well overflow-hidden flex-1 flex flex-col min-h-[240px] lg:min-h-0">
               <p
-                className="shrink-0 border-t border-[color:var(--border-default)] px-2 sm:px-2.5 py-2 m-0 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] leading-snug text-[color:var(--text-muted)]"
-                role="note"
+                className="shrink-0 m-0 px-2 sm:px-2.5 pt-2.5 pb-2 border-b border-[color:var(--border-default)] text-[10px] sm:text-[11px] leading-snug text-[color:var(--text-muted)] mb-2"
+                style={{ fontFamily: 'var(--zenith-font-body)' }}
               >
-                <span className="inline-flex items-center gap-1.5">
-                  <span
-                    className="h-2 w-2 rounded-full shrink-0"
-                    style={{ background: PAYMENT_RADAR_NAME_PENDING }}
-                    aria-hidden
-                  />
-                  <span>Project name — pending payment</span>
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span
-                    className="h-2 w-2 rounded-full shrink-0"
-                    style={{ background: PAYMENT_RADAR_NAME_PARTIAL }}
-                    aria-hidden
-                  />
-                  <span>Project name — partial payment</span>
-                </span>
+                Latest 10 received payments across the current date filters.
               </p>
+              <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 max-h-[min(70vh,520px)] lg:max-h-none zenith-scroll-x">
+                <table className="zenith-table--data w-full min-w-[660px] text-left text-[11px] sm:text-xs">
+                  <thead>
+                    <tr className="border-b border-[color:var(--border-default)]">
+                      <th
+                        className="py-2 px-2 sm:px-2.5 font-semibold text-right tabular-nums whitespace-nowrap w-[54px]"
+                        title="Project serial number (Sl No.)"
+                      >
+                        <span className="hidden sm:inline">Sl No.</span>
+                        <span className="sm:hidden">Prj #</span>
+                      </th>
+                      <th
+                        className="py-2 px-2 sm:px-2.5 font-semibold cursor-pointer select-none max-w-[10rem]"
+                        onClick={() => togglePaymentSort('customer')}
+                      >
+                        Project {paymentSortField === 'customer' ? (paymentSortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                      </th>
+                      <th
+                        className="py-2 px-2 font-semibold cursor-pointer select-none min-w-[6.5rem] max-w-[9rem]"
+                        onClick={() => togglePaymentSort('salesperson')}
+                      >
+                        Sales person {paymentSortField === 'salesperson' ? (paymentSortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                      </th>
+                      <th
+                        className="py-2 px-2 font-semibold text-right cursor-pointer select-none whitespace-nowrap"
+                        onClick={() => togglePaymentSort('amount')}
+                      >
+                        Amt {paymentSortField === 'amount' ? (paymentSortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                      </th>
+                      <th
+                        className="py-2 px-2 font-semibold whitespace-nowrap cursor-pointer select-none"
+                        onClick={() => togglePaymentSort('receivedAt')}
+                      >
+                        Received {paymentSortField === 'receivedAt' ? (paymentSortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                      </th>
+                      <th
+                        className="py-2 px-2 font-semibold whitespace-nowrap cursor-pointer select-none"
+                        onClick={() => togglePaymentSort('type')}
+                      >
+                        Type {paymentSortField === 'type' ? (paymentSortDir === 'desc' ? ' ↓' : ' ↑') : ''}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paymentRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-6 px-2 text-center text-[color:var(--text-muted)]">
+                          No recent payments found for this period.
+                        </td>
+                      </tr>
+                    ) : (
+                      paymentRows.map((r) => {
+                        const sp = (r.salespersonName ?? '').trim() || 'Unassigned'
+                        const typeLabel =
+                          r.installmentType === 'ADVANCE'
+                            ? 'Advance'
+                            : r.installmentType === 'PAYMENT_1'
+                              ? 'Payment 1'
+                              : r.installmentType === 'PAYMENT_2'
+                                ? 'Payment 2'
+                                : r.installmentType === 'PAYMENT_3'
+                                  ? 'Payment 3'
+                                  : 'Last'
+                        return (
+                          <tr
+                            key={`${r.projectId}-${r.installmentType}-${r.receivedAt}`}
+                            className="border-b border-[color:var(--border-default)] last:border-b-0 hover:bg-[color:var(--bg-table-hover)]"
+                          >
+                            <td className="py-2 px-2 sm:px-2.5 text-right tabular-nums text-[color:var(--text-muted)] whitespace-nowrap">
+                              {r.projectSerialNumber != null ? r.projectSerialNumber : '—'}
+                            </td>
+                            <td className="py-2 px-2 sm:px-2.5 max-w-[10rem]">
+                              {onOpenFinanceDrawer ? (
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenFinanceDrawer(r.projectId)}
+                                  className="font-semibold block truncate text-left w-full bg-transparent border-0 cursor-pointer p-0 transition-[filter] hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] rounded-sm"
+                                  style={{ color: paymentRadarProjectNameColor(r.paymentStatus ?? undefined) }}
+                                  title={r.customerName}
+                                >
+                                  {r.customerName}
+                                </button>
+                              ) : (
+                                <Link
+                                  to={`/projects/${r.projectId}`}
+                                  className="font-semibold block truncate transition-[filter] hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] rounded-sm"
+                                  style={{ color: paymentRadarProjectNameColor(r.paymentStatus ?? undefined) }}
+                                  title={r.customerName}
+                                >
+                                  {r.customerName}
+                                </Link>
+                              )}
+                            </td>
+                            <td className="py-2 px-2 text-[color:var(--text-secondary)] truncate max-w-[9rem]" title={sp}>
+                              {sp}
+                            </td>
+                            <td className="py-2 px-2 text-right tabular-nums text-[color:var(--text-secondary)] whitespace-nowrap font-semibold">
+                              ₹{Math.round(r.amount).toLocaleString('en-IN')}
+                            </td>
+                            <td className="py-2 px-2 text-[color:var(--text-muted)] whitespace-nowrap tabular-nums">
+                              {r.receivedAt ? format(parseISO(r.receivedAt), 'dd MMM yy') : '—'}
+                            </td>
+                            <td className="py-2 px-2 text-[color:var(--text-secondary)] whitespace-nowrap">
+                              {typeLabel}
+                            </td>
+                          </tr>
+                        )
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
@@ -1117,6 +1387,24 @@ function FinanceRadarBlock({
             </div>
           </div>
         </div>
+        <p
+          className="mt-3 text-[10px] leading-snug text-[color:var(--text-muted)] flex flex-wrap items-center gap-x-4 gap-y-1"
+          role="note"
+          style={{ fontFamily: 'var(--zenith-font-body)' }}
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full shrink-0" style={{ background: PAYMENT_RADAR_NAME_PENDING }} aria-hidden />
+            <span>Payment Status - Full Pending</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full shrink-0" style={{ background: PAYMENT_RADAR_NAME_PARTIAL }} aria-hidden />
+            <span>Payment Status - Partial</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full shrink-0" style={{ background: PAYMENT_RADAR_NAME_FULLY_PAID }} aria-hidden />
+            <span>Payment Status - Fully Paid</span>
+          </span>
+        </p>
       </div>
       {reminderProject ? (
         <ReminderModal
@@ -1298,6 +1586,13 @@ function InstallationPulseBlock({
             <thead>
               <tr className="border-b border-[color:var(--border-default)]">
                 <th
+                  className="py-2.5 pr-2 sm:pr-3 font-semibold text-right tabular-nums whitespace-nowrap w-[58px] align-bottom"
+                  title="Project serial number (Sl No.)"
+                >
+                  <span className="hidden sm:inline">Sl No.</span>
+                  <span className="sm:hidden">Prj #</span>
+                </th>
+                <th
                   className="py-2.5 pr-3 sm:pr-4 font-semibold align-bottom cursor-pointer select-none"
                   onClick={() => handleSort('customerName')}
                 >
@@ -1348,7 +1643,7 @@ function InstallationPulseBlock({
             <tbody>
               {displayRows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-[color:var(--text-muted)]">
+                  <td colSpan={9} className="py-8 text-center text-[color:var(--text-muted)]">
                     No confirmed or under-installation projects for this period.
                   </td>
                 </tr>
@@ -1363,6 +1658,9 @@ function InstallationPulseBlock({
                         installPulseRowOverdue(r) ? 'bg-red-500/5' : 'hover:bg-[color:var(--bg-table-hover)]'
                       }`}
                     >
+                      <td className="py-2.5 pr-2 sm:pr-3 text-right tabular-nums text-[color:var(--text-muted)] align-middle whitespace-nowrap">
+                        {r.projectSerialNumber != null ? r.projectSerialNumber : '—'}
+                      </td>
                       <td className="py-2.5 pr-3 sm:pr-4 align-middle">
                         <div className="flex items-center gap-2 min-w-0">
                           <span
