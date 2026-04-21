@@ -17,9 +17,9 @@ export interface SolarNewsTickerProps {
   onItemClick?: (url: string) => void
 }
 
-const ZENITH_TICKER_PX_PER_SEC = 24
-const ZENITH_TICKER_MIN_S = 30
-const ZENITH_TICKER_MAX_S = 130
+const ZENITH_TICKER_PX_PER_SEC = 20
+const ZENITH_TICKER_MIN_S = 34
+const ZENITH_TICKER_MAX_S = 150
 
 const FALLBACK: Array<Omit<SolarNewsItem, 'id' | 'publishedAt' | 'url'> & { url: string }> = [
   {
