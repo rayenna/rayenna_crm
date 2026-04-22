@@ -207,7 +207,12 @@ export default function SolarNewsTicker({
             />
             Solar news
           </span>
-          <HelpTooltip helpKey="zenith.solar-news" position="bottom" className="opacity-90" />
+          <HelpTooltip
+            helpKey="zenith.solar-news"
+            position="bottom"
+            variant="zenith"
+            className="opacity-95"
+          />
         </div>
 
         <div
