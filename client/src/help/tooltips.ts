@@ -149,13 +149,13 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.command-center',
     title: 'Zenith Command Center',
     content:
-      'Full-screen analytics with the same FY, Quarter, and Month rules as the Dashboard: AI Insights, The Board leaderboard, collapsible Your Focus, KPIs (including clickable Availing Loan on Finance and executive Zenith), Revenue forecast, Deal flow funnel (click stages or payment pills), Proposal Engine under Your Focus, clickable Explore charts, Payment radar Top overdue hints, and Quick Actions lists. Drawer list rows and single-project headers show Sales (assigned salesperson). Single-project Quick Actions and Operations drawers show Recent remarks (read-only) above Log activity and a Payment snapshot (status, total received, balance) after Deal value when payment applies — N/A when not applicable. Finance drawer from Payment radar already includes payment context. List mode includes Open in Projects → for the full Projects page with matching filters. Open Help → Analytics for the full guide.',
+      'Full-screen analytics with the same FY, Quarter, and Month rules as the Dashboard: Solar News (RSS industry headlines above AI Insights), AI Insights from your loaded CRM data, The Board leaderboard, collapsible Your Focus, KPIs (including clickable Availing Loan on Finance and executive Zenith), Revenue forecast, Deal flow funnel (click stages or payment pills), Proposal Engine under Your Focus, clickable Explore charts, Payment radar (Top overdue, Latest payments received, shared payment-status legend), and Quick Actions lists. Drawer list rows and single-project headers show Sales (assigned salesperson). Single-project Quick Actions and Operations drawers show Recent remarks (read-only) above Log activity and a Payment snapshot (status, total received, balance) after Deal value when payment applies — N/A when not applicable. Finance drawer from Payment radar already includes payment context. List mode includes Open in Projects → for the full Projects page with matching filters. Open Help → Analytics for the full guide.',
   },
   'zenith.hit-list': {
     key: 'zenith.hit-list',
     title: 'Today’s Hit List',
     content:
-      'Up to seven prioritised deals from the same pipeline data as Your pipeline today. Filter customer, stage, and salesperson; click column headers to sort (including Alert, Confirmation, Health). Columns: customer, stage, sales person, deal value, last activity, Alert, confirmation date, Deal Health, Open →. Open → opens Quick Actions (Sales + name in header; Recent remarks above Log activity). On tablet/desktop, a hint may remind you to scroll the table and use Open →; hidden on small phones. Stacked cards on narrow screens.',
+      'Up to seven prioritised deals from the same pipeline data as Your pipeline today. Filter customer, stage, and salesperson; click column headers to sort (including Alert, Confirmation, Health). Columns: Sl No. / Prj # (project serial), customer, stage, sales person, deal value, last activity, Alert, confirmation date, Deal Health, Open →. Open → opens Quick Actions (Sales + name in header; Recent remarks above Log activity). On tablet/desktop, a hint may remind you to scroll the table and use Open →; hidden on small phones. Stacked cards on narrow screens.',
   },
   'zenith.quick-drawer-remarks': {
     key: 'zenith.quick-drawer-remarks',
@@ -221,7 +221,13 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.payment-radar-top-overdue',
     title: 'Top overdue (Payment radar)',
     content:
-      'Click a project name under Projects to open the project and update payment status; use Remind for WhatsApp or Email helpers. Filter by salesperson and customer text; payment ageing buckets above filter this table.',
+      'Sl No. / Prj # matches Projects. Click the project name to open the Finance quick drawer on Finance and Management/Admin Zenith (payment context); otherwise opens Project detail. Use Remind for WhatsApp or Email helpers. Filter by salesperson and customer text; payment ageing buckets above filter this table. Latest payments received (beside this table on wide layouts) lists recent receipts with the same name colours; see the shared legend below for Pending / Partial / Fully paid.',
+  },
+  'zenith.solar-news': {
+    key: 'zenith.solar-news',
+    title: 'Solar News ticker',
+    content:
+      'Industry headlines from RSS feeds aggregated on the server (~30 min cache, /api/solar-news). Click a headline to open the article in a new tab. Hover the strip on desktop to pause scrolling. Not CRM data — use AI Insights below for numbers from your filters.',
   },
   'zenith.proposal-engine-focus': {
     key: 'zenith.proposal-engine-focus',

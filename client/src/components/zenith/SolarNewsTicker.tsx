@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import axiosInstance from '../../utils/axios'
+import HelpTooltip from '../help/HelpTooltip'
 
 type SolarNewsTag = 'policy' | 'grid' | 'market' | 'tech' | 'agri'
 
@@ -191,7 +192,7 @@ export default function SolarNewsTicker({
       `}</style>
 
       <div className="zenith-exec-main mx-auto px-3 sm:px-5 py-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 min-h-0">
-        <div className="flex items-center justify-center sm:justify-start shrink-0">
+        <div className="flex items-center justify-center sm:justify-start shrink-0 gap-1">
           <span className="zenith-display text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--accent-gold)] opacity-70 inline-flex items-center gap-1.5">
             <span
               className="zenith-solar-news-dot"
@@ -206,6 +207,7 @@ export default function SolarNewsTicker({
             />
             Solar news
           </span>
+          <HelpTooltip helpKey="zenith.solar-news" position="bottom" className="opacity-90" />
         </div>
 
         <div

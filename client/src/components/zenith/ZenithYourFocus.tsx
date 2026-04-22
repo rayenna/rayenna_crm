@@ -109,6 +109,9 @@ const PAYMENT_RADAR_NAME_PENDING = 'var(--accent-blue)'
 const PAYMENT_RADAR_NAME_PARTIAL = 'var(--accent-gold)'
 const PAYMENT_RADAR_NAME_FULLY_PAID = 'var(--accent-teal)'
 
+/** Brighter than `--text-muted` for Payment radar section labels (readable in light + dark). */
+const PAYMENT_RADAR_SUBHEAD_COLOR = 'color-mix(in srgb, var(--text-secondary) 70%, var(--text-primary) 30%)'
+
 function paymentRadarProjectNameColor(
   paymentStatus: string | undefined,
 ): string {
@@ -758,19 +761,34 @@ function FinanceRadarBlock({
         ) : null}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
           <div className="zenith-stat-well px-4 py-3">
-            <p className="text-[10px] uppercase tracking-wider text-[color:var(--text-muted)] font-bold">Total outstanding</p>
+            <p
+              className="text-[10px] uppercase tracking-wider font-bold"
+              style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
+            >
+              Total outstanding
+            </p>
             <p className="text-lg font-extrabold text-[color:var(--accent-gold)] tabular-nums mt-1">
               ₹{Math.round(data.totalOutstanding).toLocaleString('en-IN')}
             </p>
           </div>
           <div className="zenith-stat-well px-4 py-3">
-            <p className="text-[10px] uppercase tracking-wider text-[color:var(--text-muted)] font-bold">Avg collection days</p>
+            <p
+              className="text-[10px] uppercase tracking-wider font-bold"
+              style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
+            >
+              Avg collection days
+            </p>
             <p className="text-lg font-extrabold text-[color:var(--text-primary)] tabular-nums mt-1">
               {data.avgCollectionDays != null ? `${data.avgCollectionDays}d` : '—'}
             </p>
           </div>
           <div className="zenith-stat-well px-4 py-3">
-            <p className="text-[10px] uppercase tracking-wider text-[color:var(--text-muted)] font-bold">Subsidy pending</p>
+            <p
+              className="text-[10px] uppercase tracking-wider font-bold"
+              style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
+            >
+              Subsidy pending
+            </p>
             <p className="text-lg font-extrabold text-[color:var(--text-primary)] tabular-nums mt-1">{data.subsidyPendingCount}</p>
           </div>
         </div>
@@ -780,7 +798,7 @@ function FinanceRadarBlock({
             <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
               <p
                 className="text-[10px] uppercase tracking-widest font-bold m-0"
-                style={{ color: 'var(--text-muted)' }}
+                style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
               >
                 Payment ageing
               </p>
@@ -788,7 +806,7 @@ function FinanceRadarBlock({
                 <button
                   type="button"
                   onClick={() => setAgeFilter(null)}
-                  className="text-[11px] font-semibold shrink-0 rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-2.5 py-1 text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:border-[color:var(--accent-teal-border)] hover:bg-[color:var(--accent-teal-muted)] transition-colors"
+                  className="text-[11px] font-semibold shrink-0 rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-2.5 py-1 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:border-[color:var(--accent-teal-border)] hover:bg-[color:var(--accent-teal-muted)] transition-colors"
                 >
                   Reset ageing filter
                 </button>
@@ -816,7 +834,7 @@ function FinanceRadarBlock({
                     <div className="text-[22px] font-bold tabular-nums mt-0.5" style={{ color: st.labelColor }}>
                       {b.count}
                     </div>
-                    <div className="text-[12px] tabular-nums mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                    <div className="text-[12px] tabular-nums mt-0.5" style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}>
                       ₹{Math.round(b.amount).toLocaleString('en-IN')}
                     </div>
                     {active ? (
@@ -846,7 +864,10 @@ function FinanceRadarBlock({
             <div className="grid gap-2 mb-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2 min-w-0">
-                  <h4 className="text-xs font-bold text-[color:var(--text-muted)] uppercase tracking-widest shrink-0">
+                  <h4
+                    className="text-xs font-bold uppercase tracking-widest shrink-0"
+                    style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
+                  >
                     Top overdue
                   </h4>
                   {ageFilter ? (
@@ -884,7 +905,7 @@ function FinanceRadarBlock({
                       setCustomerFilter('')
                       setSalesPersonFilter('ALL')
                     }}
-                    className="h-8 rounded-lg border border-[color:var(--border-default)] bg-transparent px-3 text-[11px] font-semibold text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:border-[color:var(--border-strong)] transition-colors"
+                    className="h-8 rounded-lg border border-[color:var(--border-default)] bg-transparent px-3 text-[11px] font-semibold text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:border-[color:var(--border-strong)] transition-colors"
                   >
                     Reset filters
                   </button>
@@ -913,11 +934,14 @@ function FinanceRadarBlock({
 
             <div className="zenith-stat-well overflow-hidden flex-1 flex flex-col min-h-[240px] lg:min-h-0">
               <p
-                className="shrink-0 m-0 px-2 sm:px-2.5 pt-2.5 pb-2 border-b border-[color:var(--border-default)] text-[10px] sm:text-[11px] leading-snug text-[color:var(--text-muted)]"
-                style={{ fontFamily: 'var(--zenith-font-body)' }}
+                className="shrink-0 m-0 px-2 sm:px-2.5 pt-2.5 pb-2 border-b border-[color:var(--border-default)] text-[10px] sm:text-[11px] leading-snug"
+                style={{ fontFamily: 'var(--zenith-font-body)', color: PAYMENT_RADAR_SUBHEAD_COLOR }}
               >
                 Click the project name to open the project and update the current payment status; use{' '}
-                <span className="text-[color:var(--text-muted)] font-medium">Remind</span> to send a reminder.
+                <span className="font-medium" style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}>
+                  Remind
+                </span>{' '}
+                to send a reminder.
               </p>
               <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 max-h-[min(70vh,520px)] lg:max-h-none zenith-scroll-x">
                 <table className="zenith-table--data w-full min-w-[520px] text-left text-[11px] sm:text-xs">
@@ -961,7 +985,7 @@ function FinanceRadarBlock({
                   <tbody>
                     {overdueRows.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-6 px-2 text-center text-[color:var(--text-muted)]">
+                        <td colSpan={7} className="py-6 px-2 text-center" style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}>
                           {ageFilter
                             ? 'No overdue rows in this ageing bucket (adjust filter or customer search).'
                             : 'No overdue rows in top slice.'}
@@ -1036,7 +1060,10 @@ function FinanceRadarBlock({
             <div className="grid gap-2 mb-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2 min-w-0">
-                  <h4 className="text-xs font-bold text-[color:var(--text-muted)] uppercase tracking-widest shrink-0">
+                  <h4
+                    className="text-xs font-bold uppercase tracking-widest shrink-0"
+                    style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
+                  >
                     Latest payments received
                   </h4>
                   {/* Placeholder chip keeps header baseline aligned with Top overdue (age bucket chip). */}
@@ -1056,7 +1083,7 @@ function FinanceRadarBlock({
                       setPaymentCustomerFilter('')
                       setPaymentSalesPersonFilter('ALL')
                     }}
-                    className="h-8 rounded-lg border border-[color:var(--border-default)] bg-transparent px-3 text-[11px] font-semibold text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:border-[color:var(--border-strong)] transition-colors"
+                    className="h-8 rounded-lg border border-[color:var(--border-default)] bg-transparent px-3 text-[11px] font-semibold text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:border-[color:var(--border-strong)] transition-colors"
                   >
                     Reset filters
                   </button>
@@ -1085,8 +1112,8 @@ function FinanceRadarBlock({
 
             <div className="zenith-stat-well overflow-hidden flex-1 flex flex-col min-h-[240px] lg:min-h-0">
               <p
-                className="shrink-0 m-0 px-2 sm:px-2.5 pt-2.5 pb-2 border-b border-[color:var(--border-default)] text-[10px] sm:text-[11px] leading-snug text-[color:var(--text-muted)] mb-2"
-                style={{ fontFamily: 'var(--zenith-font-body)' }}
+                className="shrink-0 m-0 px-2 sm:px-2.5 pt-2.5 pb-2 border-b border-[color:var(--border-default)] text-[10px] sm:text-[11px] leading-snug mb-2"
+                style={{ fontFamily: 'var(--zenith-font-body)', color: PAYMENT_RADAR_SUBHEAD_COLOR }}
               >
                 Latest 10 received payments across the current date filters.
               </p>
@@ -1136,7 +1163,7 @@ function FinanceRadarBlock({
                   <tbody>
                     {paymentRows.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-6 px-2 text-center text-[color:var(--text-muted)]">
+                        <td colSpan={6} className="py-6 px-2 text-center" style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}>
                           No recent payments found for this period.
                         </td>
                       </tr>
@@ -1212,12 +1239,18 @@ function FinanceRadarBlock({
             <div className="flex flex-col max-lg:h-auto lg:h-full min-h-0 lg:min-h-[320px]">
               {/* Upper: on lg split height with bar; on mobile natural height so the bar block keeps room */}
               <div className="flex flex-col flex-none lg:flex-1 lg:min-h-0 lg:basis-0 border-b border-[color:var(--border-default)] p-3 sm:p-4">
-                <h4 className="text-xs font-bold text-[color:var(--text-muted)] uppercase tracking-widest mb-2 shrink-0">
+                <h4
+                  className="text-xs font-bold uppercase tracking-widest mb-2 shrink-0"
+                  style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
+                >
                   Collected vs outstanding
                 </h4>
                 <div className="zenith-chart-slot zenith-payment-radar-pie-slot w-full max-lg:h-[200px] max-lg:flex-none lg:flex-1 lg:min-h-[160px] relative">
                   {pieData.length === 0 ? (
-                    <p className="text-sm text-[color:var(--text-muted)] flex items-center justify-center h-full text-left px-1">
+                    <p
+                      className="text-sm flex items-center justify-center h-full text-left px-1"
+                      style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
+                    >
                       No payment mix data
                     </p>
                   ) : (
@@ -1270,7 +1303,9 @@ function FinanceRadarBlock({
                                 align="center"
                                 wrapperStyle={{ paddingTop: 4 }}
                                 formatter={(value) => (
-                                  <span className="text-[color:var(--text-secondary)] text-[10px] sm:text-[11px]">{value}</span>
+                                  <span className="text-[10px] sm:text-[11px]" style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}>
+                                    {value}
+                                  </span>
                                 )}
                               />
                             ) : null}
@@ -1280,7 +1315,10 @@ function FinanceRadarBlock({
                     </ZenithChartTouchReset>
                   )}
                 </div>
-                <p className="text-[9px] sm:text-[10px] text-left text-[color:var(--text-muted)] mt-1.5 shrink-0 leading-relaxed">
+                <p
+                  className="text-[9px] sm:text-[10px] text-left mt-1.5 shrink-0 leading-relaxed"
+                  style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
+                >
                   Amounts in ₹ · Collected, outstanding, subsidy pending
                 </p>
               </div>
@@ -1288,7 +1326,10 @@ function FinanceRadarBlock({
               {/* Lower half: bars */}
               {monthlyCollections.length > 0 ? (
                 <div className="flex flex-col flex-none lg:flex-1 lg:min-h-0 lg:basis-0 p-3 sm:p-4 max-lg:pb-4">
-                <h4 className="text-xs font-bold text-[color:var(--text-muted)] uppercase tracking-widest mb-2 shrink-0 max-lg:leading-snug">
+                <h4
+                  className="text-xs font-bold uppercase tracking-widest mb-2 shrink-0 max-lg:leading-snug"
+                  style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
+                >
                   <span className="max-lg:block lg:inline">Collections</span>
                   <span className="max-lg:hidden"> — </span>
                   <span className="max-lg:block lg:inline max-lg:mt-0.5">last 6 months</span>
@@ -1353,7 +1394,10 @@ function FinanceRadarBlock({
                       )}
                     </ZenithChartTouchReset>
                   </div>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-[10px] shrink-0 text-[color:var(--text-secondary)]">
+                  <div
+                    className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-[10px] shrink-0"
+                    style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
+                  >
                     <span className="inline-flex items-center gap-1.5">
                       <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--accent-teal)]" />
                       Collected
@@ -1374,13 +1418,16 @@ function FinanceRadarBlock({
                           ▼ Collections down ₹{Math.abs(Math.round(trendDelta)).toLocaleString('en-IN')} vs last month
                         </span>
                       ) : (
-                        <span style={{ color: 'var(--text-muted)' }}>Collections steady vs last month</span>
+                        <span style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}>Collections steady vs last month</span>
                       )}
                     </p>
                   ) : null}
                 </div>
               ) : (
-                <div className="flex flex-col flex-1 min-h-0 basis-0 items-center justify-center p-4 text-[color:var(--text-muted)] text-xs border-t border-[color:var(--border-default)]">
+                <div
+                  className="flex flex-col flex-1 min-h-0 basis-0 items-center justify-center p-4 text-xs border-t border-[color:var(--border-default)]"
+                  style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
+                >
                   No monthly collections trend for this period.
                 </div>
               )}
@@ -1388,9 +1435,9 @@ function FinanceRadarBlock({
           </div>
         </div>
         <p
-          className="mt-3 text-[10px] leading-snug text-[color:var(--text-muted)] flex flex-wrap items-center gap-x-4 gap-y-1"
+          className="mt-3 text-[10px] leading-snug flex flex-wrap items-center gap-x-4 gap-y-1"
           role="note"
-          style={{ fontFamily: 'var(--zenith-font-body)' }}
+          style={{ fontFamily: 'var(--zenith-font-body)', color: PAYMENT_RADAR_SUBHEAD_COLOR }}
         >
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full shrink-0" style={{ background: PAYMENT_RADAR_NAME_PENDING }} aria-hidden />
