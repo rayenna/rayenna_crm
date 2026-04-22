@@ -1,8 +1,6 @@
 import express, { Request, Response } from 'express'
 import axios from 'axios'
 import { XMLParser } from 'fast-xml-parser'
-import * as cheerio from 'cheerio'
-import type { Element } from 'domhandler'
 import { authenticate } from '../middleware/auth'
 
 const router = express.Router()
@@ -33,62 +31,6 @@ const RSS_SOURCES: Array<{ source: string; url: string; maxItems: number }> = [
   { source: 'ET Energy', url: 'https://energy.economictimes.indiatimes.com/rss/topstories', maxItems: 10 },
 ]
 
-/** Cap anchor scan on huge homepages (IEA, UN, etc.) for speed and stability. */
-const MAX_HTML_ANCHORS_SCAN = 280
-
-const HTML_SOURCES: Array<{
-  source: string
-  url: string
-  // Return candidate anchors (href + text) from the page
-  pick: ($: cheerio.CheerioAPI) => Array<{ headline: string; url: string }>
-}> = [
-  {
-    source: 'ANERT',
-    url: 'https://anert.gov.in/',
-    pick: pickNewsLinksFromAnchors,
-  },
-  {
-    source: 'MNRE',
-    url: 'https://mnre.gov.in/en/',
-    pick: pickNewsLinksFromAnchors,
-  },
-  {
-    source: 'KSEB',
-    url: 'https://kseb.in/',
-    pick: pickNewsLinksFromAnchors,
-  },
-  {
-    source: 'PM Surya Ghar',
-    url: 'https://pmsuryaghar.gov.in/',
-    pick: pickNewsLinksFromAnchors,
-  },
-  {
-    source: 'Mercom India',
-    url: 'https://www.mercomindia.com/',
-    pick: pickNewsLinksFromAnchors,
-  },
-  {
-    source: 'Wood Mackenzie',
-    url: 'https://www.woodmac.com/market-insights/power-and-renewables/discover-global-power-and-renewables-insights/',
-    pick: pickNewsLinksFromAnchors,
-  },
-  {
-    source: 'Saur Energy',
-    url: 'https://www.saurenergy.com/',
-    pick: pickNewsLinksFromAnchors,
-  },
-  {
-    source: 'IEA',
-    url: 'https://www.iea.org/',
-    pick: pickNewsLinksFromAnchors,
-  },
-  {
-    source: 'UN Climate',
-    url: 'https://www.un.org/en/climatechange/',
-    pick: pickNewsLinksFromAnchors,
-  },
-]
-
 const ET_SOLAR_FILTER_TERMS = [
   'solar',
   'renewable',
@@ -105,40 +47,6 @@ const ET_SOLAR_FILTER_TERMS = [
 function isEtRelevant(title: string): boolean {
   const t = title.toLowerCase()
   return ET_SOLAR_FILTER_TERMS.some((k) => t.includes(k))
-}
-
-/** Large global portals: keep scraped lines loosely energy/climate-related. */
-const GLOBAL_PORTAL_SOURCES = new Set(['IEA', 'UN Climate'])
-const GLOBAL_PORTAL_HEADLINE_TERMS = [
-  'solar',
-  'renewable',
-  'wind',
-  'energy',
-  'power',
-  'grid',
-  'electric',
-  'climate',
-  'carbon',
-  'cop',
-  'emission',
-  'fossil',
-  'battery',
-  'storage',
-  'hydrogen',
-  'efficiency',
-  'heat',
-  'cooling',
-  'oil',
-  'gas',
-  'petroleum',
-  'transport',
-  'vehicle',
-  'methane',
-]
-
-function isGlobalPortalHeadline(headline: string): boolean {
-  const t = headline.toLowerCase()
-  return GLOBAL_PORTAL_HEADLINE_TERMS.some((k) => t.includes(k))
 }
 
 function normalizeHeadline(s: string): string {
@@ -189,40 +97,6 @@ function isCssOrMarkupNoise(s: string): boolean {
   const colons = (t.match(/:/g) || []).length
   if (semi >= 5 && colons >= 5) return true
   return false
-}
-
-/** For scraped anchors: prefer human link text; fall back to first image alt — avoid img style dumps. */
-function headlineFromAnchor($: cheerio.CheerioAPI, el: Element): string {
-  const a = $(el)
-  const directOnly = a
-    .clone()
-    .children()
-    .remove()
-    .end()
-    .text()
-    .replace(/\s+/g, ' ')
-    .trim()
-  const directClean = stripHtmlFromText(directOnly)
-  if (directClean.length >= 12 && !isCssOrMarkupNoise(directClean)) return directClean
-
-  const alt = stripHtmlFromText(a.find('img').first().attr('alt') ?? '')
-  if (alt.length >= 12 && !isCssOrMarkupNoise(alt)) return alt
-
-  const full = stripHtmlFromText(a.text())
-  if (full.length >= 12 && !isCssOrMarkupNoise(full)) return full
-
-  return ''
-}
-
-function pickNewsLinksFromAnchors($: cheerio.CheerioAPI): Array<{ headline: string; url: string }> {
-  return $('a')
-    .toArray()
-    .slice(0, MAX_HTML_ANCHORS_SCAN)
-    .map((el: Element) => ({
-      headline: headlineFromAnchor($, el),
-      url: $(el).attr('href')?.trim() || '',
-    }))
-    .filter((x: { headline: string; url: string }) => x.headline.length >= 18 && x.url)
 }
 
 function absoluteUrl(base: string, href: string): string {
@@ -305,40 +179,6 @@ async function fetchRss(source: string, url: string, maxItems: number): Promise<
   return out
 }
 
-async function fetchHtml(source: string, pageUrl: string, pick: (c: cheerio.CheerioAPI) => Array<{ headline: string; url: string }>): Promise<SolarNewsItem[]> {
-  const res = await axios.get(pageUrl, {
-    timeout: 15000,
-    headers: {
-      'User-Agent': 'RayennaCRM/1.0 (+Zenith Solar News)',
-      Accept: 'text/html,application/xhtml+xml',
-    },
-  })
-  const html = String(res.data ?? '')
-  const $ = cheerio.load(html)
-  const candidates = pick($)
-  const out: SolarNewsItem[] = []
-
-  for (const c of candidates.slice(0, 20)) {
-    const headline = stripHtmlFromText(String(c.headline ?? '').trim())
-    if (!headline || headline.length < 18) continue
-    if (isCssOrMarkupNoise(headline)) continue
-    if (GLOBAL_PORTAL_SOURCES.has(source) && !isGlobalPortalHeadline(headline)) continue
-    const href = String(c.url ?? '').trim()
-    if (!href || href.startsWith('javascript:') || href === '#') continue
-    const urlOut = absoluteUrl(pageUrl, href)
-    out.push({
-      id: `${source}:${normalizeHeadline(headline)}`.slice(0, 180),
-      source,
-      headline,
-      url: urlOut,
-      tag: assignTag(headline),
-      publishedAt: new Date().toISOString(),
-    })
-  }
-
-  return out
-}
-
 function enforcePerSourceLimit(items: SolarNewsItem[], maxPerSource: number): SolarNewsItem[] {
   const used: Record<string, number> = {}
   const out: SolarNewsItem[] = []
@@ -361,11 +201,7 @@ router.get('/', authenticate, async (_req: Request, res: Response) => {
     const rssJobs = RSS_SOURCES.map((s) =>
       fetchRss(s.source, s.url, s.maxItems).catch(() => [] as SolarNewsItem[]),
     )
-    const htmlJobs = HTML_SOURCES.map((s) =>
-      fetchHtml(s.source, s.url, s.pick).catch(() => [] as SolarNewsItem[]),
-    )
-
-    const results = await Promise.all([...rssJobs, ...htmlJobs])
+    const results = await Promise.all(rssJobs)
     const flat = results.flat()
 
     // Deduplicate (simple)
