@@ -29,6 +29,10 @@ const RSS_SOURCES: Array<{ source: string; url: string; maxItems: number }> = [
   { source: 'Renewable Mirror', url: 'https://www.renewablemirror.com/feed/', maxItems: 10 },
   { source: 'CleanTechnica', url: 'https://cleantechnica.com/feed/', maxItems: 10 },
   { source: 'ET Energy', url: 'https://energy.economictimes.indiatimes.com/rss/topstories', maxItems: 10 },
+  { source: 'EQ Mag Pro', url: 'https://www.eqmagpro.com/tag/kerala/feed/', maxItems: 10 },
+  { source: 'Renewable Watch', url: 'https://renewablewatch.in/category/solar-power/feed/', maxItems: 10 },
+  { source: 'SolarClue', url: 'https://blog.solarclue.com/feed/', maxItems: 10 },
+  { source: 'PV Magazine India', url: 'https://www.pv-magazine-india.com/feed/', maxItems: 10 },
 ]
 
 const ET_SOLAR_FILTER_TERMS = [
