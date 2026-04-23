@@ -1,4 +1,5 @@
-import { forwardRef, useCallback, useEffect, useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown } from 'lucide-react'
 
 export type ZenithSingleSelectOption = { value: string; label: string }
@@ -39,6 +40,12 @@ export const ZenithSingleSelect = forwardRef<HTMLButtonElement, ZenithSingleSele
   ) {
     const [open, setOpen] = useState(false)
     const rootRef = useRef<HTMLDivElement>(null)
+    const listRef = useRef<HTMLUListElement>(null)
+    const [portalPos, setPortalPos] = useState<{ top: number; left: number; width: number }>({
+      top: 0,
+      left: 0,
+      width: 0,
+    })
     const selected = options.find((o) => o.value === value)
     const display = selected?.label ?? (value ? value : placeholder)
 
@@ -67,6 +74,50 @@ export const ZenithSingleSelect = forwardRef<HTMLButtonElement, ZenithSingleSele
         document.removeEventListener('keydown', onKey)
       }
     }, [open, finalizeClose])
+
+    const updatePortalPos = useCallback(() => {
+      if (!open) return
+      const btn = rootRef.current?.querySelector('button')
+      const ul = listRef.current
+      if (!btn || !ul) return
+
+      const btnRect = btn.getBoundingClientRect()
+      const ulRect = ul.getBoundingClientRect()
+
+      const viewportW = window.innerWidth
+      const viewportH = window.innerHeight
+
+      let width = Math.max(220, btnRect.width)
+      width = Math.min(width, viewportW - 20)
+
+      let left = btnRect.left
+      if (left + width > viewportW - 10) left = viewportW - width - 10
+      if (left < 10) left = 10
+
+      // Prefer opening downward; if it would overflow, flip above.
+      let top = btnRect.bottom + 6
+      const maxH = Math.min(viewportH * 0.55, 320)
+      const estimatedH = Math.min(maxH, ulRect.height || maxH)
+      if (top + estimatedH > viewportH - 10) {
+        top = Math.max(10, btnRect.top - estimatedH - 6)
+      }
+
+      setPortalPos({ top, left, width })
+    }, [open])
+
+    useLayoutEffect(() => {
+      if (!open) return
+      // 2-pass position so the list has measurable height.
+      updatePortalPos()
+      const raf = requestAnimationFrame(() => updatePortalPos())
+      window.addEventListener('scroll', updatePortalPos, true)
+      window.addEventListener('resize', updatePortalPos)
+      return () => {
+        cancelAnimationFrame(raf)
+        window.removeEventListener('scroll', updatePortalPos, true)
+        window.removeEventListener('resize', updatePortalPos)
+      }
+    }, [open, updatePortalPos])
 
     const btnClass =
       'zenith-native-select flex w-full min-h-[44px] items-center justify-between gap-2 rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-left text-sm ring-1 ring-[color:var(--border-default)] transition-all focus:border-[color:var(--accent-gold-border)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-muted)] disabled:cursor-not-allowed disabled:opacity-55'
@@ -99,49 +150,58 @@ export const ZenithSingleSelect = forwardRef<HTMLButtonElement, ZenithSingleSele
             aria-hidden
           />
         </button>
-        {open && !disabled && (
-          <ul
-            role="listbox"
-            className="absolute z-[60] mt-1 max-h-[min(55vh,320px)] w-full overflow-auto rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-dropdown)] py-1 shadow-xl ring-1 ring-[color:var(--border-default)] backdrop-blur-xl"
-          >
-            {allowEmpty && (
-              <li role="presentation" className="px-1">
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={value === ''}
-                  className="w-full rounded-lg px-3 py-2.5 text-left text-sm text-[color:var(--text-muted)] hover:bg-[color:var(--bg-table-hover)]"
-                  onClick={() => {
-                    onChange('')
-                    finalizeClose()
-                  }}
-                >
-                  {placeholder}
-                </button>
-              </li>
-            )}
-            {options.map((opt) => (
-              <li key={opt.value} role="presentation" className="px-1">
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={value === opt.value}
-                  className={`w-full rounded-lg px-3 py-2.5 text-left text-sm hover:bg-[color:var(--bg-table-hover)] ${
-                    value === opt.value
-                      ? 'bg-[color:var(--bg-badge)] font-semibold text-[color:var(--accent-gold)]'
-                      : 'text-[color:var(--text-primary)]'
-                  }`}
-                  onClick={() => {
-                    onChange(opt.value)
-                    finalizeClose()
-                  }}
-                >
-                  {opt.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+        {open && !disabled
+          ? createPortal(
+              <ul
+                ref={listRef}
+                role="listbox"
+                className="fixed z-[5900] max-h-[min(55vh,320px)] overflow-auto rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-dropdown)] py-1 shadow-xl ring-1 ring-[color:var(--border-default)] backdrop-blur-xl"
+                style={{
+                  top: portalPos.top,
+                  left: portalPos.left,
+                  width: portalPos.width,
+                }}
+              >
+                {allowEmpty && (
+                  <li role="presentation" className="px-1">
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={value === ''}
+                      className="w-full rounded-lg px-3 py-2.5 text-left text-sm text-[color:var(--text-muted)] hover:bg-[color:var(--bg-table-hover)]"
+                      onClick={() => {
+                        onChange('')
+                        finalizeClose()
+                      }}
+                    >
+                      {placeholder}
+                    </button>
+                  </li>
+                )}
+                {options.map((opt) => (
+                  <li key={opt.value} role="presentation" className="px-1">
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={value === opt.value}
+                      className={`w-full rounded-lg px-3 py-2.5 text-left text-sm hover:bg-[color:var(--bg-table-hover)] ${
+                        value === opt.value
+                          ? 'bg-[color:var(--bg-badge)] font-semibold text-[color:var(--accent-gold)]'
+                          : 'text-[color:var(--text-primary)]'
+                      }`}
+                      onClick={() => {
+                        onChange(opt.value)
+                        finalizeClose()
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>,
+              document.body,
+            )
+          : null}
       </div>
     )
   },
