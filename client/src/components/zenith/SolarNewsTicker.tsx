@@ -18,9 +18,10 @@ export interface SolarNewsTickerProps {
   onItemClick?: (url: string) => void
 }
 
-const ZENITH_TICKER_PX_PER_SEC = 6
-const ZENITH_TICKER_MIN_S = 70
-const ZENITH_TICKER_MAX_S = 360
+/** Lower = slower scroll (duration ∝ scrollWidth / pxPerSec). Same logic for all breakpoints. */
+const ZENITH_TICKER_PX_PER_SEC = 4
+const ZENITH_TICKER_MIN_S = 105
+const ZENITH_TICKER_MAX_S = 540
 
 const FALLBACK: Array<Omit<SolarNewsItem, 'id' | 'publishedAt' | 'url'> & { url: string }> = [
   {
