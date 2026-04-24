@@ -57,7 +57,12 @@ export const ZenithSingleSelect = forwardRef<HTMLButtonElement, ZenithSingleSele
     useEffect(() => {
       if (!open) return
       const onDoc = (e: MouseEvent) => {
-        if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        if (
+          rootRef.current &&
+          !rootRef.current.contains(e.target as Node) &&
+          listRef.current &&
+          !listRef.current.contains(e.target as Node)
+        ) {
           finalizeClose()
         }
       }
