@@ -212,6 +212,15 @@
   animation-duration: 140s;
 }
 
+/* Mobile light-mode: reduce compositing churn while scrolling (Android Chrome can intermittently blank
+   translucent/animated KPI tiles when the animated background is repainting). Keep the background
+   static on small screens; desktop retains the subtle drift. */
+@media (max-width: 768px) {
+  [data-theme='light'] .zenith-root.zenith-animated-bg {
+    animation: none !important;
+  }
+}
+
 .zenith-glass {
   background: var(--bg-card);
   border: 1px solid var(--border-card);
