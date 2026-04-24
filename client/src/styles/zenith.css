@@ -551,6 +551,20 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   animation: zenith-ai-insights-marquee-kf 32s linear infinite;
 }
 
+/* iOS/Safari light-mode scroll bug: blurred elements inside translucent cards can rasterize and flash blank during scroll.
+   Mitigation: in light mode on small viewports, force KPI cards onto their own compositing layer and remove heavy blur. */
+@media (max-width: 768px) {
+  [data-theme='light'] .zenith-root .zenith-kpi-card {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: transform;
+  }
+
+  [data-theme='light'] .zenith-root .zenith-kpi-card__blob {
+    filter: none !important;
+  }
+}
+
 /* Pause only for real mouse hover — avoids “stuck paused” after touch on some browsers */
 @media (hover: hover) and (pointer: fine) {
   .zenith-ai-insights-viewport:hover .zenith-ai-insights-marquee {

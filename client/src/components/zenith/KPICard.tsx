@@ -62,10 +62,10 @@ export default function KPICard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className={`relative rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-3.5 w-full min-w-0 h-full overflow-hidden group transition-[box-shadow,transform,border-color] duration-200 ease-out hover:-translate-y-px hover:border-[color:var(--border-strong)]${to || onClick ? ' cursor-pointer' : ''}`}
+      className={`zenith-kpi-card relative rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-3.5 w-full min-w-0 h-full overflow-hidden group transition-[box-shadow,transform,border-color] duration-200 ease-out hover:-translate-y-px hover:border-[color:var(--border-strong)]${to || onClick ? ' cursor-pointer' : ''}`}
     >
       <div
-        className="pointer-events-none absolute -top-8 -right-8 w-28 h-28 rounded-full opacity-[0.12] blur-2xl transition-opacity duration-300 group-hover:opacity-[0.18]"
+        className="zenith-kpi-card__blob pointer-events-none absolute -top-8 -right-8 w-28 h-28 rounded-full opacity-[0.12] blur-2xl transition-opacity duration-300 group-hover:opacity-[0.18]"
         style={{ background: 'radial-gradient(circle, color-mix(in_srgb,var(--accent-gold) 55%, transparent) 0%, transparent 70%)' }}
       />
 
