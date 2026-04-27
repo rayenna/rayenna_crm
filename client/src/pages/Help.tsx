@@ -1,11 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState, Suspense } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { helpSections, HelpSection, getHelpSectionForRoute, getHelpContextLabel } from '../help/sections'
+import {
+  helpSections,
+  HelpSection,
+  getHelpSectionForRoute,
+  getHelpContextLabel,
+  helpSectionSubNav,
+  dashboardHelpAnchors,
+} from '../help/sections'
 import { getHelpContent } from '../help/contentLoader'
 import { searchHelpContent } from '../help/searchHelp'
 import HelpSidebar from '../components/help/HelpSidebar'
+import DealHealthScoreHelpIllustration from '../components/help/DealHealthScoreHelpIllustration'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { BookOpen } from 'lucide-react'
 import { slugifyHeadingLabel, textFromChildren } from '../help/markdownHeadingUtils'
@@ -22,18 +30,29 @@ function normalizeHelpMarkdown(raw: string | undefined): string {
 const Help = () => {
   const { section } = useParams<{ section?: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const helpContextPathRef = useRef<string | null>(null)
 
-  // Legacy URL: /help/zenith → Zenith is a subsection under Analytics
+  // Legacy URL: /help/analytics (combined Dashboard + Zenith) → split pages
   useEffect(() => {
-    if (section === 'zenith') {
-      navigate('/help/analytics#zenith-command-center', { replace: true })
-    }
+    if (section !== 'analytics') return
+    const raw = typeof window !== 'undefined' ? window.location.hash.slice(1) : ''
+    const h = raw ? decodeURIComponent(raw) : ''
+    const target = !h || dashboardHelpAnchors.has(h) ? 'dashboard' : 'zenith'
+    const suffix = h ? `#${encodeURIComponent(h)}` : ''
+    navigate(`/help/${target}${suffix}`, { replace: true })
   }, [section, navigate])
 
   // Determine current section - simplified and safe for hard refresh
   const selectedSection = useMemo(() => {
     try {
+      if (section === 'analytics') {
+        const raw = typeof window !== 'undefined' ? window.location.hash.slice(1) : ''
+        const h = raw ? decodeURIComponent(raw) : ''
+        const sid = !h || dashboardHelpAnchors.has(h) ? 'dashboard' : 'zenith'
+        const sec = helpSections.find((s) => s.id === sid)
+        if (sec) return sec
+      }
       // If explicit section in URL, use it. Still read referrer for context banner (e.g. opened via ? or Help menu from another page).
       if (section) {
         try {
@@ -99,16 +118,16 @@ const Help = () => {
     : ''
   const markdownContent = useMemo(() => normalizeHelpMarkdown(rawContent), [rawContent])
 
-  // Deep-link to heading within a section (e.g. shared /help/analytics#proposal-engine-card)
+  // Deep-link to heading within a section (e.g. /help/dashboard#quick-access-tiles)
   useEffect(() => {
-    const raw = window.location.hash?.slice(1)
+    const raw = location.hash?.slice(1)
     if (!raw || !markdownContent.trim()) return
     const id = decodeURIComponent(raw)
     const timer = window.setTimeout(() => {
       document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 150)
     return () => window.clearTimeout(timer)
-  }, [section, selectedSection?.id, markdownContent])
+  }, [section, selectedSection?.id, markdownContent, location.hash])
 
   const [searchQuery, setSearchQuery] = useState('')
   const allContent = useMemo(
@@ -138,6 +157,7 @@ const Help = () => {
   }
 
   const contextLabel = helpContextPathRef.current ? getHelpContextLabel(helpContextPathRef.current) : null
+  const helpDocZenith = selectedSection?.id === 'zenith'
 
   // Ensure we have a valid section before rendering
   if (!selectedSection) {
@@ -218,6 +238,7 @@ const Help = () => {
                 sections={helpSections}
                 selectedSection={selectedSection}
                 onSectionSelect={handleSectionSelect}
+                sectionSubNav={helpSectionSubNav}
               />
             )}
           </div>
@@ -267,14 +288,18 @@ const Help = () => {
                               key={selectedSection?.id ?? 'help'}
                               remarkPlugins={[remarkGfm]}
                               components={{
-                      h1: ({ children, ...props }) => (
-                        <h1
-                          className="zenith-display mb-6 mt-0 border-b border-[color:var(--border-default)] bg-gradient-to-r from-[color:var(--accent-gold)] via-[color:var(--accent-amber)] to-[color:var(--accent-teal)] bg-clip-text pb-4 text-2xl font-extrabold tracking-tight text-transparent sm:text-3xl"
-                          {...props}
-                        >
-                          {children}
-                        </h1>
-                      ),
+                      h1: ({ children, ...props }) => {
+                        const id = slugifyHeadingLabel(textFromChildren(children))
+                        return (
+                          <h1
+                            id={id}
+                            className="zenith-display scroll-mt-28 mb-6 mt-0 border-b border-[color:var(--border-default)] bg-gradient-to-r from-[color:var(--accent-gold)] via-[color:var(--accent-amber)] to-[color:var(--accent-teal)] bg-clip-text pb-4 text-2xl font-extrabold tracking-tight text-transparent sm:text-3xl"
+                            {...props}
+                          >
+                            {children}
+                          </h1>
+                        )
+                      },
                       h2: ({ children, ...props }) => {
                         const id = slugifyHeadingLabel(textFromChildren(children))
                         return (
@@ -292,7 +317,11 @@ const Help = () => {
                         return (
                           <h3
                             id={id}
-                            className="scroll-mt-24 mb-2 mt-7 border-l-4 border-[color:var(--accent-teal)] pl-3 text-base font-semibold text-[color:var(--text-primary)] sm:text-lg"
+                            className={
+                              helpDocZenith
+                                ? 'scroll-mt-28 mb-2 mt-9 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-input)] px-4 py-3 text-base font-bold text-[color:var(--text-primary)] shadow-sm ring-1 ring-[color:var(--border-default)]/60 sm:text-lg'
+                                : 'scroll-mt-24 mb-2 mt-7 border-l-4 border-[color:var(--accent-teal)] pl-3 text-base font-semibold text-[color:var(--text-primary)] sm:text-lg'
+                            }
                             {...props}
                           >
                             {children}
@@ -304,7 +333,11 @@ const Help = () => {
                         return (
                           <h4
                             id={id}
-                            className="scroll-mt-20 mb-2 mt-5 text-base font-semibold text-[color:var(--text-primary)]"
+                            className={
+                              helpDocZenith
+                                ? 'scroll-mt-24 mb-2 mt-6 text-[15px] font-semibold text-[color:var(--text-primary)] sm:text-base'
+                                : 'scroll-mt-20 mb-2 mt-5 text-base font-semibold text-[color:var(--text-primary)]'
+                            }
                             {...props}
                           >
                             {children}
@@ -312,7 +345,14 @@ const Help = () => {
                         )
                       },
                       p: ({ ...props }) => (
-                        <p className="mb-4 text-[15px] leading-relaxed text-[color:var(--text-secondary)]" {...props} />
+                        <p
+                          className={
+                            helpDocZenith
+                              ? 'mb-4 text-[15px] leading-[1.65] text-[color:var(--text-secondary)] sm:text-[0.9375rem]'
+                              : 'mb-4 text-[15px] leading-relaxed text-[color:var(--text-secondary)]'
+                          }
+                          {...props}
+                        />
                       ),
                       ul: ({ ...props }) => (
                         <ul
@@ -333,13 +373,38 @@ const Help = () => {
                         <strong className="font-semibold text-[color:var(--text-primary)]" {...props} />
                       ),
                       hr: () => (
-                        <hr className="mx-auto my-8 h-px max-w-lg rounded-full border-0 bg-gradient-to-r from-transparent via-[color:var(--border-strong)] to-transparent" />
+                        <hr
+                          className={
+                            helpDocZenith
+                              ? 'mx-auto my-10 h-px max-w-md rounded-full border-0 bg-gradient-to-r from-transparent via-[color:var(--accent-teal)]/35 to-transparent'
+                              : 'mx-auto my-8 h-px max-w-lg rounded-full border-0 bg-gradient-to-r from-transparent via-[color:var(--border-strong)] to-transparent'
+                          }
+                        />
                       ),
-                      code: ({ inline, ...props }: React.ComponentProps<'code'> & { inline?: boolean }) => {
+                      code: ({
+                        inline,
+                        className,
+                        children,
+                        ...props
+                      }: React.ComponentProps<'code'> & { inline?: boolean }) => {
                         if (inline) {
                           return (
                             <code
                               className="rounded-md border border-[color:var(--border-default)] bg-[color:var(--bg-badge)] px-1.5 py-0.5 font-mono text-sm text-[color:var(--accent-gold)]"
+                              {...props}
+                            >
+                              {children}
+                            </code>
+                          )
+                        }
+                        if (
+                          typeof className === 'string' &&
+                          className.includes('language-deal-health-figure')
+                        ) {
+                          return (
+                            <code
+                              className={className}
+                              data-help="deal-health-figure"
                               {...props}
                             />
                           )
@@ -348,15 +413,28 @@ const Help = () => {
                           <code
                             className="mb-4 block overflow-x-auto rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] p-4 font-mono text-sm text-[color:var(--text-primary)] shadow-inner"
                             {...props}
-                          />
+                          >
+                            {children}
+                          </code>
                         )
                       },
-                      pre: ({ ...props }) => (
-                        <pre
-                          className="mb-4 overflow-x-auto rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] p-4 text-[color:var(--text-primary)] shadow-inner"
-                          {...props}
-                        />
-                      ),
+                      pre: ({ children, ...props }) => {
+                        const first = React.Children.toArray(children)[0]
+                        if (
+                          React.isValidElement(first) &&
+                          (first.props as { 'data-help'?: string })['data-help'] === 'deal-health-figure'
+                        ) {
+                          return <DealHealthScoreHelpIllustration />
+                        }
+                        return (
+                          <pre
+                            className="mb-4 overflow-x-auto rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] p-4 text-[color:var(--text-primary)] shadow-inner"
+                            {...props}
+                          >
+                            {children}
+                          </pre>
+                        )
+                      },
                       a: (props: React.ComponentProps<'a'>) => {
                         const href = props.href ?? ''
                         const linkClass =
@@ -379,20 +457,24 @@ const Help = () => {
                           )
                         }
                         if (href.startsWith('/help/')) {
-                          const sectionKey = href
+                          const [pathOnly, frag] = href.split('#')
+                          const sectionKey = pathOnly
                             .replace('/help/', '')
                             .split('?')[0]
-                            .split('#')[0]
                             .replace(/\/$/, '')
                           const targetSection = helpSections.find((s) => s.routeKey === sectionKey)
                           if (targetSection) {
+                            const hashSuffix = frag
+                              ? `#${encodeURIComponent(decodeURIComponent(frag))}`
+                              : ''
                             return (
                               <a
                                 {...props}
                                 href="#"
                                 onClick={(e) => {
                                   e.preventDefault()
-                                  handleSectionSelect(targetSection)
+                                  helpContextPathRef.current = null
+                                  navigate(`/help/${targetSection.routeKey}${hashSuffix}`)
                                 }}
                                 className={`${linkClass} cursor-pointer`}
                               />
@@ -430,7 +512,13 @@ const Help = () => {
                         )
                       },
                       table: ({ ...props }) => (
-                        <div className="mb-6 overflow-x-auto rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] shadow-md">
+                        <div
+                          className={
+                            helpDocZenith
+                              ? 'mb-7 overflow-x-auto rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-input)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]/50'
+                              : 'mb-6 overflow-x-auto rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] shadow-md'
+                          }
+                        >
                           <table
                             className="min-w-full border-collapse text-[13px] sm:text-sm"
                             {...props}

@@ -62,7 +62,7 @@ When focus is **not** in a text field, **textarea**, **select**, or **contentedi
 
 On a **Help** page, **Esc** returns you to the **Dashboard**.
 
-The same table is maintained under [Analytics & Reports → Keyboard shortcuts](/help/analytics#keyboard-shortcuts) and [Getting Started → Keyboard shortcuts](/help/getting-started#keyboard-shortcuts).
+The same table is maintained under [Dashboard → Keyboard shortcuts](/help/dashboard#keyboard-shortcuts) and [Getting Started → Keyboard shortcuts](/help/getting-started#keyboard-shortcuts).
 
 ### User Actions Menu
 

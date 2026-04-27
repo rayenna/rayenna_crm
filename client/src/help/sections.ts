@@ -7,13 +7,54 @@ export interface HelpSection {
   routePatterns?: string[] // Routes that should show this help section
 }
 
+/** Sidebar sub-links under a help section (hash = `slugifyHeadingLabel` of the target H1 in that page). */
+export type HelpSubNavItem = { label: string; hash: string }
+
+export const helpSectionSubNav: Partial<Record<string, HelpSubNavItem[]>> = {
+  modules: [
+    { label: 'Customer Master', hash: 'customer-master-module' },
+    { label: 'Projects', hash: 'projects-module' },
+    { label: 'Support Tickets', hash: 'support-tickets-module' },
+    { label: 'Tally Export', hash: 'tally-export-module' },
+  ],
+}
+
+/**
+ * When opening Help from a module route, scroll target inside /help/modules.
+ * Hashes must match H1 titles in `content/modules/index.md` (see `slugifyHeadingLabel` in Help.tsx).
+ */
+export function getHelpHashForRoute(currentPath: string): string | null {
+  if (currentPath === '/customers' || currentPath.startsWith('/customers/')) return 'customer-master-module'
+  if (currentPath === '/projects' || currentPath.startsWith('/projects/')) return 'projects-module'
+  if (currentPath === '/support-tickets' || currentPath.startsWith('/support-tickets/')) {
+    return 'support-tickets-module'
+  }
+  if (currentPath === '/tally-export' || currentPath.startsWith('/tally-export/')) return 'tally-export-module'
+  return null
+}
+
+/**
+ * URL fragments that belong to the classic **Dashboard** help page (`/help/dashboard`).
+ * Used to redirect legacy `/help/analytics#…` links to Dashboard vs Zenith help.
+ */
+export const dashboardHelpAnchors = new Set([
+  'dashboard-filters',
+  'things-needing-attention-dashboard',
+  'quick-access-tiles',
+  'payment-status-card',
+  'proposal-engine-card',
+  'layout-by-role',
+  'charts-and-visualizations',
+  'classic-dashboard-chart-click-through-to-projects',
+  'keyboard-shortcuts',
+])
+
 export const helpSections: HelpSection[] = [
   {
     id: 'getting-started',
     title: 'Getting Started',
     routeKey: 'getting-started',
     markdownPath: '/help-docs/getting-started/index.md',
-    routePatterns: ['/dashboard']
   },
   {
     id: 'roles',
@@ -29,11 +70,18 @@ export const helpSections: HelpSection[] = [
     routePatterns: ['/customers', '/projects', '/users', '/tally-export']
   },
   {
-    id: 'analytics',
-    title: 'Analytics',
-    routeKey: 'analytics',
-    markdownPath: '/help-docs/analytics/index.md',
-    routePatterns: ['/dashboard', '/zenith']
+    id: 'dashboard',
+    title: 'Dashboard',
+    routeKey: 'dashboard',
+    markdownPath: '/help-docs/dashboard/index.md',
+    routePatterns: ['/dashboard'],
+  },
+  {
+    id: 'zenith',
+    title: 'Zenith',
+    routeKey: 'zenith',
+    markdownPath: '/help-docs/zenith/index.md',
+    routePatterns: ['/zenith'],
   },
   {
     id: 'training',
@@ -56,10 +104,10 @@ export const helpSections: HelpSection[] = [
   }
 ]
 
-// Route to help section mapping (Dashboard opens Analytics for context-sensitive help)
+// Route to help section mapping (context-sensitive Help)
 export const routeToHelpMapping: Record<string, string> = {
-  '/dashboard': 'analytics',
-  '/zenith': 'analytics',
+  '/dashboard': 'dashboard',
+  '/zenith': 'zenith',
   '/customers': 'modules',
   '/projects': 'modules',
   '/support-tickets': 'modules',

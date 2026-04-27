@@ -38,28 +38,28 @@ export default function DashboardLifecycleBrandReminder({
 
   return (
     <section
-      className="min-w-0 rounded-lg border border-slate-200/90 bg-white/90 shadow-sm backdrop-blur-sm"
+      className="min-w-0 rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:rounded-2xl"
       role="region"
       aria-labelledby="dashboard-notice-board-heading"
     >
-      <div className="flex gap-2.5 border-l-[3px] border-amber-500/80 py-2.5 pl-3 pr-3 sm:gap-3 sm:py-3 sm:pl-3.5 sm:pr-4">
+      <div className="flex gap-2.5 border-l-4 border-[color:var(--accent-gold)] py-2.5 pl-3 pr-3 sm:gap-3 sm:py-3 sm:pl-3.5 sm:pr-4">
         <ClipboardList
-          className="mt-0.5 h-4 w-4 shrink-0 text-amber-600/90"
+          className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--accent-gold)]"
           strokeWidth={2}
           aria-hidden
         />
         <div className="min-w-0 flex-1">
           <h2
             id="dashboard-notice-board-heading"
-            className="text-sm font-semibold leading-tight text-slate-800"
+            className="text-sm font-semibold leading-tight text-[color:var(--text-primary)]"
           >
             Things Needing Immediate Attention
           </h2>
-          <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-slate-500">
-            Lifecycle — panel &amp; inverter brands
+          <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-[color:var(--text-muted)]">
+            Lifecycle — panel & inverter brands
           </p>
-          <p className="mt-1.5 text-xs leading-snug text-slate-600 sm:text-[13px] sm:leading-relaxed">
-            <span className="font-medium text-slate-700">{missing.length}</span>
+          <p className="mt-1.5 text-xs leading-snug text-[color:var(--text-secondary)] sm:text-[13px] sm:leading-relaxed">
+            <span className="font-medium text-[color:var(--text-primary)]">{missing.length}</span>
             {' project'}
             {missing.length === 1 ? '' : 's'} in Under Installation, Completed, or Completed – Subsidy Credited
             {' — '}
@@ -67,14 +67,14 @@ export default function DashboardLifecycleBrandReminder({
             {nameList ? (
               <>
                 {' · '}
-                <span className="text-slate-700">{nameList}</span>
+                <span className="text-[color:var(--text-primary)]">{nameList}</span>
               </>
             ) : null}
             .
           </p>
           <Link
             to={projectsHref}
-            className="mt-1.5 inline-block text-xs font-medium text-primary-600 underline decoration-primary-600/30 underline-offset-2 transition hover:text-primary-700 hover:decoration-primary-600/60 sm:text-[13px]"
+            className="mt-1.5 inline-block text-xs font-semibold text-[color:var(--accent-teal)] underline decoration-[color:color-mix(in_srgb,var(--accent-teal)_45%,transparent)] underline-offset-2 transition hover:text-[color:var(--text-primary)] hover:decoration-[color:var(--accent-teal)] sm:text-[13px]"
           >
             Open in Projects
           </Link>

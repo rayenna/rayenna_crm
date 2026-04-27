@@ -14,17 +14,17 @@ The Rayenna CRM is a comprehensive customer relationship management system desig
 2. **Dashboard**: View your personalized dashboard based on your role
 3. **Navigation**: Use the top navigation menu to access different modules
 4. **Proposals**: From a project in Proposal or Confirmed stage, click **Proposals (New)** to open the Proposal Engine and work on Costing, BOM, ROI, and Proposal
-5. **Zenith**: Open **Zenith ✦** from the Dashboard menu for Rayenna’s full-screen **command center** — same FY / Quarter / Month rules as the dashboard, **AI Insights**, **The Board** (click totals or rows for deal lists), **Deal flow funnel** (click stages or payment pills), **collapsible Your Focus** (pipeline, payment radar, installation pulse, **Proposal Engine** buckets for eligible roles), **Revenue forecast** (stage-weighted pipeline), **Explore** charts with a **Quick Actions** drawer, **Open in Projects →** when you need the full **Projects** grid with the same filters, optional **Victory** toast, and animated KPIs. In **Quick Actions** and **Operations** single-project drawers, a **Payment** line after **Deal value** shows **status**, **total received**, and **balance** (or **N/A** when not applicable). Start at [Analytics → Zenith Command Center](/help/analytics#zenith-command-center); drill-down behaviour: [Explore charts & drill-down](/help/analytics#explore-charts-and-drill-down-zenith), [Deal flow funnel](/help/analytics#deal-flow-funnel-zenith), [The Board](/help/analytics#the-board-leaderboard), [Explorer batch limit](/help/analytics#explorer-batch-limit-zenith) if you have very large data volumes.
+5. **Zenith**: Open **Zenith ✦** from the Dashboard menu for Rayenna’s full-screen **command center** — same FY / Quarter / Month rules as the dashboard, **AI Insights**, **The Board** (click totals or rows for deal lists), **Deal flow funnel** (click stages or payment pills), **collapsible Your Focus** (pipeline, payment radar, installation pulse, **Proposal Engine** buckets for eligible roles), **Revenue forecast** (stage-weighted pipeline), **Explore** charts with a **Quick Actions** drawer, **Open in Projects →** when you need the full **Projects** grid with the same filters, optional **Victory** toast, and animated KPIs. In **Quick Actions** and **Operations** single-project drawers, a **Payment** line after **Deal value** shows **status**, **total received**, and **balance** (or **N/A** when not applicable). Start at [Zenith → Zenith Command Center](/help/zenith#zenith-command-center); drill-down behaviour: [Explore charts & drill-down](/help/zenith#explore-charts-and-drill-down-zenith), [Deal flow funnel](/help/zenith#deal-flow-funnel-zenith), [The Board](/help/zenith#the-board-leaderboard), [Explorer batch limit](/help/zenith#explorer-batch-limit-zenith) if you have very large data volumes.
 6. **Help**: Press **?** (when not typing in a field) or use **Help (?)** in the **user menu** for context-sensitive documentation; use **Search help…** on the Help page to find topics across sections
-7. **Tip of the Day**: Optional daily tips (Dashboard, Zenith, Projects, and more) — reopen anytime from the user menu → **Tip of the Day**; full behaviour is under [Analytics → Help and tips](/help/analytics#help-and-tips)
-8. **Keyboard shortcuts**: Use **Ctrl+Shift+** a letter (Windows/Linux) or **⌘⇧** on Mac to jump around the app — see [Keyboard shortcuts](#keyboard-shortcuts) below and [Analytics & Reports → Keyboard shortcuts](/help/analytics#keyboard-shortcuts)
+7. **Tip of the Day**: Optional daily tips (Dashboard, Zenith, Projects, and more) — reopen anytime from the user menu → **Tip of the Day**; full behaviour is under [Zenith → Help and tips](/help/zenith#help-and-tips)
+8. **Keyboard shortcuts**: Use **Ctrl+Shift+** a letter (Windows/Linux) or **⌘⇧** on Mac to jump around the app — see [Keyboard shortcuts](#keyboard-shortcuts) below and [Dashboard → Keyboard shortcuts](/help/dashboard#keyboard-shortcuts)
 
 ## Next Steps
 
 - Learn about [User Roles & Permissions](/help/roles)
 - Explore the [Modules](/help/modules)
-- Check out [Analytics & Reports](/help/analytics)
-- Try [Zenith — Command Center](/help/analytics#zenith-command-center) for immersive analytics; use [Revenue forecast](/help/analytics#revenue-forecast-wide-kpi-tile) and [FY revenue & profit chart](/help/analytics#revenue-and-profit-by-fy-chart-zenith) when you want the details
+- Check out **[Dashboard](/help/dashboard)** help (classic filters, Quick Access, charts)
+- Try [Zenith — Command Center](/help/zenith#zenith-command-center) for immersive analytics; use [Revenue forecast](/help/zenith#revenue-forecast-wide-kpi-tile) and [FY revenue & profit chart](/help/zenith#revenue-and-profit-by-fy-chart-zenith) when you want the details
 - Run or join a session using the **[Zenith training guide](/help/training)** — presentation-style facilitator material (**Sales-first**; all roles)
 - Learn [keyboard shortcuts](#keyboard-shortcuts) for faster navigation
 
@@ -32,7 +32,7 @@ The Rayenna CRM is a comprehensive customer relationship management system desig
 
 When focus is **not** in a text field, **textarea**, **select**, or **contenteditable** area:
 
-- **?** — Open **Help** for the current area (from Dashboard, opens Analytics; from Zenith, includes Zenith Command Center).
+- **?** — Open **Help** for the current area (from **Dashboard**, opens **Dashboard** help; from **Zenith**, opens **Zenith** help at **Zenith Command Center**).
 
 | Shortcut (Win/Linux) | Mac | Action |
 | :-- | :-- | :-- |
@@ -44,4 +44,4 @@ When focus is **not** in a text field, **textarea**, **select**, or **contentedi
 | Ctrl+Shift+M | ⌘⇧M | **New customer** — opens the create form (Sales, Management, Admin) |
 | Ctrl+Shift+E | ⌘⇧E | **New project** — opens the new-project screen (Admin, Sales). Route: projects/new |
 
-On a **Help** page, **Esc** returns you to the **Dashboard**. The same shortcuts are summarised under [Analytics & Reports → Keyboard shortcuts](/help/analytics#keyboard-shortcuts).
+On a **Help** page, **Esc** returns you to the **Dashboard**. The same shortcuts are summarised under [Dashboard → Keyboard shortcuts](/help/dashboard#keyboard-shortcuts).

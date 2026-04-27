@@ -4,13 +4,13 @@ import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import ThemeToggle from './ThemeToggle'
 import TipOfTheDay from './TipOfTheDay'
-import { getHelpSectionForRoute, helpSections } from '../help/sections'
+import { getHelpSectionForRoute, getHelpHashForRoute, helpSections } from '../help/sections'
 import { setSessionStorageItem } from '../lib/safeLocalStorage'
 import '../styles/zenith.css'
 import VictoryToast from './zenith/VictoryToast'
 import { useVictoryToast } from '../hooks/useVictoryToast'
 
-/** For `/help/analytics#foo`, `pathname` is `/help/analytics` and `hash` is `#foo`. */
+/** For `/help/dashboard#foo`, `pathname` is `/help/dashboard` and `hash` is `#foo`. */
 function isHelpMenuPathActive(itemPath: string, pathname: string, locHash: string): boolean {
   const i = itemPath.indexOf('#')
   if (i === -1) return pathname === itemPath
@@ -112,7 +112,11 @@ const Layout = () => {
     const section = helpSections.find((s) => s.id === sectionId)
     if (!section) return '/help'
     if (location.pathname.startsWith('/zenith')) {
-      return `/help/${section.routeKey}#zenith-command-center`
+      return `/help/zenith#zenith-command-center`
+    }
+    const moduleHash = sectionId === 'modules' ? getHelpHashForRoute(location.pathname) : null
+    if (moduleHash) {
+      return `/help/${section.routeKey}#${moduleHash}`
     }
     return `/help/${section.routeKey}`
   }, [location.pathname])

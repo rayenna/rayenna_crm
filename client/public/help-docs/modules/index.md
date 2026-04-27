@@ -8,10 +8,10 @@ The Rayenna CRM consists of several key modules designed to manage different asp
 
 ### Dashboard
 - Role-based dashboards, KPI tiles, and **Quick Access** (metric cards plus **Payment Status**; **Proposal Engine** summary on Sales and Management)
-- **Charts → Projects:** On the classic Dashboard, **click** bars, pie slices, FY columns (revenue vs profit separately), **Availing Loan by Bank** bars, **panel / inverter brand** bars (Sales, Management, Admin, Operations), or **Customer profitability** words / **Top 10** rows to open **Projects** with matching filters and your dashboard dates — see [Analytics → Classic Dashboard chart click-through](/help/analytics#classic-dashboard-chart-click-through-to-projects)
-- **Filters:** Financial Year, Quarter, and Month — see [Analytics & Reports](/help/analytics) for Quick Access layout, Payment rows, Proposal Engine buckets, and charts
-- **Things needing attention** — **Sales**, **Operations**, and **Admin** may see a compact notice on the classic Dashboard when late-stage projects are missing **panel and/or inverter brand**; **Zenith** [daily briefing](/help/analytics#daily-briefing-zenith) can show the same reminder for **Sales**, **Admin**, and **Operations** (not **Management** / **Finance**). Details: [Analytics → Things needing attention](/help/analytics#things-needing-attention-dashboard).
-- **[Zenith ✦](/help/analytics#zenith-command-center)** — full-screen command center (same filters), **The Board** leaderboard (Month / Quarter / FY + clickable drill-down lists), **collapsible Your Focus**, **Today’s Hit List** (pipeline-style **filters + sort** on up to seven urgent deals; **scroll / Open →** hint on **tablet/desktop**; **Quick Actions**), **Revenue forecast**, **Explore** chart drill-downs, **Availing Loan** KPI → **Quick Actions** list (Finance + executive Zenith), **Payment radar** **Top overdue** helper text (**project name** vs **Remind**), **Victory** toast on winning stage changes, and **Quick Actions** (**Sales** + salesperson on drawer headers and list rows; **Recent remarks** above **Log activity** in single-project drawers; **Payment** snapshot after **Deal value** on **Quick Actions** and **Operations** drawers when a single project is open — **N/A** when payment does not apply); deep dive under Analytics → Zenith Command Center
+- **Charts → Projects:** On the classic Dashboard, **click** bars, pie slices, FY columns (revenue vs profit separately), **Availing Loan by Bank** bars, **panel / inverter brand** bars (Sales, Management, Admin, Operations), or **Customer profitability** words / **Top 10** rows to open **Projects** with matching filters and your dashboard dates — see [Dashboard → Classic Dashboard chart click-through](/help/dashboard#classic-dashboard-chart-click-through-to-projects)
+- **Filters:** Financial Year, Quarter, and Month — see **[Dashboard](/help/dashboard)** help for Quick Access layout, Payment rows, Proposal Engine buckets, and charts
+- **Things needing attention** — **Sales**, **Operations**, and **Admin** may see a compact notice on the classic Dashboard when late-stage projects are missing **panel and/or inverter brand**; **Zenith** [daily briefing](/help/zenith#daily-briefing-zenith) can show the same reminder for **Sales**, **Admin**, and **Operations** (not **Management** / **Finance**). Details: [Dashboard → Things needing attention](/help/dashboard#things-needing-attention-dashboard).
+- **[Zenith ✦](/help/zenith#zenith-command-center)** — full-screen command center (same filters), **Solar News** (RSS headlines) and **AI Insights** tickers, **The Board** leaderboard (Month / Quarter / FY + clickable drill-down lists), **collapsible Your Focus**, **Today’s Hit List** (**Sl No.** / **Prj #**, pipeline-style **filters + sort** on up to seven urgent deals; **scroll / Open →** hint on **tablet/desktop**; **Quick Actions**), **Revenue forecast**, **Explore** chart drill-downs, **Availing Loan** KPI → **Quick Actions** list (Finance + executive Zenith), **Payment radar** (**Top overdue**, **Latest payments received**, **Finance quick drawer** on project name where wired, shared **payment status** legend, **Remind**), **Victory** toast on winning stage changes, and **Quick Actions** (**Sales** + salesperson on drawer headers and list rows; **Recent remarks** above **Log activity** in single-project drawers; **Payment** snapshot after **Deal value** on **Quick Actions** and **Operations** drawers when a single project is open — **N/A** when payment does not apply); deep dive under **[Zenith](/help/zenith#zenith-command-center)** help
 - **[Zenith training guide](/help/training)** — facilitator-led and self-study material for end-user sessions (**Sales-first**; all roles)
 - Visual analytics (charts vary by role)
 
@@ -352,13 +352,7 @@ The score is **computed in the app** from five factors: **Activity** (last updat
 
 The total is the **sum** of five parts. Each part has a **maximum**; the overall score is **capped at 100**.
 
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  DEAL HEALTH  =  Activity  +  Momentum  +  Deal value  +  Close date  +  Source │
-│                 (max 30)      (max 25)     (max 20)       (max 15)      (max 10) │
-│                                                                                 │
-│                         └── All five add together → 0–100 ──┘                   │
-└─────────────────────────────────────────────────────────────────────────────┘
+```deal-health-figure
 ```
 
 | Factor (label on the card) | Max pts | In plain words |

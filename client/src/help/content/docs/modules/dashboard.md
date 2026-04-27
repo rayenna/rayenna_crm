@@ -38,7 +38,7 @@ The Dashboard is a comprehensive analytics and monitoring interface that display
 
 **Sales**, **Operations**, and **Admin** may see a compact notice **above** the main KPI / Quick Access area titled **Things Needing Immediate Attention** when at least one project in **Under Installation**, **Completed**, or **Completed – Subsidy Credited** is missing **panel brand and/or inverter brand** in **Project Lifecycle**. **Management** users (same executive-style layout as Admin for other tiles) **do not** see this strip.
 
-The notice respects your **Financial Year**, **Quarter**, and **Month** filters, shows how many projects qualify and **customer names** (truncated when there are many), and links to **Open in Projects** with those three statuses and the same dates. For the same data-quality signal inside **Zenith**, see **Help → Analytics → [Daily briefing (Zenith)](/help/analytics#daily-briefing-zenith)** and **[Panel and inverter brand charts](/help/analytics#panel-and-inverter-brand-charts-zenith)**.
+The notice respects your **Financial Year**, **Quarter**, and **Month** filters, shows how many projects qualify and **customer names** (truncated when there are many), and links to **Open in Projects** with those three statuses and the same dates. For the same data-quality signal inside **Zenith**, see **Help → Zenith → [Daily briefing (Zenith)](/help/zenith#daily-briefing-zenith)** and **[Panel and inverter brand charts](/help/zenith#panel-and-inverter-brand-charts-zenith)**.
 
 ## KPI Tiles
 
@@ -635,7 +635,7 @@ Charts provide visual representations of your data, making it easier to understa
 
 Most dashboard **charts are interactive**: click a **bar**, **grouped FY bar** (blue revenue vs green profit separately), **pie slice**, **word** in the profitability cloud, or a **Top 10** table row to open the **Projects** page with filters that match what you clicked, plus the dashboard **Financial Year**, **Quarter**, and **Month** when applicable. Chart tooltips often remind you with **Click to open Projects →** (or similar).
 
-This uses the **same slice ideas** as **Zenith** where both exist; the difference is that the classic Dashboard navigates **directly** to Projects, while Zenith usually opens **Quick Actions** first and offers **Open in Projects →** in the drawer. For deeper behaviour and edge cases, see **Help → Analytics and Reports → [Classic Dashboard — chart click-through](/help/analytics#classic-dashboard-chart-click-through-to-projects)**.
+This uses the **same slice ideas** as **Zenith** where both exist; the difference is that the classic Dashboard navigates **directly** to Projects, while Zenith usually opens **Quick Actions** first and offers **Open in Projects →** in the drawer. For deeper behaviour and edge cases, see **Help → Dashboard → [Classic Dashboard — chart click-through](/help/dashboard#classic-dashboard-chart-click-through-to-projects)**.
 
 ### Common Charts
 

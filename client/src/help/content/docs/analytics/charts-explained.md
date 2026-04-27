@@ -9,7 +9,7 @@ Analytics charts in Rayenna CRM transform your business data into visual represe
 On the **classic Dashboard** (the main role-based home screen), **most charts are clickable**. Click a **bar**, **FY column** (click the **blue** revenue bar or the **green** profit bar separately), **pie slice**, **financing bank bar**, **panel or inverter brand bar**, a **word** in the **Customer profitability** cloud, or a row in **Top 10** to navigate to **Projects** with filters that match that slice and your dashboard **FY / Quarter / Month**.
 
 - Tooltips often say **Click to open Projects →** (or similar).
-- **Zenith** uses the same slice definitions for many charts but usually opens **Quick Actions** first; use **Open in Projects →** there. See [Analytics and Reports → Classic Dashboard chart click-through](/help/analytics#classic-dashboard-chart-click-through-to-projects) and [Zenith Explore charts](/help/analytics#explore-charts-and-drill-down-zenith).
+- **Zenith** uses the same slice definitions for many charts but usually opens **Quick Actions** first; use **Open in Projects →** there. See [Dashboard → Classic Dashboard chart click-through](/help/dashboard#classic-dashboard-chart-click-through-to-projects) and [Zenith → Explore charts](/help/zenith#explore-charts-and-drill-down-zenith).
 
 ## Project Value & Profit by Financial Year
 
@@ -611,7 +611,7 @@ On the **classic Dashboard**, **Sales**, **Management**, **Admin**, and **Operat
 
 The same charts appear under **Zenith → Explore the landscape** on **executive** Zenith (**Sales**, **Management**, **Admin**) and **Operations** Zenith.
 
-**Hover** a bar to see: **brand** name, **project count**, **Order value (sum)**, **System capacity (sum)** in **kW** (total installed capacity recorded on those projects; shows **—** if none), an estimated **panel** or **inverter** cost line, and a hint to **click through**. On **Zenith**, the drill opens **Quick Actions**; on the **classic Dashboard**, the same bars jump straight to **Projects**. Full behaviour: [Analytics and Reports → Panel and inverter brand charts](/help/analytics#panel-and-inverter-brand-charts-zenith).
+**Hover** a bar to see: **brand** name, **project count**, **Order value (sum)**, **System capacity (sum)** in **kW** (total installed capacity recorded on those projects; shows **—** if none), an estimated **panel** or **inverter** cost line, and a hint to **click through**. On **Zenith**, the drill opens **Quick Actions**; on the **classic Dashboard**, the same bars jump straight to **Projects**. Full behaviour: [Zenith → Panel and inverter brand charts](/help/zenith#panel-and-inverter-brand-charts-zenith).
 
 ---
 

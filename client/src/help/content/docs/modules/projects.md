@@ -879,13 +879,7 @@ The score is **computed in the app** from five factors: **Activity** (last updat
 
 The total is the **sum** of five parts. Each part has a **maximum**; the overall score is **capped at 100**.
 
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  DEAL HEALTH  =  Activity  +  Momentum  +  Deal value  +  Close date  +  Source │
-│                 (max 30)      (max 25)     (max 20)       (max 15)      (max 10) │
-│                                                                                 │
-│                         └── All five add together → 0–100 ──┘                   │
-└─────────────────────────────────────────────────────────────────────────────┘
+```deal-health-figure
 ```
 
 | Factor (label on the card) | Max pts | In plain words |
