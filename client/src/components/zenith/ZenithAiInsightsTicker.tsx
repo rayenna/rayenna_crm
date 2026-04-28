@@ -89,7 +89,7 @@ export default function ZenithAiInsightsTicker({
     <div className="zenith-ai-insights-root border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 96%, transparent)]">
       <div className="zenith-exec-main mx-auto px-3 sm:px-5 py-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 min-h-0">
         <div className="flex items-center justify-center sm:justify-start shrink-0">
-          <span className="zenith-display text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--accent-gold)] opacity-70 inline-flex items-center gap-1.5">
+          <span className="zenith-display text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.22em] inline-flex items-center gap-1.5">
             <span
               className="zenith-command-live-dot"
               style={{
@@ -98,11 +98,13 @@ export default function ZenithAiInsightsTicker({
               }}
               aria-hidden
             />
-            AI insights
+            <span className="bg-gradient-to-r from-[color:var(--accent-gold)] via-[color:var(--accent-amber)] to-[color:var(--accent-teal)] bg-clip-text text-transparent drop-shadow-[0_1px_10px_color-mix(in_srgb,var(--accent-teal)_24%,transparent)]">
+              AI insights
+            </span>
           </span>
         </div>
         <div
-          className="zenith-ai-insights-viewport flex-1 min-w-0 min-h-[44px] sm:min-h-0 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-input)] py-2 sm:py-1.5 flex items-center"
+          className="zenith-ai-insights-viewport flex-1 min-w-0 min-h-[44px] sm:min-h-0 rounded-full bg-transparent py-2 sm:py-1.5 flex items-center"
           role="region"
           aria-label="AI insights, auto-scrolling"
         >

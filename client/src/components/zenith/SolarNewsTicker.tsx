@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import axiosInstance from '../../utils/axios'
 import HelpTooltip from '../help/HelpTooltip'
+import { Cpu, Leaf, Rss, Scale, TrendingUp, Zap } from 'lucide-react'
 
 type SolarNewsTag = 'policy' | 'grid' | 'market' | 'tech' | 'agri'
 
@@ -70,6 +71,23 @@ function tagStyle(tag: SolarNewsTag): { fg: string; bg: string } {
       return { fg: 'var(--accent-green)', bg: 'color-mix(in srgb, var(--accent-green) 16%, transparent)' }
     default:
       return { fg: 'var(--accent-gold)', bg: 'var(--accent-gold-muted)' }
+  }
+}
+
+function tagIcon(tag: SolarNewsTag) {
+  switch (tag) {
+    case 'policy':
+      return Scale
+    case 'grid':
+      return Zap
+    case 'market':
+      return TrendingUp
+    case 'tech':
+      return Cpu
+    case 'agri':
+      return Leaf
+    default:
+      return Rss
   }
 }
 
@@ -194,7 +212,7 @@ export default function SolarNewsTicker({
 
       <div className="zenith-exec-main mx-auto px-3 sm:px-5 py-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 min-h-0">
         <div className="flex items-center justify-center sm:justify-start shrink-0 gap-1">
-          <span className="zenith-display text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--accent-gold)] opacity-70 inline-flex items-center gap-1.5">
+          <span className="zenith-display text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.22em] inline-flex items-center gap-1.5">
             <span
               className="zenith-solar-news-dot"
               style={{
@@ -206,7 +224,9 @@ export default function SolarNewsTicker({
               }}
               aria-hidden
             />
-            Solar news
+            <span className="bg-gradient-to-r from-[color:var(--accent-gold)] via-[color:var(--accent-amber)] to-[color:var(--accent-teal)] bg-clip-text text-transparent drop-shadow-[0_1px_10px_color-mix(in_srgb,var(--accent-gold)_24%,transparent)]">
+              Solar news
+            </span>
           </span>
           <HelpTooltip
             helpKey="zenith.solar-news"
@@ -217,7 +237,7 @@ export default function SolarNewsTicker({
         </div>
 
         <div
-          className="zenith-solar-news-viewport flex-1 min-w-0 min-h-[44px] sm:min-h-0 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-input)] py-2 sm:py-1.5 flex items-center overflow-hidden"
+          className="zenith-solar-news-viewport flex-1 min-w-0 min-h-[44px] sm:min-h-0 rounded-full bg-transparent py-2 sm:py-1.5 flex items-center overflow-hidden"
           role="region"
           aria-label="Solar news, auto-scrolling"
         >
@@ -233,6 +253,7 @@ export default function SolarNewsTicker({
             >
               {marqueeItems.map((it, idx) => {
                 const t = tagStyle(it.tag)
+                const Icon = tagIcon(it.tag)
                 const key = `${it.id}:${idx}`
                 return (
                   <button
@@ -240,31 +261,26 @@ export default function SolarNewsTicker({
                     type="button"
                     className="zenith-solar-news-item inline-flex items-center gap-2 bg-transparent border-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] rounded-full px-2 py-2 min-h-[44px] sm:min-h-0 sm:py-1 sm:px-1 touch-manipulation"
                     onClick={() => open(it.url)}
-                    aria-label={`${it.source}: ${it.headline}`}
+                    aria-label={`${it.tag}: ${it.headline}`}
                   >
                     <span
+                      className="inline-flex items-center justify-center rounded-full border shadow-sm shrink-0"
                       style={{
-                        fontFamily:
-                          '"Space Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                        fontSize: 9,
-                        letterSpacing: '0.07em',
-                        textTransform: 'uppercase',
-                        color: 'var(--accent-gold)',
-                        opacity: 0.96,
+                        width: 24,
+                        height: 24,
+                        color: t.fg,
+                        background: `color-mix(in srgb, ${t.bg} 82%, transparent)`,
+                        borderColor: `color-mix(in srgb, ${t.fg} 38%, var(--border-default))`,
+                        boxShadow: `0 0 0 2px color-mix(in srgb, ${t.fg} 14%, transparent), 0 10px 16px -12px color-mix(in srgb, ${t.fg} 44%, transparent)`,
                       }}
+                      aria-hidden
+                      title={`Solar news — ${it.tag}`}
                     >
-                      {it.source}
+                      <Icon size={13} strokeWidth={2.2} />
                     </span>
 
                     <span
-                      className="zenith-solar-news-headline"
-                      style={{
-                        fontFamily: 'DM Sans, system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
-                        fontSize: 11.5,
-                        color:
-                          'color-mix(in srgb, var(--text-primary) 78%, var(--text-secondary) 22%)',
-                        lineHeight: '16px',
-                      }}
+                      className="zenith-solar-news-headline text-left text-[12px] sm:text-[13px] font-medium text-[color:var(--accent-gold)] active:opacity-90 sm:hover:opacity-90 transition-colors"
                     >
                       {it.headline}
                     </span>
