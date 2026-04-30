@@ -11,7 +11,7 @@ import {
   Cell,
   Legend,
 } from 'recharts'
-import { Zap, TrendingUp, IndianRupee, Target, Percent, Landmark } from 'lucide-react'
+import { XCircle, Zap, TrendingUp, IndianRupee, Target, Percent, Landmark } from 'lucide-react'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
 import { ProjectStatus, UserRole } from '../../types'
@@ -57,7 +57,7 @@ import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChar
 import { buildZenithLifecycleBrandBarRows } from '../../utils/zenithPanelInverterBrandChartData'
 import ZenithLifecycleBrandBarCharts from './ZenithLifecycleBrandBarCharts'
 
-const icons = [Zap, TrendingUp, IndianRupee, Target, Percent, Landmark]
+const icons = [Zap, TrendingUp, IndianRupee, Target, Percent, Landmark, XCircle]
 const DEFAULT_MONTHLY_TARGET_KW = 50
 const SALES_MONTHLY_TARGET_KW = 25
 
@@ -214,6 +214,8 @@ export default function ZenithExecutiveBody({
 
   const explorerProjects = (data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]
   const availingLoanProjectsUrl = buildProjectsUrl({ availingLoan: true }, dateFilter)
+  const lostProjectsUrl = buildProjectsUrl({ status: [ProjectStatus.LOST] }, dateFilter)
+  const showLostKpi = role === UserRole.ADMIN || role === UserRole.MANAGEMENT
 
   const drill = useCallback(
     (dimension: ZenithChartDrilldownDimension, value: string, opts?: DrilldownOpts) => {
@@ -302,6 +304,16 @@ export default function ZenithExecutiveBody({
       projectsPageHref: availingLoanProjectsUrl,
     })
   }, [explorerProjects, quickAction.openDrawerListMode, availingLoanProjectsUrl])
+
+  const onLostProjectsKpiClick = useCallback(() => {
+    const filtered = explorerProjects.filter((p) => p.projectStatus === ProjectStatus.LOST)
+    quickAction.openDrawerListMode({
+      filterLabel: 'Lost projects',
+      filteredProjects: filtered,
+      listAmountMode: 'deal_value',
+      projectsPageHref: lostProjectsUrl,
+    })
+  }, [explorerProjects, quickAction.openDrawerListMode, lostProjectsUrl])
 
   /** Match Hit List height to KPI grid on lg+. Row must use items-start (not stretch) so the grid keeps its natural height; if the row stretches the grid to the Hit List, offsetHeight equals the list and the widget never shrinks. */
   const kpiBandRef = useRef<HTMLDivElement>(null)
@@ -485,7 +497,11 @@ export default function ZenithExecutiveBody({
           <div
             id="zenith-kpis"
             ref={kpiBandRef}
-            className="grid min-w-0 flex-1 grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-2.5 sm:gap-3 scroll-mt-28 content-start lg:pb-0"
+            className={`grid min-w-0 flex-1 grid-cols-2 ${
+              showLostKpi
+                ? 'sm:grid-cols-4 lg:grid-cols-4'
+                : 'sm:grid-cols-3 lg:grid-cols-3'
+            } gap-2.5 sm:gap-3 scroll-mt-28 content-start lg:pb-0`}
           >
             {kpis.map((k, i) => (
               <div key={k.key} className="min-w-0 h-full">
@@ -500,12 +516,20 @@ export default function ZenithExecutiveBody({
                     item={k}
                     index={i}
                     icon={icons[i] ?? Zap}
-                    onClick={k.key === 'loan' ? onAvailingLoanKpiClick : undefined}
+                    onClick={
+                      k.key === 'loan'
+                        ? onAvailingLoanKpiClick
+                        : k.key === 'lost'
+                          ? onLostProjectsKpiClick
+                          : undefined
+                    }
                   />
                 )}
               </div>
             ))}
-            <div className="col-span-2 sm:col-span-3 min-w-0 shrink-0">
+            <div
+              className={`col-span-2 ${showLostKpi ? 'sm:col-span-4' : 'sm:col-span-3'} min-w-0 shrink-0`}
+            >
               <ForecastKPI
                 projects={explorerProjects}
                 onOpenForecastList={(args) =>
@@ -536,7 +560,13 @@ export default function ZenithExecutiveBody({
                   item={k}
                   index={i}
                   icon={icons[i] ?? Zap}
-                  onClick={k.key === 'loan' ? onAvailingLoanKpiClick : undefined}
+                  onClick={
+                    k.key === 'loan'
+                      ? onAvailingLoanKpiClick
+                      : k.key === 'lost'
+                        ? onLostProjectsKpiClick
+                        : undefined
+                  }
                 />
               )}
             </div>

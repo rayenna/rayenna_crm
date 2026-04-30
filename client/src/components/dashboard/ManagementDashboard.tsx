@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import axiosInstance from '../../utils/axios'
 import { getFriendlyApiErrorMessage } from '../../utils/axios'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
-import { FaUsers, FaCog, FaFileInvoice, FaCheckCircle, FaExclamationTriangle, FaClipboardList, FaUniversity } from 'react-icons/fa'
+import { FaUsers, FaCog, FaFileInvoice, FaCheckCircle, FaExclamationTriangle, FaClipboardList, FaUniversity, FaTimesCircle } from 'react-icons/fa'
 import { ProjectStatus } from '../../types'
 import ProjectValuePieChart from './ProjectValuePieChart'
 import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
@@ -157,7 +157,7 @@ const ManagementDashboard = ({
           </div>
 
           {/* Row 2 – execution (4 tiles) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 min-w-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5 min-w-0">
             <MetricCard
               title="Confirmed Orders"
               value={(data?.projectsByStatus?.find((p: any) => p.status === ProjectStatus.CONFIRMED)?.count) ?? 0}
@@ -188,6 +188,14 @@ const ManagementDashboard = ({
               icon={<FaCheckCircle />}
               gradient="from-yellow-500 to-amber-500"
               to={buildProjectsUrl({ status: [ProjectStatus.COMPLETED_SUBSIDY_CREDITED] }, tileParams)}
+              variant="zenith"
+            />
+            <MetricCard
+              title="Lost Projects"
+              value={(data as any)?.lostProjectsCount ?? 0}
+              icon={<FaTimesCircle />}
+              gradient="from-slate-600 to-rose-600"
+              to={buildProjectsUrl({ status: [ProjectStatus.LOST] }, tileParams)}
               variant="zenith"
             />
           </div>

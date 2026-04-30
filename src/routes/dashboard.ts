@@ -2119,6 +2119,9 @@ router.get('/management', authenticate, async (req: Request, res) => {
         ?.filter((p) => openDealsStatuses.includes(p.projectStatus as ProjectStatus))
         .reduce((sum, p) => sum + (p._count?.id || 0), 0) || 0;
 
+    const lostProjectsCount =
+      projectsByStatusRawMgmt?.find((p) => (p.projectStatus as ProjectStatus) === ProjectStatus.LOST)?._count?.id || 0;
+
     const projectsByPaymentStatus = await buildProjectsByPaymentStatus(where as Prisma.ProjectWhereInput);
 
     // Availing Loan count and profitabilityData from batch above
@@ -2205,6 +2208,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
       pipeline: { atRisk: openDealsCount },
       pipelineByLeadSource,
       pipelineByType: pipelineByTypeWithPercentage,
+      lostProjectsCount,
       projectsByStatus,
       zenithExplorerProjects,
     });

@@ -128,7 +128,10 @@ export function buildExecutiveZenithKpis(
   const loanChangePct =
     singleFYSelected && prevFinLoans != null ? pctChange(loans, prevFinLoans) : null
 
-  return [
+  const showLostKpi = role === UserRole.ADMIN || role === UserRole.MANAGEMENT
+  const lost = showLostKpi ? Number(data?.lostProjectsCount ?? 0) : 0
+
+  const base: ZenithKpiItem[] = [
     {
       key: 'capacity',
       label: 'Total Capacity',
@@ -183,6 +186,19 @@ export function buildExecutiveZenithKpis(
       sparkline: fySparkline(rows, () => loans),
     },
   ]
+
+  if (showLostKpi) {
+    base.push({
+      key: 'lost',
+      label: 'Lost Projects',
+      value: lost,
+      format: 'number',
+      changePct: null,
+      sparkline: fySparkline(rows, () => lost),
+    })
+  }
+
+  return base
 }
 
 interface OperationsPrevKpis {
