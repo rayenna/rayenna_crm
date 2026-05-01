@@ -282,6 +282,17 @@ export interface RoofLayoutArtifact {
   prefer_3d_for_proposal?: boolean;
 }
 
+/** Rich block inserted before the Bill of Quantities (persisted on proposal artifact). */
+export interface ProposalCustomSectionBeforeBoq {
+  id: string;
+  title: string;
+  /** Sanitized HTML fragment (bold, lists, links, images). */
+  bodyHtml: string;
+  /** Optional YouTube or direct https .mp4 URL — embedded in preview; Word export uses link (+ optional poster). */
+  mediaUrl?: string;
+  mediaPosterUrl?: string;
+}
+
 export interface ProposalArtifact {
   refNumber:   string;
   generatedAt: string;
@@ -293,6 +304,9 @@ export interface ProposalArtifact {
   editedHtml?: string;
   /** Per-section text overrides extracted from the edited DOM — used for DOCX export */
   textOverrides?: Record<string, string | undefined>;
+
+  /** Optional sections (title + rich body + optional video) rendered before the Bill of Quantities */
+  customSectionsBeforeBoq?: ProposalCustomSectionBeforeBoq[];
 
   /**
    * Full in-memory proposal view model (JSON snapshot) so the Proposal page can reopen
@@ -561,6 +575,7 @@ function pruneCustomerArtifacts(activeId: string | null): void {
           editedHtml: undefined,
           textOverrides: undefined,
           proposalView: undefined,
+          customSectionsBeforeBoq: next.proposal.customSectionsBeforeBoq,
           includeRoofLayout: next.proposal.includeRoofLayout,
           roofLayout: next.proposal.roofLayout ?? null,
           crmDocumentUrl: next.proposal.crmDocumentUrl,

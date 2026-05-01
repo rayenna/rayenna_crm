@@ -432,6 +432,7 @@ import type {
   BomArtifact,
   RoiArtifact,
   ProposalArtifact,
+  ProposalCustomSectionBeforeBoq,
   CustomerRecord,
   CustomerMaster,
 } from './customerStore';
@@ -870,6 +871,7 @@ export async function syncProjectProposal(
           bomComments: artifact.bomComments ?? null,
           editedHtml: artifact.editedHtml ?? null,
           textOverrides: artifact.textOverrides ?? null,
+          customSectionsBeforeBoq: artifact.customSectionsBeforeBoq ?? null,
           proposalView: artifact.proposalView ?? null,
           summary: artifact.summary ?? null,
           includeRoofLayout: artifact.includeRoofLayout ?? false,
@@ -927,6 +929,7 @@ interface ApiProposalArtifact {
   bomComments?: Record<string, string> | null;
   editedHtml?: string | null;
   textOverrides?: Record<string, string | undefined> | null;
+  customSectionsBeforeBoq?: unknown;
   proposalView?: unknown;
   summary?: string | null;
   includeRoofLayout?: boolean | null;
@@ -992,6 +995,9 @@ export function mapApiArtifactsToRecord(artifacts: ProposalEngineProjectDetailRe
           bomComments: artifacts.proposal.bomComments ?? undefined,
           editedHtml: artifacts.proposal.editedHtml ?? undefined,
           textOverrides: artifacts.proposal.textOverrides ?? undefined,
+          customSectionsBeforeBoq: Array.isArray(artifacts.proposal.customSectionsBeforeBoq)
+            ? (artifacts.proposal.customSectionsBeforeBoq as ProposalCustomSectionBeforeBoq[])
+            : undefined,
           proposalView: artifacts.proposal.proposalView ?? undefined,
           includeRoofLayout: !!artifacts.proposal.includeRoofLayout,
           roofLayout: artifacts.proposal.roofLayout

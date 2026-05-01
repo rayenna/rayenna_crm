@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
-import { ProjectStatus, UserRole } from '@prisma/client';
+import { Prisma, ProjectStatus, UserRole } from '@prisma/client';
 import * as Sentry from '@sentry/node';
 import bcrypt from 'bcryptjs';
 import prisma from '../prisma';
@@ -115,6 +115,7 @@ async function findLatestPeProposal(projectId: string) {
           bomComments: true,
           editedHtml: true,
           textOverrides: true,
+          customSectionsBeforeBoq: true,
           summary: true,
           includeRoofLayout: true,
           savedAt: true,
@@ -1126,6 +1127,28 @@ router.put(
         }
       }
 
+      const customSectionsPatch: { customSectionsBeforeBoq?: Prisma.InputJsonValue | typeof Prisma.DbNull } = {};
+      if (Object.prototype.hasOwnProperty.call(req.body, 'customSectionsBeforeBoq')) {
+        const raw = req.body.customSectionsBeforeBoq;
+        if (raw == null) {
+          customSectionsPatch.customSectionsBeforeBoq = Prisma.DbNull;
+        } else {
+          if (!Array.isArray(raw)) {
+            return res.status(400).json({ error: 'customSectionsBeforeBoq must be an array or null' });
+          }
+          const csBytes = Buffer.byteLength(JSON.stringify(raw), 'utf8');
+          if (csBytes > MAX_PROPOSAL_CUSTOM_SECTIONS_JSON_BYTES) {
+            return res.status(413).json({
+              error: 'Custom sections payload is too large to save. Remove images or shorten content.',
+              code: 'PROPOSAL_CUSTOM_SECTIONS_TOO_LARGE',
+              limitBytes: MAX_PROPOSAL_CUSTOM_SECTIONS_JSON_BYTES,
+              sizeBytes: csBytes,
+            });
+          }
+          customSectionsPatch.customSectionsBeforeBoq = raw as Prisma.InputJsonValue;
+        }
+      }
+
       const includeRoofLayout: boolean =
         typeof req.body.includeRoofLayout === 'boolean'
           ? req.body.includeRoofLayout
@@ -1138,6 +1161,7 @@ router.put(
         bomComments: req.body.bomComments ?? null,
         editedHtml,
         textOverrides: req.body.textOverrides ?? null,
+        ...customSectionsPatch,
         summary: req.body.summary ?? null,
         includeRoofLayout,
         ...(Object.prototype.hasOwnProperty.call(req.body, 'proposalView')
@@ -1243,6 +1267,7 @@ const MAX_PE_SHARES_PER_PROJECT = 10;
 const MAX_SHARE_HTML_BYTES = 2_000_000; // 2 MB (utf8). Safety guard against accidental multi-MB shares.
 const MAX_PROPOSAL_HTML_BYTES = 2_000_000; // 2 MB limit for stored proposal HTML as well.
 const MAX_PROPOSAL_VIEW_JSON_BYTES = 2_000_000; // 2 MB for serialized proposalView (sheet + BOM + ROI snapshot)
+const MAX_PROPOSAL_CUSTOM_SECTIONS_JSON_BYTES = 1_000_000; // 1 MB for custom rich sections before BOQ
 const MAX_COSTING_ROWS = 5000; // Very generous guard against accidental huge uploads.
 const MAX_BOM_ROWS = 8000; // Very generous guard.
 

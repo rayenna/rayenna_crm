@@ -23,7 +23,16 @@ import {
   getApiBaseUrl,
   fetchManualRoofLayout,
 } from '../lib/apiClient';
-import type { CostingArtifact, BomArtifact, RoiArtifact, ProposalArtifact } from '../lib/customerStore';
+import type {
+  CostingArtifact,
+  BomArtifact,
+  RoiArtifact,
+  ProposalArtifact,
+  ProposalCustomSectionBeforeBoq,
+} from '../lib/customerStore';
+import { normalizeCustomSectionsBeforeBoq, stripPeManagedSectionsFromDocHtml } from '../lib/proposalCustomSections';
+import { proposalCustomSectionsToDocxBlocks } from '../lib/proposalCustomSectionsDocx';
+import { CustomSectionsBeforeBoq } from '../components/CustomSectionsBeforeBoq';
 
 // ─────────────────────────────────────────────
 // Types
@@ -631,6 +640,8 @@ function buildDocx(
   textOverrides?: TextOverrides,
   roofLayout?: AiRoofLayoutResponse | null,
   roofLayoutImageData?: ArrayBuffer,
+  customSectionsBeforeBoq?: ProposalCustomSectionBeforeBoq[],
+  customSectionPostersById?: Record<string, ArrayBuffer | undefined>,
   docx?: DocxModule,
 ): import('docx').Document {
   if (!docx) {
@@ -1095,6 +1106,12 @@ function buildDocx(
       new Paragraph({ text: '', spacing: { after: 200 } }),
     ];
   })() : [];
+
+  const customBeforeBoqDocx = proposalCustomSectionsToDocxBlocks(
+    customSectionsBeforeBoq,
+    customSectionPostersById,
+    docx,
+  );
 
   // ── Commercials ──
   const grandTotal = p.sheet?.grandTotal ?? p.roiAutofill?.grandTotal ?? p.roi?.inputs.projectCost ?? 0;
@@ -1697,6 +1714,7 @@ function buildDocx(
     }),
     new Paragraph({ text: '', spacing: { after: 200 } }),
     ...roiSection,
+    ...customBeforeBoqDocx,
     ...bomSection,
     ...commercialsSection,
     heading('Client Scope'),
@@ -1809,6 +1827,20 @@ function extractTextOverrides(root: HTMLElement): Record<string, string> {
   return overrides;
 }
 
+function mergeProposalEditableInnerHtml(top: HTMLElement | null, bottom: HTMLElement | null): string {
+  return `${top?.innerHTML ?? ''}${bottom?.innerHTML ?? ''}`;
+}
+
+function extractMergedProposalTextOverrides(
+  top: HTMLElement | null,
+  bottom: HTMLElement | null,
+): Record<string, string> {
+  return {
+    ...(top ? extractTextOverrides(top) : {}),
+    ...(bottom ? extractTextOverrides(bottom) : {}),
+  };
+}
+
 /** Saved inline edits (per data-docx-section) — applied through React so they survive re-renders. */
 const ProposalTextOverridesContext = React.createContext<Record<string, string | undefined>>({});
 
@@ -1894,6 +1926,7 @@ async function exportToDocx(
   textOverrides?: TextOverrides,
   container?: HTMLElement | null,
   roofLayout?: AiRoofLayoutResponse | null,
+  customSectionsBeforeBoq?: ProposalCustomSectionBeforeBoq[],
 ): Promise<void> {
   const docx = await import('docx');
 
@@ -1947,6 +1980,23 @@ async function exportToDocx(
     }
   }
 
+  const posterById: Record<string, ArrayBuffer | undefined> = {};
+  if (customSectionsBeforeBoq?.length) {
+    await Promise.all(
+      customSectionsBeforeBoq.map(async (s) => {
+        const u = s.mediaPosterUrl?.trim();
+        if (!u) return;
+        try {
+          const res = await fetch(u, { mode: 'cors' });
+          if (!res.ok) return;
+          posterById[s.id] = await res.arrayBuffer();
+        } catch {
+          /* CORS or network — poster omitted from Word */
+        }
+      }),
+    );
+  }
+
   const doc = buildDocx(
     p,
     diagramImageData,
@@ -1955,6 +2005,8 @@ async function exportToDocx(
     textOverrides,
     roofLayout,
     roofLayoutImageData,
+    customSectionsBeforeBoq,
+    posterById,
     docx,
   );
   const blob = await docx.Packer.toBlob(doc);
@@ -3309,7 +3361,9 @@ export default function ProposalPreview() {
   const [roofLayoutError, setRoofLayoutError]     = useState<string | null>(null);
   const printRef                              = useRef<HTMLDivElement>(null);
   // Ref to the contentEditable document body div so we can read its innerHTML on save
-  const docBodyRef                            = useRef<HTMLDivElement>(null);
+  /** Split so nested rich editors (custom sections) are not inside a parent contentEditable — paste/images break otherwise. */
+  const docBodyTopRef                         = useRef<HTMLDivElement>(null);
+  const docBodyBottomRef                      = useRef<HTMLDivElement>(null);
 
   const [shareModalOpen, setShareModalOpen]         = useState(false);
   const [shareLink, setShareLink]                   = useState<string | null>(null);
@@ -3321,6 +3375,7 @@ export default function ProposalPreview() {
   const [shareExpiryDate, setShareExpiryDate]      = useState('');
   const [shareLinkCopied, setShareLinkCopied]      = useState(false);
   const [displayTextOverrides, setDisplayTextOverrides] = useState<Record<string, string | undefined>>({});
+  const [customSectionsBeforeBoq, setCustomSectionsBeforeBoq] = useState<ProposalCustomSectionBeforeBoq[]>([]);
 
   const role = getCurrentUserRole();
   const canWrite = role != null && ['ADMIN', 'SALES'].includes(String(role).toUpperCase());
@@ -3361,6 +3416,7 @@ export default function ProposalPreview() {
       setProposal(null);
       setDisplayTextOverrides({});
       setBomComments({});
+      setCustomSectionsBeforeBoq([]);
       return;
     }
     const saved = ac.proposal;
@@ -3368,6 +3424,7 @@ export default function ProposalPreview() {
       setProposal(null);
       setDisplayTextOverrides({});
       setBomComments({});
+      setCustomSectionsBeforeBoq([]);
       return;
     }
 
@@ -3380,6 +3437,7 @@ export default function ProposalPreview() {
         setProposal(null);
         setDisplayTextOverrides({});
         setBomComments({});
+        setCustomSectionsBeforeBoq([]);
         return;
       }
       setProposal(
@@ -3397,6 +3455,7 @@ export default function ProposalPreview() {
 
     setBomComments(saved.bomComments ?? {});
     setDisplayTextOverrides(saved.textOverrides ?? {});
+    setCustomSectionsBeforeBoq(normalizeCustomSectionsBeforeBoq(saved.customSectionsBeforeBoq));
     setIsEditing(false);
     setIncludeRoofLayout(!!saved.includeRoofLayout);
   }, [activeCustomerId]);
@@ -3481,8 +3540,18 @@ export default function ProposalPreview() {
     setSaveStatus('saving');
 
     // 1. Capture current edited HTML and extract per-section text overrides
-    const editedHtml     = docBodyRef.current?.innerHTML ?? undefined;
-    const textOverrides  = docBodyRef.current ? extractTextOverrides(docBodyRef.current) : undefined;
+    const editedHtml = (() => {
+      const merged = mergeProposalEditableInnerHtml(docBodyTopRef.current, docBodyBottomRef.current);
+      const cleaned = stripPeManagedSectionsFromDocHtml(merged);
+      return cleaned.trim() === '' ? undefined : cleaned;
+    })();
+    const textOverrides = extractMergedProposalTextOverrides(
+      docBodyTopRef.current,
+      docBodyBottomRef.current,
+    );
+    const textOverridesMaybeEmpty =
+      Object.keys(textOverrides).length > 0 ? textOverrides : undefined;
+    const customSectionsSnapshot = normalizeCustomSectionsBeforeBoq(customSectionsBeforeBoq);
 
     // 2. Persist BOM comments
     persistComments(bomComments);
@@ -3515,13 +3584,15 @@ export default function ProposalPreview() {
         summary:     execSummary(proposal).slice(0, 200),
         bomComments,
         editedHtml,
-        textOverrides,
+        textOverrides: textOverridesMaybeEmpty,
+        customSectionsBeforeBoq: customSectionsSnapshot,
         proposalView: cloneProposalForStorage(proposal),
         includeRoofLayout,
         roofLayout: includeRoofLayout ? (roofLayout ?? null) : null,
       };
 
       saveAllArtifacts(activeCustomer.id, costingArtifact, bomArtifact, roiArtifact, proposalArtifact);
+      setCustomSectionsBeforeBoq(customSectionsSnapshot);
       setSavedToCustomer(activeCustomer.master.name);
 
       // Sync all four artifacts to CRM backend so Admin/Ops/Finance/Management see the same data.
@@ -3605,6 +3676,11 @@ export default function ProposalPreview() {
         bomComments: savedComments,
         editedHtml:    undefined,
         textOverrides: undefined,
+        customSectionsBeforeBoq: normalizeCustomSectionsBeforeBoq(
+          customSectionsBeforeBoq.length > 0
+            ? customSectionsBeforeBoq
+            : activeCustomer.proposal?.customSectionsBeforeBoq ?? [],
+        ),
         proposalView: cloneProposalForStorage(p),
         includeRoofLayout: options.includeRoofLayout,
         roofLayout: options.includeRoofLayout ? (activeCustomer.proposal?.roofLayout ?? null) : null,
@@ -3738,6 +3814,7 @@ export default function ProposalPreview() {
     setRoofLayoutLoading(false);
     setIsEditing(false);
     setSaveStatus('idle');
+    setCustomSectionsBeforeBoq([]);
   };
 
   const handleExportPdf = () => {
@@ -3751,9 +3828,12 @@ export default function ProposalPreview() {
     try {
       // Prefer live DOM overrides (captures any unsaved edits too);
       // fall back to last-saved overrides from the customer record.
-      const liveOverrides = docBodyRef.current
-        ? extractTextOverrides(docBodyRef.current)
-        : undefined;
+      const liveMerged = extractMergedProposalTextOverrides(
+        docBodyTopRef.current,
+        docBodyBottomRef.current,
+      );
+      const liveOverrides =
+        Object.keys(liveMerged).length > 0 ? liveMerged : undefined;
       const savedOverrides = getActiveCustomer()?.proposal?.textOverrides;
       const textOverrides = (liveOverrides && Object.keys(liveOverrides).length > 0)
         ? liveOverrides
@@ -3765,6 +3845,7 @@ export default function ProposalPreview() {
         textOverrides,
         printRef.current ?? undefined,
         includeRoofLayout ? roofLayout : null,
+        normalizeCustomSectionsBeforeBoq(customSectionsBeforeBoq),
       );
     } finally {
       setExporting(null);
@@ -3975,7 +4056,7 @@ export default function ProposalPreview() {
                   <div className="flex items-center gap-2">
                     <span>✏️</span>
                     <span>
-                      Edit mode — click proposal text to edit inline, and use the <strong>Bill of Quantities</strong> note fields below. Click <strong>Save</strong> when done (notes and body save together).
+                      Edit mode — click proposal text to edit inline, use the extra blocks above the <strong>Bill of Quantities</strong> (titles and rich text), and use the <strong>Bill of Quantities</strong> note fields below. Click <strong>Save</strong> when done (notes, media links, and body save together).
                     </span>
                   </div>
                   <p className="sm:ml-6 text-[10px] sm:text-[11px] text-amber-700">
@@ -4056,16 +4137,16 @@ export default function ProposalPreview() {
                 </div>
               </div>
 
-              {/* Document body — ref used to read/restore edited HTML */}
-              <div
-                ref={docBodyRef}
-                className="px-4 sm:px-8 py-6 sm:py-8"
-                contentEditable={canWrite && isEditing}
-                suppressContentEditableWarning
-                spellCheck={canWrite && isEditing}
-                style={canWrite && isEditing ? { outline: 'none', cursor: 'text' } : undefined}
-              >
+              {/* Two contentEditable regions: nested editors inside a parent contentEditable break image paste/insert in browsers. */}
+              <div className="px-4 sm:px-8 py-6 sm:py-8">
                 <ProposalTextOverridesContext.Provider value={displayTextOverrides}>
+                <div
+                  ref={docBodyTopRef}
+                  contentEditable={canWrite && isEditing}
+                  suppressContentEditableWarning
+                  spellCheck={canWrite && isEditing}
+                  style={canWrite && isEditing ? { outline: 'none', cursor: 'text' } : undefined}
+                >
                 {/* Saved-to-customer confirmation */}
                 {savedToCustomer && (
                   <div className="print-hide mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-center justify-between gap-3">
@@ -4144,6 +4225,19 @@ export default function ProposalPreview() {
                 <OurProcessBlock />
                 <Divider />
                 <ScopeOfWorkBlock proposal={proposal} />
+                </div>
+                <CustomSectionsBeforeBoq
+                  sections={customSectionsBeforeBoq}
+                  onChange={setCustomSectionsBeforeBoq}
+                  readOnly={!canWrite || !isEditing}
+                />
+                <div
+                  ref={docBodyBottomRef}
+                  contentEditable={canWrite && isEditing}
+                  suppressContentEditableWarning
+                  spellCheck={canWrite && isEditing}
+                  style={canWrite && isEditing ? { outline: 'none', cursor: 'text' } : undefined}
+                >
                 {proposal.bom.length > 0 && (
                   <>
                     <Divider />
@@ -4183,6 +4277,7 @@ export default function ProposalPreview() {
                 <SectionBlock title="Closing Note" content={closingText(proposal)} />
                 <Divider />
                 <SectionBlock title="Subsidy Disclaimer and Payment Terms" content={SUBSIDY_DISCLAIMER_TEXT} />
+                </div>
                 </ProposalTextOverridesContext.Provider>
               </div>
 

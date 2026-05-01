@@ -13,6 +13,7 @@
     "@sentry/react": "^10.42.0",
     "@types/three": "^0.183.1",
     "docx": "^9.6.0",
+    "dompurify": "^3.4.2",
     "konva": "^8.4.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
+    "@types/dompurify": "^3.0.5",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@typescript-eslint/eslint-plugin": "^8.0.0",

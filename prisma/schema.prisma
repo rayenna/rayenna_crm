@@ -704,6 +704,8 @@ model PEProposal {
   bomComments   Json?
   editedHtml    String?  @db.Text
   textOverrides Json?
+  /// Rich custom sections (title + HTML body + optional media URLs) inserted before the Bill of Quantities
+  customSectionsBeforeBoq Json?
   /// Full Proposal Engine view snapshot (costing/BOM/ROI-backed) for reopening on any device
   proposalView  Json?
   summary       String?
