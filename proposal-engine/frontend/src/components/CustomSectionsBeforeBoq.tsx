@@ -514,10 +514,12 @@ function TableContextBar({
   ctx,
   onTableAction,
   onTableAlign,
+  onTableWidth,
 }: {
   ctx: TableContext;
   onTableAction: (fn: () => void) => void;
   onTableAlign: (align: 'left' | 'center' | 'right') => void;
+  onTableWidth: (width: 'auto' | '33%' | '50%' | '75%' | '100%') => void;
 }) {
   const ab = 'text-[11px] sm:text-[10px] font-semibold px-2.5 py-1.5 sm:py-0.5 sm:px-2 rounded-md border border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 active:bg-indigo-100 transition-colors [touch-action:manipulation]';
   const db = 'text-[11px] sm:text-[10px] font-semibold px-2.5 py-1.5 sm:py-0.5 sm:px-2 rounded-md border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 active:bg-rose-100 transition-colors [touch-action:manipulation]';
@@ -581,6 +583,26 @@ function TableContextBar({
       >
         <svg width="13" height="13" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="5" y="5" width="9" height="2" rx="1"/><rect x="2" y="9" width="12" height="2" rx="1"/></svg>
       </button>
+
+      {sep}
+
+      {/* Table width — set overall table width; clears per-cell pixel widths so
+          columns redistribute proportionally within the chosen table width */}
+      <span className="text-[10px] sm:text-[9px] font-black text-indigo-400 uppercase tracking-widest">Table width</span>
+      {([
+        { label: 'Auto', value: 'auto'  as const, title: 'Fit to content'      },
+        { label: '33%',  value: '33%'   as const, title: 'One-third width'     },
+        { label: '50%',  value: '50%'   as const, title: 'Half width'          },
+        { label: '75%',  value: '75%'   as const, title: 'Three-quarter width' },
+        { label: 'Full', value: '100%'  as const, title: 'Full editor width'   },
+      ]).map(({ label, value, title }) => (
+        <button
+          key={value} type="button" className={ab} title={title}
+          onMouseDown={(e) => e.preventDefault()} onClick={() => onTableWidth(value)}
+        >
+          {label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -1082,6 +1104,42 @@ function CustomBodyEditor({
   }, [tableCtx, onCommit]);
 
   /**
+   * Set the overall width of the table the cursor is currently in.
+   * Clears per-cell pixel widths so columns redistribute evenly within
+   * the new table width. 'auto' lets the table shrink to content width.
+   */
+  const applyTableWidth = useCallback((width: 'auto' | '33%' | '50%' | '75%' | '100%') => {
+    const ctx = tableCtx;
+    const root = ref.current;
+    if (!ctx?.table || !root?.contains(ctx.table)) return;
+    const table = ctx.table as HTMLTableElement;
+
+    // Set table width via CSS (remove HTML width attr to avoid conflicts)
+    table.removeAttribute('width');
+    if (width === 'auto') {
+      table.style.width = '';
+      table.style.minWidth = '';
+    } else {
+      table.style.width = width;
+      table.style.minWidth = '';
+    }
+
+    // Clear per-cell fixed pixel widths so columns scale proportionally
+    table.querySelectorAll<HTMLElement>('td, th').forEach((cell) => {
+      cell.removeAttribute('width');
+      cell.style.width = '';
+      cell.style.minWidth = '';
+    });
+    // Clear per-col <col> widths too if present
+    table.querySelectorAll<HTMLElement>('col').forEach((col) => {
+      col.removeAttribute('width');
+      col.style.width = '';
+    });
+
+    if (root) onCommit(sanitizeProposalCustomBodyHtml(root.innerHTML));
+  }, [tableCtx, onCommit]);
+
+  /**
    * Unified alignment handler. When an S/M/L image is selected, we set
    * margin-left/right on the <img> itself (images are display:block via Tailwind
    * preflight, so text-align on the parent has no effect — auto margins do).
@@ -1261,7 +1319,7 @@ function CustomBodyEditor({
       />
 
       {tableCtx && (
-        <TableContextBar ctx={tableCtx} onTableAction={onTableAction} onTableAlign={applyTableAlign} />
+        <TableContextBar ctx={tableCtx} onTableAction={onTableAction} onTableAlign={applyTableAlign} onTableWidth={applyTableWidth} />
       )}
 
       <div
