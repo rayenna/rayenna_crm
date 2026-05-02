@@ -67,7 +67,17 @@ export function isSafeDataImageSrc(src: string | null | undefined): boolean {
   }
 }
 
-/** Strip Word / Outlook conditional blocks and Office XML tags before DOMPurify. */
+/**
+ * Strip Word / Outlook conditional blocks, Office XML tags, and problematic
+ * inline CSS properties before handing off to DOMPurify.
+ *
+ * Key Word-paste issues this handles:
+ * - mso-* properties (Office-specific, meaningless in browser)
+ * - background / background-color (Word adds dark/black backgrounds that
+ *   render as a black box inside the editor)
+ * - windowtext / Windows-specific named colours
+ * - Inch-based margins (margin: .5in etc.) that push content off-screen
+ */
 export function preCleanRichPasteHtml(html: string): string {
   return (
     html
@@ -76,6 +86,24 @@ export function preCleanRichPasteHtml(html: string): string {
       // Office XML namespaces (Word paste)
       .replace(/<\/?(?:o|w|v|m):\w+[^>]*>/gi, '')
       .replace(/<\/?font[^>]*>/gi, '')
+      // Scrub each style="..." attribute to remove Office-specific / dangerous CSS
+      .replace(/style="([^"]*)"/gi, (_match, styleContent: string) => {
+        const cleaned = styleContent
+          .split(';')
+          .map((p) => p.trim())
+          .filter((p) => {
+            if (!p) return false;
+            const lower = p.toLowerCase();
+            if (lower.startsWith('mso-')) return false;          // Office-only props
+            if (lower.startsWith('background')) return false;    // black-box culprit
+            if (lower.includes('windowtext')) return false;      // Windows named colour
+            if (/margin[^:]*:\s*[\d.]+in/i.test(p)) return false; // inch-based margins
+            return true;
+          })
+          .join('; ')
+          .trim();
+        return cleaned ? `style="${cleaned}"` : '';
+      })
   );
 }
 

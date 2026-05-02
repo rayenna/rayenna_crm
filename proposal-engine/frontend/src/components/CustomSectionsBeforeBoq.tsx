@@ -1066,6 +1066,49 @@ function CustomBodyEditor({
     const dt = e.clipboardData;
     if (!dt || !ref.current) return;
 
+    // ── Priority 1: Rich HTML ────────────────────────────────────────────────
+    // Always try HTML first. Word, Google Docs, and web pages all put HTML on
+    // the clipboard alongside a bitmap render of the selection. If we checked
+    // image files first we would paste the bitmap (which shows as a black box
+    // in the editor) instead of the actual text content.
+    const htmlRaw = dt.getData('text/html');
+    const plain   = dt.getData('text/plain') ?? '';
+
+    if (htmlRaw && htmlRaw.trim().length > 0) {
+      const cleaned = sanitizeProposalCustomBodyHtml(preCleanRichPasteHtml(htmlRaw));
+      const probe = document.createElement('div');
+      probe.innerHTML = cleaned;
+      const textLen = (probe.textContent ?? '').replace(/\u00a0/g, ' ').trim().length;
+      const meaningful =
+        textLen > 0 ||
+        !!probe.querySelector('img,table,ul,ol,a,h3,h4,blockquote');
+      if (meaningful) {
+        e.preventDefault();
+        e.stopPropagation();
+        insertHtmlIntoCaret(ref.current, cleaned);
+        commitFromEditor();
+        return;
+      }
+    }
+
+    // ── Priority 2: Plain text ───────────────────────────────────────────────
+    if (plain.length > 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      const escaped = plain
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      const lines = escaped.split(/\r?\n/);
+      const asHtml = lines.map((line) => `<p>${line.length ? line : '<br />'}</p>`).join('');
+      insertHtmlIntoCaret(ref.current, asHtml);
+      commitFromEditor();
+      return;
+    }
+
+    // ── Priority 3: Raw image files ──────────────────────────────────────────
+    // Only reached when the clipboard carries no text at all — i.e. a genuine
+    // image paste from an image editor or a screenshot tool.
     const { files } = dt;
     if (files?.length) {
       for (let i = 0; i < files.length; i++) {
@@ -1093,39 +1136,6 @@ function CustomBodyEditor({
           return;
         }
       }
-    }
-
-    const htmlRaw = dt.getData('text/html');
-    const plain = dt.getData('text/plain') ?? '';
-
-    if (htmlRaw && htmlRaw.trim().length > 0) {
-      const cleaned = sanitizeProposalCustomBodyHtml(preCleanRichPasteHtml(htmlRaw));
-      const probe = document.createElement('div');
-      probe.innerHTML = cleaned;
-      const textLen = (probe.textContent ?? '').replace(/\u00a0/g, ' ').trim().length;
-      const meaningful =
-        textLen > 0 ||
-        !!probe.querySelector('img,table,ul,ol,a,h3,h4,blockquote');
-      if (meaningful) {
-        e.preventDefault();
-        e.stopPropagation();
-        insertHtmlIntoCaret(ref.current, cleaned);
-        commitFromEditor();
-        return;
-      }
-    }
-
-    if (plain.length > 0) {
-      e.preventDefault();
-      e.stopPropagation();
-      const escaped = plain
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-      const lines = escaped.split(/\r?\n/);
-      const asHtml = lines.map((line) => `<p>${line.length ? line : '<br />'}</p>`).join('');
-      insertHtmlIntoCaret(ref.current, asHtml);
-      commitFromEditor();
     }
   };
 
