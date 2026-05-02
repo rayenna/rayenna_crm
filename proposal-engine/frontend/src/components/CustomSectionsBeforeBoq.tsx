@@ -2,6 +2,8 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  useEffect,
+  useCallback,
   type ClipboardEvent,
   type ChangeEvent,
   type MouseEvent as ReactMouseEvent,
@@ -108,6 +110,281 @@ function insertHtmlIntoCaret(el: HTMLElement, html: string): void {
   el.insertAdjacentHTML('beforeend', html);
 }
 
+// ─── Toolbar constants ────────────────────────────────────────────────────────
+
+const FONT_FAMILIES = [
+  { label: 'Arial', value: 'Arial, sans-serif' },
+  { label: 'Georgia', value: 'Georgia, serif' },
+  { label: 'Times New Roman', value: '"Times New Roman", serif' },
+  { label: 'Trebuchet MS', value: '"Trebuchet MS", sans-serif' },
+  { label: 'Courier New', value: '"Courier New", monospace' },
+];
+
+const FONT_SIZES = [
+  { label: '8pt', value: '8pt' },
+  { label: '10pt', value: '10pt' },
+  { label: '11pt', value: '11pt' },
+  { label: '12pt', value: '12pt' },
+  { label: '14pt', value: '14pt' },
+  { label: '16pt', value: '16pt' },
+  { label: '18pt', value: '18pt' },
+  { label: '20pt', value: '20pt' },
+  { label: '24pt', value: '24pt' },
+  { label: '28pt', value: '28pt' },
+  { label: '36pt', value: '36pt' },
+];
+
+function makeDefaultTable(): string {
+  const cell = (tag: 'th' | 'td') =>
+    `<${tag} style="border:1px solid #cbd5e1;padding:6px 10px;text-align:left;">&nbsp;</${tag}>`;
+  const headerRow = `<tr style="background:#f1f5f9;">${cell('th')}${cell('th')}${cell('th')}</tr>`;
+  const bodyRow = `<tr>${cell('td')}${cell('td')}${cell('td')}</tr>`;
+  return `<table style="width:100%;border-collapse:collapse;font-size:13px;margin:8px 0;"><thead>${headerRow}</thead><tbody>${bodyRow}${bodyRow}</tbody></table><p><br/></p>`;
+}
+
+/** Wrap the current selection in a span with an inline style property. Falls back gracefully when selection is collapsed. */
+function applyInlineStyle(property: string, value: string, editorEl: HTMLElement): void {
+  editorEl.focus();
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  const range = sel.getRangeAt(0);
+
+  if (range.collapsed) {
+    // No selection — set a "pending" style that will apply to the next typed character
+    // via execCommand styleWithCSS trick
+    document.execCommand('styleWithCSS', false, 'true');
+    if (property === 'font-family') document.execCommand('fontName', false, value);
+    else if (property === 'font-size') {
+      // Map to nearest execCommand fontSize bucket (1-7) just to trigger the span,
+      // then fix it up immediately.
+      document.execCommand('fontSize', false, '3');
+      const sel2 = window.getSelection();
+      if (sel2 && sel2.rangeCount > 0) {
+        const r2 = sel2.getRangeAt(0);
+        const span = r2.startContainer.parentElement;
+        if (span && span !== editorEl) span.style.fontSize = value;
+      }
+    }
+    document.execCommand('styleWithCSS', false, 'false');
+    return;
+  }
+
+  // Extract, wrap, re-insert
+  const frag = range.extractContents();
+  const span = document.createElement('span');
+  span.style.setProperty(property, value);
+  span.appendChild(frag);
+  range.insertNode(span);
+  // Restore selection to cover the new span
+  const newRange = document.createRange();
+  newRange.selectNodeContents(span);
+  sel.removeAllRanges();
+  sel.addRange(newRange);
+}
+
+// ─── Toolbar button helpers ────────────────────────────────────────────────────
+
+function cmd(command: string, value?: string) {
+  document.execCommand(command, false, value ?? '');
+}
+
+interface FormatState {
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  orderedList: boolean;
+  unorderedList: boolean;
+}
+
+function getFormatState(): FormatState {
+  return {
+    bold: document.queryCommandState('bold'),
+    italic: document.queryCommandState('italic'),
+    underline: document.queryCommandState('underline'),
+    orderedList: document.queryCommandState('insertOrderedList'),
+    unorderedList: document.queryCommandState('insertUnorderedList'),
+  };
+}
+
+// ─── Toolbar component ─────────────────────────────────────────────────────────
+
+function EditorToolbar({
+  editorRef,
+  onImageClick,
+  selectedImg,
+  onImageWidth,
+  formatState,
+  onFormat,
+}: {
+  editorRef: React.RefObject<HTMLDivElement | null>;
+  onImageClick: () => void;
+  selectedImg: HTMLImageElement | null;
+  onImageWidth: (mode: 'sm' | 'md' | 'lg' | 'full') => void;
+  formatState: FormatState;
+  onFormat: (fn: () => void) => void;
+}) {
+  const tbBtn = (active: boolean) =>
+    `min-w-[28px] h-7 px-1.5 rounded text-xs font-bold border transition-colors select-none ${
+      active
+        ? 'bg-primary-100 border-primary-400 text-primary-800'
+        : 'bg-white border-secondary-300 text-secondary-700 hover:bg-secondary-50'
+    }`;
+
+  const sep = <span className="w-px h-5 bg-secondary-200 mx-0.5 flex-shrink-0" />;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1 rounded-t-lg border border-b-0 border-secondary-200 bg-secondary-50 px-2 py-1.5 print-hide">
+      {/* Font family */}
+      <select
+        className="h-7 rounded border border-secondary-300 bg-white px-1.5 text-xs text-secondary-800 focus:outline-none focus:ring-1 focus:ring-primary-400 cursor-pointer"
+        defaultValue=""
+        onMouseDown={(e) => e.stopPropagation()}
+        onChange={(e) => {
+          const v = e.target.value;
+          e.target.value = '';
+          if (!v || !editorRef.current) return;
+          onFormat(() => applyInlineStyle('font-family', v, editorRef.current!));
+        }}
+      >
+        <option value="" disabled>Font</option>
+        {FONT_FAMILIES.map((f) => (
+          <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>
+            {f.label}
+          </option>
+        ))}
+      </select>
+
+      {/* Font size */}
+      <select
+        className="h-7 w-[68px] rounded border border-secondary-300 bg-white px-1 text-xs text-secondary-800 focus:outline-none focus:ring-1 focus:ring-primary-400 cursor-pointer"
+        defaultValue=""
+        onMouseDown={(e) => e.stopPropagation()}
+        onChange={(e) => {
+          const v = e.target.value;
+          e.target.value = '';
+          if (!v || !editorRef.current) return;
+          onFormat(() => applyInlineStyle('font-size', v, editorRef.current!));
+        }}
+      >
+        <option value="" disabled>Size</option>
+        {FONT_SIZES.map((s) => (
+          <option key={s.value} value={s.value}>{s.label}</option>
+        ))}
+      </select>
+
+      {sep}
+
+      {/* Bold */}
+      <button
+        type="button"
+        title="Bold (Ctrl+B)"
+        className={tbBtn(formatState.bold)}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => onFormat(() => cmd('bold'))}
+      >
+        B
+      </button>
+
+      {/* Italic */}
+      <button
+        type="button"
+        title="Italic (Ctrl+I)"
+        className={`${tbBtn(formatState.italic)} italic`}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => onFormat(() => cmd('italic'))}
+      >
+        I
+      </button>
+
+      {/* Underline */}
+      <button
+        type="button"
+        title="Underline (Ctrl+U)"
+        className={`${tbBtn(formatState.underline)} underline`}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => onFormat(() => cmd('underline'))}
+      >
+        U
+      </button>
+
+      {sep}
+
+      {/* Bullet list */}
+      <button
+        type="button"
+        title="Bullet list"
+        className={tbBtn(formatState.unorderedList)}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => onFormat(() => cmd('insertUnorderedList'))}
+      >
+        &#8226;&#8212;
+      </button>
+
+      {/* Numbered list */}
+      <button
+        type="button"
+        title="Numbered list"
+        className={tbBtn(formatState.orderedList)}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => onFormat(() => cmd('insertOrderedList'))}
+      >
+        1.&#8212;
+      </button>
+
+      {sep}
+
+      {/* Table */}
+      <button
+        type="button"
+        title="Insert table (3×3)"
+        className={tbBtn(false)}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => {
+          if (!editorRef.current) return;
+          onFormat(() => insertHtmlIntoCaret(editorRef.current!, makeDefaultTable()));
+        }}
+      >
+        ⊞
+      </button>
+
+      {sep}
+
+      {/* Image */}
+      <button
+        type="button"
+        title="Insert image"
+        className={tbBtn(false)}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={onImageClick}
+      >
+        🖼
+      </button>
+
+      {/* Image width controls — only visible when an image is selected */}
+      {selectedImg ? (
+        <>
+          {sep}
+          <span className="text-[10px] font-semibold text-secondary-500">Width:</span>
+          {(['sm', 'md', 'lg', 'full'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              title={mode === 'sm' ? '260px' : mode === 'md' ? '380px' : mode === 'lg' ? '560px' : 'Full width'}
+              className={tbBtn(false)}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onImageWidth(mode)}
+            >
+              {mode === 'sm' ? 'S' : mode === 'md' ? 'M' : mode === 'lg' ? 'L' : 'Full'}
+            </button>
+          ))}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+// ─── Main editor ───────────────────────────────────────────────────────────────
+
 function CustomBodyEditor({
   html,
   readOnly,
@@ -120,8 +397,14 @@ function CustomBodyEditor({
   const ref = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const selectedImgRef = useRef<HTMLImageElement | null>(null);
-  /** Bumps when image selection changes so the toolbar re-renders (refs alone do not). */
-  const [imgToolbarRev, setImgToolbarRev] = useState(0);
+  const [imgRev, setImgRev] = useState(0);
+  const [formatState, setFormatState] = useState<FormatState>({
+    bold: false,
+    italic: false,
+    underline: false,
+    orderedList: false,
+    unorderedList: false,
+  });
 
   useLayoutEffect(() => {
     const el = ref.current;
@@ -131,16 +414,37 @@ function CustomBodyEditor({
       el.innerHTML = html;
       selectedImgRef.current = null;
       highlightSelectedImg(el, null);
-      setImgToolbarRev((n) => n + 1);
+      setImgRev((n) => n + 1);
     }
   }, [html, readOnly]);
+
+  // Track selection changes to update toolbar active states
+  const refreshFormatState = useCallback(() => {
+    try { setFormatState(getFormatState()); } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener('selectionchange', refreshFormatState);
+    return () => document.removeEventListener('selectionchange', refreshFormatState);
+  }, [refreshFormatState]);
+
+  const commitFromEditor = useCallback(() => {
+    if (ref.current) onCommit(sanitizeProposalCustomBodyHtml(ref.current.innerHTML));
+  }, [onCommit]);
+
+  /** Run a format command, then re-focus the editor and commit. */
+  const onFormat = useCallback((fn: () => void) => {
+    ref.current?.focus();
+    fn();
+    refreshFormatState();
+    commitFromEditor();
+  }, [commitFromEditor, refreshFormatState]);
 
   const insertImageFromFile = async (file: File) => {
     const dataUrl = await compressImageFileToDataUrl(file);
     if (!dataUrl || !ref.current) return;
-    const imgHtml = `<img src="${dataUrl}" alt="" width="${IMG_WIDTH_MD}" />`;
-    insertHtmlIntoCaret(ref.current, imgHtml);
-    onCommit(sanitizeProposalCustomBodyHtml(ref.current.innerHTML));
+    insertHtmlIntoCaret(ref.current, `<img src="${dataUrl}" alt="" width="${IMG_WIDTH_MD}" />`);
+    commitFromEditor();
   };
 
   const applyImageWidth = (mode: 'sm' | 'md' | 'lg' | 'full') => {
@@ -156,8 +460,8 @@ function CustomBodyEditor({
       img.removeAttribute('height');
     }
     highlightSelectedImg(root, img);
-    onCommit(sanitizeProposalCustomBodyHtml(root.innerHTML));
-    setImgToolbarRev((n) => n + 1);
+    commitFromEditor();
+    setImgRev((n) => n + 1);
   };
 
   const onEditorClick = (e: ReactMouseEvent<HTMLDivElement>) => {
@@ -167,12 +471,11 @@ function CustomBodyEditor({
     if (t instanceof HTMLImageElement && root.contains(t)) {
       selectedImgRef.current = t;
       highlightSelectedImg(root, t);
-      setImgToolbarRev((n) => n + 1);
-    } else if (t instanceof Node && root.contains(t)) {
+    } else {
       selectedImgRef.current = null;
       highlightSelectedImg(root, null);
-      setImgToolbarRev((n) => n + 1);
     }
+    setImgRev((n) => n + 1);
   };
 
   const onPaste = (e: ClipboardEvent<HTMLDivElement>) => {
@@ -223,7 +526,7 @@ function CustomBodyEditor({
         e.preventDefault();
         e.stopPropagation();
         insertHtmlIntoCaret(ref.current, cleaned);
-        onCommit(sanitizeProposalCustomBodyHtml(ref.current.innerHTML));
+        commitFromEditor();
         return;
       }
     }
@@ -238,7 +541,7 @@ function CustomBodyEditor({
       const lines = escaped.split(/\r?\n/);
       const asHtml = lines.map((line) => `<p>${line.length ? line : '<br />'}</p>`).join('');
       insertHtmlIntoCaret(ref.current, asHtml);
-      onCommit(sanitizeProposalCustomBodyHtml(ref.current.innerHTML));
+      commitFromEditor();
     }
   };
 
@@ -258,55 +561,33 @@ function CustomBodyEditor({
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2 print-hide">
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFilePick} />
-        <button
-          type="button"
-          className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-secondary-300 bg-white text-secondary-700 hover:bg-secondary-50"
-          onClick={() => fileRef.current?.click()}
-        >
-          Insert image
-        </button>
-        <span className="text-[10px] text-secondary-500">Paste rich text or images</span>
-      </div>
+    <div className="rounded-lg border border-secondary-200 overflow-hidden focus-within:ring-2 focus-within:ring-primary-400/40 focus-within:border-primary-300">
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFilePick} />
 
-      {selectedImgRef.current && ref.current?.contains(selectedImgRef.current) ? (
-        <div
-          key={imgToolbarRev}
-          className="flex flex-wrap items-center gap-1.5 rounded-lg border border-primary-200 bg-primary-50/80 px-2 py-1.5 print-hide"
-        >
-          <span className="text-[10px] font-semibold text-secondary-600 mr-1">Image width:</span>
-          {(['sm', 'md', 'lg', 'full'] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              className="text-[10px] font-semibold px-2 py-0.5 rounded border border-secondary-300 bg-white text-secondary-800 hover:bg-secondary-50"
-              onMouseDown={(ev) => ev.preventDefault()}
-              onClick={() => applyImageWidth(mode)}
-            >
-              {mode === 'sm' ? 'S' : mode === 'md' ? 'M' : mode === 'lg' ? 'L' : 'Full'}
-            </button>
-          ))}
-          <span className="text-[9px] text-secondary-500 ml-1 hidden sm:inline">
-            S/M/L = px · Full = container width
-          </span>
-        </div>
-      ) : null}
+      <EditorToolbar
+        key={imgRev}
+        editorRef={ref}
+        onImageClick={() => fileRef.current?.click()}
+        selectedImg={selectedImgRef.current && ref.current?.contains(selectedImgRef.current) ? selectedImgRef.current : null}
+        onImageWidth={applyImageWidth}
+        formatState={formatState}
+        onFormat={onFormat}
+      />
 
       <div
         ref={ref}
-        className="min-h-[120px] rounded-lg border border-secondary-200 bg-white px-3 py-2 text-sm text-secondary-800 focus:outline-none focus:ring-2 focus:ring-primary-400/40 [&_a]:text-blue-600 [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-md [&_img]:border [&_img]:border-secondary-200 [&_table]:w-full [&_table]:text-xs [&_table]:border-collapse [&_td]:border [&_td]:border-secondary-200 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-secondary-200 [&_th]:px-2 [&_th]:py-1 [&_th]:bg-secondary-50"
+        className="min-h-[140px] bg-white px-3 py-2.5 text-sm text-secondary-800 focus:outline-none [&_a]:text-blue-600 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-md [&_img]:border [&_img]:border-secondary-200 [&_table]:border-collapse [&_td]:border [&_td]:border-secondary-200 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-secondary-200 [&_th]:px-2 [&_th]:py-1 [&_th]:bg-secondary-50"
         contentEditable
         suppressContentEditableWarning
         onMouseDown={(ev) => ev.stopPropagation()}
         onClick={onEditorClick}
+        onKeyUp={refreshFormatState}
         onPaste={onPaste}
         onBlur={() => {
           highlightSelectedImg(ref.current, null);
           selectedImgRef.current = null;
-          setImgToolbarRev((n) => n + 1);
-          if (ref.current) onCommit(sanitizeProposalCustomBodyHtml(ref.current.innerHTML));
+          setImgRev((n) => n + 1);
+          commitFromEditor();
         }}
       />
     </div>

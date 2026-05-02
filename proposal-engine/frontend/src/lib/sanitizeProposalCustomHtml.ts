@@ -33,6 +33,7 @@ const ALLOWED_ATTR = [
   'target',
   'rel',
   'class',
+  'style',
   'src',
   'alt',
   'width',
