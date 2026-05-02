@@ -89,6 +89,7 @@ export const TIPS: string[] = [
   'Save frequently used Costing configurations as templates in Proposal Engine – they are shared across all Sales and Admin users.',
   'Only Admin can delete shared Costing templates in Proposal Engine; Sales can save and use them but not remove them.',
   'Operations, Management, and Finance can open Proposal Engine from Proposals (New) to review Costing, BOM, ROI, and Proposal in read-only mode.',
+  'Proposal Engine custom sections (before the Bill of Quantities) now support a full word-processor toolbar — font, size, colour, highlight, bold/italic/underline, lists, tables with row/column controls, and image upload. Add project-specific content like case studies or site photos directly in the proposal.',
   // Zenith Command Center
   'Open Zenith ✦ from the Dashboard menu for a full-screen analytics view — same FY, Quarter, and Month rules as the classic dashboard.',
   'Zenith is built to be the future of Rayenna CRM: one command bar, server-backed data after login, and charts you can click through to project lists.',

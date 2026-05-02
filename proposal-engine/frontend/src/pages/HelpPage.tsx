@@ -144,7 +144,7 @@ const TIP_CATEGORIES: { label: string; icon: string; accent: string; bg: string;
 ];
 
 // Tip count per category (matches order in tipOfTheDay.ts)
-const TIP_COUNTS = [5, 7, 5, 5, 9, 4, 1];
+const TIP_COUNTS = [5, 7, 5, 5, 13, 4, 1];
 
 /* ─── Table of Contents ─────────────────────────────────────────────────── */
 const TOC = [
@@ -616,6 +616,7 @@ export default function HelpPage() {
                 ['Environmental Impact',    'CO₂ offset, clean energy generation, sustainability'],
                 ['Our Process',             '5-step journey from consultation to ongoing support'],
                 ['Scope of Work',           'Site survey, equipment supply, installation, documentation'],
+                ['Custom Sections (optional)', 'Your own content between Scope of Work and BOQ — add with the "+ Add section" button; supports rich text, tables, and images'],
                 ['Bill of Quantities',      'Grouped equipment list with per-category comment fields'],
                 ['Proposed Rooftop Solar Layout (optional)', 'When enabled: satellite-based draft and metrics; intro text states the layout is conceptual and refers readers to the Bill of Quantities for accurate scope and deliverables'],
                 ['Commercials',             'Project cost breakdown and ROI summary'],
@@ -650,6 +651,44 @@ export default function HelpPage() {
             <p className="text-sm text-gray-600 leading-relaxed">
               In the <strong>Bill of Quantities</strong> section of the proposal, each category has a comment field. Use this to add notes like <em>"Adani DCR modules as per MNRE approved list"</em> or <em>"Deye hybrid inverter with 5-year warranty"</em>. These are saved when you click <strong>💾 Save</strong> in the header and will be included in DOCX and PDF exports.
             </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Custom Sections (before Bill of Quantities)</h3>
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">
+              Click <strong>+ Add section</strong> on the Proposal page to insert a free-form content block between the Scope of Work and the Bill of Quantities. Each section has:
+            </p>
+            <ul className="mt-1 space-y-1.5 text-sm text-gray-600 list-disc list-inside mb-3">
+              <li>A <strong>Section title</strong> field — appears as a heading in the proposal.</li>
+              <li>A <strong>rich text body editor</strong> with a full word-processor toolbar.</li>
+              <li><strong>↑ / ↓</strong> arrows to reorder sections and a <strong>Remove section</strong> link.</li>
+            </ul>
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">
+              <strong>Toolbar capabilities:</strong>
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-3">
+              {[
+                ['Font Family', 'Arial, Calibri, Courier New, Garamond, Georgia, Sans Serif, Times New Roman, Trebuchet MS, Verdana'],
+                ['Font Size', '8 pt through 36 pt'],
+                ['Text Style', 'Bold, Italic, Underline'],
+                ['Script', 'Subscript, Superscript'],
+                ['Colour', 'Font colour (24 swatches + custom), Highlight colour (12 swatches + remove)'],
+                ['Indent', 'Increase and Decrease indent'],
+                ['Alignment', 'Left, Centre, Right'],
+                ['Lists', 'Bullet list, Numbered list'],
+                ['Table', 'Pick rows × columns from a hover grid; context bar inside the table for insert/delete rows or columns, column width, and border style (All, Outer, Inner, None)'],
+                ['Image', 'Upload any image; resize to Small, Medium, Large, or Full width after insertion'],
+              ].map(([cap, desc]) => (
+                <div key={cap} className="flex gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
+                  <span className="font-semibold text-gray-700 flex-shrink-0">{cap}:</span>
+                  <span className="text-gray-500">{desc}</span>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <Tip>Click on any toolbar button while text is selected to apply that format. On mobile the toolbar scrolls horizontally — swipe left to reach alignment, list, and table buttons.</Tip>
+              <Note>All custom section content — including tables, images, and colours — is preserved in both PDF and DOCX exports. Custom sections are saved when you click 💾 Save in the proposal header.</Note>
+            </div>
           </div>
 
           <div>
@@ -979,6 +1018,14 @@ export default function HelpPage() {
 
           <FaqItem q="The proposal is showing 0 kW in the Financial Benefits section. How do I fix it?">
             This happens when the ROI result has not been saved. Go to the <Link to="/roi" className="text-indigo-600 underline">ROI Calculator</Link>, click <strong>Calculate</strong>, and then click <strong>💾 Save Result</strong>. Then regenerate the proposal.
+          </FaqItem>
+
+          <FaqItem q="How do I add custom content like a case study or site photo between Scope of Work and the BOQ?">
+            On the <Link to="/proposal" className="text-indigo-600 underline">Proposal page</Link>, click <strong>+ Add section</strong>. Give the section a title, then type or paste content into the rich-text editor. You can format text, insert a table, or upload an image using the toolbar. When finished, click <strong>💾 Save</strong> in the proposal header — the section is included in both PDF and DOCX exports.
+          </FaqItem>
+
+          <FaqItem q="The table I inserted in a custom section has no borders. How do I add them?">
+            Place your cursor inside any cell in the table. A blue <strong>Table tools</strong> bar will appear above the editor. Click <strong>Borders: All</strong> to apply borders to every cell, <strong>Outer</strong> for just the table outline, or <strong>Inner</strong> for only the internal cell dividers. Choose <strong>None</strong> to remove all borders.
           </FaqItem>
 
           <FaqItem q="Will my data be lost if I close the browser?">

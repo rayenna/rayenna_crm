@@ -63,6 +63,10 @@ export const TIPS: string[] = [
   'PDF export captures your inline edits automatically because it renders the live document — always save before exporting.',
   'DOCX export also reflects your inline edits — the saved text overrides are applied to every section of the Word document.',
   'The proposal reference number (REY/YYYY/MM/XXXXX) is generated automatically — it is unique to each generation.',
+  'Use Custom Sections (the "+ Add section" button on the Proposal page) to insert project-specific content between the Scope of Work and the Bill of Quantities — ideal for case studies, site photos, installation notes, or a project timeline.',
+  'Custom sections have a full word-processor toolbar: Font Family (Arial, Calibri, Garamond, Verdana and more), Font Size (8–36 pt), Bold, Italic, Underline, Subscript, Superscript, Font Colour, Highlight, Indent, Left/Centre/Right Alignment, Bullets, Numbered List, Table, and Image.',
+  'To insert a table in a custom section, click the ⊞ button and hover over the grid to pick the exact number of rows and columns. Once your cursor is inside any table cell, a blue context bar appears with options to insert or delete rows and columns, set individual column widths, and apply border styles (All, Outer, Inner, or None).',
+  'All formatting in custom sections — fonts, colours, tables, images, and alignment — is preserved in both PDF and DOCX exports. Move sections up or down with the ↑ ↓ arrows; remove a section with "Remove section".',
 
   // ── Export & Data ───────────────────────────────────────────────────────────
   'Enable "Background graphics" in your browser\'s print settings for the best PDF output — logos and colour headers will print correctly.',
