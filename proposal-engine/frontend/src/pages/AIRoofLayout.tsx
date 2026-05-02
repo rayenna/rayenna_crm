@@ -227,6 +227,12 @@ export default function AIRoofLayout() {
   const lineRef = useRef<any>(null);
   /** Ref to the control-point circles Layer so it can be hidden before toDataURL capture. */
   const handlesLayerRef = useRef<any>(null);
+  /**
+   * Tracks the pixel position where the move-rect drag started.
+   * Used to detect accidental clicks (< 8 px travel) so the polygon is not
+   * moved and panels do not flicker on simple taps inside the polygon area.
+   */
+  const polygonMoveStartRef = useRef<{ x: number; y: number } | null>(null);
   const polygonDragRef = useRef<{ x: number; y: number } | null>(null);
   const polygonBaseRef = useRef<Point[] | null>(null); // polygon at drag start for imperative updates
   const recomputeTimeoutRef = useRef<number | null>(null);
@@ -1772,36 +1778,68 @@ export default function AIRoofLayout() {
                                   onMouseEnter={() => { document.body.style.cursor = 'move'; }}
                                   onMouseLeave={() => { document.body.style.cursor = 'default'; }}
                                   onDragStart={(e) => {
-                                    document.body.style.cursor = 'grabbing';
-                                    isDraggingRef.current = true;
-                                    setIsDragging(true);
+                                    // Save start position but do NOT set isDragging yet.
+                                    // Panels only hide (and the move commits) once the drag
+                                    // exceeds the 8 px threshold — prevents accidental moves
+                                    // and panel flicker on simple taps inside the polygon.
+                                    polygonMoveStartRef.current = { x: e.target.x(), y: e.target.y() };
                                     polygonBaseRef.current = polygon ? polygon.map((p) => ({ ...p })) : null;
-                                    polygonDragRef.current = {
-                                      x: e.target.x(),
-                                      y: e.target.y(),
-                                    };
+                                    polygonDragRef.current = { x: e.target.x(), y: e.target.y() };
                                   }}
                                   onDragMove={(e) => {
                                     if (!polygonDragRef.current || !polygonBaseRef.current || !lineRef.current) return;
-                                    const start = polygonDragRef.current;
+                                    const start = polygonMoveStartRef.current;
                                     const nx = e.target.x();
                                     const ny = e.target.y();
-                                    const dx = nx - start.x;
-                                    const dy = ny - start.y;
+                                    const totalDist = start
+                                      ? Math.abs(nx - start.x) + Math.abs(ny - start.y)
+                                      : 0;
+                                    // Engage drag mode only once clearly intentional
+                                    if (totalDist > 8 && !isDraggingRef.current) {
+                                      isDraggingRef.current = true;
+                                      setIsDragging(true);
+                                      document.body.style.cursor = 'grabbing';
+                                    }
+                                    if (!isDraggingRef.current) return;
+                                    const dragOrigin = polygonDragRef.current;
+                                    const dx = nx - dragOrigin.x;
+                                    const dy = ny - dragOrigin.y;
                                     const flat = polygonBaseRef.current.flatMap((p) => [p.x + dx, p.y + dy]);
                                     lineRef.current.points(flat);
                                     lineRef.current.getLayer()?.batchDraw();
                                   }}
-                                  onDragEnd={() => {
+                                  onDragEnd={(e) => {
+                                    const start = polygonMoveStartRef.current;
+                                    const nx = e.target.x();
+                                    const ny = e.target.y();
+                                    const totalDist = start
+                                      ? Math.abs(nx - start.x) + Math.abs(ny - start.y)
+                                      : 0;
+                                    const didMove = totalDist > 8;
+
                                     document.body.style.cursor = 'move';
                                     polygonDragRef.current = null;
+                                    polygonMoveStartRef.current = null;
                                     isDraggingRef.current = false;
                                     setIsDragging(false);
-                                    if (lineRef.current) {
+
+                                    if (didMove && lineRef.current) {
+                                      // Commit the moved polygon to React state
                                       const flat = lineRef.current.points();
                                       const next: Point[] = [];
-                                      for (let i = 0; i < flat.length; i += 2) next.push({ x: flat[i]!, y: flat[i + 1]! });
+                                      for (let i = 0; i < flat.length; i += 2)
+                                        next.push({ x: flat[i]!, y: flat[i + 1]! });
                                       setPolygon(next.length ? next : null);
+                                    } else {
+                                      // Click (not a real drag) — snap the Konva rect back to
+                                      // its original position and restore the polygon line.
+                                      if (start) e.target.position({ x: start.x, y: start.y });
+                                      if (polygonBaseRef.current && lineRef.current) {
+                                        lineRef.current.points(
+                                          polygonBaseRef.current.flatMap((p) => [p.x, p.y]),
+                                        );
+                                        lineRef.current.getLayer()?.batchDraw();
+                                      }
                                     }
                                     polygonBaseRef.current = null;
                                   }}
@@ -1836,10 +1874,8 @@ export default function AIRoofLayout() {
                                 fill="rgba(14,30,95,0.88)"
                                 stroke="#a8b8cc"
                                 strokeWidth={1.0}
-                                shadowColor="rgba(5,10,30,0.65)"
-                                shadowBlur={3}
-                                shadowOpacity={0.7}
-                                shadowOffset={{ x: 0, y: 1 }}
+                                perfectDrawEnabled={false}
+                                shadowEnabled={false}
                               />
                             ))}
                           </Layer>
