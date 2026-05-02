@@ -134,12 +134,94 @@ const FONT_SIZES = [
   { label: '36pt', value: '36pt' },
 ];
 
-function makeDefaultTable(): string {
-  const cell = (tag: 'th' | 'td') =>
-    `<${tag} style="border:1px solid #cbd5e1;padding:6px 10px;text-align:left;">&nbsp;</${tag}>`;
-  const headerRow = `<tr style="background:#f1f5f9;">${cell('th')}${cell('th')}${cell('th')}</tr>`;
-  const bodyRow = `<tr>${cell('td')}${cell('td')}${cell('td')}</tr>`;
-  return `<table style="width:100%;border-collapse:collapse;font-size:13px;margin:8px 0;"><thead>${headerRow}</thead><tbody>${bodyRow}${bodyRow}</tbody></table><p><br/></p>`;
+function makeTable(rows: number, cols: number): string {
+  const cellStyle = 'border:1px solid #cbd5e1;padding:6px 10px;text-align:left;';
+  const thStyle   = cellStyle + 'background:#f1f5f9;';
+  const thCells   = Array.from({ length: cols }, () => `<th style="${thStyle}">&nbsp;</th>`).join('');
+  const tdCells   = Array.from({ length: cols }, () => `<td style="${cellStyle}">&nbsp;</td>`).join('');
+  const headerRow = `<tr>${thCells}</tr>`;
+  const bodyRows  = Array.from({ length: Math.max(1, rows - 1) }, () => `<tr>${tdCells}</tr>`).join('');
+  return `<table style="width:100%;border-collapse:collapse;font-size:13px;margin:8px 0;"><thead>${headerRow}</thead><tbody>${bodyRows}</tbody></table><p><br/></p>`;
+}
+
+// ─── Table context (cursor position inside a table) ────────────────────────────
+
+interface TableContext {
+  table:    HTMLTableElement;
+  row:      HTMLTableRowElement;
+  cell:     HTMLTableCellElement;
+  colIndex: number;
+}
+
+function getTableContext(editorEl: HTMLElement): TableContext | null {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return null;
+  let node: Node | null = sel.getRangeAt(0).startContainer;
+  let cell: HTMLTableCellElement | null = null;
+  let row:  HTMLTableRowElement  | null = null;
+  let table: HTMLTableElement    | null = null;
+  while (node && node !== editorEl) {
+    if (node instanceof HTMLElement) {
+      const tag = node.tagName;
+      if (!cell  && (tag === 'TD' || tag === 'TH')) cell  = node as HTMLTableCellElement;
+      if (!row   && tag === 'TR')                   row   = node as HTMLTableRowElement;
+      if (!table && tag === 'TABLE')                table = node as HTMLTableElement;
+    }
+    node = node.parentNode;
+  }
+  if (!cell || !row || !table || !editorEl.contains(table)) return null;
+  const colIndex = Array.from(row.cells).indexOf(cell);
+  return { table, row, cell, colIndex };
+}
+
+// ─── Table DOM operations (mutate in-place; caller must commitFromEditor) ──────
+
+function tableInsertRow(ctx: TableContext, before: boolean): void {
+  const { table, row } = ctx;
+  const cols     = row.cells.length;
+  const cellStyle = row.cells[0]?.style.cssText ?? 'border:1px solid #cbd5e1;padding:6px 10px;';
+  const newRow   = table.insertRow(before ? row.rowIndex : row.rowIndex + 1);
+  for (let i = 0; i < cols; i++) {
+    const td = newRow.insertCell(i);
+    td.style.cssText = cellStyle.replace(/background[^;]*;?/gi, '');
+    td.innerHTML     = '&nbsp;';
+  }
+}
+
+function tableDeleteRow(ctx: TableContext): void {
+  const { table, row } = ctx;
+  if (table.rows.length <= 1) return;
+  table.deleteRow(row.rowIndex);
+}
+
+function tableInsertColumn(ctx: TableContext, before: boolean): void {
+  const { table, colIndex } = ctx;
+  Array.from(table.rows).forEach((row, ri) => {
+    const isHeader  = ri === 0 && row.parentElement?.tagName === 'THEAD';
+    const newCell   = document.createElement(isHeader ? 'th' : 'td');
+    const cellStyle = 'border:1px solid #cbd5e1;padding:6px 10px;text-align:left;';
+    newCell.style.cssText = isHeader ? cellStyle + 'background:#f1f5f9;' : cellStyle;
+    newCell.innerHTML = '&nbsp;';
+    const ref = row.cells[before ? colIndex : colIndex + 1];
+    ref ? row.insertBefore(newCell, ref) : row.appendChild(newCell);
+  });
+}
+
+function tableDeleteColumn(ctx: TableContext): void {
+  const { table, colIndex } = ctx;
+  if (table.rows[0] && table.rows[0].cells.length <= 1) return;
+  Array.from(table.rows).forEach((row) => {
+    const cell = row.cells[colIndex];
+    if (cell) row.deleteCell(cell.cellIndex);
+  });
+}
+
+function tableSetColumnWidth(ctx: TableContext, width: string): void {
+  const { table, colIndex } = ctx;
+  Array.from(table.rows).forEach((row) => {
+    const cell = row.cells[colIndex];
+    if (cell) cell.style.width = width;
+  });
 }
 
 /** Wrap the current selection in a span with an inline style property. Falls back gracefully when selection is collapsed. */
@@ -194,16 +276,140 @@ interface FormatState {
   underline: boolean;
   orderedList: boolean;
   unorderedList: boolean;
+  alignLeft: boolean;
+  alignCenter: boolean;
+  alignRight: boolean;
 }
 
 function getFormatState(): FormatState {
   return {
-    bold: document.queryCommandState('bold'),
-    italic: document.queryCommandState('italic'),
-    underline: document.queryCommandState('underline'),
-    orderedList: document.queryCommandState('insertOrderedList'),
+    bold:          document.queryCommandState('bold'),
+    italic:        document.queryCommandState('italic'),
+    underline:     document.queryCommandState('underline'),
+    orderedList:   document.queryCommandState('insertOrderedList'),
     unorderedList: document.queryCommandState('insertUnorderedList'),
+    alignLeft:     document.queryCommandState('justifyLeft'),
+    alignCenter:   document.queryCommandState('justifyCenter'),
+    alignRight:    document.queryCommandState('justifyRight'),
   };
+}
+
+// ─── Table row×col picker popover ─────────────────────────────────────────────
+
+const PICKER_MAX = 8;
+
+function TablePicker({
+  onInsert,
+  onClose,
+}: {
+  onInsert: (rows: number, cols: number) => void;
+  onClose: () => void;
+}) {
+  const [hover, setHover] = useState({ r: 0, c: 0 });
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={wrapRef}
+      className="absolute z-50 top-full left-0 mt-1 bg-white border border-secondary-200 rounded-xl shadow-xl p-3 select-none"
+      onMouseDown={(e) => e.preventDefault()}
+    >
+      <p className="text-[10px] font-semibold text-secondary-500 mb-2 text-center min-w-[120px]">
+        {hover.r > 0 && hover.c > 0
+          ? `${hover.c} column${hover.c > 1 ? 's' : ''} × ${hover.r} row${hover.r > 1 ? 's' : ''}`
+          : 'Hover to choose size'}
+      </p>
+      <div
+        className="grid gap-[3px]"
+        style={{ gridTemplateColumns: `repeat(${PICKER_MAX}, 18px)` }}
+      >
+        {Array.from({ length: PICKER_MAX }, (_, r) =>
+          Array.from({ length: PICKER_MAX }, (_, c) => (
+            <div
+              key={`${r}-${c}`}
+              className={`w-[18px] h-[18px] rounded-sm border cursor-pointer transition-colors ${
+                r < hover.r && c < hover.c
+                  ? 'bg-primary-300 border-primary-500'
+                  : 'bg-secondary-100 border-secondary-300 hover:bg-primary-100 hover:border-primary-300'
+              }`}
+              onMouseEnter={() => setHover({ r: r + 1, c: c + 1 })}
+              onClick={() => {
+                onInsert(hover.r, hover.c);
+                onClose();
+              }}
+            />
+          )),
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Table context bar (shown when cursor is inside a table) ───────────────────
+
+const COL_WIDTHS = [
+  { label: 'Auto', value: '' },
+  { label: '10%',  value: '10%' },
+  { label: '20%',  value: '20%' },
+  { label: '25%',  value: '25%' },
+  { label: '33%',  value: '33%' },
+  { label: '50%',  value: '50%' },
+  { label: '75%',  value: '75%' },
+  { label: '100%', value: '100%' },
+];
+
+function TableContextBar({
+  ctx,
+  onTableAction,
+}: {
+  ctx: TableContext;
+  onTableAction: (fn: () => void) => void;
+}) {
+  const actionBtn =
+    'text-[10px] font-semibold px-2 py-0.5 rounded border border-blue-200 bg-white text-blue-700 hover:bg-blue-50 transition-colors';
+  const dangerBtn =
+    'text-[10px] font-semibold px-2 py-0.5 rounded border border-red-200 bg-white text-red-600 hover:bg-red-50 transition-colors';
+  const sep = <span className="w-px h-4 bg-blue-200 flex-shrink-0" />;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 px-2.5 py-1.5 bg-blue-50/70 border-b border-blue-100 print-hide">
+      <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wide mr-0.5">Row</span>
+      <button type="button" className={actionBtn} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertRow(ctx, true))}  title="Insert row above">↑ Above</button>
+      <button type="button" className={actionBtn} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertRow(ctx, false))} title="Insert row below">↓ Below</button>
+      <button type="button" className={dangerBtn} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableDeleteRow(ctx))}         title="Delete this row">✕ Row</button>
+
+      {sep}
+
+      <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wide mr-0.5">Col</span>
+      <button type="button" className={actionBtn} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertColumn(ctx, true))}  title="Insert column left">← Left</button>
+      <button type="button" className={actionBtn} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertColumn(ctx, false))} title="Insert column right">→ Right</button>
+      <button type="button" className={dangerBtn} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableDeleteColumn(ctx))}        title="Delete this column">✕ Col</button>
+
+      {sep}
+
+      <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wide mr-0.5">Width</span>
+      {COL_WIDTHS.map((w) => (
+        <button
+          key={w.label}
+          type="button"
+          className={actionBtn}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onTableAction(() => tableSetColumnWidth(ctx, w.value))}
+          title={w.value ? `Set column width to ${w.value}` : 'Reset column width to auto'}
+        >
+          {w.label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 // ─── Toolbar component ─────────────────────────────────────────────────────────
@@ -215,6 +421,9 @@ function EditorToolbar({
   onImageWidth,
   formatState,
   onFormat,
+  tablePickerOpen,
+  onTablePickerToggle,
+  onTableInsert,
 }: {
   editorRef: React.RefObject<HTMLDivElement | null>;
   onImageClick: () => void;
@@ -222,6 +431,9 @@ function EditorToolbar({
   onImageWidth: (mode: 'sm' | 'md' | 'lg' | 'full') => void;
   formatState: FormatState;
   onFormat: (fn: () => void) => void;
+  tablePickerOpen: boolean;
+  onTablePickerToggle: () => void;
+  onTableInsert: (rows: number, cols: number) => void;
 }) {
   const tbBtn = (active: boolean) =>
     `min-w-[28px] h-7 px-1.5 rounded text-xs font-bold border transition-colors select-none ${
@@ -275,96 +487,82 @@ function EditorToolbar({
       {sep}
 
       {/* Bold */}
-      <button
-        type="button"
-        title="Bold (Ctrl+B)"
-        className={tbBtn(formatState.bold)}
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => onFormat(() => cmd('bold'))}
-      >
-        B
+      <button type="button" title="Bold (Ctrl+B)" className={tbBtn(formatState.bold)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('bold'))}>
+        <strong>B</strong>
       </button>
 
       {/* Italic */}
-      <button
-        type="button"
-        title="Italic (Ctrl+I)"
-        className={`${tbBtn(formatState.italic)} italic`}
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => onFormat(() => cmd('italic'))}
-      >
-        I
+      <button type="button" title="Italic (Ctrl+I)" className={`${tbBtn(formatState.italic)} italic`} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('italic'))}>
+        <em>I</em>
       </button>
 
       {/* Underline */}
-      <button
-        type="button"
-        title="Underline (Ctrl+U)"
-        className={`${tbBtn(formatState.underline)} underline`}
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => onFormat(() => cmd('underline'))}
-      >
+      <button type="button" title="Underline (Ctrl+U)" className={`${tbBtn(formatState.underline)} underline`} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('underline'))}>
         U
       </button>
 
       {sep}
 
+      {/* Align left */}
+      <button type="button" title="Align left" className={tbBtn(formatState.alignLeft)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('justifyLeft'))}>
+        &#8676;
+      </button>
+
+      {/* Align center */}
+      <button type="button" title="Align center" className={tbBtn(formatState.alignCenter)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('justifyCenter'))}>
+        &#8596;
+      </button>
+
+      {/* Align right */}
+      <button type="button" title="Align right" className={tbBtn(formatState.alignRight)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('justifyRight'))}>
+        &#8677;
+      </button>
+
+      {sep}
+
       {/* Bullet list */}
-      <button
-        type="button"
-        title="Bullet list"
-        className={tbBtn(formatState.unorderedList)}
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => onFormat(() => cmd('insertUnorderedList'))}
-      >
+      <button type="button" title="Bullet list" className={tbBtn(formatState.unorderedList)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('insertUnorderedList'))}>
         &#8226;&#8212;
       </button>
 
       {/* Numbered list */}
-      <button
-        type="button"
-        title="Numbered list"
-        className={tbBtn(formatState.orderedList)}
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => onFormat(() => cmd('insertOrderedList'))}
-      >
+      <button type="button" title="Numbered list" className={tbBtn(formatState.orderedList)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('insertOrderedList'))}>
         1.&#8212;
       </button>
 
       {sep}
 
-      {/* Table */}
-      <button
-        type="button"
-        title="Insert table (3×3)"
-        className={tbBtn(false)}
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => {
-          if (!editorRef.current) return;
-          onFormat(() => insertHtmlIntoCaret(editorRef.current!, makeDefaultTable()));
-        }}
-      >
-        ⊞
-      </button>
+      {/* Table — click opens grid picker */}
+      <div className="relative">
+        <button
+          type="button"
+          title="Insert table — choose size"
+          className={tbBtn(tablePickerOpen)}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onTablePickerToggle}
+        >
+          ⊞
+        </button>
+        {tablePickerOpen && (
+          <TablePicker
+            onInsert={onTableInsert}
+            onClose={onTablePickerToggle}
+          />
+        )}
+      </div>
 
       {sep}
 
       {/* Image */}
-      <button
-        type="button"
-        title="Insert image"
-        className={tbBtn(false)}
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={onImageClick}
-      >
+      <button type="button" title="Insert image" className={tbBtn(false)} onMouseDown={(e) => e.preventDefault()} onClick={onImageClick}>
         🖼
       </button>
 
-      {/* Image width controls — only visible when an image is selected */}
+      {/* Image width controls — only when an image is selected */}
       {selectedImg ? (
         <>
           {sep}
-          <span className="text-[10px] font-semibold text-secondary-500">Width:</span>
+          <span className="text-[10px] font-semibold text-secondary-500">Img:</span>
           {(['sm', 'md', 'lg', 'full'] as const).map((mode) => (
             <button
               key={mode}
@@ -398,12 +596,17 @@ function CustomBodyEditor({
   const fileRef = useRef<HTMLInputElement>(null);
   const selectedImgRef = useRef<HTMLImageElement | null>(null);
   const [imgRev, setImgRev] = useState(0);
+  const [tablePickerOpen, setTablePickerOpen] = useState(false);
+  const [tableCtx, setTableCtx] = useState<TableContext | null>(null);
   const [formatState, setFormatState] = useState<FormatState>({
     bold: false,
     italic: false,
     underline: false,
     orderedList: false,
     unorderedList: false,
+    alignLeft: false,
+    alignCenter: false,
+    alignRight: false,
   });
 
   useLayoutEffect(() => {
@@ -418,9 +621,10 @@ function CustomBodyEditor({
     }
   }, [html, readOnly]);
 
-  // Track selection changes to update toolbar active states
+  // Track selection changes to update toolbar active states + table context
   const refreshFormatState = useCallback(() => {
     try { setFormatState(getFormatState()); } catch { /* ignore */ }
+    setTableCtx(ref.current ? getTableContext(ref.current) : null);
   }, []);
 
   useEffect(() => {
@@ -439,6 +643,13 @@ function CustomBodyEditor({
     refreshFormatState();
     commitFromEditor();
   }, [commitFromEditor, refreshFormatState]);
+
+  /** Run a direct DOM table operation (no execCommand), then commit. */
+  const onTableAction = useCallback((fn: () => void) => {
+    fn();
+    if (ref.current) onCommit(sanitizeProposalCustomBodyHtml(ref.current.innerHTML));
+    setTableCtx(ref.current ? getTableContext(ref.current) : null);
+  }, [onCommit]);
 
   const insertImageFromFile = async (file: File) => {
     const dataUrl = await compressImageFileToDataUrl(file);
@@ -572,7 +783,17 @@ function CustomBodyEditor({
         onImageWidth={applyImageWidth}
         formatState={formatState}
         onFormat={onFormat}
+        tablePickerOpen={tablePickerOpen}
+        onTablePickerToggle={() => setTablePickerOpen((v) => !v)}
+        onTableInsert={(rows, cols) => {
+          setTablePickerOpen(false);
+          onFormat(() => insertHtmlIntoCaret(ref.current!, makeTable(rows, cols)));
+        }}
       />
+
+      {tableCtx && (
+        <TableContextBar ctx={tableCtx} onTableAction={onTableAction} />
+      )}
 
       <div
         ref={ref}
