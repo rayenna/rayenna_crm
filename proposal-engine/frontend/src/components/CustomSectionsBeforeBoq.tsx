@@ -376,36 +376,41 @@ function ColorPicker({
   return (
     <div
       ref={wrapRef}
-      className="absolute z-50 top-full left-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl p-3 min-w-[172px]"
+      className="absolute z-50 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl p-3
+                 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0"
       onMouseDown={(e) => e.preventDefault()}
     >
-      <div className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(8, 18px)' }}>
+      {/* Swatches — 24px on mobile for easy tapping, 22px on sm+ */}
+      <div className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(8, 24px)' }}>
         {colors.map((color) => (
           <button
             key={color}
             type="button"
             title={color}
-            className="w-[18px] h-[18px] rounded border border-slate-200 hover:scale-125 transition-transform ring-offset-1 hover:ring-2 hover:ring-slate-400 focus:outline-none"
+            className="w-6 h-6 rounded-md border border-slate-200 active:scale-90 hover:scale-110
+                       transition-transform ring-offset-1 hover:ring-2 hover:ring-slate-400
+                       focus:outline-none [touch-action:manipulation]"
             style={{ background: color }}
             onClick={() => { onSelect(color); onClose(); }}
           />
         ))}
       </div>
       <div className="mt-2.5 flex items-center gap-2">
-        <label className="flex items-center gap-1.5 cursor-pointer">
+        <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="color"
-            className="w-6 h-6 rounded border border-slate-200 cursor-pointer p-0"
+            className="w-7 h-7 sm:w-6 sm:h-6 rounded border border-slate-200 cursor-pointer p-0"
             defaultValue="#000000"
             onChange={(e) => onSelect(e.target.value)}
             title="Custom colour"
           />
-          <span className="text-[10px] text-slate-500 font-medium">Custom</span>
+          <span className="text-xs sm:text-[10px] text-slate-500 font-medium">Custom</span>
         </label>
         {allowRemove && (
           <button
             type="button"
-            className="text-[10px] text-slate-500 hover:text-red-500 font-medium ml-auto"
+            className="text-xs sm:text-[10px] text-slate-500 hover:text-red-500 font-medium ml-auto
+                       [touch-action:manipulation]"
             onClick={() => { onSelect(''); onClose(); }}
           >
             {removeLabel}
@@ -441,28 +446,31 @@ function TablePicker({
   return (
     <div
       ref={wrapRef}
-      className="absolute z-50 top-full left-0 mt-1 bg-white border border-secondary-200 rounded-xl shadow-xl p-3 select-none"
+      className="absolute z-50 top-full mt-1 bg-white border border-secondary-200 rounded-xl shadow-xl p-3 select-none
+                 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0"
       onMouseDown={(e) => e.preventDefault()}
     >
-      <p className="text-[10px] font-semibold text-secondary-500 mb-2 text-center min-w-[120px]">
+      <p className="text-xs sm:text-[10px] font-semibold text-secondary-500 mb-2 text-center min-w-[140px]">
         {hover.r > 0 && hover.c > 0
-          ? `${hover.c} column${hover.c > 1 ? 's' : ''} × ${hover.r} row${hover.r > 1 ? 's' : ''}`
-          : 'Hover to choose size'}
+          ? `${hover.c} col${hover.c > 1 ? 's' : ''} × ${hover.r} row${hover.r > 1 ? 's' : ''}`
+          : 'Tap to choose size'}
       </p>
+      {/* Cells 22px — comfortable on both mobile and desktop */}
       <div
-        className="grid gap-[3px]"
-        style={{ gridTemplateColumns: `repeat(${PICKER_MAX}, 18px)` }}
+        className="grid gap-1"
+        style={{ gridTemplateColumns: `repeat(${PICKER_MAX}, 22px)` }}
       >
         {Array.from({ length: PICKER_MAX }, (_, r) =>
           Array.from({ length: PICKER_MAX }, (_, c) => (
             <div
               key={`${r}-${c}`}
-              className={`w-[18px] h-[18px] rounded-sm border cursor-pointer transition-colors ${
+              className={`w-[22px] h-[22px] rounded border cursor-pointer transition-colors [touch-action:manipulation] ${
                 r < hover.r && c < hover.c
                   ? 'bg-primary-300 border-primary-500'
                   : 'bg-secondary-100 border-secondary-300 hover:bg-primary-100 hover:border-primary-300'
               }`}
               onMouseEnter={() => setHover({ r: r + 1, c: c + 1 })}
+              onTouchStart={() => setHover({ r: r + 1, c: c + 1 })}
               onClick={() => {
                 onInsert(hover.r, hover.c);
                 onClose();
@@ -495,14 +503,14 @@ function TableContextBar({
   ctx: TableContext;
   onTableAction: (fn: () => void) => void;
 }) {
-  const ab = 'text-[10px] font-semibold px-2 py-0.5 rounded-md border border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 transition-colors';
-  const db = 'text-[10px] font-semibold px-2 py-0.5 rounded-md border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 transition-colors';
-  const sep = <span className="w-px h-4 bg-indigo-200/60 flex-shrink-0 mx-0.5" />;
+  const ab = 'text-[11px] sm:text-[10px] font-semibold px-2.5 py-1.5 sm:py-0.5 sm:px-2 rounded-md border border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 active:bg-indigo-100 transition-colors [touch-action:manipulation]';
+  const db = 'text-[11px] sm:text-[10px] font-semibold px-2.5 py-1.5 sm:py-0.5 sm:px-2 rounded-md border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 active:bg-rose-100 transition-colors [touch-action:manipulation]';
+  const sep = <span className="w-px h-5 sm:h-4 bg-indigo-200/60 flex-shrink-0 mx-0.5" />;
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 px-3 py-1.5 bg-indigo-50/60 border-b border-indigo-100 print-hide">
+    <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 sm:py-1.5 bg-indigo-50/60 border-b border-indigo-100 print-hide">
       {/* Row ops */}
-      <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Row</span>
+      <span className="text-[10px] sm:text-[9px] font-black text-indigo-400 uppercase tracking-widest">Row</span>
       <button type="button" className={ab} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertRow(ctx, true))}>↑ Above</button>
       <button type="button" className={ab} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertRow(ctx, false))}>↓ Below</button>
       <button type="button" className={db} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableDeleteRow(ctx))}>✕ Row</button>
@@ -510,7 +518,7 @@ function TableContextBar({
       {sep}
 
       {/* Column ops */}
-      <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Col</span>
+      <span className="text-[10px] sm:text-[9px] font-black text-indigo-400 uppercase tracking-widest">Col</span>
       <button type="button" className={ab} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertColumn(ctx, true))}>← Left</button>
       <button type="button" className={ab} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertColumn(ctx, false))}>→ Right</button>
       <button type="button" className={db} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableDeleteColumn(ctx))}>✕ Col</button>
@@ -518,7 +526,7 @@ function TableContextBar({
       {sep}
 
       {/* Column width */}
-      <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Width</span>
+      <span className="text-[10px] sm:text-[9px] font-black text-indigo-400 uppercase tracking-widest">Width</span>
       {COL_WIDTHS.map((w) => (
         <button key={w.label} type="button" className={ab} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableSetColumnWidth(ctx, w.value))}>
           {w.label}
@@ -528,7 +536,7 @@ function TableContextBar({
       {sep}
 
       {/* Borders */}
-      <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Borders</span>
+      <span className="text-[10px] sm:text-[9px] font-black text-indigo-400 uppercase tracking-widest">Borders</span>
       {(['all', 'outer', 'inner', 'none'] as const).map((preset) => (
         <button key={preset} type="button" className={ab} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableSetBorders(ctx, preset))}>
           {preset.charAt(0).toUpperCase() + preset.slice(1)}
@@ -567,26 +575,35 @@ function EditorToolbar({
   const [lastHighlight, setLastHighlight]       = useState('#fef08a');
 
   /* ── styling helpers ── */
-  // Icon button: borderless, highlight on hover/active
+  // Icon button — 36px tall on mobile, 28px on sm+; no border, bg on hover/active
   const ib = (active: boolean, extra = '') =>
-    `relative h-7 min-w-[28px] px-1.5 rounded-md flex items-center justify-center text-[13px] select-none transition-all duration-100 cursor-pointer ${extra} ${
+    `relative h-9 sm:h-7 min-w-[36px] sm:min-w-[28px] px-2 sm:px-1.5 rounded-md flex items-center
+     justify-center text-[13px] select-none transition-all duration-100 flex-shrink-0
+     [touch-action:manipulation] ${extra} ${
       active
         ? 'bg-blue-100 text-blue-700 shadow-inner'
-        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+        : 'text-slate-600 hover:bg-slate-100 active:bg-slate-200 hover:text-slate-900'
     }`;
-  // Thin separator
-  const Sep = () => <span className="w-px h-5 bg-slate-200 mx-0.5 flex-shrink-0" />;
-  // Label above a group of buttons
+  // Separator — taller on mobile to match button height
+  const Sep = () => <span className="w-px h-7 sm:h-5 bg-slate-200 mx-0.5 flex-shrink-0" />;
+  // Tiny group label (image size)
   const GLabel = ({ children }: { children: React.ReactNode }) => (
-    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 select-none">{children}</span>
+    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 select-none flex-shrink-0">{children}</span>
   );
 
   return (
-    <div className="flex flex-wrap items-center gap-x-1 gap-y-1 rounded-t-lg border border-b-0 border-slate-200 bg-gradient-to-b from-slate-50 to-white px-2.5 py-2 print-hide shadow-sm">
+    // On mobile: single row with horizontal scroll (no wrap) so toolbar stays compact.
+    // On sm+: wrap naturally across multiple rows.
+    <div className="flex flex-nowrap sm:flex-wrap items-center gap-x-1 gap-y-1
+                    overflow-x-auto sm:overflow-x-visible
+                    rounded-t-lg border border-b-0 border-slate-200
+                    bg-gradient-to-b from-slate-50 to-white
+                    px-2.5 py-2 print-hide shadow-sm
+                    [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
 
       {/* ── Font family ── */}
       <select
-        className="h-7 max-w-[120px] rounded-md border border-slate-200 bg-white px-2 text-[12px] text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer hover:border-slate-300 transition-colors"
+        className="h-9 sm:h-7 flex-shrink-0 max-w-[130px] sm:max-w-[120px] rounded-md border border-slate-200 bg-white px-2 text-[12px] text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer hover:border-slate-300 transition-colors [touch-action:manipulation]"
         defaultValue=""
         onMouseDown={(e) => e.stopPropagation()}
         onChange={(e) => {
@@ -603,7 +620,7 @@ function EditorToolbar({
 
       {/* ── Font size ── */}
       <select
-        className="h-7 w-[68px] rounded-md border border-slate-200 bg-white px-1.5 text-[12px] text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer hover:border-slate-300 transition-colors"
+        className="h-9 sm:h-7 flex-shrink-0 w-[72px] sm:w-[68px] rounded-md border border-slate-200 bg-white px-1.5 text-[12px] text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer hover:border-slate-300 transition-colors [touch-action:manipulation]"
         defaultValue=""
         onMouseDown={(e) => e.stopPropagation()}
         onChange={(e) => {
@@ -619,7 +636,7 @@ function EditorToolbar({
       <Sep />
 
       {/* ── Text style group ── */}
-      <div className="flex items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
+      <div className="flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
         <button type="button" title="Bold (Ctrl+B)" className={ib(formatState.bold, 'font-black')} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('bold'))}>B</button>
         <button type="button" title="Italic (Ctrl+I)" className={ib(formatState.italic, 'italic font-semibold')} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('italic'))}>I</button>
         <button type="button" title="Underline (Ctrl+U)" className={ib(formatState.underline, 'underline')} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('underline'))}>U</button>
@@ -634,7 +651,7 @@ function EditorToolbar({
       <Sep />
 
       {/* ── Font colour ── */}
-      <div className="relative">
+      <div className="relative flex-shrink-0">
         <button
           type="button"
           title="Font colour"
@@ -660,7 +677,7 @@ function EditorToolbar({
       </div>
 
       {/* ── Highlight colour ── */}
-      <div className="relative">
+      <div className="relative flex-shrink-0">
         <button
           type="button"
           title="Highlight colour"
@@ -700,7 +717,7 @@ function EditorToolbar({
       <Sep />
 
       {/* ── Indent ── */}
-      <div className="flex items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
+      <div className="flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
         <button type="button" title="Decrease indent" className={ib(false)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('outdent'))}>
           <span className="text-[14px] leading-none">⇤</span>
         </button>
@@ -712,7 +729,7 @@ function EditorToolbar({
       <Sep />
 
       {/* ── Alignment ── */}
-      <div className="flex items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
+      <div className="flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
         <button type="button" title="Align left" className={ib(formatState.alignLeft)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('justifyLeft'))}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="0" y="5" width="9" height="2" rx="1"/><rect x="0" y="9" width="12" height="2" rx="1"/></svg>
         </button>
@@ -727,7 +744,7 @@ function EditorToolbar({
       <Sep />
 
       {/* ── Lists ── */}
-      <div className="flex items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
+      <div className="flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
         <button type="button" title="Bullet list" className={ib(formatState.unorderedList)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('insertUnorderedList'))}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><circle cx="1.5" cy="2" r="1.5"/><rect x="4" y="1" width="10" height="2" rx="1"/><circle cx="1.5" cy="7" r="1.5"/><rect x="4" y="6" width="10" height="2" rx="1"/><circle cx="1.5" cy="12" r="1.5"/><rect x="4" y="11" width="10" height="2" rx="1"/></svg>
         </button>
@@ -739,7 +756,7 @@ function EditorToolbar({
       <Sep />
 
       {/* ── Table ── */}
-      <div className="relative">
+      <div className="relative flex-shrink-0">
         <button
           type="button"
           title="Insert table — choose rows × columns"
