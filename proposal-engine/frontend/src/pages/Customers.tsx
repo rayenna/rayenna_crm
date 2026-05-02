@@ -367,7 +367,7 @@ function ProjectCard({
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <p className="text-sm font-bold text-secondary-900 truncate">{name}</p>
+              <p className="text-sm font-bold text-secondary-900 truncate min-w-0">{name}</p>
               {isReadOnly && (
                 <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 font-semibold flex-shrink-0">
                   View only
@@ -976,8 +976,8 @@ function CustomerCard({
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <div className="flex items-center gap-1">
-                <p className="text-sm font-bold text-secondary-900 truncate">{record.master.name}</p>
+              <div className="flex items-center gap-1 min-w-0">
+                <p className="text-sm font-bold text-secondary-900 truncate min-w-0">{record.master.name}</p>
                 {typeof record.proposalIndex === 'number' && (
                   <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-semibold flex-shrink-0">
                     #{record.proposalIndex}
