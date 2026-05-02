@@ -436,9 +436,11 @@ export default function AIRoofLayout() {
     };
   }, [activeProject?.master?.crmProjectId]);
 
-  // Geometry constants (approximate, tuned for visual realism)
-  // Use a stable value here so area + panel counts remain in a sensible range.
-  const METERS_PER_PIXEL = 0.15;
+  // Geometry constants derived from the satellite image API parameters.
+  // Backend fetches: zoom=20, size=1024x1024, scale=2 → returns a 2048×2048 px image.
+  // Pixel scale at zoom=20, scale=2 (equator baseline): 40,075,016 / (256 × 2^20) / 2 ≈ 0.0746 m/px.
+  // 0.075 is used as a round, slightly-conservative equator value (actual varies ±10% by latitude).
+  const METERS_PER_PIXEL = 0.075;
   const PANEL_WIDTH_M = 1.1;
   const PANEL_HEIGHT_M = 2.2;
   const PANEL_AREA_M2 = 2.42;
