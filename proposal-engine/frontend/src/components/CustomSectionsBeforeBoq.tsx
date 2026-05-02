@@ -113,11 +113,15 @@ function insertHtmlIntoCaret(el: HTMLElement, html: string): void {
 // ─── Toolbar constants ────────────────────────────────────────────────────────
 
 const FONT_FAMILIES = [
-  { label: 'Arial', value: 'Arial, sans-serif' },
-  { label: 'Georgia', value: 'Georgia, serif' },
-  { label: 'Times New Roman', value: '"Times New Roman", serif' },
-  { label: 'Trebuchet MS', value: '"Trebuchet MS", sans-serif' },
-  { label: 'Courier New', value: '"Courier New", monospace' },
+  { label: 'Arial',            value: 'Arial, sans-serif' },
+  { label: 'Calibri',          value: 'Calibri, sans-serif' },
+  { label: 'Courier New',      value: '"Courier New", monospace' },
+  { label: 'Garamond',         value: 'Garamond, serif' },
+  { label: 'Georgia',          value: 'Georgia, serif' },
+  { label: 'Sans Serif',       value: 'sans-serif' },
+  { label: 'Times New Roman',  value: '"Times New Roman", serif' },
+  { label: 'Trebuchet MS',     value: '"Trebuchet MS", sans-serif' },
+  { label: 'Verdana',          value: 'Verdana, sans-serif' },
 ];
 
 const FONT_SIZES = [
