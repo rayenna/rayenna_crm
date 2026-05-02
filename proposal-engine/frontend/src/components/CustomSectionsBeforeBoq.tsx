@@ -8,6 +8,7 @@ import {
   type ChangeEvent,
   type MouseEvent as ReactMouseEvent,
 } from 'react';
+import { createPortal } from 'react-dom';
 import type { ProposalCustomSectionBeforeBoq } from '../lib/customerStore';
 import {
   newCustomSectionId,
@@ -549,27 +550,53 @@ function TableContextBar({
 // ─── Toolbar tooltip ───────────────────────────────────────────────────────────
 
 /**
- * Lightweight CSS-only styled tooltip for toolbar buttons.
- * Hidden on mobile (touch screens have no hover) and shows after a short delay
- * to avoid flickering when the user mouses across the toolbar.
+ * Toolbar button tooltip rendered via createPortal into document.body.
+ * This bypasses the overflow-x:auto clipping on the scrollable toolbar row —
+ * the tooltip always floats above the button regardless of any parent overflow.
+ * Hidden on mobile (touch = no hover).
  */
 function BtnTooltip({ label, children }: { label: string; children: React.ReactNode }) {
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const [coords, setCoords] = useState<{ x: number; y: number } | null>(null);
+
+  const show = () => {
+    const el = anchorRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setCoords({ x: r.left + r.width / 2, y: r.top });
+  };
+  const hide = () => setCoords(null);
+
   return (
-    <span className="group/tt relative inline-flex items-center flex-shrink-0">
+    <span
+      ref={anchorRef}
+      className="inline-flex items-center flex-shrink-0"
+      onMouseEnter={show}
+      onMouseLeave={hide}
+      onMouseDown={hide}   /* hide on click so it doesn't linger after action */
+    >
       {children}
-      <span
-        role="tooltip"
-        className={[
-          'pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-[300]',
-          'whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1.5',
-          'text-[11px] font-medium leading-none text-white shadow-xl',
-          'opacity-0 group-hover/tt:opacity-100 transition-opacity duration-100 delay-500',
-          'hidden sm:block',
-        ].join(' ')}
-      >
-        {label}
-        <span className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900" />
-      </span>
+      {coords && createPortal(
+        <span
+          role="tooltip"
+          style={{
+            position: 'fixed',
+            left: coords.x,
+            top: coords.y - 6,
+            transform: 'translate(-50%, -100%)',
+            zIndex: 9999,
+            pointerEvents: 'none',
+          }}
+          className="hidden sm:block whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1.5 text-[11px] font-medium leading-none text-white shadow-xl"
+        >
+          {label}
+          {/* Arrow pointing down toward the button */}
+          <span
+            style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid #0f172a' }}
+          />
+        </span>,
+        document.body,
+      )}
     </span>
   );
 }
