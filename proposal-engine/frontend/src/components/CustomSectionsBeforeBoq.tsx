@@ -546,6 +546,34 @@ function TableContextBar({
   );
 }
 
+// ─── Toolbar tooltip ───────────────────────────────────────────────────────────
+
+/**
+ * Lightweight CSS-only styled tooltip for toolbar buttons.
+ * Hidden on mobile (touch screens have no hover) and shows after a short delay
+ * to avoid flickering when the user mouses across the toolbar.
+ */
+function BtnTooltip({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <span className="group/tt relative inline-flex items-center flex-shrink-0">
+      {children}
+      <span
+        role="tooltip"
+        className={[
+          'pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-[300]',
+          'whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1.5',
+          'text-[11px] font-medium leading-none text-white shadow-xl',
+          'opacity-0 group-hover/tt:opacity-100 transition-opacity duration-100 delay-500',
+          'hidden sm:block',
+        ].join(' ')}
+      >
+        {label}
+        <span className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900" />
+      </span>
+    </span>
+  );
+}
+
 // ─── Toolbar component ─────────────────────────────────────────────────────────
 
 function EditorToolbar({
@@ -602,68 +630,85 @@ function EditorToolbar({
                     [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
 
       {/* ── Font family ── */}
-      <select
-        className="h-9 sm:h-7 flex-shrink-0 max-w-[130px] sm:max-w-[120px] rounded-md border border-slate-200 bg-white px-2 text-[12px] text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer hover:border-slate-300 transition-colors [touch-action:manipulation]"
-        defaultValue=""
-        onMouseDown={(e) => e.stopPropagation()}
-        onChange={(e) => {
-          const v = e.target.value; e.target.value = '';
-          if (!v || !editorRef.current) return;
-          onFormat(() => applyInlineStyle('font-family', v, editorRef.current!));
-        }}
-      >
-        <option value="" disabled>Font</option>
-        {FONT_FAMILIES.map((f) => (
-          <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>{f.label}</option>
-        ))}
-      </select>
+      <BtnTooltip label="Font family">
+        <select
+          title="Font family"
+          className="h-9 sm:h-7 flex-shrink-0 max-w-[130px] sm:max-w-[120px] rounded-md border border-slate-200 bg-white px-2 text-[12px] text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer hover:border-slate-300 transition-colors [touch-action:manipulation]"
+          defaultValue=""
+          onMouseDown={(e) => e.stopPropagation()}
+          onChange={(e) => {
+            const v = e.target.value; e.target.value = '';
+            if (!v || !editorRef.current) return;
+            onFormat(() => applyInlineStyle('font-family', v, editorRef.current!));
+          }}
+        >
+          <option value="" disabled>Font</option>
+          {FONT_FAMILIES.map((f) => (
+            <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>{f.label}</option>
+          ))}
+        </select>
+      </BtnTooltip>
 
       {/* ── Font size ── */}
-      <select
-        className="h-9 sm:h-7 flex-shrink-0 w-[72px] sm:w-[68px] rounded-md border border-slate-200 bg-white px-1.5 text-[12px] text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer hover:border-slate-300 transition-colors [touch-action:manipulation]"
-        defaultValue=""
-        onMouseDown={(e) => e.stopPropagation()}
-        onChange={(e) => {
-          const v = e.target.value; e.target.value = '';
-          if (!v || !editorRef.current) return;
-          onFormat(() => applyInlineStyle('font-size', v, editorRef.current!));
-        }}
-      >
-        <option value="" disabled>Size</option>
-        {FONT_SIZES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-      </select>
+      <BtnTooltip label="Font size">
+        <select
+          title="Font size"
+          className="h-9 sm:h-7 flex-shrink-0 w-[72px] sm:w-[68px] rounded-md border border-slate-200 bg-white px-1.5 text-[12px] text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer hover:border-slate-300 transition-colors [touch-action:manipulation]"
+          defaultValue=""
+          onMouseDown={(e) => e.stopPropagation()}
+          onChange={(e) => {
+            const v = e.target.value; e.target.value = '';
+            if (!v || !editorRef.current) return;
+            onFormat(() => applyInlineStyle('font-size', v, editorRef.current!));
+          }}
+        >
+          <option value="" disabled>Size</option>
+          {FONT_SIZES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
+      </BtnTooltip>
 
       <Sep />
 
       {/* ── Text style group ── */}
       <div className="flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
-        <button type="button" title="Bold (Ctrl+B)" className={ib(formatState.bold, 'font-black')} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('bold'))}>B</button>
-        <button type="button" title="Italic (Ctrl+I)" className={ib(formatState.italic, 'italic font-semibold')} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('italic'))}>I</button>
-        <button type="button" title="Underline (Ctrl+U)" className={ib(formatState.underline, 'underline')} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('underline'))}>U</button>
-        <button type="button" title="Subscript" className={ib(formatState.subscript)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('subscript'))}>
-          <span className="text-[11px] leading-none">x<sub className="text-[8px]">2</sub></span>
-        </button>
-        <button type="button" title="Superscript" className={ib(formatState.superscript)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('superscript'))}>
-          <span className="text-[11px] leading-none">x<sup className="text-[8px]">2</sup></span>
-        </button>
+        <BtnTooltip label="Bold (Ctrl+B)">
+          <button type="button" className={ib(formatState.bold, 'font-black')} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('bold'))}>B</button>
+        </BtnTooltip>
+        <BtnTooltip label="Italic (Ctrl+I)">
+          <button type="button" className={ib(formatState.italic, 'italic font-semibold')} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('italic'))}>I</button>
+        </BtnTooltip>
+        <BtnTooltip label="Underline (Ctrl+U)">
+          <button type="button" className={ib(formatState.underline, 'underline')} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('underline'))}>U</button>
+        </BtnTooltip>
+        <BtnTooltip label="Subscript">
+          <button type="button" className={ib(formatState.subscript)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('subscript'))}>
+            <span className="text-[11px] leading-none">x<sub className="text-[8px]">2</sub></span>
+          </button>
+        </BtnTooltip>
+        <BtnTooltip label="Superscript">
+          <button type="button" className={ib(formatState.superscript)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('superscript'))}>
+            <span className="text-[11px] leading-none">x<sup className="text-[8px]">2</sup></span>
+          </button>
+        </BtnTooltip>
       </div>
 
       <Sep />
 
       {/* ── Font colour ── */}
       <div className="relative flex-shrink-0">
-        <button
-          type="button"
-          title="Font colour"
-          className={ib(fontColorOpen)}
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => { setFontColorOpen((v) => !v); setHighlightOpen(false); }}
-        >
-          <span className="flex flex-col items-center leading-none gap-[2px]">
-            <span className="text-[12px] font-black leading-none" style={{ color: lastFontColor === '#ffffff' ? '#000' : lastFontColor }}>A</span>
-            <span className="h-[3px] w-[14px] rounded-sm" style={{ background: lastFontColor }} />
-          </span>
-        </button>
+        <BtnTooltip label="Font colour">
+          <button
+            type="button"
+            className={ib(fontColorOpen)}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => { setFontColorOpen((v) => !v); setHighlightOpen(false); }}
+          >
+            <span className="flex flex-col items-center leading-none gap-[2px]">
+              <span className="text-[12px] font-black leading-none" style={{ color: lastFontColor === '#ffffff' ? '#000' : lastFontColor }}>A</span>
+              <span className="h-[3px] w-[14px] rounded-sm" style={{ background: lastFontColor }} />
+            </span>
+          </button>
+        </BtnTooltip>
         {fontColorOpen && (
           <ColorPicker
             colors={FONT_COLORS}
@@ -678,18 +723,19 @@ function EditorToolbar({
 
       {/* ── Highlight colour ── */}
       <div className="relative flex-shrink-0">
-        <button
-          type="button"
-          title="Highlight colour"
-          className={ib(highlightOpen)}
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => { setHighlightOpen((v) => !v); setFontColorOpen(false); }}
-        >
-          <span className="flex flex-col items-center leading-none gap-[2px]">
-            <span className="text-[11px] font-bold leading-none px-0.5 rounded-sm" style={{ background: lastHighlight, color: '#1e293b' }}>ab</span>
-            <span className="h-[3px] w-[14px] rounded-sm" style={{ background: lastHighlight }} />
-          </span>
-        </button>
+        <BtnTooltip label="Highlight colour">
+          <button
+            type="button"
+            className={ib(highlightOpen)}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => { setHighlightOpen((v) => !v); setFontColorOpen(false); }}
+          >
+            <span className="flex flex-col items-center leading-none gap-[2px]">
+              <span className="text-[11px] font-bold leading-none px-0.5 rounded-sm" style={{ background: lastHighlight, color: '#1e293b' }}>ab</span>
+              <span className="h-[3px] w-[14px] rounded-sm" style={{ background: lastHighlight }} />
+            </span>
+          </button>
+        </BtnTooltip>
         {highlightOpen && (
           <ColorPicker
             colors={HIGHLIGHT_COLORS}
@@ -718,58 +764,73 @@ function EditorToolbar({
 
       {/* ── Indent ── */}
       <div className="flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
-        <button type="button" title="Decrease indent" className={ib(false)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('outdent'))}>
-          <span className="text-[14px] leading-none">⇤</span>
-        </button>
-        <button type="button" title="Increase indent" className={ib(false)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('indent'))}>
-          <span className="text-[14px] leading-none">⇥</span>
-        </button>
+        <BtnTooltip label="Decrease indent">
+          <button type="button" className={ib(false)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('outdent'))}>
+            <span className="text-[14px] leading-none">⇤</span>
+          </button>
+        </BtnTooltip>
+        <BtnTooltip label="Increase indent">
+          <button type="button" className={ib(false)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('indent'))}>
+            <span className="text-[14px] leading-none">⇥</span>
+          </button>
+        </BtnTooltip>
       </div>
 
       <Sep />
 
       {/* ── Alignment ── */}
       <div className="flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
-        <button type="button" title="Align left" className={ib(formatState.alignLeft)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('justifyLeft'))}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="0" y="5" width="9" height="2" rx="1"/><rect x="0" y="9" width="12" height="2" rx="1"/></svg>
-        </button>
-        <button type="button" title="Align center" className={ib(formatState.alignCenter)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('justifyCenter'))}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="2.5" y="5" width="9" height="2" rx="1"/><rect x="1" y="9" width="12" height="2" rx="1"/></svg>
-        </button>
-        <button type="button" title="Align right" className={ib(formatState.alignRight)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('justifyRight'))}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="5" y="5" width="9" height="2" rx="1"/><rect x="2" y="9" width="12" height="2" rx="1"/></svg>
-        </button>
+        <BtnTooltip label="Align left">
+          <button type="button" className={ib(formatState.alignLeft)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('justifyLeft'))}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="0" y="5" width="9" height="2" rx="1"/><rect x="0" y="9" width="12" height="2" rx="1"/></svg>
+          </button>
+        </BtnTooltip>
+        <BtnTooltip label="Align centre">
+          <button type="button" className={ib(formatState.alignCenter)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('justifyCenter'))}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="2.5" y="5" width="9" height="2" rx="1"/><rect x="1" y="9" width="12" height="2" rx="1"/></svg>
+          </button>
+        </BtnTooltip>
+        <BtnTooltip label="Align right">
+          <button type="button" className={ib(formatState.alignRight)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('justifyRight'))}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="5" y="5" width="9" height="2" rx="1"/><rect x="2" y="9" width="12" height="2" rx="1"/></svg>
+          </button>
+        </BtnTooltip>
       </div>
 
       <Sep />
 
       {/* ── Lists ── */}
       <div className="flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
-        <button type="button" title="Bullet list" className={ib(formatState.unorderedList)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('insertUnorderedList'))}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><circle cx="1.5" cy="2" r="1.5"/><rect x="4" y="1" width="10" height="2" rx="1"/><circle cx="1.5" cy="7" r="1.5"/><rect x="4" y="6" width="10" height="2" rx="1"/><circle cx="1.5" cy="12" r="1.5"/><rect x="4" y="11" width="10" height="2" rx="1"/></svg>
-        </button>
-        <button type="button" title="Numbered list" className={ib(formatState.orderedList)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('insertOrderedList'))}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><text x="0" y="4" fontSize="4" fontFamily="monospace">1.</text><rect x="5" y="1" width="9" height="2" rx="1"/><text x="0" y="9" fontSize="4" fontFamily="monospace">2.</text><rect x="5" y="6" width="9" height="2" rx="1"/><text x="0" y="14" fontSize="4" fontFamily="monospace">3.</text><rect x="5" y="11" width="9" height="2" rx="1"/></svg>
-        </button>
+        <BtnTooltip label="Bullet list">
+          <button type="button" className={ib(formatState.unorderedList)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('insertUnorderedList'))}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><circle cx="1.5" cy="2" r="1.5"/><rect x="4" y="1" width="10" height="2" rx="1"/><circle cx="1.5" cy="7" r="1.5"/><rect x="4" y="6" width="10" height="2" rx="1"/><circle cx="1.5" cy="12" r="1.5"/><rect x="4" y="11" width="10" height="2" rx="1"/></svg>
+          </button>
+        </BtnTooltip>
+        <BtnTooltip label="Numbered list">
+          <button type="button" className={ib(formatState.orderedList)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('insertOrderedList'))}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><text x="0" y="4" fontSize="4" fontFamily="monospace">1.</text><rect x="5" y="1" width="9" height="2" rx="1"/><text x="0" y="9" fontSize="4" fontFamily="monospace">2.</text><rect x="5" y="6" width="9" height="2" rx="1"/><text x="0" y="14" fontSize="4" fontFamily="monospace">3.</text><rect x="5" y="11" width="9" height="2" rx="1"/></svg>
+          </button>
+        </BtnTooltip>
       </div>
 
       <Sep />
 
       {/* ── Table ── */}
       <div className="relative flex-shrink-0">
-        <button
-          type="button"
-          title="Insert table — choose rows × columns"
-          className={ib(tablePickerOpen)}
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => { onTablePickerToggle(); setFontColorOpen(false); setHighlightOpen(false); }}
-        >
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.3">
-            <rect x="1" y="1" width="13" height="13" rx="1.5"/>
-            <line x1="1" y1="5" x2="14" y2="5"/><line x1="1" y1="9" x2="14" y2="9"/>
-            <line x1="5" y1="1" x2="5" y2="14"/><line x1="9" y1="1" x2="9" y2="14"/>
-          </svg>
-        </button>
+        <BtnTooltip label="Insert table">
+          <button
+            type="button"
+            className={ib(tablePickerOpen)}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => { onTablePickerToggle(); setFontColorOpen(false); setHighlightOpen(false); }}
+          >
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.3">
+              <rect x="1" y="1" width="13" height="13" rx="1.5"/>
+              <line x1="1" y1="5" x2="14" y2="5"/><line x1="1" y1="9" x2="14" y2="9"/>
+              <line x1="5" y1="1" x2="5" y2="14"/><line x1="9" y1="1" x2="9" y2="14"/>
+            </svg>
+          </button>
+        </BtnTooltip>
         {tablePickerOpen && (
           <TablePicker onInsert={onTableInsert} onClose={onTablePickerToggle} />
         )}
@@ -778,19 +839,20 @@ function EditorToolbar({
       <Sep />
 
       {/* ── Image ── */}
-      <button
-        type="button"
-        title="Insert image"
-        className={ib(false)}
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={onImageClick}
-      >
-        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.3">
-          <rect x="1" y="2" width="13" height="11" rx="1.5"/>
-          <circle cx="5" cy="5.5" r="1.2"/>
-          <polyline points="1,11 5,7 8,10 10,8 14,12"/>
-        </svg>
-      </button>
+      <BtnTooltip label="Insert image">
+        <button
+          type="button"
+          className={ib(false)}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onImageClick}
+        >
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.3">
+            <rect x="1" y="2" width="13" height="11" rx="1.5"/>
+            <circle cx="5" cy="5.5" r="1.2"/>
+            <polyline points="1,11 5,7 8,10 10,8 14,12"/>
+          </svg>
+        </button>
+      </BtnTooltip>
 
       {/* Image width controls — only when an image is clicked */}
       {selectedImg && (
@@ -798,16 +860,19 @@ function EditorToolbar({
           <Sep />
           <GLabel>Img size</GLabel>
           {(['sm', 'md', 'lg', 'full'] as const).map((mode) => (
-            <button
+            <BtnTooltip
               key={mode}
-              type="button"
-              title={mode === 'sm' ? '260px' : mode === 'md' ? '380px' : mode === 'lg' ? '560px' : 'Full width'}
-              className={ib(false, 'text-[11px] font-semibold')}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => onImageWidth(mode)}
+              label={mode === 'sm' ? 'Small — 260 px' : mode === 'md' ? 'Medium — 380 px' : mode === 'lg' ? 'Large — 560 px' : 'Full width'}
             >
-              {mode === 'sm' ? 'S' : mode === 'md' ? 'M' : mode === 'lg' ? 'L' : 'Full'}
-            </button>
+              <button
+                type="button"
+                className={ib(false, 'text-[11px] font-semibold')}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => onImageWidth(mode)}
+              >
+                {mode === 'sm' ? 'S' : mode === 'md' ? 'M' : mode === 'lg' ? 'L' : 'Full'}
+              </button>
+            </BtnTooltip>
           ))}
         </>
       )}
