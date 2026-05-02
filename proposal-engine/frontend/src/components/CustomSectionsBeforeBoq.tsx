@@ -23,6 +23,19 @@ import {
   preCleanRichPasteHtml,
 } from '../lib/sanitizeProposalCustomHtml';
 
+/**
+ * Detect which Office app copied to the clipboard by scanning the HTML header.
+ * Word, Excel, and PowerPoint all embed namespace / generator markers in the
+ * HTML they put on the clipboard — we sniff those to route the paste correctly.
+ */
+function detectOfficeSource(html: string): 'word' | 'excel' | 'powerpoint' | 'other' {
+  const h = html.slice(0, 3000); // only scan the preamble for speed
+  if (/office:powerpoint|powerpoint\.show|MsoPresentationText/i.test(h)) return 'powerpoint';
+  if (/office:excel|excel\.sheet|class=["']xl/i.test(h)) return 'excel';
+  if (/office:word|word\.document|class=["']Mso/i.test(h)) return 'word';
+  return 'other';
+}
+
 /** Resize / JPEG-compress so pasted photos stay under sanitiser limits and save reliably. */
 async function compressImageFileToDataUrl(file: File): Promise<string | null> {
   if (!file.type.startsWith('image/')) return null;
@@ -1062,26 +1075,80 @@ function CustomBodyEditor({
     setImgRev((n) => n + 1);
   };
 
+  /** Insert the first image file found in a DataTransfer. Returns true if inserted. */
+  const pasteImageFromDataTransfer = (dt: DataTransfer): boolean => {
+    const items = dt.items;
+    if (items?.length) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+          const f = item.getAsFile();
+          if (f) { void insertImageFromFile(f); return true; }
+        }
+      }
+    }
+    const { files } = dt;
+    if (files?.length) {
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        if (f.type.startsWith('image/')) { void insertImageFromFile(f); return true; }
+      }
+    }
+    return false;
+  };
+
   const onPaste = (e: ClipboardEvent<HTMLDivElement>) => {
     const dt = e.clipboardData;
     if (!dt || !ref.current) return;
 
-    // ── Priority 1: Rich HTML ────────────────────────────────────────────────
-    // Always try HTML first. Word, Google Docs, and web pages all put HTML on
-    // the clipboard alongside a bitmap render of the selection. If we checked
-    // image files first we would paste the bitmap (which shows as a black box
-    // in the editor) instead of the actual text content.
     const htmlRaw = dt.getData('text/html');
     const plain   = dt.getData('text/plain') ?? '';
+    const source  = detectOfficeSource(htmlRaw);
 
+    // ── PowerPoint → paste as image ─────────────────────────────────────────
+    // PPT slides are not useful as editable text; grab the bitmap instead.
+    if (source === 'powerpoint') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!pasteImageFromDataTransfer(dt)) {
+        // No image on clipboard (e.g. macOS PPT) — fall through to rich text
+        const cleaned = sanitizeProposalCustomBodyHtml(preCleanRichPasteHtml(htmlRaw));
+        if (cleaned.trim()) { insertHtmlIntoCaret(ref.current, cleaned); commitFromEditor(); }
+      }
+      return;
+    }
+
+    // ── Excel → extract cells and paste as a clean table ────────────────────
+    if (source === 'excel' && htmlRaw) {
+      e.preventDefault();
+      e.stopPropagation();
+      const cleaned = sanitizeProposalCustomBodyHtml(preCleanRichPasteHtml(htmlRaw));
+      const probe = document.createElement('div');
+      probe.innerHTML = cleaned;
+      const tables = probe.querySelectorAll('table');
+      if (tables.length > 0) {
+        let tableHtml = '';
+        tables.forEach((t) => { tableHtml += t.outerHTML; });
+        insertHtmlIntoCaret(ref.current, tableHtml);
+      } else {
+        // Fallback: plain text rows if no <table> survived sanitisation
+        const lines = plain.split(/\r?\n/).filter(Boolean);
+        const rows  = lines.map((l) =>
+          `<tr>${l.split('\t').map((c) => `<td>${c.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>`).join('')}</tr>`
+        );
+        if (rows.length) insertHtmlIntoCaret(ref.current, `<table>${rows.join('')}</table>`);
+      }
+      commitFromEditor();
+      return;
+    }
+
+    // ── Word / Google Docs / web → paste as rich text ────────────────────────
     if (htmlRaw && htmlRaw.trim().length > 0) {
       const cleaned = sanitizeProposalCustomBodyHtml(preCleanRichPasteHtml(htmlRaw));
       const probe = document.createElement('div');
       probe.innerHTML = cleaned;
       const textLen = (probe.textContent ?? '').replace(/\u00a0/g, ' ').trim().length;
-      const meaningful =
-        textLen > 0 ||
-        !!probe.querySelector('img,table,ul,ol,a,h3,h4,blockquote');
+      const meaningful = textLen > 0 || !!probe.querySelector('img,table,ul,ol,a,h3,h4,blockquote');
       if (meaningful) {
         e.preventDefault();
         e.stopPropagation();
@@ -1091,7 +1158,7 @@ function CustomBodyEditor({
       }
     }
 
-    // ── Priority 2: Plain text ───────────────────────────────────────────────
+    // ── Plain text fallback ──────────────────────────────────────────────────
     if (plain.length > 0) {
       e.preventDefault();
       e.stopPropagation();
@@ -1100,42 +1167,15 @@ function CustomBodyEditor({
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
       const lines = escaped.split(/\r?\n/);
-      const asHtml = lines.map((line) => `<p>${line.length ? line : '<br />'}</p>`).join('');
-      insertHtmlIntoCaret(ref.current, asHtml);
+      insertHtmlIntoCaret(ref.current, lines.map((l) => `<p>${l || '<br />'}</p>`).join(''));
       commitFromEditor();
       return;
     }
 
-    // ── Priority 3: Raw image files ──────────────────────────────────────────
-    // Only reached when the clipboard carries no text at all — i.e. a genuine
-    // image paste from an image editor or a screenshot tool.
-    const { files } = dt;
-    if (files?.length) {
-      for (let i = 0; i < files.length; i++) {
-        const f = files[i];
-        if (f.type.startsWith('image/')) {
-          e.preventDefault();
-          e.stopPropagation();
-          void insertImageFromFile(f);
-          return;
-        }
-      }
-    }
-
-    const items = dt.items;
-    if (items?.length) {
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item.kind === 'file' && item.type.startsWith('image/')) {
-          const f = item.getAsFile();
-          if (f) {
-            e.preventDefault();
-            e.stopPropagation();
-            void insertImageFromFile(f);
-          }
-          return;
-        }
-      }
+    // ── Bare image (screenshot tool, image editor) → paste as image ──────────
+    if (pasteImageFromDataTransfer(dt)) {
+      e.preventDefault();
+      e.stopPropagation();
     }
   };
 
