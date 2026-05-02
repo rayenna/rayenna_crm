@@ -138,6 +138,52 @@ const FONT_SIZES = [
   { label: '36pt', value: '36pt' },
 ];
 
+// ─── Color palettes ────────────────────────────────────────────────────────────
+
+const FONT_COLORS = [
+  '#000000', '#1e293b', '#374151', '#6b7280', '#9ca3af', '#d1d5db', '#f1f5f9', '#ffffff',
+  '#dc2626', '#ea580c', '#d97706', '#ca8a04', '#65a30d', '#16a34a', '#0d9488', '#0891b2',
+  '#0284c7', '#2563eb', '#4f46e5', '#7c3aed', '#9333ea', '#c026d3', '#db2777', '#be123c',
+];
+
+const HIGHLIGHT_COLORS = [
+  '#fef08a', '#bbf7d0', '#bfdbfe', '#fde68a', '#fbcfe8', '#ddd6fe',
+  '#fed7aa', '#a7f3d0', '#c7d2fe', '#fecaca', '#d1fae5', '#e0e7ff',
+];
+
+// ─── Table border presets ─────────────────────────────────────────────────────
+
+function tableSetBorders(ctx: TableContext, preset: 'all' | 'none' | 'outer' | 'inner'): void {
+  const { table } = ctx;
+  const BORDER = '1px solid #94a3b8';
+  const totalRows = table.rows.length;
+  Array.from(table.rows).forEach((row, rowIdx) => {
+    const totalCols = row.cells.length;
+    Array.from(row.cells).forEach((cell, colIdx) => {
+      const isTop    = rowIdx === 0;
+      const isBottom = rowIdx === totalRows - 1;
+      const isLeft   = colIdx === 0;
+      const isRight  = colIdx === totalCols - 1;
+      switch (preset) {
+        case 'all':   cell.style.border = BORDER; break;
+        case 'none':  cell.style.border = 'none'; break;
+        case 'outer':
+          cell.style.borderTop    = isTop    ? BORDER : 'none';
+          cell.style.borderBottom = isBottom ? BORDER : 'none';
+          cell.style.borderLeft   = isLeft   ? BORDER : 'none';
+          cell.style.borderRight  = isRight  ? BORDER : 'none';
+          break;
+        case 'inner':
+          cell.style.borderTop    = !isTop    ? BORDER : 'none';
+          cell.style.borderBottom = !isBottom ? BORDER : 'none';
+          cell.style.borderLeft   = !isLeft   ? BORDER : 'none';
+          cell.style.borderRight  = !isRight  ? BORDER : 'none';
+          break;
+      }
+    });
+  });
+}
+
 function makeTable(rows: number, cols: number): string {
   const cellStyle = 'border:1px solid #cbd5e1;padding:6px 10px;text-align:left;';
   const thStyle   = cellStyle + 'background:#f1f5f9;';
@@ -283,6 +329,8 @@ interface FormatState {
   alignLeft: boolean;
   alignCenter: boolean;
   alignRight: boolean;
+  subscript: boolean;
+  superscript: boolean;
 }
 
 function getFormatState(): FormatState {
@@ -295,7 +343,77 @@ function getFormatState(): FormatState {
     alignLeft:     document.queryCommandState('justifyLeft'),
     alignCenter:   document.queryCommandState('justifyCenter'),
     alignRight:    document.queryCommandState('justifyRight'),
+    subscript:     document.queryCommandState('subscript'),
+    superscript:   document.queryCommandState('superscript'),
   };
+}
+
+// ─── Color picker popover ──────────────────────────────────────────────────────
+
+function ColorPicker({
+  colors,
+  onSelect,
+  onClose,
+  allowRemove = false,
+  removeLabel = 'None',
+}: {
+  colors: string[];
+  onSelect: (color: string) => void;
+  onClose: () => void;
+  allowRemove?: boolean;
+  removeLabel?: string;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={wrapRef}
+      className="absolute z-50 top-full left-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl p-3 min-w-[172px]"
+      onMouseDown={(e) => e.preventDefault()}
+    >
+      <div className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(8, 18px)' }}>
+        {colors.map((color) => (
+          <button
+            key={color}
+            type="button"
+            title={color}
+            className="w-[18px] h-[18px] rounded border border-slate-200 hover:scale-125 transition-transform ring-offset-1 hover:ring-2 hover:ring-slate-400 focus:outline-none"
+            style={{ background: color }}
+            onClick={() => { onSelect(color); onClose(); }}
+          />
+        ))}
+      </div>
+      <div className="mt-2.5 flex items-center gap-2">
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input
+            type="color"
+            className="w-6 h-6 rounded border border-slate-200 cursor-pointer p-0"
+            defaultValue="#000000"
+            onChange={(e) => onSelect(e.target.value)}
+            title="Custom colour"
+          />
+          <span className="text-[10px] text-slate-500 font-medium">Custom</span>
+        </label>
+        {allowRemove && (
+          <button
+            type="button"
+            className="text-[10px] text-slate-500 hover:text-red-500 font-medium ml-auto"
+            onClick={() => { onSelect(''); onClose(); }}
+          >
+            {removeLabel}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ─── Table row×col picker popover ─────────────────────────────────────────────
@@ -377,39 +495,43 @@ function TableContextBar({
   ctx: TableContext;
   onTableAction: (fn: () => void) => void;
 }) {
-  const actionBtn =
-    'text-[10px] font-semibold px-2 py-0.5 rounded border border-blue-200 bg-white text-blue-700 hover:bg-blue-50 transition-colors';
-  const dangerBtn =
-    'text-[10px] font-semibold px-2 py-0.5 rounded border border-red-200 bg-white text-red-600 hover:bg-red-50 transition-colors';
-  const sep = <span className="w-px h-4 bg-blue-200 flex-shrink-0" />;
+  const ab = 'text-[10px] font-semibold px-2 py-0.5 rounded-md border border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 transition-colors';
+  const db = 'text-[10px] font-semibold px-2 py-0.5 rounded-md border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 transition-colors';
+  const sep = <span className="w-px h-4 bg-indigo-200/60 flex-shrink-0 mx-0.5" />;
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 px-2.5 py-1.5 bg-blue-50/70 border-b border-blue-100 print-hide">
-      <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wide mr-0.5">Row</span>
-      <button type="button" className={actionBtn} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertRow(ctx, true))}  title="Insert row above">↑ Above</button>
-      <button type="button" className={actionBtn} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertRow(ctx, false))} title="Insert row below">↓ Below</button>
-      <button type="button" className={dangerBtn} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableDeleteRow(ctx))}         title="Delete this row">✕ Row</button>
+    <div className="flex flex-wrap items-center gap-1.5 px-3 py-1.5 bg-indigo-50/60 border-b border-indigo-100 print-hide">
+      {/* Row ops */}
+      <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Row</span>
+      <button type="button" className={ab} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertRow(ctx, true))}>↑ Above</button>
+      <button type="button" className={ab} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertRow(ctx, false))}>↓ Below</button>
+      <button type="button" className={db} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableDeleteRow(ctx))}>✕ Row</button>
 
       {sep}
 
-      <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wide mr-0.5">Col</span>
-      <button type="button" className={actionBtn} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertColumn(ctx, true))}  title="Insert column left">← Left</button>
-      <button type="button" className={actionBtn} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertColumn(ctx, false))} title="Insert column right">→ Right</button>
-      <button type="button" className={dangerBtn} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableDeleteColumn(ctx))}        title="Delete this column">✕ Col</button>
+      {/* Column ops */}
+      <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Col</span>
+      <button type="button" className={ab} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertColumn(ctx, true))}>← Left</button>
+      <button type="button" className={ab} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertColumn(ctx, false))}>→ Right</button>
+      <button type="button" className={db} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableDeleteColumn(ctx))}>✕ Col</button>
 
       {sep}
 
-      <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wide mr-0.5">Width</span>
+      {/* Column width */}
+      <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Width</span>
       {COL_WIDTHS.map((w) => (
-        <button
-          key={w.label}
-          type="button"
-          className={actionBtn}
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onTableAction(() => tableSetColumnWidth(ctx, w.value))}
-          title={w.value ? `Set column width to ${w.value}` : 'Reset column width to auto'}
-        >
+        <button key={w.label} type="button" className={ab} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableSetColumnWidth(ctx, w.value))}>
           {w.label}
+        </button>
+      ))}
+
+      {sep}
+
+      {/* Borders */}
+      <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Borders</span>
+      {(['all', 'outer', 'inner', 'none'] as const).map((preset) => (
+        <button key={preset} type="button" className={ab} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableSetBorders(ctx, preset))}>
+          {preset.charAt(0).toUpperCase() + preset.slice(1)}
         </button>
       ))}
     </div>
@@ -439,140 +561,231 @@ function EditorToolbar({
   onTablePickerToggle: () => void;
   onTableInsert: (rows: number, cols: number) => void;
 }) {
-  const tbBtn = (active: boolean) =>
-    `min-w-[28px] h-7 px-1.5 rounded text-xs font-bold border transition-colors select-none ${
-      active
-        ? 'bg-primary-100 border-primary-400 text-primary-800'
-        : 'bg-white border-secondary-300 text-secondary-700 hover:bg-secondary-50'
-    }`;
+  const [fontColorOpen, setFontColorOpen]       = useState(false);
+  const [highlightOpen, setHighlightOpen]       = useState(false);
+  const [lastFontColor, setLastFontColor]       = useState('#000000');
+  const [lastHighlight, setLastHighlight]       = useState('#fef08a');
 
-  const sep = <span className="w-px h-5 bg-secondary-200 mx-0.5 flex-shrink-0" />;
+  /* ── styling helpers ── */
+  // Icon button: borderless, highlight on hover/active
+  const ib = (active: boolean, extra = '') =>
+    `relative h-7 min-w-[28px] px-1.5 rounded-md flex items-center justify-center text-[13px] select-none transition-all duration-100 cursor-pointer ${extra} ${
+      active
+        ? 'bg-blue-100 text-blue-700 shadow-inner'
+        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+    }`;
+  // Thin separator
+  const Sep = () => <span className="w-px h-5 bg-slate-200 mx-0.5 flex-shrink-0" />;
+  // Label above a group of buttons
+  const GLabel = ({ children }: { children: React.ReactNode }) => (
+    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 select-none">{children}</span>
+  );
 
   return (
-    <div className="flex flex-wrap items-center gap-1 rounded-t-lg border border-b-0 border-secondary-200 bg-secondary-50 px-2 py-1.5 print-hide">
-      {/* Font family */}
+    <div className="flex flex-wrap items-center gap-x-1 gap-y-1 rounded-t-lg border border-b-0 border-slate-200 bg-gradient-to-b from-slate-50 to-white px-2.5 py-2 print-hide shadow-sm">
+
+      {/* ── Font family ── */}
       <select
-        className="h-7 rounded border border-secondary-300 bg-white px-1.5 text-xs text-secondary-800 focus:outline-none focus:ring-1 focus:ring-primary-400 cursor-pointer"
+        className="h-7 max-w-[120px] rounded-md border border-slate-200 bg-white px-2 text-[12px] text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer hover:border-slate-300 transition-colors"
         defaultValue=""
         onMouseDown={(e) => e.stopPropagation()}
         onChange={(e) => {
-          const v = e.target.value;
-          e.target.value = '';
+          const v = e.target.value; e.target.value = '';
           if (!v || !editorRef.current) return;
           onFormat(() => applyInlineStyle('font-family', v, editorRef.current!));
         }}
       >
         <option value="" disabled>Font</option>
         {FONT_FAMILIES.map((f) => (
-          <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>
-            {f.label}
-          </option>
+          <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>{f.label}</option>
         ))}
       </select>
 
-      {/* Font size */}
+      {/* ── Font size ── */}
       <select
-        className="h-7 w-[68px] rounded border border-secondary-300 bg-white px-1 text-xs text-secondary-800 focus:outline-none focus:ring-1 focus:ring-primary-400 cursor-pointer"
+        className="h-7 w-[68px] rounded-md border border-slate-200 bg-white px-1.5 text-[12px] text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer hover:border-slate-300 transition-colors"
         defaultValue=""
         onMouseDown={(e) => e.stopPropagation()}
         onChange={(e) => {
-          const v = e.target.value;
-          e.target.value = '';
+          const v = e.target.value; e.target.value = '';
           if (!v || !editorRef.current) return;
           onFormat(() => applyInlineStyle('font-size', v, editorRef.current!));
         }}
       >
         <option value="" disabled>Size</option>
-        {FONT_SIZES.map((s) => (
-          <option key={s.value} value={s.value}>{s.label}</option>
-        ))}
+        {FONT_SIZES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
       </select>
 
-      {sep}
+      <Sep />
 
-      {/* Bold */}
-      <button type="button" title="Bold (Ctrl+B)" className={tbBtn(formatState.bold)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('bold'))}>
-        <strong>B</strong>
-      </button>
+      {/* ── Text style group ── */}
+      <div className="flex items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
+        <button type="button" title="Bold (Ctrl+B)" className={ib(formatState.bold, 'font-black')} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('bold'))}>B</button>
+        <button type="button" title="Italic (Ctrl+I)" className={ib(formatState.italic, 'italic font-semibold')} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('italic'))}>I</button>
+        <button type="button" title="Underline (Ctrl+U)" className={ib(formatState.underline, 'underline')} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('underline'))}>U</button>
+        <button type="button" title="Subscript" className={ib(formatState.subscript)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('subscript'))}>
+          <span className="text-[11px] leading-none">x<sub className="text-[8px]">2</sub></span>
+        </button>
+        <button type="button" title="Superscript" className={ib(formatState.superscript)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('superscript'))}>
+          <span className="text-[11px] leading-none">x<sup className="text-[8px]">2</sup></span>
+        </button>
+      </div>
 
-      {/* Italic */}
-      <button type="button" title="Italic (Ctrl+I)" className={`${tbBtn(formatState.italic)} italic`} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('italic'))}>
-        <em>I</em>
-      </button>
+      <Sep />
 
-      {/* Underline */}
-      <button type="button" title="Underline (Ctrl+U)" className={`${tbBtn(formatState.underline)} underline`} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('underline'))}>
-        U
-      </button>
-
-      {sep}
-
-      {/* Align left */}
-      <button type="button" title="Align left" className={tbBtn(formatState.alignLeft)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('justifyLeft'))}>
-        &#8676;
-      </button>
-
-      {/* Align center */}
-      <button type="button" title="Align center" className={tbBtn(formatState.alignCenter)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('justifyCenter'))}>
-        &#8596;
-      </button>
-
-      {/* Align right */}
-      <button type="button" title="Align right" className={tbBtn(formatState.alignRight)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('justifyRight'))}>
-        &#8677;
-      </button>
-
-      {sep}
-
-      {/* Bullet list */}
-      <button type="button" title="Bullet list" className={tbBtn(formatState.unorderedList)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('insertUnorderedList'))}>
-        &#8226;&#8212;
-      </button>
-
-      {/* Numbered list */}
-      <button type="button" title="Numbered list" className={tbBtn(formatState.orderedList)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('insertOrderedList'))}>
-        1.&#8212;
-      </button>
-
-      {sep}
-
-      {/* Table — click opens grid picker */}
+      {/* ── Font colour ── */}
       <div className="relative">
         <button
           type="button"
-          title="Insert table — choose size"
-          className={tbBtn(tablePickerOpen)}
+          title="Font colour"
+          className={ib(fontColorOpen)}
           onMouseDown={(e) => e.preventDefault()}
-          onClick={onTablePickerToggle}
+          onClick={() => { setFontColorOpen((v) => !v); setHighlightOpen(false); }}
         >
-          ⊞
+          <span className="flex flex-col items-center leading-none gap-[2px]">
+            <span className="text-[12px] font-black leading-none" style={{ color: lastFontColor === '#ffffff' ? '#000' : lastFontColor }}>A</span>
+            <span className="h-[3px] w-[14px] rounded-sm" style={{ background: lastFontColor }} />
+          </span>
         </button>
-        {tablePickerOpen && (
-          <TablePicker
-            onInsert={onTableInsert}
-            onClose={onTablePickerToggle}
+        {fontColorOpen && (
+          <ColorPicker
+            colors={FONT_COLORS}
+            onSelect={(c) => {
+              setLastFontColor(c);
+              onFormat(() => document.execCommand('foreColor', false, c));
+            }}
+            onClose={() => setFontColorOpen(false)}
           />
         )}
       </div>
 
-      {sep}
+      {/* ── Highlight colour ── */}
+      <div className="relative">
+        <button
+          type="button"
+          title="Highlight colour"
+          className={ib(highlightOpen)}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => { setHighlightOpen((v) => !v); setFontColorOpen(false); }}
+        >
+          <span className="flex flex-col items-center leading-none gap-[2px]">
+            <span className="text-[11px] font-bold leading-none px-0.5 rounded-sm" style={{ background: lastHighlight, color: '#1e293b' }}>ab</span>
+            <span className="h-[3px] w-[14px] rounded-sm" style={{ background: lastHighlight }} />
+          </span>
+        </button>
+        {highlightOpen && (
+          <ColorPicker
+            colors={HIGHLIGHT_COLORS}
+            onSelect={(c) => {
+              setLastHighlight(c || '#fef08a');
+              onFormat(() => {
+                if (!c) {
+                  document.execCommand('styleWithCSS', false, 'true');
+                  document.execCommand('hiliteColor', false, 'transparent');
+                  document.execCommand('styleWithCSS', false, 'false');
+                } else {
+                  document.execCommand('styleWithCSS', false, 'true');
+                  document.execCommand('hiliteColor', false, c);
+                  document.execCommand('styleWithCSS', false, 'false');
+                }
+              });
+            }}
+            onClose={() => setHighlightOpen(false)}
+            allowRemove
+            removeLabel="Remove"
+          />
+        )}
+      </div>
 
-      {/* Image */}
-      <button type="button" title="Insert image" className={tbBtn(false)} onMouseDown={(e) => e.preventDefault()} onClick={onImageClick}>
-        🖼
+      <Sep />
+
+      {/* ── Indent ── */}
+      <div className="flex items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
+        <button type="button" title="Decrease indent" className={ib(false)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('outdent'))}>
+          <span className="text-[14px] leading-none">⇤</span>
+        </button>
+        <button type="button" title="Increase indent" className={ib(false)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('indent'))}>
+          <span className="text-[14px] leading-none">⇥</span>
+        </button>
+      </div>
+
+      <Sep />
+
+      {/* ── Alignment ── */}
+      <div className="flex items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
+        <button type="button" title="Align left" className={ib(formatState.alignLeft)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('justifyLeft'))}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="0" y="5" width="9" height="2" rx="1"/><rect x="0" y="9" width="12" height="2" rx="1"/></svg>
+        </button>
+        <button type="button" title="Align center" className={ib(formatState.alignCenter)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('justifyCenter'))}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="2.5" y="5" width="9" height="2" rx="1"/><rect x="1" y="9" width="12" height="2" rx="1"/></svg>
+        </button>
+        <button type="button" title="Align right" className={ib(formatState.alignRight)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('justifyRight'))}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="5" y="5" width="9" height="2" rx="1"/><rect x="2" y="9" width="12" height="2" rx="1"/></svg>
+        </button>
+      </div>
+
+      <Sep />
+
+      {/* ── Lists ── */}
+      <div className="flex items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
+        <button type="button" title="Bullet list" className={ib(formatState.unorderedList)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('insertUnorderedList'))}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><circle cx="1.5" cy="2" r="1.5"/><rect x="4" y="1" width="10" height="2" rx="1"/><circle cx="1.5" cy="7" r="1.5"/><rect x="4" y="6" width="10" height="2" rx="1"/><circle cx="1.5" cy="12" r="1.5"/><rect x="4" y="11" width="10" height="2" rx="1"/></svg>
+        </button>
+        <button type="button" title="Numbered list" className={ib(formatState.orderedList)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('insertOrderedList'))}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><text x="0" y="4" fontSize="4" fontFamily="monospace">1.</text><rect x="5" y="1" width="9" height="2" rx="1"/><text x="0" y="9" fontSize="4" fontFamily="monospace">2.</text><rect x="5" y="6" width="9" height="2" rx="1"/><text x="0" y="14" fontSize="4" fontFamily="monospace">3.</text><rect x="5" y="11" width="9" height="2" rx="1"/></svg>
+        </button>
+      </div>
+
+      <Sep />
+
+      {/* ── Table ── */}
+      <div className="relative">
+        <button
+          type="button"
+          title="Insert table — choose rows × columns"
+          className={ib(tablePickerOpen)}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => { onTablePickerToggle(); setFontColorOpen(false); setHighlightOpen(false); }}
+        >
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.3">
+            <rect x="1" y="1" width="13" height="13" rx="1.5"/>
+            <line x1="1" y1="5" x2="14" y2="5"/><line x1="1" y1="9" x2="14" y2="9"/>
+            <line x1="5" y1="1" x2="5" y2="14"/><line x1="9" y1="1" x2="9" y2="14"/>
+          </svg>
+        </button>
+        {tablePickerOpen && (
+          <TablePicker onInsert={onTableInsert} onClose={onTablePickerToggle} />
+        )}
+      </div>
+
+      <Sep />
+
+      {/* ── Image ── */}
+      <button
+        type="button"
+        title="Insert image"
+        className={ib(false)}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={onImageClick}
+      >
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.3">
+          <rect x="1" y="2" width="13" height="11" rx="1.5"/>
+          <circle cx="5" cy="5.5" r="1.2"/>
+          <polyline points="1,11 5,7 8,10 10,8 14,12"/>
+        </svg>
       </button>
 
-      {/* Image width controls — only when an image is selected */}
-      {selectedImg ? (
+      {/* Image width controls — only when an image is clicked */}
+      {selectedImg && (
         <>
-          {sep}
-          <span className="text-[10px] font-semibold text-secondary-500">Img:</span>
+          <Sep />
+          <GLabel>Img size</GLabel>
           {(['sm', 'md', 'lg', 'full'] as const).map((mode) => (
             <button
               key={mode}
               type="button"
               title={mode === 'sm' ? '260px' : mode === 'md' ? '380px' : mode === 'lg' ? '560px' : 'Full width'}
-              className={tbBtn(false)}
+              className={ib(false, 'text-[11px] font-semibold')}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => onImageWidth(mode)}
             >
@@ -580,7 +793,7 @@ function EditorToolbar({
             </button>
           ))}
         </>
-      ) : null}
+      )}
     </div>
   );
 }
@@ -611,6 +824,8 @@ function CustomBodyEditor({
     alignLeft: false,
     alignCenter: false,
     alignRight: false,
+    subscript: false,
+    superscript: false,
   });
 
   useLayoutEffect(() => {
