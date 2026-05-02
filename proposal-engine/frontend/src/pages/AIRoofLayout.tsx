@@ -1833,12 +1833,12 @@ export default function AIRoofLayout() {
                                 y={rect.y}
                                 width={rect.w}
                                 height={rect.h}
-                                fill="rgba(37,99,235,0.35)"
-                                stroke="#1e3a8a"
-                                strokeWidth={0.8}
-                                shadowColor="rgba(15,23,42,0.55)"
-                                shadowBlur={4}
-                                shadowOpacity={0.6}
+                                fill="rgba(14,30,95,0.88)"
+                                stroke="#a8b8cc"
+                                strokeWidth={1.0}
+                                shadowColor="rgba(5,10,30,0.65)"
+                                shadowBlur={3}
+                                shadowOpacity={0.7}
                                 shadowOffset={{ x: 0, y: 1 }}
                               />
                             ))}
