@@ -1,6 +1,6 @@
 import { Suspense, lazy, useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { flushSync } from 'react-dom';
-import { Stage, Layer, Image as KonvaImage, Line, Rect, Circle } from 'react-konva';
+import { Stage, Layer, Image as KonvaImage, Line, Rect, Circle, Text } from 'react-konva';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - use-image has ESM types that may not be picked up correctly here
 import useImage from 'use-image';
@@ -81,18 +81,23 @@ function focalPointForEditingPolygon(
   };
 }
 
+/** Extra whitespace (px) added around the 2D map inside the scroll container — gives room to scroll past image edges. */
+const SCROLL_BUFFER_PX = 300;
+
 function scrollLayoutPreviewToFocal(
   el: HTMLDivElement,
   focalImageX: number,
   focalImageY: number,
   zoom: number,
+  scrollBuffer = 0,
 ) {
   const cw = el.clientWidth;
   const ch = el.clientHeight;
   const sw = el.scrollWidth;
   const sh = el.scrollHeight;
-  const cx = focalImageX * zoom;
-  const cy = focalImageY * zoom;
+  // Focal point in viewport pixels, offset by the extra buffer padding around the image.
+  const cx = focalImageX * zoom + scrollBuffer;
+  const cy = focalImageY * zoom + scrollBuffer;
   el.scrollLeft = Math.max(0, Math.min(Math.max(0, sw - cw), cx - cw / 2));
   el.scrollTop = Math.max(0, Math.min(Math.max(0, sh - ch), cy - ch / 2));
 }
@@ -220,6 +225,8 @@ export default function AIRoofLayout() {
   // Konva-based layout state (pure frontend, no native deps)
   const stageRef = useRef<any>(null);
   const lineRef = useRef<any>(null);
+  /** Ref to the control-point circles Layer so it can be hidden before toDataURL capture. */
+  const handlesLayerRef = useRef<any>(null);
   const polygonDragRef = useRef<{ x: number; y: number } | null>(null);
   const polygonBaseRef = useRef<Point[] | null>(null); // polygon at drag start for imperative updates
   const recomputeTimeoutRef = useRef<number | null>(null);
@@ -462,7 +469,7 @@ export default function AIRoofLayout() {
       const run = () => {
         const el = layoutScrollRef.current;
         if (!el) return;
-        scrollLayoutPreviewToFocal(el, focal.x, focal.y, zoom);
+        scrollLayoutPreviewToFocal(el, focal.x, focal.y, zoom, SCROLL_BUFFER_PX);
         scrollCenterMetaRef.current.savedDone = true;
       };
       requestAnimationFrame(() => requestAnimationFrame(run));
@@ -475,7 +482,7 @@ export default function AIRoofLayout() {
       const run = () => {
         const el = layoutScrollRef.current;
         if (!el) return;
-        scrollLayoutPreviewToFocal(el, focal.x, focal.y, zoom);
+        scrollLayoutPreviewToFocal(el, focal.x, focal.y, zoom, SCROLL_BUFFER_PX);
         scrollCenterMetaRef.current.editingDone = true;
       };
       requestAnimationFrame(() => requestAnimationFrame(run));
@@ -635,7 +642,20 @@ export default function AIRoofLayout() {
     const pixelRatio = options?.pixelRatio ?? 2;
     const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
     const quality = format === 'jpeg' ? (options?.quality ?? 0.82) : undefined;
-    return stageRef.current.toDataURL({ pixelRatio, mimeType: mime, quality });
+
+    // Hide control-point handles and scale bar editing overlay before capture so the saved
+    // image is clean — no green dots on polygon corners, no on-screen UI artefacts.
+    const handlesLayer = handlesLayerRef.current;
+    if (handlesLayer) {
+      handlesLayer.visible(false);
+      stageRef.current.batchDraw();
+    }
+    const dataUrl = stageRef.current.toDataURL({ pixelRatio, mimeType: mime, quality });
+    if (handlesLayer) {
+      handlesLayer.visible(true);
+      stageRef.current.batchDraw();
+    }
+    return dataUrl;
   }
 
   const handleSaveForProposal = async () => {
@@ -922,7 +942,7 @@ export default function AIRoofLayout() {
       window.clearTimeout(recomputeTimeoutRef.current);
     }
     recomputeTimeoutRef.current = window.setTimeout(() => {
-      const maxCap = typeof window !== 'undefined' && window.innerWidth < 768 ? 70 : 120;
+      const maxCap = typeof window !== 'undefined' && window.innerWidth < 768 ? 150 : 300;
       const { panels: nextPanels, roofAreaM2, usableAreaM2, panelCount } =
         computePanelsForPolygon(polygon, maxCap);
 
@@ -1665,18 +1685,24 @@ export default function AIRoofLayout() {
                         </div>
                       </div>
                     ) : bgImage && imageSize ? (
+                      /* Extra SCROLL_BUFFER_PX of whitespace wraps the image on all sides so
+                         users can scroll past the image edges for precise panel placement.
+                         The Konva stage itself stays at native image-pixel size — coordinates
+                         and toDataURL are unaffected. */
                       <div
                         className="relative flex-shrink-0"
                         style={{
-                          width: imageSize.width * zoom,
-                          height: imageSize.height * zoom,
-                          minWidth: imageSize.width * zoom,
-                          minHeight: imageSize.height * zoom,
+                          width: imageSize.width * zoom + 2 * SCROLL_BUFFER_PX,
+                          height: imageSize.height * zoom + 2 * SCROLL_BUFFER_PX,
+                          minWidth: imageSize.width * zoom + 2 * SCROLL_BUFFER_PX,
+                          minHeight: imageSize.height * zoom + 2 * SCROLL_BUFFER_PX,
                         }}
                       >
                         <div
-                          className="absolute top-0 left-0"
                           style={{
+                            position: 'absolute',
+                            top: SCROLL_BUFFER_PX,
+                            left: SCROLL_BUFFER_PX,
                             transform: `scale(${zoom})`,
                             transformOrigin: '0 0',
                             width: imageSize.width,
@@ -1723,6 +1749,7 @@ export default function AIRoofLayout() {
                               }
                               const w = Math.max(10, maxX - minX);
                               const h = Math.max(10, maxY - minY);
+                              // Invisible bounding-box rect — drag anywhere inside polygon to move the whole roof outline
                               return (
                                 <Rect
                                   x={minX}
@@ -1732,7 +1759,10 @@ export default function AIRoofLayout() {
                                   opacity={0}
                                   draggable
                                   strokeEnabled={false}
+                                  onMouseEnter={() => { document.body.style.cursor = 'move'; }}
+                                  onMouseLeave={() => { document.body.style.cursor = 'default'; }}
                                   onDragStart={(e) => {
+                                    document.body.style.cursor = 'grabbing';
                                     isDraggingRef.current = true;
                                     setIsDragging(true);
                                     polygonBaseRef.current = polygon ? polygon.map((p) => ({ ...p })) : null;
@@ -1753,6 +1783,7 @@ export default function AIRoofLayout() {
                                     lineRef.current.getLayer()?.batchDraw();
                                   }}
                                   onDragEnd={() => {
+                                    document.body.style.cursor = 'move';
                                     polygonDragRef.current = null;
                                     isDraggingRef.current = false;
                                     setIsDragging(false);
@@ -1770,9 +1801,11 @@ export default function AIRoofLayout() {
                           </Layer>
                         )}
 
-                        {/* Panels clipped to polygon, with improved styling — hidden during drag for performance */}
+                        {/* Panels clipped to polygon — listening={false} lets pointer events pass
+                            through to the invisible drag-rect below so the whole polygon can be moved. */}
                         {layoutMode === 'editing' && polygon && panels.length > 0 && !isDragging && (
                           <Layer
+                            listening={false}
                             clipFunc={(ctx) => {
                               if (!polygon.length) return;
                               ctx.beginPath();
@@ -1790,8 +1823,8 @@ export default function AIRoofLayout() {
                                 y={rect.y}
                                 width={rect.w}
                                 height={rect.h}
-                                fill="rgba(37,99,235,0.35)" // blue fill, opacity 0.35
-                                stroke="#1e3a8a" // dark blue stroke
+                                fill="rgba(37,99,235,0.35)"
+                                stroke="#1e3a8a"
                                 strokeWidth={0.8}
                                 shadowColor="rgba(15,23,42,0.55)"
                                 shadowBlur={4}
@@ -1802,19 +1835,20 @@ export default function AIRoofLayout() {
                           </Layer>
                         )}
 
-                        {/* Draggable polygon control points (bigger hit areas for easier touch/trackpad use) */}
+                        {/* Draggable polygon control-point circles (corner handles).
+                            Ref is attached so they can be hidden before toDataURL capture. */}
                         {layoutMode === 'editing' && polygon && (
-                          <Layer>
+                          <Layer ref={handlesLayerRef}>
                             {polygon.map((p, idx) => (
                               <Circle
                                 key={idx}
                                 x={p.x}
                                 y={p.y}
-                                  radius={controlPointRadius}
+                                radius={controlPointRadius}
                                 fill="#10b981"
                                 stroke="#047857"
                                 strokeWidth={1.5}
-                                  hitStrokeWidth={controlPointHitStrokeWidth}
+                                hitStrokeWidth={controlPointHitStrokeWidth}
                                 draggable
                                 onDragStart={() => {
                                   isDraggingRef.current = true;
@@ -1844,6 +1878,54 @@ export default function AIRoofLayout() {
                             ))}
                           </Layer>
                         )}
+
+                        {/* Scale bar — bottom-right corner of the canvas.
+                            Renders in all modes (saved + editing) so the saved proposal image includes it. */}
+                        {imageSize && (() => {
+                          const scaleBarM = 20; // show a 20-metre reference bar
+                          const scaleBarPx = scaleBarM / METERS_PER_PIXEL;
+                          const margin = 16;
+                          const barY = imageSize.height - margin - 4;
+                          const barX = imageSize.width - margin - scaleBarPx;
+                          const textY = barY - 16;
+                          return (
+                            <Layer listening={false}>
+                              {/* White shadow for contrast on any background */}
+                              <Line
+                                points={[barX, barY, barX + scaleBarPx, barY]}
+                                stroke="white"
+                                strokeWidth={5}
+                                lineCap="round"
+                              />
+                              <Line
+                                points={[barX, barY, barX + scaleBarPx, barY]}
+                                stroke="#1e293b"
+                                strokeWidth={2.5}
+                                lineCap="round"
+                              />
+                              {/* Tick marks at each end */}
+                              <Line points={[barX, barY - 5, barX, barY + 5]} stroke="white" strokeWidth={4} />
+                              <Line points={[barX, barY - 5, barX, barY + 5]} stroke="#1e293b" strokeWidth={2} />
+                              <Line points={[barX + scaleBarPx, barY - 5, barX + scaleBarPx, barY + 5]} stroke="white" strokeWidth={4} />
+                              <Line points={[barX + scaleBarPx, barY - 5, barX + scaleBarPx, barY + 5]} stroke="#1e293b" strokeWidth={2} />
+                              {/* Label */}
+                              <Text
+                                x={barX}
+                                y={textY}
+                                width={scaleBarPx}
+                                text={`${scaleBarM} m`}
+                                align="center"
+                                fontSize={13}
+                                fontStyle="bold"
+                                fill="white"
+                                shadowColor="#0f172a"
+                                shadowBlur={3}
+                                shadowOffsetX={0}
+                                shadowOffsetY={1}
+                              />
+                            </Layer>
+                          );
+                        })()}
                           </Stage>
                         </div>
                       </div>
