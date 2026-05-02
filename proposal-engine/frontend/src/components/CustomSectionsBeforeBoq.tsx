@@ -513,9 +513,11 @@ const COL_WIDTHS = [
 function TableContextBar({
   ctx,
   onTableAction,
+  onTableAlign,
 }: {
   ctx: TableContext;
   onTableAction: (fn: () => void) => void;
+  onTableAlign: (align: 'left' | 'center' | 'right') => void;
 }) {
   const ab = 'text-[11px] sm:text-[10px] font-semibold px-2.5 py-1.5 sm:py-0.5 sm:px-2 rounded-md border border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50 active:bg-indigo-100 transition-colors [touch-action:manipulation]';
   const db = 'text-[11px] sm:text-[10px] font-semibold px-2.5 py-1.5 sm:py-0.5 sm:px-2 rounded-md border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 active:bg-rose-100 transition-colors [touch-action:manipulation]';
@@ -556,6 +558,29 @@ function TableContextBar({
           {preset.charAt(0).toUpperCase() + preset.slice(1)}
         </button>
       ))}
+
+      {sep}
+
+      {/* Table alignment — aligns the whole table left/centre/right within the editor */}
+      <span className="text-[10px] sm:text-[9px] font-black text-indigo-400 uppercase tracking-widest">Table align</span>
+      <button
+        type="button" className={ab} title="Align table left"
+        onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAlign('left')}
+      >
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="0" y="5" width="9" height="2" rx="1"/><rect x="0" y="9" width="12" height="2" rx="1"/></svg>
+      </button>
+      <button
+        type="button" className={ab} title="Align table centre"
+        onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAlign('center')}
+      >
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="2.5" y="5" width="9" height="2" rx="1"/><rect x="1" y="9" width="12" height="2" rx="1"/></svg>
+      </button>
+      <button
+        type="button" className={ab} title="Align table right"
+        onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAlign('right')}
+      >
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="5" y="5" width="9" height="2" rx="1"/><rect x="2" y="9" width="12" height="2" rx="1"/></svg>
+      </button>
     </div>
   );
 }
@@ -1037,6 +1062,26 @@ function CustomBodyEditor({
   };
 
   /**
+   * Align the entire <table> within the editor using auto margins.
+   * Works on display:table the same way auto margins work on display:block.
+   * Called from the TableContextBar, not the main toolbar, so text alignment
+   * inside cells is completely unaffected.
+   */
+  const applyTableAlign = useCallback((align: 'left' | 'center' | 'right') => {
+    const ctx = tableCtx;
+    const root = ref.current;
+    if (!ctx?.table || !root?.contains(ctx.table)) return;
+    const table = ctx.table as HTMLTableElement;
+    table.style.marginLeft  = align === 'left'   ? '0'    : 'auto';
+    table.style.marginRight = align === 'right'  ? '0'    : 'auto';
+    if (align === 'center') {
+      table.style.marginLeft  = 'auto';
+      table.style.marginRight = 'auto';
+    }
+    if (root) onCommit(sanitizeProposalCustomBodyHtml(root.innerHTML));
+  }, [tableCtx, onCommit]);
+
+  /**
    * Unified alignment handler. When an S/M/L image is selected, we set
    * margin-left/right on the <img> itself (images are display:block via Tailwind
    * preflight, so text-align on the parent has no effect — auto margins do).
@@ -1216,7 +1261,7 @@ function CustomBodyEditor({
       />
 
       {tableCtx && (
-        <TableContextBar ctx={tableCtx} onTableAction={onTableAction} />
+        <TableContextBar ctx={tableCtx} onTableAction={onTableAction} onTableAlign={applyTableAlign} />
       )}
 
       <div
