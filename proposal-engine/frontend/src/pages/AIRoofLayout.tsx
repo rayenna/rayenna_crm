@@ -1685,10 +1685,12 @@ export default function AIRoofLayout() {
                         </div>
                       </div>
                     ) : bgImage && imageSize ? (
-                      /* Extra SCROLL_BUFFER_PX of whitespace wraps the image on all sides so
-                         users can scroll past the image edges for precise panel placement.
-                         The Konva stage itself stays at native image-pixel size — coordinates
-                         and toDataURL are unaffected. */
+                      /* SCROLL_BUFFER_PX of extra scroll space on all sides lets users pan
+                         past the image edge for precise panel/polygon placement.
+                         The satellite image is applied as a CSS background stretched to fill
+                         the entire scroll area — so buffer zones show a natural map extension
+                         instead of white edges. The Konva Stage sits on top at the correct
+                         coordinates; toDataURL is unaffected. */
                       <div
                         className="relative flex-shrink-0"
                         style={{
@@ -1696,6 +1698,12 @@ export default function AIRoofLayout() {
                           height: imageSize.height * zoom + 2 * SCROLL_BUFFER_PX,
                           minWidth: imageSize.width * zoom + 2 * SCROLL_BUFFER_PX,
                           minHeight: imageSize.height * zoom + 2 * SCROLL_BUFFER_PX,
+                          // Stretch the same satellite image across the whole div so buffer
+                          // zones show map content rather than blank white edges.
+                          backgroundImage: bgImageUrl ? `url('${bgImageUrl.replace(/'/g, "\\'")}')` : undefined,
+                          backgroundSize: '100% 100%',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: '0 0',
                         }}
                       >
                         <div
