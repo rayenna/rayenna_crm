@@ -581,7 +581,7 @@ function EditorToolbar({
   onImageClick,
   selectedImg,
   onImageWidth,
-  onImageAlign,
+  onAlign,
   formatState,
   onFormat,
   tablePickerOpen,
@@ -592,7 +592,8 @@ function EditorToolbar({
   onImageClick: () => void;
   selectedImg: HTMLImageElement | null;
   onImageWidth: (mode: 'sm' | 'md' | 'lg' | 'full') => void;
-  onImageAlign: (align: 'left' | 'center' | 'right') => void;
+  /** Handles Left/Centre/Right alignment for both text and selected images. */
+  onAlign: (align: 'left' | 'center' | 'right') => void;
   formatState: FormatState;
   onFormat: (fn: () => void) => void;
   tablePickerOpen: boolean;
@@ -781,16 +782,15 @@ function EditorToolbar({
       <Sep />
 
       {/* ── Alignment ── */}
-      {/* When an S/M/L image is selected, alignment sets text-align on the image's
-          parent block (centering/floating the image). For full-width images and
-          normal text, the standard execCommand path is used. */}
+      {/* onAlign() handles both cases: image selected → auto margins on <img>;
+          no image → execCommand justifyLeft/Center/Right on text. */}
       <div className="flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
         <BtnTooltip label="Align left">
           <button
             type="button"
             className={ib(formatState.alignLeft)}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => selectedImg?.hasAttribute('width') ? onImageAlign('left') : onFormat(() => cmd('justifyLeft'))}
+            onClick={() => onAlign('left')}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="0" y="5" width="9" height="2" rx="1"/><rect x="0" y="9" width="12" height="2" rx="1"/></svg>
           </button>
@@ -800,7 +800,7 @@ function EditorToolbar({
             type="button"
             className={ib(formatState.alignCenter)}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => selectedImg?.hasAttribute('width') ? onImageAlign('center') : onFormat(() => cmd('justifyCenter'))}
+            onClick={() => onAlign('center')}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="2.5" y="5" width="9" height="2" rx="1"/><rect x="1" y="9" width="12" height="2" rx="1"/></svg>
           </button>
@@ -810,7 +810,7 @@ function EditorToolbar({
             type="button"
             className={ib(formatState.alignRight)}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => selectedImg?.hasAttribute('width') ? onImageAlign('right') : onFormat(() => cmd('justifyRight'))}
+            onClick={() => onAlign('right')}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="5" y="5" width="9" height="2" rx="1"/><rect x="2" y="9" width="12" height="2" rx="1"/></svg>
           </button>
@@ -997,38 +997,29 @@ function CustomBodyEditor({
   };
 
   /**
-   * Align a selected S/M/L image by setting text-align on its nearest block
-   * ancestor within the editor. Full-width images (no width attr) are skipped —
-   * they already span the full container so alignment has no effect.
+   * Unified alignment handler. When an S/M/L image is selected, we set
+   * margin-left/right on the <img> itself (images are display:block via Tailwind
+   * preflight, so text-align on the parent has no effect — auto margins do).
+   * When no image is selected, falls back to execCommand justify*.
    */
-  const applyImageAlign = (align: 'left' | 'center' | 'right') => {
+  const applyAlign = useCallback((align: 'left' | 'center' | 'right') => {
     const img = selectedImgRef.current;
     const root = ref.current;
-    if (!img || !root?.contains(img)) return;
-    // Skip full-width images (no explicit width attribute)
-    if (!img.hasAttribute('width')) return;
 
-    // Walk up the DOM to find the nearest block-level element inside the editor
-    const BLOCK_TAGS = ['P', 'DIV', 'LI', 'BLOCKQUOTE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'TD', 'TH'];
-    let block: HTMLElement | null = img.parentElement;
-    while (block && block !== root && !BLOCK_TAGS.includes(block.tagName)) {
-      block = block.parentElement as HTMLElement | null;
-    }
-
-    if (!block || block === root) {
-      // Image is a direct child of the editor root — wrap it in a <p>
-      const p = document.createElement('p');
-      p.style.textAlign = align;
-      root.insertBefore(p, img);
-      p.appendChild(img);
+    if (img && root?.contains(img) && img.hasAttribute('width')) {
+      // Image alignment via auto margins (works for display:block images)
+      img.style.display = 'block';
+      img.style.marginLeft  = align === 'left'   ? '0'    : 'auto';
+      img.style.marginRight = align === 'right'  ? '0'    : 'auto';
+      highlightSelectedImg(root, img);
+      if (root) onCommit(sanitizeProposalCustomBodyHtml(root.innerHTML));
+      setImgRev((n) => n + 1);
     } else {
-      block.style.textAlign = align;
+      // Text / paragraph alignment
+      const execAlignCmd = align === 'left' ? 'justifyLeft' : align === 'center' ? 'justifyCenter' : 'justifyRight';
+      onFormat(() => document.execCommand(execAlignCmd));
     }
-
-    highlightSelectedImg(root, img);
-    commitFromEditor();
-    setImgRev((n) => n + 1);
-  };
+  }, [onCommit, onFormat]);
 
   const onEditorClick = (e: ReactMouseEvent<HTMLDivElement>) => {
     const root = ref.current;
@@ -1136,7 +1127,7 @@ function CustomBodyEditor({
         onImageClick={() => fileRef.current?.click()}
         selectedImg={selectedImgRef.current && ref.current?.contains(selectedImgRef.current) ? selectedImgRef.current : null}
         onImageWidth={applyImageWidth}
-        onImageAlign={applyImageAlign}
+        onAlign={applyAlign}
         formatState={formatState}
         onFormat={onFormat}
         tablePickerOpen={tablePickerOpen}
