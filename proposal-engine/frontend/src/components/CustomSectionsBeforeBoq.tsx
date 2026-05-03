@@ -408,7 +408,7 @@ function ColorPicker({
       ref={wrapRef}
       className="absolute z-50 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl p-3
                  left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0"
-      onMouseDown={(e) => e.preventDefault()}
+      onPointerDown={(e) => e.preventDefault()}
     >
       {/* Swatches — 24px on mobile for easy tapping, 22px on sm+ */}
       <div className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(8, 24px)' }}>
@@ -421,6 +421,7 @@ function ColorPicker({
                        transition-transform ring-offset-1 hover:ring-2 hover:ring-slate-400
                        focus:outline-none [touch-action:manipulation]"
             style={{ background: color }}
+            onPointerDown={(e) => e.preventDefault()}
             onClick={() => { onSelect(color); onClose(); }}
           />
         ))}
@@ -441,6 +442,7 @@ function ColorPicker({
             type="button"
             className="text-xs sm:text-[10px] text-slate-500 hover:text-red-500 font-medium ml-auto
                        [touch-action:manipulation]"
+            onPointerDown={(e) => e.preventDefault()}
             onClick={() => { onSelect(''); onClose(); }}
           >
             {removeLabel}
@@ -479,7 +481,7 @@ function TablePicker({
       ref={wrapRef}
       className="absolute z-50 top-full mt-1 bg-white border border-secondary-200 rounded-xl shadow-xl p-3 select-none
                  left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0"
-      onMouseDown={(e) => e.preventDefault()}
+      onPointerDown={(e) => e.preventDefault()}
     >
       <p className="text-xs sm:text-[10px] font-semibold text-secondary-500 mb-2 text-center min-w-[140px]">
         {hover.r > 0 && hover.c > 0
@@ -502,6 +504,7 @@ function TablePicker({
           }`}
           onMouseEnter={() => setHover({ r: r + 1, c: c + 1 })}
           onTouchStart={() => setHover({ r: r + 1, c: c + 1 })}
+          onPointerDown={(e) => e.preventDefault()}
           onClick={() => {
             // Use r+1 / c+1 directly — avoids the React async-state race on
             // mobile where hover state hasn't flushed yet when onClick fires.
@@ -548,24 +551,24 @@ function TableContextBar({
     <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 sm:py-1.5 bg-indigo-50/60 border-b border-indigo-100 print-hide">
       {/* Row ops */}
       <span className="text-[10px] sm:text-[9px] font-black text-indigo-400 uppercase tracking-widest">Row</span>
-      <button type="button" className={ab} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertRow(ctx, true))}>↑ Above</button>
-      <button type="button" className={ab} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertRow(ctx, false))}>↓ Below</button>
-      <button type="button" className={db} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableDeleteRow(ctx))}>✕ Row</button>
+      <button type="button" className={ab} onPointerDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertRow(ctx, true))}>↑ Above</button>
+      <button type="button" className={ab} onPointerDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertRow(ctx, false))}>↓ Below</button>
+      <button type="button" className={db} onPointerDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableDeleteRow(ctx))}>✕ Row</button>
 
       {sep}
 
       {/* Column ops */}
       <span className="text-[10px] sm:text-[9px] font-black text-indigo-400 uppercase tracking-widest">Col</span>
-      <button type="button" className={ab} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertColumn(ctx, true))}>← Left</button>
-      <button type="button" className={ab} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertColumn(ctx, false))}>→ Right</button>
-      <button type="button" className={db} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableDeleteColumn(ctx))}>✕ Col</button>
+      <button type="button" className={ab} onPointerDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertColumn(ctx, true))}>← Left</button>
+      <button type="button" className={ab} onPointerDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableInsertColumn(ctx, false))}>→ Right</button>
+      <button type="button" className={db} onPointerDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableDeleteColumn(ctx))}>✕ Col</button>
 
       {sep}
 
       {/* Column width */}
       <span className="text-[10px] sm:text-[9px] font-black text-indigo-400 uppercase tracking-widest">Width</span>
       {COL_WIDTHS.map((w) => (
-        <button key={w.label} type="button" className={ab} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableSetColumnWidth(ctx, w.value))}>
+        <button key={w.label} type="button" className={ab} onPointerDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableSetColumnWidth(ctx, w.value))}>
           {w.label}
         </button>
       ))}
@@ -575,7 +578,7 @@ function TableContextBar({
       {/* Borders */}
       <span className="text-[10px] sm:text-[9px] font-black text-indigo-400 uppercase tracking-widest">Borders</span>
       {(['all', 'outer', 'inner', 'none'] as const).map((preset) => (
-        <button key={preset} type="button" className={ab} onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableSetBorders(ctx, preset))}>
+        <button key={preset} type="button" className={ab} onPointerDown={(e) => e.preventDefault()} onClick={() => onTableAction(() => tableSetBorders(ctx, preset))}>
           {preset.charAt(0).toUpperCase() + preset.slice(1)}
         </button>
       ))}
@@ -586,19 +589,19 @@ function TableContextBar({
       <span className="text-[10px] sm:text-[9px] font-black text-indigo-400 uppercase tracking-widest">Table align</span>
       <button
         type="button" className={ab} title="Align table left"
-        onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAlign('left')}
+        onPointerDown={(e) => e.preventDefault()} onClick={() => onTableAlign('left')}
       >
         <svg width="13" height="13" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="0" y="5" width="9" height="2" rx="1"/><rect x="0" y="9" width="12" height="2" rx="1"/></svg>
       </button>
       <button
         type="button" className={ab} title="Align table centre"
-        onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAlign('center')}
+        onPointerDown={(e) => e.preventDefault()} onClick={() => onTableAlign('center')}
       >
         <svg width="13" height="13" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="2.5" y="5" width="9" height="2" rx="1"/><rect x="1" y="9" width="12" height="2" rx="1"/></svg>
       </button>
       <button
         type="button" className={ab} title="Align table right"
-        onMouseDown={(e) => e.preventDefault()} onClick={() => onTableAlign('right')}
+        onPointerDown={(e) => e.preventDefault()} onClick={() => onTableAlign('right')}
       >
         <svg width="13" height="13" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="5" y="5" width="9" height="2" rx="1"/><rect x="2" y="9" width="12" height="2" rx="1"/></svg>
       </button>
@@ -617,7 +620,7 @@ function TableContextBar({
       ]).map(({ label, value, title }) => (
         <button
           key={value} type="button" className={ab} title={title}
-          onMouseDown={(e) => e.preventDefault()} onClick={() => onTableWidth(value)}
+          onPointerDown={(e) => e.preventDefault()} onClick={() => onTableWidth(value)}
         >
           {label}
         </button>
@@ -781,21 +784,21 @@ function EditorToolbar({
       {/* ── Text style group ── */}
       <div className="flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
         <BtnTooltip label="Bold (Ctrl+B)">
-          <button type="button" className={ib(formatState.bold, 'font-black')} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('bold'))}>B</button>
+          <button type="button" className={ib(formatState.bold, 'font-black')} onPointerDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('bold'))}>B</button>
         </BtnTooltip>
         <BtnTooltip label="Italic (Ctrl+I)">
-          <button type="button" className={ib(formatState.italic, 'italic font-semibold')} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('italic'))}>I</button>
+          <button type="button" className={ib(formatState.italic, 'italic font-semibold')} onPointerDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('italic'))}>I</button>
         </BtnTooltip>
         <BtnTooltip label="Underline (Ctrl+U)">
-          <button type="button" className={ib(formatState.underline, 'underline')} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('underline'))}>U</button>
+          <button type="button" className={ib(formatState.underline, 'underline')} onPointerDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('underline'))}>U</button>
         </BtnTooltip>
         <BtnTooltip label="Subscript">
-          <button type="button" className={ib(formatState.subscript)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('subscript'))}>
+          <button type="button" className={ib(formatState.subscript)} onPointerDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('subscript'))}>
             <span className="text-[11px] leading-none">x<sub className="text-[8px]">2</sub></span>
           </button>
         </BtnTooltip>
         <BtnTooltip label="Superscript">
-          <button type="button" className={ib(formatState.superscript)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('superscript'))}>
+          <button type="button" className={ib(formatState.superscript)} onPointerDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('superscript'))}>
             <span className="text-[11px] leading-none">x<sup className="text-[8px]">2</sup></span>
           </button>
         </BtnTooltip>
@@ -809,7 +812,7 @@ function EditorToolbar({
           <button
             type="button"
             className={ib(fontColorOpen)}
-            onMouseDown={(e) => e.preventDefault()}
+            onPointerDown={(e) => e.preventDefault()}
             onClick={() => { setFontColorOpen((v) => !v); setHighlightOpen(false); }}
           >
             <span className="flex flex-col items-center leading-none gap-[2px]">
@@ -841,7 +844,7 @@ function EditorToolbar({
           <button
             type="button"
             className={ib(highlightOpen)}
-            onMouseDown={(e) => e.preventDefault()}
+            onPointerDown={(e) => e.preventDefault()}
             onClick={() => { setHighlightOpen((v) => !v); setFontColorOpen(false); }}
           >
             <span className="flex flex-col items-center leading-none gap-[2px]">
@@ -880,12 +883,12 @@ function EditorToolbar({
       {/* ── Indent ── */}
       <div className="flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
         <BtnTooltip label="Decrease indent">
-          <button type="button" className={ib(false)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('outdent'))}>
+          <button type="button" className={ib(false)} onPointerDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('outdent'))}>
             <span className="text-[14px] leading-none">⇤</span>
           </button>
         </BtnTooltip>
         <BtnTooltip label="Increase indent">
-          <button type="button" className={ib(false)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('indent'))}>
+          <button type="button" className={ib(false)} onPointerDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('indent'))}>
             <span className="text-[14px] leading-none">⇥</span>
           </button>
         </BtnTooltip>
@@ -901,7 +904,7 @@ function EditorToolbar({
           <button
             type="button"
             className={ib(formatState.alignLeft)}
-            onMouseDown={(e) => e.preventDefault()}
+            onPointerDown={(e) => e.preventDefault()}
             onClick={() => onAlign('left')}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="0" y="5" width="9" height="2" rx="1"/><rect x="0" y="9" width="12" height="2" rx="1"/></svg>
@@ -911,7 +914,7 @@ function EditorToolbar({
           <button
             type="button"
             className={ib(formatState.alignCenter)}
-            onMouseDown={(e) => e.preventDefault()}
+            onPointerDown={(e) => e.preventDefault()}
             onClick={() => onAlign('center')}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="2.5" y="5" width="9" height="2" rx="1"/><rect x="1" y="9" width="12" height="2" rx="1"/></svg>
@@ -921,7 +924,7 @@ function EditorToolbar({
           <button
             type="button"
             className={ib(formatState.alignRight)}
-            onMouseDown={(e) => e.preventDefault()}
+            onPointerDown={(e) => e.preventDefault()}
             onClick={() => onAlign('right')}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2" rx="1"/><rect x="5" y="5" width="9" height="2" rx="1"/><rect x="2" y="9" width="12" height="2" rx="1"/></svg>
@@ -934,12 +937,12 @@ function EditorToolbar({
       {/* ── Lists ── */}
       <div className="flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
         <BtnTooltip label="Bullet list">
-          <button type="button" className={ib(formatState.unorderedList)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('insertUnorderedList'))}>
+          <button type="button" className={ib(formatState.unorderedList)} onPointerDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('insertUnorderedList'))}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><circle cx="1.5" cy="2" r="1.5"/><rect x="4" y="1" width="10" height="2" rx="1"/><circle cx="1.5" cy="7" r="1.5"/><rect x="4" y="6" width="10" height="2" rx="1"/><circle cx="1.5" cy="12" r="1.5"/><rect x="4" y="11" width="10" height="2" rx="1"/></svg>
           </button>
         </BtnTooltip>
         <BtnTooltip label="Numbered list">
-          <button type="button" className={ib(formatState.orderedList)} onMouseDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('insertOrderedList'))}>
+          <button type="button" className={ib(formatState.orderedList)} onPointerDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('insertOrderedList'))}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><text x="0" y="4" fontSize="4" fontFamily="monospace">1.</text><rect x="5" y="1" width="9" height="2" rx="1"/><text x="0" y="9" fontSize="4" fontFamily="monospace">2.</text><rect x="5" y="6" width="9" height="2" rx="1"/><text x="0" y="14" fontSize="4" fontFamily="monospace">3.</text><rect x="5" y="11" width="9" height="2" rx="1"/></svg>
           </button>
         </BtnTooltip>
@@ -953,7 +956,7 @@ function EditorToolbar({
           <button
             type="button"
             className={ib(tablePickerOpen)}
-            onMouseDown={(e) => e.preventDefault()}
+            onPointerDown={(e) => e.preventDefault()}
             onClick={() => { onTablePickerToggle(); setFontColorOpen(false); setHighlightOpen(false); }}
           >
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.3">
@@ -975,7 +978,7 @@ function EditorToolbar({
         <button
           type="button"
           className={ib(false)}
-          onMouseDown={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.preventDefault()}
           onClick={onImageClick}
         >
           <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.3">
@@ -999,7 +1002,7 @@ function EditorToolbar({
               <button
                 type="button"
                 className={ib(false, 'text-[11px] font-semibold')}
-                onMouseDown={(e) => e.preventDefault()}
+                onPointerDown={(e) => e.preventDefault()}
                 onClick={() => onImageWidth(mode)}
               >
                 {mode === 'sm' ? 'S' : mode === 'md' ? 'M' : mode === 'lg' ? 'L' : 'Full'}
