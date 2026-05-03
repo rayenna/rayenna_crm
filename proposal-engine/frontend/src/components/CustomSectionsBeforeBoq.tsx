@@ -95,8 +95,11 @@ function highlightSelectedImg(root: HTMLElement | null, img: HTMLImageElement | 
 function insertHtmlIntoCaret(el: HTMLElement, html: string): void {
   el.focus();
   try {
-    document.execCommand('insertHTML', false, html);
-    return;
+    // On Android Chrome, execCommand('insertHTML') returns false silently
+    // (it does NOT throw). We must check the return value and fall through
+    // to the Range API so the table / HTML is actually inserted.
+    const ok = document.execCommand('insertHTML', false, html);
+    if (ok) return;
   } catch {
     /* fall through */
   }
@@ -297,7 +300,8 @@ function applyInlineStyle(property: string, value: string, editorEl: HTMLElement
 
   if (range.collapsed) {
     // No selection — set a "pending" style that will apply to the next typed character
-    // via execCommand styleWithCSS trick
+    // via execCommand styleWithCSS trick. These execCommand calls work for the
+    // pending-style case even on Android Chrome.
     document.execCommand('styleWithCSS', false, 'true');
     if (property === 'font-family') document.execCommand('fontName', false, value);
     else if (property === 'font-size') {
@@ -310,6 +314,10 @@ function applyInlineStyle(property: string, value: string, editorEl: HTMLElement
         const span = r2.startContainer.parentElement;
         if (span && span !== editorEl) span.style.fontSize = value;
       }
+    } else if (property === 'color') {
+      document.execCommand('foreColor', false, value);
+    } else if (property === 'background-color') {
+      document.execCommand('hiliteColor', false, value);
     }
     document.execCommand('styleWithCSS', false, 'false');
     return;
@@ -808,7 +816,12 @@ function EditorToolbar({
             colors={FONT_COLORS}
             onSelect={(c) => {
               setLastFontColor(c);
-              onFormat(() => document.execCommand('foreColor', false, c));
+              // Use the span-wrapper path instead of execCommand('foreColor') —
+              // execCommand('foreColor') is silently ignored on Android Chrome when
+              // the element lost focus due to a toolbar tap.
+              if (editorRef.current) {
+                onFormat(() => applyInlineStyle('color', c || '#000000', editorRef.current!));
+              }
             }}
             onClose={() => setFontColorOpen(false)}
           />
@@ -835,17 +848,18 @@ function EditorToolbar({
             colors={HIGHLIGHT_COLORS}
             onSelect={(c) => {
               setLastHighlight(c || '#fef08a');
-              onFormat(() => {
-                if (!c) {
-                  document.execCommand('styleWithCSS', false, 'true');
-                  document.execCommand('hiliteColor', false, 'transparent');
-                  document.execCommand('styleWithCSS', false, 'false');
-                } else {
-                  document.execCommand('styleWithCSS', false, 'true');
-                  document.execCommand('hiliteColor', false, c);
-                  document.execCommand('styleWithCSS', false, 'false');
-                }
-              });
+              // Use the span-wrapper path instead of execCommand('hiliteColor') —
+              // hiliteColor is one of the first execCommands to be ignored silently
+              // on Android Chrome when the element lost focus due to a toolbar tap.
+              if (editorRef.current) {
+                onFormat(() =>
+                  applyInlineStyle(
+                    'background-color',
+                    c || 'transparent',
+                    editorRef.current!,
+                  ),
+                );
+              }
             }}
             onClose={() => setHighlightOpen(false)}
             allowRemove
@@ -1082,24 +1096,20 @@ function CustomBodyEditor({
     const el = ref.current;
     if (!el) return;
     el.focus();
-    // On mobile a toolbar tap can briefly collapse the selection before onClick
-    // fires. Restore the last known in-editor range so the command targets the
-    // correct text even if the browser moved the caret on focus().
+    // Always restore the last known in-editor selection after focus().
+    // On Android Chrome, el.focus() moves the caret to an arbitrary position
+    // (usually the start of the element) — NOT where the user had it.
+    // We unconditionally override that with the saved range so every command
+    // (bold, italic, color, table insert …) targets the correct text.
+    // On desktop this is a no-op in practice because the saved range == the
+    // current range (mousedown e.preventDefault() kept the selection intact).
     try {
       const saved = savedSelectionRef.current;
       if (saved) {
         const sel = window.getSelection();
         if (sel) {
-          const anchor = sel.anchorNode;
-          const hasEditorSel =
-            anchor &&
-            el.contains(
-              anchor.nodeType === Node.TEXT_NODE ? (anchor.parentNode as Node) : anchor,
-            );
-          if (!hasEditorSel) {
-            sel.removeAllRanges();
-            sel.addRange(saved.cloneRange());
-          }
+          sel.removeAllRanges();
+          sel.addRange(saved.cloneRange());
         }
       }
     } catch { /* ignore */ }
