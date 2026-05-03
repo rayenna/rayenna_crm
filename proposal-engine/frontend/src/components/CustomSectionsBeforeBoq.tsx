@@ -380,11 +380,12 @@ function ColorPicker({
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const onDown = (e: MouseEvent) => {
+    // Use pointerdown (not mousedown) so outside-taps close the picker on mobile too.
+    const onDown = (e: PointerEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onClose();
     };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
   }, [onClose]);
 
   return (
@@ -450,11 +451,12 @@ function TablePicker({
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const onDown = (e: MouseEvent) => {
+    // Use pointerdown (not mousedown) so outside-taps close the picker on mobile too.
+    const onDown = (e: PointerEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onClose();
     };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
   }, [onClose]);
 
   return (
@@ -476,20 +478,22 @@ function TablePicker({
       >
         {Array.from({ length: PICKER_MAX }, (_, r) =>
           Array.from({ length: PICKER_MAX }, (_, c) => (
-            <div
-              key={`${r}-${c}`}
-              className={`w-[22px] h-[22px] rounded border cursor-pointer transition-colors [touch-action:manipulation] ${
-                r < hover.r && c < hover.c
-                  ? 'bg-primary-300 border-primary-500'
-                  : 'bg-secondary-100 border-secondary-300 hover:bg-primary-100 hover:border-primary-300'
-              }`}
-              onMouseEnter={() => setHover({ r: r + 1, c: c + 1 })}
-              onTouchStart={() => setHover({ r: r + 1, c: c + 1 })}
-              onClick={() => {
-                onInsert(hover.r, hover.c);
-                onClose();
-              }}
-            />
+        <div
+          key={`${r}-${c}`}
+          className={`w-[22px] h-[22px] rounded border cursor-pointer transition-colors [touch-action:manipulation] ${
+            r < hover.r && c < hover.c
+              ? 'bg-primary-300 border-primary-500'
+              : 'bg-secondary-100 border-secondary-300 hover:bg-primary-100 hover:border-primary-300'
+          }`}
+          onMouseEnter={() => setHover({ r: r + 1, c: c + 1 })}
+          onTouchStart={() => setHover({ r: r + 1, c: c + 1 })}
+          onClick={() => {
+            // Use r+1 / c+1 directly — avoids the React async-state race on
+            // mobile where hover state hasn't flushed yet when onClick fires.
+            onInsert(r + 1, c + 1);
+            onClose();
+          }}
+        />
           )),
         )}
       </div>
@@ -1004,6 +1008,18 @@ function CustomBodyEditor({
   const [imgRev, setImgRev] = useState(0);
   const [tablePickerOpen, setTablePickerOpen] = useState(false);
   const [tableCtx, setTableCtx] = useState<TableContext | null>(null);
+  /**
+   * Saved last-known selection range while the cursor was inside the editor.
+   * Restored inside onFormat so mobile toolbar taps work even if the browser
+   * briefly moved focus away and collapsed the selection.
+   */
+  const savedSelectionRef = useRef<Range | null>(null);
+  /**
+   * Mirrors tableCtx in a ref so onTableAction can always read the last valid
+   * table context even if React state has already been cleared by a
+   * selectionchange event that fired between the touchstart and onClick.
+   */
+  const tableCtxRef = useRef<TableContext | null>(null);
   const [formatState, setFormatState] = useState<FormatState>({
     bold: false,
     italic: false,
@@ -1032,7 +1048,24 @@ function CustomBodyEditor({
   // Track selection changes to update toolbar active states + table context
   const refreshFormatState = useCallback(() => {
     try { setFormatState(getFormatState()); } catch { /* ignore */ }
-    setTableCtx(ref.current ? getTableContext(ref.current) : null);
+    const ctx = ref.current ? getTableContext(ref.current) : null;
+    setTableCtx(ctx);
+    tableCtxRef.current = ctx;
+
+    // Save the current selection range whenever the cursor is inside the editor.
+    // onFormat restores this on mobile where a toolbar tap can briefly clear selection.
+    try {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && ref.current) {
+        const anchor = sel.anchorNode;
+        const inEditor =
+          anchor &&
+          ref.current.contains(
+            anchor.nodeType === Node.TEXT_NODE ? (anchor.parentNode as Node) : anchor,
+          );
+        if (inEditor) savedSelectionRef.current = sel.getRangeAt(0).cloneRange();
+      }
+    } catch { /* ignore */ }
   }, []);
 
   useEffect(() => {
@@ -1046,17 +1079,46 @@ function CustomBodyEditor({
 
   /** Run a format command, then re-focus the editor and commit. */
   const onFormat = useCallback((fn: () => void) => {
-    ref.current?.focus();
+    const el = ref.current;
+    if (!el) return;
+    el.focus();
+    // On mobile a toolbar tap can briefly collapse the selection before onClick
+    // fires. Restore the last known in-editor range so the command targets the
+    // correct text even if the browser moved the caret on focus().
+    try {
+      const saved = savedSelectionRef.current;
+      if (saved) {
+        const sel = window.getSelection();
+        if (sel) {
+          const anchor = sel.anchorNode;
+          const hasEditorSel =
+            anchor &&
+            el.contains(
+              anchor.nodeType === Node.TEXT_NODE ? (anchor.parentNode as Node) : anchor,
+            );
+          if (!hasEditorSel) {
+            sel.removeAllRanges();
+            sel.addRange(saved.cloneRange());
+          }
+        }
+      }
+    } catch { /* ignore */ }
     fn();
     refreshFormatState();
     commitFromEditor();
   }, [commitFromEditor, refreshFormatState]);
 
-  /** Run a direct DOM table operation (no execCommand), then commit. */
+  /**
+   * Run a direct DOM table operation (no execCommand), then commit.
+   * Uses tableCtxRef (not tableCtx state) so the correct context is always
+   * available even if a selectionchange event cleared the state before onClick.
+   */
   const onTableAction = useCallback((fn: () => void) => {
     fn();
     if (ref.current) onCommit(sanitizeProposalCustomBodyHtml(ref.current.innerHTML));
-    setTableCtx(ref.current ? getTableContext(ref.current) : null);
+    const ctx = ref.current ? getTableContext(ref.current) : null;
+    setTableCtx(ctx);
+    tableCtxRef.current = ctx;
   }, [onCommit]);
 
   const insertImageFromFile = async (file: File) => {
@@ -1318,8 +1380,15 @@ function CustomBodyEditor({
         }}
       />
 
-      {tableCtx && (
-        <TableContextBar ctx={tableCtx} onTableAction={onTableAction} onTableAlign={applyTableAlign} onTableWidth={applyTableWidth} />
+      {/* Show the context bar if either the React state OR the ref has a valid
+          context — the ref survives a brief selectionchange-clear on mobile. */}
+      {(tableCtx ?? tableCtxRef.current) && (
+        <TableContextBar
+          ctx={(tableCtx ?? tableCtxRef.current)!}
+          onTableAction={onTableAction}
+          onTableAlign={applyTableAlign}
+          onTableWidth={applyTableWidth}
+        />
       )}
 
       <div
