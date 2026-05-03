@@ -378,24 +378,41 @@ function getFormatState(): FormatState {
 }
 
 // ─── Color picker popover ──────────────────────────────────────────────────────
+// Rendered via createPortal into document.body so that `overflow-x: auto` on
+// the toolbar container never clips the picker in portrait / scrolled mode.
 
 function ColorPicker({
   colors,
   onSelect,
   onClose,
+  anchorRef,
   allowRemove = false,
   removeLabel = 'None',
 }: {
   colors: string[];
   onSelect: (color: string) => void;
   onClose: () => void;
+  anchorRef: React.RefObject<HTMLElement | null>;
   allowRemove?: boolean;
   removeLabel?: string;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  // Calculate fixed position from the anchor button on mount.
+  useEffect(() => {
+    const anchor = anchorRef.current;
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const PICKER_W = 228; // approximate picker width
+    const left = Math.max(8, Math.min(
+      window.innerWidth - PICKER_W - 8,
+      rect.left + rect.width / 2 - PICKER_W / 2,
+    ));
+    setPos({ top: rect.bottom + 6, left });
+  }, [anchorRef]);
 
   useEffect(() => {
-    // Use pointerdown (not mousedown) so outside-taps close the picker on mobile too.
     const onDown = (e: PointerEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onClose();
     };
@@ -403,14 +420,16 @@ function ColorPicker({
     return () => document.removeEventListener('pointerdown', onDown);
   }, [onClose]);
 
-  return (
+  if (!pos) return null;
+
+  return createPortal(
     <div
       ref={wrapRef}
-      className="absolute z-50 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl p-3
-                 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0"
+      style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+      className="bg-white border border-slate-200 rounded-xl shadow-2xl p-3"
       onPointerDown={(e) => e.preventDefault()}
     >
-      {/* Swatches — 24px on mobile for easy tapping, 22px on sm+ */}
+      {/* Swatches — 24px on mobile for easy tapping */}
       <div className="grid gap-1.5" style={{ gridTemplateColumns: 'repeat(8, 24px)' }}>
         {colors.map((color) => (
           <button
@@ -449,26 +468,43 @@ function ColorPicker({
           </button>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
 // ─── Table row×col picker popover ─────────────────────────────────────────────
+// Rendered via createPortal into document.body so that `overflow-x: auto` on
+// the toolbar container never clips the picker in portrait / scrolled mode.
 
 const PICKER_MAX = 8;
 
 function TablePicker({
   onInsert,
   onClose,
+  anchorRef,
 }: {
   onInsert: (rows: number, cols: number) => void;
   onClose: () => void;
+  anchorRef: React.RefObject<HTMLElement | null>;
 }) {
   const [hover, setHover] = useState({ r: 0, c: 0 });
   const wrapRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
-    // Use pointerdown (not mousedown) so outside-taps close the picker on mobile too.
+    const anchor = anchorRef.current;
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const PICKER_W = 220;
+    const left = Math.max(8, Math.min(
+      window.innerWidth - PICKER_W - 8,
+      rect.left + rect.width / 2 - PICKER_W / 2,
+    ));
+    setPos({ top: rect.bottom + 6, left });
+  }, [anchorRef]);
+
+  useEffect(() => {
     const onDown = (e: PointerEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) onClose();
     };
@@ -476,46 +512,47 @@ function TablePicker({
     return () => document.removeEventListener('pointerdown', onDown);
   }, [onClose]);
 
-  return (
+  if (!pos) return null;
+
+  return createPortal(
     <div
       ref={wrapRef}
-      className="absolute z-50 top-full mt-1 bg-white border border-secondary-200 rounded-xl shadow-xl p-3 select-none
-                 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0"
+      style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+      className="bg-white border border-secondary-200 rounded-xl shadow-xl p-3 select-none"
       onPointerDown={(e) => e.preventDefault()}
     >
-      <p className="text-xs sm:text-[10px] font-semibold text-secondary-500 mb-2 text-center min-w-[140px]">
+      <p className="text-xs font-semibold text-secondary-500 mb-2 text-center min-w-[140px]">
         {hover.r > 0 && hover.c > 0
           ? `${hover.c} col${hover.c > 1 ? 's' : ''} × ${hover.r} row${hover.r > 1 ? 's' : ''}`
           : 'Tap to choose size'}
       </p>
-      {/* Cells 22px — comfortable on both mobile and desktop */}
+      {/* Cells 28px on mobile for easy tapping */}
       <div
         className="grid gap-1"
-        style={{ gridTemplateColumns: `repeat(${PICKER_MAX}, 22px)` }}
+        style={{ gridTemplateColumns: `repeat(${PICKER_MAX}, 28px)` }}
       >
         {Array.from({ length: PICKER_MAX }, (_, r) =>
           Array.from({ length: PICKER_MAX }, (_, c) => (
-        <div
-          key={`${r}-${c}`}
-          className={`w-[22px] h-[22px] rounded border cursor-pointer transition-colors [touch-action:manipulation] ${
-            r < hover.r && c < hover.c
-              ? 'bg-primary-300 border-primary-500'
-              : 'bg-secondary-100 border-secondary-300 hover:bg-primary-100 hover:border-primary-300'
-          }`}
-          onMouseEnter={() => setHover({ r: r + 1, c: c + 1 })}
-          onTouchStart={() => setHover({ r: r + 1, c: c + 1 })}
-          onPointerDown={(e) => e.preventDefault()}
-          onClick={() => {
-            // Use r+1 / c+1 directly — avoids the React async-state race on
-            // mobile where hover state hasn't flushed yet when onClick fires.
-            onInsert(r + 1, c + 1);
-            onClose();
-          }}
-        />
+            <div
+              key={`${r}-${c}`}
+              className={`w-7 h-7 rounded border cursor-pointer transition-colors [touch-action:manipulation] ${
+                r < hover.r && c < hover.c
+                  ? 'bg-primary-300 border-primary-500'
+                  : 'bg-secondary-100 border-secondary-300 hover:bg-primary-100 hover:border-primary-300'
+              }`}
+              onMouseEnter={() => setHover({ r: r + 1, c: c + 1 })}
+              onTouchStart={() => setHover({ r: r + 1, c: c + 1 })}
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => {
+                onInsert(r + 1, c + 1);
+                onClose();
+              }}
+            />
           )),
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -714,6 +751,11 @@ function EditorToolbar({
   const [lastFontColor, setLastFontColor]       = useState('#000000');
   const [lastHighlight, setLastHighlight]       = useState('#fef08a');
 
+  // Refs for picker anchor buttons — used by portalized pickers for fixed positioning.
+  const fontColorBtnRef  = useRef<HTMLButtonElement>(null);
+  const highlightBtnRef  = useRef<HTMLButtonElement>(null);
+  const tableBtnRef      = useRef<HTMLButtonElement>(null);
+
   /* ── styling helpers ── */
   // Icon button — 36px tall on mobile, 28px on sm+; no border, bg on hover/active
   const ib = (active: boolean, extra = '') =>
@@ -782,15 +824,44 @@ function EditorToolbar({
       <Sep />
 
       {/* ── Text style group ── */}
+      {/* Bold / Italic / Underline use applyInlineStyle (DOM span-wrapper) instead of
+          execCommand — execCommand for style commands is silently ignored by Android
+          Chrome when the element gained focus programmatically rather than by a direct
+          tap inside the editor itself. applyInlineStyle works via the Range API and is
+          fully reliable on all browsers including Android Chrome. */}
       <div className="flex flex-shrink-0 items-center gap-0.5 rounded-lg bg-slate-100/70 px-0.5 py-0.5">
         <BtnTooltip label="Bold (Ctrl+B)">
-          <button type="button" className={ib(formatState.bold, 'font-black')} onPointerDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('bold'))}>B</button>
+          <button
+            type="button"
+            className={ib(formatState.bold, 'font-black')}
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={() => {
+              if (!editorRef.current) return;
+              onFormat(() => applyInlineStyle('font-weight', formatState.bold ? 'normal' : 'bold', editorRef.current!));
+            }}
+          >B</button>
         </BtnTooltip>
         <BtnTooltip label="Italic (Ctrl+I)">
-          <button type="button" className={ib(formatState.italic, 'italic font-semibold')} onPointerDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('italic'))}>I</button>
+          <button
+            type="button"
+            className={ib(formatState.italic, 'italic font-semibold')}
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={() => {
+              if (!editorRef.current) return;
+              onFormat(() => applyInlineStyle('font-style', formatState.italic ? 'normal' : 'italic', editorRef.current!));
+            }}
+          >I</button>
         </BtnTooltip>
         <BtnTooltip label="Underline (Ctrl+U)">
-          <button type="button" className={ib(formatState.underline, 'underline')} onPointerDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('underline'))}>U</button>
+          <button
+            type="button"
+            className={ib(formatState.underline, 'underline')}
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={() => {
+              if (!editorRef.current) return;
+              onFormat(() => applyInlineStyle('text-decoration', formatState.underline ? 'none' : 'underline', editorRef.current!));
+            }}
+          >U</button>
         </BtnTooltip>
         <BtnTooltip label="Subscript">
           <button type="button" className={ib(formatState.subscript)} onPointerDown={(e) => e.preventDefault()} onClick={() => onFormat(() => cmd('subscript'))}>
@@ -807,9 +878,10 @@ function EditorToolbar({
       <Sep />
 
       {/* ── Font colour ── */}
-      <div className="relative flex-shrink-0">
+      <div className="flex-shrink-0">
         <BtnTooltip label="Font colour">
           <button
+            ref={fontColorBtnRef}
             type="button"
             className={ib(fontColorOpen)}
             onPointerDown={(e) => e.preventDefault()}
@@ -823,12 +895,10 @@ function EditorToolbar({
         </BtnTooltip>
         {fontColorOpen && (
           <ColorPicker
+            anchorRef={fontColorBtnRef}
             colors={FONT_COLORS}
             onSelect={(c) => {
               setLastFontColor(c);
-              // Use the span-wrapper path instead of execCommand('foreColor') —
-              // execCommand('foreColor') is silently ignored on Android Chrome when
-              // the element lost focus due to a toolbar tap.
               if (editorRef.current) {
                 onFormat(() => applyInlineStyle('color', c || '#000000', editorRef.current!));
               }
@@ -839,9 +909,10 @@ function EditorToolbar({
       </div>
 
       {/* ── Highlight colour ── */}
-      <div className="relative flex-shrink-0">
+      <div className="flex-shrink-0">
         <BtnTooltip label="Highlight colour">
           <button
+            ref={highlightBtnRef}
             type="button"
             className={ib(highlightOpen)}
             onPointerDown={(e) => e.preventDefault()}
@@ -855,19 +926,13 @@ function EditorToolbar({
         </BtnTooltip>
         {highlightOpen && (
           <ColorPicker
+            anchorRef={highlightBtnRef}
             colors={HIGHLIGHT_COLORS}
             onSelect={(c) => {
               setLastHighlight(c || '#fef08a');
-              // Use the span-wrapper path instead of execCommand('hiliteColor') —
-              // hiliteColor is one of the first execCommands to be ignored silently
-              // on Android Chrome when the element lost focus due to a toolbar tap.
               if (editorRef.current) {
                 onFormat(() =>
-                  applyInlineStyle(
-                    'background-color',
-                    c || 'transparent',
-                    editorRef.current!,
-                  ),
+                  applyInlineStyle('background-color', c || 'transparent', editorRef.current!),
                 );
               }
             }}
@@ -951,9 +1016,10 @@ function EditorToolbar({
       <Sep />
 
       {/* ── Table ── */}
-      <div className="relative flex-shrink-0">
+      <div className="flex-shrink-0">
         <BtnTooltip label="Insert table">
           <button
+            ref={tableBtnRef}
             type="button"
             className={ib(tablePickerOpen)}
             onPointerDown={(e) => e.preventDefault()}
@@ -967,7 +1033,7 @@ function EditorToolbar({
           </button>
         </BtnTooltip>
         {tablePickerOpen && (
-          <TablePicker onInsert={onTableInsert} onClose={onTablePickerToggle} />
+          <TablePicker anchorRef={tableBtnRef} onInsert={onTableInsert} onClose={onTablePickerToggle} />
         )}
       </div>
 
