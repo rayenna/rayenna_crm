@@ -93,7 +93,11 @@ function highlightSelectedImg(root: HTMLElement | null, img: HTMLImageElement | 
 }
 
 function insertHtmlIntoCaret(el: HTMLElement, html: string): void {
-  el.focus();
+  // Only focus if not already active. When called from inside onFormat(),
+  // the element is already focused and the correct selection range has been
+  // restored. A redundant focus() would fire selectionchange and overwrite
+  // that restored range before we can use it.
+  if (document.activeElement !== el) el.focus();
   try {
     // On Android Chrome, execCommand('insertHTML') returns false silently
     // (it does NOT throw). We must check the return value and fall through
@@ -293,7 +297,10 @@ function tableSetColumnWidth(ctx: TableContext, width: string): void {
 
 /** Wrap the current selection in a span with an inline style property. Falls back gracefully when selection is collapsed. */
 function applyInlineStyle(property: string, value: string, editorEl: HTMLElement): void {
-  editorEl.focus();
+  // Do NOT call editorEl.focus() here. onFormat() has already focused the
+  // element and restored the correct selection range. A second focus() call
+  // fires another selectionchange which would overwrite the restored range
+  // before Range.extractContents() / insertNode() can use it.
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return;
   const range = sel.getRangeAt(0);
@@ -1095,24 +1102,38 @@ function CustomBodyEditor({
   const onFormat = useCallback((fn: () => void) => {
     const el = ref.current;
     if (!el) return;
+
+    // ─── Android Chrome root-cause fix ────────────────────────────────────────
+    // Problem: el.focus() below fires a synchronous `selectionchange` event,
+    // which calls refreshFormatState(), which OVERWRITES savedSelectionRef with
+    // whatever position Android Chrome auto-placed the caret (usually element
+    // start). By the time we read savedSelectionRef to restore it, it already
+    // holds the wrong (overwritten) value — so every command runs at the wrong
+    // position and formatting appears to do nothing.
+    //
+    // Fix: snapshot the range we want to restore BEFORE calling el.focus().
+    // The snapshot is immune to the subsequent selectionchange overwrite.
+    const rangeToRestore = (() => {
+      try { return savedSelectionRef.current?.cloneRange() ?? null; }
+      catch { return null; }
+    })();
+
     el.focus();
-    // Always restore the last known in-editor selection after focus().
-    // On Android Chrome, el.focus() moves the caret to an arbitrary position
-    // (usually the start of the element) — NOT where the user had it.
-    // We unconditionally override that with the saved range so every command
-    // (bold, italic, color, table insert …) targets the correct text.
-    // On desktop this is a no-op in practice because the saved range == the
-    // current range (mousedown e.preventDefault() kept the selection intact).
-    try {
-      const saved = savedSelectionRef.current;
-      if (saved) {
+
+    // Unconditionally restore the snapshotted range. On desktop this is a
+    // no-op (the range equals the current selection). On Android Chrome this
+    // puts the caret/selection back exactly where the user had it before the
+    // toolbar tap blurred the editor.
+    if (rangeToRestore) {
+      try {
         const sel = window.getSelection();
         if (sel) {
           sel.removeAllRanges();
-          sel.addRange(saved.cloneRange());
+          sel.addRange(rangeToRestore);
         }
-      }
-    } catch { /* ignore */ }
+      } catch { /* ignore */ }
+    }
+
     fn();
     refreshFormatState();
     commitFromEditor();
@@ -1411,6 +1432,30 @@ function CustomBodyEditor({
         onKeyUp={refreshFormatState}
         onPaste={onPaste}
         onBlur={() => {
+          // ── Android Chrome: save selection on blur ──────────────────────────
+          // On Android Chrome, the editor blurs (touchstart on toolbar button)
+          // BEFORE `selectionchange` fires. At this exact moment
+          // window.getSelection() still holds the user's range. We snapshot it
+          // here so onFormat() has a guaranteed-correct range to restore even
+          // after selectionchange subsequently clears the selection.
+          try {
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+              const anchor = sel.anchorNode;
+              const el = ref.current;
+              const inEditor =
+                anchor &&
+                el &&
+                el.contains(
+                  anchor.nodeType === Node.TEXT_NODE
+                    ? (anchor.parentNode as Node)
+                    : anchor,
+                );
+              if (inEditor) {
+                savedSelectionRef.current = sel.getRangeAt(0).cloneRange();
+              }
+            }
+          } catch { /* ignore */ }
           highlightSelectedImg(ref.current, null);
           selectedImgRef.current = null;
           setImgRev((n) => n + 1);
