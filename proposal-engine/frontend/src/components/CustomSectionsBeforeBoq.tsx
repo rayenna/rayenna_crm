@@ -36,7 +36,15 @@ function detectOfficeSource(html: string): 'word' | 'excel' | 'powerpoint' | 'ot
   return 'other';
 }
 
-/** Resize / JPEG-compress so pasted photos stay under sanitiser limits and save reliably. */
+/**
+ * Resize / JPEG-compress so pasted photos stay under sanitiser limits and save reliably.
+ *
+ * Target: decoded JPEG bytes < 450 KB (sanitiser MAX_IMAGE_BYTES).
+ * In base64 that is ~600 KB of string; we target ≤ 560 K to leave headroom.
+ * For very large or highly-detailed images (e.g. aerial/satellite photos) we
+ * progressively drop quality below 0.45 and, if still too large, halve the
+ * pixel dimensions until the image fits.
+ */
 async function compressImageFileToDataUrl(file: File): Promise<string | null> {
   if (!file.type.startsWith('image/')) return null;
   const blobUrl = URL.createObjectURL(file);
@@ -48,26 +56,43 @@ async function compressImageFileToDataUrl(file: File): Promise<string | null> {
       im.src = blobUrl;
     });
 
+    // Target base64 string length that keeps decoded bytes safely under 450 KB
+    const TARGET_LEN = 560_000;
+
     let { width, height } = img;
+
+    // Initial cap: images wider than 1600 px are rarely needed at full res
     const maxW = 1600;
     if (width > maxW) {
       height = Math.round((height * maxW) / width);
       width = maxW;
     }
 
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-    ctx.drawImage(img, 0, 0, width, height);
+    const drawToDataUrl = (w: number, h: number, q: number): string => {
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return '';
+      ctx.drawImage(img, 0, 0, w, h);
+      return canvas.toDataURL('image/jpeg', q);
+    };
 
+    // Pass 1: reduce quality from 0.88 → 0.20 in steps
     let q = 0.88;
-    let dataUrl = canvas.toDataURL('image/jpeg', q);
-    while (dataUrl.length > 850_000 && q > 0.45) {
-      q -= 0.06;
-      dataUrl = canvas.toDataURL('image/jpeg', q);
+    let dataUrl = drawToDataUrl(width, height, q);
+    while (dataUrl.length > TARGET_LEN && q > 0.20) {
+      q = Math.max(0.20, q - 0.08);
+      dataUrl = drawToDataUrl(width, height, q);
     }
+
+    // Pass 2: if still too large, progressively halve pixel dimensions
+    while (dataUrl.length > TARGET_LEN && width > 200) {
+      width  = Math.round(width  * 0.6);
+      height = Math.round(height * 0.6);
+      dataUrl = drawToDataUrl(width, height, q);
+    }
+
     return isSafeDataImageSrc(dataUrl) ? dataUrl : null;
   } catch {
     return null;
@@ -306,12 +331,24 @@ function applyInlineStyle(property: string, value: string, editorEl: HTMLElement
   const range = sel.getRangeAt(0);
 
   if (range.collapsed) {
-    // No selection — set a "pending" style that will apply to the next typed character
-    // via execCommand styleWithCSS trick. These execCommand calls work for the
-    // pending-style case even on Android Chrome.
+    // No text selected — apply a "pending" style via execCommand so the next
+    // typed character inherits it. execCommand works for the pending-style case
+    // on all browsers including Android Chrome.
+    //
+    // NOTE: font-weight / font-style / text-decoration MUST use their dedicated
+    // execCommand verbs here; the generic styleWithCSS + insertHTML trick does
+    // not activate "pending" styles for these properties on Android Chrome —
+    // that was the root cause of Italic never working on mobile.
     document.execCommand('styleWithCSS', false, 'true');
-    if (property === 'font-family') document.execCommand('fontName', false, value);
-    else if (property === 'font-size') {
+    if (property === 'font-weight') {
+      document.execCommand('bold', false);
+    } else if (property === 'font-style') {
+      document.execCommand('italic', false);
+    } else if (property === 'text-decoration') {
+      document.execCommand('underline', false);
+    } else if (property === 'font-family') {
+      document.execCommand('fontName', false, value);
+    } else if (property === 'font-size') {
       // Map to nearest execCommand fontSize bucket (1-7) just to trigger the span,
       // then fix it up immediately.
       document.execCommand('fontSize', false, '3');
@@ -330,17 +367,32 @@ function applyInlineStyle(property: string, value: string, editorEl: HTMLElement
     return;
   }
 
-  // Extract, wrap, re-insert
-  const frag = range.extractContents();
-  const span = document.createElement('span');
-  span.style.setProperty(property, value);
-  span.appendChild(frag);
-  range.insertNode(span);
-  // Restore selection to cover the new span
-  const newRange = document.createRange();
-  newRange.selectNodeContents(span);
-  sel.removeAllRanges();
-  sel.addRange(newRange);
+  // Non-collapsed selection: extract, wrap in span, re-insert.
+  // Wrapped in try/catch because on Android Chrome, Range.extractContents() /
+  // Range.insertNode() can throw or silently no-op when the range crosses certain
+  // contentEditable boundaries. If the Range API fails, fall back to execCommand.
+  try {
+    const frag = range.extractContents();
+    const span = document.createElement('span');
+    span.style.setProperty(property, value);
+    span.appendChild(frag);
+    range.insertNode(span);
+    // Restore selection to cover the new span
+    const newRange = document.createRange();
+    newRange.selectNodeContents(span);
+    sel.removeAllRanges();
+    sel.addRange(newRange);
+  } catch {
+    // Fallback for Android Chrome Range API failures
+    document.execCommand('styleWithCSS', false, 'true');
+    if (property === 'font-weight')         document.execCommand('bold', false);
+    else if (property === 'font-style')     document.execCommand('italic', false);
+    else if (property === 'text-decoration') document.execCommand('underline', false);
+    else if (property === 'color')          document.execCommand('foreColor', false, value);
+    else if (property === 'background-color') document.execCommand('hiliteColor', false, value);
+    else if (property === 'font-family')    document.execCommand('fontName', false, value);
+    document.execCommand('styleWithCSS', false, 'false');
+  }
 }
 
 // ─── Toolbar button helpers ────────────────────────────────────────────────────
@@ -776,12 +828,22 @@ function EditorToolbar({
   return (
     // On mobile: single row with horizontal scroll (no wrap) so toolbar stays compact.
     // On sm+: wrap naturally across multiple rows.
-    <div className="flex flex-nowrap sm:flex-wrap items-center gap-x-1 gap-y-1
+    //
+    // onTouchStart preventDefault: on Android Chrome (portrait), tapping anywhere
+    // outside the keyboard's trigger area causes the virtual keyboard to dismiss
+    // and reset the caret BEFORE the click event fires. Intercepting touchstart on
+    // the entire toolbar div and calling preventDefault() tells the browser "this
+    // is an intentional touch on a control, not a tap-to-dismiss", keeping the
+    // keyboard up and the selection intact.
+    <div
+      className="flex flex-nowrap sm:flex-wrap items-center gap-x-1 gap-y-1
                     overflow-x-auto sm:overflow-x-visible
                     rounded-t-lg border border-b-0 border-slate-200
                     bg-gradient-to-b from-slate-50 to-white
                     px-2.5 py-2 print-hide shadow-sm
-                    [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                    [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+      onTouchStart={(e) => e.preventDefault()}
+    >
 
       {/* ── Font family ── */}
       <BtnTooltip label="Font family">
@@ -1096,6 +1158,8 @@ function CustomBodyEditor({
   const fileRef = useRef<HTMLInputElement>(null);
   const selectedImgRef = useRef<HTMLImageElement | null>(null);
   const [imgRev, setImgRev] = useState(0);
+  const [imgError, setImgError] = useState<string | null>(null);
+  const imgErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tablePickerOpen, setTablePickerOpen] = useState(false);
   const [tableCtx, setTableCtx] = useState<TableContext | null>(null);
   /**
@@ -1142,11 +1206,15 @@ function CustomBodyEditor({
     setTableCtx(ctx);
     tableCtxRef.current = ctx;
 
-    // Save the current selection range whenever the cursor is inside the editor.
-    // onFormat restores this on mobile where a toolbar tap can briefly clear selection.
+    // Save the current selection range, but ONLY when the editor is the active
+    // element. On Android Chrome, after the editor blurs (user taps toolbar),
+    // `selectionchange` can fire again with the caret snapped to the editor's
+    // start position (anchorNode still inside the editor, but wrong offset).
+    // Guarding on `document.activeElement` prevents that spurious
+    // `selectionchange` from overwriting the correct range saved by `onBlur`.
     try {
       const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0 && ref.current) {
+      if (sel && sel.rangeCount > 0 && ref.current && document.activeElement === ref.current) {
         const anchor = sel.anchorNode;
         const inEditor =
           anchor &&
@@ -1221,9 +1289,22 @@ function CustomBodyEditor({
     tableCtxRef.current = ctx;
   }, [onCommit]);
 
+  const showImgError = (msg: string) => {
+    setImgError(msg);
+    if (imgErrorTimerRef.current) clearTimeout(imgErrorTimerRef.current);
+    imgErrorTimerRef.current = setTimeout(() => setImgError(null), 5000);
+  };
+
   const insertImageFromFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      showImgError('Only image files (JPG, PNG, WebP, etc.) can be inserted.');
+      return;
+    }
     const dataUrl = await compressImageFileToDataUrl(file);
-    if (!dataUrl || !ref.current) return;
+    if (!dataUrl || !ref.current) {
+      showImgError('Image is too large to insert even after compression. Try a smaller or lower-resolution image.');
+      return;
+    }
     insertHtmlIntoCaret(ref.current, `<img src="${dataUrl}" alt="" width="${IMG_WIDTH_MD}" />`);
     commitFromEditor();
   };
@@ -1479,6 +1560,20 @@ function CustomBodyEditor({
           onFormat(() => insertHtmlIntoCaret(ref.current!, makeTable(rows, cols)));
         }}
       />
+
+      {imgError && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border-b border-red-200 text-xs text-red-700">
+          <span className="shrink-0">⚠</span>
+          <span>{imgError}</span>
+          <button
+            type="button"
+            className="ml-auto shrink-0 text-red-400 hover:text-red-600"
+            onClick={() => setImgError(null)}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Show the context bar if either the React state OR the ref has a valid
           context — the ref survives a brief selectionchange-clear on mobile. */}

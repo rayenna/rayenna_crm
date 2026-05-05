@@ -1,0 +1,77 @@
+---
+description: Tracks unresolved Android Chrome mobile bug in the Proposal Engine rich text editor (Custom Sections). Read this when resuming work on this feature.
+globs: proposal-engine/frontend/src/components/CustomSectionsBeforeBoq.tsx
+alwaysApply: false
+---
+
+# Android Chrome — Editor Mobile Bugs (Custom Sections)
+
+**Device**: One Plus 12, Android, Chrome browser  
+**Feature**: "Add Section" / Custom Sections Before BOQ rich text editor  
+**File**: `proposal-engine/frontend/src/components/CustomSectionsBeforeBoq.tsx`  
+**Status**: All known issues addressed as of 2026-05-05. Needs real-device verification.
+
+---
+
+## What was reported
+
+On Android Chrome (One Plus 12), the following toolbar actions **did not work**:
+- Insert Table (nothing inserted)
+- Italic toggle
+- Font Color picker (color not applied)
+- Highlight / Shading color picker (color not applied)
+- Portrait orientation worse than landscape
+
+---
+
+## Fixes applied (chronological)
+
+| Commit / Date | Fix | What it addressed |
+|---|---|---|
+| Previous | `TablePicker onClick` reads `r+1/c+1` directly | Stale hover state in TablePicker |
+| Previous | `mousedown` → `pointerdown` for outside-close | ColorPicker / TablePicker close handling |
+| Previous | `savedSelectionRef` — save last in-editor selection on `selectionchange` | Mobile toolbar tap clears selection |
+| Previous | `tableCtxRef` mirror + fallback render for TableContextBar | TableContextBar disappearing on mobile |
+| `9dcd0ee` | `insertHtmlIntoCaret`: check `execCommand('insertHTML')` return value; fall through to Range API | Table insert on Android |
+| `9dcd0ee` | `onFormat`: snapshot range BEFORE `el.focus()`, restore unconditionally | Formatting at wrong position on Android |
+| `9dcd0ee` | Font color / highlight: replaced `execCommand` with `applyInlineStyle` (Range API) | Color not applying on Android |
+| `9dcd0ee` | `onBlur` saves selection (fires before `selectionchange` on Android) | Correct range preserved after editor blur |
+| 2026-05-05 | **`applyInlineStyle` collapsed branch**: added `font-weight` → `execCommand('bold')`, `font-style` → `execCommand('italic')`, `text-decoration` → `execCommand('underline')` | **Root cause of Italic never working**: collapsed branch only handled font-family/size/color; mobile users position cursor then tap format (collapsed), so bold/italic/underline were silently no-ops |
+| 2026-05-05 | **`applyInlineStyle` non-collapsed path**: wrapped `range.extractContents()` / `range.insertNode()` in try/catch with `execCommand` fallback | Android Chrome Range API can throw/no-op on certain contentEditable boundaries |
+| 2026-05-05 | **Toolbar `onTouchStart={(e) => e.preventDefault()}`** on the outer toolbar `<div>` | Portrait keyboard dismissal: Android Chrome treated toolbar taps as "tap outside input" and dismissed the keyboard + reset caret before click fired |
+| 2026-05-05 | **`refreshFormatState`**: guard `savedSelectionRef` update with `document.activeElement === ref.current` | After editor blur, `selectionchange` could fire with anchor still in editor (Android snaps caret to start), overwriting the correct range saved by `onBlur` |
+
+---
+
+## Architecture notes (for future debugging)
+
+### Selection save / restore chain (Android Chrome)
+1. User taps toolbar button → `touchstart` on toolbar (now calls `e.preventDefault()` to keep keyboard)
+2. Editor loses focus → **`onBlur`** saves selection to `savedSelectionRef` ✓ (fires before `selectionchange`)
+3. `selectionchange` fires (Android may snap caret to editor start) → `refreshFormatState` → **does NOT overwrite** `savedSelectionRef` because `document.activeElement !== ref.current`
+4. `click` fires on button → `onFormat` runs:
+   - Snapshots `rangeToRestore` from `savedSelectionRef` (immune to subsequent overwrites)
+   - Calls `el.focus()` (fires another `selectionchange`, harmless)
+   - Restores range from `rangeToRestore`
+   - Calls `fn()` (applies formatting)
+
+### applyInlineStyle: two paths
+- **Collapsed cursor** (no selection) → `execCommand('bold'/'italic'/'underline'/'fontName'/etc) — sets pending style for next typed character
+- **Non-collapsed** (text selected) → Range API: `extractContents()` + `insertNode(span)`, with `execCommand` fallback if Range API throws
+
+### insertHtmlIntoCaret (table insert)
+- First tries `document.execCommand('insertHTML')` — returns `false` on Android Chrome
+- Falls through to Range API: `range.extractContents()` + `range.insertNode(frag)` — works on Android
+
+---
+
+## If issues recur — next avenues to explore
+
+1. **`el.focus()` async caret placement on Android**: `sel.addRange(rangeToRestore)` is called synchronously after `el.focus()`, but if Android Chrome defers caret placement to a microtask/task, the restored range would be overwritten. Fix: add a `requestAnimationFrame` before calling `fn()` to let the focus/caret settle.
+2. **Font size / font family on Android**: still use the `execCommand('fontSize')` + fix-up approach; if broken, replace with the same span-based collapsed fallback as bold/italic.
+3. **Subscript / superscript**: currently use `execCommand('subscript'/'superscript')` — add to collapsed branch if needed.
+
+---
+
+## Related past chats
+- [Android mobile editor bug investigation](9857b2ce-6058-486a-a1a0-6bf936f9c86a)
