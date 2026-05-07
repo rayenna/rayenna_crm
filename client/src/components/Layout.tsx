@@ -130,7 +130,7 @@ const Layout = () => {
     setHelpDropdownOpen(false)
   }
 
-  // Keyboard: ? → Help · Ctrl/Cmd+Shift+ D C P K Z M E → routes (see help docs) · Esc → leave Help
+  // Keyboard: ? → Help · Ctrl/Cmd+Shift+ D C P K Z M(MyDay) N(NewCustomer) E(NewProject) → routes (see help docs) · Esc → leave Help
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement
@@ -187,7 +187,7 @@ const Layout = () => {
           go('/zenith')
           return
         }
-        if (key === 'm' && hasRole(SHORTCUT_ROLES_NEW_CUSTOMER)) {
+        if (key === 'n' && hasRole(SHORTCUT_ROLES_NEW_CUSTOMER)) {
           go('/customers?new=1')
           return
         }

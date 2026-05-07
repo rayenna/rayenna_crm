@@ -179,7 +179,8 @@ Use **Ctrl+Shift+**_letter_ on Windows/Linux or **⌘⇧**_letter_ on Mac. They 
 | ⌘⇧P / Ctrl+Shift+P | **Projects** (same roles as Customers) |
 | ⌘⇧K / Ctrl+Shift+K | **Support Tickets** (Admin, Sales, Operations, Management — not Finance) |
 | ⌘⇧Z / Ctrl+Shift+Z | **Zenith** (roles that see Zenith under the Dashboard menu) |
-| ⌘⇧M / Ctrl+Shift+M | **New customer** — opens the create form (Sales, Management, Admin) |
+| ⌘⇧M / Ctrl+Shift+M | **My Day** — open the personal Tasks, Journal & Reminders drawer (all roles) |
+| ⌘⇧N / Ctrl+Shift+N | **New customer** — opens the create form (Sales, Management, Admin) |
 | ⌘⇧E / Ctrl+Shift+E | **New project** — opens the new-project screen (Admin, Sales). Route: projects/new |
 
 **Esc** on a **Help** page returns you to the **Dashboard**. A three-column version (Win/Linux · Mac · Action) is under [Getting Started → Keyboard shortcuts](/help/getting-started#keyboard-shortcuts).

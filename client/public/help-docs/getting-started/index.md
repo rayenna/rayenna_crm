@@ -41,7 +41,8 @@ When focus is **not** in a text field, **textarea**, **select**, or **contentedi
 | Ctrl+Shift+P | ⌘⇧P | **Projects** (same roles as Customers) |
 | Ctrl+Shift+K | ⌘⇧K | **Support Tickets** (Admin, Sales, Operations, Management — not Finance) |
 | Ctrl+Shift+Z | ⌘⇧Z | **Zenith** (roles that see Zenith under the Dashboard menu) |
-| Ctrl+Shift+M | ⌘⇧M | **New customer** — opens the create form (Sales, Management, Admin) |
+| Ctrl+Shift+M | ⌘⇧M | **My Day** — open the personal Tasks, Journal & Reminders drawer (all roles) |
+| Ctrl+Shift+N | ⌘⇧N | **New customer** — opens the create form (Sales, Management, Admin) |
 | Ctrl+Shift+E | ⌘⇧E | **New project** — opens the new-project screen (Admin, Sales). Route: projects/new |
 
 On a **Help** page, **Esc** returns you to the **Dashboard**. The same shortcuts are summarised under [Dashboard → Keyboard shortcuts](/help/dashboard#keyboard-shortcuts).

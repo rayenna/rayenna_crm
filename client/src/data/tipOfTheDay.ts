@@ -23,9 +23,9 @@ export const TIPS: string[] = [
   // General
   'Use the Dashboard filters (FY, Quarter, Month) to focus on specific periods.',
   'Press ? from any page to open context-sensitive Help — open Analytics & Reports there for dashboard filters, Quick Access layouts by role, and the Proposal Engine summary card.',
-  'Keyboard shortcuts (when focus is not in a text field or dropdown): ? Help · Ctrl+Shift+D Dashboard · C Customers · P Projects · K Support Tickets · Z Zenith · M new customer · E new project. On Mac use ⌘⇧ instead of Ctrl+Shift. Full list in Help under Getting Started or Analytics.',
+  'Keyboard shortcuts (when focus is not in a text field or dropdown): ? Help · Ctrl+Shift+D Dashboard · C Customers · P Projects · K Support Tickets · Z Zenith · M My Day drawer · N New customer · E New project. On Mac use ⌘⇧ instead of Ctrl+Shift. Full list in Help under Getting Started.',
   'Press Ctrl+Shift+Z (⌘⇧Z on Mac) to jump straight to Zenith — same roles that see Zenith ✦ under the Dashboard menu.',
-  'Ctrl+Shift+M (⌘⇧M) opens Customers with the New Customer form (Sales, Management, Admin). Same if you open /customers?new=1 after login. Ctrl+Shift+E (⌘⇧E) opens New Project for Admin and Sales.',
+  'Ctrl+Shift+M (⌘⇧M) opens your My Day drawer — Tasks, Journal, and Reminders — from any page. Ctrl+Shift+N (⌘⇧N) opens the New Customer form (Sales, Management, Admin). Ctrl+Shift+E (⌘⇧E) opens New Project for Admin and Sales.',
   'On a Help page, press Esc to return to the Dashboard. The Help docs include a full keyboard shortcut table under Getting Started and Analytics & Reports.',
   'Create Support Tickets from the project detail page to track customer issues.',
   'Use the Audit & Security page to review login and key system events.',
@@ -124,6 +124,15 @@ export const TIPS: string[] = [
   'Zenith drawer lists use a server batch (up to about 5,000 recently updated projects). Open in Projects → uses full Projects filters — if you have huge volumes, counts can differ slightly.',
   'Zenith funnel and chart drill-downs use the same date scope as the rest of Zenith — open Help → Analytics for the full behaviour.',
   'Sales Zenith shows your data only (like your Sales dashboard); Management and Admin see company-wide executive metrics.',
+  // My Day personal productivity drawer
+  'My Day is your personal productivity space inside Rayenna. Press Ctrl+Shift+M (⌘⇧M on Mac) from any page, or click the sunrise icon ☀ in the top nav bar. Tasks, Journal, and Reminders — all private to your account.',
+  'My Day Tasks: add to-dos with an optional due date and project pin. Today\'s tasks appear at the top; overdue or unfinished items surface automatically as Carry-overs so nothing slips through.',
+  'My Day Journal: one personal note per day. Type freely — it auto-saves after a short pause. Recent entries are shown below, collapsed to three lines. Expand any entry to read the full note.',
+  'My Day Reminders: set a due date on any reminder and it groups automatically — Overdue (red), Today (amber), This Week (teal), or Later (grey). Use reminders for customer follow-ups or project milestones you track personally.',
+  'My Day syncs across all your devices. Write a note or add a task on your phone; log in on another laptop and it\'s all there. Data lives on the server, not just the browser.',
+  'The sunrise icon ☀ in the top nav bar shows a count badge when you have incomplete tasks. On desktop the button also shows "My Day" as a label. The badge clears as you check off tasks.',
+  'My Day Journal is separate from CRM project notes — it\'s your private workspace. Use it for daily intentions, client meeting prep, end-of-day reflections, or anything you want to track personally.',
+  'Pin a project to a My Day task or reminder for context — the project label appears on the item as a small badge so you remember why it matters. Pinning is a label only and does not change the project record.',
 ]
 
 /**

@@ -2,126 +2,143 @@ import { Router, Request, Response } from 'express'
 import { body, param, query, validationResult } from 'express-validator'
 import { authenticate } from '../middleware/auth'
 import prisma from '../prisma'
+import { randomUUID } from 'crypto'
 
 const router = Router()
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function todayStart(): Date {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  return d
+/** YYYY-MM-DD string in the server's local time (matches what the frontend sends) */
+function toDateStr(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
-function mapTask(t: {
-  id: string; userId: string; content: string; isDone: boolean
-  dueDate: Date | null; isReminder: boolean; projectId: string | null
-  projectLabel: string | null; createdAt: Date; updatedAt: Date; sortOrder: number
-}) {
+/** Normalise a YYYY-MM-DD string coming from the client. */
+function normDateStr(iso: string): string {
+  // Accept YYYY-MM-DD or full ISO — take the date part only
+  return iso.slice(0, 10)
+}
+
+// ─── Types (raw DB rows) ──────────────────────────────────────────────────────
+
+interface TaskRow {
+  id: string
+  user_id: string
+  content: string
+  is_done: boolean
+  due_date: Date | null
+  is_reminder: boolean
+  project_id: string | null
+  project_label: string | null
+  created_at: Date
+  updated_at: Date
+  sort_order: number
+}
+
+interface JournalRow {
+  id: string
+  user_id: string
+  entry_date: Date
+  content: string
+  project_id: string | null
+  project_label: string | null
+  created_at: Date
+  updated_at: Date
+}
+
+// ─── Serialisers ──────────────────────────────────────────────────────────────
+
+function serTask(t: TaskRow) {
   return {
     id: t.id,
     content: t.content,
-    isDone: t.isDone,
-    dueDate: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : null,
-    isReminder: t.isReminder,
-    projectId: t.projectId,
-    projectLabel: t.projectLabel,
-    createdAt: t.createdAt.toISOString(),
-    sortOrder: t.sortOrder,
+    isDone: t.is_done,
+    dueDate: t.due_date ? toDateStr(new Date(t.due_date)) : null,
+    isReminder: t.is_reminder,
+    projectId: t.project_id,
+    projectLabel: t.project_label,
+    createdAt: new Date(t.created_at).toISOString(),
+    sortOrder: t.sort_order,
   }
 }
 
-function mapJournal(j: {
-  id: string; userId: string; entryDate: Date; content: string
-  projectId: string | null; projectLabel: string | null; updatedAt: Date
-}) {
+function serJournal(j: JournalRow) {
   return {
     id: j.id,
-    entryDate: j.entryDate.toISOString().slice(0, 10),
+    entryDate: toDateStr(new Date(j.entry_date)),
     content: j.content,
-    projectId: j.projectId,
-    projectLabel: j.projectLabel,
-    updatedAt: j.updatedAt.toISOString(),
+    projectId: j.project_id,
+    projectLabel: j.project_label,
+    updatedAt: new Date(j.updated_at).toISOString(),
   }
 }
 
-function validationErrors(req: Request, res: Response): boolean {
-  const errors = validationResult(req)
-  if (!errors.isEmpty()) {
-    res.status(400).json({ errors: errors.array() })
-    return true
-  }
+function validErr(req: Request, res: Response): boolean {
+  const errs = validationResult(req)
+  if (!errs.isEmpty()) { res.status(400).json({ errors: errs.array() }); return true }
   return false
 }
 
 // ─── Tasks ────────────────────────────────────────────────────────────────────
 
-/**
- * GET /api/my-day/tasks
- * Returns today's tasks + incomplete tasks from previous days.
- */
 router.get('/tasks', authenticate, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id
-    const today = todayStart()
+    const todayStr = toDateStr(new Date())
 
-    const tasks = await prisma.userTask.findMany({
-      where: {
-        userId,
-        isReminder: false,
-        OR: [
-          { dueDate: null },
-          { dueDate: { gte: today } },
-          { isDone: false },           // carry-overs from past days
-        ],
-      },
-      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
-    })
-
-    res.json(tasks.map(mapTask))
+    const rows = await prisma.$queryRaw<TaskRow[]>`
+      SELECT * FROM user_tasks
+      WHERE user_id = ${userId}
+        AND is_reminder = false
+        AND (
+          due_date IS NULL
+          OR due_date >= ${todayStr}::date
+          OR is_done = false
+        )
+      ORDER BY sort_order ASC, created_at DESC
+    `
+    res.json(rows.map(serTask))
   } catch (err) {
     console.error('[my-day] GET tasks:', err)
     res.status(500).json({ error: 'Failed to load tasks' })
   }
 })
 
-/**
- * POST /api/my-day/tasks
- * Create a new task.
- */
 router.post(
   '/tasks',
   authenticate,
   [
-    body('content').isString().trim().notEmpty().withMessage('content is required'),
-    body('dueDate').optional({ nullable: true }).isISO8601().withMessage('dueDate must be YYYY-MM-DD'),
+    body('content').isString().trim().notEmpty(),
+    body('dueDate').optional({ nullable: true }).isISO8601(),
     body('isReminder').optional().isBoolean(),
     body('projectId').optional({ nullable: true }).isString(),
     body('projectLabel').optional({ nullable: true }).isString(),
   ],
   async (req: Request, res: Response) => {
-    if (validationErrors(req, res)) return
+    if (validErr(req, res)) return
     try {
       const userId = req.user!.id
-      const { content, dueDate, isReminder, projectId, projectLabel } = req.body as {
-        content: string
-        dueDate?: string | null
-        isReminder?: boolean
-        projectId?: string | null
-        projectLabel?: string | null
-      }
+      const { content, dueDate, isReminder, projectId, projectLabel } = req.body
+      const id = randomUUID()
+      const isRem = isReminder ?? false
 
-      const task = await prisma.userTask.create({
-        data: {
-          userId,
-          content: content.trim(),
-          dueDate: dueDate ? new Date(dueDate) : null,
-          isReminder: isReminder ?? false,
-          projectId: projectId ?? null,
-          projectLabel: projectLabel ?? null,
-        },
-      })
-      res.status(201).json(mapTask(task))
+      if (dueDate) {
+        const dueDateStr = normDateStr(dueDate)
+        await prisma.$executeRaw`
+          INSERT INTO user_tasks (id, user_id, content, is_done, due_date, is_reminder, project_id, project_label, sort_order)
+          VALUES (${id}::uuid, ${userId}, ${content.trim()}, false, ${dueDateStr}::date, ${isRem}, ${projectId ?? null}, ${projectLabel ?? null}, 0)
+        `
+      } else {
+        await prisma.$executeRaw`
+          INSERT INTO user_tasks (id, user_id, content, is_done, due_date, is_reminder, project_id, project_label, sort_order)
+          VALUES (${id}::uuid, ${userId}, ${content.trim()}, false, NULL, ${isRem}, ${projectId ?? null}, ${projectLabel ?? null}, 0)
+        `
+      }
+      const rows = await prisma.$queryRaw<TaskRow[]>`SELECT * FROM user_tasks WHERE id = ${id}::uuid`
+      res.status(201).json(serTask(rows[0]!))
     } catch (err) {
       console.error('[my-day] POST tasks:', err)
       res.status(500).json({ error: 'Failed to create task' })
@@ -129,36 +146,28 @@ router.post(
   },
 )
 
-/**
- * PATCH /api/my-day/tasks/:id
- * Partial update: isDone, content, sortOrder.
- */
 router.patch(
   '/tasks/:id',
   authenticate,
   [param('id').isUUID()],
   async (req: Request, res: Response) => {
-    if (validationErrors(req, res)) return
+    if (validErr(req, res)) return
     try {
       const userId = req.user!.id
       const { id } = req.params
-      const { isDone, content, sortOrder } = req.body as {
-        isDone?: boolean; content?: string; sortOrder?: number
-      }
+      const { isDone, content, sortOrder } = req.body
 
-      // Verify ownership
-      const existing = await prisma.userTask.findFirst({ where: { id, userId } })
-      if (!existing) { res.status(404).json({ error: 'Task not found' }); return }
+      const existing = await prisma.$queryRaw<TaskRow[]>`
+        SELECT id FROM user_tasks WHERE id = ${id}::uuid AND user_id = ${userId}
+      `
+      if (!existing.length) { res.status(404).json({ error: 'Task not found' }); return }
 
-      const task = await prisma.userTask.update({
-        where: { id },
-        data: {
-          ...(isDone !== undefined && { isDone }),
-          ...(content !== undefined && { content: content.trim() }),
-          ...(sortOrder !== undefined && { sortOrder }),
-        },
-      })
-      res.json(mapTask(task))
+      if (isDone !== undefined)    await prisma.$executeRaw`UPDATE user_tasks SET is_done = ${isDone},    updated_at = now() WHERE id = ${id}::uuid`
+      if (content !== undefined)   await prisma.$executeRaw`UPDATE user_tasks SET content = ${String(content).trim()}, updated_at = now() WHERE id = ${id}::uuid`
+      if (sortOrder !== undefined) await prisma.$executeRaw`UPDATE user_tasks SET sort_order = ${Number(sortOrder)}, updated_at = now() WHERE id = ${id}::uuid`
+
+      const rows = await prisma.$queryRaw<TaskRow[]>`SELECT * FROM user_tasks WHERE id = ${id}::uuid`
+      res.json(serTask(rows[0]!))
     } catch (err) {
       console.error('[my-day] PATCH tasks/:id:', err)
       res.status(500).json({ error: 'Failed to update task' })
@@ -166,23 +175,20 @@ router.patch(
   },
 )
 
-/**
- * DELETE /api/my-day/tasks/:id
- */
 router.delete(
   '/tasks/:id',
   authenticate,
   [param('id').isUUID()],
   async (req: Request, res: Response) => {
-    if (validationErrors(req, res)) return
+    if (validErr(req, res)) return
     try {
       const userId = req.user!.id
       const { id } = req.params
-
-      const existing = await prisma.userTask.findFirst({ where: { id, userId } })
-      if (!existing) { res.status(404).json({ error: 'Task not found' }); return }
-
-      await prisma.userTask.delete({ where: { id } })
+      const existing = await prisma.$queryRaw<TaskRow[]>`
+        SELECT id FROM user_tasks WHERE id = ${id}::uuid AND user_id = ${userId}
+      `
+      if (!existing.length) { res.status(404).json({ error: 'Task not found' }); return }
+      await prisma.$executeRaw`DELETE FROM user_tasks WHERE id = ${id}::uuid`
       res.status(204).send()
     } catch (err) {
       console.error('[my-day] DELETE tasks/:id:', err)
@@ -193,37 +199,33 @@ router.delete(
 
 // ─── Journal ──────────────────────────────────────────────────────────────────
 
-/**
- * GET /api/my-day/journal?date=YYYY-MM-DD
- * Returns today's entry + up to 10 recent past entries.
- */
 router.get(
   '/journal',
   authenticate,
   [query('date').optional().isISO8601()],
   async (req: Request, res: Response) => {
-    if (validationErrors(req, res)) return
+    if (validErr(req, res)) return
     try {
       const userId = req.user!.id
-      const targetDateStr = (req.query.date as string) || new Date().toISOString().slice(0, 10)
-      const targetDate = new Date(targetDateStr)
-      targetDate.setHours(0, 0, 0, 0)
+      const targetStr = req.query.date
+        ? normDateStr(req.query.date as string)
+        : toDateStr(new Date())
 
-      const [todayEntry, recentEntries] = await Promise.all([
-        prisma.userJournal.findUnique({ where: { userId_entryDate: { userId, entryDate: targetDate } } }),
-        prisma.userJournal.findMany({
-          where: {
-            userId,
-            entryDate: { lt: targetDate },
-          },
-          orderBy: { entryDate: 'desc' },
-          take: 10,
-        }),
+      const [todayRows, recentRows] = await Promise.all([
+        prisma.$queryRaw<JournalRow[]>`
+          SELECT * FROM user_journal
+          WHERE user_id = ${userId} AND entry_date = ${targetStr}::date
+        `,
+        prisma.$queryRaw<JournalRow[]>`
+          SELECT * FROM user_journal
+          WHERE user_id = ${userId} AND entry_date < ${targetStr}::date
+          ORDER BY entry_date DESC LIMIT 10
+        `,
       ])
 
       res.json({
-        today: todayEntry ? mapJournal(todayEntry) : null,
-        recent: recentEntries.map(mapJournal),
+        today: todayRows[0] ? serJournal(todayRows[0]) : null,
+        recent: recentRows.map(serJournal),
       })
     } catch (err) {
       console.error('[my-day] GET journal:', err)
@@ -232,46 +234,43 @@ router.get(
   },
 )
 
-/**
- * POST /api/my-day/journal
- * Upsert today's journal entry.
- */
 router.post(
   '/journal',
   authenticate,
   [
-    body('entryDate').isISO8601().withMessage('entryDate is required (YYYY-MM-DD)'),
+    body('entryDate').isISO8601(),
     body('content').isString(),
     body('projectId').optional({ nullable: true }).isString(),
     body('projectLabel').optional({ nullable: true }).isString(),
   ],
   async (req: Request, res: Response) => {
-    if (validationErrors(req, res)) return
+    if (validErr(req, res)) return
     try {
       const userId = req.user!.id
-      const { entryDate, content, projectId, projectLabel } = req.body as {
-        entryDate: string; content: string; projectId?: string | null; projectLabel?: string | null
+      const { entryDate, content, projectId, projectLabel } = req.body
+      // Use plain YYYY-MM-DD strings with ::date cast — avoids all JS timezone issues
+      const dateStr = normDateStr(entryDate)
+      const id = randomUUID()
+
+      await prisma.$executeRaw`
+        INSERT INTO user_journal (id, user_id, entry_date, content, project_id, project_label)
+        VALUES (${id}::uuid, ${userId}, ${dateStr}::date, ${content}, ${projectId ?? null}, ${projectLabel ?? null})
+        ON CONFLICT (user_id, entry_date)
+        DO UPDATE SET content = EXCLUDED.content,
+                      project_id = EXCLUDED.project_id,
+                      project_label = EXCLUDED.project_label,
+                      updated_at = now()
+      `
+      // Fetch back by the same string — guaranteed to match what we just wrote
+      const rows = await prisma.$queryRaw<JournalRow[]>`
+        SELECT * FROM user_journal
+        WHERE user_id = ${userId} AND entry_date = ${dateStr}::date
+      `
+      if (!rows[0]) {
+        res.status(500).json({ error: 'Journal entry not found after save' })
+        return
       }
-
-      const dateVal = new Date(entryDate)
-      dateVal.setHours(0, 0, 0, 0)
-
-      const entry = await prisma.userJournal.upsert({
-        where: { userId_entryDate: { userId, entryDate: dateVal } },
-        create: {
-          userId,
-          entryDate: dateVal,
-          content,
-          projectId: projectId ?? null,
-          projectLabel: projectLabel ?? null,
-        },
-        update: {
-          content,
-          projectId: projectId ?? null,
-          projectLabel: projectLabel ?? null,
-        },
-      })
-      res.json(mapJournal(entry))
+      res.json(serJournal(rows[0]))
     } catch (err) {
       console.error('[my-day] POST journal:', err)
       res.status(500).json({ error: 'Failed to save journal' })
@@ -281,63 +280,48 @@ router.post(
 
 // ─── Reminders ────────────────────────────────────────────────────────────────
 
-/**
- * GET /api/my-day/reminders
- * Returns upcoming reminders (isReminder=true, dueDate >= today), sorted by dueDate asc.
- */
 router.get('/reminders', authenticate, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id
-    const today = todayStart()
+    const todayStr = toDateStr(new Date())
 
-    const reminders = await prisma.userTask.findMany({
-      where: {
-        userId,
-        isReminder: true,
-        dueDate: { gte: today },
-      },
-      orderBy: { dueDate: 'asc' },
-    })
-
-    res.json(reminders.map(mapTask))
+    const rows = await prisma.$queryRaw<TaskRow[]>`
+      SELECT * FROM user_tasks
+      WHERE user_id = ${userId}
+        AND is_reminder = true
+        AND due_date >= ${todayStr}::date
+      ORDER BY due_date ASC
+    `
+    res.json(rows.map(serTask))
   } catch (err) {
     console.error('[my-day] GET reminders:', err)
     res.status(500).json({ error: 'Failed to load reminders' })
   }
 })
 
-/**
- * POST /api/my-day/reminders
- * Create a reminder (isReminder: true, dueDate required).
- */
 router.post(
   '/reminders',
   authenticate,
   [
-    body('content').isString().trim().notEmpty().withMessage('content is required'),
-    body('dueDate').isISO8601().withMessage('dueDate is required (YYYY-MM-DD)'),
+    body('content').isString().trim().notEmpty(),
+    body('dueDate').isISO8601(),
     body('projectId').optional({ nullable: true }).isString(),
     body('projectLabel').optional({ nullable: true }).isString(),
   ],
   async (req: Request, res: Response) => {
-    if (validationErrors(req, res)) return
+    if (validErr(req, res)) return
     try {
       const userId = req.user!.id
-      const { content, dueDate, projectId, projectLabel } = req.body as {
-        content: string; dueDate: string; projectId?: string | null; projectLabel?: string | null
-      }
+      const { content, dueDate, projectId, projectLabel } = req.body
+      const id = randomUUID()
+      const dueDateStr = normDateStr(dueDate)
 
-      const task = await prisma.userTask.create({
-        data: {
-          userId,
-          content: content.trim(),
-          dueDate: new Date(dueDate),
-          isReminder: true,
-          projectId: projectId ?? null,
-          projectLabel: projectLabel ?? null,
-        },
-      })
-      res.status(201).json(mapTask(task))
+      await prisma.$executeRaw`
+        INSERT INTO user_tasks (id, user_id, content, is_done, due_date, is_reminder, project_id, project_label, sort_order)
+        VALUES (${id}::uuid, ${userId}, ${content.trim()}, false, ${dueDateStr}::date, true, ${projectId ?? null}, ${projectLabel ?? null}, 0)
+      `
+      const rows = await prisma.$queryRaw<TaskRow[]>`SELECT * FROM user_tasks WHERE id = ${id}::uuid`
+      res.status(201).json(serTask(rows[0]!))
     } catch (err) {
       console.error('[my-day] POST reminders:', err)
       res.status(500).json({ error: 'Failed to create reminder' })

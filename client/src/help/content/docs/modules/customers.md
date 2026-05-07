@@ -13,7 +13,7 @@ The Customer Master module is your central database for managing all customer in
 
 ### Creating a New Customer
 
-**Quick open (same form)** — If your role can create customers, **Ctrl+Shift+M** (Windows/Linux) or **⌘⇧M** (Mac) opens **Customers** with the **New Customer** form ready (see [Keyboard shortcuts](/help/getting-started#keyboard-shortcuts)). You can also open **`/customers?new=1`** after login for the same behaviour.
+**Quick open (same form)** — If your role can create customers, **Ctrl+Shift+N** (Windows/Linux) or **⌘⇧N** (Mac) opens **Customers** with the **New Customer** form ready (see [Keyboard shortcuts](/help/getting-started#keyboard-shortcuts)). You can also open **`/customers?new=1`** after login for the same behaviour.
 
 **Step 1: Access Customer Master**
 1. Go to **Customers** page from the top menu

@@ -491,14 +491,19 @@ For **exact point tables** (activity days, momentum multiples, every rupee band,
 
 ---
 
-# Appendix — Keyboard shortcuts (Zenith-relevant)
+# Appendix — Keyboard shortcuts
 
 | Shortcut | Action |
 | :-- | :-- |
 | `?` | Help (context-sensitive: Zenith or Dashboard) |
-| `Ctrl+Shift+Z` / `⌘⇧Z` | Open **Zenith** |
 | `Ctrl+Shift+D` / `⌘⇧D` | **Dashboard** |
+| `Ctrl+Shift+C` / `⌘⇧C` | **Customers** |
 | `Ctrl+Shift+P` / `⌘⇧P` | **Projects** |
+| `Ctrl+Shift+K` / `⌘⇧K` | **Support Tickets** |
+| `Ctrl+Shift+Z` / `⌘⇧Z` | Open **Zenith** |
+| `Ctrl+Shift+M` / `⌘⇧M` | **My Day** — Tasks, Journal & Reminders drawer (all roles) |
+| `Ctrl+Shift+N` / `⌘⇧N` | **New customer** (Sales, Management, Admin) |
+| `Ctrl+Shift+E` / `⌘⇧E` | **New project** (Admin, Sales) |
 | `Esc` | From Help → **Dashboard** |
 
 Full list: **Help → Getting Started → Keyboard shortcuts**.
@@ -520,7 +525,7 @@ Full list: **Help → Getting Started → Keyboard shortcuts**.
 | **Product** | Rayenna CRM — Zenith Command Center |
 | **Audience** | End-user training (Sales-primary); facilitators; slide authors |
 | **Companion** | Help → **Zenith** → **Zenith Command Center** |
-| **Version note** | Includes **Solar News** (RSS) above **AI Insights**; **mobile** command bar (dropdown filters, briefing top-right). Pipeline / Hit List: **Sl No.** / **Prj #**; Hit List: pipeline-style **filters + sort**; **scroll / Open →** hint on **md+** only; **Availing Loan** KPI opens drawer; Payment radar: **Top overdue**, **Latest payments received**, **Finance quick drawer** on project name where wired, shared **payment status** legend, **Remind** helpers. Quick drawers: **Sales** next to project name (list + single); **Recent remarks** before **Log activity**; **Payment** card after **Deal value** on **Quick Actions** and **Operations** single-project view (**N/A** when payment not applicable). **Customer Master:** **Ctrl+Shift+M** / **⌘⇧M** and **`/customers?new=1`** open **New Customer** when allowed. **Projects:** **System Capacity (kW)** is integer-only; **Inverter Capacity (kW)** on **Edit** defaults from it until overridden; **Project Detail** read-only view uses responsive **card** rows and per-installment **Payment Tracking** blocks; **Projects** grid uses **Deal Health**–style dark **popovers** for **Pending/Partial balance** and **financing bank** (hover vs tap — see Help → Modules). **Dashboard + Zenith:** **Things needing attention** strip (**Sales**, **Operations**, **Admin**); **daily briefing** lifecycle reminder (**Sales**, **Admin**, **Operations**); **panel / inverter brand** chart tooltips include **System capacity (sum)**. **Classic Dashboard:** most charts **click through to Projects** (bars, FY columns, pie slices, loan-by-bank, panel/inverter bars, profitability cloud / Top 10); **Zenith Explore** includes **panel / inverter** for **Sales** on executive Zenith (aligned with Dashboard). |
+| **Version note** | Includes **Solar News** (RSS) above **AI Insights**; **mobile** command bar (dropdown filters, briefing top-right). Pipeline / Hit List: **Sl No.** / **Prj #**; Hit List: pipeline-style **filters + sort**; **scroll / Open →** hint on **md+** only; **Availing Loan** KPI opens drawer; Payment radar: **Top overdue**, **Latest payments received**, **Finance quick drawer** on project name where wired, shared **payment status** legend, **Remind** helpers. Quick drawers: **Sales** next to project name (list + single); **Recent remarks** before **Log activity**; **Payment** card after **Deal value** on **Quick Actions** and **Operations** single-project view (**N/A** when payment not applicable). **Customer Master:** **Ctrl+Shift+N** / **⌘⇧N** and **`/customers?new=1`** open **New Customer** when allowed. **My Day** drawer (Tasks, Journal, Reminders): **Ctrl+Shift+M** / **⌘⇧M** or the sunrise icon ☀ in the top nav bar (all roles). **Projects:** **System Capacity (kW)** is integer-only; **Inverter Capacity (kW)** on **Edit** defaults from it until overridden; **Project Detail** read-only view uses responsive **card** rows and per-installment **Payment Tracking** blocks; **Projects** grid uses **Deal Health**–style dark **popovers** for **Pending/Partial balance** and **financing bank** (hover vs tap — see Help → Modules). **Dashboard + Zenith:** **Things needing attention** strip (**Sales**, **Operations**, **Admin**); **daily briefing** lifecycle reminder (**Sales**, **Admin**, **Operations**); **panel / inverter brand** chart tooltips include **System capacity (sum)**. **Classic Dashboard:** most charts **click through to Projects** (bars, FY columns, pie slices, loan-by-bank, panel/inverter bars, profitability cloud / Top 10); **Zenith Explore** includes **panel / inverter** for **Sales** on executive Zenith (aligned with Dashboard). |
 
 ---
 

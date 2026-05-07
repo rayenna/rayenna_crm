@@ -402,6 +402,25 @@ This block covers **in-app Help**, **Tip of the Day**, and how **Zenith** fits i
 
 The rotation includes many **Zenith**-oriented hints, for example: **Solar News** and **AI Insights** ribbons; **The Board**; **Deal flow funnel** and **payment** drill-downs; **Availing Loan** KPI → drawer; **Payment radar** (**Top overdue**, **Latest payments received**, shared **payment status** legend, **Remind**); **Proposal Engine** rows under **Your Focus**; **Open in Projects →**; **collapsible Your Focus**; **Victory toast**; **Revenue forecast**; **FY chart** drill-down; **Customer profitability**; **Explore** (**panel / inverter brand** bars and **System capacity (sum)** in tooltips); **Today’s Hit List** (**Sl No.** / **Prj #**, filters, sort, **Alert**, **confirmation date**; **desktop / tablet** scroll + **Open →** hint); **Smart daily briefing** (lifecycle **panel / inverter** reminder for **Sales**, **Admin**, **Operations**); classic **Dashboard** [Things needing attention](/help/dashboard#things-needing-attention-dashboard); **Sales** on quick-drawer headers and list rows; **Recent remarks** before **Log activity**; **Payment** snapshot (**status**, **received**, **balance**) after **Deal value** in **Quick Actions** and **Operations** drawers (**N/A** when payment does not apply); plus **Projects** tips (**whole-number System Capacity (kW)**, **Inverter Capacity** defaulting from it, **Project Detail** layout, **payment balance** and **financing bank** popovers aligned with **Deal Health** styling).
 
+#### My Day — personal productivity drawer
+
+**My Day** is a private, cross-device productivity space available to every role. Open it with **Ctrl+Shift+M** (⌘⇧M) from any page, or click the **sunrise icon ☀** in the top navigation bar. A count badge on the icon shows how many incomplete tasks are waiting.
+
+The drawer has three tabs:
+
+| Tab | What it does |
+| :-- | :-- |
+| **Tasks** | Personal to-do items. Add tasks with an optional due date and project pin. Tasks due today appear under **Today**; overdue or older open items surface under **Carry-overs**. Tap a checkbox to complete; swipe or use the ⋯ menu to delete. |
+| **Journal** | A private daily note. One entry per day — type freely and it auto-saves after a short pause (look for the **Saved** / **Saving…** / **Retry** status). Recent entries (last 10) appear below the editor, collapsed to 3 lines with an expand toggle. |
+| **Reminders** | Tasks with a specific due date and the reminder flag set. Grouped by urgency: **Overdue** (red), **Today** (amber), **This Week** (teal), and **Later** (grey). Add a new reminder with the date picker at the bottom. |
+
+**Key behaviours:**
+- All data is **private to your account** — no team sharing or collaboration.
+- Data is stored on the server and **syncs across devices**: open My Day on another machine after logging in and your tasks, journal, and reminders are all there.
+- On **mobile** the drawer opens full-screen from the bottom. On **desktop** it slides in from the right as a side panel.
+- Press **Esc** to close the drawer from any tab.
+- You can **pin a project** to a task or reminder for context — this is a label only and does not change the project record.
+
 #### Support Tickets (dashboard + project)
 
 From **[Support Tickets](/help/modules#support-tickets-module)** in **Modules**: the **Support Tickets** page lists every ticket; opening a row uses the same **Ticket Details** drawer pattern as on **Project detail** (dark Zenith-style shell, follow-up timeline, **Close ticket** when your role allows). Shortcut: **Ctrl+Shift+K** / **⌘⇧K** when your role has menu access.

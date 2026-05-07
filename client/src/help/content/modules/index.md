@@ -74,7 +74,7 @@ Each customer is assigned a unique **Customer ID** when created. This ID:
 
 ### From the Customers Page
 
-**Shortcut / deep link:** **Ctrl+Shift+M** (Windows/Linux) or **⌘⇧M** (Mac), or **`/customers?new=1`** after login, opens **Customers** with **New Customer** when your role allows (see [Keyboard shortcuts](/help/getting-started#keyboard-shortcuts)).
+**Shortcut / deep link:** **Ctrl+Shift+N** (Windows/Linux) or **⌘⇧N** (Mac), or **`/customers?new=1`** after login, opens **Customers** with **New Customer** when your role allows (see [Keyboard shortcuts](/help/getting-started#keyboard-shortcuts)).
 
 1. Navigate to **Customers** from the top menu (Customer Master).
 2. Click the **New Customer** button (top right).
