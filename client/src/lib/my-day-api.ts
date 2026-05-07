@@ -1,0 +1,81 @@
+import axiosInstance from '../utils/axios'
+import type { Task, JournalEntry } from '../components/my-day/types'
+
+// ── Tasks ─────────────────────────────────────────────────────────────────────
+
+export async function fetchTasks(): Promise<Task[]> {
+  const { data } = await axiosInstance.get<Task[]>('/api/my-day/tasks')
+  return data
+}
+
+export async function createTask(payload: {
+  content: string
+  dueDate?: string | null
+  isReminder?: boolean
+  projectId?: string | null
+  projectLabel?: string | null
+}): Promise<Task> {
+  const { data } = await axiosInstance.post<Task>('/api/my-day/tasks', payload)
+  return data
+}
+
+export async function patchTask(
+  id: string,
+  payload: Partial<Pick<Task, 'isDone' | 'content' | 'sortOrder'>>,
+): Promise<Task> {
+  const { data } = await axiosInstance.patch<Task>(`/api/my-day/tasks/${id}`, payload)
+  return data
+}
+
+export async function deleteTask(id: string): Promise<void> {
+  await axiosInstance.delete(`/api/my-day/tasks/${id}`)
+}
+
+// ── Journal ───────────────────────────────────────────────────────────────────
+
+export async function fetchJournal(date?: string): Promise<{
+  today: JournalEntry | null
+  recent: JournalEntry[]
+}> {
+  const params = date ? { date } : {}
+  const { data } = await axiosInstance.get<{ today: JournalEntry | null; recent: JournalEntry[] }>(
+    '/api/my-day/journal',
+    { params },
+  )
+  return data
+}
+
+export async function upsertJournal(payload: {
+  entryDate: string
+  content: string
+  projectId?: string | null
+  projectLabel?: string | null
+}): Promise<JournalEntry> {
+  const { data } = await axiosInstance.post<JournalEntry>('/api/my-day/journal', payload)
+  return data
+}
+
+// ── Reminders ─────────────────────────────────────────────────────────────────
+
+export async function fetchReminders(): Promise<Task[]> {
+  const { data } = await axiosInstance.get<Task[]>('/api/my-day/reminders')
+  return data
+}
+
+export async function createReminder(payload: {
+  content: string
+  dueDate: string
+  projectId?: string | null
+  projectLabel?: string | null
+}): Promise<Task> {
+  const { data } = await axiosInstance.post<Task>('/api/my-day/reminders', payload)
+  return data
+}
+
+export async function patchReminder(
+  id: string,
+  payload: Partial<Pick<Task, 'isDone'>>,
+): Promise<Task> {
+  const { data } = await axiosInstance.patch<Task>(`/api/my-day/tasks/${id}`, payload)
+  return data
+}

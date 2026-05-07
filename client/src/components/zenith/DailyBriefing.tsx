@@ -3,6 +3,7 @@ import { useModalEscape } from '../../contexts/ModalEscapeContext'
 import { motion } from 'framer-motion'
 import { Binoculars } from 'lucide-react'
 import { UserRole } from '../../types'
+import MyDayButton from '../my-day/MyDayButton'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
 import {
   formatBriefingCustomerNameList,
@@ -320,13 +321,16 @@ export default function DailyBriefing({
             />
             Don&apos;t show again today
           </label>
-          <button
-            type="button"
-            onClick={() => onDismiss(dontShowToday)}
-            className="rounded-xl bg-[color:var(--accent-gold)] px-6 py-2.5 text-sm font-bold text-[color:var(--text-inverse)]"
-          >
-            Got it →
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <MyDayButton variant="briefing" onBeforeOpen={() => onDismiss(dontShowToday)} />
+            <button
+              type="button"
+              onClick={() => onDismiss(dontShowToday)}
+              className="rounded-xl bg-[color:var(--accent-gold)] px-6 py-2.5 text-sm font-bold text-[color:var(--text-inverse)]"
+            >
+              Got it →
+            </button>
+          </div>
         </div>
       </motion.div>
     </motion.div>

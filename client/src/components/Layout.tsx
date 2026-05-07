@@ -9,6 +9,9 @@ import { setSessionStorageItem } from '../lib/safeLocalStorage'
 import '../styles/zenith.css'
 import VictoryToast from './zenith/VictoryToast'
 import { useVictoryToast } from '../hooks/useVictoryToast'
+import { MyDayProvider } from '../contexts/MyDayContext'
+import MyDayButton from './my-day/MyDayButton'
+import MyDayDrawer from './my-day/MyDayDrawer'
 
 /** For `/help/dashboard#foo`, `pathname` is `/help/dashboard` and `hash` is `#foo`. */
 function isHelpMenuPathActive(itemPath: string, pathname: string, locHash: string): boolean {
@@ -270,6 +273,7 @@ const Layout = () => {
   }, [helpDropdownOpen, dashboardDropdownOpen, moreDropdownOpen, profileDropdownOpen])
 
   return (
+    <MyDayProvider>
     <div className="min-h-screen min-h-[100dvh] bg-[color:var(--bg-page)] text-[color:var(--text-primary)] [-webkit-tap-highlight-color:transparent]">
       <nav className="sticky top-0 z-50 border-b border-[color:var(--nav-border)] bg-[color:var(--nav-bg)] pt-[env(safe-area-inset-top,0px)] shadow-lg shadow-black/40 ring-1 ring-[color:var(--nav-border)]">
         <div className="mx-auto w-full max-w-[1600px] px-3 sm:px-4 lg:px-6 xl:px-8">
@@ -499,6 +503,9 @@ const Layout = () => {
               <span className="hidden max-w-[min(7rem,28vw)] truncate text-sm font-medium text-[color:var(--nav-text-hover)] md:inline lg:hidden">
                 {user?.name}
               </span>
+
+              {/* My Day button — visible at all breakpoints */}
+              <MyDayButton variant="nav" />
 
               {/* Profile menu — lg+; consolidates role + theme + actions */}
               <div ref={profileDropdownRef} className="relative hidden lg:block">
@@ -738,7 +745,11 @@ const Layout = () => {
       {user ? <VictoryToast toast={victoryToast} onDismiss={dismissVictoryToast} /> : null}
 
       <TipOfTheDay />
+
+      {/* My Day drawer — mounted once at layout level; persists state across route changes */}
+      {user ? <MyDayDrawer /> : null}
     </div>
+    </MyDayProvider>
   )
 }
 

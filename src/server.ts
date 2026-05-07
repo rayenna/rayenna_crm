@@ -235,6 +235,7 @@ const server = app.listen(PORT, async () => {
     const solarNewsRoutes       = (await import('./routes/solarNews')).default;
     const roofLayoutRoutes     = (await import('./routes/roofLayout')).default;
     const pdfRoutes            = (await import('./routes/pdf')).default;
+    const myDayRoutes          = (await import('./routes/myDay')).default;
 
     apiRouter.use('/auth', authRoutes);
     apiRouter.use('/projects', projectRoutes);
@@ -259,6 +260,7 @@ const server = app.listen(PORT, async () => {
     apiRouter.use('/proposal-engine', proposalEngineRoutes);
     apiRouter.use('/solar-news', solarNewsRoutes);
     apiRouter.use('/roof', roofLayoutRoutes);
+    apiRouter.use('/my-day', myDayRoutes);
     apiRouter.use('/', pdfRoutes);
 
     routesLoaded = true;

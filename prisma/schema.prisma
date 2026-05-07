@@ -770,6 +770,42 @@ model PESelectedProject {
   @@map("pe_selected_projects")
 }
 
+// ── My Day ────────────────────────────────────────────────────────────────────
+// Personal productivity data — private to each user. No shared state.
+
+model UserTask {
+  id           String    @id @default(uuid())
+  userId       String
+  content      String
+  isDone       Boolean   @default(false)
+  dueDate      DateTime? @db.Date
+  isReminder   Boolean   @default(false)
+  projectId    String?
+  projectLabel String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sortOrder    Int       @default(0)
+
+  @@index([userId, dueDate])
+  @@index([userId, isReminder, dueDate])
+  @@map("user_tasks")
+}
+
+model UserJournal {
+  id           String   @id @default(uuid())
+  userId       String
+  entryDate    DateTime @db.Date
+  content      String   @default("") @db.Text
+  projectId    String?
+  projectLabel String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, entryDate])
+  @@index([userId, entryDate(sort: Desc)])
+  @@map("user_journal")
+}
+
 // Shareable proposal link (read-only view via /view/:token). No auth required to view; optional password, expiry.
 model PESharedProposal {
   id           String    @id @default(cuid())
