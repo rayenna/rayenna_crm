@@ -775,16 +775,16 @@ model PESelectedProject {
 
 model UserTask {
   id           String    @id @default(uuid())
-  userId       String
+  userId       String    @map("user_id")
   content      String
-  isDone       Boolean   @default(false)
-  dueDate      DateTime? @db.Date
-  isReminder   Boolean   @default(false)
-  projectId    String?
-  projectLabel String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  sortOrder    Int       @default(0)
+  isDone       Boolean   @default(false) @map("is_done")
+  dueDate      DateTime? @db.Date        @map("due_date")
+  isReminder   Boolean   @default(false) @map("is_reminder")
+  projectId    String?   @map("project_id")
+  projectLabel String?   @map("project_label")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt      @map("updated_at")
+  sortOrder    Int       @default(0)     @map("sort_order")
 
   @@index([userId, dueDate])
   @@index([userId, isReminder, dueDate])
@@ -793,13 +793,13 @@ model UserTask {
 
 model UserJournal {
   id           String   @id @default(uuid())
-  userId       String
-  entryDate    DateTime @db.Date
+  userId       String   @map("user_id")
+  entryDate    DateTime @db.Date        @map("entry_date")
   content      String   @default("") @db.Text
-  projectId    String?
-  projectLabel String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  projectId    String?  @map("project_id")
+  projectLabel String?  @map("project_label")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt      @map("updated_at")
 
   @@unique([userId, entryDate])
   @@index([userId, entryDate(sort: Desc)])
