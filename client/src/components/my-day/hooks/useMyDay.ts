@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import toast from 'react-hot-toast'
+import { useQueryClient } from '@tanstack/react-query'
 import type { Task, JournalEntry } from '../types'
 import {
   fetchTasks,
@@ -11,12 +12,19 @@ import {
   fetchReminders,
   createReminder,
 } from '../../../lib/my-day-api'
+import { MY_DAY_SNAPSHOT_QUERY_KEY } from '../../../lib/myDaySnapshot'
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
 export function useMyDay() {
+  const queryClient = useQueryClient()
+
+  const bumpSnapshot = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: MY_DAY_SNAPSHOT_QUERY_KEY })
+  }, [queryClient])
+
   // ── Tasks ──────────────────────────────────────────────────────────────────
   const [tasks, setTasks] = useState<Task[]>([])
   const [tasksLoading, setTasksLoading] = useState(false)
@@ -44,6 +52,7 @@ export function useMyDay() {
         isDone: !tasks.find((t) => t.id === id)?.isDone,
       })
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
+      bumpSnapshot()
     } catch {
       // revert
       setTasks((prev) =>
@@ -51,7 +60,7 @@ export function useMyDay() {
       )
       toast.error('Failed to update task')
     }
-  }, [tasks])
+  }, [tasks, bumpSnapshot])
 
   const addTask = useCallback(async (
     content: string,
@@ -73,22 +82,24 @@ export function useMyDay() {
     try {
       const created = await createTask({ content, projectId, projectLabel })
       setTasks((prev) => prev.map((t) => (t.id === optimistic.id ? created : t)))
+      bumpSnapshot()
     } catch {
       setTasks((prev) => prev.filter((t) => t.id !== optimistic.id))
       toast.error('Failed to add task')
     }
-  }, [tasks.length])
+  }, [tasks.length, bumpSnapshot])
 
   const removeTask = useCallback(async (id: string) => {
     const removed = tasks.find((t) => t.id === id)
     setTasks((prev) => prev.filter((t) => t.id !== id))
     try {
       await deleteTask(id)
+      bumpSnapshot()
     } catch {
       if (removed) setTasks((prev) => [removed, ...prev])
       toast.error('Failed to delete task')
     }
-  }, [tasks])
+  }, [tasks, bumpSnapshot])
 
   // ── Journal ─────────────────────────────────────────────────────────────────
   const [journalToday, setJournalToday] = useState<JournalEntry | null>(null)
@@ -124,11 +135,12 @@ export function useMyDay() {
       const saved = await upsertJournal({ entryDate: todayISO(), content, projectId, projectLabel })
       setJournalToday(saved)
       setJournalSaveState('saved')
+      bumpSnapshot()
       setTimeout(() => setJournalSaveState('idle'), 2000)
     } catch {
       setJournalSaveState('error')
     }
-  }, [])
+  }, [bumpSnapshot])
 
   const saveJournal = useCallback((
     content: string,
@@ -150,6 +162,7 @@ export function useMyDay() {
         setJournalToday(saved)
         pendingJournalRef.current = null
         setJournalSaveState('saved')
+        bumpSnapshot()
         setTimeout(() => setJournalSaveState('idle'), 2000)
       } catch {
         // retry once after 5s
@@ -160,6 +173,7 @@ export function useMyDay() {
             const saved = await upsertJournal({ entryDate: todayISO(), content, projectId, projectLabel })
             setJournalToday(saved)
             setJournalSaveState('saved')
+            bumpSnapshot()
             setTimeout(() => setJournalSaveState('idle'), 2000)
           } catch {
             setJournalSaveState('error')
@@ -167,7 +181,7 @@ export function useMyDay() {
         }, 5000)
       }
     }, 2000)
-  }, [])
+  }, [bumpSnapshot])
 
   // Flush on unmount
   useEffect(() => {
@@ -215,22 +229,24 @@ export function useMyDay() {
     try {
       const created = await createReminder({ content, dueDate, projectId, projectLabel })
       setReminders((prev) => prev.map((r) => (r.id === optimistic.id ? created : r)))
+      bumpSnapshot()
     } catch {
       setReminders((prev) => prev.filter((r) => r.id !== optimistic.id))
       toast.error('Failed to add reminder')
     }
-  }, [])
+  }, [bumpSnapshot])
 
   const removeReminder = useCallback(async (id: string) => {
     const removed = reminders.find((r) => r.id === id)
     setReminders((prev) => prev.filter((r) => r.id !== id))
     try {
       await deleteTask(id)
+      bumpSnapshot()
     } catch {
       if (removed) setReminders((prev) => [...prev, removed])
       toast.error('Failed to delete reminder')
     }
-  }, [reminders])
+  }, [reminders, bumpSnapshot])
 
   return {
     // tasks

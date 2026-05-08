@@ -1,3 +1,5 @@
+export type MyDayTabId = 'tasks' | 'journal' | 'reminders'
+
 export interface Task {
   id: string
   content: string

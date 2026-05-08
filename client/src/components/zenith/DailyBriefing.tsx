@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useModalEscape } from '../../contexts/ModalEscapeContext'
+import { useMyDayContext } from '../../contexts/MyDayContext'
 import { motion } from 'framer-motion'
-import { Binoculars } from 'lucide-react'
+import { Binoculars, Sun } from 'lucide-react'
 import { UserRole } from '../../types'
 import MyDayButton from '../my-day/MyDayButton'
+import type { MyDayTabId } from '../my-day/types'
+import type { MyDaySnapshot } from '../../lib/myDaySnapshot'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
 import {
   formatBriefingCustomerNameList,
@@ -197,19 +200,35 @@ function generateBriefing(args: {
   return { greeting, firstName, lines: lines.slice(0, 5) }
 }
 
+function briefingJumpTabClass(active?: boolean) {
+  return [
+    'text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors',
+    active
+      ? 'border-[color:var(--accent-gold)] bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
+      : 'border-[color:var(--border-default)] bg-transparent text-[color:var(--text-secondary)] hover:border-[color:var(--accent-gold-border)] hover:text-[color:var(--text-primary)]',
+  ].join(' ')
+}
+
 export default function DailyBriefing({
   isVisible,
   onDismiss,
   role,
   currentUserName,
   data,
+  myDaySnapshot = null,
+  myDaySnapshotLoading = false,
+  myDaySnapshotError = false,
 }: {
   isVisible: boolean
   onDismiss: (dontShowToday: boolean) => void
   role: UserRole
   currentUserName?: string | null
   data: Record<string, unknown>
+  myDaySnapshot?: MyDaySnapshot | null
+  myDaySnapshotLoading?: boolean
+  myDaySnapshotError?: boolean
 }) {
+  const { openTab } = useMyDayContext()
   const [dontShowToday, setDontShowToday] = useState(false)
   const today = useMemo(() => new Date(), [])
 
@@ -217,6 +236,11 @@ export default function DailyBriefing({
     () => generateBriefing({ role, currentUserName, data }),
     [role, currentUserName, data],
   )
+
+  const jumpToMyDayTab = (tab: MyDayTabId) => {
+    onDismiss(dontShowToday)
+    openTab(tab)
+  }
 
   useModalEscape(isVisible, () => onDismiss(false))
 
@@ -238,7 +262,7 @@ export default function DailyBriefing({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 10, scale: 0.98 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="w-full max-w-[520px] rounded-[20px] border border-[color:var(--accent-gold-border)] bg-[color:var(--bg-modal)] p-7"
+        className="w-full max-w-[560px] rounded-[20px] border border-[color:var(--accent-gold-border)] bg-[color:var(--bg-modal)] p-7"
         style={{ boxShadow: 'var(--shadow-modal)' }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
@@ -309,6 +333,79 @@ export default function DailyBriefing({
               </div>
             </motion.div>
           ))}
+        </div>
+
+        <div className="mt-5 pt-4 border-t border-[color:var(--border-default)]">
+          <div className="flex items-center gap-2 mb-3">
+            <Sun className="w-4 h-4 text-[color:var(--accent-gold)] shrink-0" aria-hidden />
+            <span
+              className="text-sm font-bold text-[color:var(--accent-gold)]"
+              style={{ fontFamily: "'Syne', sans-serif" }}
+            >
+              Your My Day
+            </span>
+          </div>
+
+          {myDaySnapshotLoading ? (
+            <div className="space-y-2" aria-busy="true">
+              <div
+                className="h-3 rounded-lg bg-[color:var(--bg-badge)] animate-pulse"
+                style={{ width: '72%' }}
+              />
+              <div
+                className="h-3 rounded-lg bg-[color:var(--bg-badge)] animate-pulse"
+                style={{ width: '48%' }}
+              />
+            </div>
+          ) : null}
+
+          {myDaySnapshotError && !myDaySnapshotLoading ? (
+            <p className="text-[13px] text-[color:var(--text-muted)] leading-relaxed">
+              Could not load your tasks and reminders. Use{' '}
+              <strong className="text-[color:var(--text-secondary)]">Open My Day</strong> below to try again.
+            </p>
+          ) : null}
+
+          {!myDaySnapshotLoading && !myDaySnapshotError && myDaySnapshot ? (
+            <>
+              {myDaySnapshot.summaryFragments.length > 0 ? (
+                <p className="text-[13px] font-semibold text-[color:var(--text-primary)] leading-snug mb-2">
+                  {myDaySnapshot.summaryFragments.join(' · ')}
+                </p>
+              ) : null}
+
+              {myDaySnapshot.isQuietPersonal && myDaySnapshot.summaryFragments.length === 0 ? (
+                <p className="text-[13px] text-[color:var(--text-secondary)] leading-relaxed">
+                  You&apos;re caught up on tasks and reminders. Add items anytime, or start today&apos;s journal note.
+                </p>
+              ) : null}
+
+              {!myDaySnapshot.isQuietPersonal && myDaySnapshot.teaserLines.length > 0 ? (
+                <ul className="mt-1 mb-1 space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
+                  {myDaySnapshot.teaserLines.map((line, i) => (
+                    <li
+                      key={`${i}-${line.slice(0, 24)}`}
+                      className="text-[13px] text-[color:var(--text-secondary)] leading-snug pl-3 border-l-2 border-[color:var(--accent-gold-muted)]"
+                    >
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              <div className="flex flex-wrap gap-2 mt-3">
+                <button type="button" className={briefingJumpTabClass()} onClick={() => jumpToMyDayTab('tasks')}>
+                  Tasks
+                </button>
+                <button type="button" className={briefingJumpTabClass()} onClick={() => jumpToMyDayTab('reminders')}>
+                  Reminders
+                </button>
+                <button type="button" className={briefingJumpTabClass()} onClick={() => jumpToMyDayTab('journal')}>
+                  Journal
+                </button>
+              </div>
+            </>
+          ) : null}
         </div>
 
         <div className="mt-6 pt-4 border-t border-[color:var(--border-default)] flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

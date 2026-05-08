@@ -27,6 +27,7 @@ import FinanceQuickDrawer from '../components/zenith/FinanceQuickDrawer'
 import OperationsQuickDrawer from '../components/zenith/OperationsQuickDrawer'
 import OfflineBanner from '../components/OfflineBanner'
 import { useOfflineSync, ZENITH_DATA_SYNCED } from '../hooks/useOfflineSync'
+import { useMyDaySnapshotQuery } from '../hooks/useMyDaySnapshotQuery'
 
 const Zenith = () => {
   const { user } = useAuth()
@@ -72,6 +73,8 @@ const Zenith = () => {
     user?.role === UserRole.OPERATIONS ||
     user?.role === UserRole.MANAGEMENT ||
     user?.role === UserRole.ADMIN
+
+  const myDaySnapQ = useMyDaySnapshotQuery(!!user)
 
   const { data: dashboardData, error: fyError, isError: isFyError, refetch: refetchFYs } =
     useQuery({
@@ -385,6 +388,9 @@ const Zenith = () => {
             role={user.role}
             currentUserName={user.name}
             data={(zenithData ?? {}) as Record<string, unknown>}
+            myDaySnapshot={myDaySnapQ.data ?? null}
+            myDaySnapshotLoading={myDaySnapQ.isLoading}
+            myDaySnapshotError={myDaySnapQ.isError}
           />
         ) : null}
       </AnimatePresence>

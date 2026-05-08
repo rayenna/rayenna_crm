@@ -1,8 +1,11 @@
 import { useMyDayContext } from '../../contexts/MyDayContext'
+import type { MyDayTabId } from './types'
 
 interface Props {
   variant: 'briefing' | 'nav'
   onBeforeOpen?: () => void
+  /** Opens My Day on this tab when supported (nav + briefing). */
+  targetTab?: MyDayTabId
 }
 
 /** Sunrise icon — a sun disc with 8 short rays, feels warm and inviting */
@@ -40,12 +43,13 @@ function SunriseIcon({ size = 20 }: { size?: number }) {
   )
 }
 
-export default function MyDayButton({ variant, onBeforeOpen }: Props) {
-  const { open, isOpen, incompleteTasks } = useMyDayContext()
+export default function MyDayButton({ variant, onBeforeOpen, targetTab }: Props) {
+  const { open, openTab, isOpen, incompleteTasks } = useMyDayContext()
 
   const handleClick = () => {
     onBeforeOpen?.()
-    open()
+    if (targetTab) openTab(targetTab)
+    else open()
   }
 
   if (variant === 'nav') {

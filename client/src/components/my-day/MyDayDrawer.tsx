@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
 import { useMyDayContext } from '../../contexts/MyDayContext'
 import { useMyDay } from './hooks/useMyDay'
 import TasksTab     from './tabs/TasksTab'
 import JournalTab   from './tabs/JournalTab'
 import RemindersTab from './tabs/RemindersTab'
 import axiosInstance from '../../utils/axios'
-import type { PinOption } from './types'
+import type { MyDayTabId, PinOption } from './types'
+import { buildMyDaySnapshot, groupRemindersByDue } from '../../lib/myDaySnapshot'
 
-type TabId = 'tasks' | 'journal' | 'reminders'
-const TABS: { id: TabId; label: string }[] = [
+const TABS: { id: MyDayTabId; label: string }[] = [
   { id: 'tasks',     label: 'Tasks'     },
   { id: 'journal',   label: 'Journal'   },
   { id: 'reminders', label: 'Reminders' },
@@ -33,11 +34,15 @@ function useIsDesktop() {
 }
 
 export default function MyDayDrawer() {
-  const { isOpen, close, open, setIncompleteTasks } = useMyDayContext()
+  const { isOpen, close, open, setIncompleteTasks, pendingTabRef } = useMyDayContext()
   const isDesktop = useIsDesktop()
 
-  const [activeTab, setActiveTab] = useState<TabId>(() => {
-    try { return (localStorage.getItem(LS_TAB_KEY) as TabId) || 'tasks' } catch { return 'tasks' }
+  const [activeTab, setActiveTab] = useState<MyDayTabId>(() => {
+    try {
+      return (localStorage.getItem(LS_TAB_KEY) as MyDayTabId) || 'tasks'
+    } catch {
+      return 'tasks'
+    }
   })
 
   const [pinOptions, setPinOptions] = useState<PinOption[]>([])
@@ -84,10 +89,30 @@ export default function MyDayDrawer() {
     setIncompleteTasks(count)
   }, [md.tasks, setIncompleteTasks])
 
-  const switchTab = (tab: TabId) => {
+  const switchTab = useCallback((tab: MyDayTabId) => {
     setActiveTab(tab)
     try { localStorage.setItem(LS_TAB_KEY, tab) } catch { /* ignore */ }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const next = pendingTabRef.current
+    if (!next) return
+    switchTab(next)
+    pendingTabRef.current = null
+  }, [isOpen, pendingTabRef, switchTab])
+
+  const headerSnap = useMemo(
+    () => buildMyDaySnapshot(md.tasks, md.reminders, md.journalToday),
+    [md.tasks, md.reminders, md.journalToday],
+  )
+
+  const urgentReminderCount = useMemo(() => {
+    const g = groupRemindersByDue(md.reminders)
+    return g.overdue.length + g.todayList.length
+  }, [md.reminders])
+
+  const dataReady = !md.tasksLoading && !md.remindersLoading && !md.journalLoading
 
   // Global keyboard shortcut: Cmd/Ctrl + Shift + M
   useEffect(() => {
@@ -121,9 +146,6 @@ export default function MyDayDrawer() {
   const PANEL_W = 420
   const incompleteCount = md.tasks.filter((t) => !t.isDone && !t.isReminder).length
 
-  const desktopTransform = isOpen ? 'translateX(0)' : `translateX(${PANEL_W}px)`
-  const mobileTransform  = isOpen ? 'translateY(0)'  : 'translateY(100%)'
-
   return (
     <>
       {/* Mobile backdrop */}
@@ -142,10 +164,13 @@ export default function MyDayDrawer() {
       />
 
       {/* Panel */}
-      <div
+      <motion.div
         role="dialog"
         aria-modal="true"
         aria-label="My Day"
+        initial={false}
+        animate={isDesktop ? { x: isOpen ? 0 : PANEL_W } : { y: isOpen ? 0 : '100%' }}
+        transition={{ type: 'spring', stiffness: 380, damping: 34 }}
         style={{
           position: 'fixed',
           zIndex: 6001,
@@ -159,12 +184,10 @@ export default function MyDayDrawer() {
                 right: 0,
                 bottom: 0,
                 width: PANEL_W,
-                transform: desktopTransform,
                 boxShadow: '-20px 0 60px rgba(0,0,0,0.55)',
               }
             : {
                 inset: 0,
-                transform: mobileTransform,
               }),
         }}
       >
@@ -181,13 +204,38 @@ export default function MyDayDrawer() {
             borderBottom: '0.5px solid var(--border-default)',
           }}
         >
-          <div>
-            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+          <div style={{ minWidth: 0 }}>
+            <h2
+              className="myday-drawer-title"
+              style={{
+                margin: 0,
+                fontSize: 18,
+                fontWeight: 800,
+                color: 'var(--text-primary)',
+                lineHeight: 1.2,
+                fontFamily: "'Syne', sans-serif",
+              }}
+            >
               My Day
             </h2>
-            <p style={{ margin: '2px 0 12px', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1 }}>
+            <p style={{ margin: '4px 0 8px', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.3 }}>
               {todayFormatted()}
             </p>
+            <div className="myday-drawer-summary">
+              {!dataReady ? (
+                <span className="myday-drawer-chip myday-drawer-chip--muted">Loading…</span>
+              ) : headerSnap.summaryFragments.length > 0 ? (
+                headerSnap.summaryFragments.map((frag) => (
+                  <span key={frag} className="myday-drawer-chip">
+                    {frag}
+                  </span>
+                ))
+              ) : headerSnap.journalStarted ? (
+                <span className="myday-drawer-chip myday-drawer-chip--journal">Journal · today&apos;s note started</span>
+              ) : (
+                <span className="myday-drawer-chip myday-drawer-chip--muted">Nothing queued — add a task or reminder</span>
+              )}
+            </div>
           </div>
           <button
             type="button"
@@ -224,7 +272,8 @@ export default function MyDayDrawer() {
         >
           {TABS.map((tab) => {
             const isCurrent = activeTab === tab.id
-            const badgeCount = tab.id === 'tasks' ? incompleteCount : 0
+            const badgeCount =
+              tab.id === 'tasks' ? incompleteCount : tab.id === 'reminders' ? urgentReminderCount : 0
             return (
               <button
                 key={tab.id}
@@ -252,6 +301,9 @@ export default function MyDayDrawer() {
                 {tab.label}
                 {badgeCount > 0 && (
                   <span
+                    className={
+                      tab.id === 'reminders' && urgentReminderCount > 0 ? 'myday-tab-badge--urgent' : undefined
+                    }
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -266,7 +318,7 @@ export default function MyDayDrawer() {
                       padding: '0 4px',
                     }}
                   >
-                    {badgeCount}
+                    {badgeCount > 9 ? '9+' : badgeCount}
                   </span>
                 )}
               </button>
@@ -311,7 +363,7 @@ export default function MyDayDrawer() {
             />
           </div>
         </div>
-      </div>
+      </motion.div>
     </>
   )
 }

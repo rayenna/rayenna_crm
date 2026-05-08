@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Reminder, PinOption } from '../types'
 import ReminderItem from '../components/ReminderItem'
+import { groupRemindersByDue } from '../../../lib/myDaySnapshot'
 
 interface Props {
   reminders: Reminder[]
@@ -21,34 +22,13 @@ const SECTION_LABEL: React.CSSProperties = {
   display: 'block',
 }
 
-function groupReminders(reminders: Reminder[]) {
-  const today = new Date(); today.setHours(0,0,0,0)
-  const nextWeek = new Date(today); nextWeek.setDate(today.getDate() + 7)
-
-  const overdue:   Reminder[] = []
-  const todayList: Reminder[] = []
-  const thisWeek:  Reminder[] = []
-  const later:     Reminder[] = []
-
-  reminders.forEach((r) => {
-    if (!r.dueDate || r.isDone) return
-    const d = new Date(r.dueDate + 'T00:00:00')
-    if (d < today)           overdue.push(r)
-    else if (d.getTime() === today.getTime()) todayList.push(r)
-    else if (d < nextWeek)   thisWeek.push(r)
-    else                     later.push(r)
-  })
-
-  return { overdue, todayList, thisWeek, later }
-}
-
 export default function RemindersTab({ reminders, loading, onDelete, onAdd, pinOptions }: Props) {
   const [content, setContent] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [projectId, setProjectId] = useState('')
   const [addError, setAddError] = useState('')
 
-  const { overdue, todayList, thisWeek, later } = groupReminders(reminders)
+  const { overdue, todayList, thisWeek, later } = groupRemindersByDue(reminders)
   const hasAny = overdue.length + todayList.length + thisWeek.length + later.length > 0
 
   const handleAdd = () => {
