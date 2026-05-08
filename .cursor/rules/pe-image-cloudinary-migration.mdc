@@ -1,0 +1,43 @@
+---
+description: Proactive reminder about Proposal Engine image storage migration to Cloudinary
+alwaysApply: true
+---
+
+# PE Image Storage — Cloudinary Migration Threshold
+
+Proposal Engine custom-section images are currently stored as **base64 in `pe_proposals` (Neon DB TOAST)**.
+This is intentional and acceptable today. CRM project documents already use Cloudinary correctly.
+
+## Current state (May 2026)
+- 32 proposals · ~2 MB TOAST · ~64 KB per proposal
+- No action needed until threshold below is reached
+
+## Trigger thresholds
+| `pe_proposals` TOAST size | Action |
+|---|---|
+| < 10 MB | Monitor only |
+| 10–20 MB | Begin Cloudinary migration sprint for PE image uploads |
+| > 20 MB | Stop adding image features in PE until migrated |
+
+## Monitoring query (run in Neon SQL Editor)
+```sql
+SELECT pg_size_pretty(pg_relation_size(t.oid)) AS pe_proposals_blob_size
+FROM pg_class c
+JOIN pg_class t ON c.reltoastrelid = t.oid
+WHERE c.relname = 'pe_proposals';
+```
+
+## When migration is triggered, change these two things only
+1. `proposal-engine/frontend/src/components/CustomSectionsBeforeBoq.tsx`
+   — replace `compressImageFileToDataUrl()` with upload-to-Cloudinary → insert returned URL
+2. Add `POST /api/proposal-engine/upload-image` route using existing Cloudinary credentials
+   (same `CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET` already in Render — no new account needed)
+
+Existing base64 images in old proposals remain valid — no backfill required at migration time.
+
+## Reminder dates
+- Aug 2026 — run monitoring query
+- Nov 2026 — run again; schedule sprint if > 10 MB
+- Feb 2027 — treat as P1 if > 15 MB and not yet done
+
+Full plan: `docs/pe-image-storage-migration-plan.md`

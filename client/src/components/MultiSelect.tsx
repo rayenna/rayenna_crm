@@ -103,8 +103,8 @@ const MultiSelect = ({
         <span
           className={`${
             selectedValues.length === 0
-              ? (variant === 'zenith' ? 'text-[color:var(--text-placeholder)]' : 'text-gray-500')
-              : (variant === 'zenith' ? 'text-[color:var(--text-primary)]' : 'text-gray-700')
+              ? (variant === 'zenith' ? 'text-[color:var(--text-primary)]' : 'text-gray-600')
+              : (variant === 'zenith' ? 'text-[color:var(--text-primary)]' : 'text-gray-800')
           } whitespace-nowrap mr-2 min-w-0 overflow-hidden text-ellipsis`}
           title={displayText}
         >

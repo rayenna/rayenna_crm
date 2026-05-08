@@ -311,8 +311,20 @@ export default function DailyBriefing({
           ))}
         </div>
 
-        <div className="mt-6 pt-4 border-t border-[color:var(--border-default)] flex items-center justify-between gap-3">
-          <label className="flex items-center gap-2 text-[13px] text-[color:var(--text-muted)] cursor-pointer select-none">
+        <div className="mt-6 pt-4 border-t border-[color:var(--border-default)] flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          {/* Buttons — shown first on mobile so they're immediately reachable */}
+          <div className="flex items-center gap-2 order-1 sm:order-2 sm:shrink-0">
+            <MyDayButton variant="briefing" onBeforeOpen={() => onDismiss(dontShowToday)} />
+            <button
+              type="button"
+              onClick={() => onDismiss(dontShowToday)}
+              className="flex-1 sm:flex-none rounded-xl bg-[color:var(--accent-gold)] px-5 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] whitespace-nowrap"
+            >
+              Got it →
+            </button>
+          </div>
+          {/* Checkbox — below buttons on mobile, left side on desktop */}
+          <label className="flex items-center gap-2 text-[13px] text-[color:var(--text-muted)] cursor-pointer select-none order-2 sm:order-1">
             <input
               type="checkbox"
               checked={dontShowToday}
@@ -321,16 +333,6 @@ export default function DailyBriefing({
             />
             Don&apos;t show again today
           </label>
-          <div className="flex items-center gap-2 shrink-0">
-            <MyDayButton variant="briefing" onBeforeOpen={() => onDismiss(dontShowToday)} />
-            <button
-              type="button"
-              onClick={() => onDismiss(dontShowToday)}
-              className="rounded-xl bg-[color:var(--accent-gold)] px-6 py-2.5 text-sm font-bold text-[color:var(--text-inverse)]"
-            >
-              Got it →
-            </button>
-          </div>
         </div>
       </motion.div>
     </motion.div>
