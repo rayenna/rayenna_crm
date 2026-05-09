@@ -252,7 +252,7 @@ export default function DailyBriefing({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[950] flex items-center justify-center p-5 backdrop-blur-md"
+      className="fixed inset-0 z-[950] flex items-start sm:items-center justify-center p-3 sm:p-5 backdrop-blur-md"
       style={{ background: 'var(--bg-overlay)' }}
       onClick={() => onDismiss(false)}
       role="presentation"
@@ -262,7 +262,7 @@ export default function DailyBriefing({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 10, scale: 0.98 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="w-full max-w-[560px] rounded-[20px] border border-[color:var(--accent-gold-border)] bg-[color:var(--bg-modal)] p-7"
+        className="w-full max-w-[560px] rounded-[20px] border border-[color:var(--accent-gold-border)] bg-[color:var(--bg-modal)] p-4 sm:p-7 max-h-[calc(100dvh-24px)] overflow-hidden flex flex-col relative"
         style={{ boxShadow: 'var(--shadow-modal)' }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
@@ -271,7 +271,7 @@ export default function DailyBriefing({
         <button
           type="button"
           onClick={() => onDismiss(false)}
-          className="absolute"
+          className="absolute z-10"
           style={{
             top: 16,
             right: 16,
@@ -286,129 +286,146 @@ export default function DailyBriefing({
           ×
         </button>
 
-        <div className="pb-4 mb-5 border-b border-[color:var(--border-default)]">
-          <div className="flex items-center gap-2">
-            <Binoculars className="w-5 h-5 text-[color:var(--accent-gold)]" aria-hidden />
-            <span
-              className="font-bold text-[color:var(--accent-gold)]"
-              style={{ fontFamily: "'Syne', sans-serif" }}
-            >
-              Zenith
-            </span>
-          </div>
-          <div
-            className="mt-3 text-[22px] font-bold text-[color:var(--text-primary)]"
-            style={{ fontFamily: "'Syne', sans-serif" }}
-          >
-            {briefing.greeting}, {briefing.firstName}.
-          </div>
-          <div className="mt-1 text-[13px] text-[color:var(--text-muted)]">{formatDateLine(today)}</div>
-        </div>
-
-        <div>
-          {briefing.lines.map((line, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.08 }}
-            >
-              <div className="flex items-start gap-3 mb-3.5">
-                <span
-                  style={{
-                    fontSize: 16,
-                    width: 28,
-                    height: 28,
-                    borderRadius: 999,
-                    background: 'var(--bg-badge)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  {line.icon}
-                </span>
-                <span style={{ fontSize: 14, lineHeight: 1.6, color: line.color, paddingTop: 3 }}>{line.text}</span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        <div className="mt-5 pt-4 border-t border-[color:var(--border-default)]">
-          <div className="flex items-center gap-2 mb-3">
-            <Sun className="w-4 h-4 text-[color:var(--accent-gold)] shrink-0" aria-hidden />
-            <span
-              className="text-sm font-bold text-[color:var(--accent-gold)]"
-              style={{ fontFamily: "'Syne', sans-serif" }}
-            >
-              Your My Day
-            </span>
-          </div>
-
-          {myDaySnapshotLoading ? (
-            <div className="space-y-2" aria-busy="true">
-              <div
-                className="h-3 rounded-lg bg-[color:var(--bg-badge)] animate-pulse"
-                style={{ width: '72%' }}
-              />
-              <div
-                className="h-3 rounded-lg bg-[color:var(--bg-badge)] animate-pulse"
-                style={{ width: '48%' }}
-              />
+        <div className="min-h-0 overflow-y-auto pr-1 pb-1">
+          <div className="pb-4 mb-5 border-b border-[color:var(--border-default)]">
+            <div className="flex items-center gap-2">
+              <Binoculars className="w-5 h-5 text-[color:var(--accent-gold)]" aria-hidden />
+              <span
+                className="font-bold text-[color:var(--accent-gold)]"
+                style={{ fontFamily: "'Syne', sans-serif" }}
+              >
+                Zenith
+              </span>
             </div>
-          ) : null}
+            <div
+              className="mt-3 text-[22px] font-bold text-[color:var(--text-primary)]"
+              style={{ fontFamily: "'Syne', sans-serif" }}
+            >
+              {briefing.greeting}, {briefing.firstName}.
+            </div>
+            <div className="mt-1 text-[13px] text-[color:var(--text-muted)]">{formatDateLine(today)}</div>
+          </div>
 
-          {myDaySnapshotError && !myDaySnapshotLoading ? (
-            <p className="text-[13px] text-[color:var(--text-muted)] leading-relaxed">
-              Could not load your tasks and reminders. Use{' '}
-              <strong className="text-[color:var(--text-secondary)]">Open My Day</strong> below to try again.
-            </p>
-          ) : null}
+          <div>
+            {briefing.lines.map((line, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.08 }}
+              >
+                <div className="flex items-start gap-3 mb-3.5">
+                  <span
+                    style={{
+                      fontSize: 16,
+                      width: 28,
+                      height: 28,
+                      borderRadius: 999,
+                      background: 'var(--bg-badge)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {line.icon}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 14,
+                      lineHeight: 1.6,
+                      color: line.color,
+                      paddingTop: 3,
+                      fontWeight: 600,
+                      textShadow: '0 1px 0 rgba(0,0,0,0.12)',
+                    }}
+                  >
+                    {line.text}
+                  </span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
 
-          {!myDaySnapshotLoading && !myDaySnapshotError && myDaySnapshot ? (
-            <>
-              {myDaySnapshot.summaryFragments.length > 0 ? (
-                <p className="text-[13px] font-semibold text-[color:var(--text-primary)] leading-snug mb-2">
-                  {myDaySnapshot.summaryFragments.join(' · ')}
-                </p>
-              ) : null}
+          <div className="mt-5 pt-4 border-t border-[color:var(--border-default)]">
+            <div className="flex items-center gap-2 mb-3">
+              <Sun className="w-4 h-4 text-[color:var(--accent-gold)] shrink-0" aria-hidden />
+              <span
+                className="text-sm font-bold text-[color:var(--accent-gold)]"
+                style={{ fontFamily: "'Syne', sans-serif" }}
+              >
+                Your My Day
+              </span>
+            </div>
 
-              {myDaySnapshot.isQuietPersonal && myDaySnapshot.summaryFragments.length === 0 ? (
-                <p className="text-[13px] text-[color:var(--text-secondary)] leading-relaxed">
-                  You&apos;re caught up on tasks and reminders. Add items anytime, or start today&apos;s journal note.
-                </p>
-              ) : null}
-
-              {!myDaySnapshot.isQuietPersonal && myDaySnapshot.teaserLines.length > 0 ? (
-                <ul className="mt-1 mb-1 space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
-                  {myDaySnapshot.teaserLines.map((line, i) => (
-                    <li
-                      key={`${i}-${line.slice(0, 24)}`}
-                      className="text-[13px] text-[color:var(--text-secondary)] leading-snug pl-3 border-l-2 border-[color:var(--accent-gold-muted)]"
-                    >
-                      {line}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-
-              <div className="flex flex-wrap gap-2 mt-3">
-                <button type="button" className={briefingJumpTabClass()} onClick={() => jumpToMyDayTab('tasks')}>
-                  Tasks
-                </button>
-                <button type="button" className={briefingJumpTabClass()} onClick={() => jumpToMyDayTab('reminders')}>
-                  Reminders
-                </button>
-                <button type="button" className={briefingJumpTabClass()} onClick={() => jumpToMyDayTab('journal')}>
-                  Journal
-                </button>
+            {myDaySnapshotLoading ? (
+              <div className="space-y-2" aria-busy="true">
+                <div
+                  className="h-3 rounded-lg bg-[color:var(--bg-badge)] animate-pulse"
+                  style={{ width: '72%' }}
+                />
+                <div
+                  className="h-3 rounded-lg bg-[color:var(--bg-badge)] animate-pulse"
+                  style={{ width: '48%' }}
+                />
               </div>
-            </>
-          ) : null}
+            ) : null}
+
+            {myDaySnapshotError && !myDaySnapshotLoading ? (
+              <p className="text-[13px] text-[color:var(--text-secondary)] leading-relaxed">
+                Could not load your tasks and reminders. Use{' '}
+                <strong className="text-[color:var(--text-secondary)]">Open My Day</strong> below to try again.
+              </p>
+            ) : null}
+
+            {!myDaySnapshotLoading && !myDaySnapshotError && myDaySnapshot ? (
+              <>
+                {myDaySnapshot.summaryFragments.length > 0 ? (
+                  <p className="text-[13px] font-bold text-[color:var(--text-primary)] leading-snug mb-2">
+                    {myDaySnapshot.summaryFragments.join(' · ')}
+                  </p>
+                ) : null}
+
+                {myDaySnapshot.isQuietPersonal && myDaySnapshot.summaryFragments.length === 0 ? (
+                  <p className="text-[13px] text-[color:var(--text-primary)] leading-relaxed">
+                    You&apos;re caught up on tasks and reminders. Add items anytime, or start today&apos;s journal
+                    note.
+                  </p>
+                ) : null}
+
+                {!myDaySnapshot.isQuietPersonal && myDaySnapshot.teaserLines.length > 0 ? (
+                  <ul className="mt-1 mb-1 space-y-1.5 pr-1">
+                    {myDaySnapshot.teaserLines.map((line, i) => (
+                      <li
+                        key={`${i}-${line.slice(0, 24)}`}
+                        className="text-[13px] text-[color:var(--text-primary)] leading-snug pl-3 border-l-2 border-[color:var(--accent-gold-muted)]"
+                      >
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </>
+            ) : null}
+          </div>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-[color:var(--border-default)] flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-4 pt-4 border-t border-[color:var(--border-default)] flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
+          {!myDaySnapshotLoading && !myDaySnapshotError && myDaySnapshot ? (
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className={briefingJumpTabClass()} onClick={() => jumpToMyDayTab('tasks')}>
+                Tasks
+              </button>
+              <button type="button" className={briefingJumpTabClass()} onClick={() => jumpToMyDayTab('reminders')}>
+                Reminders
+              </button>
+              <button type="button" className={briefingJumpTabClass()} onClick={() => jumpToMyDayTab('journal')}>
+                Journal
+              </button>
+            </div>
+          ) : (
+            <span />
+          )}
           {/* Buttons — shown first on mobile so they're immediately reachable */}
           <div className="flex items-center gap-2 order-1 sm:order-2 sm:shrink-0">
             <MyDayButton variant="briefing" onBeforeOpen={() => onDismiss(dontShowToday)} />
@@ -420,16 +437,34 @@ export default function DailyBriefing({
               Got it →
             </button>
           </div>
-          {/* Checkbox — below buttons on mobile, left side on desktop */}
-          <label className="flex items-center gap-2 text-[13px] text-[color:var(--text-muted)] cursor-pointer select-none order-2 sm:order-1">
-            <input
-              type="checkbox"
-              checked={dontShowToday}
-              onChange={(e) => setDontShowToday(e.target.checked)}
-              style={{ accentColor: 'var(--accent-gold)', cursor: 'pointer' }}
-            />
-            Don&apos;t show again today
-          </label>
+          {/* Dismiss control — make it obvious + tap-friendly on mobile */}
+          <button
+            type="button"
+            onClick={() => setDontShowToday((v) => !v)}
+            className={[
+              'order-2 sm:order-1 w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2',
+              'rounded-xl border px-4 py-3 sm:py-2.5 text-[13px] font-semibold select-none',
+              dontShowToday
+                ? 'border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] text-[color:var(--text-primary)]'
+                : 'border-[color:var(--border-default)] bg-transparent text-[color:var(--text-secondary)]',
+            ].join(' ')}
+            aria-pressed={dontShowToday}
+            aria-label="Don't show this briefing again today"
+          >
+            <span className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={dontShowToday}
+                onChange={(e) => setDontShowToday(e.target.checked)}
+                onClick={(e) => e.stopPropagation()}
+                style={{ accentColor: 'var(--accent-gold)', cursor: 'pointer' }}
+              />
+              Don&apos;t show again today
+            </span>
+            <span className="text-xs font-bold text-[color:var(--text-muted)] sm:hidden">
+              {dontShowToday ? 'ON' : 'OFF'}
+            </span>
+          </button>
         </div>
       </motion.div>
     </motion.div>
