@@ -410,61 +410,79 @@ export default function DailyBriefing({
           </div>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-[color:var(--border-default)] flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
-          {!myDaySnapshotLoading && !myDaySnapshotError && myDaySnapshot ? (
-            <div className="flex flex-wrap gap-2">
-              <button type="button" className={briefingJumpTabClass()} onClick={() => jumpToMyDayTab('tasks')}>
-                Tasks
+        <div className="mt-4 pt-4 border-t border-[color:var(--border-default)] shrink-0">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            {/* Left block: shortcuts + dismissal (desktop/landscape keeps it tidy) */}
+            <div className="flex flex-col gap-2 sm:gap-2">
+              {!myDaySnapshotLoading && !myDaySnapshotError && myDaySnapshot ? (
+                <div className="flex flex-wrap gap-2 sm:flex-nowrap">
+                  <button type="button" className={briefingJumpTabClass()} onClick={() => jumpToMyDayTab('tasks')}>
+                    Tasks
+                  </button>
+                  <button
+                    type="button"
+                    className={briefingJumpTabClass()}
+                    onClick={() => jumpToMyDayTab('reminders')}
+                  >
+                    Reminders
+                  </button>
+                  <button type="button" className={briefingJumpTabClass()} onClick={() => jumpToMyDayTab('journal')}>
+                    Journal
+                  </button>
+                </div>
+              ) : null}
+
+              {/* Mobile: big tap-friendly toggle row */}
+              <button
+                type="button"
+                onClick={() => setDontShowToday((v) => !v)}
+                className={[
+                  'sm:hidden w-full flex items-center justify-between gap-2',
+                  'rounded-xl border px-4 py-3 text-[13px] font-semibold select-none',
+                  dontShowToday
+                    ? 'border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] text-[color:var(--text-primary)]'
+                    : 'border-[color:var(--border-default)] bg-transparent text-[color:var(--text-secondary)]',
+                ].join(' ')}
+                aria-pressed={dontShowToday}
+                aria-label="Don't show this briefing again today"
+              >
+                <span className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={dontShowToday}
+                    onChange={(e) => setDontShowToday(e.target.checked)}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ accentColor: 'var(--accent-gold)', cursor: 'pointer' }}
+                  />
+                  Don&apos;t show again today
+                </span>
+                <span className="text-xs font-bold text-[color:var(--text-muted)]">{dontShowToday ? 'ON' : 'OFF'}</span>
               </button>
-              <button type="button" className={briefingJumpTabClass()} onClick={() => jumpToMyDayTab('reminders')}>
-                Reminders
-              </button>
-              <button type="button" className={briefingJumpTabClass()} onClick={() => jumpToMyDayTab('journal')}>
-                Journal
+
+              {/* Desktop/landscape: single-line checkbox under the shortcuts */}
+              <label className="hidden sm:flex items-center gap-2 text-[13px] font-semibold text-[color:var(--text-secondary)] select-none cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={dontShowToday}
+                  onChange={(e) => setDontShowToday(e.target.checked)}
+                  style={{ accentColor: 'var(--accent-gold)', cursor: 'pointer' }}
+                />
+                <span className="text-[color:var(--text-primary)]">Don&apos;t show again today</span>
+              </label>
+            </div>
+
+            {/* Right block: primary actions */}
+            <div className="flex items-center gap-2 sm:shrink-0">
+              <MyDayButton variant="briefing" onBeforeOpen={() => onDismiss(dontShowToday)} />
+              <button
+                type="button"
+                onClick={() => onDismiss(dontShowToday)}
+                className="flex-1 sm:flex-none rounded-xl bg-[color:var(--accent-gold)] px-5 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] whitespace-nowrap"
+              >
+                Got it →
               </button>
             </div>
-          ) : (
-            <span />
-          )}
-          {/* Buttons — shown first on mobile so they're immediately reachable */}
-          <div className="flex items-center gap-2 order-1 sm:order-2 sm:shrink-0">
-            <MyDayButton variant="briefing" onBeforeOpen={() => onDismiss(dontShowToday)} />
-            <button
-              type="button"
-              onClick={() => onDismiss(dontShowToday)}
-              className="flex-1 sm:flex-none rounded-xl bg-[color:var(--accent-gold)] px-5 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] whitespace-nowrap"
-            >
-              Got it →
-            </button>
           </div>
-          {/* Dismiss control — make it obvious + tap-friendly on mobile */}
-          <button
-            type="button"
-            onClick={() => setDontShowToday((v) => !v)}
-            className={[
-              'order-2 sm:order-1 w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2',
-              'rounded-xl border px-4 py-3 sm:py-2.5 text-[13px] font-semibold select-none',
-              dontShowToday
-                ? 'border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] text-[color:var(--text-primary)]'
-                : 'border-[color:var(--border-default)] bg-transparent text-[color:var(--text-secondary)]',
-            ].join(' ')}
-            aria-pressed={dontShowToday}
-            aria-label="Don't show this briefing again today"
-          >
-            <span className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={dontShowToday}
-                onChange={(e) => setDontShowToday(e.target.checked)}
-                onClick={(e) => e.stopPropagation()}
-                style={{ accentColor: 'var(--accent-gold)', cursor: 'pointer' }}
-              />
-              Don&apos;t show again today
-            </span>
-            <span className="text-xs font-bold text-[color:var(--text-muted)] sm:hidden">
-              {dontShowToday ? 'ON' : 'OFF'}
-            </span>
-          </button>
         </div>
       </motion.div>
     </motion.div>
