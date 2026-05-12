@@ -1,6 +1,7 @@
 /** Alphabetical; "Others" last — Project Lifecycle / inverter brand dropdown */
 export const INVERTER_BRAND_OPTIONS = [
   'Delta',
+  'Eastman',
   'Deye',
   'Feston',
   'FIMER',
