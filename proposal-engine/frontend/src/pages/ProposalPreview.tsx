@@ -1544,7 +1544,29 @@ function buildDocx(
       ];
     })(),
     ...(roofLayout
-      ? [
+      ? (() => {
+          // Detect image type from the URL so the DOCX embed format is correct
+          const roofImgUrl = (roofLayout.prefer_3d_for_proposal && roofLayout.layout_image_3d_url)
+            ? roofLayout.layout_image_3d_url
+            : roofLayout.layout_image_url;
+          const roofImgType: 'jpg' | 'png' =
+            typeof roofImgUrl === 'string' && roofImgUrl.toLowerCase().includes('.png') ? 'png' : 'jpg';
+
+          const roofMetricLabels = ['Roof area (m²)', 'Usable area (m²)', 'Panel count'];
+          const roofMetricValues = [
+            Number.isFinite(roofLayout.roof_area_m2) ? `${Number(roofLayout.roof_area_m2).toFixed(1)}` : '—',
+            Number.isFinite(roofLayout.usable_area_m2) ? `${Number(roofLayout.usable_area_m2).toFixed(1)}` : '—',
+            Number.isFinite(roofLayout.panel_count) ? String(roofLayout.panel_count) : '—',
+          ];
+          const docxSizeKw = (p.roi?.inputs.systemSizeKw ?? 0) > 0
+            ? p.roi!.inputs.systemSizeKw
+            : (p.systemSizeKw || p.roiAutofill?.systemSizeKw || 0);
+          if (docxSizeKw > 0) {
+            roofMetricLabels.push('System size (kW)');
+            roofMetricValues.push(`${Number(docxSizeKw).toFixed(1)} kW`);
+          }
+
+          return [
           heading('Proposed Rooftop Solar Layout'),
           ...(roofLayoutImageData
             ? [
@@ -1553,8 +1575,8 @@ function buildDocx(
                   children: [
                     new ImageRun({
                       data: roofLayoutImageData,
-                      transformation: { width: 420, height: 260 },
-                      type: 'jpg',
+                      transformation: { width: 600, height: 390 },
+                      type: roofImgType,
                     }),
                   ],
                   spacing: { after: 120 },
@@ -1575,7 +1597,7 @@ function buildDocx(
             width: { size: 100, type: WidthType.PERCENTAGE },
             rows: [
               new TableRow({
-                children: ['Roof area (m²)', 'Usable area (m²)', 'Panel count'].map(
+                children: roofMetricLabels.map(
                   (label) =>
                     new TableCell({
                       children: [
@@ -1589,17 +1611,7 @@ function buildDocx(
                 ),
               }),
               new TableRow({
-                children: [
-                  Number.isFinite(roofLayout.roof_area_m2)
-                    ? `${Number(roofLayout.roof_area_m2).toFixed(1)}`
-                    : '—',
-                  Number.isFinite(roofLayout.usable_area_m2)
-                    ? `${Number(roofLayout.usable_area_m2).toFixed(1)}`
-                    : '—',
-                  Number.isFinite(roofLayout.panel_count)
-                    ? String(roofLayout.panel_count)
-                    : '—',
-                ].map(
+                children: roofMetricValues.map(
                   (value) =>
                     new TableCell({
                       children: [
@@ -1614,7 +1626,8 @@ function buildDocx(
             ],
           }),
           new Paragraph({ text: '', spacing: { after: 200 } }),
-        ]
+          ];
+        })()
       : []),
     heading('Our Process for Seamless Solar Integration'),
     new Paragraph({
@@ -2288,7 +2301,7 @@ function OurProcessBlock() {
   );
 }
 
-function RoofLayoutBlock({ layout }: { layout: AiRoofLayoutResponse }) {
+function RoofLayoutBlock({ layout, systemSizeKw }: { layout: AiRoofLayoutResponse; systemSizeKw?: number | null }) {
   const accent = '#0f766e';
   const apiBase = getApiBaseUrl();
   // Prefer persisted 3D render for proposal when the project flag says so.
@@ -2311,6 +2324,11 @@ function RoofLayoutBlock({ layout }: { layout: AiRoofLayoutResponse }) {
         <h2 className="text-base font-extrabold uppercase tracking-widest" style={{ color: accent }}>
           Proposed Rooftop Solar Layout
         </h2>
+        {systemSizeKw != null && Number(systemSizeKw) > 0 && (
+          <span className="ml-1 text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-0.5">
+            {Number(systemSizeKw).toFixed(1)} kW System
+          </span>
+        )}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-start">
@@ -2334,25 +2352,39 @@ function RoofLayoutBlock({ layout }: { layout: AiRoofLayoutResponse }) {
                 {Number.isFinite(layout.usable_area_m2) ? Number(layout.usable_area_m2).toFixed(1) : '—'} m²
               </dd>
             </div>
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 sm:col-span-2">
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
               <dt className="font-semibold text-emerald-800 uppercase tracking-wide text-[10px]">Panel count</dt>
               <dd className="mt-1 text-base font-semibold text-emerald-900">
                 {Number.isFinite(layout.panel_count) ? layout.panel_count : '—'}
               </dd>
             </div>
+            {systemSizeKw != null && Number(systemSizeKw) > 0 && (
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                <dt className="font-semibold text-emerald-800 uppercase tracking-wide text-[10px]">System size</dt>
+                <dd className="mt-1 text-base font-semibold text-emerald-900">
+                  {Number(systemSizeKw).toFixed(1)} kW
+                </dd>
+              </div>
+            )}
           </dl>
         </div>
 
         <div className="space-y-2">
-          <div className="rounded-xl border border-slate-200 bg-slate-900/5 overflow-hidden">
+          {layout.source === 'AI' && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              ⚠ <strong>Panel overlay not yet saved.</strong> The image below is the raw satellite view.
+              Open <em>AI Roof Layout</em>, adjust the green polygon over your roof, then click <strong>Save to Proposal</strong> to embed the panel drawing.
+            </div>
+          )}
+          <div className="rounded-xl border border-slate-200 bg-slate-900/5 overflow-hidden flex items-center justify-center min-h-[280px]">
             {src ? (
               <img
                 data-docx-image="roof-layout"
                 src={src}
                 alt="Proposed rooftop solar layout"
                 crossOrigin="anonymous"
-                className="w-full h-auto"
-                style={{ maxHeight: '320px', objectFit: 'cover' }}
+                className="w-full h-auto max-w-full block"
+                style={{ maxHeight: 'min(520px, 72vh)', objectFit: 'contain', background: '#f1f5f9' }}
               />
             ) : (
               <div className="h-48 flex items-center justify-center text-xs text-secondary-400">
@@ -3490,6 +3522,7 @@ export default function ProposalPreview() {
             usable_area_m2: Number.isFinite(Number((manual as any).usable_area_m2)) ? Number((manual as any).usable_area_m2) : 0,
             panel_count: Number.isFinite(Number((manual as any).panel_count)) ? Number((manual as any).panel_count) : 0,
             layout_image_url: String((manual as any).layout_image_url),
+            source: (manual as any).source ?? 'MANUAL',
           };
           if ((manual as any).layout_image_3d_url != null && String((manual as any).layout_image_3d_url).trim()) {
             next.layout_image_3d_url = String((manual as any).layout_image_3d_url);
@@ -3716,6 +3749,7 @@ export default function ProposalPreview() {
               usable_area_m2: Number.isFinite(Number((manual as any).usable_area_m2)) ? Number((manual as any).usable_area_m2) : 0,
               panel_count: Number.isFinite(Number((manual as any).panel_count)) ? Number((manual as any).panel_count) : 0,
               layout_image_url: String(manual.layout_image_url),
+              source: (manual as any).source ?? 'MANUAL',
             };
             if ((manual as any).layout_image_3d_url != null && String((manual as any).layout_image_3d_url).trim()) {
               rl.layout_image_3d_url = String((manual as any).layout_image_3d_url);
@@ -4178,7 +4212,16 @@ export default function ProposalPreview() {
                   <>
                     <Divider />
                     {roofLayout ? (
-                      <RoofLayoutBlock layout={roofLayout} />
+                      <RoofLayoutBlock
+                        layout={roofLayout}
+                        systemSizeKw={
+                          proposal
+                            ? ((proposal.roi?.inputs.systemSizeKw ?? 0) > 0
+                                ? proposal.roi!.inputs.systemSizeKw
+                                : proposal.systemSizeKw || proposal.roiAutofill?.systemSizeKw || 0)
+                            : null
+                        }
+                      />
                     ) : roofLayoutLoading ? (
                       <div className="mb-8 pdf-section">
                         <div className="flex items-center gap-3 mb-3">

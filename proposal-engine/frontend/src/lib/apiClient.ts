@@ -318,6 +318,10 @@ export interface AiRoofLayoutResponse {
   prefer_3d_for_proposal?: boolean;
   roof_polygon_coordinates?: AiRoofLayoutPolygonPoint[];
   panel_coordinates?: AiRoofLayoutPanelRect[];
+  /** 'AI' = raw satellite copy (no panel overlay); 'MANUAL' = Konva canvas export with panels drawn. */
+  source?: 'AI' | 'MANUAL';
+  savedAt?: string;
+  projectId?: string;
 }
 
 export async function generateAiRoofLayout(params: {

@@ -81,8 +81,9 @@ function focalPointForEditingPolygon(
   };
 }
 
-/** Extra whitespace (px) added around the 2D map inside the scroll container — gives room to scroll past image edges. */
-const SCROLL_BUFFER_PX = 300;
+/** Scroll padding around the 2D Konva map was previously 300px for “pan past edges”.
+ *  That created large grey scroll gutters; preview scroll is now exactly the scaled image. */
+const SCROLL_BUFFER_PX = 0;
 
 function scrollLayoutPreviewToFocal(
   el: HTMLDivElement,
@@ -173,8 +174,27 @@ export default function AIRoofLayout() {
   const [lastLongitude, setLastLongitude] = useState<number | null>(null);
   const [mapsLinkOverride, setMapsLinkOverride] = useState('');
   const [panelWOverride, setPanelWOverride] = useState('');
-  // Start at 50% zoom for an easier overview of the roof + layout
-  const [zoom, setZoom] = useState(0.5);
+  /** 'custom' = show a free-text number input; '' = use CRM/project value; any numeric string = preset wattage. */
+  const [panelWPreset, setPanelWPreset] = useState<string>('');
+
+  // CRM panel wattage read from the active project's master data (synced from panelCapacityW).
+  // Available immediately without an extra fetch.
+  const crmPanelWattage: number | null =
+    typeof activeProject?.master?.panelWattage === 'number' && activeProject.master.panelWattage > 0
+      ? activeProject.master.panelWattage
+      : null;
+
+  // The wattage that WILL be used on the next Generate click (for display).
+  const effectiveWattage: number = (() => {
+    if (panelWOverride.trim() !== '') {
+      const v = Number(panelWOverride.trim());
+      if (!Number.isNaN(v) && v > 0) return v;
+    }
+    if (crmPanelWattage != null) return crmPanelWattage;
+    return 550;
+  })();
+  // 75% zoom gives a good first view at zoom=19 (307 m coverage).
+  const [zoom, setZoom] = useState(0.75);
   /** 3D layout preview zoom (separate from 2D Konva zoom). Scales scroll content so WebGL resizes — stays sharp. */
   const [zoom3d, setZoom3d] = useState(1);
   const [layoutScrollViewport, setLayoutScrollViewport] = useState({ w: 0, h: 0 });
@@ -208,11 +228,13 @@ export default function AIRoofLayout() {
   /** Mount node for 3D control panel (outside scroll canvas, like 2D toolbars). */
   const [solar3dControlsHost, setSolar3dControlsHost] = useState<HTMLDivElement | null>(null);
 
-  /** Per-image URL: centre saved view once, editing polygon once (don’t fight user scroll / drag). */
-  const scrollCenterMetaRef = useRef<{ url: string; savedDone: boolean; editingDone: boolean }>({
+  /** Full satellite URL for this editing session — proposal saves a separate cropped JPEG; editor must stay on satellite. */
+  const satelliteEditorUrlRef = useRef<string | null>(null);
+
+  /** Recenters preview when URL / zoom / viewport changes (old editingDone flag left the map stuck in a corner after resize). */
+  const scrollCenterMetaRef = useRef<{ url: string; lastSig: string }>({
     url: '',
-    savedDone: false,
-    editingDone: false,
+    lastSig: '',
   });
 
   // Konva shapes are rendered inside a container that's scaled via CSS `transform: scale(${zoom})`.
@@ -227,6 +249,9 @@ export default function AIRoofLayout() {
   const lineRef = useRef<any>(null);
   /** Ref to the control-point circles Layer so it can be hidden before toDataURL capture. */
   const handlesLayerRef = useRef<any>(null);
+  const polygonOutlineLayerRef = useRef<any>(null);
+  /** Whole-roof drag hit target (above panels); hidden with outline during proposal capture. */
+  const polygonDragLayerRef = useRef<any>(null);
   /**
    * Tracks the pixel position where the move-rect drag started.
    * Used to detect accidental clicks (< 8 px travel) so the polygon is not
@@ -270,17 +295,33 @@ export default function AIRoofLayout() {
   const [bgImage] = useImage(bgImageUrl ?? '', 'anonymous');
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
 
-  // DevTools open/close can cause viewport reflow (scrollbars/layout changes).
-  // Konva sometimes needs an explicit redraw after such changes to keep shapes visible.
+  // Konva redraw after zoom / viewport / tab / image changes. Only when 2D tab is active — the Stage
+  // unmounts on the saved-3D tab; coming back to 2D otherwise left a torn / empty canvas until zoom nudged it.
   useEffect(() => {
-    if (!stageRef.current) return;
-    try {
-      stageRef.current.batchDraw?.();
-      stageRef.current.draw?.();
-    } catch {
-      // No-op: stageRef may not be ready during initial render.
-    }
-  }, [isMobileView, zoom, roofViewTab, imageSize]);
+    if (roofViewTab !== '2d') return;
+    let cancelled = false;
+    const draw = () => {
+      if (cancelled) return;
+      try {
+        stageRef.current?.batchDraw?.();
+        stageRef.current?.draw?.();
+      } catch {
+        // Stage may not be mounted yet (e.g. tab switch).
+      }
+    };
+    draw();
+    const a = requestAnimationFrame(draw);
+    const b = requestAnimationFrame(() => {
+      requestAnimationFrame(draw);
+    });
+    const tid = window.setTimeout(draw, 100);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(a);
+      cancelAnimationFrame(b);
+      clearTimeout(tid);
+    };
+  }, [isMobileView, zoom, roofViewTab, imageSize, layoutMode, bgImage]);
 
   const has3DRoofData =
     polygon != null && polygon.length >= 3 && panels.length > 0 && imageSize != null;
@@ -343,17 +384,6 @@ export default function AIRoofLayout() {
     !!(last3dPngDataUrl && String(last3dPngDataUrl).trim()) ||
     !!(result?.layout_image_3d_url && String(result.layout_image_3d_url).trim());
 
-  function handleChooseProposalLayout2d() {
-    setProposalImageSource('2d');
-    setRoofViewTab('2d');
-  }
-
-  function handleChooseProposalLayout3d() {
-    if (!canChoose3dForProposal) return;
-    setProposalImageSource('3d');
-    if (canToggle2d3dPreview) setRoofViewTab('3d');
-  }
-
   const layout3dBaseW = Math.max(layoutScrollViewport.w, 360);
   const layout3dBaseH = Math.max(layoutScrollViewport.h, 280);
   const layoutZoom3dActive = roofViewTab === '3d';
@@ -385,6 +415,7 @@ export default function AIRoofLayout() {
           usable_area_m2: Number(manual.usable_area_m2),
           panel_count: Number(manual.panel_count),
           layout_image_url: String(manual.layout_image_url),
+          source: (manual as any).source ?? 'MANUAL',
         };
         if (manual.layout_image_3d_url != null && String(manual.layout_image_3d_url).trim()) {
           next.layout_image_3d_url = String(manual.layout_image_3d_url);
@@ -431,6 +462,7 @@ export default function AIRoofLayout() {
         setPolygon(null);
         setPanels([]);
         setImageSize(null);
+        satelliteEditorUrlRef.current = null;
       } catch {
         // If no layout exists yet, backend may respond 404; ignore and let user generate.
       }
@@ -443,10 +475,10 @@ export default function AIRoofLayout() {
   }, [activeProject?.master?.crmProjectId]);
 
   // Geometry constants derived from the satellite image API parameters.
-  // Backend fetches: zoom=20, size=1024x1024, scale=2 → returns a 2048×2048 px image.
-  // Pixel scale at zoom=20, scale=2 (equator baseline): 40,075,016 / (256 × 2^20) / 2 ≈ 0.0746 m/px.
-  // 0.075 is used as a round, slightly-conservative equator value (actual varies ±10% by latitude).
-  const METERS_PER_PIXEL = 0.075;
+  // Backend fetches: zoom=19, size=1024x1024, scale=2 → returns a 2048×2048 px image.
+  // Pixel scale at zoom=19, scale=2 (equator baseline): 40,075,016 / (256 × 2^19) / 2 ≈ 0.1493 m/px.
+  // 0.149 is used as a slightly-conservative equator value (actual varies ±5% by latitude for India).
+  const METERS_PER_PIXEL = 0.149;
   const PANEL_WIDTH_M = 1.1;
   const PANEL_HEIGHT_M = 2.2;
   const PANEL_AREA_M2 = 2.42;
@@ -461,41 +493,54 @@ export default function AIRoofLayout() {
     }
   }, [bgImage, imageSize]);
 
-  // Saved view: centre the scroll viewport on roof/panels (API coords) or image centre.
+  // Saved view: centre the 2D scroll viewport on image/panel focal whenever the 2D tab is visible
+  // (toggling 3D → 2D must re-run — scroll metrics and content size change between tabs).
   // Editing view: centre once per image on the polygon when it first exists (so the roof isn’t stuck top-left).
   useLayoutEffect(() => {
     if (!imageSize || !bgImage) return;
 
-    const urlKey = bgImageUrl ?? '';
-    if (scrollCenterMetaRef.current.url !== urlKey) {
-      scrollCenterMetaRef.current = { url: urlKey, savedDone: false, editingDone: false };
+    // Invalidate cached scroll signature while not on 2D — coming back from 3D must recentre.
+    if (roofViewTab !== '2d') {
+      scrollCenterMetaRef.current.lastSig = '';
+      return;
     }
 
+    const urlKey = bgImageUrl ?? '';
+    if (scrollCenterMetaRef.current.url !== urlKey) {
+      scrollCenterMetaRef.current = { url: urlKey, lastSig: '' };
+    }
+
+    const vw = layoutScrollViewport.w;
+    const vh = layoutScrollViewport.h;
+    if (vw < 32 || vh < 32) return;
+
     if (layoutMode === 'saved') {
-      if (scrollCenterMetaRef.current.savedDone) return;
+      const scrollSig = `saved|${zoom}|${Math.round(vw)}|${Math.round(vh)}`;
+      if (scrollCenterMetaRef.current.lastSig === scrollSig) return;
+      scrollCenterMetaRef.current.lastSig = scrollSig;
       const focal = focalPointForSavedView(imageSize, result);
       const run = () => {
         const el = layoutScrollRef.current;
         if (!el) return;
         scrollLayoutPreviewToFocal(el, focal.x, focal.y, zoom, SCROLL_BUFFER_PX);
-        scrollCenterMetaRef.current.savedDone = true;
       };
       requestAnimationFrame(() => requestAnimationFrame(run));
       return;
     }
 
     if (layoutMode === 'editing' && polygon && polygon.length >= 2) {
-      if (scrollCenterMetaRef.current.editingDone) return;
+      const scrollSig = `editing|${zoom}|${Math.round(vw)}|${Math.round(vh)}`;
+      if (scrollCenterMetaRef.current.lastSig === scrollSig) return;
+      scrollCenterMetaRef.current.lastSig = scrollSig;
       const focal = focalPointForEditingPolygon(imageSize, polygon);
       const run = () => {
         const el = layoutScrollRef.current;
         if (!el) return;
         scrollLayoutPreviewToFocal(el, focal.x, focal.y, zoom, SCROLL_BUFFER_PX);
-        scrollCenterMetaRef.current.editingDone = true;
       };
       requestAnimationFrame(() => requestAnimationFrame(run));
     }
-  }, [layoutMode, imageSize, bgImage, bgImageUrl, result, polygon, zoom]);
+  }, [layoutMode, roofViewTab, imageSize, bgImage, bgImageUrl, result, polygon, zoom, layoutScrollViewport.w, layoutScrollViewport.h]);
 
   const handleGenerate = async () => {
     if (!activeProject) {
@@ -532,6 +577,7 @@ export default function AIRoofLayout() {
     // while the new AI layout is still loading (otherwise we get a brief "old AI" flash).
     setBgImageUrl(null);
     setImageSize(null);
+    satelliteEditorUrlRef.current = null;
 
     try {
       const crmProject = await fetchCrmProjectForAiLayout(crmProjectId);
@@ -618,6 +664,7 @@ export default function AIRoofLayout() {
         usable_area_m2: Number(usable),
         panel_count: Number(panelCount),
         layout_image_url: data?.layout_image_url && String(data.layout_image_url).trim() ? data.layout_image_url : '',
+        ...(data?.roof_polygon_coordinates?.length ? { roof_polygon_coordinates: data.roof_polygon_coordinates } : {}),
       };
       setResult(nextResult);
       solar3dPersistentLayoutKeyRef.current = '';
@@ -635,6 +682,7 @@ export default function AIRoofLayout() {
           : `${getApiBaseUrl() || ''}${rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`}`
         : null;
       setBgImageUrl(imageUrl);
+      if (imageUrl) satelliteEditorUrlRef.current = imageUrl;
 
       // polygon and panels will be initialised once the image size is known
     } catch (err: any) {
@@ -644,26 +692,98 @@ export default function AIRoofLayout() {
     }
   };
 
-  async function captureLayoutImage(options?: { format?: 'png' | 'jpeg'; quality?: number; pixelRatio?: number }): Promise<string | null> {
+  async function captureLayoutImage(options?: {
+    format?: 'png' | 'jpeg';
+    quality?: number;
+    pixelRatio?: number;
+    /** Crop to this rect in stage pixel coordinates before export. */
+    crop?: { x: number; y: number; width: number; height: number };
+  }): Promise<string | null> {
     if (!stageRef.current) return null;
     const format = options?.format ?? 'png';
     const pixelRatio = options?.pixelRatio ?? 2;
     const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
     const quality = format === 'jpeg' ? (options?.quality ?? 0.82) : undefined;
 
-    // Hide control-point handles and scale bar editing overlay before capture so the saved
-    // image is clean — no green dots on polygon corners, no on-screen UI artefacts.
+    // Hide control-point handles, polygon outline, and whole-roof drag layer — saved image shows only panels on satellite.
     const handlesLayer = handlesLayerRef.current;
-    if (handlesLayer) {
-      handlesLayer.visible(false);
-      stageRef.current.batchDraw();
-    }
-    const dataUrl = stageRef.current.toDataURL({ pixelRatio, mimeType: mime, quality });
-    if (handlesLayer) {
-      handlesLayer.visible(true);
-      stageRef.current.batchDraw();
-    }
+    const polygonOutlineLayer = polygonOutlineLayerRef.current;
+    const polygonDragLayer = polygonDragLayerRef.current;
+    if (handlesLayer) handlesLayer.visible(false);
+    if (polygonOutlineLayer) polygonOutlineLayer.visible(false);
+    if (polygonDragLayer) polygonDragLayer.visible(false);
+    stageRef.current.batchDraw();
+    const dataUrl = stageRef.current.toDataURL({
+      pixelRatio,
+      mimeType: mime,
+      quality,
+      ...(options?.crop ?? {}),
+    });
+    if (handlesLayer) handlesLayer.visible(true);
+    if (polygonOutlineLayer) polygonOutlineLayer.visible(true);
+    if (polygonDragLayer) polygonDragLayer.visible(true);
+    stageRef.current.batchDraw();
     return dataUrl;
+  }
+
+  /** Proposal JPEG: panels readable without cropping down to a blurry postage stamp.
+   *  Uses bbox + generous pad + min/max fractions of full satellite for stable framing. */
+  function computeProposalExportCrop(
+    poly: Point[],
+    panelRects: PanelRect[],
+    imgSize: { width: number; height: number },
+  ): { x: number; y: number; width: number; height: number } | undefined {
+    if (!poly || poly.length < 3) return undefined;
+
+    let bbMinX = Infinity,
+      bbMaxX = -Infinity,
+      bbMinY = Infinity,
+      bbMaxY = -Infinity;
+    if (panelRects.length) {
+      for (const r of panelRects) {
+        bbMinX = Math.min(bbMinX, r.x);
+        bbMaxX = Math.max(bbMaxX, r.x + r.w);
+        bbMinY = Math.min(bbMinY, r.y);
+        bbMaxY = Math.max(bbMaxY, r.y + r.h);
+      }
+    } else {
+      for (const p of poly) {
+        bbMinX = Math.min(bbMinX, p.x);
+        bbMaxX = Math.max(bbMaxX, p.x);
+        bbMinY = Math.min(bbMinY, p.y);
+        bbMaxY = Math.max(bbMaxY, p.y);
+      }
+    }
+    if (!Number.isFinite(bbMinX)) return undefined;
+
+    const bbW0 = Math.max(1, bbMaxX - bbMinX);
+    const bbH0 = Math.max(1, bbMaxY - bbMinY);
+
+    const padFrac = 0.2;
+    let cropW = bbW0 * (1 + 2 * padFrac);
+    let cropH = bbH0 * (1 + 2 * padFrac);
+
+    const minFrac = 0.4;
+    cropW = Math.max(cropW, imgSize.width * minFrac);
+    cropH = Math.max(cropH, imgSize.height * minFrac);
+
+    const maxFrac = 0.62;
+    cropW = Math.min(imgSize.width * maxFrac, cropW);
+    cropH = Math.min(imgSize.height * maxFrac, cropH);
+
+    cropW = Math.min(imgSize.width, cropW);
+    cropH = Math.min(imgSize.height, cropH);
+
+    const focalX = panelRects.length ? (bbMinX + bbMaxX) / 2 : poly.reduce((s, p) => s + p.x, 0) / poly.length;
+    const focalY = panelRects.length ? (bbMinY + bbMaxY) / 2 : poly.reduce((s, p) => s + p.y, 0) / poly.length;
+
+    let x = focalX - cropW / 2;
+    let y = focalY - cropH / 2;
+    x = Math.max(0, Math.min(x, imgSize.width - cropW));
+    y = Math.max(0, Math.min(y, imgSize.height - cropH));
+
+    if (cropW < 20 || cropH < 20) return undefined;
+    return { x, y, width: cropW, height: cropH };
   }
 
   const handleSaveForProposal = async () => {
@@ -734,10 +854,15 @@ export default function AIRoofLayout() {
         ...(Number.isFinite(Number(p)) && { panel_count: Number(p) }),
       };
 
+      // Tight crop around panels only — independent of preview zoom/viewport so embed stays consistent.
+      const proposalCrop =
+        polygon && imageSize ? computeProposalExportCrop(polygon, panels, imageSize) : undefined;
+
       const dataUrl = await captureLayoutImage({
         format: 'jpeg',
-        quality: 0.82,
-        pixelRatio: 1.25,
+        quality: 0.86,
+        pixelRatio: 2,
+        crop: proposalCrop,
       });
       if (!dataUrl) {
         setError('Could not capture the 2D layout. Open the 2D tab, then save again.');
@@ -802,6 +927,12 @@ export default function AIRoofLayout() {
         return next;
       });
       setLastSavedProjectId(String(crmProjectId));
+
+      // Cropped proposal JPEG must not replace the editing satellite — that shrunk the Stage/panels.
+      const sat = satelliteEditorUrlRef.current;
+      if (sat && layoutMode === 'editing') {
+        setBgImageUrl(sat);
+      }
     } catch (e) {
       setError('Could not save to the server. Check your connection and try again.');
       if (import.meta.env.DEV) console.error('Save for proposal failed:', e);
@@ -878,6 +1009,23 @@ export default function AIRoofLayout() {
       return inside;
     };
 
+    /** Require the whole panel rectangle inside the roof polygon so Konva clip does not slice panels. */
+    const rectFullyInsidePolygon = (
+      rx: number,
+      ry: number,
+      rw: number,
+      rh: number,
+      vertices: Point[],
+    ): boolean => {
+      const corners: Point[] = [
+        { x: rx, y: ry },
+        { x: rx + rw, y: ry },
+        { x: rx + rw, y: ry + rh },
+        { x: rx, y: ry + rh },
+      ];
+      return corners.every((c) => pointInPolygon(c, vertices));
+    };
+
     const approxPanelArea = panelWidthPx * panelHeightPx;
     const maxPanelsRendered = Math.min(
       maxPanelsCap,
@@ -886,9 +1034,7 @@ export default function AIRoofLayout() {
 
     for (let y = minY; y + panelHeightPx <= maxY; y += stepY) {
       for (let x = minX; x + panelWidthPx <= maxX; x += stepX) {
-        const cx = x + panelWidthPx / 2;
-        const cy = y + panelHeightPx / 2;
-        if (!pointInPolygon({ x: cx, y: cy }, poly)) continue;
+        if (!rectFullyInsidePolygon(x, y, panelWidthPx, panelHeightPx, poly)) continue;
 
         panels.push({ x, y, w: panelWidthPx, h: panelHeightPx });
         if (panels.length >= maxPanelsRendered) break;
@@ -900,26 +1046,34 @@ export default function AIRoofLayout() {
       panels,
       roofAreaM2,
       usableAreaM2,
-      // For reporting, always use the geometry-based ideal count,
-      // not the (possibly capped) number of rectangles we draw.
-      panelCount: idealPanelCount,
+      // Match what the user sees — only full, unclipped panels (Konva clips to polygon).
+      panelCount: panels.length,
     };
   }
 
-  // Initialise default polygon once we know the image size
+  // Initialise default polygon once we know the image size.
+  // Prefer polygon coordinates returned by the AI layout API (if any) so the initial shape
+  // is closer to the actual roof rather than a generic centred rectangle.
   useEffect(() => {
     if (layoutMode !== 'editing') return;
     if (!imageSize || polygon) return;
-    // Start with a smaller default polygon so it matches the main roof more closely,
-    // and align its edges to the underlying panel grid so rows/columns line up nicely.
-    const margin = Math.min(imageSize.width, imageSize.height) * 0.3;
-    let minX = margin;
-    let maxX = imageSize.width - margin;
-    let minY = margin;
-    let maxY = imageSize.height - margin;
 
-    // Compute the same grid step used for panel packing, so the polygon edges
-    // fall on grid lines and the first/last panel rows align cleanly.
+    const apiPoly = result?.roof_polygon_coordinates;
+    if (apiPoly && apiPoly.length >= 3) {
+      setPolygon(apiPoly.map((p) => ({ x: p.x, y: p.y })));
+      return;
+    }
+
+    // Fallback: fixed-size centred rectangle (~35 m × 30 m) snapped to the panel grid.
+    // Using a real-world size keeps all four corners visible regardless of zoom level.
+    const DEFAULT_W_M = 35;
+    const DEFAULT_H_M = 30;
+    const halfWPx = (DEFAULT_W_M / METERS_PER_PIXEL) / 2;
+    const halfHPx = (DEFAULT_H_M / METERS_PER_PIXEL) / 2;
+    const cx = imageSize.width / 2;
+    const cy = imageSize.height / 2;
+
+    // Snap edges to the panel grid so the first/last panel rows align cleanly.
     const panelWidthPx = PANEL_WIDTH_M / METERS_PER_PIXEL;
     const panelHeightPx = PANEL_HEIGHT_M / METERS_PER_PIXEL;
     const spacingPx = (PANEL_SPACING_M / METERS_PER_PIXEL) * panelSpacingMultiplier;
@@ -927,10 +1081,10 @@ export default function AIRoofLayout() {
     const stepY = panelHeightPx + spacingPx;
     const snap = (v: number, step: number) => Math.round(v / step) * step;
 
-    minX = snap(minX, stepX);
-    maxX = snap(maxX, stepX);
-    minY = snap(minY, stepY);
-    maxY = snap(maxY, stepY);
+    const minX = snap(cx - halfWPx, stepX);
+    const maxX = snap(cx + halfWPx, stepX);
+    const minY = snap(cy - halfHPx, stepY);
+    const maxY = snap(cy + halfHPx, stepY);
 
     setPolygon([
       { x: minX, y: minY },
@@ -938,7 +1092,7 @@ export default function AIRoofLayout() {
       { x: maxX, y: maxY },
       { x: minX, y: maxY },
     ]);
-  }, [imageSize, panelSpacingMultiplier, polygon, layoutMode]);
+  }, [imageSize, panelSpacingMultiplier, polygon, layoutMode, result?.roof_polygon_coordinates]);
 
   // Recompute panels + metrics whenever polygon / density / orientation changes,
   // but debounce and skip while actively dragging so interaction feels smooth.
@@ -1090,12 +1244,21 @@ export default function AIRoofLayout() {
 
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-2 sm:p-6 lg:p-8 max-md:rounded-lg">
         {result && lastSavedProjectId && activeProject?.master?.crmProjectId && lastSavedProjectId === String(activeProject.master.crmProjectId) && (
-          <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-            <div className="font-semibold">Saved layout loaded</div>
-            <div className="mt-0.5 text-xs text-emerald-800">
-              {loadedSavedAt ? `Last saved: ${new Date(loadedSavedAt).toLocaleString()}` : 'This project already has a saved roof layout.'}
+          result.source === 'AI' ? (
+            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <div className="font-semibold">⚠ Layout not yet saved with panels</div>
+              <div className="mt-0.5 text-xs text-amber-800">
+                The proposal currently shows the raw satellite image — no panel overlay. Adjust the green polygon to cover your roof, then click <strong>Save to Proposal</strong> above to embed the panel drawing.
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+              <div className="font-semibold">✓ Saved layout loaded</div>
+              <div className="mt-0.5 text-xs text-emerald-800">
+                {loadedSavedAt ? `Last saved: ${new Date(loadedSavedAt).toLocaleString()}` : 'This project already has a saved roof layout with panels.'}
+              </div>
+            </div>
+          )
         )}
 
         {(error || activeProject) && (
@@ -1121,13 +1284,60 @@ export default function AIRoofLayout() {
                 <label className="block text-[10px] font-medium text-sky-700 mb-0.5">
                   Panel wattage (W)
                 </label>
-                <input
-                  type="text"
-                  value={panelWOverride}
-                  onChange={(e) => setPanelWOverride(e.target.value)}
-                  placeholder="e.g. 540"
-                  className="w-full rounded-md border border-sky-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500"
-                />
+                {/* CRM value badge — mirrors the Maps link pattern */}
+                <div className="mb-1 flex items-center gap-1.5">
+                  {crmPanelWattage != null ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5">
+                      ✓ CRM project: {crmPanelWattage} W
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
+                      Not set in CRM — using 550 W default
+                    </span>
+                  )}
+                  {panelWOverride.trim() !== '' && (
+                    <span className="text-[10px] text-indigo-600 font-medium">
+                      → overridden: {effectiveWattage} W
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-1.5">
+                  <select
+                    value={panelWPreset}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setPanelWPreset(val);
+                      if (val !== 'custom') setPanelWOverride(val);
+                      else setPanelWOverride('');
+                    }}
+                    className="flex-1 rounded-md border border-sky-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 bg-white"
+                  >
+                    <option value="">
+                      {crmPanelWattage != null ? `Use CRM value (${crmPanelWattage} W)` : 'Use default (550 W)'}
+                    </option>
+                    <option value="400">400 W</option>
+                    <option value="440">440 W</option>
+                    <option value="480">480 W</option>
+                    <option value="500">500 W</option>
+                    <option value="530">530 W</option>
+                    <option value="540">540 W</option>
+                    <option value="550">550 W</option>
+                    <option value="580">580 W</option>
+                    <option value="600">600 W</option>
+                    <option value="650">650 W</option>
+                    <option value="custom">Custom…</option>
+                  </select>
+                  {panelWPreset === 'custom' && (
+                    <input
+                      type="number"
+                      min={1}
+                      value={panelWOverride}
+                      onChange={(e) => setPanelWOverride(e.target.value)}
+                      placeholder="e.g. 570"
+                      className="w-20 rounded-md border border-sky-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    />
+                  )}
+                </div>
               </div>
             </div>
             <p className="text-[10px] text-sky-700">
@@ -1181,39 +1391,13 @@ export default function AIRoofLayout() {
 
               {/* 2) Actions + Controls + Photo — second on mobile (right column on desktop) */}
               <div className="flex flex-col gap-4 order-2 lg:order-2 bg-white p-2 sm:p-4 rounded-xl border border-gray-100">
-                {/* Layout actions — touch-friendly on mobile */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide w-full sm:w-auto">Actions</span>
-                  <div className="w-full flex items-center gap-2 mt-1">
-                    <button
-                      type="button"
-                      onClick={handleChooseProposalLayout2d}
-                      className={`min-h-[44px] px-4 py-2 rounded-lg text-xs font-semibold border flex-1 ${
-                        proposalImageSource === '2d'
-                          ? 'bg-indigo-100 border-indigo-400 text-indigo-800'
-                          : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                      }`}
-                    >
-                      Use 2D Layout
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleChooseProposalLayout3d}
-                      disabled={!canChoose3dForProposal}
-                      className={`min-h-[44px] px-4 py-2 rounded-lg text-xs font-semibold border flex-1 ${
-                        proposalImageSource === '3d'
-                          ? 'bg-indigo-100 border-indigo-400 text-indigo-800'
-                          : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    >
-                      Use 3D Render
-                    </button>
-                  </div>
+                {/* Save action */}
+                <div className="flex flex-wrap items-center gap-3">
                   <button
                     type="button"
                     onClick={handleSaveForProposal}
                     disabled={savingToProposal}
-                    className={`min-h-[44px] sm:min-h-0 inline-flex items-center justify-center px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-xs font-semibold border flex-1 sm:flex-initial ${
+                    className={`min-h-[44px] sm:min-h-0 inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-semibold border ${
                       lastSavedProjectId && activeProject?.master?.crmProjectId != null
                         ? 'bg-emerald-50 text-emerald-800 border-emerald-400'
                         : 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700'
@@ -1222,12 +1406,16 @@ export default function AIRoofLayout() {
                     {savingToProposal
                       ? 'Saving…'
                       : lastSavedProjectId && activeProject?.master?.crmProjectId != null
-                        ? 'Saved for Proposal'
+                        ? '✓ Saved for Proposal'
                         : 'Save to Proposal'}
                   </button>
-                  <p className="w-full text-[11px] text-gray-500 leading-snug">
-                    These buttons switch the preview and set which image the proposal uses. Save stores both 2D and 3D when you have exported a 3D PNG (or it is already on the server).
-                  </p>
+                  <span className="text-[11px] text-gray-500">
+                    Proposal will embed:{' '}
+                    <strong className="text-gray-700">
+                      {proposalImageSource === '3d' && canChoose3dForProposal ? '3D render' : '2D layout'}
+                    </strong>
+                    {' '}— switch tabs below to change.
+                  </span>
                 </div>
 
                 {/* All controls — stacked on mobile for easy tap, inline on desktop */}
@@ -1344,16 +1532,11 @@ export default function AIRoofLayout() {
                         {panelOrientation === 'portrait' ? 'Portrait' : 'Landscape'}
                       </button>
                     </div>
-                    {roofViewTab !== '3d' && (
+                    {roofViewTab !== '3d' && polygon && (
                       <button
                         type="button"
                         onClick={() => {
-                          if (!imageSize) return;
-                          const margin = Math.min(imageSize.width, imageSize.height) * 0.3;
-                          let minX = margin;
-                          let maxX = imageSize.width - margin;
-                          let minY = margin;
-                          let maxY = imageSize.height - margin;
+                          if (!imageSize || !polygon) return;
                           const panelWidthPx = PANEL_WIDTH_M / METERS_PER_PIXEL;
                           const panelHeightPx = PANEL_HEIGHT_M / METERS_PER_PIXEL;
                           const spacingPx =
@@ -1361,16 +1544,11 @@ export default function AIRoofLayout() {
                           const stepX = panelWidthPx + spacingPx;
                           const stepY = panelHeightPx + spacingPx;
                           const snap = (v: number, step: number) => Math.round(v / step) * step;
-                          minX = snap(minX, stepX);
-                          maxX = snap(maxX, stepX);
-                          minY = snap(minY, stepY);
-                          maxY = snap(maxY, stepY);
-                          setPolygon([
-                            { x: minX, y: minY },
-                            { x: maxX, y: minY },
-                            { x: maxX, y: maxY },
-                            { x: minX, y: maxY },
-                          ]);
+                          // Snap each vertex to the nearest grid line; preserve the polygon shape.
+                          setPolygon(polygon.map((p) => ({
+                            x: snap(p.x, stepX),
+                            y: snap(p.y, stepY),
+                          })));
                         }}
                         className="min-h-[44px] sm:min-h-0 px-4 py-2 sm:px-2 sm:py-1 rounded-full border border-gray-300 bg-white text-xs font-semibold hover:bg-gray-50 touch-manipulation w-full sm:w-auto"
                       >
@@ -1391,28 +1569,33 @@ export default function AIRoofLayout() {
                 >
                   {/* Scroll vs Edit: when editMode is false, canvas doesn't capture touch so native scroll works on mobile */}
                   {isMobileView && roofViewTab !== '3d' && (
-                    <div className="mb-2">
+                    <div className="mb-2 space-y-1.5">
+                      {!editMode && layoutMode === 'editing' && (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+                          Tap <strong>Edit polygon</strong> below to drag the green outline over your roof.
+                        </div>
+                      )}
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-gray-600">Map:</span>
                         <button
-                        type="button"
-                        onClick={() => setEditMode(false)}
-                        className={`min-h-[40px] px-3 rounded-lg text-xs font-semibold border touch-manipulation ${
-                          !editMode ? 'bg-indigo-100 border-indigo-400 text-indigo-800' : 'bg-white border-gray-300 text-gray-600'
-                        }`}
-                      >
-                        Scroll map
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditMode(true)}
-                        className={`min-h-[40px] px-3 rounded-lg text-xs font-semibold border touch-manipulation ${
-                          editMode ? 'bg-indigo-100 border-indigo-400 text-indigo-800' : 'bg-white border-gray-300 text-gray-600'
-                        }`}
-                      >
-                        Edit polygon
-                      </button>
-                    </div>
+                          type="button"
+                          onClick={() => setEditMode(false)}
+                          className={`min-h-[40px] px-3 rounded-lg text-xs font-semibold border touch-manipulation ${
+                            !editMode ? 'bg-indigo-100 border-indigo-400 text-indigo-800' : 'bg-white border-gray-300 text-gray-600'
+                          }`}
+                        >
+                          Scroll map
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditMode(true)}
+                          className={`min-h-[40px] px-3 rounded-lg text-xs font-semibold border touch-manipulation ${
+                            editMode ? 'bg-indigo-100 border-indigo-400 text-indigo-800' : 'bg-white border-gray-300 text-gray-600'
+                          }`}
+                        >
+                          Edit polygon
+                        </button>
+                      </div>
                     </div>
                   )}
                   {roofViewTab === '3d' && has3DRoofData ? (
@@ -1693,27 +1876,32 @@ export default function AIRoofLayout() {
                         </div>
                       </div>
                     ) : bgImage && imageSize ? (
-                      /* SCROLL_BUFFER_PX of extra scroll space on all sides lets users pan
-                         past the image edge for precise panel/polygon placement.
-                         The satellite image is applied as a CSS background stretched to fill
-                         the entire scroll area — so buffer zones show a natural map extension
-                         instead of white edges. The Konva Stage sits on top at the correct
-                         coordinates; toDataURL is unaffected. */
                       <div
-                        className="relative flex-shrink-0"
+                        className="flex w-full justify-center items-start box-border"
+                        style={{ minHeight: '100%' }}
+                      >
+                        {/* Scroll extent matches scaled map (SCROLL_BUFFER_PX = 0); centre below without flex on overflow parent (fixes Konva drag). */}
+                        <div
+                          className="relative flex-shrink-0 bg-white"
                         style={{
                           width: imageSize.width * zoom + 2 * SCROLL_BUFFER_PX,
                           height: imageSize.height * zoom + 2 * SCROLL_BUFFER_PX,
                           minWidth: imageSize.width * zoom + 2 * SCROLL_BUFFER_PX,
                           minHeight: imageSize.height * zoom + 2 * SCROLL_BUFFER_PX,
-                          // Stretch the same satellite image across the whole div so buffer
-                          // zones show map content rather than blank white edges.
-                          backgroundImage: bgImageUrl ? `url('${bgImageUrl.replace(/'/g, "\\'")}')` : undefined,
-                          backgroundSize: '100% 100%',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: '0 0',
+                          ...(layoutMode === 'editing' &&
+                          bgImageUrl &&
+                          imageSize.width >= 1800 &&
+                          imageSize.height >= 1800 &&
+                          Math.abs(imageSize.width / imageSize.height - 1) < 0.08
+                            ? {
+                                backgroundImage: `url('${bgImageUrl.replace(/'/g, "\\'")}')`,
+                                backgroundSize: '100% 100%',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundPosition: '0 0',
+                              }
+                            : {}),
                         }}
-                      >
+                        >
                         <div
                           style={{
                             position: 'absolute',
@@ -1724,6 +1912,7 @@ export default function AIRoofLayout() {
                             width: imageSize.width,
                             height: imageSize.height,
                             pointerEvents: editMode || !isMobileView ? 'auto' : 'none',
+                            ...(editMode || !isMobileView ? ({ touchAction: 'none' } as const) : {}),
                           }}
                         >
                           <Stage
@@ -1740,9 +1929,9 @@ export default function AIRoofLayout() {
                           />
                         </Layer>
 
-                        {/* Roof polygon boundary in green + drag-whole-roof helper (editing only) */}
+                        {/* Green outline draws under panels (restores earlier look). */}
                         {layoutMode === 'editing' && polygon && (
-                          <Layer>
+                          <Layer ref={polygonOutlineLayerRef}>
                             <Line
                               ref={lineRef}
                               points={polygon.flatMap((p) => [p.x, p.y])}
@@ -1752,6 +1941,43 @@ export default function AIRoofLayout() {
                               fill="rgba(34,197,94,0.08)"
                               listening={false}
                             />
+                          </Layer>
+                        )}
+
+                        {layoutMode === 'editing' && polygon && panels.length > 0 && !isDragging && (
+                          <Layer
+                            listening={false}
+                            clipFunc={(ctx) => {
+                              if (!polygon.length) return;
+                              ctx.beginPath();
+                              polygon.forEach((p, idx) => {
+                                if (idx === 0) ctx.moveTo(p.x, p.y);
+                                else ctx.lineTo(p.x, p.y);
+                              });
+                              ctx.closePath();
+                            }}
+                          >
+                            {panels.map((rect, idx) => (
+                              <Rect
+                                key={idx}
+                                x={rect.x}
+                                y={rect.y}
+                                width={rect.w}
+                                height={rect.h}
+                                fill="rgba(14,30,95,0.88)"
+                                stroke="#a8b8cc"
+                                strokeWidth={1.0}
+                                listening={false}
+                                perfectDrawEnabled={false}
+                                shadowEnabled={false}
+                              />
+                            ))}
+                          </Layer>
+                        )}
+
+                        {/* Invisible bbox above panels — Konva still hit-tests panel rects unless drag layer is on top. */}
+                        {layoutMode === 'editing' && polygon && (
+                          <Layer ref={polygonDragLayerRef}>
                             {(() => {
                               let minX = polygon[0]!.x;
                               let maxX = polygon[0]!.x;
@@ -1765,23 +1991,18 @@ export default function AIRoofLayout() {
                               }
                               const w = Math.max(10, maxX - minX);
                               const h = Math.max(10, maxY - minY);
-                              // Invisible bounding-box rect — drag anywhere inside polygon to move the whole roof outline
                               return (
                                 <Rect
                                   x={minX}
                                   y={minY}
                                   width={w}
                                   height={h}
-                                  opacity={0}
+                                  fill="rgba(22,163,74,0.03)"
                                   draggable
                                   strokeEnabled={false}
                                   onMouseEnter={() => { document.body.style.cursor = 'move'; }}
                                   onMouseLeave={() => { document.body.style.cursor = 'default'; }}
                                   onDragStart={(e) => {
-                                    // Save start position but do NOT set isDragging yet.
-                                    // Panels only hide (and the move commits) once the drag
-                                    // exceeds the 8 px threshold — prevents accidental moves
-                                    // and panel flicker on simple taps inside the polygon.
                                     polygonMoveStartRef.current = { x: e.target.x(), y: e.target.y() };
                                     polygonBaseRef.current = polygon ? polygon.map((p) => ({ ...p })) : null;
                                     polygonDragRef.current = { x: e.target.x(), y: e.target.y() };
@@ -1794,7 +2015,6 @@ export default function AIRoofLayout() {
                                     const totalDist = start
                                       ? Math.abs(nx - start.x) + Math.abs(ny - start.y)
                                       : 0;
-                                    // Engage drag mode only once clearly intentional
                                     if (totalDist > 8 && !isDraggingRef.current) {
                                       isDraggingRef.current = true;
                                       setIsDragging(true);
@@ -1824,15 +2044,12 @@ export default function AIRoofLayout() {
                                     setIsDragging(false);
 
                                     if (didMove && lineRef.current) {
-                                      // Commit the moved polygon to React state
                                       const flat = lineRef.current.points();
                                       const next: Point[] = [];
                                       for (let i = 0; i < flat.length; i += 2)
                                         next.push({ x: flat[i]!, y: flat[i + 1]! });
                                       setPolygon(next.length ? next : null);
                                     } else {
-                                      // Click (not a real drag) — snap the Konva rect back to
-                                      // its original position and restore the polygon line.
                                       if (start) e.target.position({ x: start.x, y: start.y });
                                       if (polygonBaseRef.current && lineRef.current) {
                                         lineRef.current.points(
@@ -1846,38 +2063,6 @@ export default function AIRoofLayout() {
                                 />
                               );
                             })()}
-                          </Layer>
-                        )}
-
-                        {/* Panels clipped to polygon — listening={false} lets pointer events pass
-                            through to the invisible drag-rect below so the whole polygon can be moved. */}
-                        {layoutMode === 'editing' && polygon && panels.length > 0 && !isDragging && (
-                          <Layer
-                            listening={false}
-                            clipFunc={(ctx) => {
-                              if (!polygon.length) return;
-                              ctx.beginPath();
-                              polygon.forEach((p, idx) => {
-                                if (idx === 0) ctx.moveTo(p.x, p.y);
-                                else ctx.lineTo(p.x, p.y);
-                              });
-                              ctx.closePath();
-                            }}
-                          >
-                            {panels.map((rect, idx) => (
-                              <Rect
-                                key={idx}
-                                x={rect.x}
-                                y={rect.y}
-                                width={rect.w}
-                                height={rect.h}
-                                fill="rgba(14,30,95,0.88)"
-                                stroke="#a8b8cc"
-                                strokeWidth={1.0}
-                                perfectDrawEnabled={false}
-                                shadowEnabled={false}
-                              />
-                            ))}
                           </Layer>
                         )}
 
@@ -1974,6 +2159,7 @@ export default function AIRoofLayout() {
                         })()}
                           </Stage>
                         </div>
+                      </div>
                       </div>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm min-h-[200px]">
