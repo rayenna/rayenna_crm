@@ -190,6 +190,7 @@ router.post('/ai-layout', authenticate, async (req, res) => {
       usable_area_m2: result.usableAreaM2,
       panel_count: result.panelCount,
       layout_image_url: layoutImageUrl,
+      roof_polygon_coordinates: result.roofPolygonCoords,
     });
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -436,6 +437,7 @@ router.get('/manual-layout/:projectId', authenticate, async (req, res) => {
         prefer_3d_for_proposal: record.prefer3dForProposal,
         savedAt: record.savedAt.toISOString(),
         projectId: record.projectId,
+        source: record.source, // 'AI' = raw satellite (no panels), 'MANUAL' = Konva export with panels
       });
     }
 
@@ -486,11 +488,12 @@ router.get('/manual-layout/:projectId', authenticate, async (req, res) => {
           layout_image_url: layoutImageUrl,
           savedAt: new Date().toISOString(),
           projectId,
+          source: 'MANUAL',
         });
       }
     }
 
-    return res.json(parsed);
+    return res.json({ ...parsed, source: parsed.source ?? 'MANUAL' });
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Failed to load manual roof layout meta:', err);

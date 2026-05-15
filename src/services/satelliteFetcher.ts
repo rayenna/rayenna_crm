@@ -21,8 +21,11 @@ export async function fetchSatelliteImage(
   const url =
     'https://maps.googleapis.com/maps/api/staticmap' +
     `?center=${latitude},${longitude}` +
-    // High‑resolution imagery: zoom 20, scale 2 as requested
-    '&zoom=20&size=1024x1024&scale=2&maptype=satellite' +
+    // zoom=19 gives a 2048×2048 px image at ~0.149 m/px (equator).
+    // zoom=20 sounds higher-res but causes visible stitching/seam artifacts
+    // because Google tiles that zone from lower-zoom imagery — zoom=19 has
+    // consistent native coverage almost everywhere and looks far cleaner.
+    '&zoom=19&size=1024x1024&scale=2&maptype=satellite' +
     `&key=${apiKey}`;
 
   const res = await axios.get(url, { responseType: 'arraybuffer' });
