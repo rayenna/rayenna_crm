@@ -62,6 +62,10 @@ npm run dev
 - **BOM** – bill of materials items
 - **ROICalculation** – financial metrics
 
+## Related docs
+
+- **[AI Roof Layout — 2D roadmap (bookmark)](./ai-roof-layout-2d-roadmap.md)** — SaaS-grade 2D plan vs Photonik / SolarEdge / HelioScope; P0/P1/P2 and resume prompts.
+
 ## Planned Features
 
 - [ ] Costing Sheet builder UI

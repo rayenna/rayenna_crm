@@ -307,11 +307,18 @@ export interface AiRoofLayoutPanelRect {
   height: number;
 }
 
+export type { RoofLayoutGeometryV1 } from './roofLayoutGeometry';
+export { parseRoofLayoutGeometry, buildRoofLayoutGeometry } from './roofLayoutGeometry';
+
 export interface AiRoofLayoutResponse {
   roof_area_m2: number;
   usable_area_m2: number;
   panel_count: number;
   layout_image_url: string;
+  /** Fresh satellite tile used as the 2D editor background (regenerated with lat/lng). */
+  satellite_image_url?: string;
+  resolved_latitude?: number;
+  resolved_longitude?: number;
   /** Server-persisted 3D simulation image (when saved). */
   layout_image_3d_url?: string;
   /** Proposal embed uses 3D URL when true and `layout_image_3d_url` is set. */
@@ -322,6 +329,8 @@ export interface AiRoofLayoutResponse {
   source?: 'AI' | 'MANUAL';
   savedAt?: string;
   projectId?: string;
+  /** Full editable 2D state when saved from the layout editor. */
+  geometry?: import('./roofLayoutGeometry').RoofLayoutGeometryV1;
 }
 
 export async function generateAiRoofLayout(params: {
@@ -349,17 +358,22 @@ export async function saveManualRoofLayoutImage(params: {
   roof_area_m2?: number;
   usable_area_m2?: number;
   panel_count?: number;
-}): Promise<{ layout_image_url: string }> {
-  return apiFetch<{ layout_image_url: string }>('/api/roof/save-layout-image', {
-    method: 'POST',
-    body: JSON.stringify({
-      projectId: params.projectId,
-      dataUrl: params.dataUrl,
-      roof_area_m2: params.roof_area_m2,
-      usable_area_m2: params.usable_area_m2,
-      panel_count: params.panel_count,
-    }),
-  });
+  geometry?: import('./roofLayoutGeometry').RoofLayoutGeometryV1;
+}): Promise<{ layout_image_url: string; geometry?: import('./roofLayoutGeometry').RoofLayoutGeometryV1 }> {
+  return apiFetch<{ layout_image_url: string; geometry?: import('./roofLayoutGeometry').RoofLayoutGeometryV1 }>(
+    '/api/roof/save-layout-image',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        projectId: params.projectId,
+        dataUrl: params.dataUrl,
+        roof_area_m2: params.roof_area_m2,
+        usable_area_m2: params.usable_area_m2,
+        panel_count: params.panel_count,
+        ...(params.geometry ? { geometry: params.geometry } : {}),
+      }),
+    },
+  );
 }
 
 /** Persist 3D export to CRM; does not replace the 2D layout URL. */
@@ -396,6 +410,10 @@ export async function fetchManualRoofLayout(projectId: string): Promise<{
   layout_image_3d_url?: string;
   prefer_3d_for_proposal?: boolean;
   savedAt?: string;
+  source?: 'AI' | 'MANUAL';
+  roof_polygon_coordinates?: AiRoofLayoutPolygonPoint[];
+  panel_coordinates?: AiRoofLayoutPanelRect[];
+  geometry?: import('./roofLayoutGeometry').RoofLayoutGeometryV1;
 }> {
   return apiFetch(`/api/roof/manual-layout/${encodeURIComponent(projectId)}`);
 }

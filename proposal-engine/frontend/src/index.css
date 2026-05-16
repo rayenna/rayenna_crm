@@ -60,6 +60,50 @@
 }
 
 /*
+ * AI Roof Layout — preview frame (full width of workspace column).
+ */
+.roof-layout-preview-2d {
+  width: 100%;
+  max-width: 100%;
+  min-height: clamp(220px, 42dvh, 400px);
+  max-height: clamp(300px, 52dvh, 480px);
+  aspect-ratio: 4 / 3;
+}
+
+@media (min-width: 640px) {
+  .roof-layout-preview-2d {
+    aspect-ratio: 16 / 10;
+    min-height: clamp(280px, 44dvh, 460px);
+    max-height: clamp(360px, 54dvh, 540px);
+  }
+}
+
+@media (min-width: 1024px) {
+  .roof-layout-preview-2d {
+    aspect-ratio: unset;
+    width: 100%;
+    height: clamp(420px, 54vh, 680px);
+    min-height: clamp(400px, 50vh, 640px);
+    max-height: clamp(480px, 58vh, 720px);
+  }
+}
+
+.roof-layout-preview-3d {
+  width: 100%;
+  max-width: 100%;
+  min-height: clamp(280px, 46dvh, 480px);
+  max-height: clamp(400px, 58dvh, 680px);
+}
+
+@media (min-width: 1024px) {
+  .roof-layout-preview-3d {
+    height: clamp(440px, 56vh, 720px);
+    min-height: clamp(420px, 52vh, 680px);
+    max-height: clamp(520px, 62vh, 780px);
+  }
+}
+
+/*
  * AI Roof Layout — 3D preview scrollport.
  * Never use -webkit-appearance: none on ::-webkit-scrollbar here: on many mobile WebKit builds
  * the thumb/track fail to paint and scrollbars vanish entirely.
