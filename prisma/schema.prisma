@@ -737,6 +737,9 @@ model ProjectRoofLayout {
 
   source         RoofLayoutSource @default(AI)
 
+  /// Editable 2D state: roof polygon, panel rects, keepouts (versioned JSON).
+  geometryJson   Json?
+
   savedAt        DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

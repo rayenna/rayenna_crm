@@ -45,14 +45,23 @@ export async function generateRoofLayoutJob(input: LayoutJobInput): Promise<Layo
   });
 
   // Satellite image is always 2048×2048 (zoom=19, size=1024x1024, scale=2).
-  // 0.149 m/px at the equator. Seed a small centre polygon sized for a typical
-  // commercial rooftop (~35 m × 30 m) so the user can see all four corners
-  // immediately and drag them to fit the actual building.
-  // Replace halfWPx/halfHPx with real detected coordinates when image analysis is added.
-  const IMG_CENTER = 1024; // 2048 / 2
+  // Seed a centre rectangle sized from CRM system kW + module wattage (not a fixed 35×30 m box).
+  const IMG_CENTER = 1024;
   const METERS_PER_PIXEL = 0.149;
-  const halfWPx = Math.round((35 / METERS_PER_PIXEL) / 2); // ~117 px ≈ 35 m
-  const halfHPx = Math.round((30 / METERS_PER_PIXEL) / 2); // ~101 px ≈ 30 m
+  const PANEL_AREA_M2 = 2.42;
+  const SPACING_FACTOR = 1.2;
+  const USABLE_FACTOR = 0.75;
+  const panelsForTarget = Math.max(
+    4,
+    Math.ceil((input.systemSizeKw * 1000) / Math.max(input.panelWattage, 1)),
+  );
+  const seedRoofAreaM2 = (panelsForTarget * PANEL_AREA_M2 * SPACING_FACTOR) / USABLE_FACTOR;
+  const areaPx = seedRoofAreaM2 / (METERS_PER_PIXEL * METERS_PER_PIXEL);
+  const aspect = 1.12;
+  const heightPx = Math.sqrt(areaPx / aspect);
+  const widthPx = areaPx / heightPx;
+  const halfWPx = Math.round(Math.min(widthPx / 2, IMG_CENTER - 40));
+  const halfHPx = Math.round(Math.min(heightPx / 2, IMG_CENTER - 40));
   const roofPolygonCoords = [
     { x: IMG_CENTER - halfWPx, y: IMG_CENTER - halfHPx },
     { x: IMG_CENTER + halfWPx, y: IMG_CENTER - halfHPx },

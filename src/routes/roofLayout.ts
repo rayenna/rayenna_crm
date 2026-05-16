@@ -3,9 +3,10 @@ import fs from 'fs';
 import path from 'path';
 import { authenticate } from '../middleware/auth';
 import { generateRoofLayoutJob } from '../workers/layoutGenerationWorker';
+import { parseRoofLayoutGeometry, type RoofLayoutGeometryV1 } from '../types/roofLayoutGeometry';
 import prisma from '../prisma';
 import { v2 as cloudinary } from 'cloudinary';
-import { UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 
 const router = Router();
 
@@ -182,6 +183,7 @@ router.post('/ai-layout', authenticate, async (req, res) => {
         source: 'AI',
         layoutImage3dUrl: null,
         prefer3dForProposal: false,
+        geometryJson: Prisma.DbNull,
       },
     });
 
@@ -190,6 +192,9 @@ router.post('/ai-layout', authenticate, async (req, res) => {
       usable_area_m2: result.usableAreaM2,
       panel_count: result.panelCount,
       layout_image_url: layoutImageUrl,
+      satellite_image_url: `/api/generated_layouts/${projectId}_satellite.png`,
+      resolved_latitude: Number(latitude),
+      resolved_longitude: Number(longitude),
       roof_polygon_coordinates: result.roofPolygonCoords,
     });
   } catch (err) {
@@ -200,12 +205,13 @@ router.post('/ai-layout', authenticate, async (req, res) => {
 });
 
 router.post('/save-layout-image', authenticate, async (req, res) => {
-  const { projectId, dataUrl, roof_area_m2, usable_area_m2, panel_count } = req.body as {
+  const { projectId, dataUrl, roof_area_m2, usable_area_m2, panel_count, geometry } = req.body as {
     projectId?: string;
     dataUrl?: string;
     roof_area_m2?: number;
     usable_area_m2?: number;
     panel_count?: number;
+    geometry?: unknown;
   };
 
   if (!projectId || !dataUrl || typeof dataUrl !== 'string') {
@@ -245,6 +251,9 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
       layoutImageUrl = await uploadRoofLayoutToCloudinary({ projectId, filePath });
     }
 
+    const parsedGeometry = geometry != null ? parseRoofLayoutGeometry(geometry) : null;
+    const geometryJson = parsedGeometry ? (parsedGeometry as object) : undefined;
+
     const metaPath = path.join(generatedLayoutsDir, `${projectId}_manual_layout.json`);
     await fs.promises.writeFile(
       metaPath,
@@ -256,6 +265,7 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
           panel_count: panels,
           savedAt: new Date().toISOString(),
           layout_image_url: layoutImageUrl,
+          ...(parsedGeometry ? { geometry: parsedGeometry } : {}),
         },
         null,
         2,
@@ -273,6 +283,7 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
         layoutImageUrl,
         source: 'MANUAL',
         prefer3dForProposal: false,
+        ...(geometryJson != null ? { geometryJson } : {}),
       },
       update: {
         roofAreaM2: roof,
@@ -281,10 +292,14 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
         layoutImageUrl,
         source: 'MANUAL',
         prefer3dForProposal: false,
+        ...(geometryJson != null ? { geometryJson } : {}),
       },
     });
 
-    return res.json({ layout_image_url: layoutImageUrl });
+    return res.json({
+      layout_image_url: layoutImageUrl,
+      ...(parsedGeometry ? { geometry: parsedGeometry } : {}),
+    });
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Failed to save manual roof layout image:', err);
@@ -428,6 +443,7 @@ router.get('/manual-layout/:projectId', authenticate, async (req, res) => {
     // Prefer DB record so the layout is available cross-machine.
     const record = await prisma.projectRoofLayout.findUnique({ where: { projectId } });
     if (record) {
+      const geom = parseRoofLayoutGeometry(record.geometryJson);
       return res.json({
         roof_area_m2: record.roofAreaM2,
         usable_area_m2: record.usableAreaM2,
@@ -438,6 +454,13 @@ router.get('/manual-layout/:projectId', authenticate, async (req, res) => {
         savedAt: record.savedAt.toISOString(),
         projectId: record.projectId,
         source: record.source, // 'AI' = raw satellite (no panels), 'MANUAL' = Konva export with panels
+        ...(geom
+          ? {
+              geometry: geom,
+              roof_polygon_coordinates: geom.roofPolygon,
+              panel_coordinates: geom.panelRects,
+            }
+          : {}),
       });
     }
 
@@ -493,7 +516,18 @@ router.get('/manual-layout/:projectId', authenticate, async (req, res) => {
       }
     }
 
-    return res.json({ ...parsed, source: parsed.source ?? 'MANUAL' });
+    const geomFromFile = parseRoofLayoutGeometry(parsed.geometry);
+    return res.json({
+      ...parsed,
+      source: parsed.source ?? 'MANUAL',
+      ...(geomFromFile
+        ? {
+            geometry: geomFromFile,
+            roof_polygon_coordinates: geomFromFile.roofPolygon,
+            panel_coordinates: geomFromFile.panelRects,
+          }
+        : {}),
+    });
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Failed to load manual roof layout meta:', err);
