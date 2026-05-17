@@ -144,7 +144,7 @@ const TIP_CATEGORIES: { label: string; icon: string; accent: string; bg: string;
 ];
 
 // Tip count per category (matches order in tipOfTheDay.ts)
-const TIP_COUNTS = [5, 7, 5, 5, 13, 4, 1];
+const TIP_COUNTS = [5, 7, 5, 5, 16, 4, 1];
 
 /* ─── Table of Contents ─────────────────────────────────────────────────── */
 const TOC = [
@@ -220,14 +220,14 @@ export default function HelpPage() {
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* 1. QUICK START                                                    */}
       {/* ══════════════════════════════════════════════════════════════════ */}
-      <Section id="quickstart" icon="🚀" title="Quick Start — 5 Steps to a Proposal" accent="bg-indigo-100 text-indigo-700" defaultOpen>
+      <Section id="quickstart" icon="🚀" title="Quick Start — Core workflow + roof layout" accent="bg-indigo-100 text-indigo-700" defaultOpen>
 
         <p className="text-sm text-gray-600 mb-5">
-          Follow these five steps in order and you will have a complete, professional proposal ready to share with your customer.
+          Follow the <strong>five core steps</strong> for a complete proposal. Add <strong>AI Roof Layout</strong> (optional, between ROI and Proposal) when you want a satellite site plan — typically <strong>2–5 minutes</strong> once you know the page. Full detail: <a href="#ai-roof-layout" className="text-indigo-600 underline font-medium">AI Roof Layout section</a>.
         </p>
 
         {/* Visual workflow */}
-        <div className="flex flex-wrap items-center gap-2 mb-6 text-xs font-semibold">
+        <div className="flex flex-wrap items-center gap-2 mb-2 text-xs font-semibold">
           {['1 Customer', '2 Costing', '3 BOM', '4 ROI', '5 Proposal'].map((s, i, arr) => (
             <Fragment key={s}>
               <span className="px-3 py-1.5 rounded-full bg-indigo-600 text-white shadow-sm">{s}</span>
@@ -235,9 +235,10 @@ export default function HelpPage() {
             </Fragment>
           ))}
         </div>
-        <p className="text-xs text-gray-500 mb-6 -mt-4">
-          Optional: use <strong>AI Roof Layout (Beta)</strong> (nav link between ROI and Proposal) after ROI when you want a satellite layout in the proposal — see the AI Roof Layout section below.
-        </p>
+        <div className="flex flex-wrap items-center gap-2 mb-6 text-xs font-semibold">
+          <span className="text-gray-400">optional after step 4 →</span>
+          <span className="px-3 py-1.5 rounded-full bg-emerald-600 text-white shadow-sm">AI Roof Layout</span>
+        </div>
 
         <div className="space-y-5">
           <Step n={1} title="Pick a CRM Project">
@@ -257,12 +258,36 @@ export default function HelpPage() {
           </Step>
 
           <Step n={5} title="Generate and Export the Proposal">
-            Go to <Link to="/proposal" className="text-indigo-600 underline font-medium">Proposal</Link>. Click <strong>Generate Proposal</strong> to see the full document. Use the <strong>✏️ Edit</strong> button to make any inline changes, then click <strong>💾 Save</strong> in the header to lock everything in. In the header or footer use <strong>⬇ PDF</strong> or <strong>⬇ DOCX</strong> to export, or <strong>🔗 Share</strong> to get a shareable link (optional password and validity).
+            Go to <Link to="/proposal" className="text-indigo-600 underline font-medium">Proposal</Link>. Click <strong>Generate Proposal</strong> to see the full document. If you saved a roof layout, turn on <strong>Include AI Roof Layout (Beta) in proposal</strong> first so the site plan section appears. Use <strong>✏️ Edit</strong> for inline changes, then <strong>💾 Save</strong> in the header. Export with <strong>⬇ PDF</strong> or <strong>⬇ DOCX</strong>, or <strong>🔗 Share</strong> for a customer link (optional password and expiry).
           </Step>
         </div>
 
+        <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 space-y-3">
+          <p className="text-sm font-semibold text-emerald-900">Optional — AI Roof Layout (recommended for site visuals)</p>
+          <p className="text-sm text-gray-700 leading-relaxed">
+            Open <Link to="/ai-layout" className="text-indigo-600 underline font-medium">AI Roof Layout (Beta)</Link> with the same active CRM project. The page guides you: <strong>Locate site</strong> → <strong>Outline roof</strong> → <strong>Place panels</strong> → <strong>Review &amp; save</strong>.
+          </p>
+          <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
+            <li>
+              <strong>Locate:</strong> CRM latitude/longitude load automatically. If the pin is wrong, paste a full <strong>Google Maps URL</strong> (or <code className="text-xs bg-white px-1 rounded">lat, lng</code>) in <strong>Override location</strong> and click <strong>Regenerate AI Layout</strong>. Short <code className="text-xs">maps.app.goo.gl</code> links will not work — open them in a browser and copy the full <code className="text-xs">google.com/maps/…</code> address.
+            </li>
+            <li>
+              <strong>Outline:</strong> Drag green corner handles to match the flat roof. The first outline is a <strong>starting rectangle</strong> (not auto-traced AI). Use <strong>Undo</strong> / <strong>Redo</strong> if you mis-click.
+            </li>
+            <li>
+              <strong>Panels:</strong> Add <strong>keepouts</strong> (vents, tanks) so panels skip those areas. Use <strong>Refill panels</strong> toward CRM target kW; adjust density and portrait/landscape. Hover a roof edge to see length in metres.
+            </li>
+            <li>
+              <strong>Save:</strong> Click <strong>Save to Proposal</strong> — image, metrics, and layout geometry are stored on the <strong>CRM project</strong> (same layout when you log in from another laptop). <strong>Regenerate AI Layout</strong> fetches fresh satellite imagery and clears your saved draft — use only when you need a new location or image.
+            </li>
+          </ol>
+          <p className="text-xs text-gray-600">
+            On phone: use <strong>Scroll map</strong> vs <strong>Edit polygon</strong> above the preview. On desktop: stepper and tools sit beside the map (wide screens).
+          </p>
+        </div>
+
         <div className="mt-5">
-          <Tip>The entire workflow takes about 10–15 minutes once you are familiar with it. Built-in templates do most of the heavy lifting.</Tip>
+          <Tip>The core workflow takes about 10–15 minutes once you are familiar with it. Roof layout adds a few minutes the first time; saved layouts reopen on return visits.</Tip>
         </div>
       </Section>
 
@@ -738,9 +763,21 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">What AI Roof Layout does</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              AI Roof Layout helps you draft a rooftop polygon and an initial solar panel arrangement on top of a satellite image.
-              It is designed to speed up proposal drafting (you can still verify on-site measurements).
+              AI Roof Layout places a <strong>satellite image</strong> of the CRM site, lets you <strong>draw the roof outline</strong>, fill <strong>panels</strong> (with keepouts), and save a site plan into the proposal. It speeds up sales visuals — always confirm final layout and quantities on site. The tool does <strong>not</strong> auto-trace the roof from AI today; you adjust the starting rectangle to match the building.
             </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Guided steps on the page</h3>
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">
+              A <strong>stepper</strong> tracks where you are (desktop: left column). Typical flow:
+            </p>
+            <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
+              <li><strong>Locate site</strong> — CRM coordinates, optional Maps override, <strong>Generate / Regenerate AI Layout</strong></li>
+              <li><strong>Outline roof</strong> — drag corners; <strong>Undo</strong> / <strong>Redo</strong></li>
+              <li><strong>Place panels</strong> — keepouts, density, orientation, <strong>Refill panels</strong> toward target kW</li>
+              <li><strong>Review &amp; save</strong> — status strip, then <strong>Save to Proposal</strong></li>
+            </ol>
           </div>
 
           <div>
@@ -759,38 +796,53 @@ export default function HelpPage() {
           </div>
 
           <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Locate site — CRM data and overrides</h3>
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">
+              In the tools area (right sidebar on desktop, or below the map on smaller screens), use <strong>Overrides</strong> when CRM data needs correction:
+            </p>
+            <ul className="mt-1 space-y-1 text-sm text-gray-600 list-disc list-inside">
+              <li><strong>Google Maps link</strong> — paste a full <code className="text-xs bg-gray-100 px-1 rounded">google.com/maps/…</code> URL or <code className="text-xs bg-gray-100 px-1 rounded">lat, lng</code>, then <strong>Regenerate AI Layout</strong>.</li>
+              <li><strong>Panel wattage (W)</strong> — override module size; CRM value appears as a pill when available.</li>
+            </ul>
+            <Note>Short <code className="text-xs">maps.app.goo.gl</code> links have no coordinates — open in a browser and copy the full Maps URL.</Note>
+          </div>
+
+          <div>
             <h3 className="font-semibold text-gray-800 mb-2">Generate, edit, export, and save</h3>
             <ul className="mt-2 space-y-1 text-sm text-gray-600 list-disc list-inside">
-              <li>Open <strong>AI Roof Layout (Beta)</strong> from the top navigation.</li>
-              <li>Click <strong>Generate AI Layout</strong> to fetch satellite imagery and draw an initial green <strong>roof polygon</strong> with a blue <strong>panel grid</strong> inside it.</li>
-              <li>Adjust the polygon and tools (see below), then use <strong>PNG</strong> / <strong>JPG</strong> to download a copy if needed.</li>
-              <li>Click <strong>Save for proposal</strong> when the preview matches what you want in the document.</li>
+              <li><strong>Generate AI Layout</strong> / <strong>Regenerate AI Layout</strong> — fetches satellite imagery and a new starting roof rectangle + panel grid.</li>
+              <li>Optional <strong>PNG</strong> / <strong>JPG</strong> export from the toolbar.</li>
+              <li><strong>Save to Proposal</strong> — stores image, metrics, and editable geometry on the CRM project (available on another device after login).</li>
             </ul>
-            <p className="text-sm text-gray-600 leading-relaxed mt-2">
-              Saving stores the layout image and metrics in the Rayenna CRM backend <strong>per CRM project</strong>.
-            </p>
+            <Warn><strong>Regenerate</strong> fetches a new satellite image and clears saved server geometry — use for a new location, not small outline tweaks.</Warn>
           </div>
 
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Using the polygon to match roof size and panel count</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              The <strong>Layout summary</strong> (left on desktop, above the preview on small screens) shows <strong>Roof area</strong>, <strong>Usable area</strong>, and <strong>Panel count</strong>. Those numbers update as you edit — use them as your guide.
+              The <strong>status strip</strong> and layout summary show <strong>Roof area</strong>, <strong>Usable area</strong>, <strong>Panel count</strong>, approximate <strong>kW</strong> vs CRM target, and fill %. Numbers update as you edit.
             </p>
             <ul className="mt-2 space-y-1.5 text-sm text-gray-600 list-disc list-inside">
               <li>
-                <strong>Polygon shape &amp; size:</strong> Drag the <strong>green corner handles</strong> to change the roof outline. Drag anywhere <strong>inside</strong> the polygon to move the whole roof without resizing. A <strong>larger</strong> polygon (covering more of the satellite roof) increases usable area and usually <strong>increases</strong> the reported panel count; a <strong>smaller</strong> or tighter polygon <strong>reduces</strong> it. Fit the outline to the actual flat roof you intend to use.
+                <strong>Polygon:</strong> Drag <strong>green corner handles</strong> or move the whole roof from inside. <strong>Undo</strong> / <strong>Redo</strong> available. Hover a roof edge for length in metres.
               </li>
               <li>
-                <strong>Panel density (slider):</strong> Controls how tightly panels are packed — <strong>Tighter</strong> fits more panels in the same polygon; <strong>Looser</strong> spreads them out (fewer panels for the same outline). Use this to fine-tune count after the polygon is roughly right.
+                <strong>Keepouts:</strong> Draw rectangular obstructions (vents, tanks); panels will not fill those areas. Use the keepout tool on mobile or in the tools sidebar on desktop.
               </li>
               <li>
-                <strong>Orientation:</strong> Toggle <strong>Portrait</strong> / <strong>Landscape</strong> to swap how rectangles sit on the roof; panel count may change slightly because the grid geometry changes.
+                <strong>Refill panels</strong> / <strong>Clear panels</strong> — refill toward CRM system kW inside the current outline (respects keepouts).
               </li>
               <li>
-                <strong>Snap to grid:</strong> Re-aligns the polygon to the internal panel grid so edges line up cleanly with rows and columns — useful after manual tweaks.
+                <strong>Panel density (slider):</strong> Tighter vs looser packing inside the polygon.
               </li>
               <li>
-                <strong>Zoom (− / +):</strong> Scales the preview so you can see the whole roof or work on detail. Zoom does not change panel maths; it only changes how large the image appears inside the scrollable preview.
+                <strong>Orientation:</strong> <strong>Portrait</strong> / <strong>Landscape</strong> module layout.
+              </li>
+              <li>
+                <strong>Satellite opacity:</strong> Fade the background to see panel alignment more clearly.
+              </li>
+              <li>
+                <strong>Zoom (− / +):</strong> View only — does not change panel maths.
               </li>
             </ul>
             <p className="text-sm text-gray-600 leading-relaxed mt-2">
@@ -817,10 +869,10 @@ export default function HelpPage() {
                 <p className="text-xs font-bold uppercase tracking-wide text-amber-900 mb-2">📱 Mobile (narrow screen)</p>
                 <ul className="space-y-1.5 text-sm text-gray-700 list-disc list-inside">
                   <li>
-                    Under <strong>Layout preview</strong> you will see <strong>Map: Scroll map</strong> and <strong>Edit polygon</strong>. Use <strong>Scroll map</strong> when you need to <strong>drag the map with one finger</strong> to look around the satellite image (touches pass through the canvas so the page scrolls/pans).
+                    Above the map: <strong>Scroll map</strong>, <strong>Edit polygon</strong>, and <strong>Keepouts</strong>. Use <strong>Scroll map</strong> to pan the satellite image with one finger.
                   </li>
                   <li>
-                    Switch to <strong>Edit polygon</strong> when you want to <strong>move green handles or the roof</strong> — the canvas then captures touches for editing.
+                    <strong>Edit polygon</strong> — move green handles or the whole roof. <strong>Keepouts</strong> — draw rectangles for vents/tanks.
                   </li>
                   <li>
                     Controls (zoom, density, orientation, snap) use larger tap targets; you may see a slightly <strong>simplified on-screen panel grid</strong> while dragging for performance, but <strong>Roof / Usable / Panel count</strong> in the summary still follow the same rules.
@@ -834,13 +886,20 @@ export default function HelpPage() {
           </div>
 
           <div>
+            <h3 className="font-semibold text-gray-800 mb-2">2D vs 3D preview</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Use the <strong>2D</strong> / <strong>3D</strong> tabs above the map. <strong>2D</strong> is the editable layout used for proposals by default. <strong>3D</strong> is an optional perspective view — you can capture a 3D PNG and choose 2D or 3D for the proposal embed when saving.
+            </p>
+          </div>
+
+          <div>
             <h3 className="font-semibold text-gray-800 mb-2">Enable the layout inside the Proposal</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Open <strong>Proposal</strong> and toggle <strong>Include AI Roof Layout (Beta) in proposal</strong>.
-              Then click <strong>Generate Proposal</strong> (or <strong>Save</strong> after any edits) so the <strong>Proposed Rooftop Solar Layout</strong> section appears and is locked in with the proposal artifacts.
+              After <strong>Save to Proposal</strong>, open <Link to="/proposal" className="text-indigo-600 underline font-medium">Proposal</Link> and turn on <strong>Include AI Roof Layout (Beta) in proposal</strong>.
+              Then <strong>Generate Proposal</strong> (or <strong>Save</strong> after edits) so the <strong>Proposed Rooftop Solar Layout</strong> section appears.
             </p>
             <p className="text-sm text-gray-600 leading-relaxed mt-2">
-              That section includes a short introduction explaining that the image is a rough, preliminary visualization based on satellite imagery and project inputs, and that the <strong>Bill of Quantities</strong> below is the source of truth for accurate scope, specifications, and deliverables.
+              Copy explains the image is preliminary; the <strong>Bill of Quantities</strong> remains the source of truth for scope and specifications.
             </p>
           </div>
         </div>
@@ -1030,6 +1089,18 @@ export default function HelpPage() {
 
           <FaqItem q="Will my data be lost if I close the browser?">
             No — once you click <strong>Save</strong> on Costing, BOM, ROI, or Proposal, your data is stored in the Rayenna CRM backend and is available when you log in again (even from another device). Unsaved changes and some local work-in-progress are kept in your browser only, so always save your work and export important proposals to PDF or DOCX as a backup.
+          </FaqItem>
+
+          <FaqItem q="I pasted a Google Maps link but Regenerate still shows the old site.">
+            Use a <strong>full</strong> <code className="text-xs bg-gray-100 px-1 rounded">google.com/maps/…</code> URL (with <code className="text-xs">@lat,lng</code> or <code className="text-xs">!3d…!4d…</code>) or type coordinates as <code className="text-xs">latitude, longitude</code>. Short <code className="text-xs">maps.app.goo.gl</code> links cannot be read. If the field is empty or invalid, the app keeps CRM coordinates.
+          </FaqItem>
+
+          <FaqItem q="Why did my saved roof layout disappear after Regenerate?">
+            <strong>Regenerate AI Layout</strong> starts a fresh draft: new satellite image, new starting polygon, and cleared saved geometry on the server. Use Regenerate only when you need a new location or image. For small edits, adjust the polygon and click <strong>Save to Proposal</strong> again without regenerating.
+          </FaqItem>
+
+          <FaqItem q="Can I continue a roof layout on another laptop?">
+            Yes — after <strong>Save to Proposal</strong>, open the same CRM project on the other device and go to <strong>AI Roof Layout</strong>. The saved polygon, keepouts, and panels reload from the server. Unsaved work-in-progress on one browser is not synced until you save.
           </FaqItem>
 
         </div>

@@ -95,3 +95,9 @@ Vercel PE project: redeploy if used (same as Render PE).
 PE-only commits under `proposal-engine/`. Do not mix with CRM paths in one commit.
 
 When resuming in Cursor: *“Continue PE modernization from `proposal-engine/docs/MODERNIZATION_PROGRESS.md`, start Phase 2b.”*
+
+---
+
+## User Guide (May 2026)
+
+**Help → Quick Start** and **AI Roof Layout** sections in `frontend/src/pages/HelpPage.tsx` were updated to document: guided stepper, Maps override + regenerate, keepouts, undo/redo, Save to Proposal vs Regenerate, cross-device geometry, 2D/3D tabs, and new FAQ entries.
