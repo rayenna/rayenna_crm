@@ -1,7 +1,8 @@
 # AI Roof Layout — 2D roadmap (bookmark)
 
-**Status:** Planned — pick up anytime  
+**Status:** In progress — P0 largely started (see session log); 3D secondary  
 **Last updated:** 2026-05-16  
+**Architecture:** [ARCHITECTURE.md](./ARCHITECTURE.md)  
 **Scope:** 2D layout only (3D deferred until 2D reaches SaaS bar)  
 **Primary UI:** `proposal-engine/frontend/src/pages/AIRoofLayout.tsx`  
 **Backend:** `src/routes/roofLayout.ts`, `src/workers/layoutGenerationWorker.ts`, related services  
@@ -29,11 +30,11 @@ Win on **workflow integration** first; match **design-studio feel** in P0/P1.
 | Imagery | Single Google static satellite (~2048×2048, zoom 19) | HD tiles, layers |
 | Roof outline | **Centered rectangle** seeded in worker; user drags corners | AI trace or CAD/LIDAR facets |
 | Panels | One polygon; grid fill; density + orientation | Multi-facet arrays, keepouts, setbacks |
-| Obstacles | Backend stub (`detectObstaclesM2`); not in 2D UI | Drawable keepouts, shade |
+| Obstacles | Backend stub (`detectObstaclesM2`); **keepouts in 2D UI** (rect) | Shade, setbacks, auto-detect |
 | Roofs | Single polygon | Multiple facets + azimuth each |
 | Electrical | None in 2D | Stringing, MPPT (out of 2D scope for now) |
 | Output | Cropped JPEG + m² / panel count → proposal | Site plan PDF, BOM tie-in |
-| UX | Konva; scroll vs edit; mobile toolbar + accordion (2026-05) | Full canvas, tool palette, undo, shortcuts |
+| UX | Konva; stepper/status/undo; keepouts; mobile toolbar (2026-05) | Multi-facet, PDF site plan, shortcuts |
 
 Backend note: `layoutGenerationWorker.ts` comment says real segmentation replaces rectangle coords when added.
 

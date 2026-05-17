@@ -1,7 +1,10 @@
 
 # AI Roof Detection & Solar Layout — Implementation Plan
 
-> **Status: PENDING — To be revisited later.** Plan is complete; implementation deferred.
+> **Status: SUPERSEDED (2026-05-16)**  
+> Core feature is **shipped** (API in `src/routes/roofLayout.ts`, UI in `AIRoofLayout.tsx`).  
+> **Active roadmap:** [docs/ai-roof-layout-2d-roadmap.md](./docs/ai-roof-layout-2d-roadmap.md) (P0/P1/P2, session log).  
+> Keep this file for historical repo-map notes only; do not treat “PENDING / deferred” as current.
 
 **Goal:** Automatically generate a rooftop solar panel layout image from coordinates and insert it into the Proposal Engine customer proposal.
 

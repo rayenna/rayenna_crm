@@ -1,100 +1,23 @@
 /**
- * customerStore.ts
- * ─────────────────────────────────────────────────────────────────────────────
- * Central data model for the Proposal Engine.
+ * customerStore.ts — Proposal Engine client data layer
  *
- * Each CustomerRecord holds:
- *   - Customer master data  (name, location, contact, phone, email)
- *   - Costing Sheet snapshot
- *   - BOM snapshot
- *   - ROI result snapshot
- *   - Generated proposal snapshot
- *   - Metadata (createdAt, updatedAt, status)
+ * Each CustomerRecord is keyed to a CRM project (`master.crmProjectId`) and holds
+ * snapshots: costing, BOM, ROI, proposal, plus UI metadata (status, timestamps).
  *
- * All data lives in localStorage under CUSTOMERS_KEY.
- * The "active customer" (the one currently being worked on) is stored
- * separately under ACTIVE_CUSTOMER_KEY so the four work pages know which
- * customer they belong to.
+ * ── Source of truth (cross-device) ─────────────────────────────────────────
+ * After Save, artifacts live on the server (Neon) via apiClient sync helpers:
+ *   syncProjectCosting / syncProjectBom / syncProjectRoi / syncProjectProposal
+ * Opening a project: fetchProjectWithArtifacts → mapApiArtifactsToRecord.
+ * See proposal-engine/docs/ARCHITECTURE.md.
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * FUTURE RAYENNA CRM INTEGRATION PLAN
- * ─────────────────────────────────────────────────────────────────────────────
+ * ── Browser-only (this module + localStorage) ───────────────────────────────
+ * - rayenna_customers_v1_{userId} — cached list / records for offline UX
+ * - rayenna_active_customer_v1_{userId} — which project work pages use
+ * - rayenna_pe_hidden_projects_v1_{userId} — hidden rows in PE list
+ * - WIP keys (getWipKeysForCurrentUser) — in-progress drafts on each work page
+ *   until explicit Save; cleared on switchActiveCustomer. WIP does NOT sync.
  *
- * This module is intentionally designed to be a thin data layer that can be
- * swapped from localStorage to CRM API calls with minimal changes to the UI.
- *
- * 1. AUTHENTICATION
- *    Replace all localStorage reads/writes with JWT-authenticated API calls
- *    using the Rayenna CRM access token.  The token should be injected via
- *    a shared auth context (e.g. useAuth() hook from the CRM shell).
- *
- * 2. CUSTOMER MASTER AUTO-POPULATION
- *    CustomerMaster fields (name, location, contactPerson, phone, email,
- *    systemSizeKw, tariff, etc.) will be auto-populated from the CRM
- *    Customer Master record via:
- *      GET /api/crm/customers/:crmCustomerId
- *    The crmCustomerId is stored on CustomerRecord.master.crmCustomerId.
- *
- * 3. PROJECT SELECTION — REPLACES "NEW CUSTOMER"  ← KEY UX CHANGE
- *    The "+ New Customer" button on the Customers page will be replaced by a
- *    "Select Project" picker that lists only the CRM Projects assigned to the
- *    logged-in salesperson based on their access privileges.
- *
- *    API to fetch the salesperson's project list:
- *      GET /api/crm/projects?assignedTo=<userId>&status=active
- *    The picker should support search/filter by customer name or project name.
- *    On selection, the chosen CRM Project's data auto-populates CustomerMaster
- *    (see point 4 below) and sets crmProjectId on the record.
- *
- * 4. PROJECT LINKAGE  ← KEY INTEGRATION POINT
- *    In the CRM, proposals are linked to PROJECTS, not directly to customers.
- *    A customer can have multiple projects (e.g. Phase 1 rooftop, Phase 2 ground-mount).
- *    The mapping is:
- *
- *      Proposal Engine CustomerRecord  →  CRM Project record
- *      ─────────────────────────────────────────────────────
- *      CustomerRecord.id               →  crmProjectId (stored on master)
- *      CustomerRecord.master.name      →  Project.customer.name
- *      CustomerRecord.master.location  →  Project.siteAddress
- *      CustomerRecord.costing          →  Project.artifacts["costing-sheet"]
- *      CustomerRecord.bom              →  Project.artifacts["bom"]
- *      CustomerRecord.roi              →  Project.artifacts["roi"]
- *      CustomerRecord.proposal         →  Project.artifacts["proposal"]  ← primary link
- *
- *    When saving artifacts, the single-save call (saveAllArtifacts) should POST to:
- *      POST /api/crm/projects/:crmProjectId/artifacts
- *    with a payload containing all four artifact snapshots.
- *
- *    The generated Proposal document (PDF/DOCX) should be uploaded to:
- *      POST /api/crm/projects/:crmProjectId/documents
- *    and will then appear in the CRM Project → Documents / Artifacts tab.
- *
- * 5. PROJECT CAPACITY & SITE DATA AUTO-FILL
- *    When a CRM Project is selected, the following fields should be
- *    auto-populated into the Proposal Engine work pages:
- *      - System size (kW)        → ROI Calculator: systemSizeKw
- *      - Site address            → Proposal: location
- *      - Electricity tariff      → ROI Calculator: tariff (from Project.tariff)
- *      - Customer contact        → Proposal: contactPerson, phone, email
- *
- * 6. ACCESS PRIVILEGES
- *    The CRM JWT payload will include role/permission claims.
- *    The Proposal Engine should respect:
- *      - canCreateProposal  : show/hide "Generate Proposal" button
- *      - canEditCosting     : show/hide Save on Costing Sheet
- *      - canViewROI         : show/hide ROI Calculator page
- *    These can be checked via a shared usePermissions() hook from the CRM shell.
- *
- * 7. PROPOSAL DOCUMENT READINESS (Proposal Engine only)
- *    CustomerRecord.status reflects saved artifacts in this app — not CRM sales stages.
- *    Values (internal): not-started, draft, proposal-ready — same semantics as CRM labels:
- *    Not Yet Created, PE Draft, PE Ready. Project lifecycle / deal tracking is done in CRM only.
- *
- * 8. MIGRATION
- *    Existing localStorage data can be migrated to CRM on first login by
- *    reading CUSTOMERS_KEY and POSTing each record to the CRM API.
- *    After migration, clear localStorage and switch to API mode.
- * ─────────────────────────────────────────────────────────────────────────────
+ * Auth: CRM JWT in sessionStorage (pe_jwt). Role checks: apiClient canEdit*.
  */
 
 // ─────────────────────────────────────────────
