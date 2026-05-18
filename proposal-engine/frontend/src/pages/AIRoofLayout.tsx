@@ -567,6 +567,12 @@ export default function AIRoofLayout() {
     !!(last3dPngDataUrl && String(last3dPngDataUrl).trim()) ||
     !!(result?.layout_image_3d_url && String(result.layout_image_3d_url).trim());
 
+  /** When satellite disk URL 404s, still show the persisted proposal JPEG from Cloudinary/DB. */
+  const layoutPreviewFallbackUrl =
+    roofViewTab === '2d' && !bgImage && result?.layout_image_url
+      ? absolutizeLayoutImageUrl(result.layout_image_url)
+      : null;
+
   const layout3dBaseW = Math.max(layoutScrollViewport.w, 360);
   const layout3dBaseH = Math.max(layoutScrollViewport.h, 280);
   const layoutZoom3dActive = roofViewTab === '3d';
@@ -674,12 +680,18 @@ export default function AIRoofLayout() {
               h: k.height,
             })),
           );
+          const satFromSaved =
+            manual.satellite_image_url && String(manual.satellite_image_url).trim()
+              ? absolutizeLayoutImageUrl(String(manual.satellite_image_url))
+              : null;
           const satUrl = cacheBustImageUrl(
-            absolutizeLayoutImageUrl(satelliteEditorUrlForProject(String(crmProjectId))),
+            satFromSaved ??
+              absolutizeLayoutImageUrl(satelliteEditorUrlForProject(String(crmProjectId))),
           );
           if (hydrateGen !== layoutHydrateGenerationRef.current) return;
+          if (!satUrl) return;
           setBgImageUrl(satUrl);
-          satelliteEditorUrlRef.current = satUrl;
+          satelliteEditorUrlRef.current = satFromSaved ? satUrl.split('?')[0] ?? satUrl : satUrl;
           setLayoutMode('editing');
           setIsPolygonSummaryReady(false);
           polygonHistory.resetHistory();
@@ -2472,6 +2484,20 @@ export default function AIRoofLayout() {
                           </Stage>
                         </div>
                       </div>
+                      </div>
+                    ) : layoutPreviewFallbackUrl ? (
+                      <div className="flex flex-col items-center justify-center w-full h-full min-h-[200px] p-4 gap-3">
+                        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-center max-w-md">
+                          {layoutMode === 'editing'
+                            ? 'Satellite map could not be loaded. Showing your last saved layout image. Use Regenerate AI Layout to restore full editing.'
+                            : 'Showing your saved layout image.'}
+                        </p>
+                        <img
+                          src={layoutPreviewFallbackUrl}
+                          alt="Saved rooftop solar layout"
+                          className="max-w-full max-h-[min(520px,70vh)] w-auto h-auto object-contain rounded-lg border border-slate-200 bg-white shadow-sm"
+                          crossOrigin="anonymous"
+                        />
                       </div>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm min-h-[200px]">

@@ -106,6 +106,7 @@ export async function fetchManualRoofLayout(projectId: string): Promise<{
   usable_area_m2: number;
   panel_count: number;
   layout_image_url: string;
+  satellite_image_url?: string;
   layout_image_3d_url?: string;
   prefer_3d_for_proposal?: boolean;
   savedAt?: string;
