@@ -5,62 +5,34 @@ import { authenticate } from '../middleware/auth';
 import { generateRoofLayoutJob } from '../workers/layoutGenerationWorker';
 import { parseRoofLayoutGeometry, type RoofLayoutGeometryV1 } from '../types/roofLayoutGeometry';
 import prisma from '../prisma';
-import { v2 as cloudinary } from 'cloudinary';
 import { Prisma, UserRole } from '@prisma/client';
+import {
+  configureCloudinaryIfNeeded,
+  ensurePersistentLayoutImageUrl,
+  ensurePersistentSatelliteImageUrl,
+  ensureSatelliteOnDiskFromCloudinary,
+  repairAndPersistRoofLayoutUrls,
+  getGeneratedLayoutsDir,
+  isCloudinaryConfigured,
+  isEphemeralGeneratedLayoutsUrl,
+  uploadRoofLayout3dFileToCloudinary,
+  uploadRoofLayoutDataUrlToCloudinary,
+  uploadRoofLayoutFileToCloudinary,
+  uploadSatelliteFileToCloudinary,
+} from '../services/roofLayoutImageStorage';
 
 const router = Router();
-
-// Cloudinary configuration (optional - only if env vars are set)
-const useCloudinary = !!(
-  process.env.CLOUDINARY_CLOUD_NAME &&
-  process.env.CLOUDINARY_API_KEY &&
-  process.env.CLOUDINARY_API_SECRET
-);
+const useCloudinary = isCloudinaryConfigured();
 
 if (useCloudinary) {
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
-
+  configureCloudinaryIfNeeded();
   if (process.env.NODE_ENV === 'development') {
     console.log('✅ Cloudinary configured for roof layouts');
   }
-}
-
-function getGeneratedLayoutsDir(): string {
-  return path.join(process.cwd(), 'generated_layouts');
-}
-
-async function uploadRoofLayoutToCloudinary(opts: {
-  projectId: string;
-  filePath: string;
-}): Promise<string> {
-  // Use deterministic public_id so the final "latest" layout URL remains stable.
-  const publicId = `roof-layout-${opts.projectId}`;
-
-  const uploadResult = await cloudinary.uploader.upload(opts.filePath, {
-    folder: 'rayenna_crm',
-    public_id: publicId,
-    resource_type: 'image',
-  });
-
-  return uploadResult.secure_url;
-}
-
-async function uploadRoofLayout3dToCloudinary(opts: {
-  projectId: string;
-  filePath: string;
-}): Promise<string> {
-  const publicId = `roof-layout-3d-${opts.projectId}`;
-  const uploadResult = await cloudinary.uploader.upload(opts.filePath, {
-    folder: 'rayenna_crm',
-    public_id: publicId,
-    resource_type: 'image',
-    overwrite: true,
-  });
-  return uploadResult.secure_url;
+} else if (process.env.NODE_ENV === 'production') {
+  console.warn(
+    '⚠️ Roof layout images use ephemeral disk — set CLOUDINARY_* on the API service or saved layouts will be lost after deploy.',
+  );
 }
 
 /** Sales: project assignee OR customer's assigned salesperson (matches Proposal Engine access). */
@@ -82,7 +54,6 @@ async function ensureProjectWriteAccess(projectId: string, reqUserId: string, re
 
   const roleStr = String(reqUserRole).toUpperCase();
 
-  // Only Admin (all) or assigned Sales can write.
   if (roleStr === 'ADMIN') return { ok: true as const };
 
   if (reqUserRole === UserRole.SALES) {
@@ -101,7 +72,6 @@ async function ensureProjectReadAccess(projectId: string, reqUserId: string, req
   const project = await prisma.project.findUnique({ where: { id: projectId } });
   if (!project) return { ok: false, status: 404 as const };
 
-  // Ops/Management/Finance/Admin can view any.
   const role = reqUserRole;
   if (
     role === UserRole.OPERATIONS ||
@@ -119,6 +89,23 @@ async function ensureProjectReadAccess(projectId: string, reqUserId: string, req
   }
 
   return { ok: false, status: 403 as const };
+}
+
+function manualLayoutJsonResponse(
+  parsed: Record<string, unknown>,
+  geomFromFile: RoofLayoutGeometryV1 | null,
+) {
+  return {
+    ...parsed,
+    source: parsed.source ?? 'MANUAL',
+    ...(geomFromFile
+      ? {
+          geometry: geomFromFile,
+          roof_polygon_coordinates: geomFromFile.roofPolygon,
+          panel_coordinates: geomFromFile.panelRects,
+        }
+      : {}),
+  };
 }
 
 interface AiLayoutRequestBody {
@@ -153,11 +140,16 @@ router.post('/ai-layout', authenticate, async (req, res) => {
     });
 
     const publicUrlPath = `/api/generated_layouts/${projectId}_ai_layout.png`;
+    const satellitePath = path.join(getGeneratedLayoutsDir(), `${projectId}_satellite.png`);
 
-    // Persist AI layout image + metrics.
     let layoutImageUrl = publicUrlPath;
+    let satelliteImageUrl: string = `/api/generated_layouts/${projectId}_satellite.png`;
+
     if (useCloudinary) {
-      layoutImageUrl = await uploadRoofLayoutToCloudinary({
+      if (fs.existsSync(satellitePath)) {
+        satelliteImageUrl = await uploadSatelliteFileToCloudinary({ projectId, filePath: satellitePath });
+      }
+      layoutImageUrl = await uploadRoofLayoutFileToCloudinary({
         projectId,
         filePath: result.layoutImagePath,
       });
@@ -171,6 +163,7 @@ router.post('/ai-layout', authenticate, async (req, res) => {
         usableAreaM2: result.usableAreaM2,
         panelCount: result.panelCount,
         layoutImageUrl,
+        satelliteImageUrl,
         source: 'AI',
         layoutImage3dUrl: null,
         prefer3dForProposal: false,
@@ -180,6 +173,7 @@ router.post('/ai-layout', authenticate, async (req, res) => {
         usableAreaM2: result.usableAreaM2,
         panelCount: result.panelCount,
         layoutImageUrl,
+        satelliteImageUrl,
         source: 'AI',
         layoutImage3dUrl: null,
         prefer3dForProposal: false,
@@ -192,13 +186,12 @@ router.post('/ai-layout', authenticate, async (req, res) => {
       usable_area_m2: result.usableAreaM2,
       panel_count: result.panelCount,
       layout_image_url: layoutImageUrl,
-      satellite_image_url: `/api/generated_layouts/${projectId}_satellite.png`,
+      satellite_image_url: satelliteImageUrl,
       resolved_latitude: Number(latitude),
       resolved_longitude: Number(longitude),
       roof_polygon_coordinates: result.roofPolygonCoords,
     });
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('Failed to generate AI roof layout:', err);
     return res.status(500).json({ error: 'Failed to generate AI roof layout' });
   }
@@ -226,7 +219,6 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
     );
     if (!access.ok) return res.status(access.status).json({ error: 'No access to this project' });
 
-    // Expect a data URL like "data:image/png;base64,AAAA..."
     const match = dataUrl.match(/^data:image\/(png|jpeg);base64,(.+)$/);
     if (!match) {
       return res.status(400).json({ error: 'Invalid image data URL' });
@@ -239,16 +231,29 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
     const filePath = path.join(generatedLayoutsDir, `${projectId}_manual_layout.${ext}`);
     await fs.promises.writeFile(filePath, Buffer.from(base64, 'base64'));
 
-    // Always persist metadata so GET /manual-layout/:projectId returns 200 and the Proposal can embed the layout.
     const roof = Number.isFinite(Number(roof_area_m2)) ? Number(roof_area_m2) : 0;
     const usable = Number.isFinite(Number(usable_area_m2)) ? Number(usable_area_m2) : 0;
     const panels = Number.isFinite(Number(panel_count)) ? Number(panel_count) : 0;
     const publicUrlPath = `/api/generated_layouts/${projectId}_manual_layout.${ext}`;
 
-    // Persist image + metrics.
     let layoutImageUrl = publicUrlPath;
     if (useCloudinary) {
-      layoutImageUrl = await uploadRoofLayoutToCloudinary({ projectId, filePath });
+      layoutImageUrl = await uploadRoofLayoutDataUrlToCloudinary({ projectId, dataUrl });
+    }
+
+    const satellitePath = path.join(generatedLayoutsDir, `${projectId}_satellite.png`);
+    let satelliteImageUrl: string | null = null;
+    if (useCloudinary && fs.existsSync(satellitePath)) {
+      satelliteImageUrl = await uploadSatelliteFileToCloudinary({ projectId, filePath: satellitePath });
+    } else {
+      const existing = await prisma.projectRoofLayout.findUnique({
+        where: { projectId },
+        select: { satelliteImageUrl: true },
+      });
+      satelliteImageUrl = existing?.satelliteImageUrl ?? null;
+      if (satelliteImageUrl) {
+        satelliteImageUrl = await ensurePersistentSatelliteImageUrl(projectId, satelliteImageUrl);
+      }
     }
 
     const parsedGeometry = geometry != null ? parseRoofLayoutGeometry(geometry) : null;
@@ -265,6 +270,7 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
           panel_count: panels,
           savedAt: new Date().toISOString(),
           layout_image_url: layoutImageUrl,
+          ...(satelliteImageUrl ? { satellite_image_url: satelliteImageUrl } : {}),
           ...(parsedGeometry ? { geometry: parsedGeometry } : {}),
         },
         null,
@@ -281,6 +287,7 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
         usableAreaM2: usable,
         panelCount: panels,
         layoutImageUrl,
+        satelliteImageUrl,
         source: 'MANUAL',
         prefer3dForProposal: false,
         ...(geometryJson != null ? { geometryJson } : {}),
@@ -290,6 +297,7 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
         usableAreaM2: usable,
         panelCount: panels,
         layoutImageUrl,
+        ...(satelliteImageUrl != null ? { satelliteImageUrl } : {}),
         source: 'MANUAL',
         prefer3dForProposal: false,
         ...(geometryJson != null ? { geometryJson } : {}),
@@ -298,19 +306,15 @@ router.post('/save-layout-image', authenticate, async (req, res) => {
 
     return res.json({
       layout_image_url: layoutImageUrl,
+      ...(satelliteImageUrl ? { satellite_image_url: satelliteImageUrl } : {}),
       ...(parsedGeometry ? { geometry: parsedGeometry } : {}),
     });
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('Failed to save manual roof layout image:', err);
     return res.status(500).json({ error: 'Failed to save layout image' });
   }
 });
 
-/**
- * Persist 3D simulation PNG/JPEG without replacing the 2D Konva layout URL.
- * Requires an existing ProjectRoofLayout row (generate AI or save 2D first).
- */
 router.post('/save-3d-layout-image', authenticate, async (req, res) => {
   const { projectId, dataUrl, set_prefer_for_proposal, roof_area_m2, usable_area_m2, panel_count } =
     req.body as {
@@ -359,7 +363,7 @@ router.post('/save-3d-layout-image', authenticate, async (req, res) => {
     const publicUrlPath = `/api/generated_layouts/${projectId}_3d_layout.${ext}`;
     let layout3dUrl = publicUrlPath;
     if (useCloudinary) {
-      layout3dUrl = await uploadRoofLayout3dToCloudinary({ projectId, filePath });
+      layout3dUrl = await uploadRoofLayout3dFileToCloudinary({ projectId, filePath });
     }
 
     const roof = Number.isFinite(Number(roof_area_m2)) ? Number(roof_area_m2) : existing.roofAreaM2;
@@ -390,13 +394,11 @@ router.post('/save-3d-layout-image', authenticate, async (req, res) => {
       prefer_3d_for_proposal: prefer ? true : existing.prefer3dForProposal,
     });
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('Failed to save 3D roof layout image:', err);
     return res.status(500).json({ error: 'Failed to save 3D layout image' });
   }
 });
 
-/** Set which layout image the proposal section should embed (2D vs 3D). */
 router.post('/set-layout-embed-preference', authenticate, async (req, res) => {
   const { projectId, prefer_3d_for_proposal } = req.body as {
     projectId?: string;
@@ -427,7 +429,6 @@ router.post('/set-layout-embed-preference', authenticate, async (req, res) => {
     });
     return res.json({ ok: true, prefer_3d_for_proposal });
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('Failed to set roof layout embed preference:', err);
     return res.status(500).json({ error: 'Failed to update preference' });
   }
@@ -440,20 +441,28 @@ router.get('/manual-layout/:projectId', authenticate, async (req, res) => {
     const readAccess = await ensureProjectReadAccess(projectId, req.user!.id, req.user!.role as UserRole);
     if (!readAccess.ok) return res.status(readAccess.status).json({ error: 'Access denied' });
 
-    // Prefer DB record so the layout is available cross-machine.
     const record = await prisma.projectRoofLayout.findUnique({ where: { projectId } });
     if (record) {
+      const urls = await repairAndPersistRoofLayoutUrls(projectId);
       const geom = parseRoofLayoutGeometry(record.geometryJson);
+
+      if (!fs.existsSync(path.join(getGeneratedLayoutsDir(), `${projectId}_satellite.png`))) {
+        await ensureSatelliteOnDiskFromCloudinary(projectId);
+      }
+
       return res.json({
         roof_area_m2: record.roofAreaM2,
         usable_area_m2: record.usableAreaM2,
         panel_count: record.panelCount,
-        layout_image_url: record.layoutImageUrl,
-        layout_image_3d_url: record.layoutImage3dUrl ?? undefined,
+        layout_image_url: urls.layoutImageUrl,
+        layout_image_3d_url: urls.layoutImage3dUrl ?? undefined,
+        satellite_image_url:
+          urls.satelliteImageUrl ??
+          `/api/generated_layouts/${projectId}_satellite.png`,
         prefer_3d_for_proposal: record.prefer3dForProposal,
         savedAt: record.savedAt.toISOString(),
         projectId: record.projectId,
-        source: record.source, // 'AI' = raw satellite (no panels), 'MANUAL' = Konva export with panels
+        source: record.source,
         ...(geom
           ? {
               geometry: geom,
@@ -464,7 +473,6 @@ router.get('/manual-layout/:projectId', authenticate, async (req, res) => {
       });
     }
 
-    // Backwards-compatible filesystem fallback (pre-Cloudinary persistence).
     const generatedLayoutsDir = getGeneratedLayoutsDir();
     const metaPath = path.join(generatedLayoutsDir, `${projectId}_manual_layout.json`);
     if (!fs.existsSync(metaPath)) return res.status(404).json({ error: 'No manual layout saved' });
@@ -472,68 +480,55 @@ router.get('/manual-layout/:projectId', authenticate, async (req, res) => {
     const raw = await fs.promises.readFile(metaPath, 'utf8');
     const parsed = JSON.parse(raw) as Record<string, unknown>;
 
-    // If Cloudinary is enabled, backfill DB so other machines can read too.
     if (useCloudinary && typeof parsed.layout_image_url === 'string') {
-      const layoutUrl = parsed.layout_image_url;
-      const extMatch = layoutUrl.match(/\.(png|jpe?g)(?:\?|#|$)/i);
-      const ext = extMatch?.[1]?.toLowerCase().replace('jpeg', 'jpg') || 'png';
-      const imageFilePath = path.join(generatedLayoutsDir, `${projectId}_manual_layout.${ext}`);
+      const layoutImageUrl = await ensurePersistentLayoutImageUrl(projectId, parsed.layout_image_url);
+      const roof = Number.isFinite(Number(parsed.roof_area_m2)) ? Number(parsed.roof_area_m2) : 0;
+      const usable = Number.isFinite(Number(parsed.usable_area_m2)) ? Number(parsed.usable_area_m2) : 0;
+      const panels = Number.isFinite(Number(parsed.panel_count)) ? Number(parsed.panel_count) : 0;
+      const satelliteImageUrl = await ensurePersistentSatelliteImageUrl(
+        projectId,
+        typeof parsed.satellite_image_url === 'string' ? parsed.satellite_image_url : null,
+      );
 
-      if (fs.existsSync(imageFilePath)) {
-        const layoutImageUrl = await uploadRoofLayoutToCloudinary({ projectId, filePath: imageFilePath });
-        const roof = Number.isFinite(Number(parsed.roof_area_m2)) ? Number(parsed.roof_area_m2) : 0;
-        const usable = Number.isFinite(Number(parsed.usable_area_m2)) ? Number(parsed.usable_area_m2) : 0;
-        const panels = Number.isFinite(Number(parsed.panel_count)) ? Number(parsed.panel_count) : 0;
-
-        await prisma.projectRoofLayout.upsert({
-          where: { projectId },
-          create: {
-            projectId,
-            roofAreaM2: roof,
-            usableAreaM2: usable,
-            panelCount: panels,
-            layoutImageUrl,
-            source: 'MANUAL',
-          },
-          update: {
-            roofAreaM2: roof,
-            usableAreaM2: usable,
-            panelCount: panels,
-            layoutImageUrl,
-            source: 'MANUAL',
-          },
-        });
-
-        return res.json({
-          roof_area_m2: roof,
-          usable_area_m2: usable,
-          panel_count: panels,
-          layout_image_url: layoutImageUrl,
-          savedAt: new Date().toISOString(),
+      await prisma.projectRoofLayout.upsert({
+        where: { projectId },
+        create: {
           projectId,
+          roofAreaM2: roof,
+          usableAreaM2: usable,
+          panelCount: panels,
+          layoutImageUrl,
+          satelliteImageUrl,
           source: 'MANUAL',
-        });
-      }
+        },
+        update: {
+          roofAreaM2: roof,
+          usableAreaM2: usable,
+          panelCount: panels,
+          layoutImageUrl,
+          satelliteImageUrl,
+          source: 'MANUAL',
+        },
+      });
+
+      return res.json({
+        roof_area_m2: roof,
+        usable_area_m2: usable,
+        panel_count: panels,
+        layout_image_url: layoutImageUrl,
+        ...(satelliteImageUrl ? { satellite_image_url: satelliteImageUrl } : {}),
+        savedAt: new Date().toISOString(),
+        projectId,
+        source: 'MANUAL',
+      });
     }
 
     const geomFromFile = parseRoofLayoutGeometry(parsed.geometry);
-    return res.json({
-      ...parsed,
-      source: parsed.source ?? 'MANUAL',
-      ...(geomFromFile
-        ? {
-            geometry: geomFromFile,
-            roof_polygon_coordinates: geomFromFile.roofPolygon,
-            panel_coordinates: geomFromFile.panelRects,
-          }
-        : {}),
-    });
+    return res.json(manualLayoutJsonResponse(parsed, geomFromFile));
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('Failed to load manual roof layout meta:', err);
     return res.status(500).json({ error: 'Failed to load manual layout' });
   }
 });
 
 export default router;
-

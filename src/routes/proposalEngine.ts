@@ -16,6 +16,7 @@ import {
   type PeProjectsListFilters,
 } from '../utils/peProjectListQuery';
 import crypto from 'crypto';
+import { repairAndPersistRoofLayoutUrls } from '../services/roofLayoutImageStorage';
 
 const router = express.Router();
 
@@ -700,20 +701,36 @@ router.get('/projects/:id', authenticate, async (req: Request, res: Response) =>
       }),
     ]);
 
+    let roofLayoutPayload: {
+      roof_area_m2: number;
+      usable_area_m2: number;
+      panel_count: number;
+      layout_image_url: string;
+      layout_image_3d_url?: string;
+      satellite_image_url?: string;
+      prefer_3d_for_proposal: boolean;
+      savedAt?: string;
+    } | null = null;
+
+    if (roofLayout) {
+      const urls = await repairAndPersistRoofLayoutUrls(req.params.id);
+      roofLayoutPayload = {
+        roof_area_m2: roofLayout.roofAreaM2,
+        usable_area_m2: roofLayout.usableAreaM2,
+        panel_count: roofLayout.panelCount,
+        layout_image_url: urls.layoutImageUrl || roofLayout.layoutImageUrl,
+        layout_image_3d_url: urls.layoutImage3dUrl ?? roofLayout.layoutImage3dUrl ?? undefined,
+        satellite_image_url:
+          urls.satelliteImageUrl ?? roofLayout.satelliteImageUrl ?? undefined,
+        prefer_3d_for_proposal: roofLayout.prefer3dForProposal,
+        savedAt: roofLayout.savedAt?.toISOString?.() ?? undefined,
+      };
+    }
+
     const proposalWithRoofLayout = proposal
       ? {
           ...proposal,
-          roofLayout: roofLayout
-            ? {
-                roof_area_m2: roofLayout.roofAreaM2,
-                usable_area_m2: roofLayout.usableAreaM2,
-                panel_count: roofLayout.panelCount,
-                layout_image_url: roofLayout.layoutImageUrl,
-                layout_image_3d_url: roofLayout.layoutImage3dUrl ?? undefined,
-                prefer_3d_for_proposal: roofLayout.prefer3dForProposal,
-                savedAt: roofLayout.savedAt?.toISOString?.() ?? undefined,
-              }
-            : null,
+          roofLayout: roofLayoutPayload,
         }
       : null;
 

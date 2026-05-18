@@ -730,6 +730,8 @@ model ProjectRoofLayout {
   panelCount     Int
 
   layoutImageUrl String
+  /// Satellite base map for Konva editing (Cloudinary URL when configured).
+  satelliteImageUrl    String?
   /// Optional 3D simulation export (PNG/JPEG URL); main `layoutImageUrl` stays the 2D Konva layout.
   layoutImage3dUrl     String?
   /// When true, proposal PDF/DOCX uses `layoutImage3dUrl` if set; otherwise `layoutImageUrl`.
