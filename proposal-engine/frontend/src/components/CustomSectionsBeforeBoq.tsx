@@ -22,6 +22,29 @@ import {
   isSafeDataImageSrc,
   preCleanRichPasteHtml,
 } from '../lib/sanitizeProposalCustomHtml';
+import {
+  applyProposalEditorLink,
+  normalizeProposalEditorLinkInput,
+  readProposalEditorLinkContext,
+  removeProposalEditorLink,
+} from '../lib/proposalEditorLink';
+import {
+  attachWrappedImageDrag,
+  getImageWrapSide,
+  imageSupportsTextWrap,
+  setImageBlockAlign,
+  setImageTextWrap,
+  toggleImageTextWrap,
+  type ImageWrapSide,
+} from '../lib/proposalEditorImage';
+import {
+  applyFontFamily,
+  applyFontSize,
+  EDITOR_FONT_FAMILIES,
+  EDITOR_FONT_SIZES,
+  getSelectionTypography,
+  normalizePastedEditorTypography,
+} from '../lib/proposalEditorFont';
 
 /**
  * Detect which Office app copied to the clipboard by scanning the HTML header.
@@ -157,32 +180,6 @@ function insertHtmlIntoCaret(el: HTMLElement, html: string): void {
 }
 
 // ─── Toolbar constants ────────────────────────────────────────────────────────
-
-const FONT_FAMILIES = [
-  { label: 'Arial',            value: 'Arial, sans-serif' },
-  { label: 'Calibri',          value: 'Calibri, sans-serif' },
-  { label: 'Courier New',      value: '"Courier New", monospace' },
-  { label: 'Garamond',         value: 'Garamond, serif' },
-  { label: 'Georgia',          value: 'Georgia, serif' },
-  { label: 'Sans Serif',       value: 'sans-serif' },
-  { label: 'Times New Roman',  value: '"Times New Roman", serif' },
-  { label: 'Trebuchet MS',     value: '"Trebuchet MS", sans-serif' },
-  { label: 'Verdana',          value: 'Verdana, sans-serif' },
-];
-
-const FONT_SIZES = [
-  { label: '8pt', value: '8pt' },
-  { label: '10pt', value: '10pt' },
-  { label: '11pt', value: '11pt' },
-  { label: '12pt', value: '12pt' },
-  { label: '14pt', value: '14pt' },
-  { label: '16pt', value: '16pt' },
-  { label: '18pt', value: '18pt' },
-  { label: '20pt', value: '20pt' },
-  { label: '24pt', value: '24pt' },
-  { label: '28pt', value: '28pt' },
-  { label: '36pt', value: '36pt' },
-];
 
 // ─── Color palettes ────────────────────────────────────────────────────────────
 
@@ -321,7 +318,7 @@ function tableSetColumnWidth(ctx: TableContext, width: string): void {
 }
 
 /** Wrap the current selection in a span with an inline style property. Falls back gracefully when selection is collapsed. */
-function applyInlineStyle(property: string, value: string, editorEl: HTMLElement): void {
+function applyInlineStyle(property: string, value: string, _editorEl: HTMLElement): void {
   // Do NOT call editorEl.focus() here. onFormat() has already focused the
   // element and restored the correct selection range. A second focus() call
   // fires another selectionchange which would overwrite the restored range
@@ -346,18 +343,6 @@ function applyInlineStyle(property: string, value: string, editorEl: HTMLElement
       document.execCommand('italic', false);
     } else if (property === 'text-decoration') {
       document.execCommand('underline', false);
-    } else if (property === 'font-family') {
-      document.execCommand('fontName', false, value);
-    } else if (property === 'font-size') {
-      // Map to nearest execCommand fontSize bucket (1-7) just to trigger the span,
-      // then fix it up immediately.
-      document.execCommand('fontSize', false, '3');
-      const sel2 = window.getSelection();
-      if (sel2 && sel2.rangeCount > 0) {
-        const r2 = sel2.getRangeAt(0);
-        const span = r2.startContainer.parentElement;
-        if (span && span !== editorEl) span.style.fontSize = value;
-      }
     } else if (property === 'color') {
       document.execCommand('foreColor', false, value);
     } else if (property === 'background-color') {
@@ -390,7 +375,6 @@ function applyInlineStyle(property: string, value: string, editorEl: HTMLElement
     else if (property === 'text-decoration') document.execCommand('underline', false);
     else if (property === 'color')          document.execCommand('foreColor', false, value);
     else if (property === 'background-color') document.execCommand('hiliteColor', false, value);
-    else if (property === 'font-family')    document.execCommand('fontName', false, value);
     document.execCommand('styleWithCSS', false, 'false');
   }
 }
@@ -412,6 +396,10 @@ interface FormatState {
   alignRight: boolean;
   subscript: boolean;
   superscript: boolean;
+  /** Toolbar font-family option value; empty = mixed / default */
+  fontFamily: string;
+  /** Toolbar font-size option value (pt); empty = mixed / default */
+  fontSize: string;
 }
 
 function getFormatState(): FormatState {
@@ -426,6 +414,8 @@ function getFormatState(): FormatState {
     alignRight:    document.queryCommandState('justifyRight'),
     subscript:     document.queryCommandState('subscript'),
     superscript:   document.queryCommandState('superscript'),
+    fontFamily:    '',
+    fontSize:      '',
   };
 }
 
@@ -718,6 +708,170 @@ function TableContextBar({
   );
 }
 
+// ─── Hyperlink dialog (mobile-first bottom sheet) ─────────────────────────────
+
+function LinkDialog({
+  open,
+  initialUrl,
+  initialText,
+  canRemove,
+  onClose,
+  onApply,
+  onRemove,
+}: {
+  open: boolean;
+  initialUrl: string;
+  initialText: string;
+  canRemove: boolean;
+  onClose: () => void;
+  onApply: (url: string, text: string) => void;
+  onRemove: () => void;
+}) {
+  const [url, setUrl] = useState(initialUrl);
+  const [text, setText] = useState(initialText);
+  const [error, setError] = useState<string | null>(null);
+  const urlRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setUrl(initialUrl);
+    setText(initialText);
+    setError(null);
+    const t = window.setTimeout(() => urlRef.current?.focus(), 80);
+    return () => window.clearTimeout(t);
+  }, [open, initialUrl, initialText]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const submit = () => {
+    if (!normalizeProposalEditorLinkInput(url)) {
+      setError('Enter a valid https URL or email address.');
+      return;
+    }
+    onApply(url.trim(), text.trim());
+  };
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10000] flex flex-col justify-end sm:justify-center sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pe-link-dialog-title"
+    >
+      <button
+        type="button"
+        className="absolute inset-0 bg-slate-900/50 [touch-action:manipulation]"
+        aria-label="Close"
+        onClick={onClose}
+      />
+      <div
+        className="relative w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl
+                   border border-slate-200 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <div className="mx-auto mt-2 mb-1 h-1 w-10 rounded-full bg-slate-300 sm:hidden" aria-hidden />
+        <div className="px-4 pt-3 pb-4 sm:px-5 sm:pt-5 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 id="pe-link-dialog-title" className="text-base font-semibold text-slate-900">
+                Insert hyperlink
+              </h3>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Highlight text first, or leave display text blank to use the URL or email.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="shrink-0 h-9 w-9 rounded-lg text-slate-500 hover:bg-slate-100
+                         flex items-center justify-center [touch-action:manipulation]"
+              aria-label="Close"
+              onClick={onClose}
+            >
+              ✕
+            </button>
+          </div>
+
+          <label className="block">
+            <span className="text-xs font-medium text-slate-700">URL or email</span>
+            <input
+              ref={urlRef}
+              type="text"
+              inputMode="url"
+              autoComplete="off"
+              autoCapitalize="off"
+              autoCorrect="off"
+              placeholder="https://example.com or name@company.com"
+              value={url}
+              onChange={(e) => { setUrl(e.target.value); setError(null); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
+              className="mt-1 w-full min-h-[44px] rounded-lg border border-slate-300 px-3 text-base sm:text-sm
+                         text-slate-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-xs font-medium text-slate-700">Text to display (optional)</span>
+            <input
+              type="text"
+              autoComplete="off"
+              placeholder="Visible link text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
+              className="mt-1 w-full min-h-[44px] rounded-lg border border-slate-300 px-3 text-base sm:text-sm
+                         text-slate-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+            />
+          </label>
+
+          {error && (
+            <p className="text-xs text-red-600 font-medium" role="alert">{error}</p>
+          )}
+
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1">
+            {canRemove && (
+              <button
+                type="button"
+                className="min-h-[44px] px-4 rounded-lg text-sm font-medium text-red-600
+                           border border-red-200 hover:bg-red-50 [touch-action:manipulation]"
+                onClick={() => { onRemove(); onClose(); }}
+              >
+                Remove link
+              </button>
+            )}
+            <button
+              type="button"
+              className="min-h-[44px] px-4 rounded-lg text-sm font-medium text-slate-700
+                         border border-slate-200 hover:bg-slate-50 [touch-action:manipulation]
+                         sm:mr-auto"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="min-h-[44px] px-4 rounded-lg text-sm font-semibold text-white bg-blue-600
+                         hover:bg-blue-700 active:bg-blue-800 [touch-action:manipulation]"
+              onClick={submit}
+            >
+              Apply link
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 // ─── Toolbar tooltip ───────────────────────────────────────────────────────────
 
 /**
@@ -785,6 +939,10 @@ function EditorToolbar({
   tablePickerOpen,
   onTablePickerToggle,
   onTableInsert,
+  onLinkClick,
+  selectedImgWrap,
+  imageWrapSupported,
+  onImageWrapToggle,
 }: {
   editorRef: React.RefObject<HTMLDivElement | null>;
   onImageClick: () => void;
@@ -792,11 +950,15 @@ function EditorToolbar({
   onImageWidth: (mode: 'sm' | 'md' | 'lg' | 'full') => void;
   /** Handles Left/Centre/Right alignment for both text and selected images. */
   onAlign: (align: 'left' | 'center' | 'right') => void;
+  selectedImgWrap: ImageWrapSide | null;
+  imageWrapSupported: boolean;
+  onImageWrapToggle: () => void;
   formatState: FormatState;
   onFormat: (fn: () => void) => void;
   tablePickerOpen: boolean;
   onTablePickerToggle: () => void;
   onTableInsert: (rows: number, cols: number) => void;
+  onLinkClick: () => void;
 }) {
   const [fontColorOpen, setFontColorOpen]       = useState(false);
   const [highlightOpen, setHighlightOpen]       = useState(false);
@@ -849,17 +1011,20 @@ function EditorToolbar({
       <BtnTooltip label="Font family">
         <select
           title="Font family"
+          aria-label="Font family"
           className="h-9 sm:h-7 flex-shrink-0 max-w-[130px] sm:max-w-[120px] rounded-md border border-slate-200 bg-white px-2 text-[12px] text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer hover:border-slate-300 transition-colors [touch-action:manipulation]"
-          defaultValue=""
+          value={formatState.fontFamily}
           onMouseDown={(e) => e.stopPropagation()}
           onChange={(e) => {
-            const v = e.target.value; e.target.value = '';
+            const v = e.target.value;
             if (!v || !editorRef.current) return;
-            onFormat(() => applyInlineStyle('font-family', v, editorRef.current!));
+            onFormat(() => applyFontFamily(editorRef.current!, v));
           }}
         >
-          <option value="" disabled>Font</option>
-          {FONT_FAMILIES.map((f) => (
+          <option value="" style={{ fontFamily: 'inherit' }}>
+            {formatState.fontFamily ? 'Font' : 'Font —'}
+          </option>
+          {EDITOR_FONT_FAMILIES.map((f) => (
             <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>{f.label}</option>
           ))}
         </select>
@@ -869,17 +1034,20 @@ function EditorToolbar({
       <BtnTooltip label="Font size">
         <select
           title="Font size"
+          aria-label="Font size"
           className="h-9 sm:h-7 flex-shrink-0 w-[72px] sm:w-[68px] rounded-md border border-slate-200 bg-white px-1.5 text-[12px] text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer hover:border-slate-300 transition-colors [touch-action:manipulation]"
-          defaultValue=""
+          value={formatState.fontSize}
           onMouseDown={(e) => e.stopPropagation()}
           onChange={(e) => {
-            const v = e.target.value; e.target.value = '';
+            const v = e.target.value;
             if (!v || !editorRef.current) return;
-            onFormat(() => applyInlineStyle('font-size', v, editorRef.current!));
+            onFormat(() => applyFontSize(editorRef.current!, v));
           }}
         >
-          <option value="" disabled>Size</option>
-          {FONT_SIZES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+          <option value="">
+            {formatState.fontSize ? 'Size' : 'Size —'}
+          </option>
+          {EDITOR_FONT_SIZES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
       </BtnTooltip>
 
@@ -1077,6 +1245,27 @@ function EditorToolbar({
 
       <Sep />
 
+      {/* ── Hyperlink ── */}
+      <BtnTooltip label="Insert hyperlink">
+        <button
+          type="button"
+          className={ib(false)}
+          onPointerDown={(e) => e.preventDefault()}
+          onClick={() => {
+            setFontColorOpen(false);
+            setHighlightOpen(false);
+            onLinkClick();
+          }}
+        >
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.35" aria-hidden>
+            <path d="M6.2 8.8a3.2 3.2 0 0 0 4.5 0l1.6-1.6a3.2 3.2 0 0 0-4.5-4.5L6.8 3.6" strokeLinecap="round" />
+            <path d="M8.8 6.2a3.2 3.2 0 0 0-4.5 0L2.7 7.8a3.2 3.2 0 0 0 4.5 4.5l1-1" strokeLinecap="round" />
+          </svg>
+        </button>
+      </BtnTooltip>
+
+      <Sep />
+
       {/* ── Table ── */}
       <div className="flex-shrink-0">
         <BtnTooltip label="Insert table">
@@ -1137,6 +1326,20 @@ function EditorToolbar({
               </button>
             </BtnTooltip>
           ))}
+          <BtnTooltip label={imageWrapSupported ? 'Wrap text around image (drag image to reposition)' : 'Text wrap requires S, M, or L size (not Full width)'}>
+            <button
+              type="button"
+              className={ib(!!selectedImgWrap, 'text-[11px] font-semibold px-2')}
+              disabled={!imageWrapSupported}
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={onImageWrapToggle}
+            >
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden>
+                <rect x="1" y="2" width="5" height="5" rx="0.5" fill="currentColor" fillOpacity="0.25" stroke="currentColor" />
+                <path d="M7 3.5h6M7 6h5M7 8.5h6M7 11h4" strokeLinecap="round" />
+              </svg>
+            </button>
+          </BtnTooltip>
         </>
       )}
     </div>
@@ -1161,6 +1364,12 @@ function CustomBodyEditor({
   const [imgError, setImgError] = useState<string | null>(null);
   const imgErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tablePickerOpen, setTablePickerOpen] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkDialogDraft, setLinkDialogDraft] = useState({
+    url: '',
+    text: '',
+    canRemove: false,
+  });
   const [tableCtx, setTableCtx] = useState<TableContext | null>(null);
   /**
    * Saved last-known selection range while the cursor was inside the editor.
@@ -1185,6 +1394,8 @@ function CustomBodyEditor({
     alignRight: false,
     subscript: false,
     superscript: false,
+    fontFamily: '',
+    fontSize: '',
   });
 
   useLayoutEffect(() => {
@@ -1201,7 +1412,11 @@ function CustomBodyEditor({
 
   // Track selection changes to update toolbar active states + table context
   const refreshFormatState = useCallback(() => {
-    try { setFormatState(getFormatState()); } catch { /* ignore */ }
+    try {
+      const base = getFormatState();
+      const typo = ref.current ? getSelectionTypography(ref.current) : { fontFamily: '', fontSize: '' };
+      setFormatState({ ...base, ...typo });
+    } catch { /* ignore */ }
     const ctx = ref.current ? getTableContext(ref.current) : null;
     setTableCtx(ctx);
     tableCtxRef.current = ctx;
@@ -1236,6 +1451,38 @@ function CustomBodyEditor({
   }, [onCommit]);
 
   /** Run a format command, then re-focus the editor and commit. */
+  const restoreSavedSelection = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const rangeToRestore = (() => {
+      try { return savedSelectionRef.current?.cloneRange() ?? null; }
+      catch { return null; }
+    })();
+    el.focus();
+    if (!rangeToRestore) return;
+    try {
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(rangeToRestore);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  const openLinkDialog = useCallback(() => {
+    setTablePickerOpen(false);
+    restoreSavedSelection();
+    const el = ref.current;
+    if (!el) return;
+    const ctx = readProposalEditorLinkContext(el);
+    setLinkDialogDraft({
+      url: ctx.url,
+      text: ctx.text,
+      canRemove: ctx.hasLink,
+    });
+    setLinkDialogOpen(true);
+  }, [restoreSavedSelection]);
+
   const onFormat = useCallback((fn: () => void) => {
     const el = ref.current;
     if (!el) return;
@@ -1314,6 +1561,7 @@ function CustomBodyEditor({
     const root = ref.current;
     if (!img || !root?.contains(img)) return;
     if (mode === 'full') {
+      setImageTextWrap(img, null);
       img.removeAttribute('width');
       img.removeAttribute('height');
     } else {
@@ -1392,20 +1640,52 @@ function CustomBodyEditor({
     const img = selectedImgRef.current;
     const root = ref.current;
 
-    if (img && root?.contains(img) && img.hasAttribute('width')) {
-      // Image alignment via auto margins (works for display:block images)
-      img.style.display = 'block';
-      img.style.marginLeft  = align === 'left'   ? '0'    : 'auto';
-      img.style.marginRight = align === 'right'  ? '0'    : 'auto';
+    if (img && root?.contains(img) && imageSupportsTextWrap(img)) {
+      if (getImageWrapSide(img)) {
+        if (align === 'center') {
+          setImageTextWrap(img, null);
+          setImageBlockAlign(img, 'center');
+        } else {
+          setImageTextWrap(img, align === 'right' ? 'right' : 'left');
+        }
+      } else {
+        setImageBlockAlign(img, align);
+      }
       highlightSelectedImg(root, img);
-      if (root) onCommit(sanitizeProposalCustomBodyHtml(root.innerHTML));
+      onCommit(sanitizeProposalCustomBodyHtml(root.innerHTML));
       setImgRev((n) => n + 1);
+    } else if (img && root?.contains(img) && !img.hasAttribute('width')) {
+      setImageTextWrap(img, null);
+      const execAlignCmd = align === 'left' ? 'justifyLeft' : align === 'center' ? 'justifyCenter' : 'justifyRight';
+      onFormat(() => document.execCommand(execAlignCmd));
     } else {
       // Text / paragraph alignment
       const execAlignCmd = align === 'left' ? 'justifyLeft' : align === 'center' ? 'justifyCenter' : 'justifyRight';
       onFormat(() => document.execCommand(execAlignCmd));
     }
   }, [onCommit, onFormat]);
+
+  const handleImageWrapToggle = useCallback(() => {
+    const img = selectedImgRef.current;
+    const root = ref.current;
+    if (!img || !root?.contains(img)) return;
+    if (!imageSupportsTextWrap(img)) {
+      showImgError('Text wrap works on Small, Medium, or Large images — not Full width.');
+      return;
+    }
+    toggleImageTextWrap(img);
+    highlightSelectedImg(root, img);
+    commitFromEditor();
+    setImgRev((n) => n + 1);
+  }, [commitFromEditor]);
+
+  useEffect(() => {
+    const root = ref.current;
+    const img = selectedImgRef.current;
+    if (!root || !img || !root.contains(img) || readOnly) return;
+    if (!getImageWrapSide(img)) return;
+    return attachWrappedImageDrag(img, root, commitFromEditor);
+  }, [imgRev, readOnly, commitFromEditor]);
 
   const onEditorClick = (e: ReactMouseEvent<HTMLDivElement>) => {
     const root = ref.current;
@@ -1459,7 +1739,14 @@ function CustomBodyEditor({
       if (!pasteImageFromDataTransfer(dt)) {
         // No image on clipboard (e.g. macOS PPT) — fall through to rich text
         const cleaned = sanitizeProposalCustomBodyHtml(preCleanRichPasteHtml(htmlRaw));
-        if (cleaned.trim()) { insertHtmlIntoCaret(ref.current, cleaned); commitFromEditor(); }
+        if (cleaned.trim()) {
+          const probe = document.createElement('div');
+          probe.innerHTML = cleaned;
+          normalizePastedEditorTypography(probe);
+          insertHtmlIntoCaret(ref.current, probe.innerHTML);
+          commitFromEditor();
+          refreshFormatState();
+        }
       }
       return;
     }
@@ -1473,9 +1760,8 @@ function CustomBodyEditor({
       probe.innerHTML = cleaned;
       const tables = probe.querySelectorAll('table');
       if (tables.length > 0) {
-        let tableHtml = '';
-        tables.forEach((t) => { tableHtml += t.outerHTML; });
-        insertHtmlIntoCaret(ref.current, tableHtml);
+        normalizePastedEditorTypography(probe);
+        insertHtmlIntoCaret(ref.current, probe.innerHTML);
       } else {
         // Fallback: plain text rows if no <table> survived sanitisation
         const lines = plain.split(/\r?\n/).filter(Boolean);
@@ -1498,8 +1784,10 @@ function CustomBodyEditor({
       if (meaningful) {
         e.preventDefault();
         e.stopPropagation();
-        insertHtmlIntoCaret(ref.current, cleaned);
+        normalizePastedEditorTypography(probe);
+        insertHtmlIntoCaret(ref.current, probe.innerHTML);
         commitFromEditor();
+        refreshFormatState();
         return;
       }
     }
@@ -1534,7 +1822,7 @@ function CustomBodyEditor({
   if (readOnly) {
     return (
       <div
-        className="text-sm text-secondary-800 leading-relaxed space-y-2 [&_a]:text-blue-600 [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_strong]:font-semibold [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-secondary-200 [&_table]:w-full [&_table]:text-xs [&_table]:border-collapse [&_td]:border [&_td]:border-secondary-200 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-secondary-200 [&_th]:px-2 [&_th]:py-1 [&_th]:bg-secondary-50"
+        className="text-sm text-secondary-800 leading-relaxed space-y-2 [&_a]:text-blue-600 [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_strong]:font-semibold [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-secondary-200 [&_img.pe-img-wrap-l]:float-left [&_img.pe-img-wrap-r]:float-right [&_img.pe-img-wrap-l]:mr-3 [&_img.pe-img-wrap-r]:ml-3 [&_table]:w-full [&_table]:text-xs [&_table]:border-collapse [&_td]:border [&_td]:border-secondary-200 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-secondary-200 [&_th]:px-2 [&_th]:py-1 [&_th]:bg-secondary-50"
         dangerouslySetInnerHTML={{ __html: html }}
       />
     );
@@ -1559,7 +1847,47 @@ function CustomBodyEditor({
           setTablePickerOpen(false);
           onFormat(() => insertHtmlIntoCaret(ref.current!, makeTable(rows, cols)));
         }}
+        onLinkClick={openLinkDialog}
+        selectedImgWrap={
+          selectedImgRef.current && ref.current?.contains(selectedImgRef.current)
+            ? getImageWrapSide(selectedImgRef.current)
+            : null
+        }
+        imageWrapSupported={
+          !!selectedImgRef.current &&
+          !!ref.current?.contains(selectedImgRef.current) &&
+          imageSupportsTextWrap(selectedImgRef.current)
+        }
+        onImageWrapToggle={handleImageWrapToggle}
       />
+
+      <LinkDialog
+        open={linkDialogOpen}
+        initialUrl={linkDialogDraft.url}
+        initialText={linkDialogDraft.text}
+        canRemove={linkDialogDraft.canRemove}
+        onClose={() => setLinkDialogOpen(false)}
+        onApply={(url, text) => {
+          setLinkDialogOpen(false);
+          onFormat(() => {
+            if (ref.current) applyProposalEditorLink(ref.current, url, text);
+          });
+        }}
+        onRemove={() => {
+          onFormat(() => {
+            if (ref.current) removeProposalEditorLink(ref.current);
+          });
+        }}
+      />
+
+      {selectedImgRef.current &&
+        ref.current?.contains(selectedImgRef.current) &&
+        getImageWrapSide(selectedImgRef.current) && (
+        <div className="print-hide flex items-center gap-2 px-3 py-2 bg-sky-50 border-b border-sky-200 text-[11px] sm:text-xs text-sky-800">
+          <span className="shrink-0" aria-hidden>↕</span>
+          <span>Text wrap on — drag the image up or down to reposition; text flows on the sides.</span>
+        </div>
+      )}
 
       {imgError && (
         <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border-b border-red-200 text-xs text-red-700">
@@ -1588,7 +1916,7 @@ function CustomBodyEditor({
 
       <div
         ref={ref}
-        className="min-h-[140px] bg-white px-3 py-2.5 text-sm text-secondary-800 focus:outline-none [&_a]:text-blue-600 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-md [&_img]:border [&_img]:border-secondary-200 [&_table]:border-collapse [&_td]:border [&_td]:border-secondary-200 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-secondary-200 [&_th]:px-2 [&_th]:py-1 [&_th]:bg-secondary-50"
+        className="min-h-[140px] bg-white px-3 py-2.5 text-sm text-secondary-800 focus:outline-none [&_a]:text-blue-600 [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-md [&_img]:border [&_img]:border-secondary-200 [&_img.pe-img-wrap-l]:float-left [&_img.pe-img-wrap-r]:float-right [&_img.pe-img-wrap-l]:mr-3 [&_img.pe-img-wrap-r]:ml-3 [&_table]:border-collapse [&_td]:border [&_td]:border-secondary-200 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-secondary-200 [&_th]:px-2 [&_th]:py-1 [&_th]:bg-secondary-50"
         contentEditable
         suppressContentEditableWarning
         onMouseDown={(ev) => ev.stopPropagation()}

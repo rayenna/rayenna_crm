@@ -85,7 +85,14 @@ export function preCleanRichPasteHtml(html: string): string {
       .replace(/<!--\[if[\s\S]*?<!\[endif\]-->/gi, '')
       // Office XML namespaces (Word paste)
       .replace(/<\/?(?:o|w|v|m):\w+[^>]*>/gi, '')
-      .replace(/<\/?font[^>]*>/gi, '')
+      // Legacy <font face="..."> → span so our editor font toolbar can style pasted Word text
+      .replace(/<font\b([^>]*)>/gi, (_m, attrs: string) => {
+        const face =
+          /face\s*=\s*["']([^"']+)["']/i.exec(attrs)?.[1] ??
+          /face\s*=\s*([^\s>]+)/i.exec(attrs)?.[1];
+        return face ? `<span style="font-family: ${face.replace(/"/g, '')}">` : '<span>';
+      })
+      .replace(/<\/font>/gi, '</span>')
       // Scrub each style="..." attribute to remove Office-specific / dangerous CSS
       .replace(/style="([^"]*)"/gi, (_match, styleContent: string) => {
         const cleaned = styleContent
@@ -151,10 +158,26 @@ function stripRichPasteClasses(container: HTMLElement): void {
   container.querySelectorAll('[class]').forEach((el) => el.removeAttribute('class'));
 }
 
+const MAILTO_EMAIL_RE = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/i;
+
 function postProcessLinksAndImages(container: HTMLElement): void {
   container.querySelectorAll('a[href]').forEach((a) => {
     const href = a.getAttribute('href');
-    if (!href || !/^https:\/\//i.test(href)) {
+    if (!href) {
+      a.removeAttribute('href');
+      return;
+    }
+    if (/^mailto:/i.test(href)) {
+      const email = href.replace(/^mailto:/i, '').trim();
+      if (!MAILTO_EMAIL_RE.test(email)) {
+        a.removeAttribute('href');
+        return;
+      }
+      a.removeAttribute('target');
+      a.removeAttribute('rel');
+      return;
+    }
+    if (!/^https:\/\//i.test(href)) {
       a.removeAttribute('href');
       return;
     }

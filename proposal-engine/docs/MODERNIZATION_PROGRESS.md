@@ -2,7 +2,7 @@
 
 **Purpose:** Resume structural improvement work without re-discovering context.  
 **Last updated:** 2026-05-16  
-**Status:** Paused after **Phase 2a** — next up **Phase 2b** (`ProposalPreview.tsx` split).
+**Status:** **Phase 2b** complete — `ProposalPreview.tsx` split into `frontend/src/proposal/`. Next: **Phase 2c** (`CostingSheet.tsx`).
 
 ---
 
@@ -51,13 +51,31 @@ Reference plan (original assessment): architecture review in team chat, May 2026
 
 All pages still `import from '../lib/apiClient'`.
 
+### Phase 2b — Split `ProposalPreview.tsx`
+
+| Module | Path | Role |
+|--------|------|------|
+| Types | `frontend/src/proposal/types.ts` | `ProposalData`, ROI, DOCX overrides |
+| Format | `frontend/src/proposal/format.ts` | `fmtINR`, `fmtINRFull` |
+| Assembly | `frontend/src/proposal/proposalAssembly.ts` | `buildProposal`, `collectProposalAssembly`, `genRef`, WIP read |
+| Copy / constants | `frontend/src/proposal/proposalCopy.ts` | Section text, lists, disclaimers |
+| PDF export | `frontend/src/proposal/exportPdf.ts` | `exportToPdf` |
+| DOCX export | `frontend/src/proposal/exportDocx.ts` | `buildDocx` (~1.2k lines) |
+| Editable HTML | `frontend/src/proposal/proposalEditableHtml.ts` | Text override extract/merge |
+| Document blocks | `frontend/src/proposal/ProposalDocumentBlocks.tsx` | Section React components, `exportToDocx`, `CustomerForm` |
+| Share modal | `frontend/src/proposal/ProposalShareModal.tsx` | Mobile-first bottom sheet |
+| **Page shell** | `frontend/src/pages/ProposalPreview.tsx` | ~1.1k lines — state, handlers, layout |
+
+Tests added: `proposal/proposalAssembly.test.ts` (`genRef`, `fmtINR`, `fmtINRFull`).  
+Route unchanged: lazy `import('./pages/ProposalPreview')` in `App.tsx`.
+
 ---
 
 ## Not started (planned)
 
 | Phase | Scope |
 |-------|--------|
-| **2b** | Split `ProposalPreview.tsx` (~4.5k lines) — hooks, share UI, export helpers |
+| ~~**2b**~~ | ~~Split `ProposalPreview.tsx`~~ — done |
 | **2c** | Split `CostingSheet.tsx` |
 | **2d** | Split `Customers.tsx` |
 | **2e** | Bundle measurement; lazy chunks only if justified |
