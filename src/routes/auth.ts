@@ -9,6 +9,7 @@ import { authenticate, authorize } from '../middleware/auth';
 import { rateLimit } from '../middleware/rateLimit';
 import { logPasswordReset } from '../utils/passwordResetAudit';
 import { logAccess, logSecurityAudit } from '../utils/auditLogger';
+import { PUBLIC_ERRORS, sendErrorResponse } from '../utils/publicApiError';
 
 const router = express.Router();
 
@@ -117,34 +118,11 @@ router.post(
       });
       logAccess({ userId: user.id, email: user.email, role: user.role, actionType: 'login_success', success: true, req });
       logSecurityAudit({ userId: user.id, role: user.role, actionType: 'login', entityType: 'User', entityId: user.id, summary: `Login: ${user.email}`, req });
-    } catch (error: any) {
-      console.error('Login error:', {
-        message: error?.message,
-        name: error?.name,
-        code: error?.code,
-        meta: error?.meta,
-        stack: error?.stack,
-      });
-
-      // Provide better error messages for common issues
-      let errorMessage = 'Internal server error';
-      if (error?.code === 'P1001') {
-        errorMessage = 'Database connection failed. Please check DATABASE_URL.';
-      } else if (error?.code?.startsWith?.('P1')) {
-        errorMessage = `Database error: ${error?.message ?? 'Unknown'}`;
-      } else if (error?.message) {
-        errorMessage = error.message;
+    } catch (error: unknown) {
+      console.error('Login error:', error);
+      if (!res.headersSent) {
+        sendErrorResponse(res, 500, error, PUBLIC_ERRORS.DATABASE);
       }
-
-      const response: any = { error: errorMessage };
-      if (process.env.NODE_ENV === 'development') {
-        response.details = {
-          name: error?.name,
-          code: error?.code,
-          meta: error?.meta,
-        };
-      }
-      if (!res.headersSent) res.status(500).json(response);
     }
   }
 );
@@ -176,8 +154,8 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
       ...user,
       themePreference: dbThemeToUi((user as any).themePreference),
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    sendErrorResponse(res, 500, error);
   }
 });
 
@@ -191,8 +169,8 @@ router.get('/theme', authenticate, async (req: Request, res: Response) => {
     });
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({ theme: dbThemeToUi((user as any).themePreference) ?? 'dark' });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    sendErrorResponse(res, 500, error);
   }
 });
 
@@ -214,8 +192,8 @@ router.put(
         select: { id: true, themePreference: true },
       });
       res.json({ theme: dbThemeToUi((updated as any).themePreference) ?? theme });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      sendErrorResponse(res, 500, error);
     }
   },
 );
@@ -229,9 +207,9 @@ router.post('/sso-ticket', authenticate, async (req: Request, res: Response) => 
     const ticket = createSsoTicket(req.user.id);
     logAccess({ userId: req.user.id, email: req.user.email, role: req.user.role, actionType: 'sso_ticket_issued', success: true, req });
     res.json({ ticket });
-  } catch (error: any) {
-    console.error('SSO ticket issue error:', error?.message);
-    res.status(500).json({ error: error?.message || 'Failed to create SSO ticket' });
+  } catch (error: unknown) {
+    console.error('SSO ticket issue error:', error);
+    sendErrorResponse(res, 500, error, 'Failed to create SSO ticket. Please try again.');
   }
 });
 
@@ -272,9 +250,9 @@ router.post(
         token,
         user: { id: user.id, email: user.email, name: user.name, role: user.role },
       });
-    } catch (error: any) {
-      console.error('SSO ticket exchange error:', error?.message);
-      res.status(500).json({ error: error?.message || 'Failed to exchange ticket' });
+    } catch (error: unknown) {
+      console.error('SSO ticket exchange error:', error);
+      sendErrorResponse(res, 500, error, 'Failed to sign in. Please try again from the CRM.');
     }
   }
 );
@@ -325,8 +303,8 @@ router.post(
       });
 
       res.json({ message: 'Password changed successfully' });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      sendErrorResponse(res, 500, error);
     }
   }
 );
@@ -392,9 +370,9 @@ router.post(
         resetLink: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`,
         expiresAt: resetTokenExpiry.toISOString(),
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[Admin Reset Password] Error:', error);
-      res.status(500).json({ error: error.message || 'Failed to generate reset token' });
+      sendErrorResponse(res, 500, error, 'Failed to generate reset token. Please try again.');
     }
   }
 );
@@ -433,9 +411,9 @@ router.get('/verify-reset-token/:token', async (req: Request, res: Response) => 
       name: user.name,
       expiresAt: user.resetTokenExpiry,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Verify Reset Token] Error:', error);
-    res.status(500).json({ error: error.message || 'Failed to verify reset token' });
+    sendErrorResponse(res, 500, error, 'Failed to verify reset link. Please request a new one.');
   }
 });
 
@@ -500,9 +478,9 @@ router.post(
       logSecurityAudit({ userId: user.id, role: user.role, actionType: 'password_reset_completed', entityType: 'User', entityId: user.id, summary: 'Password reset completed', req });
 
       res.json({ message: 'Password reset successfully' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[Reset Password] Error:', error);
-      res.status(500).json({ error: error.message || 'Failed to reset password' });
+      sendErrorResponse(res, 500, error, 'Failed to reset password. Please try again.');
     }
   }
 );

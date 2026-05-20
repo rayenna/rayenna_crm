@@ -946,3 +946,208 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   color: var(--accent-red) !important;
 }
 
+/* My Day — native date picker calendar icon follows app theme (not hardcoded dark) */
+.myday-input-date {
+  color-scheme: dark;
+}
+
+[data-theme='light'] .myday-input-date {
+  color-scheme: light;
+}
+
+/* Command bar + offline banner stay visible while scrolling (mobile PWA). */
+.zenith-command-offline-stack {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.zenith-offline-snapshot-banner {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Zenith mobile polish (≤1023px, matches Tailwind lg) ───────────────────── */
+
+@media (max-width: 1023px) {
+  .zenith-root .zenith-filter-mobile-select {
+    min-height: 44px;
+    font-size: 16px;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .zenith-root .zenith-filter-mobile-reset {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .zenith-root .zenith-kpi-value {
+    font-size: 1.125rem;
+  }
+
+  .zenith-root .zenith-forecast-tab {
+    min-height: 44px;
+    min-width: 44px;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    font-size: 11px;
+  }
+
+  .zenith-root .zenith-focus-filter-select,
+  .zenith-root .zenith-native-filter-input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .zenith-scroll-x-wrap {
+    position: relative;
+  }
+
+  .zenith-mobile-bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    border-top: 1px solid var(--border-default);
+    background: color-mix(in srgb, var(--bg-surface) 94%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .zenith-mobile-bottom-nav-inner {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    gap: 2px;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 6px 8px 8px;
+  }
+
+  .zenith-mobile-bottom-nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 48px;
+    max-width: 5.5rem;
+    padding: 4px 6px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition:
+      color 0.15s ease,
+      background 0.15s ease;
+  }
+
+  .zenith-mobile-bottom-nav-btn.is-active {
+    color: var(--accent-gold);
+    background: var(--accent-gold-muted);
+  }
+
+  .zenith-mobile-bottom-nav-label {
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  .zenith-mobile-sticky-actions {
+    position: fixed;
+    right: 12px;
+    bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+    z-index: 44;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .zenith-mobile-sticky-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 9999px;
+    border: 1px solid var(--border-card);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    box-shadow: var(--shadow-card);
+    cursor: pointer;
+    transition:
+      transform 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .zenith-mobile-sticky-btn:active {
+    transform: scale(0.96);
+  }
+
+  .zenith-mobile-sticky-btn--briefing {
+    color: var(--accent-gold);
+    border-color: var(--accent-gold-border);
+    background: var(--accent-gold-muted);
+  }
+
+  .zenith-scroll-x-wrap::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 28px;
+    pointer-events: none;
+    background: linear-gradient(
+      to left,
+      color-mix(in srgb, var(--bg-card) 92%, transparent),
+      transparent
+    );
+  }
+
+}
+
+.zenith-drawer-close-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* My Day — section labels & touch targets (theme-aware) */
+.myday-section-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 12px 0 6px;
+  display: block;
+}
+
+.myday-section-label--overdue {
+  color: var(--accent-gold);
+}
+
+.myday-section-label--inline {
+  padding: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.myday-touch-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+

@@ -15,6 +15,8 @@ interface Props {
   onShowBriefing?: () => void
   /** When false, live indicator shows Offline (Zenith PWA). */
   isOnline?: boolean
+  /** When true, sticky positioning is on the parent stack (with OfflineBanner). */
+  stacked?: boolean
 }
 
 export default function CommandBar({
@@ -28,6 +30,7 @@ export default function CommandBar({
   onResetFilters,
   onShowBriefing,
   isOnline = true,
+  stacked = false,
 }: Props) {
   const [secondsAgo, setSecondsAgo] = useState(0)
   const [lastFetched, setLastFetched] = useState(() => new Date())
@@ -56,6 +59,9 @@ export default function CommandBar({
   }, [lastFetched])
 
   const timeLabel = secondsAgo < 60 ? `${secondsAgo}s ago` : `${Math.floor(secondsAgo / 60)}m ago`
+
+  const hasAnyFilter =
+    selectedFYs.length > 0 || selectedQuarters.length > 0 || selectedMonths.length > 0
 
   const briefingAndLive = (
     <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 text-[10px] sm:text-[11px] font-sans text-[color:var(--text-muted)]">
@@ -93,7 +99,13 @@ export default function CommandBar({
   )
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 92%, transparent)] backdrop-blur-xl">
+    <header
+      className={
+        stacked
+          ? 'border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 92%, transparent)] backdrop-blur-xl'
+          : 'sticky top-0 z-40 border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 92%, transparent)] backdrop-blur-xl'
+      }
+    >
       <div
         className="zenith-exec-main mx-auto px-3 sm:px-5 pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-2 sm:pb-2.5 grid grid-cols-[1fr_auto] lg:grid-cols-[auto_minmax(0,1fr)_auto] gap-x-2 gap-y-1.5 lg:gap-x-4 lg:gap-y-0 lg:items-center"
       >
@@ -113,7 +125,7 @@ export default function CommandBar({
           {briefingAndLive}
         </div>
 
-        <div className="col-span-2 col-start-1 row-start-2 min-w-0 w-full flex justify-center lg:col-span-1 lg:col-start-2 lg:row-start-1 lg:px-2">
+        <div className="col-span-2 col-start-1 row-start-2 min-w-0 w-full flex flex-col items-center lg:col-span-1 lg:col-start-2 lg:row-start-1 lg:px-2">
           <div className="lg:hidden w-full max-w-lg mx-auto">
             <ZenithFilterMobileRow
               availableFYs={availableFYs}
@@ -125,6 +137,11 @@ export default function CommandBar({
               onMonthChange={onMonthChange}
               onResetAll={onResetFilters}
             />
+            {hasAnyFilter ? (
+              <p className="mt-1.5 text-center text-[10px] leading-snug text-[color:var(--text-muted)]">
+                Date filters active — KPIs and charts update below
+              </p>
+            ) : null}
           </div>
           <div className="hidden lg:block w-full max-w-3xl mx-auto">
             <ZenithFilterSegments

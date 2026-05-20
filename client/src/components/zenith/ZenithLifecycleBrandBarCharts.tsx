@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useChartColors } from '../../hooks/useChartColors'
 import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTooltipStyles'
 import {
@@ -10,11 +11,17 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import type { YAxisProps } from 'recharts'
 import ChartPanel from './ChartPanel'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
 import { getLoanBankBarColor } from '../dashboard/loanBankChartColors'
 import type { ZenithLifecycleBrandBarRow } from '../../utils/zenithPanelInverterBrandChartData'
+import { lifecycleBrandPairedYAxisWidth } from '../../utils/zenithPanelInverterBrandChartData'
+import { zenithLifecycleBrandPairChartHeight } from './zenithChartHeight'
 import { formatZenithSystemCapacityKw } from '../../utils/zenithSystemCapacityFormat'
+
+/** Matches Dashboard lifecycle brand row min height (mobile-first full-width cards). */
+const LIFECYCLE_BRAND_CARD_MIN_PX = 360
 
 function formatInr(n: number): string {
   return Number.isFinite(n) ? `₹${Math.round(n).toLocaleString('en-IN')}` : '—'
@@ -56,25 +63,61 @@ function LifecycleBrandBarTooltip({
   )
 }
 
+function BrandYAxisTick({
+  x = 0,
+  y = 0,
+  payload,
+  fill,
+}: {
+  x?: number
+  y?: number
+  payload?: { value?: string }
+  fill: string
+}) {
+  const label = payload?.value != null ? String(payload.value) : ''
+  return (
+    <text
+      x={x}
+      y={y}
+      dy={4}
+      textAnchor="end"
+      fill={fill}
+      fontSize={10}
+      className="recharts-text"
+    >
+      {label}
+    </text>
+  )
+}
+
 function HorizontalBrandBarChart({
   data,
-  chartHeight,
+  plotHeight,
+  yAxisWidth,
   costTitle,
   onBarClick,
 }: {
   data: ZenithLifecycleBrandBarRow[]
-  chartHeight: number
+  plotHeight: number
+  yAxisWidth: number
   costTitle: string
   onBarClick: (brandLabel: string) => void
 }) {
   const chartColors = useChartColors()
+  const yTick = useMemo<YAxisProps['tick']>(
+    () => (props: Parameters<typeof BrandYAxisTick>[0]) => (
+      <BrandYAxisTick {...props} fill={chartColors.axisText} />
+    ),
+    [chartColors.axisText],
+  )
+
   if (data.length === 0) {
     return (
       <div
-        className="flex items-center justify-center rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] text-center px-3"
-        style={{ minHeight: chartHeight, fontFamily: 'DM Sans, sans-serif' }}
+        className="flex h-full w-full min-w-0 items-center justify-center rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 text-center"
+        style={{ minHeight: plotHeight, fontFamily: 'DM Sans, sans-serif' }}
       >
-        <p className="max-w-sm text-xs text-[color:var(--text-muted)]">
+        <p className="max-w-sm text-xs text-[color:var(--text-muted)] sm:text-sm">
           No projects in this period have both panel and inverter brands set in Project Lifecycle.
         </p>
       </div>
@@ -82,46 +125,97 @@ function HorizontalBrandBarChart({
   }
 
   return (
-    <ResponsiveContainer width="100%" height={chartHeight} minWidth={0}>
-      <BarChart layout="vertical" data={data} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-        <XAxis type="number" tick={{ fill: chartColors.axisText, fontSize: 10 }} allowDecimals={false} />
-        <YAxis
-          type="category"
-          dataKey="brandLabel"
-          width={118}
-          tick={{ fill: chartColors.axisText, fontSize: 9 }}
-        />
-        <Tooltip
-          content={(props) => <LifecycleBrandBarTooltip {...props} costTitle={costTitle} />}
-          cursor={{ fill: chartColors.cursorBand }}
-        />
-        <Bar
-          dataKey="count"
-          radius={[0, 4, 4, 0]}
-          animationDuration={800}
-          cursor="pointer"
-          onClick={(_row: unknown, index: number) => {
-            const row = data[index]
-            if (row?.brandLabel) onBarClick(row.brandLabel)
-          }}
+    <div className="h-full w-full min-w-0" style={{ height: plotHeight }}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        <BarChart
+          layout="vertical"
+          data={data}
+          margin={{ top: 8, right: 16, left: 4, bottom: 8 }}
+          barCategoryGap="18%"
         >
-          {data.map((row, i) => (
-            <Cell
-              key={row.brandLabel}
-              fill={getLoanBankBarColor(row.brandLabel, i)}
-              style={{ transition: 'filter 0.15s' }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.filter = 'brightness(1.3)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.filter = 'brightness(1)'
-              }}
-            />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
+          <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+          <XAxis type="number" tick={{ fill: chartColors.axisText, fontSize: 10 }} allowDecimals={false} />
+          <YAxis
+            type="category"
+            dataKey="brandLabel"
+            width={yAxisWidth}
+            interval={0}
+            tick={yTick}
+          />
+          <Tooltip
+            content={(props) => <LifecycleBrandBarTooltip {...props} costTitle={costTitle} />}
+            cursor={{ fill: chartColors.cursorBand }}
+          />
+          <Bar
+            dataKey="count"
+            radius={[0, 4, 4, 0]}
+            animationDuration={800}
+            cursor="pointer"
+            onClick={(_row: unknown, index: number) => {
+              const row = data[index]
+              if (row?.brandLabel) onBarClick(row.brandLabel)
+            }}
+          >
+            {data.map((row, i) => (
+              <Cell
+                key={row.brandLabel}
+                fill={getLoanBankBarColor(row.brandLabel, i)}
+                style={{ transition: 'filter 0.15s' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.filter = 'brightness(1.3)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.filter = 'brightness(1)'
+                }}
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+function LifecycleBrandChartCard({
+  id,
+  title,
+  rows,
+  plotHeight,
+  yAxisWidth,
+  costTitle,
+  onBarClick,
+}: {
+  id: string
+  title: string
+  rows: ZenithLifecycleBrandBarRow[]
+  plotHeight: number
+  yAxisWidth: number
+  costTitle: string
+  onBarClick: (brandLabel: string) => void
+}) {
+  return (
+    <div
+      id={id}
+      className="flex w-full min-w-0 flex-col scroll-mt-24 lg:min-h-[360px] lg:scroll-mt-0"
+      style={{ minHeight: LIFECYCLE_BRAND_CARD_MIN_PX }}
+    >
+      <ChartPanel title={title} showExploreHint className="flex h-full w-full min-w-0 flex-1 flex-col">
+        <div className="w-full min-w-0 flex-1" style={{ minHeight: plotHeight }}>
+          <ZenithChartTouchReset className="h-full w-full min-w-0">
+            {(rk) => (
+              <HorizontalBrandBarChart
+                key={rk}
+                data={rows}
+                plotHeight={plotHeight}
+                yAxisWidth={yAxisWidth}
+                costTitle={costTitle}
+                onBarClick={onBarClick}
+              />
+            )}
+          </ZenithChartTouchReset>
+        </div>
+      </ChartPanel>
+    </div>
   )
 }
 
@@ -142,38 +236,39 @@ export default function ZenithLifecycleBrandBarCharts({
   onPanelBrandClick: (brandLabel: string) => void
   onInverterBrandClick: (brandLabel: string) => void
 }) {
+  const plotHeight = useMemo(
+    () => zenithLifecycleBrandPairChartHeight(panelRows.length, inverterRows.length, chartHeight),
+    [panelRows.length, inverterRows.length, chartHeight],
+  )
+  const yAxisWidth = useMemo(
+    () =>
+      lifecycleBrandPairedYAxisWidth([
+        panelRows.map((row) => row.brandLabel),
+        inverterRows.map((row) => row.brandLabel),
+      ]),
+    [panelRows, inverterRows],
+  )
+
   return (
-    <div className="contents">
-      <div id="zenith-panel-brands" className="min-w-0 scroll-mt-24 lg:scroll-mt-0">
-        <ChartPanel title="Projects by panel brand" showExploreHint>
-          <ZenithChartTouchReset>
-            {(rk) => (
-              <HorizontalBrandBarChart
-                key={rk}
-                data={panelRows}
-                chartHeight={chartHeight}
-                costTitle="Panel cost (est.)"
-                onBarClick={onPanelBrandClick}
-              />
-            )}
-          </ZenithChartTouchReset>
-        </ChartPanel>
-      </div>
-      <div id="zenith-inverter-brands" className="min-w-0 scroll-mt-24 lg:scroll-mt-0">
-        <ChartPanel title="Projects by inverter brand" showExploreHint>
-          <ZenithChartTouchReset>
-            {(rk) => (
-              <HorizontalBrandBarChart
-                key={rk}
-                data={inverterRows}
-                chartHeight={chartHeight}
-                costTitle="Inverter cost (est.)"
-                onBarClick={onInverterBrandClick}
-              />
-            )}
-          </ZenithChartTouchReset>
-        </ChartPanel>
-      </div>
+    <div className="grid w-full grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2 lg:items-stretch [&>*]:min-w-0">
+      <LifecycleBrandChartCard
+        id="zenith-panel-brands"
+        title="Projects by panel brand"
+        rows={panelRows}
+        plotHeight={plotHeight}
+        yAxisWidth={yAxisWidth}
+        costTitle="Panel cost (est.)"
+        onBarClick={onPanelBrandClick}
+      />
+      <LifecycleBrandChartCard
+        id="zenith-inverter-brands"
+        title="Projects by inverter brand"
+        rows={inverterRows}
+        plotHeight={plotHeight}
+        yAxisWidth={yAxisWidth}
+        costTitle="Inverter cost (est.)"
+        onBarClick={onInverterBrandClick}
+      />
     </div>
   )
 }

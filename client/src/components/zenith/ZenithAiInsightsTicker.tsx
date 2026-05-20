@@ -1,8 +1,5 @@
-import {
-  ZENITH_SCROLL_IDS,
-  type ZenithInsight,
-  type ZenithInsightScrollTarget,
-} from './zenithAiInsights'
+import type { ZenithInsight, ZenithInsightScrollTarget } from './zenithAiInsights'
+import { scrollToZenithInsightTarget } from './zenithScrollToSection'
 import { useEffect, useRef, useState } from 'react'
 
 const ZENITH_TICKER_PX_PER_SEC = 32
@@ -10,18 +7,7 @@ const ZENITH_TICKER_MIN_S = 24
 const ZENITH_TICKER_MAX_S = 110
 
 function scrollToZenithSection(target: ZenithInsightScrollTarget) {
-  const id = ZENITH_SCROLL_IDS[target]
-  let el = document.getElementById(id)
-  if (!el) {
-    for (const fid of ['zenith-funnel', 'zenith-charts-row-1', 'zenith-kpis']) {
-      el = document.getElementById(fid)
-      if (el) break
-    }
-  }
-  const reduceMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  el?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' })
+  scrollToZenithInsightTarget(target)
 }
 
 function renderInsightButtons(

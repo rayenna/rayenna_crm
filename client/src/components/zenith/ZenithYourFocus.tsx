@@ -26,6 +26,7 @@ import ReminderModal from './ReminderModal'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
 import ZenithFocusCollapsible from './ZenithFocusCollapsible'
 import ZenithProposalEngineCard from './ZenithProposalEngineCard'
+import ZenithScrollHint from './ZenithScrollHint'
 import type { ReminderTemplateProject } from '../../utils/reminderTemplates'
 import {
   formatZenithDealInrParts,
@@ -374,7 +375,7 @@ function SalesPipelineBlock({
             <select
               value={stageFilter}
               onChange={(e) => setStageFilter(e.target.value)}
-              className="zenith-native-select h-9 rounded-lg px-2.5 text-xs focus:outline-none"
+              className="zenith-native-select zenith-focus-filter-select h-9 rounded-lg px-2.5 text-xs focus:outline-none"
               aria-label="Filter by stage"
             >
               <option value="ALL">All stages</option>
@@ -387,7 +388,7 @@ function SalesPipelineBlock({
             <select
               value={salesPersonFilter}
               onChange={(e) => setSalesPersonFilter(e.target.value)}
-              className="zenith-native-select h-9 rounded-lg px-2.5 text-xs focus:outline-none max-w-[200px]"
+              className="zenith-native-select zenith-focus-filter-select h-9 rounded-lg px-2.5 text-xs focus:outline-none max-w-[200px]"
               aria-label="Filter by sales person"
             >
               <option value="ALL">All salespeople</option>
@@ -404,7 +405,9 @@ function SalesPipelineBlock({
             </span>
           )}
         </div>
-        <div className="zenith-scroll-x overflow-x-auto -mx-1 max-lg:pb-1">
+        <ZenithScrollHint className="mb-1 px-0.5" />
+        <div className="zenith-scroll-x-wrap">
+          <div className="zenith-scroll-x overflow-x-auto -mx-1 max-lg:pb-1">
           <table className="zenith-table--data w-full text-left text-xs sm:text-sm min-w-[760px]">
             <thead>
               <tr className="border-b border-[color:var(--border-default)]">
@@ -530,6 +533,7 @@ function SalesPipelineBlock({
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </section>
@@ -937,12 +941,15 @@ function FinanceRadarBlock({
                 className="shrink-0 m-0 px-2 sm:px-2.5 pt-2.5 pb-2 border-b border-[color:var(--border-default)] text-[10px] sm:text-[11px] leading-snug"
                 style={{ fontFamily: 'var(--zenith-font-body)', color: PAYMENT_RADAR_SUBHEAD_COLOR }}
               >
-                Click the project name to open the project and update the current payment status; use{' '}
+                <span className="lg:hidden">Tap</span>
+                <span className="hidden lg:inline">Click</span> the project name to open the project and update the current payment status; use{' '}
                 <span className="font-medium" style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}>
                   Remind
                 </span>{' '}
                 to send a reminder.
               </p>
+              <ZenithScrollHint className="px-2 sm:px-2.5 pt-1" />
+              <div className="zenith-scroll-x-wrap flex-1 min-h-0 flex flex-col">
               <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 max-h-[min(70vh,520px)] lg:max-h-none zenith-scroll-x">
                 <table className="zenith-table--data w-full min-w-[520px] text-left text-[11px] sm:text-xs">
                   <thead>
@@ -1052,6 +1059,7 @@ function FinanceRadarBlock({
                   </tbody>
                 </table>
               </div>
+              </div>
               {/* Legend moved below the whole Payment radar grid (shared by both tables). */}
             </div>
           </div>
@@ -1117,6 +1125,8 @@ function FinanceRadarBlock({
               >
                 Latest 10 received payments across the current date filters.
               </p>
+              <ZenithScrollHint className="px-2 sm:px-2.5" />
+              <div className="zenith-scroll-x-wrap flex-1 min-h-0 flex flex-col">
               <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 max-h-[min(70vh,520px)] lg:max-h-none zenith-scroll-x">
                 <table className="zenith-table--data w-full min-w-[660px] text-left text-[11px] sm:text-xs">
                   <thead>
@@ -1228,6 +1238,7 @@ function FinanceRadarBlock({
                     )}
                   </tbody>
                 </table>
+              </div>
               </div>
             </div>
           </div>
@@ -1624,8 +1635,10 @@ function InstallationPulseBlock({
             <strong className={uiDelayedCount > 0 ? 'text-[color:var(--accent-red)]' : 'text-[color:var(--accent-teal)]'}>{uiDelayedCount}</strong>
           </span>
         </div>
+        <ZenithScrollHint className="mb-2" />
+        <div className="zenith-scroll-x-wrap rounded-lg sm:rounded-none">
         <div
-          className="zenith-scroll-x zenith-install-pulse-scroll overflow-x-auto overscroll-x-contain -mx-1 px-1 sm:px-0 rounded-lg sm:rounded-none"
+          className="zenith-scroll-x zenith-install-pulse-scroll overflow-x-auto overscroll-x-contain -mx-1 px-1 sm:px-0"
           role="region"
           aria-label="Installation projects table, scroll horizontally on small screens"
         >
@@ -1816,6 +1829,7 @@ function InstallationPulseBlock({
               )}
             </tbody>
           </table>
+        </div>
         </div>
         <p
           className="shrink-0 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] leading-snug text-[color:var(--text-muted)] mt-3 mb-1 max-w-3xl"

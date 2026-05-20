@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { registerSW } from 'virtual:pwa-register'
 import App from './App.tsx'
 import { scrubSentryEvent } from './utils/sentryScrub'
+import { FRIENDLY_DEFAULT, sanitizeUserFacingMessage } from './utils/friendlyErrors'
 import './styles/tokens.css'
 import './index.css'
 
@@ -61,7 +62,7 @@ function getFriendlyErrorMessage(error: unknown): string {
   if (message.includes('AuthProvider') || message.includes('context')) {
     return 'Something went wrong loading this page. Please refresh and try again.'
   }
-  return message
+  return sanitizeUserFacingMessage(message) ?? FRIENDLY_DEFAULT
 }
 
 const isDev = import.meta.env.DEV

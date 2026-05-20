@@ -1,8 +1,19 @@
 # Dashboard
 
-> **Note:** The **Dashboard** is your main analytics view. Use the filter bar at the top to choose **Financial Year**, **Quarter**, and **Month**; Quick Access counts, the **Payment Status** and **Proposal Engine** summaries, and most KPI tiles follow those filters. Charts may have their own controls where noted.
+> **Note:** The **Dashboard** is your main analytics view. Use the filter bar at the top to choose **Financial Year**, **Quarter**, and **Month**; Quick Access counts, the **Payment Status** and **Proposal Engine** summaries, and most KPI tiles follow those filters. Charts may have their own controls where noted. A **scrolling announcement** under the page title highlights **My Day** and **Zenith**.
 
-**Jump to:** [Dashboard filters](#dashboard-filters) · [Things needing attention](#things-needing-attention-dashboard) · [Quick Access tiles](#quick-access-tiles) · [Payment Status](#payment-status-card) · [Proposal Engine](#proposal-engine-card) · [Layout by role](#layout-by-role) · [Charts](#charts-and-visualizations) · [Dashboard chart click-through](#classic-dashboard-chart-click-through-to-projects) · [Zenith Command Center](/help/zenith#zenith-command-center) (full-screen analytics)
+**Jump to:** [Scrolling announcements](#scrolling-announcements-dashboard) · [Dashboard filters](#dashboard-filters) · [Things needing attention](#things-needing-attention-dashboard) · [Quick Access tiles](#quick-access-tiles) · [Payment Status](#payment-status-card) · [Proposal Engine](#proposal-engine-card) · [Layout by role](#layout-by-role) · [Charts](#charts-and-visualizations) · [Dashboard chart click-through](#classic-dashboard-chart-click-through-to-projects) · [Zenith Command Center](/help/zenith#zenith-command-center) (full-screen analytics)
+
+---
+
+## Scrolling announcements (Dashboard)
+
+Below the **Dashboard** title, a **marquee** scrolls product updates. It currently alternates:
+
+1. **My Day** — Personal **Tasks**, **Journal**, and **Reminders** drawer. Open with **Ctrl+Shift+M** (**⌘⇧M** on Mac) from any page, or tap the **sunrise ☀** icon in the top navigation bar (badge shows incomplete task count).
+2. **Zenith** — Full-screen **Command Center** under **Dashboard** menu → **Zenith ✦** (same FY / Quarter / Month rules as this page).
+
+Full **My Day** behaviour: [Zenith help → My Day](/help/zenith#my-day-personal-productivity-drawer) (also available from every role, not only in Zenith).
 
 ---
 
@@ -179,7 +190,7 @@ Use **Ctrl+Shift+**_letter_ on Windows/Linux or **⌘⇧**_letter_ on Mac. They 
 | ⌘⇧P / Ctrl+Shift+P | **Projects** (same roles as Customers) |
 | ⌘⇧K / Ctrl+Shift+K | **Support Tickets** (Admin, Sales, Operations, Management — not Finance) |
 | ⌘⇧Z / Ctrl+Shift+Z | **Zenith** (roles that see Zenith under the Dashboard menu) |
-| ⌘⇧M / Ctrl+Shift+M | **My Day** — open the personal Tasks, Journal & Reminders drawer (all roles) |
+| ⌘⇧M / Ctrl+Shift+M | **My Day** — Tasks, Journal & Reminders (all roles). **Edit** or **Delete** tasks from the **⋯** menu on each row. Journal: **Load more** for older entries. Reminders include **overdue** items with any past due date. |
 | ⌘⇧N / Ctrl+Shift+N | **New customer** — opens the create form (Sales, Management, Admin) |
 | ⌘⇧E / Ctrl+Shift+E | **New project** — opens the new-project screen (Admin, Sales). Route: projects/new |
 

@@ -202,7 +202,11 @@ router.delete(
 router.get(
   '/journal',
   authenticate,
-  [query('date').optional().isISO8601()],
+  [
+    query('date').optional().isISO8601(),
+    query('recentLimit').optional().isInt({ min: 1, max: 50 }),
+    query('recentOffset').optional().isInt({ min: 0 }),
+  ],
   async (req: Request, res: Response) => {
     if (validErr(req, res)) return
     try {
@@ -210,8 +214,10 @@ router.get(
       const targetStr = req.query.date
         ? normDateStr(req.query.date as string)
         : toDateStr(new Date())
+      const recentLimit = Math.min(Number(req.query.recentLimit) || 10, 50)
+      const recentOffset = Math.max(Number(req.query.recentOffset) || 0, 0)
 
-      const [todayRows, recentRows] = await Promise.all([
+      const [todayRows, recentRows, countRows] = await Promise.all([
         prisma.$queryRaw<JournalRow[]>`
           SELECT * FROM user_journal
           WHERE user_id = ${userId} AND entry_date = ${targetStr}::date
@@ -219,13 +225,19 @@ router.get(
         prisma.$queryRaw<JournalRow[]>`
           SELECT * FROM user_journal
           WHERE user_id = ${userId} AND entry_date < ${targetStr}::date
-          ORDER BY entry_date DESC LIMIT 10
+          ORDER BY entry_date DESC
+          LIMIT ${recentLimit} OFFSET ${recentOffset}
+        `,
+        prisma.$queryRaw<[{ count: bigint }]>`
+          SELECT COUNT(*)::bigint AS count FROM user_journal
+          WHERE user_id = ${userId} AND entry_date < ${targetStr}::date
         `,
       ])
 
       res.json({
         today: todayRows[0] ? serJournal(todayRows[0]) : null,
         recent: recentRows.map(serJournal),
+        recentTotal: Number(countRows[0]?.count ?? 0),
       })
     } catch (err) {
       console.error('[my-day] GET journal:', err)
@@ -283,13 +295,13 @@ router.post(
 router.get('/reminders', authenticate, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id
-    const todayStr = toDateStr(new Date())
 
     const rows = await prisma.$queryRaw<TaskRow[]>`
       SELECT * FROM user_tasks
       WHERE user_id = ${userId}
         AND is_reminder = true
-        AND due_date >= ${todayStr}::date
+        AND is_done = false
+        AND due_date IS NOT NULL
       ORDER BY due_date ASC
     `
     res.json(rows.map(serTask))

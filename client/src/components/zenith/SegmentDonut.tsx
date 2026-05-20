@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import { ZENITH_DONUT_CHART_HEIGHT_PX, ZENITH_DONUT_PIE_ONLY_MOBILE_PX } from './zenithDonutConstants'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
+import ZenithExploreHint from './ZenithExploreHint'
+import { useZenithNarrowLayout } from '../../hooks/useZenithNarrowLayout'
 import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTooltipStyles'
 
 const COLORS = [
@@ -24,20 +26,6 @@ export interface SegmentSlice {
   percentage?: string
 }
 
-function useZenithNarrowLayout(): boolean {
-  const [narrow, setNarrow] = useState(() =>
-    typeof window !== 'undefined' ? window.matchMedia('(max-width: 1023px)').matches : false,
-  )
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 1023px)')
-    const u = () => setNarrow(mq.matches)
-    u()
-    mq.addEventListener('change', u)
-    return () => mq.removeEventListener('change', u)
-  }, [])
-  return narrow
-}
-
 export default function SegmentDonut({
   title,
   data,
@@ -48,12 +36,15 @@ export default function SegmentDonut({
    * while keeping a minimum chart height. Matches Executive Zenith loans + word cloud alignment.
    */
   stretchToRowHeight = false,
+  chartHeightPx,
 }: {
   title: string
   data: SegmentSlice[]
   onSegmentClick?: (segmentName: string) => void
   showExploreHint?: boolean
   stretchToRowHeight?: boolean
+  /** Desktop chart slot height; mobile uses a proportional slice. Matches `zenithStandardChartHeight`. */
+  chartHeightPx?: number
 }) {
   const chartData = useMemo(
     () =>
@@ -69,7 +60,10 @@ export default function SegmentDonut({
 
   const narrow = useZenithNarrowLayout()
 
-  const pieSlotHeightPx = narrow ? ZENITH_DONUT_PIE_ONLY_MOBILE_PX : ZENITH_DONUT_CHART_HEIGHT_PX
+  const desktopChartHeightPx = chartHeightPx ?? ZENITH_DONUT_CHART_HEIGHT_PX
+  const pieSlotHeightPx = narrow
+    ? Math.min(ZENITH_DONUT_PIE_ONLY_MOBILE_PX, Math.round(desktopChartHeightPx * 0.65))
+    : desktopChartHeightPx
   const pieMargin = narrow ? { top: 6, bottom: 6, left: 6, right: 6 } : undefined
 
   const cardClass =
@@ -82,14 +76,7 @@ export default function SegmentDonut({
         <h3 className="zenith-display text-sm sm:text-[15px] font-semibold text-[color:var(--text-primary)] min-w-0">
           {title}
         </h3>
-        {showExploreHint ? (
-          <span
-            className="shrink-0 pt-0.5 italic text-[10px] text-[color:var(--text-muted)]"
-            style={{ fontFamily: 'DM Sans, sans-serif' }}
-          >
-            Click to explore →
-          </span>
-        ) : null}
+        {showExploreHint ? <ZenithExploreHint /> : null}
       </div>
       <div
         className={

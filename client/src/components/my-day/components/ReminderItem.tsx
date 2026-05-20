@@ -92,10 +92,9 @@ export default function ReminderItem({ reminder, onDelete }: Props) {
         type="button"
         aria-label="Delete reminder"
         onClick={() => onDelete(reminder.id)}
+        className="myday-touch-target"
         style={{
           flexShrink: 0,
-          width: 32,
-          height: 32,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

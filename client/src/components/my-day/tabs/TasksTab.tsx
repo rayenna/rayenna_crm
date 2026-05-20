@@ -7,23 +7,13 @@ interface Props {
   loading: boolean
   error: string | null
   onToggle: (id: string) => void
+  onEdit: (id: string, content: string) => void
   onDelete: (id: string) => void
   onAdd: (content: string, projectId?: string | null, projectLabel?: string | null) => void
   pinOptions: PinOption[]
 }
 
-const SECTION_LABEL: React.CSSProperties = {
-  fontFamily: '"Space Mono", monospace',
-  fontSize: 9,
-  fontWeight: 700,
-  letterSpacing: '0.1em',
-  textTransform: 'uppercase',
-  color: 'rgba(255,255,255,0.25)',
-  padding: '12px 0 6px',
-  display: 'block',
-}
-
-export default function TasksTab({ tasks, loading, error, onToggle, onDelete, onAdd, pinOptions }: Props) {
+export default function TasksTab({ tasks, loading, error, onToggle, onEdit, onDelete, onAdd, pinOptions }: Props) {
   const today = new Date().toISOString().slice(0, 10)
 
   const todayTasks = tasks.filter((t) => !t.isReminder && (t.dueDate === today || t.dueDate === null))
@@ -55,15 +45,15 @@ export default function TasksTab({ tasks, loading, error, onToggle, onDelete, on
             {/* Carryovers */}
             {carryovers.length > 0 && (
               <>
-                <span style={SECTION_LABEL}>Carry-overs</span>
+                <span className="myday-section-label">Carry-overs</span>
                 {carryovers.map((t) => (
-                  <TaskItem key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} />
+                  <TaskItem key={t.id} task={t} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} />
                 ))}
               </>
             )}
 
             {/* Today */}
-            <span style={SECTION_LABEL}>Today</span>
+            <span className="myday-section-label">Today</span>
 
             {todayPending.length === 0 && todayDone.length === 0 && (
               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.6 }}>
@@ -72,14 +62,14 @@ export default function TasksTab({ tasks, loading, error, onToggle, onDelete, on
             )}
 
             {todayPending.map((t) => (
-              <TaskItem key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} />
+              <TaskItem key={t.id} task={t} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} />
             ))}
 
             {todayDone.length > 0 && (
               <>
-                <span style={{ ...SECTION_LABEL, marginTop: 8 }}>Done</span>
+                <span className="myday-section-label" style={{ marginTop: 8 }}>Done</span>
                 {todayDone.map((t) => (
-                  <TaskItem key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} />
+                  <TaskItem key={t.id} task={t} onToggle={onToggle} onEdit={onEdit} onDelete={onDelete} />
                 ))}
               </>
             )}

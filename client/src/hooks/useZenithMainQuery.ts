@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../utils/axios'
 import { UserRole } from '../types'
+import { fetchZenithWithOfflineCache } from '../utils/zenithOfflineFetch'
+import { zenithQueryCacheKey } from '../utils/zenithOfflineCache'
 
 function zenithEndpoint(role: UserRole | undefined): 'sales' | 'management' | 'operations' | 'finance' | null {
   if (!role) return null
@@ -26,19 +28,34 @@ export function useZenithMainQuery(
     (role === UserRole.SALES || role === UserRole.MANAGEMENT || role === UserRole.ADMIN)
 
   const endpoint = zenithEndpoint(role)
+  const cacheKey = zenithQueryCacheKey([
+    'zenith',
+    'dashboard',
+    endpoint,
+    selectedFYs,
+    selectedQuarters,
+    selectedMonths,
+  ])
 
   return useQuery({
     queryKey: ['zenith', 'dashboard', endpoint, selectedFYs, selectedQuarters, selectedMonths],
     queryFn: async () => {
       if (!endpoint) throw new Error('No dashboard endpoint for role')
-      const params = new URLSearchParams()
-      selectedFYs.forEach((fy) => params.append('fy', fy))
-      selectedQuarters.forEach((q) => params.append('quarter', q))
-      selectedMonths.forEach((month) => params.append('month', month))
-      const res = await axiosInstance.get(`/api/dashboard/${endpoint}?${params.toString()}`)
-      return res.data
+      return fetchZenithWithOfflineCache(cacheKey, async () => {
+        const params = new URLSearchParams()
+        selectedFYs.forEach((fy) => params.append('fy', fy))
+        selectedQuarters.forEach((q) => params.append('quarter', q))
+        selectedMonths.forEach((month) => params.append('month', month))
+        const res = await axiosInstance.get(`/api/dashboard/${endpoint}?${params.toString()}`)
+        return res.data as Record<string, unknown>
+      })
     },
     enabled: !!endpoint && !skipFetch,
     initialData: skipFetch ? (initialDataWhenFiltersEmpty as Record<string, unknown>) : undefined,
+    retry: (failureCount, error: unknown) => {
+      const status = (error as { response?: { status?: number } })?.response?.status
+      if (status === 401 || status === 403) return false
+      return failureCount < 1
+    },
   })
 }

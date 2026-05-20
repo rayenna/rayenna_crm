@@ -28,6 +28,21 @@ import OperationsQuickDrawer from '../components/zenith/OperationsQuickDrawer'
 import OfflineBanner from '../components/OfflineBanner'
 import { useOfflineSync, ZENITH_DATA_SYNCED } from '../hooks/useOfflineSync'
 import { useMyDaySnapshotQuery } from '../hooks/useMyDaySnapshotQuery'
+import { useZenithNarrowLayout } from '../hooks/useZenithNarrowLayout'
+import ZenithMobileBottomNav from '../components/zenith/ZenithMobileBottomNav'
+import ZenithMobileStickyActions from '../components/zenith/ZenithMobileStickyActions'
+import {
+  zenithMobileTabScrollId,
+  type ZenithMobileTab,
+} from '../components/zenith/zenithMobileNav'
+import { scrollToZenithElementId } from '../components/zenith/zenithScrollToSection'
+import ZenithOfflineSnapshotBanner from '../components/zenith/ZenithOfflineSnapshotBanner'
+import { fetchZenithWithOfflineCache } from '../utils/zenithOfflineFetch'
+import {
+  isZenithOfflineSnapshotPayload,
+  stripZenithOfflineSnapshotMeta,
+  zenithQueryCacheKey,
+} from '../utils/zenithOfflineCache'
 
 const Zenith = () => {
   const { user } = useAuth()
@@ -75,33 +90,57 @@ const Zenith = () => {
     user?.role === UserRole.ADMIN
 
   const myDaySnapQ = useMyDaySnapshotQuery(!!user)
+  const narrow = useZenithNarrowLayout()
+  const [mobileTab, setMobileTab] = useState<ZenithMobileTab>('overview')
+
+  const showExecHitList =
+    user?.role === UserRole.SALES ||
+    user?.role === UserRole.MANAGEMENT ||
+    user?.role === UserRole.ADMIN
+
+  useEffect(() => {
+    if (!narrow || !user?.role) return
+    const id = zenithMobileTabScrollId(mobileTab, user.role, { showHitList: showExecHitList })
+    const frame = window.requestAnimationFrame(() => scrollToZenithElementId(id))
+    return () => window.cancelAnimationFrame(frame)
+  }, [mobileTab, narrow, user?.role, showExecHitList])
+
+  const fyCacheKey = zenithQueryCacheKey(['dashboard', 'fys', user?.role])
 
   const { data: dashboardData, error: fyError, isError: isFyError, refetch: refetchFYs } =
     useQuery({
       queryKey: ['dashboard', 'fys', user?.role],
       queryFn: async () => {
-        if (user?.role === UserRole.SALES) {
-          const res = await axiosInstance.get('/api/dashboard/sales')
-          return res.data
-        }
-        if (user?.role === UserRole.OPERATIONS || user?.role === UserRole.FINANCE) {
-          const res = await axiosInstance.get('/api/dashboard/financial-years')
-          return res.data
-        }
-        const res = await axiosInstance.get('/api/dashboard/management')
-        return res.data
+        if (!user?.role) throw new Error('No role')
+        return fetchZenithWithOfflineCache(fyCacheKey, async () => {
+          if (user.role === UserRole.SALES) {
+            const res = await axiosInstance.get('/api/dashboard/sales')
+            return res.data as Record<string, unknown>
+          }
+          if (user.role === UserRole.OPERATIONS || user.role === UserRole.FINANCE) {
+            const res = await axiosInstance.get('/api/dashboard/financial-years')
+            return res.data as Record<string, unknown>
+          }
+          const res = await axiosInstance.get('/api/dashboard/management')
+          return res.data as Record<string, unknown>
+        })
       },
       enabled: !!user,
     })
 
+  const dashboardDataClean = useMemo(
+    () => stripZenithOfflineSnapshotMeta(dashboardData as Record<string, unknown> | undefined),
+    [dashboardData],
+  )
+
   const availableFYs =
-    (dashboardData as { projectValueProfitByFY?: { fy: string }[] })?.projectValueProfitByFY
+    (dashboardDataClean.projectValueProfitByFY as { fy: string }[] | undefined)
       ?.map((item) => item.fy)
       .filter(Boolean) ?? []
 
   const filtersEmpty =
     selectedFYs.length === 0 && selectedQuarters.length === 0 && selectedMonths.length === 0
-  const initialDataWhenFiltersEmpty = filtersEmpty ? dashboardData : undefined
+  const initialDataWhenFiltersEmpty = filtersEmpty ? dashboardDataClean : undefined
 
   const {
     data: zenithData,
@@ -129,6 +168,23 @@ const Zenith = () => {
     return () => window.removeEventListener(ZENITH_DATA_SYNCED, handler)
   }, [refetch, refetchFYs])
 
+  const zenithDataClean = useMemo(
+    () => stripZenithOfflineSnapshotMeta((zenithData ?? {}) as Record<string, unknown>),
+    [zenithData],
+  )
+
+  const isOfflineSnapshot = useMemo(
+    () => isZenithOfflineSnapshotPayload((zenithData ?? {}) as Record<string, unknown>),
+    [zenithData],
+  )
+
+  const offlineSnapshotAt = (zenithData as Record<string, unknown> | undefined)?.[
+    '__zenithSnapshotAt'
+  ] as string | undefined
+
+  const hasZenithBodyData = Object.keys(zenithDataClean).length > 0
+  const showZenithLoadError = !isFyError && isError && !hasZenithBodyData
+
   const dateFilter = useMemo(
     () => ({ selectedFYs, selectedQuarters, selectedMonths }),
     [selectedFYs, selectedQuarters, selectedMonths],
@@ -154,11 +210,10 @@ const Zenith = () => {
 
   const insights = useMemo(() => {
     if (!user?.role) return []
-    const d = (zenithData ?? {}) as Record<string, unknown>
-    return buildZenithAiInsights(user.role, d, dateFilter, {
+    return buildZenithAiInsights(user.role, zenithDataClean, dateFilter, {
       salesTeamPipeline: salesPerfInsights?.salesTeamData,
     })
-  }, [user?.role, zenithData, dateFilter, salesPerfInsights?.salesTeamData])
+  }, [user?.role, zenithDataClean, dateFilter, salesPerfInsights?.salesTeamData])
 
   const handleResetFilters = useCallback(() => {
     setSelectedFYs([])
@@ -193,9 +248,11 @@ const Zenith = () => {
     [operationsQuickDrawer, quickAction],
   )
 
+  const mobileTabProp = narrow ? mobileTab : null
+
   const body = useMemo(() => {
     if (!user?.role) return null
-    const data = (zenithData ?? {}) as Record<string, unknown>
+    const data = zenithDataClean
     switch (user.role) {
       case UserRole.SALES:
       case UserRole.MANAGEMENT:
@@ -207,6 +264,7 @@ const Zenith = () => {
             isLoading={isLoading}
             dateFilter={dateFilter}
             quickAction={quickAction}
+            mobileTab={mobileTabProp}
             onOpenFinanceDrawer={
               user.role === UserRole.ADMIN || user.role === UserRole.MANAGEMENT
                 ? financeQuickDrawer.open
@@ -223,6 +281,7 @@ const Zenith = () => {
             isLoading={isLoading}
             dateFilter={dateFilter}
             quickAction={quickAction}
+            mobileTab={mobileTabProp}
             onOpenOperationsDrawer={operationsQuickDrawer.open}
             onOpenProjectQuickDrawer={openZenithProjectQuickDrawer}
           />
@@ -234,6 +293,7 @@ const Zenith = () => {
             isLoading={isLoading}
             dateFilter={dateFilter}
             quickAction={quickAction}
+            mobileTab={mobileTabProp}
             onOpenFinanceDrawer={financeQuickDrawer.open}
           />
         )
@@ -246,47 +306,57 @@ const Zenith = () => {
     }
   }, [
     user?.role,
-    zenithData,
+    zenithDataClean,
     isLoading,
     dateFilter,
     quickAction,
     financeQuickDrawer.open,
     operationsQuickDrawer.open,
     openZenithProjectQuickDrawer,
+    mobileTabProp,
   ])
 
   return (
-    <div className="zenith-root zenith-animated-bg">
+    <div className={`zenith-root zenith-animated-bg${narrow ? ' zenith-root--mobile-nav' : ''}`}>
       {/* No overflow-x-clip here: CSS pairs non-visible overflow-x with overflow-y:auto and Chrome/Android PWA
           clips Recharts SVG while document-scrolling. Width is contained via zenith-root + min-w-0 / max-w-full. */}
       <div className="min-w-0 max-w-full">
-      <CommandBar
-        availableFYs={availableFYs}
-        selectedFYs={selectedFYs}
-        selectedQuarters={selectedQuarters}
-        selectedMonths={selectedMonths}
-        onFYChange={setSelectedFYs}
-        onQuarterChange={setSelectedQuarters}
-        onMonthChange={setSelectedMonths}
-        onResetFilters={handleResetFilters}
-        onShowBriefing={showBriefing}
-        isOnline={isOnline}
-      />
+      <div className="zenith-command-offline-stack">
+        <CommandBar
+          stacked
+          availableFYs={availableFYs}
+          selectedFYs={selectedFYs}
+          selectedQuarters={selectedQuarters}
+          selectedMonths={selectedMonths}
+          onFYChange={setSelectedFYs}
+          onQuarterChange={setSelectedQuarters}
+          onMonthChange={setSelectedMonths}
+          onResetFilters={handleResetFilters}
+          onShowBriefing={showBriefing}
+          isOnline={isOnline}
+        />
 
-      <OfflineBanner
-        isOnline={isOnline}
-        isSyncing={isSyncing}
-        pendingCount={pendingCount}
-        syncError={syncError}
-        onSyncNow={syncNow}
-        showOnlineAck={showOnlineAck}
-      />
+        <OfflineBanner
+          isOnline={isOnline}
+          isSyncing={isSyncing}
+          pendingCount={pendingCount}
+          syncError={syncError}
+          onSyncNow={syncNow}
+          showOnlineAck={showOnlineAck}
+        />
+      </div>
+
+      {isOfflineSnapshot && hasZenithBodyData ? (
+        <ZenithOfflineSnapshotBanner savedAt={offlineSnapshotAt} />
+      ) : null}
+
+      <div id="zenith-mobile-nav-sentinel" className="h-0 w-0 overflow-hidden" aria-hidden />
 
       {/* Solar news — place above AI insights bar */}
       {user?.role ? <SolarNewsTicker /> : null}
 
-      {!isFyError && !isError && user?.role ? (
-        <ZenithAiInsightsTicker insights={insights} isLoading={isLoading} />
+      {!isFyError && user?.role && (hasZenithBodyData || !isError) ? (
+        <ZenithAiInsightsTicker insights={insights} isLoading={isLoading && !hasZenithBodyData} />
       ) : null}
 
       {showQuickActionDrawer && quickAction.listMode && quickAction.isOpen ? (
@@ -325,21 +395,21 @@ const Zenith = () => {
         </div>
       )}
 
-      {!isFyError && isError && (
+      {showZenithLoadError && (
         <div className="max-w-xl mx-auto mt-6 px-4 rounded-2xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] p-5 text-sm text-[color:var(--text-primary)]">
           <p className="font-semibold text-[color:var(--accent-red)]">Unable to load Zenith data</p>
           <p className="mt-2 text-[color:var(--text-secondary)]">{getFriendlyApiErrorMessage(error)}</p>
           <button
             type="button"
             onClick={() => refetch()}
-            className="mt-4 px-4 py-2 rounded-xl bg-[color:var(--accent-gold)] text-[color:var(--text-inverse)] font-bold text-sm"
+            className="mt-4 min-h-[44px] px-4 py-2 rounded-xl bg-[color:var(--accent-gold)] text-[color:var(--text-inverse)] font-bold text-sm touch-manipulation"
           >
             Try again
           </button>
         </div>
       )}
 
-      {!isFyError && !isError ? body : null}
+      {!isFyError && !showZenithLoadError && hasZenithBodyData ? body : null}
 
       {showQuickActionDrawer ? (
         <QuickActionDrawer
@@ -378,6 +448,20 @@ const Zenith = () => {
           readOnly={user?.role === UserRole.MANAGEMENT}
           onClose={operationsQuickDrawer.close}
         />
+      ) : null}
+
+      {narrow && user?.role ? (
+        <>
+          <ZenithMobileStickyActions onShowBriefing={showBriefing} />
+          <ZenithMobileBottomNav
+            role={user.role}
+            activeTab={mobileTab}
+            onTabChange={setMobileTab}
+            showHitList={showExecHitList}
+            pendingSyncCount={pendingCount}
+            isOnline={isOnline}
+          />
+        </>
       ) : null}
 
       <AnimatePresence>

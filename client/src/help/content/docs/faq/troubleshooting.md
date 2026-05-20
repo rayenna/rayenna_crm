@@ -24,6 +24,21 @@
 4. Try incognito/private browsing mode
 5. Contact administrator to reset password
 
+**Note:** Rayenna shows a **plain-language** message on login failure (not raw database or server errors). If you see “We couldn’t sign you in” or similar, use the steps above before reporting a technical error.
+
+### Zenith shows Offline or old numbers
+
+**Symptoms**: **Offline** on the Zenith command bar, gold “saved data” banner, or changes in Quick Actions not saving
+
+**Solutions**:
+1. Check Wi‑Fi or mobile data; wait until the bar shows **Live**
+2. If you use the CRM as an **installed app (PWA)**, open Zenith once online with your usual **FY / Quarter / Month** before going to a weak-signal site
+3. When offline, **read-only** Zenith may show the last successful load; **Log activity** and other allowed drawer edits are **queued** — tap **Sync** when back online
+4. **My Day**, **Solar News**, and **Open in Projects →** need a live connection
+5. Refresh the page or reinstall the PWA if the offline banner persists after you have good connectivity
+
+See **Help → Zenith → Working offline (Zenith PWA)** for full detail.
+
 ### Features Not Available
 
 **Symptoms**: Buttons or options are missing

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { apiBaseUrl, isTimeoutOrNetworkError } from '../utils/axios'
+import { apiBaseUrl, getFriendlyApiErrorMessage, isTimeoutOrNetworkError } from '../utils/axios'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import '../styles/zenith.css'
@@ -72,13 +72,15 @@ const Login = () => {
       navigate('/dashboard')
     } catch (error: unknown) {
       stopElapsedCounter()
-      const err = error as { response?: { data?: { error?: string }; status?: number } }
-      const fallback = typeof window !== 'undefined' && window.location.hostname.includes('localhost')
-        ? 'Cannot reach API. Start backend and frontend: run "npm run dev" from the project root (backend on :3000, frontend on :5173).'
-        : isTimeoutOrNetworkError(error)
-          ? 'Server took too long to respond. It may still be waking up — please try again.'
-          : 'Cannot reach API. Set VITE_API_BASE_URL, redeploy static site, ensure backend is live.'
-      const msg = err?.response?.data?.error ?? (err?.response ? 'Login failed' : fallback)
+      const err = error as { response?: { status?: number } }
+      const msg =
+        err?.response != null
+          ? getFriendlyApiErrorMessage(error)
+          : typeof window !== 'undefined' && window.location.hostname.includes('localhost')
+            ? 'Cannot reach API. Start backend and frontend: run "npm run dev" from the project root (backend on :3000, frontend on :5173).'
+            : isTimeoutOrNetworkError(error)
+              ? 'Server took too long to respond. It may still be waking up — please try again.'
+              : 'Cannot reach API. Set VITE_API_BASE_URL, redeploy static site, ensure backend is live.'
       toast.error(msg)
       setServerStatus('slow')
     } finally {

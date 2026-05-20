@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import ZenithExploreHint from './ZenithExploreHint'
 
 export default function ChartPanel({
   title,
@@ -30,14 +31,7 @@ export default function ChartPanel({
             <p className="text-[11px] text-[color:var(--text-muted)] mt-0.5 leading-snug">{subtitle}</p>
           ) : null}
         </div>
-        {showExploreHint ? (
-          <span
-            className="shrink-0 pt-0.5 italic text-[10px] text-[color:var(--text-muted)]"
-            style={{ fontFamily: 'DM Sans, sans-serif' }}
-          >
-            Click to explore →
-          </span>
-        ) : null}
+        {showExploreHint ? <ZenithExploreHint /> : null}
       </div>
       <div
         className={

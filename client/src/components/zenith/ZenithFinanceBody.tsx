@@ -10,7 +10,7 @@ import {
   Legend,
   Cell,
 } from 'recharts'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useChartColors } from '../../hooks/useChartColors'
 import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTooltipStyles'
 import { useQuery } from '@tanstack/react-query'
@@ -41,10 +41,11 @@ import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../..
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
 import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
+import { ZENITH_CHART_HEIGHT_FLOOR, zenithStandardChartHeight } from './zenithChartHeight'
+import { isZenithMobileTabActive } from './zenithMobileTabVisibility'
+import type { ZenithMobileTab } from './zenithMobileNav'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
-
-const ZENITH_CHART_H = 240
 
 function ExploreInrTooltip({
   active,
@@ -99,15 +100,21 @@ export default function ZenithFinanceBody({
   dateFilter,
   quickAction,
   onOpenFinanceDrawer,
+  mobileTab = null,
 }: {
   data: Record<string, unknown>
   isLoading: boolean
   dateFilter: ZenithDateFilter
   quickAction: ZenithQuickActionHandle
   onOpenFinanceDrawer?: (projectId: string) => void
+  mobileTab?: ZenithMobileTab | null
 }) {
   const { user } = useAuth()
   const chartColors = useChartColors()
+  const exploreChartHeight = useMemo(
+    () => zenithStandardChartHeight(0, ZENITH_CHART_HEIGHT_FLOOR),
+    [],
+  )
   const effFYs = dateFilter.selectedFYs
   const effQ = dateFilter.selectedQuarters
   const effM = dateFilter.selectedMonths
@@ -261,8 +268,14 @@ export default function ZenithFinanceBody({
     }))
   })()
 
+  const showOverview = isZenithMobileTabActive(mobileTab, 'overview')
+  const showPipeline = isZenithMobileTabActive(mobileTab, 'pipeline')
+  const showCharts = isZenithMobileTabActive(mobileTab, 'charts')
+  const showMore = isZenithMobileTabActive(mobileTab, 'more')
+
   return (
-    <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-6 space-y-8 pb-24 max-lg:pb-32">
+    <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-6 space-y-8 pb-24 max-lg:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
+      {showOverview ? (
       <div
         id="zenith-kpis"
         className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pb-2 scroll-mt-28"
@@ -278,6 +291,9 @@ export default function ZenithFinanceBody({
           </div>
         ))}
       </div>
+      ) : null}
+      {showPipeline ? (
+      <>
       <div id="zenith-focus" className="scroll-mt-28">
         <ZenithYourFocus
           role={user!.role}
@@ -295,6 +311,9 @@ export default function ZenithFinanceBody({
           onDealFlowStageClick={onDealFlowStageClick}
         />
       </div>
+      </>
+      ) : null}
+      {showCharts ? (
       <section className="zenith-exec-section space-y-3" aria-label="Finance charts">
         <header id="zenith-charts" className="scroll-mt-24 px-0.5">
           <h2
@@ -319,7 +338,7 @@ export default function ZenithFinanceBody({
             <ChartPanel title="Revenue by lead source" showExploreHint>
               <ZenithChartTouchReset>
                 {(rk) => (
-                  <ResponsiveContainer key={rk} width="100%" height={ZENITH_CHART_H} minWidth={0}>
+                  <ResponsiveContainer key={rk} width="100%" height={exploreChartHeight} minWidth={0}>
                     <BarChart layout="vertical" data={leadChart} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                       <XAxis type="number" tick={{ fontSize: 10, fill: chartColors.axisText }} />
@@ -363,7 +382,7 @@ export default function ZenithFinanceBody({
             <ChartPanel title="Revenue vs pipeline by sales team" showExploreHint>
               <ZenithChartTouchReset>
                 {(rk) => (
-                  <ResponsiveContainer key={rk} width="100%" height={ZENITH_CHART_H} minWidth={0}>
+                  <ResponsiveContainer key={rk} width="100%" height={exploreChartHeight} minWidth={0}>
                     <BarChart layout="vertical" data={salesMerge} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                       <XAxis type="number" tick={{ fontSize: 10, fill: chartColors.axisText }} />
@@ -432,6 +451,7 @@ export default function ZenithFinanceBody({
             <ChartPanel title="Revenue & profit by financial year" showExploreHint>
               <ZenithRevenueProfitFyChart
                 data={fyChart}
+                height={exploreChartHeight}
                 onFyClick={({ fy, metric }) =>
                   drill('fy', fy, { fyMetric: metric === 'profit' ? 'profit' : 'revenue' })
                 }
@@ -442,7 +462,7 @@ export default function ZenithFinanceBody({
             <ChartPanel title="Loans by bank" showExploreHint>
               <ZenithChartTouchReset>
                 {(rk) => (
-                  <ResponsiveContainer key={rk} width="100%" height={ZENITH_CHART_H} minWidth={0}>
+                  <ResponsiveContainer key={rk} width="100%" height={exploreChartHeight} minWidth={0}>
                     <BarChart layout="vertical" data={loans} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                       <XAxis type="number" tick={{ fontSize: 10, fill: chartColors.axisText }} />
@@ -478,6 +498,9 @@ export default function ZenithFinanceBody({
             </ChartPanel>
           </div>
         </div>
+      </section>
+      ) : null}
+      {showMore ? (
         <div
           id="zenith-segments"
           className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 lg:items-stretch lg:min-h-[480px] scroll-mt-24"
@@ -487,6 +510,7 @@ export default function ZenithFinanceBody({
               stretchToRowHeight
               title="Revenue by customer segment"
               showExploreHint
+              chartHeightPx={exploreChartHeight}
               data={seg.map((s) => ({ name: s.label, value: s.value, percentage: s.percentage }))}
               onSegmentClick={(segment) =>
                 drill('customer_segment', segment, { segmentChart: 'revenue' })
@@ -497,7 +521,7 @@ export default function ZenithFinanceBody({
             <CustomerProfitabilityRank rows={wordCloud} dateFilter={dateFilter} className="h-full min-h-[320px] flex-1" />
           </div>
         </div>
-      </section>
+      ) : null}
     </div>
   )
 }

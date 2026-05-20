@@ -121,7 +121,7 @@ export default function ForecastKPI({
             role="tab"
             aria-selected={activeTab === key}
             onClick={() => setActiveTab(key)}
-            className={`text-[10px] px-2 py-1 rounded transition-all cursor-pointer shrink-0 ${
+            className={`zenith-forecast-tab text-[10px] px-2 py-1 rounded transition-all cursor-pointer shrink-0 touch-manipulation ${
               activeTab === key
                 ? 'text-[color:var(--accent-teal)] bg-[color:var(--accent-teal-muted)] border-b-2 border-[color:var(--accent-teal)] -mb-2.5 pb-1.5'
                 : 'text-[color:var(--text-muted)] bg-transparent'

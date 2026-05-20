@@ -11,17 +11,6 @@ interface Props {
   pinOptions: PinOption[]
 }
 
-const SECTION_LABEL: React.CSSProperties = {
-  fontFamily: '"Space Mono", monospace',
-  fontSize: 9,
-  fontWeight: 700,
-  letterSpacing: '0.1em',
-  textTransform: 'uppercase',
-  color: 'rgba(255,255,255,0.25)',
-  padding: '12px 0 6px',
-  display: 'block',
-}
-
 export default function RemindersTab({ reminders, loading, onDelete, onAdd, pinOptions }: Props) {
   const [content, setContent] = useState('')
   const [dueDate, setDueDate] = useState('')
@@ -60,28 +49,28 @@ export default function RemindersTab({ reminders, loading, onDelete, onAdd, pinO
 
         {overdue.length > 0 && (
           <>
-            <span style={{ ...SECTION_LABEL, color: 'var(--accent-gold)' }}>Overdue</span>
+            <span className="myday-section-label myday-section-label--overdue">Overdue</span>
             {overdue.map((r) => <ReminderItem key={r.id} reminder={r} onDelete={onDelete} />)}
           </>
         )}
 
         {todayList.length > 0 && (
           <>
-            <span style={SECTION_LABEL}>Today</span>
+            <span className="myday-section-label">Today</span>
             {todayList.map((r) => <ReminderItem key={r.id} reminder={r} onDelete={onDelete} />)}
           </>
         )}
 
         {thisWeek.length > 0 && (
           <>
-            <span style={SECTION_LABEL}>This Week</span>
+            <span className="myday-section-label">This Week</span>
             {thisWeek.map((r) => <ReminderItem key={r.id} reminder={r} onDelete={onDelete} />)}
           </>
         )}
 
         {later.length > 0 && (
           <>
-            <span style={SECTION_LABEL}>Later</span>
+            <span className="myday-section-label">Later</span>
             {later.map((r) => <ReminderItem key={r.id} reminder={r} onDelete={onDelete} />)}
           </>
         )}
@@ -118,6 +107,7 @@ export default function RemindersTab({ reminders, loading, onDelete, onAdd, pinO
           <div style={{ display: 'flex', gap: 8 }}>
             <input
               type="date"
+              className="myday-input-date"
               min={today}
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
@@ -129,9 +119,8 @@ export default function RemindersTab({ reminders, loading, onDelete, onAdd, pinO
                 border: '1px solid var(--border-input)',
                 background: 'var(--bg-input)',
                 color: dueDate ? 'var(--text-primary)' : 'var(--text-placeholder)',
-                fontSize: 14,
+                fontSize: 16,
                 outline: 'none',
-                colorScheme: 'dark',
               }}
             />
             <button

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { notifyAuthError } from './authErrorHandler';
+import { FRIENDLY_DEFAULT, sanitizeUserFacingMessage } from './friendlyErrors';
 
 // Get API base URL from environment variable
 // Falls back to empty string (relative URLs) for local development with Vite proxy
@@ -46,12 +47,12 @@ export function getFriendlyApiErrorMessage(error: unknown): string {
     return 'You do not seem to have access to this page. Please check with your Leadership team or the Administrator.'
   }
   if (err?.response?.data?.error && typeof err.response.data.error === 'string') {
-    return err.response.data.error
+    return sanitizeUserFacingMessage(err.response.data.error) ?? FRIENDLY_DEFAULT
   }
   if (err?.message && typeof err.message === 'string' && err.message !== 'Network Error') {
-    return err.message
+    return sanitizeUserFacingMessage(err.message) ?? FRIENDLY_DEFAULT
   }
-  return 'The server may be busy or your connection was interrupted. Please try again.'
+  return FRIENDLY_DEFAULT
 }
 
 // Warn if API base is missing in production (causes login/API calls to fail)

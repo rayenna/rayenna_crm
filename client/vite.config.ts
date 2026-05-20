@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
     handler: 'NetworkFirst' as const,
     options: {
       cacheName: 'backend-api',
-      networkTimeoutSeconds: 15,
+      networkTimeoutSeconds: 6,
       expiration: {
         maxEntries: 300,
         maxAgeSeconds: 60 * 60 * 24,

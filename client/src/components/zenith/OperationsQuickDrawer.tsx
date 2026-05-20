@@ -17,6 +17,12 @@ import ZenithDrawerRemarksPanel from './ZenithDrawerRemarksPanel'
 import ZenithDrawerProjectTitle from './ZenithDrawerProjectTitle'
 import ZenithDrawerPaymentSummary from './ZenithDrawerPaymentSummary'
 import { formatZenithSystemCapacityKw } from '../../utils/zenithSystemCapacityFormat'
+import {
+  zenithDrawerMotion,
+  ZENITH_DRAWER_CLOSE_BTN_CLASS,
+  ZENITH_DRAWER_PANEL_CLASS,
+} from './zenithDrawerMotion'
+import ZenithDrawerPortal from './ZenithDrawerPortal'
 
 const QK = 'operations-quick-drawer-project' as const
 
@@ -264,7 +270,7 @@ export default function OperationsQuickDrawer({
   )
 
   return (
-    <>
+    <ZenithDrawerPortal>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: isOpen ? 1 : 0 }}
@@ -276,14 +282,8 @@ export default function OperationsQuickDrawer({
       />
 
       <motion.div
-        initial={{ x: '100%' }}
-        animate={{ x: isOpen ? 0 : '100%' }}
-        transition={
-          narrowViewport
-            ? { type: 'tween', duration: 0.2, ease: [0.22, 1, 0.36, 1] }
-            : { type: 'spring', damping: 30, stiffness: 300 }
-        }
-        className="zenith-quick-drawer-panel fixed top-0 right-0 z-[6001] h-[100dvh] w-full max-w-full lg:w-[420px] lg:max-w-[420px] flex flex-col overflow-hidden"
+        {...zenithDrawerMotion(isOpen)}
+        className={ZENITH_DRAWER_PANEL_CLASS}
         style={{
           fontFamily: 'DM Sans, sans-serif',
           paddingBottom: 'max(56px, env(safe-area-inset-bottom, 0px))',
@@ -312,7 +312,7 @@ export default function OperationsQuickDrawer({
             <button
               type="button"
               onClick={onClose}
-              className="w-8 h-8 shrink-0 rounded-full bg-[color:var(--bg-badge)] text-[color:var(--text-muted)] hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)] transition-colors"
+              className={ZENITH_DRAWER_CLOSE_BTN_CLASS}
               aria-label="Close"
             >
               ×
@@ -694,6 +694,6 @@ export default function OperationsQuickDrawer({
           {queuedToast.text}
         </div>
       ) : null}
-    </>
+    </ZenithDrawerPortal>
   )
 }

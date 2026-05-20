@@ -14,13 +14,14 @@ import {
 import ZenithChartTouchReset from './ZenithChartTouchReset'
 import { useChartColors } from '../../hooks/useChartColors'
 import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTooltipStyles'
+import { ZENITH_CHART_HEIGHT_FLOOR } from './zenithChartHeight'
 
 export type ZenithFyRevenueProfitPoint = { fy: string; revenue: number; profit: number }
 
 /** Min bar hit height in px — zero-profit years still open the profit drill-down */
-const PROFIT_HIT_MIN_PX = 18
+const PROFIT_HIT_MIN_PX = 26
 /** Invisible halo around revenue point so clicks are reliable (area fill is non-interactive). */
-const REVENUE_HIT_RADIUS_PX = 22
+const REVENUE_HIT_RADIUS_PX = 28
 
 type TooltipPayloadItem = {
   name?: string
@@ -150,9 +151,12 @@ function createProfitBarShape(
 export default function ZenithRevenueProfitFyChart({
   data,
   onFyClick,
+  height = ZENITH_CHART_HEIGHT_FLOOR,
 }: {
   data: ZenithFyRevenueProfitPoint[]
   onFyClick?: (args: { fy: string; metric: 'revenue' | 'profit' }) => void
+  /** Align with other Explore charts (see `zenithStandardChartHeight`). */
+  height?: number
 }) {
   const c = useChartColors()
   const onFyClickRef = useRef(onFyClick)
@@ -205,10 +209,13 @@ export default function ZenithRevenueProfitFyChart({
   )
 
   return (
-    <div className="zenith-fy-revenue-profit-chart zenith-chart-slot w-full h-full min-h-0 min-w-0">
+    <div
+      className="zenith-fy-revenue-profit-chart zenith-chart-slot w-full min-w-0"
+      style={{ height, minHeight: height }}
+    >
       <ZenithChartTouchReset>
         {(rk) => (
-          <ResponsiveContainer key={rk} width="100%" height={240} minWidth={0}>
+          <ResponsiveContainer key={rk} width="100%" height={height} minWidth={0}>
             <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={c.grid} />
           <XAxis dataKey="fy" tick={{ fill: c.axisText, fontSize: 10 }} />

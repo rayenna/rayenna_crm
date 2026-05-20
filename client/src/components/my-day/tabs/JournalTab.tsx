@@ -5,19 +5,30 @@ import JournalEntryComp from '../components/JournalEntry'
 interface Props {
   journalToday: JournalEntryType | null
   journalRecent: JournalEntryType[]
+  journalRecentTotal: number
   loading: boolean
+  loadingMore: boolean
   saveState: 'idle' | 'saving' | 'saved' | 'error'
   onSave: (content: string, projectId?: string | null, projectLabel?: string | null) => void
   onFlush: () => void
+  onLoadMore: () => void
   pinOptions: PinOption[]
 }
 
-const VISIBLE_COUNT = 10
-
-export default function JournalTab({ journalToday, journalRecent, loading, saveState, onSave, onFlush, pinOptions }: Props) {
+export default function JournalTab({
+  journalToday,
+  journalRecent,
+  journalRecentTotal,
+  loading,
+  loadingMore,
+  saveState,
+  onSave,
+  onFlush,
+  onLoadMore,
+  pinOptions,
+}: Props) {
   const [text, setText] = useState(journalToday?.content ?? '')
   const [projectId, setProjectId] = useState(journalToday?.projectId ?? '')
-  const [showMore, setShowMore] = useState(false)
 
   // Sync textarea when today's entry loads from server
   useEffect(() => {
@@ -47,24 +58,13 @@ export default function JournalTab({ journalToday, journalRecent, loading, saveS
   const today = new Date()
   const todayLabel = today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 
-  const visibleRecent = showMore ? journalRecent : journalRecent.slice(0, VISIBLE_COUNT)
+  const hasMoreRecent = journalRecent.length < journalRecentTotal
 
   return (
     <div style={{ overflowY: 'auto', height: '100%', padding: '0 16px 16px' }}>
       {/* Today header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0 8px' }}>
-        <span
-          style={{
-            fontFamily: '"Space Mono", monospace',
-            fontSize: 9,
-            fontWeight: 700,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-            color: 'rgba(255,255,255,0.25)',
-          }}
-        >
-          Today — {todayLabel}
-        </span>
+        <span className="myday-section-label myday-section-label--inline">Today — {todayLabel}</span>
         <span
           style={{
             fontSize: 11,
@@ -147,18 +147,7 @@ export default function JournalTab({ journalToday, journalRecent, loading, saveS
         }}
       >
         <div style={{ flex: 1, height: 1, background: 'var(--border-default)' }} />
-        <span
-          style={{
-            fontFamily: '"Space Mono", monospace',
-            fontSize: 9,
-            fontWeight: 700,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-            color: 'rgba(255,255,255,0.25)',
-          }}
-        >
-          Earlier
-        </span>
+        <span className="myday-section-label">Earlier</span>
         <div style={{ flex: 1, height: 1, background: 'var(--border-default)' }} />
       </div>
 
@@ -172,27 +161,31 @@ export default function JournalTab({ journalToday, journalRecent, loading, saveS
         </p>
       )}
 
-      {visibleRecent.map((entry) => (
+      {journalRecent.map((entry) => (
         <JournalEntryComp key={entry.id} entry={entry} />
       ))}
 
-      {journalRecent.length > VISIBLE_COUNT && !showMore && (
+      {hasMoreRecent && (
         <button
           type="button"
-          onClick={() => setShowMore(true)}
+          onClick={onLoadMore}
+          disabled={loadingMore}
+          className="myday-touch-target"
           style={{
             display: 'block',
             width: '100%',
+            minHeight: 44,
             padding: '10px 0',
             background: 'none',
             border: 'none',
             color: 'var(--accent-gold)',
             fontSize: 13,
-            cursor: 'pointer',
+            cursor: loadingMore ? 'wait' : 'pointer',
             textAlign: 'center',
+            opacity: loadingMore ? 0.6 : 1,
           }}
         >
-          Load more
+          {loadingMore ? 'Loading…' : 'Load more'}
         </button>
       )}
     </div>

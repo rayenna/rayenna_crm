@@ -18,6 +18,8 @@ import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { getLoanBankBarColor } from './loanBankChartColors'
 import {
   buildZenithLifecycleBrandBarRows,
+  lifecycleBrandPairedChartHeight,
+  lifecycleBrandPairedYAxisWidth,
   type ZenithLifecycleBrandBarRow,
 } from '../../utils/zenithPanelInverterBrandChartData'
 import { formatZenithSystemCapacityKw } from '../../utils/zenithSystemCapacityFormat'
@@ -75,19 +77,22 @@ function DashboardBrandTooltip({
 function LifecycleBrandBarCard({
   title,
   rows,
-  chartHeight,
+  plotHeight,
+  yAxisWidth,
   costTitle,
   kind,
   onBrandNavigate,
 }: {
   title: string
   rows: ZenithLifecycleBrandBarRow[]
-  chartHeight: number
+  plotHeight: number
+  yAxisWidth: number
   costTitle: string
   kind: 'panel' | 'inverter'
   onBrandNavigate: (brandLabel: string, kind: 'panel' | 'inverter') => void
 }) {
   const chartColors = useChartColors()
+
   return (
     <div className={`${ZENITH_DASHBOARD_ANALYTICS_CARD} h-full min-w-0`}>
       <div className="mb-3 flex flex-shrink-0 flex-col gap-2">
@@ -107,7 +112,7 @@ function LifecycleBrandBarCard({
           </div>
         </div>
       </div>
-      <div className="w-full flex flex-col min-w-0 overflow-hidden flex-1" style={{ height: chartHeight }}>
+      <div className="w-full flex flex-col min-w-0 overflow-hidden flex-1" style={{ height: plotHeight }}>
         {rows.length === 0 ? (
           <div className="flex h-full w-full items-center justify-center rounded-xl border border-dashed border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3">
             <p className="max-w-sm text-center text-sm text-[color:var(--text-muted)]">
@@ -127,8 +132,9 @@ function LifecycleBrandBarCard({
               <YAxis
                 type="category"
                 dataKey="brandLabel"
-                width={108}
-                tick={{ fontSize: 9, fill: chartColors.axisText }}
+                width={yAxisWidth}
+                interval={0}
+                tick={{ fontSize: 10, fill: chartColors.axisText }}
                 stroke={chartColors.grid}
               />
               <Tooltip
@@ -204,25 +210,35 @@ export default function DashboardLifecycleBrandBarCharts({
 
   if (!canView) return null
 
-  const chartHeight = 300
+  const chartFloor = 300
+  const plotHeight = lifecycleBrandPairedChartHeight(
+    [panelRows.length, inverterRows.length],
+    chartFloor,
+  )
+  const yAxisWidth = lifecycleBrandPairedYAxisWidth([
+    panelRows.map((row) => row.brandLabel),
+    inverterRows.map((row) => row.brandLabel),
+  ])
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
-      <div className="w-full min-h-[360px] flex flex-col min-w-0">
+    <div className="grid w-full grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-2 lg:items-stretch [&>*]:min-w-0">
+      <div className="flex w-full min-h-[360px] min-w-0 flex-col">
         <LifecycleBrandBarCard
           title="Projects by panel brand"
           rows={panelRows}
-          chartHeight={chartHeight}
+          plotHeight={plotHeight}
+          yAxisWidth={yAxisWidth}
           costTitle="Panel cost (est.)"
           kind="panel"
           onBrandNavigate={onBrandNavigate}
         />
       </div>
-      <div className="w-full min-h-[360px] flex flex-col min-w-0">
+      <div className="flex w-full min-h-[360px] min-w-0 flex-col">
         <LifecycleBrandBarCard
           title="Projects by inverter brand"
           rows={inverterRows}
-          chartHeight={chartHeight}
+          plotHeight={plotHeight}
+          yAxisWidth={yAxisWidth}
           costTitle="Inverter cost (est.)"
           kind="inverter"
           onBrandNavigate={onBrandNavigate}

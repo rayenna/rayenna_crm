@@ -46,11 +46,11 @@ import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
 import { buildZenithLifecycleBrandBarRows } from '../../utils/zenithPanelInverterBrandChartData'
 import ZenithLifecycleBrandBarCharts from './ZenithLifecycleBrandBarCharts'
+import { ZENITH_CHART_HEIGHT_FLOOR, zenithStandardChartHeight } from './zenithChartHeight'
+import { isZenithMobileTabActive } from './zenithMobileTabVisibility'
+import type { ZenithMobileTab } from './zenithMobileNav'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
-
-/** Bar chart height in Explore grid — matched to FY chart (240) for a balanced 2×2 on laptop widths */
-const ZENITH_OPS_CHART_H = 240
 
 function ExploreInrTooltip({
   active,
@@ -106,6 +106,7 @@ export default function ZenithOperationsBody({
   quickAction,
   onOpenOperationsDrawer,
   onOpenProjectQuickDrawer,
+  mobileTab = null,
 }: {
   data: Record<string, unknown>
   isLoading: boolean
@@ -113,6 +114,7 @@ export default function ZenithOperationsBody({
   quickAction: ZenithQuickActionHandle
   onOpenOperationsDrawer?: (projectId: string) => void
   onOpenProjectQuickDrawer: (p: QuickActionProjectRef, section?: ZenithAutoFocusSection | null) => void
+  mobileTab?: ZenithMobileTab | null
 }) {
   const { user } = useAuth()
   const chartColors = useChartColors()
@@ -261,6 +263,11 @@ export default function ZenithOperationsBody({
     [explorerProjects],
   )
 
+  const exploreChartHeight = useMemo(
+    () => zenithStandardChartHeight(inverterBrandBarRows.length, ZENITH_CHART_HEIGHT_FLOOR),
+    [inverterBrandBarRows.length],
+  )
+
   const onPanelBrandBarClick = useCallback(
     (brandLabel: string) => drill('panel_brand', brandLabel),
     [drill],
@@ -316,8 +323,13 @@ export default function ZenithOperationsBody({
     }))
   })()
 
+  const showOverview = isZenithMobileTabActive(mobileTab, 'overview')
+  const showPipeline = isZenithMobileTabActive(mobileTab, 'pipeline')
+  const showCharts = isZenithMobileTabActive(mobileTab, 'charts')
+
   return (
-    <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-6 space-y-8 pb-24 max-lg:pb-32">
+    <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-6 space-y-8 pb-24 max-lg:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
+      {showOverview ? (
       <div
         id="zenith-kpis"
         className="grid w-full grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 pb-2 scroll-mt-28"
@@ -341,6 +353,9 @@ export default function ZenithOperationsBody({
           </div>
         ))}
       </div>
+      ) : null}
+      {showPipeline ? (
+      <>
       <div id="zenith-focus" className="scroll-mt-28">
         <ZenithYourFocus
           role={user!.role}
@@ -360,6 +375,9 @@ export default function ZenithOperationsBody({
           onDealFlowStageClick={onDealFlowStageClick}
         />
       </div>
+      </>
+      ) : null}
+      {showCharts ? (
       <section className="zenith-exec-section space-y-3" aria-label="Operations charts">
         <header id="zenith-charts" className="scroll-mt-24 px-0.5">
           <h2
@@ -385,7 +403,7 @@ export default function ZenithOperationsBody({
             <ChartPanel className="min-h-0 flex-1 lg:h-full" title="Projects by stage" showExploreHint>
               <ZenithChartTouchReset>
                 {(rk) => (
-                  <ResponsiveContainer key={rk} width="100%" height={ZENITH_OPS_CHART_H} minWidth={0}>
+                  <ResponsiveContainer key={rk} width="100%" height={exploreChartHeight} minWidth={0}>
                     <BarChart layout="vertical" data={projectsByStatus} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                       <XAxis type="number" tick={{ fill: chartColors.axisText, fontSize: 10 }} />
@@ -424,7 +442,7 @@ export default function ZenithOperationsBody({
             <ChartPanel className="min-h-0 flex-1 lg:h-full" title="Revenue vs pipeline by sales team" showExploreHint>
               <ZenithChartTouchReset>
                 {(rk) => (
-                  <ResponsiveContainer key={rk} width="100%" height={ZENITH_OPS_CHART_H} minWidth={0}>
+                  <ResponsiveContainer key={rk} width="100%" height={exploreChartHeight} minWidth={0}>
                     <BarChart layout="vertical" data={salesMerge} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                       <XAxis type="number" tick={{ fontSize: 10, fill: chartColors.axisText }} />
@@ -493,6 +511,7 @@ export default function ZenithOperationsBody({
             <ChartPanel className="min-h-0 flex-1 lg:h-full" title="Revenue & profit by financial year" showExploreHint>
               <ZenithRevenueProfitFyChart
                 data={fyChart}
+                height={exploreChartHeight}
                 onFyClick={({ fy, metric }) =>
                   drill('fy', fy, { fyMetric: metric === 'profit' ? 'profit' : 'revenue' })
                 }
@@ -503,6 +522,7 @@ export default function ZenithOperationsBody({
             <SegmentDonut
               title="Revenue by customer segment"
               showExploreHint
+              chartHeightPx={exploreChartHeight}
               stretchToRowHeight
               data={seg.map((s) => ({ name: s.label, value: s.value, percentage: s.percentage }))}
               onSegmentClick={(segment) =>
@@ -512,19 +532,17 @@ export default function ZenithOperationsBody({
           </div>
         </div>
 
-        <div
-          id="zenith-charts-row-lifecycle"
-          className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 scroll-mt-28 mt-3 sm:mt-4 [&>*]:min-w-0"
-        >
+        <div id="zenith-charts-row-lifecycle" className="scroll-mt-28 mt-3 sm:mt-4 w-full min-w-0">
           <ZenithLifecycleBrandBarCharts
             panelRows={panelBrandBarRows}
             inverterRows={inverterBrandBarRows}
-            chartHeight={ZENITH_OPS_CHART_H}
+            chartHeight={ZENITH_CHART_HEIGHT_FLOOR}
             onPanelBrandClick={onPanelBrandBarClick}
             onInverterBrandClick={onInverterBrandBarClick}
           />
         </div>
       </section>
+      ) : null}
     </div>
   )
 }

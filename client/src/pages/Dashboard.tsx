@@ -89,8 +89,8 @@ const Dashboard = () => {
     }
   }
 
-  const announcementProposal =
-    'New: Rayenna Proposal Engine is now live — create full solar proposals in one click from any eligible project in the CRM.'
+  const announcementMyDay =
+    'New: My Day — your personal Tasks, Journal & Reminders drawer; press Ctrl+Shift+M (⌘⇧M) or tap the ☀ icon in the top bar from any page.'
   const announcementZenith =
     'Zenith is LIVE = Your Solar CRM, now reimagined as a Command Centre. Go to Dashboard Menu and Click on Zenith to Open and Try it.'
 
@@ -100,7 +100,7 @@ const Dashboard = () => {
         <span className="shrink-0 rounded-full bg-[color:var(--accent-gold-muted)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent-gold)] shadow-sm ring-1 ring-[color:var(--accent-gold-border)]">
           New
         </span>
-        <span className="text-[color:var(--text-primary)]">{announcementProposal}</span>
+        <span className="text-[color:var(--text-primary)]">{announcementMyDay}</span>
       </span>
       <span className="mx-6 text-[color:var(--text-muted)] sm:mx-8" aria-hidden>
         •
@@ -115,7 +115,7 @@ const Dashboard = () => {
   return (
     shell(
     <div className="max-w-full min-w-0 overflow-x-hidden dashboard-mobile-no-clip">
-      {/* Proposal Engine launch banner – tight under header */}
+      {/* Dashboard announcement marquee */}
       <style>
         {`@keyframes ray-proposal-marquee {
             0% { transform: translateX(0); }

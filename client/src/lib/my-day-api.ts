@@ -33,16 +33,29 @@ export async function deleteTask(id: string): Promise<void> {
 
 // ── Journal ───────────────────────────────────────────────────────────────────
 
-export async function fetchJournal(date?: string): Promise<{
+export async function fetchJournal(opts?: {
+  date?: string
+  recentLimit?: number
+  recentOffset?: number
+}): Promise<{
   today: JournalEntry | null
   recent: JournalEntry[]
+  recentTotal: number
 }> {
-  const params = date ? { date } : {}
-  const { data } = await axiosInstance.get<{ today: JournalEntry | null; recent: JournalEntry[] }>(
-    '/api/my-day/journal',
-    { params },
-  )
-  return data
+  const params: Record<string, string | number> = {}
+  if (opts?.date) params.date = opts.date
+  if (opts?.recentLimit != null) params.recentLimit = opts.recentLimit
+  if (opts?.recentOffset != null) params.recentOffset = opts.recentOffset
+  const { data } = await axiosInstance.get<{
+    today: JournalEntry | null
+    recent: JournalEntry[]
+    recentTotal: number
+  }>('/api/my-day/journal', { params })
+  return {
+    today: data.today,
+    recent: data.recent,
+    recentTotal: data.recentTotal ?? data.recent.length,
+  }
 }
 
 export async function upsertJournal(payload: {

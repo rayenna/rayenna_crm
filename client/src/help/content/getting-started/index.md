@@ -47,4 +47,4 @@ When focus is **not** in a text field, **textarea**, **select**, or **contentedi
 
 On a **Help** page, **Esc** returns you to the **Dashboard**. The same shortcuts are summarised under [Dashboard → Keyboard shortcuts](/help/dashboard#keyboard-shortcuts).
 
-> **My Day** is your personal productivity space inside Rayenna CRM. Press **Ctrl+Shift+M** (⌘⇧M) from any page to open it, or click the **sunrise icon ☀** in the top nav bar. Tasks and reminders show a count badge when items are pending. See [Zenith → My Day drawer](/help/zenith#my-day-personal-productivity-drawer) for full details.
+> **My Day** is your personal productivity space inside Rayenna CRM. Press **Ctrl+Shift+M** (⌘⇧M) from any page to open it, or click the **sunrise icon ☀** in the top nav bar. Tasks and reminders show a count badge when items are pending. **Edit** or **Delete** tasks from the **⋯** menu (not swipe). Journal entries support **Load more** for older notes; **overdue** reminders always appear under **Overdue**. The classic **Dashboard** scrolling banner also promotes **My Day**. See [Zenith → My Day drawer](/help/zenith#my-day-personal-productivity-drawer) for full details.

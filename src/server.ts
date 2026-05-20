@@ -9,6 +9,7 @@ import * as Sentry from '@sentry/node';
 // Prisma and route modules are loaded after listen() so /health can respond within Render's 5s timeout
 
 import { scrubSentryEvent } from './utils/sentryScrub';
+import { toPublicErrorMessage } from './utils/publicApiError';
 
 dotenv.config();
 
@@ -163,15 +164,19 @@ app.use((req, res, next) => {
   });
 });
 
-// Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+// Error handling middleware (never send raw Prisma / stack traces to clients)
+app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   if (process.env.SENTRY_DSN) {
     Sentry.captureException(err);
   }
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  console.error(err);
+  const status =
+    typeof err === 'object' && err !== null && 'status' in err && typeof (err as { status?: unknown }).status === 'number'
+      ? (err as { status: number }).status
+      : 500;
+  res.status(status).json({
+    error: toPublicErrorMessage(err),
+    ...(process.env.NODE_ENV === 'development' && err instanceof Error && { details: err.message }),
   });
 });
 

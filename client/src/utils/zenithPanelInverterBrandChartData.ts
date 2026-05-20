@@ -54,3 +54,29 @@ export function buildZenithLifecycleBrandBarRows(
     }))
     .sort((a, b) => b.count - a.count || a.brandLabel.localeCompare(b.brandLabel))
 }
+
+const LIFECYCLE_BRAND_BAR_ROW_PX = 30
+const LIFECYCLE_BRAND_CHART_VERTICAL_PAD = 40
+
+/** Vertical space so Recharts does not auto-hide every other Y-axis category label. */
+export function lifecycleBrandBarChartHeight(rowCount: number, floor = 240): number {
+  if (rowCount <= 0) return floor
+  return Math.max(floor, rowCount * LIFECYCLE_BRAND_BAR_ROW_PX + LIFECYCLE_BRAND_CHART_VERTICAL_PAD)
+}
+
+export function lifecycleBrandYAxisWidth(labels: string[]): number {
+  if (labels.length === 0) return 108
+  const longest = labels.reduce((max, s) => Math.max(max, s.length), 0)
+  return Math.min(200, Math.max(100, Math.ceil(longest * 6.5) + 24))
+}
+
+/** Same plot height for panel + inverter cards so paired Zenith/Dashboard rows align. */
+export function lifecycleBrandPairedChartHeight(rowCounts: number[], floor = 240): number {
+  const maxRows = rowCounts.reduce((max, n) => Math.max(max, n), 0)
+  return lifecycleBrandBarChartHeight(maxRows, floor)
+}
+
+/** Same Y-axis gutter for both charts so bar areas line up and labels are not truncated unevenly. */
+export function lifecycleBrandPairedYAxisWidth(labelGroups: string[][]): number {
+  return lifecycleBrandYAxisWidth(labelGroups.flat())
+}

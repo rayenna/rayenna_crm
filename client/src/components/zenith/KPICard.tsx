@@ -113,7 +113,7 @@ export default function KPICard({
       <button
         type="button"
         onClick={onClick}
-        className="block h-full min-w-0 w-full rounded-xl border-0 bg-transparent p-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--bg-page)]"
+        className="block h-full min-w-0 w-full rounded-xl border-0 bg-transparent p-0 text-left touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--bg-page)]"
         aria-label={`Open list: ${item.label}`}
       >
         {inner}

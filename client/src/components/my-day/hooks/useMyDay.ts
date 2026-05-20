@@ -101,26 +101,72 @@ export function useMyDay() {
     }
   }, [tasks, bumpSnapshot])
 
+  const editTask = useCallback(async (id: string, content: string) => {
+    const trimmed = content.trim()
+    if (!trimmed) return
+    const prev = tasks.find((t) => t.id === id)
+    if (!prev || prev.content === trimmed) return
+    setTasks((prevList) =>
+      prevList.map((t) => (t.id === id ? { ...t, content: trimmed } : t)),
+    )
+    try {
+      const updated = await patchTask(id, { content: trimmed })
+      setTasks((prevList) => prevList.map((t) => (t.id === id ? updated : t)))
+      bumpSnapshot()
+    } catch {
+      if (prev) {
+        setTasks((prevList) => prevList.map((t) => (t.id === id ? prev : t)))
+      }
+      toast.error('Failed to update task')
+    }
+  }, [tasks, bumpSnapshot])
+
   // ── Journal ─────────────────────────────────────────────────────────────────
   const [journalToday, setJournalToday] = useState<JournalEntry | null>(null)
   const [journalRecent, setJournalRecent] = useState<JournalEntry[]>([])
+  const [journalRecentTotal, setJournalRecentTotal] = useState(0)
   const [journalLoading, setJournalLoading] = useState(false)
+  const [journalLoadingMore, setJournalLoadingMore] = useState(false)
   const [journalSaveState, setJournalSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingJournalRef = useRef<{ content: string; projectId?: string | null; projectLabel?: string | null } | null>(null)
 
+  const JOURNAL_PAGE = 10
+
   const loadJournal = useCallback(async () => {
     setJournalLoading(true)
     try {
-      const data = await fetchJournal()
+      const data = await fetchJournal({ recentLimit: JOURNAL_PAGE, recentOffset: 0 })
       setJournalToday(data.today)
       setJournalRecent(data.recent)
+      setJournalRecentTotal(data.recentTotal)
     } catch {
       toast.error('Failed to load journal')
     } finally {
       setJournalLoading(false)
     }
   }, [])
+
+  const loadMoreJournal = useCallback(async () => {
+    if (journalLoadingMore || journalRecent.length >= journalRecentTotal) return
+    setJournalLoadingMore(true)
+    try {
+      const data = await fetchJournal({
+        recentLimit: JOURNAL_PAGE,
+        recentOffset: journalRecent.length,
+      })
+      setJournalRecent((prev) => {
+        const seen = new Set(prev.map((e) => e.id))
+        const next = data.recent.filter((e) => !seen.has(e.id))
+        return [...prev, ...next]
+      })
+      setJournalRecentTotal(data.recentTotal)
+    } catch {
+      toast.error('Failed to load more entries')
+    } finally {
+      setJournalLoadingMore(false)
+    }
+  }, [journalLoadingMore, journalRecent.length, journalRecentTotal])
 
   const flushJournalSave = useCallback(async () => {
     if (!pendingJournalRef.current) return
@@ -257,12 +303,16 @@ export function useMyDay() {
     toggleTask,
     addTask,
     removeTask,
+    editTask,
     // journal
     journalToday,
     journalRecent,
+    journalRecentTotal,
     journalLoading,
+    journalLoadingMore,
     journalSaveState,
     loadJournal,
+    loadMoreJournal,
     saveJournal,
     flushJournalSave,
     // reminders

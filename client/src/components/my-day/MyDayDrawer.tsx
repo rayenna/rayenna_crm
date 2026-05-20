@@ -241,9 +241,10 @@ export default function MyDayDrawer() {
             type="button"
             aria-label="Close My Day"
             onClick={close}
+            className="myday-touch-target"
             style={{
-              width: 36,
-              height: 36,
+              width: 44,
+              height: 44,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -335,6 +336,7 @@ export default function MyDayDrawer() {
               loading={md.tasksLoading}
               error={md.tasksError}
               onToggle={md.toggleTask}
+              onEdit={md.editTask}
               onDelete={md.removeTask}
               onAdd={md.addTask}
               pinOptions={pinOptions}
@@ -345,10 +347,13 @@ export default function MyDayDrawer() {
             <JournalTab
               journalToday={md.journalToday}
               journalRecent={md.journalRecent}
+              journalRecentTotal={md.journalRecentTotal}
               loading={md.journalLoading}
+              loadingMore={md.journalLoadingMore}
               saveState={md.journalSaveState}
               onSave={md.saveJournal}
               onFlush={md.flushJournalSave}
+              onLoadMore={md.loadMoreJournal}
               pinOptions={pinOptions}
             />
           </div>

@@ -25,17 +25,27 @@ export default function OfflineBanner({
   if (!isOnline) {
     inner = (
       <div
-        className="flex w-full items-center gap-2 border-b border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] px-5 py-[7px] text-xs text-[color:var(--banner-subtext)]"
+        className="flex w-full flex-wrap items-center gap-2 border-b border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] px-3 py-2.5 text-xs text-[color:var(--banner-subtext)] sm:px-5 sm:py-[7px]"
       >
         <WifiOff className="shrink-0 text-[color:var(--accent-red)]" size={14} aria-hidden />
-        <div className="min-w-0 flex-1">
-          <span>You&apos;re offline — changes will sync when reconnected</span>
+        <div className="min-w-0 flex-1 leading-snug">
+          <span>You&apos;re offline — drawer changes will sync when reconnected</span>
           {pendingCount > 0 ? (
-            <span className="ml-1 text-[color:var(--text-muted)]">
-              + {pendingCount} action{pendingCount > 1 ? 's' : ''} queued
+            <span className="block sm:inline sm:ml-1 text-[color:var(--text-muted)]">
+              {pendingCount} action{pendingCount > 1 ? 's' : ''} queued
             </span>
           ) : null}
         </div>
+        {pendingCount > 0 ? (
+          <button
+            type="button"
+            className="shrink-0 min-h-[36px] rounded-lg border border-[color:var(--accent-red-border)] bg-[color:var(--bg-card)] px-3 py-1 text-[11px] font-semibold text-[color:var(--accent-red)] touch-manipulation"
+            onClick={() => void onSyncNow()}
+            title="Try sync when connection returns"
+          >
+            Sync
+          </button>
+        ) : null}
       </div>
     )
   } else if (syncError && !isSyncing) {
@@ -65,13 +75,17 @@ export default function OfflineBanner({
         </span>
       </div>
     )
-  } else if (showOnlineAck && pendingCount === 0) {
+  } else if (showOnlineAck && !isSyncing) {
     inner = (
       <div
-        className="flex w-full items-center gap-2 border-b border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-5 py-[7px] text-xs text-[color:var(--accent-teal)]"
+        className="flex w-full items-center gap-2 border-b border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-3 py-2.5 text-xs text-[color:var(--accent-teal)] sm:px-5 sm:py-[7px]"
       >
         <CheckCircle2 className="shrink-0 text-[color:var(--accent-teal)]" size={14} aria-hidden />
-        <span>Back online — all changes synced</span>
+        <span>
+          {pendingCount > 0
+            ? `Back online — syncing ${pendingCount} queued action${pendingCount !== 1 ? 's' : ''}…`
+            : 'Back online — all changes synced'}
+        </span>
       </div>
     )
   }
