@@ -73,6 +73,7 @@ export default function Dashboard() {
         if (cancelled) return;
         const latest = getCustomer(id) ?? rec;
         const merged = applyProposalEngineProjectDetail(latest, res);
+        switchActiveCustomer(merged.id);
         upsertCustomer(merged);
         if (!cancelled) {
           const syncTime = new Date().toISOString();

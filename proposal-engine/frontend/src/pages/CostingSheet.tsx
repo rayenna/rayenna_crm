@@ -212,7 +212,7 @@ export default function CostingSheet() {
   }, [showToast]);
 
   // Core save logic — called either directly (active customer) or from modal (no customer)
-  const handleSaveSheet = useCallback((name: string, description: string) => {
+  const handleSaveSheet = useCallback(async (name: string, description: string) => {
     // Normalize GST: blank/missing → category default (5% or 18%) so labour etc. never show as 0%
     const validItems  = liveItems
       .filter((r) => r.itemName.trim())
@@ -300,8 +300,23 @@ export default function CostingSheet() {
 
       // Sync both to CRM backend so BOM page and Proposal use the same values everywhere.
       if (activeCustomer.master.crmProjectId) {
-        void syncProjectCosting(activeCustomer.master.crmProjectId, costingArtifact);
-        void syncProjectBom(activeCustomer.master.crmProjectId, bomArtifact);
+        try {
+          await syncProjectCosting(activeCustomer.master.crmProjectId, costingArtifact);
+          await syncProjectBom(activeCustomer.master.crmProjectId, bomArtifact);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Server sync failed';
+          setShowSaveSheetModal(false);
+          showToast(
+            `Saved on this device, but could not sync to the server: ${msg}. Open the project again after fixing the API connection.`,
+          );
+          return;
+        }
+      } else {
+        setShowSaveSheetModal(false);
+        showToast(
+          'Saved locally only — link this customer to a CRM project (Select Project) so costing syncs across devices.',
+        );
+        return;
       }
     }
 
@@ -740,10 +755,15 @@ export default function CostingSheet() {
                       type="number"
                       min="0"
                       max="100"
-                      step="0.5"
+                      step="0.001"
                       value={marginPercent}
-                      onChange={(e) => setMarginPercent(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
-                      className="w-14 bg-transparent text-sm font-bold text-yellow-800 text-right focus:outline-none tabular-nums"
+                      onChange={(e) => {
+                        const raw = parseFloat(e.target.value);
+                        const v = Number.isFinite(raw) ? raw : 0;
+                        const clamped = Math.max(0, Math.min(100, v));
+                        setMarginPercent(Math.round(clamped * 1000) / 1000);
+                      }}
+                      className="w-16 bg-transparent text-sm font-bold text-yellow-800 text-right focus:outline-none tabular-nums"
                     />
                     <span className="text-xs text-yellow-600">%</span>
                   </div>

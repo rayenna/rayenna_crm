@@ -242,24 +242,34 @@ export default function HelpPage() {
 
         <div className="space-y-5">
           <Step n={1} title="Pick a CRM Project">
-            Go to <Link to="/customers" className="text-indigo-600 underline font-medium">Customers / Projects</Link> and click <strong>+ Select Project</strong>. <strong>In the picker</strong>, use its search and filters to find a Rayenna CRM project in <em>Proposal</em> or <em>Confirmed</em> stage, then click <strong>Select</strong>. This creates a Proposal Engine record linked to that CRM project and makes it the <strong>active project</strong> on your Dashboard and across all workflow pages (Costing, BOM, ROI, AI Roof Layout, Proposal).
+            Go to <Link to="/customers" className="text-indigo-600 underline font-medium">Customers / Projects</Link> and click <strong>+ Select Project</strong>. <strong>In the picker</strong>, use its search and filters to find a Rayenna CRM project in <em>Proposal</em> or <em>Confirmed</em> stage, then click <strong>Use Selected Project →</strong>. This links the CRM project to Proposal Engine and makes it the <strong>active project</strong> on your Dashboard and on Costing, BOM, ROI, AI Roof Layout, and Proposal. To reopen work later, click <strong>Open</strong> on the same project in the list — the app loads the latest <strong>Costing, BOM, ROI, and Proposal</strong> from the CRM server (not only what was left in your browser).
           </Step>
 
           <Step n={2} title="Build the Costing Sheet">
-            Go to <Link to="/costing" className="text-indigo-600 underline font-medium">Costing Sheet</Link>. Click <strong>📋 Templates</strong> and pick the template closest to your project size (e.g. <em>5KW DCR</em>). Adjust quantities and prices as needed, set your margin %, and click <strong>💾 Save Sheet</strong>. The BOM and ROI will be pre-filled automatically.
+            Go to <Link to="/costing" className="text-indigo-600 underline font-medium">Costing Sheet</Link>. Click <strong>📋 Templates</strong> or <strong>📥 Import Excel</strong>, adjust quantities and prices, set <strong>Margin %</strong> (any value up to <strong>three decimal places</strong>, e.g. 15 or 3.75), then click <strong>💾 Save Sheet</strong>. Saving stores the sheet on the <strong>CRM project</strong>, auto-generates the BOM, and pre-fills ROI. If server sync fails, you will see an error — fix the connection and save again (importing alone does not sync until you save).
           </Step>
 
           <Step n={3} title="Review the Bill of Materials">
-            Go to <Link to="/bom" className="text-indigo-600 underline font-medium">BOM</Link>. The equipment list is already generated from your costing sheet. Adjust specifications (include make/model there if needed) and click <strong>💾 Save BOM</strong>.
+            Go to <Link to="/bom" className="text-indigo-600 underline font-medium">BOM</Link>. The equipment list is already generated when you saved the costing sheet. Adjust specifications (include make/model there if needed) and click <strong>💾 Save BOM</strong> to sync BOM changes to the CRM project.
           </Step>
 
           <Step n={4} title="Calculate ROI">
-            Go to <Link to="/roi" className="text-indigo-600 underline font-medium">ROI Calculator</Link>. System size and project cost are already filled in. Adjust the electricity tariff and escalation rate if needed, then click <strong>Calculate</strong>. Review the results and click <strong>💾 Save Result</strong>.
+            Go to <Link to="/roi" className="text-indigo-600 underline font-medium">ROI Calculator</Link>. System size and project cost are already filled in after a costing save. Adjust tariff and escalation if needed, click <strong>Calculate</strong>, then <strong>💾 Save Result</strong> to store ROI on the CRM project.
           </Step>
 
           <Step n={5} title="Generate and Export the Proposal">
-            Go to <Link to="/proposal" className="text-indigo-600 underline font-medium">Proposal</Link>. Click <strong>Generate Proposal</strong> to see the full document. If you saved a roof layout, turn on <strong>Include AI Roof Layout (Beta) in proposal</strong> first so the site plan section appears. Use <strong>✏️ Edit</strong> for inline changes, then <strong>💾 Save</strong> in the header. Export with <strong>⬇ PDF</strong> or <strong>⬇ DOCX</strong>, or <strong>🔗 Share</strong> for a customer link (optional password and expiry).
+            Go to <Link to="/proposal" className="text-indigo-600 underline font-medium">Proposal</Link>. Click <strong>Generate Proposal</strong>, then <strong>💾 Save</strong> in the header to store the proposal (and linked artifacts) on the CRM project. If you saved a roof layout, enable <strong>Include AI Roof Layout (Beta) in proposal</strong> first. Export with <strong>⬇ PDF</strong> or <strong>⬇ DOCX</strong>, or <strong>🔗 Share</strong> for a customer link (optional password and expiry).
           </Step>
+        </div>
+
+        <div className="mt-5 rounded-xl border border-sky-200 bg-sky-50/80 p-4 space-y-2">
+          <p className="text-sm font-semibold text-sky-900">Saving across devices (CRM is the source of truth)</p>
+          <ul className="text-sm text-gray-700 space-y-1.5 list-disc list-inside leading-relaxed">
+            <li>Workflow data is stored on the <strong>Rayenna CRM server</strong> when you save — not only in your browser.</li>
+            <li>You must start from <strong>+ Select Project</strong> (or <strong>Open</strong> on an existing CRM-linked project). Standalone customers without a CRM project link do not sync across laptops.</li>
+            <li>After <strong>Open</strong>, the <Link to="/dashboard" className="text-indigo-600 underline font-medium">Dashboard</Link> may show a green <strong>Up to date</strong> banner confirming data was loaded from the server.</li>
+            <li>Local development: run the CRM API on <strong>port 3000</strong> and Proposal Engine UI on <strong>5174</strong> (see README). If the API is down, saves may stay on this device only and reopening elsewhere will look empty.</li>
+          </ul>
         </div>
 
         <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 space-y-3">
@@ -278,7 +288,7 @@ export default function HelpPage() {
               <strong>Panels:</strong> Add <strong>keepouts</strong> (vents, tanks) so panels skip those areas. Use <strong>Refill panels</strong> toward CRM target kW; adjust density and portrait/landscape. Hover a roof edge to see length in metres.
             </li>
             <li>
-              <strong>Save:</strong> Click <strong>Save to Proposal</strong> — image, metrics, and layout geometry are stored on the <strong>CRM project</strong> (same layout when you log in from another laptop). <strong>Regenerate AI Layout</strong> fetches fresh satellite imagery and clears your saved draft — use only when you need a new location or image.
+              <strong>Save:</strong> Click <strong>Save to Proposal</strong> — satellite image (panels only, no green edit outline), metrics, and layout geometry are stored on the <strong>CRM project</strong> (same layout when you log in from another laptop). <strong>Regenerate AI Layout</strong> fetches fresh satellite imagery and clears your saved draft — use only when you need a new location or image.
             </li>
           </ol>
           <p className="text-xs text-gray-600">
@@ -323,7 +333,7 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Setting the Active Customer</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              The Costing Sheet, BOM, ROI, and Proposal pages all work on the <strong>active project</strong>. The active project is shown in the Dashboard (<em>Proposal Command Center</em>) banner at the top of the page and as a pulsing blue dot in the top navigation bar. To switch, either click a <strong>Recent project</strong> tile on the Dashboard or click the <strong>Open</strong> button on a tile in the Customers / Projects page — both actions make that project active and return you to the Dashboard.
+              The Costing Sheet, BOM, ROI, and Proposal pages all work on the <strong>active project</strong>. The active project is shown on the <Link to="/dashboard" className="text-indigo-600 underline font-medium">Dashboard</Link> (<em>Proposal Command Center</em>) and as a pulsing blue dot in the top navigation bar. Click <strong>Open</strong> on a project in <strong>Customers / Projects</strong> (or a recent tile on the Dashboard) to make it active, <strong>refresh saved artifacts from the CRM server</strong>, and return to the Dashboard. A green <strong>Up to date</strong> notice may appear after a successful refresh.
             </p>
             <div className="mt-2">
               <Warn>Always check the active customer before saving any work. Saving to the wrong customer will overwrite their data.</Warn>
@@ -429,7 +439,7 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Setting the Margin</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              The <strong>Margin %</strong> field (default 15%) is shown in the totals panel. Type a new value to update the grand total in real time. The margin is included in the proposal's commercials section but is not labelled separately — it is absorbed into the Equipment &amp; Installation line.
+              The <strong>Margin %</strong> field (default 15%) sits beside <strong>Save Sheet</strong>. Enter any percentage from <strong>0 to 100</strong> with up to <strong>three decimal places</strong> (e.g. 15, 3.75, 12.125). The grand total updates as you type. Margin is reflected in costing totals and the proposal commercials section (rolled into Equipment &amp; Installation, not shown as a separate line).
             </p>
           </div>
 
@@ -451,13 +461,17 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Saving the Sheet</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Click <strong>💾 Save Sheet</strong>. Enter a name (e.g. <em>5KW DCR – Mr. Sharma</em>) and optional notes, then confirm. Saving does three things automatically:
+              Click <strong>💾 Save Sheet</strong>. Enter a name (e.g. <em>5KW DCR – Mr. Sharma</em>) and optional notes, then confirm. For a CRM-linked active project, saving:
             </p>
             <ul className="mt-2 space-y-1 text-sm text-gray-600 list-disc list-inside">
-              <li>Saves the sheet against the active customer</li>
-              <li>Auto-generates the BOM from the costing items</li>
+              <li>Stores the costing sheet on the active customer record in your browser</li>
+              <li><strong>Syncs costing and BOM</strong> to the Rayenna CRM server (required for other devices)</li>
+              <li>Auto-generates the BOM from costing line items</li>
               <li>Pre-fills the ROI Calculator with system size and total project cost</li>
             </ul>
+            <p className="text-sm text-gray-600 leading-relaxed mt-2">
+              If sync fails, you will see a message — the sheet may still be on this device only. Ensure the CRM API is reachable and the project was opened via <strong>Select Project</strong> or <strong>Open</strong> (not a standalone customer without <code className="text-xs bg-gray-100 px-1 rounded">crmProjectId</code>).
+            </p>
             <div className="mt-2">
               <Note>Each customer has only one costing sheet. Saving again overwrites the previous one. To keep a reusable version, save it as a <strong>Template</strong> instead.</Note>
             </div>
@@ -1087,8 +1101,12 @@ export default function HelpPage() {
             Place your cursor inside any cell in the table. A blue <strong>Table tools</strong> bar will appear above the editor. Click <strong>Borders: All</strong> to apply borders to every cell, <strong>Outer</strong> for just the table outline, or <strong>Inner</strong> for only the internal cell dividers. Choose <strong>None</strong> to remove all borders.
           </FaqItem>
 
+          <FaqItem q="I saved Costing, BOM, ROI, and Proposal but when I reopen the project everything looks empty. Why?">
+            First confirm you used <strong>+ Select Project</strong> or <strong>Open</strong> on a CRM project (not a standalone test customer). Then check that save completed without an error toast — <strong>💾 Save Sheet</strong> must sync to the server for costing and BOM. Reopen the project from <strong>Customers / Projects</strong> so artifacts reload from CRM; look for the green <strong>Up to date</strong> banner on the Dashboard. In local dev, the CRM API must be running on <strong>localhost:3000</strong> while you use PE on port <strong>5174</strong>. Importing Excel or editing without clicking Save does not update the server.
+          </FaqItem>
+
           <FaqItem q="Will my data be lost if I close the browser?">
-            No — once you click <strong>Save</strong> on Costing, BOM, ROI, or Proposal, your data is stored in the Rayenna CRM backend and is available when you log in again (even from another device). Unsaved changes and some local work-in-progress are kept in your browser only, so always save your work and export important proposals to PDF or DOCX as a backup.
+            No — after a successful <strong>Save</strong> on Costing, BOM, ROI, or Proposal, data is stored on the <strong>Rayenna CRM server</strong> and reloads when you open the same CRM project again (even on another device). Unsaved edits and browser-only work-in-progress are not synced until you save. Export important proposals to PDF or DOCX as a backup.
           </FaqItem>
 
           <FaqItem q="I pasted a Google Maps link but Regenerate still shows the old site.">

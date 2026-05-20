@@ -303,8 +303,8 @@ export default function Customers() {
           ? { ...existing, updatedAt: now }
           : buildShellCustomerRecordFromProject(project);
         const record = applyProposalEngineProjectDetail(base, res);
-        upsertCustomer(record);
         switchActiveCustomer(record.id);
+        upsertCustomer(record);
         setCustomers((prev) => {
           const idx = prev.findIndex((c) => c.id === record.id);
           if (idx >= 0) {
@@ -326,8 +326,8 @@ export default function Customers() {
               master: buildMasterFromProject(project),
             }
           : buildShellCustomerRecordFromProject(project);
-        upsertCustomer(record);
         switchActiveCustomer(record.id);
+        upsertCustomer(record);
         setCustomers((prev) => {
           const idx = prev.findIndex((c) => c.id === record.id);
           if (idx >= 0) {
@@ -396,6 +396,7 @@ export default function Customers() {
         const record = applyProposalEngineProjectDetail(base, detail);
         if (cancelled) return;
 
+        switchActiveCustomer(record.id);
         upsertCustomer(record);
         setCustomers((prev) => {
           const idx = prev.findIndex((c) => c.id === record.id);
@@ -406,7 +407,6 @@ export default function Customers() {
           }
           return [...prev, record];
         });
-        switchActiveCustomer(record.id);
         navigate('/dashboard');
       } catch {
         if (cancelled) return;
@@ -438,6 +438,7 @@ export default function Customers() {
         }
 
         if (record) {
+          switchActiveCustomer(record.id);
           upsertCustomer(record);
           setCustomers((prev) => {
             const idx = prev.findIndex((c) => c.id === record.id);
@@ -448,7 +449,6 @@ export default function Customers() {
             }
             return [...prev, record];
           });
-          switchActiveCustomer(record.id);
           setProjectsError(null);
           navigate('/dashboard');
           return;

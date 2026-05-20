@@ -17,9 +17,11 @@ Use after PE frontend and/or CRM API deploys, or before merging large PE PRs.
 
 ## Costing → BOM → ROI
 
-- [ ] Costing: edit lines, save → refresh page → data still present
+- [ ] Costing: edit lines, save → no sync-error toast → refresh page → data still present
+- [ ] Costing: margin accepts decimals (e.g. 3.75) and saves correctly
 - [ ] BOM: save → reload project from list → BOM intact
 - [ ] ROI: save → reload → ROI intact
+- [ ] Open project from Customers → Dashboard shows green **Up to date** banner (server refresh)
 - [ ] Second browser (or incognito) same user: open same project → sees saved artifacts (not only local WIP)
 
 ## Proposal

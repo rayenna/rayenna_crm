@@ -264,6 +264,7 @@ export async function syncProjectCosting(
       } else {
         void captureSyncError(err, { sync: 'costing' });
       }
+      throw err;
     }
   });
 }
@@ -283,6 +284,7 @@ export async function syncProjectBom(projectId: string, artifact: BomArtifact): 
       } else {
         void captureSyncError(err, { sync: 'bom' });
       }
+      throw err;
     }
   });
 }
@@ -302,6 +304,7 @@ export async function syncProjectRoi(projectId: string, artifact: RoiArtifact): 
       } else {
         void captureSyncError(err, { sync: 'roi' });
       }
+      throw err;
     }
   });
 }
@@ -409,6 +412,7 @@ export async function syncProjectProposal(
       } else {
         void captureSyncError(err, { sync: 'proposal' });
       }
+      throw err;
     }
   });
 }

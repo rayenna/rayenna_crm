@@ -445,7 +445,7 @@ export function saveCustomers(customers: CustomerRecord[]): void {
 
 const MAX_FULL_ARTIFACT_RECORDS = 5;
 
-function pruneCustomerArtifacts(activeId: string | null): void {
+function pruneCustomerArtifacts(activeId: string | null, keepRecordId?: string): void {
   const all = loadCustomers();
   if (all.length <= MAX_FULL_ARTIFACT_RECORDS + 1) return;
 
@@ -459,6 +459,8 @@ function pruneCustomerArtifacts(activeId: string | null): void {
   sorted.slice(0, MAX_FULL_ARTIFACT_RECORDS).forEach((c) => keepIds.add(c.id));
   // And always keep the active customer (if any)
   if (activeId) keepIds.add(activeId);
+  // Never strip the record we just wrote (active may not be switched yet)
+  if (keepRecordId) keepIds.add(keepRecordId);
 
   const pruned = all.map((c) => {
     if (keepIds.has(c.id)) return c;
@@ -526,7 +528,7 @@ export function upsertCustomer(record: CustomerRecord): void {
     all.push(record);
   }
   saveCustomers(all);
-  pruneCustomerArtifacts(getActiveCustomerId());
+  pruneCustomerArtifacts(getActiveCustomerId(), record.id);
 }
 
 export function deleteCustomer(id: string): void {

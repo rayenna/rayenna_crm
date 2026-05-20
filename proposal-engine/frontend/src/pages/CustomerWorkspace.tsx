@@ -222,9 +222,9 @@ export default function CustomerWorkspace() {
         if (cancelled) return;
         const latest = getCustomer(id) ?? rec;
         const merged = applyProposalEngineProjectDetail(latest, res);
+        switchActiveCustomer(merged.id);
         upsertCustomer(merged);
         markServerSynced(merged.id);
-        switchActiveCustomer(merged.id);
         setRecord(getCustomer(id)!);
       } catch {
         // Network or auth error — keep local data

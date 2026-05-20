@@ -151,4 +151,4 @@ When resuming in Cursor: *“Continue PE modernization from `proposal-engine/doc
 
 ## User Guide (May 2026)
 
-**Help → Quick Start** and **AI Roof Layout** sections in `frontend/src/pages/HelpPage.tsx` document guided stepper, Maps override, keepouts, undo/redo, Save to Proposal vs Regenerate, cross-device geometry, 2D/3D tabs, and FAQ entries.
+**Help → Quick Start** and related sections in `frontend/src/pages/HelpPage.tsx` document core workflow, CRM server sync across devices, margin decimals, Save Sheet/BOM/ROI/proposal persistence, Dashboard **Up to date** banner, AI roof save image (panels only), picker button label, and FAQ for empty project on reopen.
