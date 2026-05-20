@@ -2,7 +2,7 @@
 
 **Purpose:** Resume structural improvement work without re-discovering context.  
 **Last updated:** 2026-05-16  
-**Status:** **Phase 2b** complete — `ProposalPreview.tsx` split into `frontend/src/proposal/`. Next: **Phase 2c** (`CostingSheet.tsx`).
+**Status:** **Phase 2c** complete — `CostingSheet.tsx` split into `frontend/src/costing/`. Next: **Phase 2d** (`Customers.tsx`).
 
 ---
 
@@ -34,7 +34,7 @@ Reference plan (original assessment): architecture review in team chat, May 2026
 | Item | Notes |
 |------|--------|
 | **Vitest** in `proposal-engine/frontend` | `npm test`, `npm run test:watch` |
-| Unit tests (23) | `parseGoogleMapsLink`, `roofLayoutGeometry`, `deriveProposalStatusFromArtifacts` / `normalizeProposalStatus`, `mapApiArtifactsToRecord` |
+| Unit tests (23+) | `parseGoogleMapsLink`, `roofLayoutGeometry`, status helpers, `mapApiArtifactsToRecord`, `proposalAssembly`, `costing/format` |
 | `tsconfig` excludes `*.test.ts` from app build | Production `tsc` unchanged |
 
 ### Phase 2a — Split `apiClient.ts`
@@ -66,8 +66,23 @@ All pages still `import from '../lib/apiClient'`.
 | Share modal | `frontend/src/proposal/ProposalShareModal.tsx` | Mobile-first bottom sheet |
 | **Page shell** | `frontend/src/pages/ProposalPreview.tsx` | ~1.1k lines — state, handlers, layout |
 
-Tests added: `proposal/proposalAssembly.test.ts` (`genRef`, `fmtINR`, `fmtINRFull`).  
-Route unchanged: lazy `import('./pages/ProposalPreview')` in `App.tsx`.
+Tests: `proposal/proposalAssembly.test.ts`. Route unchanged: lazy `ProposalPreview` in `App.tsx`.
+
+### Phase 2c — Split `CostingSheet.tsx`
+
+| Module | Path | Role |
+|--------|------|------|
+| Types | `frontend/src/costing/types.ts` | `FormValues`, `CostingTemplate`, `ImportRow` |
+| Format | `frontend/src/costing/format.ts` | `toNum`, `fmt`, `cellStr` |
+| Built-in templates | `frontend/src/costing/builtInTemplates.ts` | `EMPTY_ROW`, six production templates |
+| WIP sheets storage | `frontend/src/costing/costingStorage.ts` | `loadSheets`, `persistSheets` |
+| Export | `frontend/src/costing/exportCosting.ts` | XLSX + CSV export |
+| Import | `frontend/src/costing/costingImport.ts` | Excel parse, blank template download |
+| Modals / panels | `frontend/src/costing/CostingModals.tsx` | Save sheet/template, saved sheets, templates, import preview |
+| Table UI | `frontend/src/costing/CostingTable.tsx` | `CostRow`, grouped table, grand total, category breakdown |
+| **Page shell** | `frontend/src/pages/CostingSheet.tsx` | ~850 lines — form state, save/sync, layout |
+
+Tests added: `costing/format.test.ts`. Route unchanged: lazy `CostingSheet` in `App.tsx`. Shared domain logic remains in `lib/costingConstants.ts` (Vite Fast Refresh).
 
 ---
 
@@ -76,7 +91,7 @@ Route unchanged: lazy `import('./pages/ProposalPreview')` in `App.tsx`.
 | Phase | Scope |
 |-------|--------|
 | ~~**2b**~~ | ~~Split `ProposalPreview.tsx`~~ — done |
-| **2c** | Split `CostingSheet.tsx` |
+| ~~**2c**~~ | ~~Split `CostingSheet.tsx`~~ — done |
 | **2d** | Split `Customers.tsx` |
 | **2e** | Bundle measurement; lazy chunks only if justified |
 | **3** | WIP vs server conflict banner; central save pipeline |
@@ -92,17 +107,17 @@ npm test
 npm run build
 ```
 
-Staging: [SMOKE_CHECKLIST.md](./SMOKE_CHECKLIST.md).
+Staging: [SMOKE_CHECKLIST.md](./SMOKE_CHECKLIST.md). Costing smoke: save sheet, templates, import Excel, export XLSX/CSV, BOM autofill.
 
 ---
 
-## Deploy impact (this modernization batch)
+## Deploy impact (PE modernization batches)
 
 | Render service | Redeploy? | Why |
 |----------------|-----------|-----|
-| **rayenna-proposal-engine** (static) | **Yes** | All changes are under `proposal-engine/frontend/` + docs |
-| **CRM API** (Web Service) | **No** | No `src/` or `prisma/` changes in this batch |
-| **rayenna-crm-frontend** | **No** | No `client/` changes |
+| **rayenna-proposal-engine** (static) | **Yes** | Changes under `proposal-engine/frontend/` |
+| **CRM API** (Web Service) | **No** | Unless `src/` / `prisma/` changed in same batch |
+| **rayenna-crm-frontend** | **No** | Unless `client/` changed |
 
 Vercel PE project: redeploy if used (same as Render PE).
 
@@ -112,10 +127,10 @@ Vercel PE project: redeploy if used (same as Render PE).
 
 PE-only commits under `proposal-engine/`. Do not mix with CRM paths in one commit.
 
-When resuming in Cursor: *“Continue PE modernization from `proposal-engine/docs/MODERNIZATION_PROGRESS.md`, start Phase 2b.”*
+When resuming in Cursor: *“Continue PE modernization from `proposal-engine/docs/MODERNIZATION_PROGRESS.md`, start Phase 2d.”*
 
 ---
 
 ## User Guide (May 2026)
 
-**Help → Quick Start** and **AI Roof Layout** sections in `frontend/src/pages/HelpPage.tsx` were updated to document: guided stepper, Maps override + regenerate, keepouts, undo/redo, Save to Proposal vs Regenerate, cross-device geometry, 2D/3D tabs, and new FAQ entries.
+**Help → Quick Start** and **AI Roof Layout** sections in `frontend/src/pages/HelpPage.tsx` document guided stepper, Maps override, keepouts, undo/redo, Save to Proposal vs Regenerate, cross-device geometry, 2D/3D tabs, and FAQ entries.

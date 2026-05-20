@@ -21,8 +21,6 @@ import {
   syncProjectBom,
   syncProjectRoi,
   createProposalShare,
-  generateAiRoofLayout,
-  fetchCrmProjectForAiLayout,
   fetchManualRoofLayout,
   type AiRoofLayoutResponse,
 } from '../lib/apiClient';
@@ -63,6 +61,20 @@ import {
   exportToDocx,
 } from '../proposal/ProposalDocumentBlocks';
 import { ProposalShareModal } from '../proposal/ProposalShareModal';
+import {
+  fetchRoofLayoutForCrmProject,
+  probeRoofLayoutAvailability,
+  roofLayoutAvailabilityMessage,
+  type RoofLayoutAvailability,
+} from '../proposal/roofLayoutForProposal';
+
+/** Snapshot when user clicks Regenerate — proposal artifact is cleared but UI content is kept. */
+type RegeneratePreserve = {
+  customSections: ProposalCustomSectionBeforeBoq[];
+  bomComments: Record<string, string>;
+  editedHtml?: string;
+  textOverrides?: Record<string, string | undefined>;
+};
 
 export default function ProposalPreview() {
   const navigate = useNavigate();
@@ -95,6 +107,10 @@ export default function ProposalPreview() {
   const [shareLinkCopied, setShareLinkCopied]      = useState(false);
   const [displayTextOverrides, setDisplayTextOverrides] = useState<Record<string, string | undefined>>({});
   const [customSectionsBeforeBoq, setCustomSectionsBeforeBoq] = useState<ProposalCustomSectionBeforeBoq[]>([]);
+  const regeneratePreserveRef = useRef<RegeneratePreserve | null>(null);
+  const [roofLayoutToggleBusy, setRoofLayoutToggleBusy] = useState(false);
+  const [roofLayoutAvailability, setRoofLayoutAvailability] =
+    useState<RoofLayoutAvailability>('idle');
 
   const role = getCurrentUserRole();
   const canWrite = role != null && ['ADMIN', 'SALES'].includes(String(role).toUpperCase());
@@ -240,6 +256,37 @@ export default function ProposalPreview() {
     };
   }, [activeCustomerId]);
 
+  // Tell the user whether a saved AI Roof Layout exists before they toggle the section on.
+  useEffect(() => {
+    if (!proposal) {
+      setRoofLayoutAvailability('idle');
+      return;
+    }
+
+    let cancelled = false;
+
+    const runProbe = () => {
+      const ac = getActiveCustomer();
+      setRoofLayoutAvailability('checking');
+      void (async () => {
+        const { availability, layout } = await probeRoofLayoutAvailability(ac);
+        if (cancelled) return;
+        setRoofLayoutAvailability(availability);
+        if (availability === 'ready' && layout) {
+          setRoofLayout((prev) => prev ?? layout);
+        }
+      })();
+    };
+
+    runProbe();
+    const onFocus = () => runProbe();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [activeCustomerId, proposal?.refNumber]);
+
   // Saved inline edits: textOverrides + ProposalTextOverridesContext (not full editedHtml) so BOQ stays interactive.
 
   // ── Save comments to active customer record ──
@@ -341,6 +388,65 @@ export default function ProposalPreview() {
     }, 400);
   };
 
+  const persistRoofLayoutOnArtifact = (
+    include: boolean,
+    layout: AiRoofLayoutResponse | null,
+  ) => {
+    const ac = getActiveCustomer();
+    if (!ac?.proposal) return;
+    const nextArtifact: ProposalArtifact = {
+      ...ac.proposal,
+      includeRoofLayout: include,
+      roofLayout: include ? layout : null,
+    };
+    saveAllArtifacts(ac.id, null, null, null, nextArtifact);
+    const projectId = ac.master.crmProjectId;
+    if (projectId) void syncProjectProposal(projectId, nextArtifact);
+  };
+
+  const handleIncludeRoofLayoutChange = async (checked: boolean) => {
+    if (!canWrite || !proposal) return;
+    if (!checked) {
+      setIncludeRoofLayout(false);
+      setRoofLayout(null);
+      setRoofLayoutError(null);
+      persistRoofLayoutOnArtifact(false, null);
+      return;
+    }
+
+    const ac = getActiveCustomer();
+    if (!ac) return;
+
+    setRoofLayoutToggleBusy(true);
+    setRoofLayoutLoading(true);
+    setRoofLayoutError(null);
+    const { layout, error, status } = await fetchRoofLayoutForCrmProject(ac, {
+      allowAutoGenerate: false,
+    });
+    setRoofLayoutLoading(false);
+    setRoofLayoutToggleBusy(false);
+
+    if (!layout) {
+      setIncludeRoofLayout(false);
+      setRoofLayout(null);
+      const avail: RoofLayoutAvailability =
+        status === 'no_crm_project' ? 'no_crm_project' : 'not_saved_yet';
+      setRoofLayoutAvailability(avail);
+      setRoofLayoutError(
+        error ??
+          roofLayoutAvailabilityMessage(avail, { forToggleAttempt: true }) ??
+          'AI Roof Layout has not been saved for this project yet.',
+      );
+      return;
+    }
+
+    setIncludeRoofLayout(true);
+    setRoofLayout(layout);
+    setRoofLayoutError(null);
+    setRoofLayoutAvailability('ready');
+    persistRoofLayoutOnArtifact(true, layout);
+  };
+
   const handleGenerate = async (
     _customer: CustomerDetails,
     options: { includeRoofLayout: boolean },
@@ -361,11 +467,16 @@ export default function ProposalPreview() {
 
     // ── Restore saved comments from customer record only ──
     // Never fall back to global localStorage — it may contain a different customer's comments.
+    const preserved = regeneratePreserveRef.current;
+    regeneratePreserveRef.current = null;
+
     const savedComments: Record<string, string> =
-      activeCustomer?.proposal?.bomComments ?? {};
+      preserved?.bomComments ??
+      activeCustomer?.proposal?.bomComments ??
+      {};
     setBomComments(savedComments);
 
-    // ── Persist all 4 artifacts to active customer, preserving any previously saved editedHtml ──
+    // ── Persist all 4 artifacts to active customer, preserving custom sections / edits when regenerating ──
     if (activeCustomer) {
       const now = new Date().toISOString();
 
@@ -394,19 +505,23 @@ export default function ProposalPreview() {
         generatedAt: p.generatedAt,
         summary:     execSummary(p).slice(0, 200),
         bomComments: savedComments,
-        editedHtml:    undefined,
-        textOverrides: undefined,
+        editedHtml: preserved?.editedHtml,
+        textOverrides: preserved?.textOverrides,
         customSectionsBeforeBoq: normalizeCustomSectionsBeforeBoq(
-          customSectionsBeforeBoq.length > 0
-            ? customSectionsBeforeBoq
-            : activeCustomer.proposal?.customSectionsBeforeBoq ?? [],
+          preserved?.customSections?.length
+            ? preserved.customSections
+            : customSectionsBeforeBoq.length > 0
+              ? customSectionsBeforeBoq
+              : activeCustomer.proposal?.customSectionsBeforeBoq ?? [],
         ),
         proposalView: cloneProposalForStorage(p),
         includeRoofLayout: options.includeRoofLayout,
-        roofLayout: options.includeRoofLayout ? (activeCustomer.proposal?.roofLayout ?? null) : null,
+        roofLayout: null,
       };
 
       saveAllArtifacts(activeCustomer.id, costingArtifact, bomArtifact, roiArtifact, proposalArtifact);
+      const sectionsForUi = proposalArtifact.customSectionsBeforeBoq ?? [];
+      setCustomSectionsBeforeBoq(sectionsForUi);
       setSavedToCustomer(activeCustomer.master.name);
 
       // Sync all four artifacts to CRM backend so Admin/Ops/Finance/Management see the same data.
@@ -417,125 +532,63 @@ export default function ProposalPreview() {
         if (roiArtifact) void syncProjectRoi(projectId, roiArtifact);
         void syncProjectProposal(projectId, proposalArtifact);
       }
-    }
 
-    // Optionally generate the AI roof layout for this proposal so it can be included
-    // as a section when requested.
-    if (options.includeRoofLayout && activeCustomer?.master?.crmProjectId) {
-      setRoofLayoutLoading(true);
-      setRoofLayoutError(null);
-      try {
-        const crmProjectId = activeCustomer.master.crmProjectId;
-
-        // If a manual layout was saved by the sales team, prefer it (image + corrected metrics).
-        try {
-          const manual = await fetchManualRoofLayout(crmProjectId);
-          if (manual && typeof manual.layout_image_url === 'string' && manual.layout_image_url.trim()) {
-            const rl: AiRoofLayoutResponse = {
-              roof_area_m2: Number.isFinite(Number((manual as any).roof_area_m2)) ? Number((manual as any).roof_area_m2) : 0,
-              usable_area_m2: Number.isFinite(Number((manual as any).usable_area_m2)) ? Number((manual as any).usable_area_m2) : 0,
-              panel_count: Number.isFinite(Number((manual as any).panel_count)) ? Number((manual as any).panel_count) : 0,
-              layout_image_url: String(manual.layout_image_url),
-              source: (manual as any).source ?? 'MANUAL',
-            };
-            if ((manual as any).layout_image_3d_url != null && String((manual as any).layout_image_3d_url).trim()) {
-              rl.layout_image_3d_url = String((manual as any).layout_image_3d_url);
-            }
-            if (typeof (manual as any).prefer_3d_for_proposal === 'boolean') {
-              rl.prefer_3d_for_proposal = (manual as any).prefer_3d_for_proposal;
-            }
-            setRoofLayout(rl);
-            setRoofLayoutLoading(false);
-            return;
-          }
-        } catch {
-          // ignore if no manual layout exists
-        }
-
-        const crmProject = await fetchCrmProjectForAiLayout(crmProjectId);
-
-        let latitude: number | null =
-          (crmProject.customer && (crmProject.customer as any).latitude != null
-            ? Number((crmProject.customer as any).latitude)
-            : activeCustomer.master.latitude ?? null);
-        let longitude: number | null =
-          (crmProject.customer && (crmProject.customer as any).longitude != null
-            ? Number((crmProject.customer as any).longitude)
-            : activeCustomer.master.longitude ?? null);
-        let systemSizeKw: number | null =
-          crmProject.systemCapacity != null
-            ? Number(crmProject.systemCapacity)
-            : activeCustomer.master.systemSizeKw ?? null;
-        let panelWattage: number | null =
-          crmProject.panelCapacityW != null
-            ? Number(crmProject.panelCapacityW)
-            : activeCustomer.master.panelWattage ?? null;
-
-        if (
-          latitude == null ||
-          Number.isNaN(latitude) ||
-          longitude == null ||
-          Number.isNaN(longitude) ||
-          systemSizeKw == null ||
-          Number.isNaN(systemSizeKw) ||
-          panelWattage == null ||
-          Number.isNaN(panelWattage)
-        ) {
-          if (import.meta.env.DEV) {
-            console.warn('AI roof layout skipped: missing required CRM data');
-          }
-          return;
-        }
-
-        const data = await generateAiRoofLayout({
-          projectId: crmProject.id,
-          latitude,
-          longitude,
-          systemSizeKw,
-          panelWattage,
+      if (options.includeRoofLayout) {
+        setRoofLayoutLoading(true);
+        setRoofLayoutError(null);
+        const { layout, error, status } = await fetchRoofLayoutForCrmProject(activeCustomer, {
+          allowAutoGenerate: true,
         });
-
-        const roof = data?.roof_area_m2;
-        const usable = data?.usable_area_m2;
-        const panels = data?.panel_count;
-        if (!Number.isFinite(roof) || !Number.isFinite(usable) || !Number.isFinite(panels)) {
-          if (import.meta.env.DEV) {
-            console.warn('AI roof layout response incomplete, skipping layout section');
-          }
-          return;
+        setRoofLayout(layout);
+        setRoofLayoutError(error);
+        setRoofLayoutLoading(false);
+        if (status === 'ready') setRoofLayoutAvailability('ready');
+        else if (status === 'not_saved_yet') setRoofLayoutAvailability('not_saved_yet');
+        if (layout) {
+          const withLayout: ProposalArtifact = { ...proposalArtifact, roofLayout: layout };
+          saveAllArtifacts(activeCustomer.id, null, null, null, withLayout);
+          if (projectId) void syncProjectProposal(projectId, withLayout);
         }
-
-        setRoofLayout({
-          roof_area_m2: Number(roof),
-          usable_area_m2: Number(usable),
-          panel_count: Number(panels),
-          layout_image_url:
-            data?.layout_image_url && String(data.layout_image_url).trim() ? data.layout_image_url : '',
-        });
-        setRoofLayoutLoading(false);
-      } catch (err) {
-        if (import.meta.env.DEV) console.error('Failed to generate AI roof layout for proposal:', err);
-        setRoofLayoutError('Roof layout could not be loaded. Please open AI Roof Layout and click “Save for proposal”, then regenerate the proposal.');
-        setRoofLayoutLoading(false);
       }
     }
   };
 
   const handleRegenerate = () => {
     if (!canWrite) return;
+    const ok = window.confirm(
+      'Regenerate the proposal from Costing, BOM, and ROI?\n\n' +
+        'The current proposal document and inline text edits will be replaced. ' +
+        'Custom sections you added are kept on this page until you generate again. ' +
+        'Click Save first if you need everything stored on the server.',
+    );
+    if (!ok) return;
+
     const ac = getActiveCustomer();
+    if (ac?.proposal) {
+      regeneratePreserveRef.current = {
+        customSections: normalizeCustomSectionsBeforeBoq(
+          customSectionsBeforeBoq.length > 0
+            ? customSectionsBeforeBoq
+            : ac.proposal.customSectionsBeforeBoq ?? [],
+        ),
+        bomComments: { ...(ac.proposal.bomComments ?? {}), ...bomComments },
+        editedHtml: ac.proposal.editedHtml,
+        textOverrides: ac.proposal.textOverrides,
+      };
+    }
+
     if (ac) clearProposalArtifact(ac.id);
     setProposal(null);
     setDisplayTextOverrides({});
     setSavedToCustomer(null);
-    setBomComments({});
+    setBomComments(regeneratePreserveRef.current?.bomComments ?? {});
     setIncludeRoofLayout(false);
     setRoofLayout(null);
     setRoofLayoutError(null);
     setRoofLayoutLoading(false);
     setIsEditing(false);
     setSaveStatus('idle');
-    setCustomSectionsBeforeBoq([]);
+    setCustomSectionsBeforeBoq(regeneratePreserveRef.current?.customSections ?? []);
   };
 
   const handleExportPdf = () => {
@@ -718,8 +771,9 @@ export default function ProposalPreview() {
                   <button
                     onClick={handleRegenerate}
                     className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all min-h-[36px]"
+                    title="Rebuild proposal from Costing, BOM, and ROI (keeps custom sections on this page)"
                   >
-                    ← New Proposal
+                    ↻ Regenerate
                   </button>
                 )}
                 {canWrite && (
@@ -895,6 +949,84 @@ export default function ProposalPreview() {
                 <FinancialBenefitsBlock proposal={proposal} />
                 <Divider />
                 <EnvironmentalImpactBlock proposal={proposal} />
+                {canWrite && (
+                  <div
+                    className={`print-hide mb-6 rounded-xl px-4 py-3 space-y-2 border ${
+                      roofLayoutAvailability === 'ready'
+                        ? 'border-teal-200 bg-teal-50'
+                        : roofLayoutAvailability === 'checking'
+                          ? 'border-slate-200 bg-slate-50'
+                          : 'border-amber-200 bg-amber-50'
+                    }`}
+                  >
+                    {roofLayoutAvailability === 'checking' && (
+                      <p className="text-xs text-slate-600 flex items-center gap-2">
+                        <span className="w-3 h-3 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                        Checking for a saved AI Roof Layout on this project…
+                      </p>
+                    )}
+                    {roofLayoutAvailability === 'ready' && (
+                      <p className="text-xs text-teal-800 font-medium flex items-start gap-2">
+                        <span className="text-base leading-none">✓</span>
+                        <span>{roofLayoutAvailabilityMessage('ready')}</span>
+                      </p>
+                    )}
+                    {(roofLayoutAvailability === 'not_saved_yet' ||
+                      roofLayoutAvailability === 'no_crm_project') && (
+                      <p className="text-xs text-amber-900 font-medium flex items-start gap-2">
+                        <span className="text-base leading-none">⚠</span>
+                        <span>
+                          {roofLayoutAvailabilityMessage(roofLayoutAvailability)}
+                        </span>
+                      </p>
+                    )}
+                    {roofLayoutError && includeRoofLayout && !roofLayout && !roofLayoutLoading && (
+                      <p className="text-xs text-amber-900 bg-amber-100/80 border border-amber-300 rounded-lg px-3 py-2">
+                        {roofLayoutError}
+                      </p>
+                    )}
+                    <label
+                      className={`flex items-start gap-2 text-xs cursor-pointer ${
+                        roofLayoutAvailability === 'not_saved_yet' ||
+                        roofLayoutAvailability === 'no_crm_project'
+                          ? 'text-amber-900'
+                          : 'text-teal-900'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 rounded border-teal-400 text-teal-700 focus:ring-teal-500 disabled:opacity-50"
+                        checked={includeRoofLayout}
+                        disabled={
+                          roofLayoutToggleBusy ||
+                          roofLayoutLoading ||
+                          roofLayoutAvailability === 'checking' ||
+                          roofLayoutAvailability === 'no_crm_project'
+                        }
+                        onChange={(e) => void handleIncludeRoofLayoutChange(e.target.checked)}
+                      />
+                      <span>
+                        <span className="font-semibold">Include AI Roof Layout in this proposal</span>
+                        <span className="block text-[10px] opacity-90 mt-0.5 font-normal">
+                          Requires a layout saved from AI Roof Layout (Save to Proposal). This does not regenerate the whole proposal.
+                        </span>
+                      </span>
+                    </label>
+                    <p className="text-[10px] pl-6 opacity-90">
+                      <Link
+                        to="/ai-layout"
+                        className="font-semibold underline hover:opacity-80"
+                      >
+                        Open AI Roof Layout
+                      </Link>
+                      {roofLayoutAvailability === 'not_saved_yet'
+                        ? ' → generate the map, place panels, then Save to Proposal. Return here and enable the checkbox.'
+                        : roofLayoutAvailability === 'no_crm_project'
+                          ? ' — available after this customer is linked to a CRM project.'
+                          : ' to update the saved image before exporting PDF/DOCX.'}
+                    </p>
+                  </div>
+                )}
                 {includeRoofLayout && (
                   <>
                     <Divider />
