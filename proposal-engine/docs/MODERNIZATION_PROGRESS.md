@@ -1,8 +1,8 @@
 # Proposal Engine — modernization progress
 
 **Purpose:** Resume structural improvement work without re-discovering context.  
-**Last updated:** 2026-05-16  
-**Status:** **Phase 2c** complete — `CostingSheet.tsx` split into `frontend/src/costing/`. Next: **Phase 2d** (`Customers.tsx`).
+**Last updated:** 2026-05-20  
+**Status:** **Phase 3a** complete — server sync confirmation banner wired into Dashboard + CustomerWorkspace. Structural modernisation (2a–3a) is complete. Next work is **Phase 4** (AI Roof Layout P1 product features) when ready.
 
 ---
 
@@ -84,6 +84,22 @@ Tests: `proposal/proposalAssembly.test.ts`. Route unchanged: lazy `ProposalPrevi
 
 Tests added: `costing/format.test.ts`. Route unchanged: lazy `CostingSheet` in `App.tsx`. Shared domain logic remains in `lib/costingConstants.ts` (Vite Fast Refresh).
 
+### Phase 2d — Split `Customers.tsx`
+
+| Module | Path | Role |
+|--------|------|------|
+| Types + constants | `frontend/src/customers/types.ts` | `ProjectOption`, `PROJECTS_PAGE_SIZE`, `PROJECT_LIST_SORT_OPTIONS` |
+| Helpers | `frontend/src/customers/customerHelpers.ts` | derive/map/build functions, role constants, `canCreateOrEditProposals` |
+| Badges | `frontend/src/customers/CustomerBadges.tsx` | `ProposalReadinessBadge`, `ArtifactDots` |
+| Project card | `frontend/src/customers/ProjectCard.tsx` | API-driven project card (Ops / Mgmt / Finance / Admin) |
+| Project picker | `frontend/src/customers/ProjectPickerModal.tsx` | CRM project selector modal with sort/filter/pagination |
+| Conflict modal | `frontend/src/customers/ProjectConflictModal.tsx` | Overwrite vs Append prompt for duplicate CRM projects |
+| Customer card | `frontend/src/customers/CustomerCard.tsx` | Local `CustomerRecord` card with artifact dots + delete confirm |
+| New customer | `frontend/src/customers/NewCustomerModal.tsx` | Standalone manual-add modal (reserved; not currently wired) |
+| **Page shell** | `frontend/src/pages/Customers.tsx` | ~480 lines — state, handlers, deep-link logic, list layout |
+
+Route unchanged: lazy `Customers` in `App.tsx`. `NewCustomerModal` still re-exported from page shell for backwards compatibility.
+
 ---
 
 ## Not started (planned)
@@ -92,10 +108,12 @@ Tests added: `costing/format.test.ts`. Route unchanged: lazy `CostingSheet` in `
 |-------|--------|
 | ~~**2b**~~ | ~~Split `ProposalPreview.tsx`~~ — done |
 | ~~**2c**~~ | ~~Split `CostingSheet.tsx`~~ — done |
-| **2d** | Split `Customers.tsx` |
-| **2e** | Bundle measurement; lazy chunks only if justified |
-| **3** | WIP vs server conflict banner; central save pipeline |
-| **4** | Product: [ai-roof-layout-2d-roadmap.md](./ai-roof-layout-2d-roadmap.md) P0/P1 |
+| ~~**2d**~~ | ~~Split `Customers.tsx`~~ — done |
+| ~~**2e**~~ | ~~Bundle measurement~~ — done (`chunkSizeWarningLimit: 600`; dynamic import deferred — low payoff vs risk) |
+| ~~**3a**~~ | ~~WIP vs server sync banner~~ — done (`ServerSyncBanner` on Dashboard; `markServerSynced` in Dashboard + CustomerWorkspace) |
+| **3b** | Central save pipeline (deferred — higher effort, lower urgency than Phase 4) |
+| **4** | Product — AI Roof Layout P1: multi-facet, smarter fill, measurements (see [ai-roof-layout-2d-roadmap.md](./ai-roof-layout-2d-roadmap.md)) |
+| **4 quick wins** | Anytime: centralise `METERS_PER_PIXEL` + panel size; always save full geometry JSON; keyboard shortcuts (`Esc` pan, `E` edit, `Ctrl+Z`/`Y` undo) |
 
 ---
 
@@ -127,7 +145,7 @@ Vercel PE project: redeploy if used (same as Render PE).
 
 PE-only commits under `proposal-engine/`. Do not mix with CRM paths in one commit.
 
-When resuming in Cursor: *“Continue PE modernization from `proposal-engine/docs/MODERNIZATION_PROGRESS.md`, start Phase 2d.”*
+When resuming in Cursor: *“Continue PE modernization from `proposal-engine/docs/MODERNIZATION_PROGRESS.md`, start Phase 4.”*
 
 ---
 

@@ -27,5 +27,8 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    // Three.js, Konva, xlsx, and Solar3DView are all behind lazy routes — large chunks are expected
+    // and acceptable. Raise the warning threshold so CI output stays clean.
+    chunkSizeWarningLimit: 600,
   },
 });

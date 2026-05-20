@@ -18,6 +18,8 @@ import {
   fetchProjectWithArtifacts,
   applyProposalEngineProjectDetail,
 } from '../lib/apiClient';
+import { markServerSynced, getServerSyncStatus } from '../lib/serverSyncStatus';
+import { ServerSyncBanner } from '../components/ServerSyncBanner';
 
 function fmtINR(n: number): string {
   if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(2)} Cr`;
@@ -38,6 +40,11 @@ export default function Dashboard() {
   const [activeCustomerId, setActiveCustomerId] = useState<string | null>(() => getActiveCustomer()?.id ?? null);
   const [customers, setCustomers] = useState<CustomerRecord[]>(() => loadCustomers());
   const role = getCurrentUserRole();
+  // Seed from sessionStorage so a sync done in CustomerWorkspace shows here too.
+  const [serverSyncedAt, setServerSyncedAt] = useState<string | null>(() => {
+    const id = getActiveCustomer()?.id;
+    return id ? (getServerSyncStatus(id)?.syncedAt ?? null) : null;
+  });
   const canCreateOrEdit = role != null && ['ADMIN', 'SALES'].includes(String(role).toUpperCase());
 
   const allCustomers = useMemo(
@@ -67,7 +74,12 @@ export default function Dashboard() {
         const latest = getCustomer(id) ?? rec;
         const merged = applyProposalEngineProjectDetail(latest, res);
         upsertCustomer(merged);
-        if (!cancelled) setCustomers(loadCustomers());
+        if (!cancelled) {
+          const syncTime = new Date().toISOString();
+          markServerSynced(merged.id);
+          setServerSyncedAt(syncTime);
+          setCustomers(loadCustomers());
+        }
       } catch {
         // Offline / API error — keep local snapshot
       }
@@ -182,6 +194,14 @@ export default function Dashboard() {
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
             Rayenna Proposal Engine · Production
           </div>
+
+          {/* Server sync confirmation — shown after background refresh or cross-device navigation */}
+          {activeCustomer && serverSyncedAt && (
+            <ServerSyncBanner
+              syncedAt={serverSyncedAt}
+              onDismiss={() => setServerSyncedAt(null)}
+            />
+          )}
 
           {/* Active customer quick-access */}
           {activeCustomer ? (

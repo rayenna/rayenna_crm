@@ -18,6 +18,7 @@ import {
   canDeleteProposalEngineArtifacts,
   clearProjectProposalArtifact,
 } from '../lib/apiClient';
+import { markServerSynced } from '../lib/serverSyncStatus';
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -222,6 +223,7 @@ export default function CustomerWorkspace() {
         const latest = getCustomer(id) ?? rec;
         const merged = applyProposalEngineProjectDetail(latest, res);
         upsertCustomer(merged);
+        markServerSynced(merged.id);
         switchActiveCustomer(merged.id);
         setRecord(getCustomer(id)!);
       } catch {
