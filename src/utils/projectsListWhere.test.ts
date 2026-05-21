@@ -91,6 +91,26 @@ describe('buildProjectsWhere', () => {
     });
   });
 
+  it('treats null customerType as Residential when filtering RESIDENTIAL (chart parity)', () => {
+    const filters = parseProjectsListFilters({
+      customerType: 'RESIDENTIAL',
+      zenithSlice: 'revenue',
+    });
+    const built = buildProjectsWhere(filters, adminUser);
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    const and = (built.where as { AND?: object[] }).AND ?? [];
+    expect(and).toEqual(
+      expect.arrayContaining([
+        {
+          OR: [{ customer: { customerType: 'RESIDENTIAL' } }, { customer: { customerType: null } }],
+        },
+      ]),
+    );
+    expect(JSON.stringify(and)).toContain('projectCost');
+    expect(JSON.stringify(and)).toContain('CONFIRMED');
+  });
+
   it('applies type and projectServiceType filters for Admin', () => {
     const filters = parseProjectsListFilters({
       type: ProjectType.NON_SUBSIDY,

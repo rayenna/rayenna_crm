@@ -53,6 +53,23 @@ const CUSTOMER_TYPE_LABEL_TO_ENUM: Record<string, CustomerType> = {
   Commercial: 'COMMERCIAL',
 }
 
+function normalizeChartLabel(s: string): string {
+  return String(s)
+    .replace(/[\u2013\u2014\u2212]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function resolveCustomerTypeFromChartLabel(label: string): CustomerType | null {
+  const key = normalizeChartLabel(label)
+  if (CUSTOMER_TYPE_LABEL_TO_ENUM[key]) return CUSTOMER_TYPE_LABEL_TO_ENUM[key]
+  const lower = key.toLowerCase()
+  if (lower === 'residential' || lower.startsWith('residential')) return 'RESIDENTIAL'
+  if (lower === 'apartment' || lower.includes('apartment')) return 'APARTMENT'
+  if (lower === 'commercial' || lower.startsWith('commercial')) return 'COMMERCIAL'
+  return null
+}
+
 /**
  * Build `/projects?…` for Zenith quick-drawer list mode (payment pills + chart drill-down).
  * Returns `null` when the slice cannot be expressed with supported query params.
@@ -93,7 +110,7 @@ export function buildZenithDrawerListProjectsHref(
       )
     }
     case 'customer_segment': {
-      const ct = CUSTOMER_TYPE_LABEL_TO_ENUM[value.trim()]
+      const ct = resolveCustomerTypeFromChartLabel(value)
       if (!ct) return null
       return buildProjectsUrl(
         {

@@ -9,6 +9,7 @@ import {
   LeadSource,
   SupportTicketStatus,
 } from '@prisma/client';
+import { buildProjectsListCustomerTypeWhere } from './customerTypeCharts';
 
 export type ProjectsListFilterInput = {
   statusArray: string[];
@@ -99,12 +100,12 @@ function pushZenithExplorerSliceOntoWhere(
   const parts: object[] =
     slice === 'revenue'
       ? [
-          { projectCost: { gt: 0 } },
+          { projectCost: { not: null } },
           { projectStatus: { in: revenueStatuses } },
           stageOr,
           ...(fyProfitOnly ? [{ grossProfit: { not: null } }] : []),
         ]
-      : [{ projectCost: { gt: 0 } }, { projectStatus: { not: ProjectStatus.LOST } }];
+      : [{ projectCost: { not: null } }, { projectStatus: { not: ProjectStatus.LOST } }];
 
   pushOntoWhereAnd(where, { AND: parts });
 }
@@ -229,8 +230,9 @@ export function buildProjectsWhere(
   }
 
   const customerTypeFiltered = filters.customerTypeArray.filter((v) => VALID_CUSTOMER_TYPES.includes(v));
-  if (customerTypeFiltered.length > 0) {
-    pushOntoWhereAnd(where, { customer: { customerType: { in: customerTypeFiltered } } });
+  const customerTypeWhere = buildProjectsListCustomerTypeWhere(customerTypeFiltered);
+  if (customerTypeWhere) {
+    pushOntoWhereAnd(where, customerTypeWhere);
   }
 
   if (filters.leadSourceArray.length > 0) where.leadSource = { in: filters.leadSourceArray };

@@ -82,3 +82,27 @@ export function formatCustomerTypeForExplorer(
 ): string {
   return getCustomerTypeChartLabel(customerType);
 }
+
+const VALID_CUSTOMER_TYPES = new Set<string>(CUSTOMER_TYPE_ORDER);
+
+/**
+ * Prisma `where` clause for Projects list / export — matches donut chart cohorts.
+ * Null `customerType` on Customer Master counts as Residential (same as `aggregateProjectsByCustomerType`).
+ */
+export function buildProjectsListCustomerTypeWhere(types: string[]): object | null {
+  const valid = types.filter((t) => VALID_CUSTOMER_TYPES.has(t));
+  if (valid.length === 0) return null;
+
+  const branches: object[] = [];
+  const nonResidential = valid.filter((t) => t !== 'RESIDENTIAL');
+  if (nonResidential.length > 0) {
+    branches.push({ customer: { customerType: { in: nonResidential } } });
+  }
+  if (valid.includes('RESIDENTIAL')) {
+    branches.push({
+      OR: [{ customer: { customerType: 'RESIDENTIAL' } }, { customer: { customerType: null } }],
+    });
+  }
+  if (branches.length === 1) return branches[0]!;
+  return { OR: branches };
+}
