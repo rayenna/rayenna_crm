@@ -1,7 +1,7 @@
 import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../types/zenithExplorer'
 
 /**
- * Normalize en/em dashes and collapse whitespace so donut/chart labels match explorer `customer_segment`
+ * Normalize en/em dashes and collapse whitespace so donut/chart labels match explorer `customer_segment` (customer type label)
  * even if the UI or copy uses different dash characters.
  */
 function normalizeChartLabel(s: string): string {
@@ -101,7 +101,7 @@ export function buildFilterLabel(
     lead_source: `${value} — Lead Source`,
     assigned_to: `${value} — Sales`,
     stage: `${value} — Stage`,
-    customer_segment: `${value} — Segment`,
+    customer_segment: `${value} — Customer Type`,
     fy: `FY ${value}`,
     forecast: value,
     loan_bank: `${value} — Loan`,

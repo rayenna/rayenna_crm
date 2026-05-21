@@ -28,7 +28,7 @@
 
 **What is Zenith?** A full-screen **command center** inside Rayenna CRM. It uses the **same data and date rules** as the classic Dashboard, but adds **click-through analytics**: charts, leaderboard, funnel, **Availing Loan** KPI (Finance + executive Zenith), and Proposal Engine rows open a **Quick Actions** drawer with filtered project lists. Users can jump to the full **Projects** page with matching filters via **Open in Projects →**. On the **classic Dashboard**, most **charts are also clickable** and open **Projects** directly (same slice ideas as Zenith; no drawer first).
 
-**Why it matters:** Faster prioritisation (**Today’s Hit List** mirrors **Your pipeline today** for columns — including **Sl No.** / **Prj #** — **filters**, **sort**, and **Quick Actions** — including **Recent remarks** before you log activity and a **Payment** readout after **Deal value** when you drill into one project), plus Deal Health, **Solar News** (external RSS headlines), and **AI Insights** (CRM-derived); **transparency** (The Board drill-down); **mobility** (compact **mobile** header with FY / Qtr / Mo dropdowns); **data hygiene** (dashboard **Things needing attention** + Zenith **briefing** nudge when lifecycle **panel / inverter** brands are missing on late-stage jobs, and richer **panel / inverter brand** chart tooltips); **one workflow from charts to Projects** on the classic Dashboard (**click bars, slices, FY columns, bank bars, cloud words / Top 10**) as well as in Zenith (**drawer → Open in Projects →**).
+**Why it matters:** Faster prioritisation (**Today’s Hit List** mirrors **Your pipeline today** for columns — including **Sl No.** / **Prj #** — **filters**, **sort**, and **Quick Actions** — including **Recent remarks** before you log activity and a **Payment** readout after **Deal value** when you drill into one project), plus Deal Health, **Solar News** (external RSS headlines), and **AI Insights** (CRM-derived); **transparency** (The Board drill-down); **mobility** (compact **mobile** header, **bottom tab bar**, **offline PWA** with cached reads and queued drawer edits); **data hygiene** (dashboard **Things needing attention** + Zenith **briefing** nudge when lifecycle **panel / inverter** brands are missing on late-stage jobs, and richer **panel / inverter brand** chart tooltips); **one workflow from charts to Projects** on the classic Dashboard (**click bars, slices, FY columns, bank bars, cloud words / Top 10**) as well as in Zenith (**drawer → Open in Projects →**). Classic **Dashboard** marquee promotes **My Day** alongside **Zenith**.
 
 **Who gets it:** Sales, Operations, Finance, Management, Admin — **layout and scope differ by role** (Sales sees own pipeline on executive Zenith; Management/Admin see company-wide).
 
@@ -49,6 +49,7 @@ Use this table as your **master deck outline**. Duplicate or merge rows if you w
 | 4a | Things needing attention — Dashboard & briefing (optional) | Module 1B | 10:00 |
 | 5 | Command bar — filters (desktop) | Module 2 | 12:00 |
 | 6 | **Mobile:** compact header & dropdowns | Module 2B | 17:00 |
+| 6b | **Mobile:** bottom tabs, sticky Briefing, offline PWA | Module 2D | 22:00 |
 | 6a | **Solar News** ticker | Module 2C | 18:00 |
 | 7 | AI Insights ticker | Module 3 | 20:00 |
 | 8 | KPI strip — what the numbers mean | Module 4 | 25:00 |
@@ -83,6 +84,7 @@ By the end of this session, participants should be able to:
 6. **Recognise** role differences (company-wide vs own deals, **view-only** drawer for Management) and when **Victory** toast appears.
 7. **Explain** where **Things needing attention** appears on the classic **Dashboard**, who sees the **Zenith briefing** lifecycle reminder, and what **System capacity (sum)** means on **panel / inverter brand** chart tooltips ([Dashboard](/help/dashboard) and [Zenith](/help/zenith)).
 8. **Contrast** classic **Dashboard** chart clicks (**direct to Projects**) with **Zenith** chart clicks (**Quick Actions** list, then **Open in Projects →**), and name one chart that exists on **both** (e.g. **Projects by stage**, **panel / inverter** bars for **Sales** on Dashboard and under **Explore** on Zenith).
+9. **Use** Zenith **mobile bottom tabs**, **Live/Offline** status, and **PWA** cached read / queued drawer sync where applicable; know that **My Day** requires a live connection.
 
 ---
 
@@ -176,6 +178,26 @@ By the end of this session, participants should be able to:
 **Speaker notes:** This is for **field usage** and **landscape phone** — maximises space for Hit List, charts, and tables. Train users to use **Open in Projects →** when they need the full grid on a small screen.
 
 **Demo (2 min):** Resize browser or use device toolbar; show dropdown row and top-right briefing.
+
+---
+
+# Module 2D — Mobile layout, bottom tabs & offline (PWA)
+
+**SLIDE: Zenith on phone — tabs, not one long scroll**
+
+**Key points:**
+
+- **Bottom tab bar** (below **`lg` ~1024px**): **Today** · **Pipeline** · **Charts** · **More** (Finance only). Only **one section** is visible at a time; switching tabs scrolls to that block.
+- **Today** (Sales / Management / Admin): Hit List + KPIs + Revenue forecast + The Board. **Operations:** KPIs only. **Finance “Today”** label may read **KPIs**.
+- **Pipeline:** Deal flow funnel + **Your Focus**. **Charts:** **Explore the landscape** (including paired **panel / inverter** bars at the bottom). **More** (Finance): **Revenue by Customer Type** donut + customer profitability.
+- **Floating actions:** **✦ Briefing** and **back to top** above the tab bar (mobile only).
+- **Live / Offline** on the command bar — API health, not only `navigator.onLine`. Gold banner when showing **saved dashboard data**; red strip when offline; **Sync** when drawer actions are **queued**.
+- **Quick Actions** on mobile: drawer **slides from the right**, full width. Supported edits queue until reconnect.
+- **My Day** needs live network — not part of the offline queue. Promoted on classic **Dashboard** scrolling banner (**Ctrl+Shift+M** / ☀).
+
+**Speaker notes:** Install CRM as **Add to Home Screen** before a site visit. Open Zenith online once with usual FY filters. Demo one queued **Log activity** offline if your sandbox allows.
+
+**Demo (3 min):** Narrow viewport → switch tabs → open chart drill-down → optional airplane mode + cached banner.
 
 ---
 
@@ -302,9 +324,9 @@ By the end of this session, participants should be able to:
 
 - Bars, slices, FY points, banks → drawer **list mode**.
 - **FY chart:** **Orange** = revenue (order value totals); **Teal** = profit (**gross profit** totals).
-- **Segment donuts:** Revenue vs pipeline = **different** definitions.
+- **Customer Type donuts** (**Revenue by Customer Type** / **Pipeline by Customer Type**): slices = **Residential**, **Apartment**, **Commercial** from Customer Master — **not** project Subsidy/Non-Subsidy. Revenue vs pipeline = **different** cohort definitions.
 - **Panel / inverter brand** horizontal bars: tooltip shows **Order value (sum)**, **System capacity (sum)** (kW), then estimated cost; each bar only includes projects with **both** lifecycle brands filled. **Sales** (and other roles with these charts) can use them on the **classic Dashboard** (**click** → **Projects**) and in **Zenith** (**click** → drawer).
-- **Classic Dashboard:** Other clickable charts (stage, lead source, FY revenue vs profit, segment pies, sales team bars, availing loan by bank, profitability cloud / Top 10) also jump to **Projects** with matching URL filters — train users who live on Dashboard to **hover for the hint**, then **click**.
+- **Classic Dashboard:** Other clickable charts (stage, lead source, FY revenue vs profit, **customer type** pies, sales team bars, availing loan by bank, profitability cloud / Top 10) also jump to **Projects** with matching URL filters — train users who live on Dashboard to **hover for the hint**, then **click**.
 - **Explorer batch:** up to **~5,000** recently updated projects in Zenith’s explorer; **Open in Projects →** uses full Projects API — rare mismatch at huge volume.
 
 **Exercise (5 min):** Projects by stage → list → **Open →** one project → **Back**; optional **Open in Projects →**.
@@ -491,14 +513,19 @@ For **exact point tables** (activity days, momentum multiples, every rupee band,
 
 ---
 
-# Appendix — Keyboard shortcuts (Zenith-relevant)
+# Appendix — Keyboard shortcuts
 
 | Shortcut | Action |
 | :-- | :-- |
 | `?` | Help (context-sensitive: Zenith or Dashboard) |
-| `Ctrl+Shift+Z` / `⌘⇧Z` | Open **Zenith** |
 | `Ctrl+Shift+D` / `⌘⇧D` | **Dashboard** |
+| `Ctrl+Shift+C` / `⌘⇧C` | **Customers** |
 | `Ctrl+Shift+P` / `⌘⇧P` | **Projects** |
+| `Ctrl+Shift+K` / `⌘⇧K` | **Support Tickets** |
+| `Ctrl+Shift+Z` / `⌘⇧Z` | Open **Zenith** |
+| `Ctrl+Shift+M` / `⌘⇧M` | **My Day** — Tasks, Journal & Reminders drawer (all roles) |
+| `Ctrl+Shift+N` / `⌘⇧N` | **New customer** (Sales, Management, Admin) |
+| `Ctrl+Shift+E` / `⌘⇧E` | **New project** (Admin, Sales) |
 | `Esc` | From Help → **Dashboard** |
 
 Full list: **Help → Getting Started → Keyboard shortcuts**.
@@ -520,7 +547,7 @@ Full list: **Help → Getting Started → Keyboard shortcuts**.
 | **Product** | Rayenna CRM — Zenith Command Center |
 | **Audience** | End-user training (Sales-primary); facilitators; slide authors |
 | **Companion** | Help → **Zenith** → **Zenith Command Center** |
-| **Version note** | Includes **Solar News** (RSS) above **AI Insights**; **mobile** command bar (dropdown filters, briefing top-right). Pipeline / Hit List: **Sl No.** / **Prj #**; Hit List: pipeline-style **filters + sort**; **scroll / Open →** hint on **md+** only; **Availing Loan** KPI opens drawer; Payment radar: **Top overdue**, **Latest payments received**, **Finance quick drawer** on project name where wired, shared **payment status** legend, **Remind** helpers. Quick drawers: **Sales** next to project name (list + single); **Recent remarks** before **Log activity**; **Payment** card after **Deal value** on **Quick Actions** and **Operations** single-project view (**N/A** when payment not applicable). **Customer Master:** **Ctrl+Shift+N** / **⌘⇧N** and **`/customers?new=1`** open **New Customer** when allowed. **My Day** drawer (Tasks, Journal, Reminders): **Ctrl+Shift+M** / **⌘⇧M** or the sunrise icon ☀ in the top nav bar (all roles). **Projects:** **System Capacity (kW)** is integer-only; **Inverter Capacity (kW)** on **Edit** defaults from it until overridden; **Project Detail** read-only view uses responsive **card** rows and per-installment **Payment Tracking** blocks; **Projects** grid uses **Deal Health**–style dark **popovers** for **Pending/Partial balance** and **financing bank** (hover vs tap — see Help → Modules). **Dashboard + Zenith:** **Things needing attention** strip (**Sales**, **Operations**, **Admin**); **daily briefing** lifecycle reminder (**Sales**, **Admin**, **Operations**); **panel / inverter brand** chart tooltips include **System capacity (sum)**. **Classic Dashboard:** most charts **click through to Projects** (bars, FY columns, pie slices, loan-by-bank, panel/inverter bars, profitability cloud / Top 10); **Zenith Explore** includes **panel / inverter** for **Sales** on executive Zenith (aligned with Dashboard). |
+| **Version note** | Includes **Solar News** (RSS) above **AI Insights**; **mobile** command bar (dropdown filters, **Live/Offline**, briefing top-right); **bottom tab bar** and **PWA offline** (cached Zenith read, queued drawer writes). **Dashboard** marquee: **My Day** + **Zenith**. Pipeline / Hit List: **Sl No.** / **Prj #**; Hit List: pipeline-style **filters + sort**; **scroll / Open →** hint on **md+** only; **Availing Loan** KPI opens drawer; Payment radar: **Top overdue**, **Latest payments received**, **Finance quick drawer** on project name where wired, shared **payment status** legend, **Remind** helpers. Quick drawers: **Sales** next to project name (list + single); **Recent remarks** before **Log activity**; **Payment** card after **Deal value** on **Quick Actions** and **Operations** single-project view (**N/A** when payment not applicable). **Customer Master:** **Ctrl+Shift+N** / **⌘⇧N** and **`/customers?new=1`** open **New Customer** when allowed. **My Day** drawer (Tasks, Journal, Reminders): **Ctrl+Shift+M** / **⌘⇧M** or the sunrise icon ☀ in the top nav bar (all roles). **Projects:** **System Capacity (kW)** is integer-only; **Inverter Capacity (kW)** on **Edit** defaults from it until overridden; **Project Detail** read-only view uses responsive **card** rows and per-installment **Payment Tracking** blocks; **Projects** grid uses **Deal Health**–style dark **popovers** for **Pending/Partial balance** and **financing bank** (hover vs tap — see Help → Modules). **Dashboard + Zenith:** **Things needing attention** strip (**Sales**, **Operations**, **Admin**); **daily briefing** lifecycle reminder (**Sales**, **Admin**, **Operations**); **panel / inverter brand** chart tooltips include **System capacity (sum)**. **Classic Dashboard:** most charts **click through to Projects** (bars, FY columns, pie slices, loan-by-bank, panel/inverter bars, profitability cloud / Top 10); **Zenith Explore** includes **panel / inverter** for **Sales** on executive Zenith (aligned with Dashboard). |
 
 ---
 

@@ -282,10 +282,11 @@ server.on('error', (err: any) => {
     console.error(`\n❌ Port ${PORT} is already in use!\n`);
     console.error('Please either:');
     console.error(`  1. Kill the process using port ${PORT}:`);
-    console.error(`     netstat -ano | findstr :${PORT}`);
-    console.error(`     taskkill /PID <PID_NUMBER> /F`);
-    console.error(`  2. Or run: powershell -ExecutionPolicy Bypass -File kill-port-3000.ps1`);
-    console.error(`  3. Or set a different port: set PORT=3001 && npm run dev\n`);
+    console.error(`     macOS/Linux:  lsof -ti :${PORT} | xargs kill -9`);
+    console.error(`     Windows:      netstat -ano | findstr :${PORT}`);
+    console.error(`                   taskkill /PID <PID_NUMBER> /F`);
+    console.error(`  2. Windows only: powershell -ExecutionPolicy Bypass -File kill-port-3000.ps1`);
+    console.error(`  3. Or use another port: PORT=3001 npm run dev   (Windows: set PORT=3001 && npm run dev)\n`);
     process.exit(1);
   } else {
     console.error('Server error:', err);

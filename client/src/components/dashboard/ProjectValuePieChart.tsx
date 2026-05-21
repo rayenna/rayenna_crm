@@ -122,7 +122,7 @@ const ProjectValuePieChart = memo(
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
             </svg>
           </div>
-          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">Revenue by Customer Segment</h2>
+          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">Revenue by Customer Type</h2>
         </div>
         <div className="flex items-center justify-center text-[color:var(--text-muted)]" style={{ height: '320px' }}>
           <p>No project data available</p>
@@ -144,7 +144,7 @@ const ProjectValuePieChart = memo(
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
             </svg>
           </div>
-          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">Revenue by Customer Segment</h2>
+          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">Revenue by Customer Type</h2>
         </div>
         {!filterControlledByParent && finalAvailableFYs && finalAvailableFYs.length > 0 && (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

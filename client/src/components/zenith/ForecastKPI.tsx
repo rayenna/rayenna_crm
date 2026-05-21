@@ -111,7 +111,7 @@ export default function ForecastKPI({
           [
             ['source', 'Source'],
             ['sales', 'Sales'],
-            ['segment', 'Segment'],
+            ['segment', 'Customer type'],
             ['stage', 'Stage'],
           ] as const
         ).map(([key, label]) => (

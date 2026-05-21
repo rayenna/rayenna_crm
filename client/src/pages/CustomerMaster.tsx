@@ -10,7 +10,15 @@ import { useDebounce } from '../hooks/useDebounce'
 import MultiSelect from '../components/MultiSelect'
 import { Users, Plus, Download, Search } from 'lucide-react'
 import { ErrorModal } from '@/components/common/ErrorModal'
-import { CustomerForm, getCustomerDisplayName } from '../components/customers/CustomerForm'
+import { CustomerForm } from '../components/customers/CustomerForm'
+import { CUSTOMER_TYPE_OPTIONS, getCustomerDisplayName } from '../utils/customerRecord'
+import { GoogleMapsIconButton } from '../components/customers/GoogleMapsIconButton'
+import { formatCustomerStringList, parseCustomerStringList } from '../utils/customerContactFields'
+import {
+  buildCustomerExportQueryParams,
+  buildCustomerListFilterInput,
+  buildCustomerListQueryParams,
+} from '../utils/customerListQuery'
 
 const CustomerMaster = () => {
   const navigate = useNavigate()
@@ -62,31 +70,18 @@ const CustomerMaster = () => {
     setPage(1)
   }, [debouncedSearch, customerFilter, selectedSalespersonIds])
 
-  const { data, isLoading } = useQuery({
+  const listFilters = buildCustomerListFilterInput(
+    debouncedSearch,
+    page,
+    isSalesUser,
+    customerFilter,
+    selectedSalespersonIds,
+  )
+
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['customers', debouncedSearch, page, customerFilter, selectedSalespersonIds],
     queryFn: async () => {
-      const params = new URLSearchParams()
-      if (debouncedSearch) params.append('search', debouncedSearch)
-      params.append('page', page.toString())
-      params.append('limit', '25')
-      
-      // For Sales users: add myCustomers filter
-      if (isSalesUser) {
-        if (customerFilter === 'my') {
-          params.append('myCustomers', 'true')
-        }
-      } else {
-        // For other users: add salespersonId filter only if salespersons are selected
-        if (selectedSalespersonIds.length > 0) {
-          selectedSalespersonIds.forEach((id) => {
-            if (id && id.trim() !== '') {
-              params.append('salespersonId', id)
-            }
-          })
-        }
-        // If no salesperson is selected, don't send salespersonId parameter (shows all customers)
-      }
-      
+      const params = buildCustomerListQueryParams(listFilters)
       const res = await axiosInstance.get(`/api/customers?${params.toString()}`)
       return res.data
     },
@@ -100,28 +95,6 @@ const CustomerMaster = () => {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`
   }
 
-  const GoogleMapsIconButton = ({ href }: { href: string }) => {
-    return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        title="Open in Google Maps"
-        aria-label="Open in Google Maps"
-        className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] text-[color:var(--text-secondary)] shadow-sm transition-all hover:bg-[color:var(--bg-card-hover)] hover:shadow"
-      >
-        {/* Compact Google-Maps-like pin icon */}
-        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            d="M12 2c-3.86 0-7 3.14-7 7 0 5.25 7 13 7 13s7-7.75 7-13c0-3.86-3.14-7-7-7z"
-            fill="#EA4335"
-          />
-          <circle cx="12" cy="9" r="2.5" fill="#FFFFFF" />
-        </svg>
-      </a>
-    )
-  }
-
   const handleExportClick = (type: 'excel' | 'csv') => {
     setPendingExportType(type)
     setShowExportConfirm(true)
@@ -131,16 +104,13 @@ const CustomerMaster = () => {
     if (!pendingExportType) return
 
     try {
-      const params = new URLSearchParams()
-      if (debouncedSearch) params.append('search', debouncedSearch)
-      if (selectedSalespersonIds.length > 0) {
-        selectedSalespersonIds.forEach((id) => {
-          if (id && id.trim() !== '') {
-            params.append('salespersonId', id)
-          }
-        })
-      }
-      
+      const params = buildCustomerExportQueryParams({
+        search: debouncedSearch,
+        isSalesUser,
+        customerFilter,
+        selectedSalespersonIds,
+      })
+
       const endpoint = pendingExportType === 'excel' 
         ? `/api/customers/export/excel` 
         : `/api/customers/export/csv`
@@ -174,23 +144,45 @@ const CustomerMaster = () => {
     setPendingExportType(null)
   }
 
-  if (isLoading) {
-    return shell(
-      <div className="w-full max-w-full min-w-0 space-y-5 pt-1">
-        <div className="rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5">
-          <div className="zenith-skeleton mb-3 h-8 w-56 max-w-[70%] rounded-lg" />
-          <div className="zenith-skeleton h-4 w-full max-w-md rounded-md" />
+  const listSkeleton = (
+    <div className="w-full max-w-full min-w-0 space-y-5 pt-1">
+      <div className="rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5">
+        <div className="zenith-skeleton mb-3 h-8 w-56 max-w-[70%] rounded-lg" />
+        <div className="zenith-skeleton h-4 w-full max-w-md rounded-md" />
+      </div>
+      <div className="rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5">
+        <div className="zenith-skeleton h-12 w-full rounded-xl" />
+        <div className="mt-4 space-y-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="zenith-skeleton h-24 rounded-2xl" />
+          ))}
         </div>
-        <div className="rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5">
-          <div className="zenith-skeleton h-12 w-full rounded-xl" />
-          <div className="mt-4 space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="zenith-skeleton h-24 rounded-2xl" />
-            ))}
-          </div>
-        </div>
-      </div>,
-    )
+      </div>
+    </div>
+  )
+
+  const listErrorPanel = (
+    <div
+      className="rounded-2xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] px-5 py-8 text-center shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]"
+      role="alert"
+    >
+      <p className="text-sm font-semibold text-[color:var(--accent-red)]">Could not load customers</p>
+      <p className="mx-auto mt-2 max-w-md text-xs text-[color:var(--text-secondary)]">
+        {getFriendlyApiErrorMessage(error)}
+      </p>
+      <button
+        type="button"
+        onClick={() => void refetch()}
+        disabled={isFetching}
+        className="mt-4 inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl bg-[color:var(--accent-gold)] px-5 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] shadow-lg transition-all hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {isFetching ? 'Retrying…' : 'Try again'}
+      </button>
+    </div>
+  )
+
+  if (isLoading && !data) {
+    return shell(listSkeleton)
   }
 
   return shell(
@@ -307,6 +299,10 @@ const CustomerMaster = () => {
         </div>
       </div>
 
+      {isError ? (
+        listErrorPanel
+      ) : (
+        <>
       {/* Customer list - card-like rows (visual rhythm aligned with Projects table) */}
       <div className="space-y-3">
         {data?.customers?.map((customer: Customer, index: number) => (
@@ -317,16 +313,12 @@ const CustomerMaster = () => {
             onClick={(e) => {
               const t = e.target as HTMLElement
               if (t.closest('a, button')) return
-              navigate(`/customers/${customer.id}`, {
-                state: { fromListFilter: isSalesUser ? customerFilter : undefined },
-              })
+              navigate(`/customers/${customer.id}`)
             }}
             onKeyDown={(e) => {
               if (e.key !== 'Enter' && e.key !== ' ') return
               e.preventDefault()
-              navigate(`/customers/${customer.id}`, {
-                state: { fromListFilter: isSalesUser ? customerFilter : undefined },
-              })
+              navigate(`/customers/${customer.id}`)
             }}
             className={`group w-full cursor-pointer rounded-2xl border border-[color:var(--border-card)] text-left shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] transition-colors duration-150 hover:bg-[color:var(--bg-table-hover)] ${
               index % 2 === 1 ? 'bg-[color:var(--bg-table-alt)]' : 'bg-[color:var(--bg-card)]'
@@ -343,9 +335,14 @@ const CustomerMaster = () => {
                     <h3 className="truncate text-base font-semibold text-[color:var(--text-primary)] transition-colors group-hover:text-[color:var(--accent-gold)] sm:text-lg">
                       {getCustomerDisplayName(customer)}
                     </h3>
-                    {(customer as any)._count && (customer as any)._count.projects > 0 && (
+                    {customer.customerType && customer.customerType !== 'RESIDENTIAL' && (
+                      <span className="inline-flex items-center rounded-md border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-2 py-0.5 text-xs font-medium text-[color:var(--text-secondary)]">
+                        {CUSTOMER_TYPE_OPTIONS.find((o) => o.value === customer.customerType)?.label ?? customer.customerType}
+                      </span>
+                    )}
+                    {customer._count != null && customer._count.projects > 0 && (
                       <span className="inline-flex items-center rounded-md border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-2 py-0.5 text-xs font-semibold text-[color:var(--accent-teal)]">
-                        {(customer as any)._count.projects} Project{(customer as any)._count.projects !== 1 ? 's' : ''}
+                        {customer._count.projects} Project{customer._count.projects !== 1 ? 's' : ''}
                       </span>
                     )}
                   </div>
@@ -380,47 +377,25 @@ const CustomerMaster = () => {
                     )}
                     {customer.contactNumbers && (
                       <span className="font-medium text-[color:var(--accent-teal)]">
-                        {(() => {
-                          try {
-                            const contacts = JSON.parse(customer.contactNumbers)
-                            return Array.isArray(contacts) ? contacts.join(', ') : customer.contactNumbers
-                          } catch {
-                            return customer.contactNumbers
-                          }
-                        })()}
+                        {formatCustomerStringList(parseCustomerStringList(customer.contactNumbers))}
                       </span>
                     )}
-                    {customer.email && (
-                      <span>
-                        {(() => {
-                          try {
-                            const emails = JSON.parse(customer.email)
-                            const emailList = Array.isArray(emails) ? emails : [customer.email]
-                            const emailStr = Array.isArray(emails) ? emails.join(', ') : customer.email
-                            const mailtoHref = `mailto:${emailList.filter((e: string) => e?.trim()).join(',')}`
-                            return (
-                              <a
-                                href={mailtoHref}
-                                className="text-[color:var(--accent-blue)] underline-offset-2 hover:underline"
-                                title="Open in email application"
-                              >
-                                {emailStr}
-                              </a>
-                            )
-                          } catch {
-                            return (
-                              <a
-                                href={`mailto:${customer.email}`}
-                                className="text-[color:var(--accent-blue)] underline-offset-2 hover:underline"
-                                title="Open in email application"
-                              >
-                                {customer.email}
-                              </a>
-                            )
-                          }
-                        })()}
-                      </span>
-                    )}
+                    {customer.email && (() => {
+                      const emailList = parseCustomerStringList(customer.email)
+                      if (emailList.length === 0) return null
+                      const mailtoHref = `mailto:${emailList.join(',')}`
+                      return (
+                        <span>
+                          <a
+                            href={mailtoHref}
+                            className="text-[color:var(--accent-blue)] underline-offset-2 hover:underline"
+                            title="Open in email application"
+                          >
+                            {formatCustomerStringList(emailList)}
+                          </a>
+                        </span>
+                      )
+                    })()}
                   </div>
                 </div>
                 {/* Right: created date */}
@@ -467,6 +442,8 @@ const CustomerMaster = () => {
             </div>
           )}
         </div>
+      )}
+        </>
       )}
 
       {/* Modals rendered outside PageCard to avoid overflow/stacking issues */}

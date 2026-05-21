@@ -31,13 +31,33 @@ export function buildAbsoluteApiUrl(path: string): string {
 /** Check if error is due to timeout or backend unreachable (e.g. cold start). */
 export function isTimeoutOrNetworkError(error: unknown): boolean {
   const err = error as { code?: string; message?: string }
-  return err?.code === 'ECONNABORTED' || err?.code === 'ERR_NETWORK' || err?.message === 'Network Error'
+  return (
+    err?.code === 'ECONNABORTED' ||
+    err?.code === 'ERR_NETWORK' ||
+    err?.code === 'ECONNREFUSED' ||
+    err?.message === 'Network Error'
+  )
+}
+
+/** Vite proxy returns 500 when localhost:3000 is down; axios message is often generic. */
+function isLikelyLocalApiDown(error: unknown): boolean {
+  const err = error as {
+    response?: { status?: number; data?: { error?: string } }
+    message?: string
+  }
+  if (err?.response?.status !== 500) return false
+  if (err?.response?.data?.error) return false
+  const msg = err?.message ?? ''
+  return msg.includes('status code 500') || msg.includes('Network Error')
 }
 
 /** User-friendly message for API errors (dashboard, lists, etc.). Handles timeout, network, 401, 403, and generic. */
 export function getFriendlyApiErrorMessage(error: unknown): string {
   if (isTimeoutOrNetworkError(error)) {
     return 'The server may be waking up (e.g. after idle). Please try again in a moment.'
+  }
+  if (isLikelyLocalApiDown(error)) {
+    return 'Cannot reach the CRM API. From the repo root, run npm run dev and wait until you see “Server running on port 3000”, then try again.'
   }
   const err = error as { response?: { status?: number; data?: { error?: string } }; message?: string }
   if (err?.response?.status === 401) {

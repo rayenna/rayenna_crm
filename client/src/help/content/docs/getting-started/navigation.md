@@ -173,10 +173,10 @@ The main projects page displays all projects you have access to.
   - Export buttons (Excel, CSV) - visible to authorized users
   - "Create Project" button (Sales and Admin only)
 
-- **Filter Section** (Three-row layout on desktop):
-  - **Row 1**: Search bar (full width)
-  - **Row 2**: Primary filters (Status, Type, Project Service Type)
-  - **Row 3**: Secondary filters (Support Ticket Status, Sales Users)
+- **Filter Section**:
+  - **Search** bar and **Show Filters** / **Hide Filters** / **Clear All**
+  - **Active filter chips** under search (remove one filter at a time; admins see export hint)
+  - Expanded grid: FY/quarter/month, status, **Segment**, **Customer type**, service type, payment, tickets, pipeline, PE bucket, etc.
 
 - **Table Section**:
   - Project list with sortable columns
@@ -188,8 +188,9 @@ The main projects page displays all projects you have access to.
 - **Project ID**: Unique project identifier
 - **Customer Name**: Linked to customer details
 - **Status**: Color-coded status badge
-- **Type**: Project type (EPC, Resale, etc.)
-- **Service Type**: Service category
+- **Segment**: Subsidy / Non-Subsidy (project eligibility)
+- **Customer type**: Residential / Apartment / Commercial (from Customer Master)
+- **Service type**: EPC, Maintenance, etc.
 - **Capacity**: System capacity in kW
 - **Value**: Project value in ₹
 - **Salesperson**: Assigned sales user
@@ -241,13 +242,13 @@ Click on a project to view detailed information:
 
 ### Support Tickets Dashboard
 
-Accessible from the top navigation menu (Sales, Operations, Admin only).
+Accessible from the top navigation menu (**Admin**, **Sales**, **Operations**, **Management** — not Finance).
 
 #### Dashboard Layout
 
 - **Header Section**:
-  - Page title: "Support Tickets Dashboard"
-  - Subtitle: "Monitor and manage all support tickets across projects"
+  - Page title: **Support Tickets**
+  - Subtitle: Monitor and manage support tickets across projects
   - "Clear Filters" button (appears when filters are active)
 
 - **KPI Cards Section**:
@@ -264,10 +265,10 @@ Accessible from the top navigation menu (Sales, Operations, Admin only).
     - Clickable slices to filter table
     - Color-coded (Blue: Open, Yellow: In Progress, Gray: Closed)
   
-  - **Right Column**: Open Support Tickets Table
-    - Displays OPEN and IN_PROGRESS tickets
-    - Columns: Ticket Number, Project Name, Status, Created Date, Last Follow-up Date, View action
-    - Clickable ticket numbers open detail drawer
+  - **Right Column**: **All Support Tickets** (cards on phones, table from tablet up)
+    - Filter via KPI cards or donut chart (Open, In Progress, Closed, Overdue)
+    - Sortable columns on desktop; **View** opens the **Ticket Detail Drawer**
+    - If loading fails, **Try again** is shown
 
 - **Ticket Detail Drawer**:
   - Opens from the right side when viewing a ticket
@@ -286,11 +287,9 @@ Accessible from the top navigation menu (Sales, Operations, Admin only).
 ### Support Tickets in Project Details
 
 - **Support Tickets Section**:
-  - Located at the bottom of project detail page
-  - Lists all tickets for the project
-  - "Create Ticket" button
-  - Table showing ticket number, title, status, created date
-  - Actions: View, Close, Delete (Admin only)
+  - On project detail (near remarks / documents)
+  - **Cards on phones**, **table on desktop**; same **Ticket Detail Drawer** as the dashboard
+  - **Create Ticket**; **View ticket**; **Close** / **Delete** (Admin) when allowed
 
 ## Filters and Search
 

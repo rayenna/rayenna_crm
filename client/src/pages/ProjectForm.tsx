@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Project, ProjectType, ProjectServiceType, UserRole, ProjectStatus, LostReason, LostToCompetitionReason, LeadSource } from '../types'
+import { Customer, Project, ProjectType, ProjectServiceType, UserRole, ProjectStatus, LostReason, LostToCompetitionReason, LeadSource } from '../types'
 import toast from 'react-hot-toast'
 import { fireVictoryToast } from '../hooks/useVictoryToast'
 import RemarksSection from '../components/remarks/RemarksSection'
@@ -13,6 +13,20 @@ import { ErrorModal } from '@/components/common/ErrorModal'
 import { INVERTER_BRAND_OPTIONS } from '../constants/inverterBrands'
 import { PANEL_BRAND_OPTIONS } from '../constants/panelBrands'
 import { FINANCING_BANK_FORM_OPTIONS } from '../utils/financingBankDisplay'
+import { formatCustomerStringList, parseCustomerStringList } from '../utils/customerContactFields'
+import {
+  formatCustomerTypeDisplay,
+  getCustomerDisplayName,
+  type CustomerType,
+} from '../utils/customerRecord'
+import { getCustomerTypeLegendSwatchClass } from '../utils/customerTypeStyles'
+import { getProjectFormAccessNotice } from '../utils/projectAccessMessages'
+import ProjectAccessNotice from '../components/projects/ProjectAccessNotice'
+import { defaultPanelTypeForProjectSegment, getProjectSegmentLabel } from '../utils/projectSegment'
+
+function customerPickerLabel(customer: Customer): string {
+  return `${customer.customerId} - ${getCustomerDisplayName(customer)}`
+}
 import { ZenithSingleSelect } from '../components/zenith/ZenithSingleSelect'
 
 const ZENITH_FIELD_LABEL_CLS =
@@ -327,14 +341,10 @@ const ProjectForm = () => {
     }
   }, [leadSource, setValue])
 
-  // Auto-select Panel Type based on Segment (only for new projects, not edits)
+  // Auto-select Panel Type based on Segment (Subsidy → DCR; Non-Subsidy → Non-DCR)
   useEffect(() => {
     if (!isEdit && projectType) {
-      if (projectType === ProjectType.RESIDENTIAL_SUBSIDY) {
-        setValue('panelType', 'DCR');
-      } else if (projectType === ProjectType.RESIDENTIAL_NON_SUBSIDY || projectType === ProjectType.COMMERCIAL_INDUSTRIAL) {
-        setValue('panelType', 'Non-DCR');
-      }
+      setValue('panelType', defaultPanelTypeForProjectSegment(projectType))
     }
   }, [projectType, isEdit, setValue])
 
@@ -431,7 +441,7 @@ const ProjectForm = () => {
           setValue('customerId', project.customerId);
           // Also set the search field if customer info is available
           if (project.customer) {
-            setCustomerSearch(`${project.customer.customerId} - ${project.customer.customerName}`);
+            setCustomerSearch(customerPickerLabel(project.customer as Customer));
           }
         } else if (key === 'inverterBrand') {
           // Normalized in dedicated effect (dropdown + Others text)
@@ -653,7 +663,7 @@ const ProjectForm = () => {
       }
       
       if (!data.type) {
-        toast.error('Segment (Project Type) is required');
+        toast.error('Segment is required');
         return;
       }
     }
@@ -969,6 +979,12 @@ const ProjectForm = () => {
   const canEditSalesCommercial =
     hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS]) && canEditOtherSections
 
+  const formAccessNotice = getProjectFormAccessNotice(project, user, {
+    isEdit,
+    isFinanceOnly,
+    isLostLocked: !!isLost,
+  })
+
   return shell(
     <>
       <header className="sticky top-0 z-30 mb-4 border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 94%, transparent)] pb-3 pt-1 backdrop-blur-xl sm:mb-6">
@@ -997,6 +1013,8 @@ const ProjectForm = () => {
           </div>
         </div>
       </header>
+
+      {formAccessNotice ? <ProjectAccessNotice notice={formAccessNotice} /> : null}
 
       <div className="px-0 pb-4 sm:pb-6">
       <form onSubmit={handleSubmit(onSubmit, (errors) => {
@@ -1086,13 +1104,13 @@ const ProjectForm = () => {
                               onMouseDown={(e) => {
                                 e.preventDefault() // Prevent input blur
                                 setValue('customerId', customer.id, { shouldValidate: true, shouldDirty: true })
-                                setCustomerSearch(`${customer.customerId} - ${customer.customerName}`)
+                                setCustomerSearch(customerPickerLabel(customer))
                                 setShowCustomerDropdown(false)
                               }}
                               className="cursor-pointer border-b border-[color:var(--border-default)] px-4 py-3 last:border-b-0 hover:bg-[color:var(--bg-table-hover)] sm:py-2 touch-manipulation"
                             >
                               <div className="text-sm font-medium text-[color:var(--text-primary)]">
-                                {customer.customerId} - {customer.customerName}
+                                {customerPickerLabel(customer)}
                               </div>
                               {customer.consumerNumber && (
                                 <div className="text-xs text-[color:var(--text-muted)]">Consumer: {customer.consumerNumber}</div>
@@ -1126,7 +1144,7 @@ const ProjectForm = () => {
                                 if (selectedId) {
                                   const customer = filteredCustomers?.find((c: any) => c.id === selectedId)
                                   if (customer) {
-                                    setCustomerSearch(`${customer.customerId} - ${customer.customerName}`)
+                                    setCustomerSearch(customerPickerLabel(customer))
                                   }
                                 } else {
                                   setCustomerSearch('')
@@ -1140,7 +1158,7 @@ const ProjectForm = () => {
                             {filteredCustomers && filteredCustomers.length > 0 ? (
                               filteredCustomers.map((customer: any) => (
                                 <option key={customer.id} value={customer.id}>
-                                  {customer.customerId} - {customer.customerName}
+                                  {customerPickerLabel(customer)}
                                 </option>
                               ))
                             ) : (
@@ -1163,10 +1181,13 @@ const ProjectForm = () => {
                   {/* Hidden input removed - customerId is already registered on the select dropdown above */}
                 </>
               )}
-              {selectedCustomerId && filteredCustomers && (
+              {selectedCustomerId && (filteredCustomers || project?.customer) && (
                 <div className="mt-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] p-3 text-sm text-[color:var(--text-secondary)] shadow-inner ring-1 ring-[color:var(--border-default)] sm:p-3.5">
                   {(() => {
-                    const customer = filteredCustomers.find((c: any) => c.id === selectedCustomerId);
+                    const linkedCustomer = project?.customer
+                    const customer =
+                      filteredCustomers?.find((c: Customer) => c.id === selectedCustomerId) ??
+                      (linkedCustomer?.id === selectedCustomerId ? linkedCustomer : null)
                     if (customer) {
                       return (
                         <div className="space-y-1.5">
@@ -1177,7 +1198,24 @@ const ProjectForm = () => {
                           </p>
                           <p>
                             <span className="text-[color:var(--text-secondary)]">Name:</span>{' '}
-                            <span className="text-base font-semibold text-[color:var(--text-primary)] sm:text-lg">{customer.customerName}</span>
+                            <span className="text-base font-semibold text-[color:var(--text-primary)] sm:text-lg">{getCustomerDisplayName(customer)}</span>
+                          </p>
+                          <p className="flex flex-wrap items-center gap-2">
+                            <span className="text-[color:var(--text-secondary)]">Customer type:</span>
+                            <span
+                              className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-semibold ${getCustomerTypeLegendSwatchClass((customer.customerType ?? 'RESIDENTIAL') as CustomerType)}`}
+                            >
+                              {formatCustomerTypeDisplay(customer.customerType)}
+                            </span>
+                            <span className="text-xs text-[color:var(--text-muted)]">From Customer Master</span>
+                            {customer.id ? (
+                              <Link
+                                to={`/customers/${customer.id}`}
+                                className="text-xs font-semibold text-[color:var(--accent-gold)] hover:underline"
+                              >
+                                Open customer →
+                              </Link>
+                            ) : null}
                           </p>
                           {customer.address && (
                             <p>
@@ -1188,14 +1226,7 @@ const ProjectForm = () => {
                             <p>
                               <span className="text-[color:var(--text-secondary)]">Contact:</span>{' '}
                               <span className="text-[color:var(--text-primary)]">
-                                {(() => {
-                                  try {
-                                    const contacts = JSON.parse(customer.contactNumbers);
-                                    return Array.isArray(contacts) ? contacts.join(', ') : customer.contactNumbers;
-                                  } catch {
-                                    return customer.contactNumbers;
-                                  }
-                                })()}
+                                {formatCustomerStringList(parseCustomerStringList(customer.contactNumbers))}
                               </span>
                             </p>
                           )}
@@ -1237,13 +1268,14 @@ const ProjectForm = () => {
               >
                 {Object.values(ProjectType).map((type) => (
                   <option key={type} value={type}>
-                    {type.replace(/_/g, ' ')}
+                    {getProjectSegmentLabel(type)}
                   </option>
                 ))}
               </select>
+              <p className={ZENITH_FIELD_HINT_CLS}>Subsidy vs non-subsidy eligibility for this project (not customer type).</p>
             </div>
             <div>
-              <label className={labelCls}>Project Type *</label>
+              <label className={labelCls}>Service type *</label>
               <select
                 {...register('projectServiceType', { required: true })}
                 className={`zenith-native-select ${selectCls}`}
@@ -1257,6 +1289,7 @@ const ProjectForm = () => {
                 <option value={ProjectServiceType.RESALE}>Resale</option>
                 <option value={ProjectServiceType.OTHER_SERVICES}>Other Services</option>
               </select>
+              <p className={ZENITH_FIELD_HINT_CLS}>What you are delivering (EPC, maintenance, etc.) — separate from segment and customer type.</p>
             </div>
             {/* Sales Person is now managed at Customer level, not Project level */}
           </div>
@@ -1453,9 +1486,6 @@ const ProjectForm = () => {
                   <option value="COMPLETED_SUBSIDY_CREDITED">Completed - Subsidy Credited</option>
                   <option value={ProjectStatus.LOST}>Lost</option>
                 </select>
-                {isLost && (
-                  <p className="mt-1 text-sm text-red-400/95">This project is in Lost status and cannot be edited. Only Admin can delete it.</p>
-                )}
               </div>
               {/* Lost Status Fields - Show when Lost is selected */}
               {projectStatus === ProjectStatus.LOST && (canEditLostFields || canEditSales || hasRole([UserRole.OPERATIONS])) && (

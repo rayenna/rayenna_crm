@@ -26,7 +26,7 @@ Your dashboard shows key operational metrics and helps you prioritize your daily
 ### Charts and Visualizations
 
 - **Project Value and Profit by Financial Year**: See operational performance over time
-- **Project Value by Segment**: Visual breakdown of projects by type
+- **Revenue by Customer Type**: Pie chart by customer type from Customer Master
 
 ### Using Dashboard Filters
 

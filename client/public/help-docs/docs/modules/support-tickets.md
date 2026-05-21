@@ -110,6 +110,7 @@ Every support ticket is assigned a unique ticket number when created. This numbe
 **Authorized Roles**:
 - **Sales users**: Can create tickets for their projects
 - **Operations users**: Can create tickets for any project
+- **Management users**: Can create tickets for any project
 - **Administrators**: Can create tickets for any project
 
 **Permissions**:
@@ -195,14 +196,15 @@ Follow-ups are activity notes added to tickets to track progress, document commu
 **Who Can Add Follow-ups**:
 - **Sales users**: Can add follow-ups to tickets
 - **Operations users**: Can add follow-ups to tickets
+- **Management users**: Can add follow-ups to tickets
 - **Administrators**: Can add follow-ups to tickets
 
 **How to Add Follow-up**:
 
 **From Project Page**:
 1. Go to project's Support / Service Tickets section
-2. Click **View Ticket** for the ticket
-3. Scroll to "Add Follow-up" section
+2. Click **View** or **View ticket** (opens the **Ticket Detail Drawer** from the right)
+3. Scroll to **Add Follow-up** in the drawer
 4. Enter follow-up information
 
 **From Support Tickets Dashboard**:
@@ -314,6 +316,7 @@ Ticket resolution involves addressing the customer's issue, verifying the soluti
 **Who Can Close Tickets**:
 - **Sales users**: Can close tickets
 - **Operations users**: Can close tickets
+- **Management users**: Can close tickets
 - **Administrators**: Can close tickets
 
 **How to Close Ticket**:
@@ -405,12 +408,13 @@ The system provides different ways to view tickets based on their status, helpin
 - Includes action buttons
 
 **Ticket Information Displayed**:
-- **Ticket Number**: Unique identifier (clickable)
-- **Title**: Issue description
-- **Status**: Badge showing current status
-- **Created Date**: When ticket was created
-- **Closed Date**: When ticket was closed (if closed)
-- **Actions**: View, Close, Delete buttons
+- **Ticket Number**, **Title**, **Status**, **Created** / **Closed** dates
+- **Actions**: **View ticket** (opens the shared **Ticket Detail Drawer**); **Close** and **Delete** (Admin) when allowed
+
+**Mobile layout (project detail)**:
+- Below tablet width, tickets appear as **cards** (not a sideways-scrolling table)
+- **View ticket** is a full-width button; **Close** / **Delete** use large tap targets
+- Same drawer experience as the Support Tickets dashboard
 
 **Filtering Options**:
 - View all tickets
@@ -453,13 +457,12 @@ The system provides different ways to view tickets based on their status, helpin
 - Clickable slices to filter table
 - Shows Open, In Progress, and Closed tickets
 
-**Open Tickets Table**:
-- Lists all open and in-progress tickets
-- Shows ticket number (clickable)
-- Displays project name
-- Shows status badge
-- Includes created date and last follow-up date
-- View action to open ticket details
+**All Support Tickets list**:
+- Lists tickets for your role (Sales: own projects only; others: company-wide)
+- **Phones / narrow screens**: stacked **cards** with full-width **View ticket** (and **Close** / **Delete** when allowed)
+- **Tablet and desktop**: sortable **table** with the same data
+- Shows ticket number, project, status, created date, last follow-up, and actions
+- Click **View** or the ticket number to open the **Ticket Detail Drawer**
 
 **Filtering**:
 - Click KPI cards to filter by status
@@ -553,7 +556,7 @@ The Support Tickets Dashboard provides comprehensive tracking and monitoring cap
 **Closed Tickets**:
 - Count of tickets with CLOSED status
 - Resolved and closed tickets
-- Click to filter (table shows open tickets only)
+- Click to filter the list to **Closed** only
 - Gray color indicator
 
 **Overdue Tickets**:
@@ -587,21 +590,20 @@ The Support Tickets Dashboard provides comprehensive tracking and monitoring cap
 - Highlights selected status
 - Updates automatically
 
-### Open Tickets Table
+### All Support Tickets table and cards
 
-**Table Columns**:
-- **Ticket Number**: Clickable link to ticket details
-- **Project Name**: Project number and customer name
+**Columns / card fields**:
+- **Ticket Number**: Opens the detail drawer
+- **Project Name**: Project number and customer name (dashboard only)
 - **Status**: Badge showing current status
 - **Created Date**: When ticket was created
-- **Last Follow-up**: Date of most recent activity
-- **Action**: View button to open ticket details
+- **Last Follow-up**: Date of most recent activity (dashboard)
+- **Actions**: View; **Close** / **Delete** on project detail when permitted
 
-**Table Features**:
-- Shows only OPEN and IN_PROGRESS tickets
-- Filters based on KPI and chart selections
-- Responsive design for all screen sizes
-- Sortable and searchable
+**List behaviour**:
+- Default view shows **all statuses**; use KPI cards or chart slices to filter (Open, In Progress, Closed, Overdue)
+- **Sortable** column headers on desktop
+- If the list fails to load, a **Try again** panel appears (dashboard and project section)
 
 **Table Interactions**:
 - Click ticket number to view details
@@ -624,10 +626,8 @@ The Support Tickets Dashboard provides comprehensive tracking and monitoring cap
 - Can combine with status filters
 
 **Clear Filters**:
-- Green "Clear Filters" button appears when filters are active
-- Resets all filters to default view
-- Shows all open and in-progress tickets
-- Removes all active filters
+- **Clear filters** in the header when filters are active
+- Resets KPI/chart filters so the full ticket list is shown again
 
 ### Ticket Detail Drawer
 
@@ -718,16 +718,13 @@ The Support Tickets Dashboard provides comprehensive tracking and monitoring cap
 - ✅ Full access to all features
 
 **Finance Users**:
-- ✅ View all tickets (read-only)
-- ❌ Create tickets
-- ❌ Add follow-ups
-- ❌ Close tickets
+- ❌ No **Support Tickets** menu item (Finance uses Projects for payment work only)
 
 **Management Users**:
-- ✅ View all tickets (read-only)
-- ❌ Create tickets
-- ❌ Add follow-ups
-- ❌ Close tickets
+- ✅ View all tickets on the Support Tickets dashboard and on project detail
+- ✅ Create tickets, add follow-ups, and close tickets (same service workflow as Sales/Operations)
+- ❌ Delete tickets (Admin only)
+- ❌ Cannot edit projects or customers from ticket screens
 
 ## Best Practices
 

@@ -106,13 +106,15 @@ export default function MyDayButton({ variant, onBeforeOpen, targetTab }: Props)
         transition: 'transform 160ms, box-shadow 160ms',
       }}
       onMouseEnter={e => {
-        ;(e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.04)'
-        ;(e.currentTarget as HTMLButtonElement).style.boxShadow =
+        const el = e.currentTarget as HTMLButtonElement
+        el.style.transform = 'scale(1.04)'
+        el.style.boxShadow =
           '0 0 14px color-mix(in srgb, var(--accent-gold) 30%, transparent)'
       }}
       onMouseLeave={e => {
-        ;(e.currentTarget as HTMLButtonElement).style.transform = ''
-        ;(e.currentTarget as HTMLButtonElement).style.boxShadow = ''
+        const el = e.currentTarget as HTMLButtonElement
+        el.style.transform = ''
+        el.style.boxShadow = ''
       }}
     >
       <SunriseIcon size={16} />

@@ -31,9 +31,8 @@ enum ThemePreference {
 }
 
 enum ProjectType {
-  RESIDENTIAL_SUBSIDY
-  RESIDENTIAL_NON_SUBSIDY
-  COMMERCIAL_INDUSTRIAL
+  SUBSIDY
+  NON_SUBSIDY
 }
 
 enum ProjectStatus {
@@ -235,6 +234,8 @@ model Customer {
   idProofType    String?
   companyName    String?
   companyGst     String? // Legacy field, use gstNumber
+  /// JSON array: [{ prefix, firstName, middleName, lastName, phones: string[], emails: string[] }]
+  contacts       Json?
 
   createdById String?
   createdBy   User?   @relation("CustomerCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)

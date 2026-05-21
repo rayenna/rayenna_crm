@@ -305,7 +305,12 @@ export default function ZenithOperationsBody({
       revenue: r.totalProjectValue,
       profit: r.totalProfit,
     }))
-  const seg = (data?.projectValueByType ?? []) as { label: string; value: number; percentage: string }[]
+  const seg = (data?.projectValueByType ?? []) as {
+    type: string
+    label: string
+    value: number
+    percentage: string
+  }[]
   const paymentItems = (data?.projectsByPaymentStatus ?? []) as {
     status: string
     count: number
@@ -520,11 +525,16 @@ export default function ZenithOperationsBody({
           </div>
           <div id="zenith-segments" className="scroll-mt-28 flex min-h-0 flex-col lg:h-full">
             <SegmentDonut
-              title="Revenue by customer segment"
+              title="Revenue by Customer Type"
               showExploreHint
               chartHeightPx={exploreChartHeight}
               stretchToRowHeight
-              data={seg.map((s) => ({ name: s.label, value: s.value, percentage: s.percentage }))}
+              data={seg.map((s) => ({
+                name: s.label,
+                value: s.value,
+                percentage: s.percentage,
+                segmentKey: s.type,
+              }))}
               onSegmentClick={(segment) =>
                 drill('customer_segment', segment, { segmentChart: 'revenue' })
               }

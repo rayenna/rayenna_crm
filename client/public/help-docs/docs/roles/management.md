@@ -33,7 +33,7 @@ Management users have executive-level access to view and analyze all business da
 - Cannot update project information
 - Cannot modify customer data
 - Cannot update payments
-- Cannot create support tickets
+- Can create support tickets, add follow-ups, and close tickets (same as Sales/Operations for service work; cannot edit projects or customers)
 - Cannot manage users
 
 ## Your Dashboard
@@ -64,9 +64,9 @@ Your Management Dashboard provides a comprehensive, aggregated view of all busin
 - Identify growth patterns and trends
 - Make strategic planning decisions
 
-**Project Value by Segment**:
-- Breakdown of projects by type (Residential Subsidy, Commercial, etc.)
-- Understand which segments drive revenue
+**Revenue by Customer Type**:
+- Breakdown of order value by **customer type** (Residential, Apartment, Commercial)
+- Understand which customer types drive revenue (distinct from project Subsidy/Non-Subsidy segment)
 - Identify market opportunities
 - Plan resource allocation
 

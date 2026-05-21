@@ -107,101 +107,63 @@ This chart displays your total project value (revenue) and total profit across d
 - **Insight**: Business needs attention
 - **Action**: Investigate causes and take corrective measures
 
-## Project Value by Customer Segment
+## Revenue by Customer Type & Pipeline by Customer Type
 
-### What This Chart Shows
+### What These Charts Show
 
-This pie chart shows how your total project value is distributed across different customer segments. Each slice represents a segment, and the size of the slice shows its proportion of total value.
+On the **classic Dashboard** and in **Zenith**, you may see one or two donut (pie) charts:
 
-### Understanding the Chart
+- **Revenue by Customer Type** — share of **revenue-eligible** project value by customer type
+- **Pipeline by Customer Type** — share of **open pipeline** value by customer type
 
-**Chart Type**: Pie Chart
+Each slice is a **customer type** from **Customer Master** on the linked customer: **Residential**, **Apartment**, or **Commercial**. Slice size is that type’s share of the chart total.
 
-**What You See**:
-- **Circle Divided into Slices**: Each slice is a customer segment
-- **Slice Sizes**: Larger slices = more value from that segment
-- **Colors**: Different colors for each segment
-- **Legend**: Shows what each color represents
-- **Percentages**: Each slice shows percentage of total
-- On the **classic Dashboard**, **click a slice** (revenue segment pie or pipeline segment pie, where your role has that chart) to open **Projects** with the matching segment and analytics slice
+**Not the same as project Segment** — The **Segment** filter on **Projects** (Subsidy / Non-Subsidy) is a **project** field. These donuts do **not** use that field. If help or conversation says “segment donut,” it usually means this **customer type** chart (legacy wording).
 
-**Customer Segments**:
-- **Residential Subsidy**: Residential customers with subsidy
-- **Residential Non-Subsidy**: Residential customers without subsidy
-- **Commercial Industrial**: Commercial and industrial customers
+### Understanding the Charts
 
-### How to Read This Chart
+**Chart type**: Donut / pie
 
-**Basic Reading**:
-1. **Look at Slice Sizes**: Larger slices contribute more value
-2. **Check Percentages**: See exact proportion of each segment
-3. **Compare Segments**: Which segment is largest?
-4. **Read Legend**: Understand what each color means
+**What you see**:
+- One slice per **customer type** (plus **Unassigned** when the project has no linked customer type)
+- **Colors** and **legend** per type
+- **Percentages** on or beside slices
+- **Classic Dashboard**: click a slice → **Projects** with **Customer type** and the matching analytics slice (revenue vs pipeline)
+- **Zenith**: click a slice → **Quick Actions** drawer list; **Open in Projects →** applies the same **Customer type** filter
 
-**Understanding the Data**:
-- **Total Circle**: Represents 100% of project value
-- **Each Slice**: Shows that segment's share
-- **Slice Size**: Proportional to value contribution
-- **Percentage**: Exact share of total value
+**Cohort rules**:
+- **Revenue** chart: revenue-eligible projects only (same rules as other revenue analytics)
+- **Pipeline** chart: open pipeline only — a different total than revenue; do not compare slice sizes across the two charts as if they were the same population
+
+### How to Read These Charts
+
+1. **Largest slice** — which customer type drives most value in that chart’s cohort
+2. **Compare the pair** — revenue mix vs pipeline mix can differ (e.g. strong Commercial in pipeline, smaller in revenue)
+3. **Unassigned** — projects missing customer type on the customer record; fix in **Customer Master** or project link
+4. **FY filter** (Dashboard) — narrows which projects enter the totals; Zenith uses its own date filters
 
 ### Interpreting Insights
 
-**Market Mix Analysis**:
-- **Dominant Segment**: Largest slice shows your main market
-- **Balanced Mix**: Similar slice sizes indicate diversification
-- **Concentrated Market**: One large slice shows focus on one segment
-- **Market Opportunities**: Small slices may indicate growth potential
-
-**Business Strategy Insights**:
-- **Residential Focus**: If residential slices are large, you're residential-focused
-- **Commercial Growth**: Growing commercial slice shows expansion
-- **Subsidy Dependency**: Large subsidy slice shows reliance on subsidies
-- **Diversification**: Multiple similar slices show balanced portfolio
-
-**Revenue Concentration**:
-- **High Concentration**: One segment dominates (higher risk)
-- **Low Concentration**: Balanced across segments (lower risk)
-- **Growth Segments**: Identify which segments are growing
-- **Declining Segments**: Spot segments needing attention
-
-**What to Look For**:
-- ✅ **Positive Signs**: Balanced mix, growing segments, diversification
-- ⚠️ **Warning Signs**: Over-concentration, declining segments
-- 📊 **Opportunities**: Small but growing segments, untapped markets
-
-### Using the Filter
-
-**Financial Year Filter**:
-- Select "All Financial Years" for overall mix
-- Select specific FY to see mix for that year
-- Compare mix across different years
-- Track segment changes over time
-
-**Filter Tips**:
-- Compare FYs to see market shifts
-- Identify trends in segment mix
-- Track diversification over time
-- Analyze seasonal patterns
+- **Concentration** — one type dominates → risk if that market slows
+- **Pipeline vs revenue gap** — large Apartment in pipeline but small in revenue → future mix may shift
+- **Apartment vs Residential** — both are “residential-ish” in conversation but are **separate** types in data; read slices literally
 
 ### Practical Examples
 
-**Example 1: Balanced Portfolio**
-- Three similar-sized slices
-- Each segment contributes roughly equal value
-- **Insight**: Well-diversified business
-- **Action**: Maintain balanced approach
+**Example 1: Balanced revenue mix**
+- Similar slices for Residential, Apartment, Commercial
+- **Insight**: Diversified booked revenue
+- **Action**: Keep balanced sales motion
 
-**Example 2: Residential Dominance**
-- Large residential slices
-- Small commercial slice
-- **Insight**: Focused on residential market
-- **Action**: Consider commercial expansion
+**Example 2: Pipeline skew**
+- **Pipeline by Customer Type** shows large Commercial slice; **Revenue by Customer Type** smaller
+- **Insight**: Commercial deals in flight not yet revenue-eligible
+- **Action**: Review stage and conversion for those projects
 
-**Example 3: Growing Commercial**
-- Commercial slice growing over years
-- Residential slices stable
-- **Insight**: Successfully expanding into commercial
-- **Action**: Continue commercial growth strategy
+**Example 3: Unassigned slice**
+- Visible **Unassigned** on either chart
+- **Insight**: Data quality gap on customer type
+- **Action**: Update customers and re-check charts after sync
 
 ## Customer Profitability Word Cloud
 
@@ -625,7 +587,7 @@ Analytics charts provide:
 
 **Key Charts**:
 - Project Value & Profit by Financial Year: Track revenue and profitability trends
-- Project Value by Customer Segment: Understand market mix and distribution
+- Revenue / Pipeline by Customer Type: Understand customer-type mix (not Subsidy/Non-Subsidy segment)
 - Customer Profitability Word Cloud: Identify most valuable customers
 - Projects Availing Loans by Bank: See project count by financing bank (Sales, Finance, Management/Admin)
 - Sales Team Performance: Compare team member performance

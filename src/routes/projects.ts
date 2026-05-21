@@ -1,7 +1,13 @@
 import express, { Request, Response } from 'express';
-import type { ParsedQs } from 'qs';
 import { body, query, validationResult } from 'express-validator';
 import { ProjectStatus, ProjectType, ProjectServiceType, ProjectStage, UserRole, LeadSource, SupportTicketStatus, SystemType, LostReason, PaymentStatus } from '@prisma/client';
+import { defaultPanelTypeForProjectSegment } from '../utils/projectSegment';
+import {
+  buildProjectsWhere,
+  parseProjectsListFilters,
+  projectsListQueryValidators,
+} from '../utils/projectsListWhere';
+import { mapProjectToExportRow, PROJECTS_EXPORT_INCLUDE } from '../utils/projectsListExport';
 
 // Valid values for lostToCompetitionReason (required when lostReason is LOST_TO_COMPETITION)
 const LOST_TO_COMPETITION_REASON_VALUES = ['LOST_DUE_TO_PRICE', 'LOST_DUE_TO_FEATURES', 'LOST_DUE_TO_RELATIONSHIP_OTHER'] as const;
@@ -27,58 +33,6 @@ function parseSystemCapacityKw(value: unknown): number | null {
   const n = Number(value);
   if (!Number.isFinite(n) || n < 0) return null;
   return Math.round(n);
-}
-
-/**
- * Zenith "Open in Projects" parity: same slice as `zenithExplorerProjects` client filters
- * (`matchesDashboardRevenueWhere` vs `inDashboardPipelineSlice`), optional FY-profit (`grossProfit` set),
- * and lifecycle brand drill (`panelBrand` / `inverterBrand` + both brands present).
- */
-function pushZenithExplorerSliceOntoWhere(
-  where: Record<string, unknown>,
-  slice: 'revenue' | 'pipeline',
-  fyProfitOnly: boolean,
-) {
-  const revenueStatuses: ProjectStatus[] = [
-    ProjectStatus.CONFIRMED,
-    ProjectStatus.UNDER_INSTALLATION,
-    ProjectStatus.COMPLETED,
-    ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
-  ];
-  const stageOr = {
-    OR: [
-      { projectStage: null },
-      { projectStage: { notIn: [ProjectStage.SURVEY, ProjectStage.PROPOSAL] } },
-    ],
-  };
-
-  const parts: object[] =
-    slice === 'revenue'
-      ? [
-          { projectCost: { gt: 0 } },
-          { projectStatus: { in: revenueStatuses } },
-          stageOr,
-          ...(fyProfitOnly ? [{ grossProfit: { not: null } }] : []),
-        ]
-      : [{ projectCost: { gt: 0 } }, { projectStatus: { not: ProjectStatus.LOST } }];
-
-  const clause = { AND: parts };
-  const w = where as any;
-  if (w.AND && Array.isArray(w.AND)) {
-    w.AND.push(clause);
-    return;
-  }
-  const topKeys = Object.keys(w).filter((k) => k !== 'AND' && k !== 'OR');
-  if (topKeys.length > 0) {
-    const existing: object[] = [];
-    topKeys.forEach((key) => {
-      existing.push({ [key]: w[key] });
-      delete w[key];
-    });
-    w.AND = [...existing, clause];
-  } else {
-    w.AND = [clause];
-  }
 }
 
 /**
@@ -247,63 +201,7 @@ router.get(
   '/',
   authenticate,
   [
-    // Allow multiple status values (array) - express automatically parses multiple params with same name into array
-    query('status').optional().custom((value) => {
-      if (!value) return true;
-      const values = Array.isArray(value) ? value : [value];
-      return values.every(v => Object.values(ProjectStatus).includes(v as ProjectStatus));
-    }).withMessage('Invalid status value'),
-    // Allow multiple type values (array)
-    query('type').optional().custom((value) => {
-      if (!value) return true;
-      const values = Array.isArray(value) ? value : [value];
-      return values.every(v => Object.values(ProjectType).includes(v as ProjectType));
-    }).withMessage('Invalid type value'),
-    // Allow multiple projectServiceType values (array)
-    query('projectServiceType').optional().custom((value) => {
-      if (!value) return true;
-      const values = Array.isArray(value) ? value : [value];
-      return values.every(v => Object.values(ProjectServiceType).includes(v as ProjectServiceType));
-    }).withMessage('Invalid projectServiceType value'),
-    // Allow multiple salespersonId values (array)
-    query('salespersonId').optional().custom((value) => {
-      if (!value) return true;
-      const values = Array.isArray(value) ? value : [value];
-      return values.every(v => typeof v === 'string');
-    }).withMessage('Invalid salespersonId value'),
-    query('supportTicketStatus').optional().custom((value) => {
-      if (!value) return true;
-      const values = Array.isArray(value) ? value : [value];
-      const validValues = ['HAS_TICKETS', 'OPEN', 'IN_PROGRESS', 'CLOSED', 'NO_TICKETS'];
-      return values.every(v => validValues.includes(v as string));
-    }).withMessage('Invalid supportTicketStatus value'),
-    // Dashboard-style date filters (FY / Quarter / Month)
-    query('fy').optional().custom((value) => {
-      if (!value) return true;
-      const values = Array.isArray(value) ? value : [value];
-      return values.every(v => typeof v === 'string' && String(v).trim().length > 0);
-    }).withMessage('Invalid fy value'),
-    query('quarter').optional().custom((value) => {
-      if (!value) return true;
-      const values = Array.isArray(value) ? value : [value];
-      const valid = ['Q1', 'Q2', 'Q3', 'Q4'];
-      return values.every(v => valid.includes(String(v)));
-    }).withMessage('Invalid quarter value'),
-    query('month').optional().custom((value) => {
-      if (!value) return true;
-      const values = Array.isArray(value) ? value : [value];
-      const valid = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-      return values.every(v => valid.includes(String(v).padStart(2, '0')));
-    }).withMessage('Invalid month value'),
-    query('leadSource').optional().custom((value) => {
-      if (!value) return true;
-      const values = Array.isArray(value) ? value : [value];
-      return values.every(v => Object.values(LeadSource).includes(v as LeadSource));
-    }).withMessage('Invalid leadSource value'),
-    query('year').optional().isString(),
-    query('search').optional().isString(),
-    query('hasDocuments').optional().isIn(['true', 'false']),
-    query('availingLoan').optional().isIn(['true']),
+    ...projectsListQueryValidators,
     query('page').optional().isInt({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 100 }),
     query('sortBy')
@@ -323,21 +221,6 @@ router.get(
         'paymentStatus',
       ]),
     query('sortOrder').optional().isIn(['asc', 'desc']),
-    query('peBucket').optional().isIn(['proposal-ready', 'draft', 'not-started', 'rest']),
-    query('financingBank').optional().custom((value) => {
-      if (!value) return true;
-      const values = Array.isArray(value) ? value : [value];
-      return values.every((v) => typeof v === 'string' && String(v).trim().length > 0);
-    }).withMessage('Invalid financingBank value'),
-    query('zenithClosedFrom').optional().isISO8601(),
-    query('zenithClosedTo').optional().isISO8601(),
-    query('salespersonUnassigned').optional().isIn(['true']),
-    query('leadSourceIsNull').optional().isIn(['true']),
-    query('zenithSlice').optional().isIn(['revenue', 'pipeline']),
-    query('zenithFyProfit').optional().isIn(['true']),
-    query('panelBrand').optional().isString(),
-    query('inverterBrand').optional().isString(),
-    query('lifecycleSpecsComplete').optional().isIn(['true']),
   ],
   async (req: Request, res: Response) => {
     let where: any = {};
@@ -347,432 +230,29 @@ router.get(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const {
-        status,
-        type,
-        projectServiceType,
-        salespersonId,
-        leadSource,
-        supportTicketStatus,
-        paymentStatus,
-        fy,
-        quarter,
-        month,
-        year,
-        search,
-        hasDocuments,
-        availingLoan,
-        page = '1',
-        limit = '25',
-        sortBy,
-        sortOrder = 'desc',
-        peBucket,
-        financingBank,
-        zenithClosedFrom,
-        zenithClosedTo,
-        salespersonUnassigned,
-        leadSourceIsNull,
-        zenithSlice,
-        zenithFyProfit,
-        panelBrand,
-        inverterBrand,
-        lifecycleSpecsComplete,
-      } = req.query;
+      const { page = '1', limit = '25', sortBy, sortOrder = 'desc' } = req.query;
 
       const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
       const take = parseInt(limit as string);
 
-      where = {};
+      const listFilters = parseProjectsListFilters(req.query);
 
-      // Handle array filters (multi-select) - express sends arrays when multiple values have same param name
-      const statusArray = Array.isArray(status) ? status : status ? [status] : [];
-      const typeArray = Array.isArray(type) ? type : type ? [type] : [];
-      const projectServiceTypeArray = Array.isArray(projectServiceType) ? projectServiceType : projectServiceType ? [projectServiceType] : [];
-      const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : salespersonId ? [salespersonId] : [];
-      const leadSourceArray = Array.isArray(leadSource) ? leadSource : leadSource ? [leadSource] : [];
-      const supportTicketStatusArray = Array.isArray(supportTicketStatus) ? supportTicketStatus : supportTicketStatus ? [supportTicketStatus] : [];
-      const paymentStatusArray = Array.isArray(paymentStatus) ? paymentStatus : paymentStatus ? [paymentStatus] : [];
-      const fyArray = Array.isArray(fy) ? fy : fy ? [fy] : [];
-      const quarterArray = Array.isArray(quarter) ? quarter : quarter ? [quarter] : [];
-      const monthArray = Array.isArray(month) ? month : month ? [month] : [];
-      // FY filters: prefer ?fy=... (dashboard-style). Fallback to legacy ?year=...
-      const fyFilters: string[] = (fyArray.length > 0 ? fyArray : (year ? [year] : [])) as string[];
-
-      // Role-based filtering - Sales users only see their own projects
-      // This should be applied before other filters
-      if (req.user?.role === UserRole.SALES) {
-        where.salespersonId = req.user.id;
+      const whereForFyMeta = buildProjectsWhere(listFilters, req.user, {
+        skipDateFilters: true,
+        skipPeBucket: true,
+      });
+      if (!whereForFyMeta.ok) {
+        return res.status(whereForFyMeta.status).json({ error: whereForFyMeta.error });
       }
 
-      // Operations users can only see projects with specific statuses
-      // Operations can only see: CONFIRMED, UNDER_INSTALLATION, COMPLETED, COMPLETED_SUBSIDY_CREDITED
-      const operationsAllowedStatuses: ProjectStatus[] = [
-        ProjectStatus.CONFIRMED,
-        ProjectStatus.UNDER_INSTALLATION,
-        ProjectStatus.COMPLETED,
-        ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
-      ];
-
-      if (req.user?.role === UserRole.OPERATIONS) {
-        // If Operations user provides status filter, validate it's within allowed statuses
-        if (statusArray.length > 0) {
-          // Filter statusArray to only include allowed statuses
-          const filteredStatusArray = statusArray.filter((status): status is ProjectStatus =>
-            operationsAllowedStatuses.includes(status as ProjectStatus)
-          );
-          if (filteredStatusArray.length > 0) {
-            where.projectStatus = { in: filteredStatusArray };
-          } else {
-            // If all provided statuses are invalid, set to allowed statuses (or empty result)
-            where.projectStatus = { in: operationsAllowedStatuses };
-          }
-        } else {
-          // No status filter provided, show all allowed statuses
-          where.projectStatus = { in: operationsAllowedStatuses };
-        }
-      } else if (statusArray.length > 0) {
-        // Non-Operations users can filter by any status
-        where.projectStatus = { in: statusArray as string[] };
+      const built = buildProjectsWhere(listFilters, req.user);
+      if (!built.ok) {
+        return res.status(built.status).json({ error: built.error });
       }
-      if (typeArray.length > 0) where.type = { in: typeArray as string[] };
-      if (projectServiceTypeArray.length > 0) where.projectServiceType = { in: projectServiceTypeArray as string[] };
-      if (leadSourceArray.length > 0) where.leadSource = { in: leadSourceArray as string[] };
-      if (String(leadSourceIsNull) === 'true' && leadSourceArray.length === 0) {
-        where.leadSource = null;
-      }
-      // Only apply salespersonId filter for non-Sales users (Sales users already filtered above)
-      if (salespersonIdArray.length > 0 && req.user?.role !== UserRole.SALES) {
-        where.salespersonId = { in: salespersonIdArray as string[] };
-      }
-      if (
-        String(salespersonUnassigned) === 'true' &&
-        salespersonIdArray.length === 0 &&
-        req.user?.role !== UserRole.SALES
-      ) {
-        const unassignedCond = { salespersonId: null };
-        if (where.AND && Array.isArray(where.AND)) {
-          where.AND.push(unassignedCond);
-        } else if (!where.salespersonId) {
-          Object.assign(where, unassignedCond);
-        }
-      }
+      where = built.where;
 
-      const financingBankArray = Array.isArray(financingBank)
-        ? financingBank
-        : financingBank
-          ? [financingBank]
-          : [];
-      if (financingBankArray.length > 0) {
-        const fbCond = { financingBank: { in: financingBankArray.map((v) => String(v)) } };
-        if (where.AND && Array.isArray(where.AND)) {
-          where.AND.push(fbCond);
-        } else {
-          const topKeys = Object.keys(where).filter((k) => k !== 'AND' && k !== 'OR');
-          if (topKeys.length > 0) {
-            const existing: any[] = [];
-            topKeys.forEach((key) => {
-              existing.push({ [key]: (where as any)[key] });
-              delete (where as any)[key];
-            });
-            where.AND = [...existing, fbCond];
-          } else {
-            Object.assign(where, fbCond);
-          }
-        }
-      }
-
-      const zcFromStr = typeof zenithClosedFrom === 'string' ? zenithClosedFrom : null;
-      const zcToStr = typeof zenithClosedTo === 'string' ? zenithClosedTo : null;
-      const zcFrom = zcFromStr ? new Date(zcFromStr) : null;
-      const zcTo = zcToStr ? new Date(zcToStr) : null;
-      if (
-        zcFrom &&
-        zcTo &&
-        !Number.isNaN(zcFrom.getTime()) &&
-        !Number.isNaN(zcTo.getTime())
-      ) {
-        const winningForZenith: ProjectStatus[] = [
-          ProjectStatus.CONFIRMED,
-          ProjectStatus.UNDER_INSTALLATION,
-          ProjectStatus.COMPLETED,
-          ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
-        ];
-        const zenithClosedClause = {
-          AND: [
-            { projectStatus: { in: winningForZenith } },
-            {
-              OR: [
-                {
-                  AND: [
-                    { stageEnteredAt: { not: null } },
-                    { stageEnteredAt: { gte: zcFrom, lte: zcTo } },
-                  ],
-                },
-                {
-                  AND: [
-                    { stageEnteredAt: null },
-                    { confirmationDate: { not: null } },
-                    { confirmationDate: { gte: zcFrom, lte: zcTo } },
-                  ],
-                },
-                {
-                  AND: [
-                    { stageEnteredAt: null },
-                    { confirmationDate: null },
-                    { updatedAt: { gte: zcFrom, lte: zcTo } },
-                  ],
-                },
-              ],
-            },
-          ],
-        };
-        if (where.AND && Array.isArray(where.AND)) {
-          where.AND.push(zenithClosedClause);
-        } else {
-          const topKeys = Object.keys(where).filter((k) => k !== 'AND' && k !== 'OR');
-          if (topKeys.length > 0) {
-            const existing: any[] = [];
-            topKeys.forEach((key) => {
-              existing.push({ [key]: (where as any)[key] });
-              delete (where as any)[key];
-            });
-            where.AND = [...existing, zenithClosedClause];
-          } else {
-            Object.assign(where, zenithClosedClause);
-          }
-        }
-      }
-
-      // Handle support ticket status filter
-      if (supportTicketStatusArray.length > 0) {
-        const ticketFilterConditions: any[] = [];
-
-        supportTicketStatusArray.forEach((filterValue: string | ParsedQs) => {
-          const s = String(filterValue);
-          switch (s) {
-            case 'HAS_TICKETS':
-              // Projects with any tickets
-              ticketFilterConditions.push({
-                supportTickets: {
-                  some: {},
-                },
-              });
-              break;
-            case 'OPEN':
-              // Projects with at least one open ticket
-              ticketFilterConditions.push({
-                supportTickets: {
-                  some: {
-                    status: SupportTicketStatus.OPEN,
-                  },
-                },
-              });
-              break;
-            case 'IN_PROGRESS':
-              // Projects with at least one in-progress ticket
-              ticketFilterConditions.push({
-                supportTickets: {
-                  some: {
-                    status: SupportTicketStatus.IN_PROGRESS,
-                  },
-                },
-              });
-              break;
-            case 'CLOSED':
-              // Projects with at least one closed ticket
-              ticketFilterConditions.push({
-                supportTickets: {
-                  some: {
-                    status: SupportTicketStatus.CLOSED,
-                  },
-                },
-              });
-              break;
-            case 'NO_TICKETS':
-              // Projects without any tickets
-              ticketFilterConditions.push({
-                supportTickets: {
-                  none: {},
-                },
-              });
-              break;
-          }
-        });
-
-        if (ticketFilterConditions.length > 0) {
-          // Build the ticket filter condition
-          const ticketFilter = ticketFilterConditions.length === 1 
-            ? ticketFilterConditions[0]
-            : { OR: ticketFilterConditions };
-
-          // Ensure AND array exists
-          if (!where.AND) {
-            // Move all existing top-level conditions to AND
-            const existingConditions: any[] = [];
-            Object.keys(where).forEach(key => {
-              if (key !== 'AND' && key !== 'OR') {
-                existingConditions.push({ [key]: where[key] });
-                delete where[key];
-              }
-            });
-            where.AND = existingConditions.length > 0 ? existingConditions : [];
-          }
-
-          // Add ticket filter to AND array
-          where.AND.push(ticketFilter);
-        }
-      }
-      
-      // Handle payment status filter
-      if (paymentStatusArray.length > 0) {
-        const paymentStatusConditions: any[] = [];
-        
-        paymentStatusArray.forEach((filterValue: string | ParsedQs) => {
-          const s = String(filterValue);
-          if (s === 'NA') {
-            // N/A: Projects without order value OR in early/lost stages
-            paymentStatusConditions.push({
-              OR: [
-                // No order value (null, 0, or undefined)
-                { projectCost: null },
-                { projectCost: 0 },
-                // OR in early/lost stages
-                { projectStatus: { in: [ProjectStatus.LEAD, ProjectStatus.SITE_SURVEY, ProjectStatus.PROPOSAL, ProjectStatus.LOST] } },
-              ],
-            });
-          } else {
-            // Actual payment status (FULLY_PAID, PARTIAL, PENDING)
-            // But exclude projects that should show N/A
-            paymentStatusConditions.push({
-              AND: [
-                { paymentStatus: s },
-                // Must have order value
-                { projectCost: { not: null } },
-                { projectCost: { not: 0 } },
-                // Must not be in early/lost stages
-                { projectStatus: { notIn: [ProjectStatus.LEAD, ProjectStatus.SITE_SURVEY, ProjectStatus.PROPOSAL, ProjectStatus.LOST] } },
-              ],
-            });
-          }
-        });
-        
-        if (paymentStatusConditions.length > 0) {
-          const paymentFilter = paymentStatusConditions.length === 1 
-            ? paymentStatusConditions[0]
-            : { OR: paymentStatusConditions };
-          
-          // Ensure AND array exists
-          if (!where.AND) {
-            const existingConditions: any[] = [];
-            Object.keys(where).forEach(key => {
-              if (key !== 'AND' && key !== 'OR') {
-                existingConditions.push({ [key]: where[key] });
-                delete where[key];
-              }
-            });
-            where.AND = existingConditions.length > 0 ? existingConditions : [];
-          }
-          
-          // Add payment status filter to AND array
-          where.AND.push(paymentFilter);
-        }
-      }
-
-      const zenithSliceStr = typeof zenithSlice === 'string' ? zenithSlice : '';
-      if (zenithSliceStr === 'revenue' || zenithSliceStr === 'pipeline') {
-        pushZenithExplorerSliceOntoWhere(where, zenithSliceStr, zenithSliceStr === 'revenue' && String(zenithFyProfit) === 'true');
-      }
-
-      // Zenith panel/inverter brand chart → Projects: both lifecycle brands required; optional exact match
-      const panelBrandRaw = typeof panelBrand === 'string' ? panelBrand.trim() : '';
-      const inverterBrandRaw = typeof inverterBrand === 'string' ? inverterBrand.trim() : '';
-      const lifecycleSpecsCompleteActive =
-        String(lifecycleSpecsComplete) === 'true' || panelBrandRaw !== '' || inverterBrandRaw !== '';
-      if (lifecycleSpecsCompleteActive) {
-        const lifecycleParts: object[] = [
-          { panelBrand: { not: null } },
-          { NOT: { panelBrand: '' } },
-          { inverterBrand: { not: null } },
-          { NOT: { inverterBrand: '' } },
-        ];
-        if (panelBrandRaw !== '') {
-          lifecycleParts.push({ panelBrand: panelBrandRaw });
-        }
-        if (inverterBrandRaw !== '') {
-          lifecycleParts.push({ inverterBrand: inverterBrandRaw });
-        }
-        const lifecycleClause = { AND: lifecycleParts };
-        if (where.AND && Array.isArray(where.AND)) {
-          where.AND.push(lifecycleClause);
-        } else {
-          const topKeys = Object.keys(where).filter((k) => k !== 'AND' && k !== 'OR');
-          if (topKeys.length > 0) {
-            const existing: any[] = [];
-            topKeys.forEach((key) => {
-              existing.push({ [key]: (where as any)[key] });
-              delete (where as any)[key];
-            });
-            where.AND = [...existing, lifecycleClause];
-          } else {
-            where.AND = [lifecycleClause];
-          }
-        }
-      }
-      
-      // Handle search - combine with existing conditions using AND
-      if (search) {
-        const searchConditions = {
-          OR: [
-            { customer: { customerName: { contains: search as string, mode: 'insensitive' } } },
-            { customer: { customerId: { contains: search as string, mode: 'insensitive' } } },
-            { customer: { consumerNumber: { contains: search as string, mode: 'insensitive' } } },
-          ],
-        };
-        
-        // Ensure AND array exists (may have been created by ticket filter)
-        if (!where.AND) {
-          // Move all existing top-level conditions into AND array
-          const topLevelKeys = Object.keys(where).filter(key => key !== 'AND' && key !== 'OR');
-          if (topLevelKeys.length > 0) {
-            const existingConditions: any[] = [];
-            topLevelKeys.forEach(key => {
-              existingConditions.push({ [key]: where[key] });
-              delete where[key];
-            });
-            where.AND = existingConditions;
-          } else {
-            where.AND = [];
-          }
-        }
-
-        // Add search condition to AND array (preserving existing AND conditions including ticket filter)
-        where.AND.push(searchConditions);
-      }
-
-      // Filter: only projects with at least one document (artifact) attached
-      const hasDocumentsActive = hasDocuments === 'true' || (Array.isArray(hasDocuments) && hasDocuments.includes('true'));
-      if (hasDocumentsActive) {
-        const hasDocumentsCondition = { documents: { some: {} } };
-        if (where.AND && Array.isArray(where.AND)) {
-          where.AND.push(hasDocumentsCondition);
-        } else {
-          where.documents = { some: {} };
-        }
-      }
-
-      // Filter: only projects where Availing Loan/Financing is Yes
-      if (availingLoan === 'true') {
-        const availingLoanCondition = { availingLoan: true };
-        if (where.AND && Array.isArray(where.AND)) {
-          where.AND.push(availingLoanCondition);
-        } else {
-          where.availingLoan = true;
-        }
-      }
-
-      // Available FYs for the dropdown (based on current non-date filters + role scope)
       const availableFYRows = await prisma.project.findMany({
-        where,
+        where: whereForFyMeta.where,
         distinct: ['year'],
         select: { year: true },
       });
@@ -780,135 +260,9 @@ router.get(
         new Set(
           availableFYRows
             .map((r) => r.year)
-            .filter((y): y is string => typeof y === 'string' && y.trim().length > 0)
-        )
+            .filter((y): y is string => typeof y === 'string' && y.trim().length > 0),
+        ),
       ).sort((a, b) => String(a).localeCompare(String(b)));
-
-      // Apply dashboard-style FY / Quarter / Month filters
-      if (fyFilters.length > 0) {
-        where.year = { in: fyFilters };
-      }
-
-      // Quarter/month only apply when exactly one FY is selected (same as Dashboard)
-      const quarterFilters = quarterArray as string[];
-      const monthFilters = monthArray as string[];
-      if (fyFilters.length === 1 && (quarterFilters.length > 0 || monthFilters.length > 0)) {
-        const QUARTER_TO_MONTHS: Record<string, string[]> = {
-          Q1: ['04', '05', '06'],
-          Q2: ['07', '08', '09'],
-          Q3: ['10', '11', '12'],
-          Q4: ['01', '02', '03'],
-        };
-
-        // Derive effective month filters (quarter-only, month-only, or intersection)
-        let effectiveMonths: string[] = [];
-        if (quarterFilters.length > 0) {
-          const quarterMonths = new Set<string>();
-          quarterFilters.forEach((q) => (QUARTER_TO_MONTHS[q] ?? []).forEach((m) => quarterMonths.add(m)));
-          effectiveMonths = monthFilters.length > 0 ? monthFilters.filter((m) => quarterMonths.has(m)) : Array.from(quarterMonths);
-        } else {
-          effectiveMonths = monthFilters;
-        }
-
-        if (effectiveMonths.length > 0) {
-          const fyStr = String(fyFilters[0]);
-          const yearMatch = fyStr.match(/(\d{4})/);
-          if (yearMatch) {
-            const startYear = parseInt(yearMatch[1], 10);
-            const dateRanges: any[] = [];
-            effectiveMonths.forEach((m) => {
-              const monthNum = parseInt(m, 10);
-              if (!monthNum || monthNum < 1 || monthNum > 12) return;
-              const yearForMonth = monthNum >= 1 && monthNum <= 3 ? startYear + 1 : startYear;
-              const start = new Date(yearForMonth, monthNum - 1, 1);
-              const end = new Date(yearForMonth, monthNum, 1);
-              dateRanges.push({ confirmationDate: { gte: start, lt: end } });
-            });
-
-            if (dateRanges.length > 0) {
-              if (!where.AND) where.AND = [];
-              where.AND.push({ OR: dateRanges });
-            }
-          }
-        }
-      }
-
-      // Proposal Engine dashboard bucket — same semantics as GET /dashboard/proposal-engine-status (Sales / Management / Admin only)
-      const peBucketStr =
-        typeof peBucket === 'string' && ['proposal-ready', 'draft', 'not-started', 'rest'].includes(peBucket)
-          ? peBucket
-          : null;
-      if (peBucketStr) {
-        const allowedPeRoles: UserRole[] = [UserRole.SALES, UserRole.MANAGEMENT, UserRole.ADMIN];
-        if (!req.user?.role || !allowedPeRoles.includes(req.user.role as UserRole)) {
-          return res.status(403).json({
-            error: 'The peBucket filter is only available to Sales, Management, and Admin roles.',
-          });
-        }
-        const ensureWhereAnd = () => {
-          if (!where.AND) {
-            const existing: any[] = [];
-            Object.keys(where).forEach((key) => {
-              if (key !== 'AND' && key !== 'OR') {
-                existing.push({ [key]: (where as any)[key] });
-                delete (where as any)[key];
-              }
-            });
-            where.AND = existing;
-          }
-        };
-        ensureWhereAnd();
-
-        const peBucketClause =
-          peBucketStr === 'proposal-ready'
-            ? {
-                peSelection: { isNot: null },
-                peCostingSheets: { some: {} },
-                peBomSheets: { some: {} },
-                peRoiResults: { some: {} },
-                peProposals: { some: {} },
-              }
-            : peBucketStr === 'not-started'
-              ? {
-                  peSelection: { isNot: null },
-                  peCostingSheets: { none: {} },
-                  peBomSheets: { none: {} },
-                  peRoiResults: { none: {} },
-                  peProposals: { none: {} },
-                }
-              : peBucketStr === 'draft'
-                ? {
-                    peSelection: { isNot: null },
-                    AND: [
-                      {
-                        NOT: {
-                          AND: [
-                            { peCostingSheets: { none: {} } },
-                            { peBomSheets: { none: {} } },
-                            { peRoiResults: { none: {} } },
-                            { peProposals: { none: {} } },
-                          ],
-                        },
-                      },
-                      {
-                        NOT: {
-                          AND: [
-                            { peCostingSheets: { some: {} } },
-                            { peBomSheets: { some: {} } },
-                            { peRoiResults: { some: {} } },
-                            { peProposals: { some: {} } },
-                          ],
-                        },
-                      },
-                    ],
-                  }
-                : {
-                    peSelection: { is: null },
-                    projectStatus: { in: [ProjectStatus.PROPOSAL, ProjectStatus.CONFIRMED] },
-                  };
-
-        (where.AND as any[]).push(peBucketClause);
-      }
 
       const { orderBy, dealHealthSort: wantsHealthSort } = buildProjectsTableOrderBy(
         sortBy as string | undefined,
@@ -954,6 +308,7 @@ router.get(
             id: true,
             customerId: true,
             customerName: true,
+            customerType: true,
             firstName: true,
             middleName: true,
             lastName: true,
@@ -1397,11 +752,7 @@ router.post(
       // Auto-select Panel Type based on Segment if not provided
       let finalPanelType = panelType;
       if (!finalPanelType) {
-        if (type === ProjectType.RESIDENTIAL_SUBSIDY) {
-          finalPanelType = 'DCR';
-        } else if (type === ProjectType.RESIDENTIAL_NON_SUBSIDY || type === ProjectType.COMMERCIAL_INDUSTRIAL) {
-          finalPanelType = 'Non-DCR';
-        }
+        finalPanelType = defaultPanelTypeForProjectSegment(type);
       }
 
       // Auto-calculate expected profit (null for LOST)
@@ -3237,327 +2588,140 @@ function generateHTMLPreview(
   `;
 }
 
-// Helper function to get customer display name for export
-const getCustomerDisplayNameForExport = (customer: any): string => {
-  if (!customer) return '';
-  const parts = [customer.prefix, customer.firstName, customer.middleName, customer.lastName].filter(Boolean);
-  return parts.length > 0 ? parts.join(' ') : customer.customerName || '';
-};
 
-// Export projects to Excel (Admin only)
-router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req: Request, res: Response) => {
-  try {
-    const {
-      status,
-      type,
-      projectServiceType,
-      salespersonId,
-      leadSource,
-      year,
-      search,
-      sortBy,
-      sortOrder = 'desc',
-    } = req.query;
+const projectsExportSortValidators = [
+  query('sortBy')
+    .optional()
+    .isIn([
+      'systemCapacity',
+      'projectCost',
+      'confirmationDate',
+      'creationDate',
+      'profitability',
+      'customerName',
+      'dealHealthScore',
+      'slNo',
+      'projectType',
+      'projectStatus',
+      'leadSource',
+      'paymentStatus',
+    ]),
+  query('sortOrder').optional().isIn(['asc', 'desc']),
+];
 
-    let where: any = {};
-
-    // Handle array filters (multi-select) - express sends arrays when multiple values have same param name
-    const statusArray = Array.isArray(status) ? status : status ? [status] : [];
-    const typeArray = Array.isArray(type) ? type : type ? [type] : [];
-    const projectServiceTypeArray = Array.isArray(projectServiceType) ? projectServiceType : projectServiceType ? [projectServiceType] : [];
-    const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : salespersonId ? [salespersonId] : [];
-    const leadSourceArray = Array.isArray(leadSource) ? leadSource : leadSource ? [leadSource] : [];
-
-    // Role-based filtering - Sales users only see their own projects
-    if (req.user?.role === UserRole.SALES) {
-      where.salespersonId = req.user.id;
-    }
-
-    // Handle array filters
-    if (statusArray.length > 0) where.projectStatus = { in: statusArray as string[] };
-    if (typeArray.length > 0) where.type = { in: typeArray as string[] };
-    if (projectServiceTypeArray.length > 0) where.projectServiceType = { in: projectServiceTypeArray as string[] };
-    if (salespersonIdArray.length > 0 && req.user?.role !== UserRole.SALES) {
-      where.salespersonId = { in: salespersonIdArray as string[] };
-    }
-    if (leadSourceArray.length > 0) where.leadSource = { in: leadSourceArray as string[] };
-    if (year) where.year = year;
-
-    // Handle search - combine with existing conditions using AND
-    if (search) {
-      const searchConditions = {
-        OR: [
-          { customer: { customerName: { contains: search as string, mode: 'insensitive' } } },
-          { customer: { customerId: { contains: search as string, mode: 'insensitive' } } },
-          { customer: { consumerNumber: { contains: search as string, mode: 'insensitive' } } },
-        ],
-      };
-
-      const topLevelKeys = Object.keys(where).filter(key => key !== 'AND' && key !== 'OR');
-      if (topLevelKeys.length > 0) {
-        const existingConditions: any[] = [];
-        topLevelKeys.forEach(key => {
-          existingConditions.push({ [key]: where[key] });
-        });
-        where.AND = [...existingConditions, searchConditions];
-        topLevelKeys.forEach(key => {
-          delete where[key];
-        });
-      } else {
-        where.OR = searchConditions.OR;
-      }
-    }
-
-    const exportInclude = {
-      customer: {
-        select: {
-          customerId: true,
-          customerName: true,
-          firstName: true,
-          middleName: true,
-          lastName: true,
-          prefix: true,
-          consumerNumber: true,
-        },
-      },
-      salesperson: {
-        select: { name: true, email: true },
-      },
-    } as const;
-
-    const { orderBy: exportOrderBy, dealHealthSort: exportHealthSort } = buildProjectsTableOrderBy(
-      sortBy as string | undefined,
-      sortOrder as string | undefined,
-    );
-
-    let projects: any[];
-    if (exportHealthSort) {
-      const all = await prisma.project.findMany({
-        where,
-        include: exportInclude,
-      });
-      const order = sortOrder === 'asc' ? 'asc' : 'desc';
-      const scored = all.map((p) => ({
-        p,
-        s: computeDealHealthScoreForProjectList({
-          projectStatus: p.projectStatus,
-          updatedAt: p.updatedAt,
-          stageEnteredAt: p.stageEnteredAt,
-          projectCost: p.projectCost,
-          confirmationDate: p.confirmationDate,
-          advanceReceived: p.advanceReceived,
-          leadSource: p.leadSource,
-        }),
-      }));
-      scored.sort((a, b) => {
-        const sa = a.s ?? -1;
-        const sb = b.s ?? -1;
-        if (sa !== sb) return order === 'asc' ? sa - sb : sb - sa;
-        const ac = a.p.createdAt?.getTime?.() ?? 0;
-        const bc = b.p.createdAt?.getTime?.() ?? 0;
-        return bc - ac;
-      });
-      projects = scored.map((x) => x.p);
-    } else {
-      projects = await prisma.project.findMany({
-        where,
-        include: exportInclude,
-        orderBy: exportOrderBy,
-      });
-    }
-
-    // Format data for Excel
-    const exportData = projects.map((project) => {
-      return {
-        'SL No': project.slNo || '',
-        'Customer ID': project.customer?.customerId || '',
-        'Customer Name': getCustomerDisplayNameForExport(project.customer) || project.customer?.customerName || '',
-        'Consumer Number': project.customer?.consumerNumber || '',
-        'Project Type': project.type.replace(/_/g, ' ') || '',
-        'Project Service Type': project.projectServiceType?.replace(/_/g, ' ') || '',
-        'System Capacity (kW)': project.systemCapacity || 0,
-        'Project Cost': project.projectCost || 0,
-        'Project Status': project.projectStatus.replace(/_/g, ' ') || '',
-        'Payment Status': project.paymentStatus?.replace(/_/g, ' ') || '',
-        'Salesperson': project.salesperson?.name || '',
-        'Salesperson Email': project.salesperson?.email || '',
-        'Year': project.year || '',
-        'Confirmation Date': project.confirmationDate ? new Date(project.confirmationDate).toLocaleDateString('en-IN') : '',
-        'Created At': project.createdAt ? new Date(project.createdAt).toLocaleDateString('en-IN') : '',
-      };
+async function fetchProjectsForExport(
+  where: Record<string, unknown>,
+  sortBy: string | undefined,
+  sortOrder: string | undefined,
+) {
+  const { orderBy, dealHealthSort } = buildProjectsTableOrderBy(sortBy, sortOrder);
+  if (dealHealthSort) {
+    const all = await prisma.project.findMany({
+      where,
+      include: PROJECTS_EXPORT_INCLUDE,
     });
-
-    // Create workbook
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Projects');
-
-    // Generate buffer
-    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=projects-export-${Date.now()}.xlsx`);
-    res.send(buffer);
-  } catch (error: any) {
-    console.error('Error exporting projects to Excel:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Export projects to CSV (Admin only)
-router.get('/export/csv', authenticate, authorize(UserRole.ADMIN), async (req: Request, res: Response) => {
-  try {
-    const {
-      status,
-      type,
-      projectServiceType,
-      salespersonId,
-      leadSource,
-      year,
-      search,
-      sortBy,
-      sortOrder = 'desc',
-    } = req.query;
-
-    let where: any = {};
-
-    // Handle array filters (multi-select) - express sends arrays when multiple values have same param name
-    const statusArray = Array.isArray(status) ? status : status ? [status] : [];
-    const typeArray = Array.isArray(type) ? type : type ? [type] : [];
-    const projectServiceTypeArray = Array.isArray(projectServiceType) ? projectServiceType : projectServiceType ? [projectServiceType] : [];
-    const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : salespersonId ? [salespersonId] : [];
-    const leadSourceArray = Array.isArray(leadSource) ? leadSource : leadSource ? [leadSource] : [];
-
-    // Role-based filtering - Sales users only see their own projects
-    if (req.user?.role === UserRole.SALES) {
-      where.salespersonId = req.user.id;
-    }
-
-    // Handle array filters
-    if (statusArray.length > 0) where.projectStatus = { in: statusArray as string[] };
-    if (typeArray.length > 0) where.type = { in: typeArray as string[] };
-    if (projectServiceTypeArray.length > 0) where.projectServiceType = { in: projectServiceTypeArray as string[] };
-    if (salespersonIdArray.length > 0 && req.user?.role !== UserRole.SALES) {
-      where.salespersonId = { in: salespersonIdArray as string[] };
-    }
-    if (leadSourceArray.length > 0) where.leadSource = { in: leadSourceArray as string[] };
-    if (year) where.year = year;
-
-    // Handle search - combine with existing conditions using AND
-    if (search) {
-      const searchConditions = {
-        OR: [
-          { customer: { customerName: { contains: search as string, mode: 'insensitive' } } },
-          { customer: { customerId: { contains: search as string, mode: 'insensitive' } } },
-          { customer: { consumerNumber: { contains: search as string, mode: 'insensitive' } } },
-        ],
-      };
-
-      const topLevelKeys = Object.keys(where).filter(key => key !== 'AND' && key !== 'OR');
-      if (topLevelKeys.length > 0) {
-        const existingConditions: any[] = [];
-        topLevelKeys.forEach(key => {
-          existingConditions.push({ [key]: where[key] });
-        });
-        where.AND = [...existingConditions, searchConditions];
-        topLevelKeys.forEach(key => {
-          delete where[key];
-        });
-      } else {
-        where.OR = searchConditions.OR;
-      }
-    }
-
-    const exportIncludeCsv = {
-      customer: {
-        select: {
-          customerId: true,
-          customerName: true,
-          firstName: true,
-          middleName: true,
-          lastName: true,
-          prefix: true,
-          consumerNumber: true,
-        },
-      },
-      salesperson: {
-        select: { name: true, email: true },
-      },
-    } as const;
-
-    const { orderBy: csvOrderBy, dealHealthSort: csvHealthSort } = buildProjectsTableOrderBy(
-      sortBy as string | undefined,
-      sortOrder as string | undefined,
-    );
-
-    let projects: any[];
-    if (csvHealthSort) {
-      const all = await prisma.project.findMany({
-        where,
-        include: exportIncludeCsv,
-      });
-      const order = sortOrder === 'asc' ? 'asc' : 'desc';
-      const scored = all.map((p) => ({
-        p,
-        s: computeDealHealthScoreForProjectList({
-          projectStatus: p.projectStatus,
-          updatedAt: p.updatedAt,
-          stageEnteredAt: p.stageEnteredAt,
-          projectCost: p.projectCost,
-          confirmationDate: p.confirmationDate,
-          advanceReceived: p.advanceReceived,
-          leadSource: p.leadSource,
-        }),
-      }));
-      scored.sort((a, b) => {
-        const sa = a.s ?? -1;
-        const sb = b.s ?? -1;
-        if (sa !== sb) return order === 'asc' ? sa - sb : sb - sa;
-        const ac = a.p.createdAt?.getTime?.() ?? 0;
-        const bc = b.p.createdAt?.getTime?.() ?? 0;
-        return bc - ac;
-      });
-      projects = scored.map((x) => x.p);
-    } else {
-      projects = await prisma.project.findMany({
-        where,
-        include: exportIncludeCsv,
-        orderBy: csvOrderBy,
-      });
-    }
-
-    // Format data for CSV
-    const exportData = projects.map((project) => {
-      return {
-        'SL No': project.slNo || '',
-        'Customer ID': project.customer?.customerId || '',
-        'Customer Name': getCustomerDisplayNameForExport(project.customer) || project.customer?.customerName || '',
-        'Consumer Number': project.customer?.consumerNumber || '',
-        'Project Type': project.type.replace(/_/g, ' ') || '',
-        'Project Service Type': project.projectServiceType?.replace(/_/g, ' ') || '',
-        'System Capacity (kW)': project.systemCapacity || 0,
-        'Project Cost': project.projectCost || 0,
-        'Project Status': project.projectStatus.replace(/_/g, ' ') || '',
-        'Payment Status': project.paymentStatus?.replace(/_/g, ' ') || '',
-        'Salesperson': project.salesperson?.name || '',
-        'Salesperson Email': project.salesperson?.email || '',
-        'Year': project.year || '',
-        'Confirmation Date': project.confirmationDate ? new Date(project.confirmationDate).toLocaleDateString('en-IN') : '',
-        'Created At': project.createdAt ? new Date(project.createdAt).toLocaleDateString('en-IN') : '',
-      };
+    const order = sortOrder === 'asc' ? 'asc' : 'desc';
+    const scored = all.map((p) => ({
+      p,
+      s: computeDealHealthScoreForProjectList({
+        projectStatus: p.projectStatus,
+        updatedAt: p.updatedAt,
+        stageEnteredAt: p.stageEnteredAt,
+        projectCost: p.projectCost,
+        confirmationDate: p.confirmationDate,
+        advanceReceived: p.advanceReceived,
+        leadSource: p.leadSource,
+      }),
+    }));
+    scored.sort((a, b) => {
+      const sa = a.s ?? -1;
+      const sb = b.s ?? -1;
+      if (sa !== sb) return order === 'asc' ? sa - sb : sb - sa;
+      const ac = a.p.createdAt?.getTime?.() ?? 0;
+      const bc = b.p.createdAt?.getTime?.() ?? 0;
+      return bc - ac;
     });
-
-    // Convert to CSV
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const csv = XLSX.utils.sheet_to_csv(worksheet);
-
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename=projects-export-${Date.now()}.csv`);
-    res.send(csv);
-  } catch (error: any) {
-    console.error('Error exporting projects to CSV:', error);
-    res.status(500).json({ error: error.message });
+    return scored.map((x) => x.p);
   }
-});
+  return prisma.project.findMany({
+    where,
+    include: PROJECTS_EXPORT_INCLUDE,
+    orderBy,
+  });
+}
+
+// Export projects to Excel (Admin only) — same filters as GET /projects
+router.get(
+  '/export/excel',
+  authenticate,
+  authorize(UserRole.ADMIN),
+  [...projectsListQueryValidators, ...projectsExportSortValidators],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+      const listFilters = parseProjectsListFilters(req.query);
+      const built = buildProjectsWhere(listFilters, req.user);
+      if (!built.ok) {
+        return res.status(built.status).json({ error: built.error });
+      }
+      const { sortBy, sortOrder = 'desc' } = req.query;
+      const projects = await fetchProjectsForExport(
+        built.where,
+        sortBy as string | undefined,
+        sortOrder as string | undefined,
+      );
+      const exportData = projects.map((project) => mapProjectToExportRow(project));
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Projects');
+      const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename=projects-export-${Date.now()}.xlsx`);
+      res.send(buffer);
+    } catch (error: any) {
+      console.error('Error exporting projects to Excel:', error);
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
+
+// Export projects to CSV (Admin only) — same filters as GET /projects
+router.get(
+  '/export/csv',
+  authenticate,
+  authorize(UserRole.ADMIN),
+  [...projectsListQueryValidators, ...projectsExportSortValidators],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+      const listFilters = parseProjectsListFilters(req.query);
+      const built = buildProjectsWhere(listFilters, req.user);
+      if (!built.ok) {
+        return res.status(built.status).json({ error: built.error });
+      }
+      const { sortBy, sortOrder = 'desc' } = req.query;
+      const projects = await fetchProjectsForExport(
+        built.where,
+        sortBy as string | undefined,
+        sortOrder as string | undefined,
+      );
+      const exportData = projects.map((project) => mapProjectToExportRow(project));
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const csv = XLSX.utils.sheet_to_csv(worksheet);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=projects-export-${Date.now()}.csv`);
+      res.send(csv);
+    } catch (error: any) {
+      console.error('Error exporting projects to CSV:', error);
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
 
 export default router;

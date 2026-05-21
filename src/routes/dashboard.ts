@@ -11,6 +11,11 @@ import {
 } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
+import {
+  aggregateProjectsByCustomerType,
+  formatCustomerTypeForExplorer,
+  withChartPercentages,
+} from '../utils/customerTypeCharts';
 
 const router = express.Router();
 
@@ -294,19 +299,6 @@ function formatLeadSourceForExplorer(ls: LeadSource | null | undefined): string 
   }
 }
 
-/** Segment label — must match projectValueByType / SegmentDonut. */
-function formatProjectTypeForExplorer(type: string): string {
-  switch (type) {
-    case 'RESIDENTIAL_SUBSIDY':
-      return 'Residential - Subsidy';
-    case 'RESIDENTIAL_NON_SUBSIDY':
-      return 'Residential - Non Subsidy';
-    case 'COMMERCIAL_INDUSTRIAL':
-      return 'Commercial Industrial';
-    default:
-      return type;
-  }
-}
 
 /** Lightweight project rows for Zenith chart drill-down + revenue forecast (same FY/date scope as dashboard). */
 async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
@@ -333,7 +325,7 @@ async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
       financingBank: true,
       salespersonId: true,
       salesperson: { select: { name: true } },
-      customer: { select: { firstName: true, customerName: true } },
+      customer: { select: { firstName: true, customerName: true, customerType: true } },
     },
     take: 5000,
     orderBy: { updatedAt: 'desc' },
@@ -347,7 +339,7 @@ async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
     stageLabel: PROJECT_STATUS_LABELS[p.projectStatus] || String(p.projectStatus),
     deal_value: p.projectCost ?? 0,
     lead_source: formatLeadSourceForExplorer(p.leadSource),
-    customer_segment: formatProjectTypeForExplorer(p.type),
+    customer_segment: formatCustomerTypeForExplorer(p.customer?.customerType),
     financial_year: p.year,
     assigned_to_id: p.salespersonId ?? null,
     assigned_to_name: p.salesperson?.name?.trim() || 'Unassigned',
@@ -746,42 +738,10 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       }));
     }
 
-    // Calculate project value by type for pie chart (only confirmed/completed projects)
-    const projectValueByType = await prisma.project.groupBy({
-      by: ['type'],
-      where: getRevenueWhere(where),
-      _sum: { projectCost: true },
-      _count: { id: true },
-    });
-
-    const valueByType = projectValueByType.map((item) => {
-      let label = '';
-      switch (item.type) {
-        case 'RESIDENTIAL_SUBSIDY':
-          label = 'Residential - Subsidy';
-          break;
-        case 'RESIDENTIAL_NON_SUBSIDY':
-          label = 'Residential - Non Subsidy';
-          break;
-        case 'COMMERCIAL_INDUSTRIAL':
-          label = 'Commercial Industrial';
-          break;
-        default:
-          label = item.type;
-      }
-      return {
-        type: item.type,
-        label,
-        value: item._sum.projectCost || 0,
-        count: item._count.id,
-      };
-    });
-
-    const totalValue = valueByType.reduce((sum, item) => sum + item.value, 0);
-    const valueByTypeWithPercentage = valueByType.map((item) => ({
-      ...item,
-      percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
-    }));
+    // Revenue by customer type (Customer Master) pie chart
+    const valueByTypeWithPercentage = withChartPercentages(
+      await aggregateProjectsByCustomerType(getRevenueWhere(where)),
+    );
 
     // Pipeline by lead source (for Pipeline by Lead Source chart)
     const pipelineByLeadSourceRaw = await prisma.project.groupBy({
@@ -812,28 +772,10 @@ router.get('/sales', authenticate, async (req: Request, res) => {
     });
     pipelineByLeadSource.sort((a, b) => b.pipeline - a.pipeline);
 
-    // Pipeline by customer segment (type) – for Pipeline by Customer Segment pie chart
-    const pipelineByTypeRaw = await prisma.project.groupBy({
-      by: ['type'],
-      where: getPipelineWhere(where),
-      _sum: { projectCost: true },
-      _count: { id: true },
-    });
-    const pipelineByType = pipelineByTypeRaw.map((item) => {
-      let label = '';
-      switch (item.type) {
-        case 'RESIDENTIAL_SUBSIDY': label = 'Residential - Subsidy'; break;
-        case 'RESIDENTIAL_NON_SUBSIDY': label = 'Residential - Non Subsidy'; break;
-        case 'COMMERCIAL_INDUSTRIAL': label = 'Commercial Industrial'; break;
-        default: label = item.type;
-      }
-      return { type: item.type, label, value: item._sum.projectCost || 0, count: item._count.id };
-    });
-    const totalPipelineType = pipelineByType.reduce((sum, item) => sum + item.value, 0);
-    const pipelineByTypeWithPercentage = pipelineByType.map((item) => ({
-      ...item,
-      percentage: totalPipelineType > 0 ? ((item.value / totalPipelineType) * 100).toFixed(1) : '0',
-    }));
+    // Pipeline by customer type (Customer Master) pie chart
+    const pipelineByTypeWithPercentage = withChartPercentages(
+      await aggregateProjectsByCustomerType(getPipelineWhere(where)),
+    );
 
     // Calculate project value, profit, capacity and pipeline by financial year.
     // Use date-filtered where so: selected FY(s) only; quarter/month apply when one FY is selected.
@@ -1219,41 +1161,9 @@ router.get('/operations', authenticate, async (req: Request, res) => {
     const confirmedOrderRevenue = confirmedOrderRevenueAgg._sum.projectCost ?? 0;
 
     // Calculate project value by type for pie chart (with optional FY filter) - only confirmed/completed projects
-    const projectValueByType = await prisma.project.groupBy({
-      by: ['type'],
-      where: getRevenueWhere(where),
-      _sum: { projectCost: true },
-      _count: { id: true },
-    });
-
-    const valueByType = projectValueByType.map((item) => {
-      let label = '';
-      switch (item.type) {
-        case 'RESIDENTIAL_SUBSIDY':
-          label = 'Residential - Subsidy';
-          break;
-        case 'RESIDENTIAL_NON_SUBSIDY':
-          label = 'Residential - Non Subsidy';
-          break;
-        case 'COMMERCIAL_INDUSTRIAL':
-          label = 'Commercial Industrial';
-          break;
-        default:
-          label = item.type;
-      }
-      return {
-        type: item.type,
-        label,
-        value: item._sum.projectCost || 0,
-        count: item._count.id,
-      };
-    });
-
-    const totalValue = valueByType.reduce((sum, item) => sum + item.value, 0);
-    const valueByTypeWithPercentage = valueByType.map((item) => ({
-      ...item,
-      percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
-    }));
+    const valueByTypeWithPercentage = withChartPercentages(
+      await aggregateProjectsByCustomerType(getRevenueWhere(where)),
+    );
 
     // Calculate project value and profit by financial year (only confirmed/completed projects)
     const projectValueByFY = await prisma.project.groupBy({
@@ -1625,12 +1535,7 @@ router.get('/finance', authenticate, async (req: Request, res) => {
         orderBy: { profitability: 'desc' },
         take: 50,
       }),
-      prisma.project.groupBy({
-        by: ['type'],
-        where: getRevenueWhere(where),
-        _sum: { projectCost: true },
-        _count: { id: true },
-      }),
+      aggregateProjectsByCustomerType(getRevenueWhere(where)),
       prisma.project.groupBy({
         by: ['year'],
         where: getRevenueWhere(where),
@@ -1672,35 +1577,8 @@ router.get('/finance', authenticate, async (req: Request, res) => {
       }));
     }
 
-    // Project value by type and FY (projectValueByTypeFinance, projectValueByFYFinance, profitByFYFinance from batch above)
-    const valueByType = projectValueByTypeFinance.map((item) => {
-      let label = '';
-      switch (item.type) {
-        case 'RESIDENTIAL_SUBSIDY':
-          label = 'Residential - Subsidy';
-          break;
-        case 'RESIDENTIAL_NON_SUBSIDY':
-          label = 'Residential - Non Subsidy';
-          break;
-        case 'COMMERCIAL_INDUSTRIAL':
-          label = 'Commercial Industrial';
-          break;
-        default:
-          label = item.type;
-      }
-      return {
-        type: item.type,
-        label,
-        value: item._sum.projectCost || 0,
-        count: item._count.id,
-      };
-    });
-
-    const totalValue = valueByType.reduce((sum, item) => sum + item.value, 0);
-    const valueByTypeWithPercentage = valueByType.map((item) => ({
-      ...item,
-      percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
-    }));
+    // Revenue by customer type + FY (projectValueByTypeFinance = customer-type slices from batch)
+    const valueByTypeWithPercentage = withChartPercentages(projectValueByTypeFinance);
 
     const allFYsFinance = new Set([
       ...projectValueByFYFinance.map((item) => item.year),
@@ -1906,12 +1784,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
       profitabilityData,
       availingLoanByBankRawMgmt,
     ] = await Promise.all([
-      prisma.project.groupBy({
-        by: ['type'],
-        where: getRevenueWhere(where),
-        _sum: { projectCost: true },
-        _count: { id: true },
-      }),
+      aggregateProjectsByCustomerType(getRevenueWhere(where)),
       prisma.project.groupBy({
         by: ['salespersonId'],
         where: getRevenueWhere({ ...where, salespersonId: { not: null } }),
@@ -1924,12 +1797,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
         _sum: { projectCost: true },
         _count: { id: true },
       }),
-      prisma.project.groupBy({
-        by: ['type'],
-        where: getPipelineWhere(where),
-        _sum: { projectCost: true },
-        _count: { id: true },
-      }),
+      aggregateProjectsByCustomerType(getPipelineWhere(where)),
       prisma.project.groupBy({
         by: ['year'],
         where: whereFYSeriesMgmt,
@@ -1985,38 +1853,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
 
     const totalPipeline = totalPipelineResult;
 
-    // Format the data for the chart
-    const valueByType = projectValueByType.map((item) => {
-      let label = '';
-      switch (item.type) {
-        case 'RESIDENTIAL_SUBSIDY':
-          label = 'Residential - Subsidy';
-          break;
-        case 'RESIDENTIAL_NON_SUBSIDY':
-          label = 'Residential - Non Subsidy';
-          break;
-        case 'COMMERCIAL_INDUSTRIAL':
-          label = 'Commercial Industrial';
-          break;
-        default:
-          label = item.type;
-      }
-      return {
-        type: item.type,
-        label,
-        value: item._sum.projectCost || 0,
-        count: item._count.id,
-      };
-    });
-
-    // Calculate total for percentage calculation
-    const totalValue = valueByType.reduce((sum, item) => sum + item.value, 0);
-
-    // Add percentage to each item
-    const valueByTypeWithPercentage = valueByType.map((item) => ({
-      ...item,
-      percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
-    }));
+    const valueByTypeWithPercentage = withChartPercentages(projectValueByType);
 
     // Revenue by salesperson (revenueBySalespersonMgmt from batch above)
     let revenueBySalesperson: Array<{ salespersonId: string | null; salespersonName: string; revenue: number; projectCount: number }> = [];
@@ -2059,22 +1896,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
     });
     pipelineByLeadSource.sort((a, b) => b.pipeline - a.pipeline);
 
-    // Pipeline by customer segment (pipelineByTypeRaw from batch above)
-    const pipelineByType = pipelineByTypeRaw.map((item) => {
-      let label = '';
-      switch (item.type) {
-        case 'RESIDENTIAL_SUBSIDY': label = 'Residential - Subsidy'; break;
-        case 'RESIDENTIAL_NON_SUBSIDY': label = 'Residential - Non Subsidy'; break;
-        case 'COMMERCIAL_INDUSTRIAL': label = 'Commercial Industrial'; break;
-        default: label = item.type;
-      }
-      return { type: item.type, label, value: item._sum.projectCost || 0, count: item._count.id };
-    });
-    const totalPipelineType = pipelineByType.reduce((sum, item) => sum + item.value, 0);
-    const pipelineByTypeWithPercentage = pipelineByType.map((item) => ({
-      ...item,
-      percentage: totalPipelineType > 0 ? ((item.value / totalPipelineType) * 100).toFixed(1) : '0',
-    }));
+    const pipelineByTypeWithPercentage = withChartPercentages(pipelineByTypeRaw);
 
     // Combine the data by financial year (projectValueByFY, profitByFY, capacityByFY, pipelineByFY from batch above)
     const allFYs = new Set([

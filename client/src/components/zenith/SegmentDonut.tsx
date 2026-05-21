@@ -6,15 +6,7 @@ import ZenithChartTouchReset from './ZenithChartTouchReset'
 import ZenithExploreHint from './ZenithExploreHint'
 import { useZenithNarrowLayout } from '../../hooks/useZenithNarrowLayout'
 import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTooltipStyles'
-
-const COLORS = [
-  'var(--accent-gold)',
-  'var(--accent-teal)',
-  'var(--accent-purple)',
-  'var(--accent-blue)',
-  'var(--accent-red)',
-  'color-mix(in_srgb,var(--accent-gold) 70%, var(--accent-teal))',
-]
+import { getSegmentColor } from '../dashboard/segmentColors'
 
 function formatSliceInr(value: number): string {
   return `₹${Math.round(value || 0).toLocaleString('en-IN')}`
@@ -24,6 +16,8 @@ export interface SegmentSlice {
   name: string
   value: number
   percentage?: string
+  /** Customer Master type key (RESIDENTIAL, APARTMENT, COMMERCIAL) for stable chart colours. */
+  segmentKey?: string
 }
 
 export default function SegmentDonut({
@@ -54,6 +48,7 @@ export default function SegmentDonut({
           name: d.name,
           value: Number(d.value),
           pct: d.percentage,
+          segmentKey: d.segmentKey,
         })),
     [data],
   )
@@ -118,10 +113,10 @@ export default function SegmentDonut({
                       if (name && onSegmentClick) onSegmentClick(String(name))
                     }}
                   >
-                    {chartData.map((_, i) => (
+                    {chartData.map((entry, i) => (
                       <Cell
                         key={i}
-                        fill={COLORS[i % COLORS.length]}
+                        fill={getSegmentColor(entry.segmentKey ?? entry.name, i)}
                         stroke="var(--border-default)"
                         style={{
                           cursor: onSegmentClick ? 'pointer' : 'default',
@@ -201,7 +196,7 @@ export default function SegmentDonut({
               <span className="flex min-w-0 flex-1 items-start gap-2">
                 <span
                   className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                  style={{ backgroundColor: getSegmentColor(d.segmentKey ?? d.name, i) }}
                   aria-hidden
                 />
                 <span className="text-left text-[12px] font-medium leading-snug text-[color:var(--text-primary)]">

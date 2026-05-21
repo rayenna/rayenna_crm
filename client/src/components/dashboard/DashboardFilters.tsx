@@ -10,6 +10,8 @@ interface DashboardFiltersProps {
   onMonthChange: (months: string[]) => void
   /** Compact layout for embedding inside dense filter panels (e.g. Projects page). */
   compact?: boolean
+  /** When true with `compact`, FY/Quarter/Month become direct cells of a parent CSS grid (Projects page). */
+  gridLayout?: boolean
   /** Dark glass styling for Zenith-themed pages. */
   variant?: 'default' | 'zenith'
 }
@@ -55,6 +57,7 @@ const DashboardFilters = ({
   onQuarterChange,
   onMonthChange,
   compact = false,
+  gridLayout = false,
   variant = 'default',
 }: DashboardFiltersProps) => {
   const [showFYDropdown, setShowFYDropdown] = useState(false)
@@ -177,16 +180,15 @@ const DashboardFilters = ({
         : 'flex items-center min-h-[44px] px-3 py-3 sm:py-2.5 hover:bg-gradient-to-r hover:from-primary-50 hover:to-primary-100 cursor-pointer rounded-lg transition-all duration-200 hover:shadow-sm touch-manipulation')
   
   // Dropdown wrapper: when compact, allow full expansion; otherwise constrain max-width
-  const dropdownWrapper = compact
-    ? 'relative w-full sm:w-auto sm:flex-1 flex flex-col'
-    : 'relative w-full sm:w-auto sm:flex-1 sm:max-w-[200px] md:max-w-[220px] lg:max-w-[240px] flex flex-col'
+  const dropdownWrapper =
+    compact && gridLayout
+      ? 'relative flex min-w-0 w-full flex-col'
+      : compact
+        ? 'relative w-full sm:w-auto sm:flex-1 flex flex-col'
+        : 'relative w-full sm:w-auto sm:flex-1 sm:max-w-[200px] md:max-w-[220px] lg:max-w-[240px] flex flex-col'
 
-  return (
-    <div
-      className={`flex flex-col sm:flex-row sm:items-start sm:justify-start min-w-0 ${
-        compact ? 'w-full gap-2 sm:gap-3 mb-0' : 'w-full max-w-full gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4'
-      }`}
-    >
+  const filterCells = (
+    <>
       {/* FY Filter */}
       <div className={dropdownWrapper} ref={fyDropdownRef}>
         <button
@@ -450,6 +452,20 @@ const DashboardFilters = ({
           </div>
         )}
       </div>
+    </>
+  )
+
+  if (compact && gridLayout) {
+    return <div className="contents">{filterCells}</div>
+  }
+
+  return (
+    <div
+      className={`flex flex-col sm:flex-row sm:items-start sm:justify-start min-w-0 ${
+        compact ? 'w-full gap-2 sm:gap-3 mb-0' : 'w-full max-w-full gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4'
+      }`}
+    >
+      {filterCells}
     </div>
   )
 }

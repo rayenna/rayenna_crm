@@ -7,9 +7,8 @@ export enum UserRole {
 }
 
 export enum ProjectType {
-  RESIDENTIAL_SUBSIDY = 'RESIDENTIAL_SUBSIDY',
-  RESIDENTIAL_NON_SUBSIDY = 'RESIDENTIAL_NON_SUBSIDY',
-  COMMERCIAL_INDUSTRIAL = 'COMMERCIAL_INDUSTRIAL',
+  SUBSIDY = 'SUBSIDY',
+  NON_SUBSIDY = 'NON_SUBSIDY',
 }
 
 export enum ProjectStatus {
@@ -246,10 +245,14 @@ export interface AuditLog {
   createdAt: string
 }
 
+export type CustomerType = 'RESIDENTIAL' | 'APARTMENT' | 'COMMERCIAL'
+
 export interface Customer {
   id: string
   customerId: string // 6-digit alphanumeric ID
   customerName?: string // Legacy field, kept for backward compatibility
+  customerType?: CustomerType
+  contactPerson?: string
   prefix?: string // Mr., Ms., Mrs., Mx., Dr., etc.
   firstName?: string
   middleName?: string
@@ -269,10 +272,15 @@ export interface Customer {
   idProofType?: string
   companyName?: string
   companyGst?: string
+  gstNumber?: string
+  /** Commercial/apartment: [{ prefix, firstName, middleName, lastName, phones[], emails[] }] */
+  contacts?: unknown
   createdById?: string
   salespersonId?: string
   salesperson?: User
   projects?: Project[]
+  /** Present on list API responses */
+  _count?: { projects: number }
   createdAt: string
   updatedAt: string
 }

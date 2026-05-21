@@ -247,7 +247,12 @@ export default function ZenithFinanceBody({
       revenue: r.totalProjectValue,
       profit: r.totalProfit,
     }))
-  const seg = (data?.projectValueByType ?? []) as { label: string; value: number; percentage: string }[]
+  const seg = (data?.projectValueByType ?? []) as {
+    type: string
+    label: string
+    value: number
+    percentage: string
+  }[]
   const loans = (data?.availingLoanByBank ?? []) as { bankLabel: string; count: number }[]
   const wordCloud = (data?.wordCloudData ?? []) as { text: string; value: number }[]
   const paymentItems = (data?.projectsByPaymentStatus ?? []) as {
@@ -508,10 +513,15 @@ export default function ZenithFinanceBody({
           <div className="min-w-0 flex h-full min-h-[320px] flex-col lg:min-h-0">
             <SegmentDonut
               stretchToRowHeight
-              title="Revenue by customer segment"
+              title="Revenue by Customer Type"
               showExploreHint
               chartHeightPx={exploreChartHeight}
-              data={seg.map((s) => ({ name: s.label, value: s.value, percentage: s.percentage }))}
+              data={seg.map((s) => ({
+                name: s.label,
+                value: s.value,
+                percentage: s.percentage,
+                segmentKey: s.type,
+              }))}
               onSegmentClick={(segment) =>
                 drill('customer_segment', segment, { segmentChart: 'revenue' })
               }

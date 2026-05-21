@@ -27,7 +27,7 @@ Your dashboard is your command center. It shows key metrics about your sales per
 ### Charts and Visualizations
 
 - **Project Value and Profit by Financial Year**: See how your sales performance has changed over time
-- **Project Value by Segment**: Visual breakdown of your projects by type (Residential Subsidy, Commercial, etc.)
+- **Revenue by Customer Type**: Pie chart by customer type from Customer Master (Residential, Apartment, Commercial) — not project Subsidy/Non-Subsidy segment
 - **Customer Profitability**: Word cloud showing your most profitable customers
 
 ### Using Dashboard Filters
@@ -452,7 +452,7 @@ Support tickets are used to track customer service requests and issues. They hel
 **Where to use it**
 
 - **Projects** — Sort by **Deal Health Score** to surface **weaker** deals across your filtered list; each row shows a **badge**; **hover** for the breakdown.
-- **Zenith** — In **Your pipeline today**, compare deals at a glance; **Today’s Hit List** shows the same badge on urgent items with a quick **Open** link.
+- **Zenith** — In **Your pipeline today**, compare deals at a glance (**customer**, **stage**, **sales person**, **deal value**, **last activity**, **Deal Health**). **Today’s Hit List** uses the **same row pattern** with **filters** and **sortable** headers for up to seven urgent deals, plus **Alert** and **Confirmation**. **Open →** opens **Quick Actions**: read **Recent remarks** (same as **Project → Remarks**) for context, skim **Payment** (**status**, **received**, **balance**) after **Deal value** when it applies, then **Log activity** or other quick edits.
 - **Project Detail** — Open the full **Deal Health Score** card to see every factor and the suggested **insight** (usually pointing at the weakest area).
 
 **What to do when the score is low**

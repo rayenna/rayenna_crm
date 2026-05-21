@@ -459,11 +459,13 @@ export default function ZenithExecutiveBody({
   })()
 
   const revenueSeg = (data?.projectValueByType ?? []) as {
+    type: string
     label: string
     value: number
     percentage: string
   }[]
   const pipeSeg = (data?.pipelineByType ?? []) as {
+    type: string
     label: string
     value: number
     percentage: string
@@ -896,22 +898,32 @@ export default function ZenithExecutiveBody({
 
       {showMore ? (
       <>
-      <section className="zenith-exec-section" aria-label="Segments">
+      <section className="zenith-exec-section" aria-label="Customer types">
       <div id="zenith-segments" className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 scroll-mt-24">
         <SegmentDonut
-          title="Revenue by customer segment"
+          title="Revenue by Customer Type"
           showExploreHint
           chartHeightPx={exploreChartHeight}
-          data={revenueSeg.map((s) => ({ name: s.label, value: s.value, percentage: s.percentage }))}
+          data={revenueSeg.map((s) => ({
+            name: s.label,
+            value: s.value,
+            percentage: s.percentage,
+            segmentKey: s.type,
+          }))}
           onSegmentClick={(segment) =>
             drill('customer_segment', segment, { segmentChart: 'revenue' })
           }
         />
         <SegmentDonut
-          title="Pipeline by customer segment"
+          title="Pipeline by Customer Type"
           showExploreHint
           chartHeightPx={exploreChartHeight}
-          data={pipeSeg.map((s) => ({ name: s.label, value: s.value, percentage: s.percentage }))}
+          data={pipeSeg.map((s) => ({
+            name: s.label,
+            value: s.value,
+            percentage: s.percentage,
+            segmentKey: s.type,
+          }))}
           onSegmentClick={(segment) =>
             drill('customer_segment', segment, { segmentChart: 'pipeline' })
           }

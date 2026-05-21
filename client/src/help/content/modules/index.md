@@ -70,6 +70,18 @@ Each customer is assigned a unique **Customer ID** when created. This ID:
 - Uniquely identifies the customer across the CRM
 - Is used when searching for customers, creating projects, and in exports
 
+## Customer type
+
+Every customer has a **Customer type** on the record (not only on projects):
+
+| Type | Use for | Name on form |
+|------|---------|----------------|
+| **Residential** (default) | Individual homeowners | **Prefix**, **First Name** (required), **Middle Name**, **Last Name** |
+| **Apartment** | Housing society / apartment complex | **Society / apartment name** (required) |
+| **Commercial** | Business or commercial establishment | **Company name** (required) |
+
+The customer list shows a **type badge** for Apartment and Commercial customers.
+
 ## Creating Customers
 
 ### From the Customers Page
@@ -77,86 +89,97 @@ Each customer is assigned a unique **Customer ID** when created. This ID:
 **Shortcut / deep link:** **Ctrl+Shift+N** (Windows/Linux) or **⌘⇧N** (Mac), or **`/customers?new=1`** after login, opens **Customers** with **New Customer** when your role allows (see [Keyboard shortcuts](/help/getting-started#keyboard-shortcuts)).
 
 1. Navigate to **Customers** from the top menu (Customer Master).
-2. Click the **New Customer** button (top right).
-3. Fill in **name**:
-   - **Individual**: Use **Prefix** (Mr., Ms., etc.), **First Name** (required), **Middle Name**, **Last Name**.
-   - **Business**: Use **Customer Name** for company name.
-   - You must provide either **Customer Name** or **First Name**.
-4. Enter **address**: Address Line 1 & 2, **Country** (required for state/city), **State**, **City**, **Pin Code**.
-5. **Location**: Use the **Map Selector** to set customer location coordinates; they are saved automatically.
-6. Add **Contact Information**:
-   - **Contact Numbers**: At least one required. Use "+ Add Contact Number" for more.
-   - **Email IDs**: Optional. Use "+ Add E-mail ID" for more.
-7. Optionally add **Business** details: **DISCOM Consumer Number**, **Company Name**, **Company GST#**.
-8. **Identification**: If you enter **Id Proof#**, select **Type of Id Proof** (Aadhaar, PAN, Voters Card, DL, Passport, Others).
-9. **Salesperson** (Management and Admin only): Assign the customer to a sales team member.
-10. Click **Create**. The customer is saved and assigned a Customer ID.
+2. Click **New Customer** (top right).
+3. Select **Customer type** (Residential, Apartment, or Commercial).
+4. Fill in **name** (depends on type — see table above).
+5. Enter **address**: Address Line 1 & 2, **Country** (required for state/city), **State**, **City**, **Pin Code**.
+6. **Location**: Use the **Map Selector** to set coordinates; they save when you confirm on the map.
+7. **Contact information** (depends on type):
+   - **Residential**: **Contact Numbers** (at least one required) and optional **Email IDs** on the main form. Use **+ Add Contact Number** / **+ Add E-mail ID** for more.
+   - **Apartment** or **Commercial**: Use the **Contacts** section — add one or more people (prefix, first/middle/last name, phones, emails). At least **one phone number** is required across all contacts. There is no separate “contact person” field beside the society/company name.
+8. Optional **DISCOM Consumer Number** and **GSTIN** (single field for business types; stored for invoicing and Tally).
+9. **Identification**: If you enter **Id Proof#**, choose **Type of Id Proof**. Options depend on customer type:
+   - **Residential**: Aadhaar, PAN, Voters Card, DL, Passport, Others
+   - **Apartment**: PAN, Society Registration, RERA Registration, Occupancy Certificate
+   - **Commercial**: PAN, CIN, TAN
+10. **Salesperson** (Management and Admin only): Assign or change the owning sales user.
+11. Click **Create**. The system assigns a **Customer ID**.
+
+Phone numbers and emails from all contacts are combined for the customer list, projects, and exports.
 
 ### Who Can Create Customers
 
-- **Sales** users can create customers for their own use.
-- **Management** and **Admin** can use **New Customer** when the action is available (Admin can also assign salesperson on the form).
+- **Sales** users can create customers (typically assigned to themselves on save).
+- **Management** and **Admin** can use **New Customer** when the button is shown (**Admin** can assign any salesperson).
 - **Operations** and **Finance** do not create customers from Customer Master; they use customer data via projects and other modules.
 
 ### Required Fields
 
-- **Name**: Either **Customer Name** (business) or **First Name** (individual).
-- **At least one Contact Number**.
-
-If **Id Proof#** is provided, **Type of Id Proof** is required. **Country** must be selected before **State**; **State** before **City**.
+- **Customer type**
+- **Residential**: **First Name** and at least one **contact number**
+- **Apartment / Commercial**: **Society / company name**, at least one **contact** with a **phone number**, and valid **contacts** entries
+- If **Id Proof#** is provided, **Type of Id Proof** is required and must match the customer type
+- **Country** before **State**; **State** before **City**
 
 ## Managing Customers
 
+### Customer detail page
+
+Click a customer card on the list (or open **`/customers/{id}`**) to view the **customer detail** page. From there:
+
+- **Edit** — when your role allows (see below)
+- **Delete** — **Admin** only, and only if the customer has **no projects**
+- **Back** — return to the list
+
 ### Editing Customers
 
-- **Sales** users can edit **their own** customers (in **My Customers** view).
-- **Admin** users can edit any customer.
-- **Management** can view but not edit.
+| Role | Can edit |
+|------|----------|
+| **Admin** | Any customer |
+| **Management** | Any customer |
+| **Sales** | Customers where **you are the assigned salesperson** (`salespersonId` matches your user) |
 
-**How to edit**: Open the **Customers** page → find the customer (search/filters) → click the 3-dot **Actions** menu → **Edit** → update fields → click **Update**.
+**How to edit**: **Customers** → open the customer → **Edit** → change fields → **Update**. You do not need to be on **My Customers** to edit if you are the assigned salesperson (including when you open the customer by bookmark or direct link).
 
-**Salesperson** assignment can be changed only by **Management** or **Admin**.
+**Salesperson** on the form can be changed only by **Management** or **Admin**. On the detail page, other roles see the assigned salesperson as read-only text until options load in edit mode.
 
 ### My Customers vs All Customers (Sales)
 
-- **My Customers**: Customers you created or are assigned to. You can create, edit, and manage them.
-- **All Customers**: View-only list of all customers. You cannot edit others’ customers.
+- **My Customers**: Customers **assigned to you** (`salespersonId`). You can edit these when you open their detail page.
+- **All Customers**: Full directory (read-only for others’ records). Use this to look up any customer; you cannot edit customers assigned to someone else.
 
-Use the **Filter** radio buttons on the Customers page to switch between **My Customers** and **All Customers**.
+Use the **Filter** radio buttons on the Customers page to switch between **My Customers** and **All Customers**. This filter also applies to **export** (Admin).
 
 ### Deleting Customers
 
-- **Admin** only can delete customers.
-- Customers with existing projects **cannot be deleted**. Delete or reassign projects first.
-- Use the 3-dot **Actions** menu on a customer row → **Delete** → confirm in the warning dialog.
+- **Admin** only, from the customer **detail** page.
+- Customers with existing projects **cannot be deleted**. Remove or reassign projects first.
+- Confirm in the warning dialog.
+
+### If the list fails to load
+
+If the customer list cannot reach the server, an error message appears with **Try again** to reload the same search and filters.
 
 ## Viewing and Finding Customers
 
 ### Customers List
 
 1. Navigate to **Customers** from the top menu.
-2. Use the **search bar** to find customers by **customer name**, **Customer ID**, or **consumer number** (real-time, case-insensitive).
+2. Use the **search bar** for **customer name**, **Customer ID**, or **consumer number** (debounced, case-insensitive).
 3. Apply **filters**:
-   - **Sales users**: Choose **My Customers** or **All Customers** (radio buttons).
-   - **Other users**: Use **Sales Person** dropdown to filter by one or more salespersons. Leave as "All Sales Persons" to see all customers.
-4. The list shows customer cards with ID, name, address, contact info, **project count** badge, and creation date.
-5. Use **Previous** and **Next** for pagination (25 customers per page).
-
-### Customer Row Actions
-
-Each customer row has a 3-dot **Actions** menu:
-
-- **Edit** (Admin, Management, or Sales in My Customers): Open the customer form to update details.
-- **Delete** (Admin only): Remove the customer. Not available if the customer has projects.
-- **Open in Google Maps**: Shown when location coordinates are set. Opens the customer location in Google Maps in a new tab.
+   - **Sales users**: **My Customers** or **All Customers** (radio buttons).
+   - **Other users**: **Sales Person** dropdown (one or more). Leave as “All Sales Persons” for everyone.
+4. Each card shows **Customer ID**, display name, **type badge** (when not Residential), address, contacts, **project count**, and **Google Maps** when coordinates exist.
+5. **Previous** / **Next** — 25 customers per page.
 
 ### Customer Information Displayed
 
-- **Customer ID**, **Name** (or individual name components)
-- **Address**, **Pin Code**, **Google Maps link** (if location set)
-- **Contact numbers**, **Email IDs** (clickable mailto links)
-- **DISCOM Consumer Number**, **Company Name** (if provided)
-- **Project count** badge (number of projects linked to the customer)
+- **Customer ID**, display name (residential name, or company/society with primary contact where relevant)
+- **Customer type** badge on the list for Apartment / Commercial
+- **Address**, **Pin Code**, **Google Maps** (when location set)
+- **Contact numbers**, **Email IDs**
+- **DISCOM Consumer Number**, company/society name, **GSTIN** when set
+- **Project count** badge
 
 ## Relationship to Projects
 
@@ -189,10 +212,10 @@ Exports include all customer information and respect current filters and search.
 
 A quick reference for Customer Master access:
 
-- **Sales**: Create customers, edit own customers (My Customers), view All Customers (read-only). Cannot change salesperson or delete.
+- **Sales**: Create customers; edit customers **assigned to you**; **My Customers** / **All Customers** filters; cannot change salesperson or delete.
 - **Operations / Finance**: View customers (via filters). Cannot create, edit, or delete.
-- **Management**: View all customers, assign/change salesperson, edit customer details. Cannot create or delete.
-- **Admin**: Full access; create, edit, delete (when no projects), export.
+- **Management**: View all customers; create (when **New Customer** is shown); **edit any customer**; assign/change salesperson. Cannot delete.
+- **Admin**: Full access; create, edit, delete (when no projects), export (respects current list filters and search).
 
 ## Getting Help
 
@@ -233,7 +256,7 @@ At any stage, a project may be marked **Lost** if the customer does not proceed.
 2. Click the **New Project** button (top right)
 3. **Select the customer** (required): Search by name, ID, or consumer number. The customer cannot be changed after creation. If the customer does not exist, create them first from **Customer Master**.
 4. Fill in **Customer & Project Details**:
-   - **Segment** (required): Residential Subsidy, Residential Non-Subsidy, or Commercial Industrial
+   - **Segment** (required): **Subsidy** or **Non-Subsidy** (customer type — Residential, Apartment, Commercial — is set on the **Customer** record)
    - **Project Type** (required): EPC Project, Panel Cleaning, Maintenance, Repair, Consulting, Resale, or Other Services
 5. Complete **Sales & Commercial Information**:
    - **Lead Source**: Website, Referral, Google, Channel Partner, Digital Marketing, Sales, Management Connect, or Other (additional details required for some options)
@@ -307,16 +330,16 @@ The tile counts and filters match the dashboard filters (FY, Quarter, Month) you
 2. Use the **search bar** to find projects by customer name, customer ID, or consumer number.
 3. Apply **filters** (click **Show Filters** to expand):
    - **FY, Quarter, Month**: Same dashboard-style date filters. Tile counts and Quick Access links use these.
-   - **Status**: Lead, Site Survey, Proposal, Confirmed, Installation, Completed, etc.
-   - **Payment Status**: Pending, Partial, Fully Paid, N/A (Finance, Sales, Management, Admin, Operations)
-   - **Availing Loan**: Check to show only projects where Availing Loan/Financing is Yes
-   - **Segment**: Residential Subsidy, Residential Non-Subsidy, Commercial Industrial
-   - **Service Type**: EPC Project, Panel Cleaning, Maintenance, etc.
-   - **Support Ticket Status**: Has Tickets, Open, In Progress, Closed, No Tickets
-   - **Salesperson** (for non-Sales users): Filter by assigned salesperson
-4. Use **Clear All** to reset search, filters, and sort. Works even when arriving from a dashboard tile.
-5. Sort by creation date, confirmation date, order value, customer name, profitability, system capacity, or **Deal Health Score**. Default is confirmation date (newest first).
-6. Click a **project row** or **project number** to open the **Project Detail** page.
+   - **Pipeline** (status): Lead, Site Survey, Proposal, Confirmed, Installation, Completed, etc.
+   - **Customer type**: Residential, Apartment, Commercial (from **Customer Master** — not the same as **Segment**)
+   - **Segment**: Subsidy or Non-Subsidy (on the project)
+   - **Project Types** (service): EPC, Panel Cleaning, Maintenance, etc.
+   - **Payment Status**, **Lead source**, **Ticket status**, **Sales users** (non-Sales), **Has Artifacts**, **Availing Loan**
+4. **Active filters** chips appear under the search bar when anything is applied; click **×** on a chip to remove that slice only.
+5. Use **Clear All** to reset search, filters, sort, and dates. Works even when arriving from a dashboard or Zenith chart link.
+6. **Admins**: **Export to Excel/CSV** downloads the **same filtered list** (see full Projects help for columns).
+7. Sort by creation date, confirmation date, order value, customer name, profitability, system capacity, or **Deal Health Score**. Default is confirmation date (newest first).
+8. Click a **project row** or **project number** to open the **Project Detail** page.
 
 Filters are remembered when you navigate to a project and use **Back** to return.
 
@@ -524,6 +547,7 @@ The system will automatically:
 
 - **Sales** users can create tickets for their projects
 - **Operations** users can create tickets for any project
+- **Management** users can create tickets for any project
 - **Admin** users have full access to create tickets
 
 **Note**: You cannot create tickets for projects in **Lost** status.
@@ -590,8 +614,7 @@ When a support issue has been resolved:
 
 ### Who Can Close Tickets
 
-- **Sales** users can close tickets
-- **Operations** users can close tickets
+- **Sales**, **Operations**, and **Management** users can close tickets
 - **Admin** users can close any ticket
 
 **Note**: Once closed, only Admin users can add follow-ups to the ticket.
@@ -646,7 +669,7 @@ Each ticket displays:
 - **Admin**: Full access; can create, close, add follow-ups, delete tickets, and add follow-ups to closed tickets.
 - **Sales**: Can create tickets (own projects), add follow-ups, close tickets. Cannot delete.
 - **Operations**: Can create tickets (any project), add follow-ups, close tickets. Cannot delete.
-- **Management**: Can view the Support Tickets dashboard. Create, close, and follow-up access via API; UI may vary.
+- **Management**: Can view the Support Tickets dashboard and project tickets; create tickets, add follow-ups, and close tickets (not delete).
 - **Finance**: No access to the Support Tickets module.
 
 **Navigation access**: Admin, Sales, Operations, Management (Finance does not see Support Tickets in the menu).

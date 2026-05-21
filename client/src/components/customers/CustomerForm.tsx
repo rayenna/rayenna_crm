@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
@@ -10,10 +10,66 @@ import { countries, getStatesByCountry, getCitiesByState } from '../../utils/loc
 import MapSelector from '../MapSelector'
 import { FaUserFriends } from 'react-icons/fa'
 import { ErrorModal } from '@/components/common/ErrorModal'
+import { parseCustomerStringListForForm } from '../../utils/customerContactFields'
+import {
+  CUSTOMER_TYPE_OPTIONS,
+  getCustomerDisplayName,
+  getGstFormValue,
+  getIdProofTypeOptions,
+  isBusinessCustomerType,
+  isAllowedIdProofType,
+  validateCustomerIdentityFields,
+} from '../../utils/customerRecord'
+import {
+  emptyCustomerContact,
+  loadBusinessContactsFromCustomer,
+  normalizeContactsForSave,
+  validateBusinessContacts,
+  type CustomerContactEntry,
+} from '../../utils/customContacts'
+import { CustomerContactsEditor } from './CustomerContactsEditor'
 
-export function getCustomerDisplayName(customer: Customer) {
-  const parts = [customer.prefix, customer.firstName, customer.middleName, customer.lastName].filter(Boolean)
-  return parts.length > 0 ? parts.join(' ') : customer.customerName || 'Unknown'
+function customerToFormValues(customer: Customer | null | undefined) {
+  if (!customer) {
+    return {
+      customerType: 'RESIDENTIAL' as const,
+      prefix: '',
+      firstName: '',
+      middleName: '',
+      lastName: '',
+      addressLine1: '',
+      addressLine2: '',
+      city: '',
+      state: '',
+      country: '',
+      pinCode: '',
+      consumerNumber: '',
+      idProofNumber: '',
+      idProofType: '',
+      companyName: '',
+      companyGst: '',
+      salespersonId: '',
+    }
+  }
+  return {
+    customerType: customer.customerType || 'RESIDENTIAL',
+    prefix: customer.prefix || '',
+    firstName: customer.firstName || '',
+    middleName: customer.middleName || '',
+    lastName: customer.lastName || '',
+    addressLine1: customer.addressLine1 || '',
+    addressLine2: customer.addressLine2 || '',
+    city: customer.city || '',
+    state: customer.state || '',
+    country: customer.country || '',
+    pinCode: customer.pinCode || '',
+    consumerNumber: customer.consumerNumber || '',
+    idProofNumber: customer.idProofNumber || '',
+    idProofType: customer.idProofType || '',
+    companyName: customer.companyName || '',
+    companyGst: getGstFormValue(customer),
+    salespersonId: customer.salespersonId || '',
+  }
 }
 
 /** Section shell aligned with Project Detail `InfoSection`: header strip + body, no floating title row. */
@@ -62,7 +118,7 @@ export function CustomerForm({
   const { hasRole } = useAuth()
   useModalEscape(layout === 'modal', onClose)
 
-  const { data: salespersons } = useQuery({
+  const { data: salespersons, isLoading: salespersonsLoading } = useQuery({
     queryKey: ['salespersons'],
     queryFn: async () => {
       const res = await axiosInstance.get('/api/users/role/sales')
@@ -70,7 +126,7 @@ export function CustomerForm({
     },
   })
 
-  // Fetch full customer data when editing (to get all fields including idProofNumber, idProofType, companyName, companyGst)
+  // Modal edit may open from list rows missing id-proof fields; detail page already has full GET payload.
   const { data: fullCustomerData } = useQuery({
     queryKey: ['customer', customer?.id],
     queryFn: async () => {
@@ -78,93 +134,59 @@ export function CustomerForm({
       const res = await axiosInstance.get(`/api/customers/${customer.id}`)
       return res.data as Customer
     },
-    enabled: !!customer?.id, // Only fetch if we have a customer ID
+    enabled: !!customer?.id && layout === 'modal',
   })
 
-  // Use full customer data if available, otherwise fall back to customer prop
-  const customerData = fullCustomerData || customer
+  const customerData = layout === 'page' && customer ? customer : (fullCustomerData || customer)
+
+  const assignedSalespersonId = customerData?.salespersonId ?? ''
+  const assignedSalespersonName = useMemo(() => {
+    if (!assignedSalespersonId || !salespersons?.length) return null
+    const match = salespersons.find((sp: { id: string; name: string }) => sp.id === assignedSalespersonId)
+    return match?.name ?? null
+  }, [assignedSalespersonId, salespersons])
 
   const { register, handleSubmit, formState: { errors }, watch, setValue, reset } = useForm({
     shouldFocusError: false, // keep focus on validation modal instead of first error field
-    defaultValues: {
-      prefix: customerData?.prefix || '',
-      firstName: customerData?.firstName || '',
-      middleName: customerData?.middleName || '',
-      lastName: customerData?.lastName || '',
-      addressLine1: customerData?.addressLine1 || '',
-      addressLine2: customerData?.addressLine2 || '',
-      city: customerData?.city || '',
-      state: customerData?.state || '',
-      country: customerData?.country || '',
-      pinCode: customerData?.pinCode || '',
-      consumerNumber: customerData?.consumerNumber || '',
-      idProofNumber: customerData?.idProofNumber || '',
-      idProofType: customerData?.idProofType || '',
-      companyName: customerData?.companyName || '',
-      companyGst: customerData?.companyGst || '',
-      salespersonId: customerData?.salespersonId || '',
-    }
+    defaultValues: customerToFormValues(customerData),
   })
 
-  // Reset form when customer data changes (for edit mode)
-  useEffect(() => {
-    if (customerData) {
-      reset({
-        prefix: customerData.prefix || '',
-        firstName: customerData.firstName || '',
-        middleName: customerData.middleName || '',
-        lastName: customerData.lastName || '',
-        addressLine1: customerData.addressLine1 || '',
-        addressLine2: customerData.addressLine2 || '',
-        city: customerData.city || '',
-        state: customerData.state || '',
-        country: customerData.country || '',
-        pinCode: customerData.pinCode || '',
-        consumerNumber: customerData.consumerNumber || '',
-        idProofNumber: customerData.idProofNumber || '',
-        idProofType: customerData.idProofType || '',
-        companyName: customerData.companyName || '',
-        companyGst: customerData.companyGst || '',
-        salespersonId: customerData.salespersonId || '',
-      })
-    } else {
-      reset({
-        prefix: '',
-        firstName: '',
-        middleName: '',
-        lastName: '',
-        addressLine1: '',
-        addressLine2: '',
-        city: '',
-        state: '',
-        country: '',
-        pinCode: '',
-        consumerNumber: '',
-        idProofNumber: '',
-        idProofType: '',
-        companyName: '',
-        companyGst: '',
-        salespersonId: '',
-      })
-    }
-  }, [customerData?.id, customerData?.idProofNumber, customerData?.idProofType, customerData?.companyName, customerData?.companyGst, reset])
-  const [contactNumbers, setContactNumbers] = useState<string[]>(customerData?.contactNumbers ? (() => {
-    try {
-      const parsed = JSON.parse(customerData.contactNumbers)
-      return Array.isArray(parsed) ? parsed : [customerData.contactNumbers]
-    } catch {
-      return [customerData.contactNumbers]
-    }
-  })() : [''])
+  const watchedCustomerType = watch('customerType')
+  const isBusinessType = isBusinessCustomerType(watchedCustomerType)
 
-  const [emails, setEmails] = useState<string[]>(customerData?.email ? (() => {
-    try {
-      const parsed = JSON.parse(customerData.email)
-      return Array.isArray(parsed) ? parsed : [customerData.email]
-    } catch {
-      return [customerData.email]
-    }
-  })() : [''])
+  // Reset form when customer record changes (edit mode / switching customer)
+  useEffect(() => {
+    reset(customerToFormValues(customerData))
+  }, [
+    customerData?.id,
+    customerData?.salespersonId,
+    customerData?.updatedAt,
+    customerData?.customerType,
+    customerData?.contacts,
+    customerData?.companyName,
+    customerData?.idProofNumber,
+    customerData?.idProofType,
+    customerData?.companyGst,
+    customerData?.gstNumber,
+    reset,
+  ])
+
+  // Native <select> shows the empty option when options load after the value is set (misleading "No Salesperson Assigned").
+  useEffect(() => {
+    if (!salespersons?.length || !assignedSalespersonId) return
+    setValue('salespersonId', assignedSalespersonId, { shouldDirty: false, shouldValidate: false })
+  }, [assignedSalespersonId, salespersons, setValue])
+  const [contactNumbers, setContactNumbers] = useState<string[]>(() =>
+    parseCustomerStringListForForm(customerData?.contactNumbers),
+  )
+
+  const [emails, setEmails] = useState<string[]>(() => parseCustomerStringListForForm(customerData?.email))
+
+  const [businessContacts, setBusinessContacts] = useState<CustomerContactEntry[]>(() =>
+    isBusinessCustomerType(customerData?.customerType)
+      ? loadBusinessContactsFromCustomer(customerData)
+      : [emptyCustomerContact()],
+  )
 
   const [validationErrors, setValidationErrors] = useState<string[] | null>(null)
 
@@ -183,37 +205,48 @@ export function CustomerForm({
     }
   }, [customerData?.id, customerData?.latitude, customerData?.longitude])
 
-  // Sync contactNumbers and emails when customer data changes
   useEffect(() => {
-    if (customerData?.contactNumbers) {
-      try {
-        const parsed = JSON.parse(customerData.contactNumbers)
-        setContactNumbers(Array.isArray(parsed) ? parsed : [customerData.contactNumbers])
-      } catch {
-        setContactNumbers([customerData.contactNumbers])
-      }
-    } else {
-      setContactNumbers([''])
-    }
+    setContactNumbers(parseCustomerStringListForForm(customerData?.contactNumbers))
   }, [customerData?.id, customerData?.contactNumbers])
 
   useEffect(() => {
-    if (customerData?.email) {
-      try {
-        const parsed = JSON.parse(customerData.email)
-        setEmails(Array.isArray(parsed) ? parsed : [customerData.email])
-      } catch {
-        setEmails([customerData.email])
-      }
-    } else {
+    setEmails(parseCustomerStringListForForm(customerData?.email))
+  }, [customerData?.id, customerData?.email])
+
+  useEffect(() => {
+    if (!isBusinessCustomerType(customerData?.customerType)) return
+    setBusinessContacts(loadBusinessContactsFromCustomer(customerData))
+  }, [customerData?.id, customerData?.contacts, customerData?.contactNumbers, customerData?.email, customerData?.contactPerson, customerData?.customerType])
+
+  const prevCustomerTypeRef = useRef(watchedCustomerType)
+  useEffect(() => {
+    const prev = prevCustomerTypeRef.current
+    if (isBusinessType && !isBusinessCustomerType(prev)) {
+      setBusinessContacts([emptyCustomerContact()])
+    }
+    if (!isBusinessType && isBusinessCustomerType(prev)) {
+      setContactNumbers([''])
       setEmails([''])
     }
-  }, [customerData?.id, customerData?.email])
-  
+    prevCustomerTypeRef.current = watchedCustomerType
+  }, [watchedCustomerType, isBusinessType])
+
   // Watch country and state for cascading dropdowns
   const selectedCountry = watch('country')
   const selectedState = watch('state')
   const idProofNumber = watch('idProofNumber')
+  const idProofTypeValue = watch('idProofType')
+  const idProofTypeOptions = useMemo(
+    () => getIdProofTypeOptions(watchedCustomerType, idProofTypeValue),
+    [watchedCustomerType, idProofTypeValue],
+  )
+
+  useEffect(() => {
+    if (!idProofTypeValue?.trim()) return
+    if (!isAllowedIdProofType(watchedCustomerType, idProofTypeValue)) {
+      setValue('idProofType', '', { shouldDirty: true, shouldValidate: true })
+    }
+  }, [watchedCustomerType, idProofTypeValue, setValue])
   
   // Get states and cities based on selections
   // When editing, use customer's country/state if available, otherwise use watched values
@@ -255,7 +288,9 @@ export function CustomerForm({
   })
 
   const fieldLabel: Record<string, string> = {
-    firstName: 'First Name',
+    customerType: 'Customer type',
+    firstName: 'First name',
+    companyName: isBusinessType && watchedCustomerType === 'APARTMENT' ? 'Society / building name' : 'Company name',
     addressLine1: 'Address Line 1',
     country: 'Country',
     state: 'State',
@@ -263,12 +298,26 @@ export function CustomerForm({
   }
 
   const onSubmit = (data: any) => {
-    const errs: string[] = []
-    if (!contactNumbers.some(cn => (cn || '').trim() !== '')) {
+    const errs: string[] = [
+      ...validateCustomerIdentityFields({
+        customerType: data.customerType,
+        companyName: data.companyName,
+        firstName: data.firstName,
+      }),
+    ]
+    if (isBusinessType) {
+      errs.push(...validateBusinessContacts(businessContacts))
+    } else if (!contactNumbers.some((cn) => (cn || '').trim() !== '')) {
       errs.push('At least one contact number is required.')
     }
     if (data.idProofNumber && data.idProofNumber.trim() !== '' && (!data.idProofType || data.idProofType.trim() === '')) {
       errs.push('Type of Id Proof is required when Id Proof# is provided.')
+    } else if (
+      data.idProofNumber?.trim() &&
+      data.idProofType?.trim() &&
+      !isAllowedIdProofType(data.customerType, data.idProofType)
+    ) {
+      errs.push('Type of Id Proof is not valid for the selected customer type.')
     }
     if (errs.length > 0) {
       setValidationErrors(errs)
@@ -277,15 +326,28 @@ export function CustomerForm({
 
     const submitData: any = {
       ...data,
-      // Explicitly include these fields to ensure they're sent
+      customerType: data.customerType || 'RESIDENTIAL',
+      contactPerson: null,
       idProofNumber: data.idProofNumber || null,
       idProofType: data.idProofType || null,
-      companyName: data.companyName || null,
-      companyGst: data.companyGst || null,
-      contactNumbers: contactNumbers.filter(cn => cn.trim() !== ''),
-      email: emails.filter(e => e.trim() !== ''),
+      companyName: data.companyName?.trim() || null,
+      companyGst: data.companyGst?.trim() || null,
       latitude: latitude,
       longitude: longitude,
+    }
+
+    if (isBusinessType) {
+      submitData.contacts = normalizeContactsForSave(businessContacts)
+      submitData.contactPerson = null
+      submitData.prefix = ''
+      submitData.firstName = ''
+      submitData.middleName = ''
+      submitData.lastName = ''
+    } else {
+      submitData.contacts = null
+      submitData.contactPerson = null
+      submitData.contactNumbers = contactNumbers.filter((cn) => cn.trim() !== '')
+      submitData.email = emails.filter((e) => e.trim() !== '')
     }
     
     if (import.meta.env.DEV) console.log('Submitting customer')
@@ -375,35 +437,108 @@ export function CustomerForm({
             borderAccentClass="border-l-[3px] border-l-[color:var(--accent-teal)]"
             icon={<svg className="text-[color:var(--accent-teal)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
           >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <label className={labelCls}>Prefix</label>
-                <select {...register('prefix')} className={selectCls}>
-                  <option value="">None</option>
-                  <option value="Mr.">Mr.</option>
-                  <option value="Ms.">Ms.</option>
-                  <option value="Mrs.">Mrs.</option>
-                  <option value="Miss">Miss</option>
-                  <option value="Mx.">Mx.</option>
-                  <option value="Dr.">Dr.</option>
-                  <option value="Prof.">Prof.</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelCls}>First Name <span className="text-red-500">*</span></label>
-                <input {...register('firstName', { required: 'First name is required' })} className={inputCls} placeholder="First Name" />
-                {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName.message as string}</p>}
-              </div>
-              <div>
-                <label className={labelCls}>Middle Name</label>
-                <input {...register('middleName')} className={inputCls} placeholder="Middle Name" />
-              </div>
-              <div>
-                <label className={labelCls}>Last Name</label>
-                <input {...register('lastName')} className={inputCls} placeholder="Last Name" />
-              </div>
+            <div className="max-w-md">
+              <label className={labelCls}>
+                Customer type <span className="text-red-500">*</span>
+              </label>
+              <select
+                {...register('customerType', { required: 'Customer type is required' })}
+                className={selectCls}
+              >
+                {CUSTOMER_TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              {errors.customerType && (
+                <p className="text-red-500 text-xs mt-1">{errors.customerType.message as string}</p>
+              )}
             </div>
+
+            {isBusinessType ? (
+              <div className="max-w-2xl">
+                <label className={labelCls}>
+                  {watchedCustomerType === 'APARTMENT' ? 'Society / building name' : 'Company name'}{' '}
+                  <span className="text-red-500">*</span>
+                </label>
+                <input
+                  {...register('companyName', {
+                    validate: (v) => {
+                      if (!isBusinessCustomerType(watch('customerType'))) return true
+                      return v?.trim() ? true : watchedCustomerType === 'APARTMENT'
+                        ? 'Society / building name is required'
+                        : 'Company name is required'
+                    },
+                  })}
+                  className={inputCls}
+                  placeholder={watchedCustomerType === 'APARTMENT' ? 'e.g. Green Valley Apartments' : 'Registered company name'}
+                />
+                {errors.companyName && (
+                  <p className="text-red-500 text-xs mt-1">{errors.companyName.message as string}</p>
+                )}
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-[color:var(--text-muted)]">Enter the customer’s name for residential accounts.</p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div>
+                    <label className={labelCls}>Prefix</label>
+                    <select {...register('prefix')} className={selectCls}>
+                      <option value="">None</option>
+                      <option value="Mr.">Mr.</option>
+                      <option value="Ms.">Ms.</option>
+                      <option value="Mrs.">Mrs.</option>
+                      <option value="Miss">Miss</option>
+                      <option value="Mx.">Mx.</option>
+                      <option value="Dr.">Dr.</option>
+                      <option value="Prof.">Prof.</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>
+                      First name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      {...register('firstName', {
+                        validate: (v) =>
+                          v?.trim() ? true : 'First name is required for residential customers',
+                      })}
+                      className={inputCls}
+                      placeholder="First name"
+                    />
+                    {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName.message as string}</p>}
+                  </div>
+                  <div>
+                    <label className={labelCls}>Middle name</label>
+                    <input {...register('middleName')} className={inputCls} placeholder="Middle name" />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Last name</label>
+                    <input {...register('lastName')} className={inputCls} placeholder="Last name" />
+                  </div>
+                </div>
+              </>
+            )}
           </CustomerFormSection>
+
+          {isBusinessType ? (
+            <CustomerFormSection
+              title="Contacts"
+              borderAccentClass="border-l-[3px] border-l-[color:var(--accent-teal)]"
+              icon={<svg className="text-[color:var(--accent-teal)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>}
+            >
+              <p className="mb-4 text-xs text-[color:var(--text-muted)]">
+                Add one or more people at this company. Each contact has their own phone numbers and e-mail IDs.
+              </p>
+              <CustomerContactsEditor
+                contacts={businessContacts}
+                onChange={setBusinessContacts}
+                readOnly={readOnly}
+                inputCls={inputCls}
+                labelCls={labelCls}
+                selectCls={selectCls}
+              />
+            </CustomerFormSection>
+          ) : null}
 
           <CustomerFormSection
             title="Address"
@@ -484,6 +619,7 @@ export function CustomerForm({
             />
           </CustomerFormSection>
 
+          {!isBusinessType ? (
           <CustomerFormSection
             title="Contact"
             borderAccentClass="border-l-[3px] border-l-[color:var(--accent-teal)]"
@@ -564,6 +700,7 @@ export function CustomerForm({
               </div>
             </div>
           </CustomerFormSection>
+          ) : null}
 
           <CustomerFormSection
             title="Identity & company"
@@ -578,32 +715,46 @@ export function CustomerForm({
               <div>
                 <label className={labelCls}>Type of Id Proof {idProofNumber?.trim() && <span className="text-red-500">*</span>}</label>
                 <select
+                  key={`id-proof-type-${watchedCustomerType}`}
                   {...register('idProofType', {
-                    validate: (v) => idProofNumber?.trim() && (!v || !v.trim()) ? 'Type of Id Proof is required when Id Proof# is provided' : true
+                    validate: (v) => {
+                      if (idProofNumber?.trim() && (!v || !v.trim())) {
+                        return 'Type of Id Proof is required when Id Proof# is provided'
+                      }
+                      if (v?.trim() && !isAllowedIdProofType(watchedCustomerType, v)) {
+                        return 'Select a valid type for this customer type'
+                      }
+                      return true
+                    },
                   })}
-                  className={`${selectCls} ${idProofNumber?.trim() && !watch('idProofType') ? 'border-[color:var(--accent-red-border)] focus:border-[color:var(--accent-red)] focus:ring-[color:var(--accent-red-muted)]' : ''}`}
+                  className={`${selectCls} ${idProofNumber?.trim() && !idProofTypeValue?.trim() ? 'border-[color:var(--accent-red-border)] focus:border-[color:var(--accent-red)] focus:ring-[color:var(--accent-red-muted)]' : ''}`}
                 >
-                  <option value="">Select Type</option>
-                  <option value="Aadhaar">Aadhaar</option>
-                  <option value="PAN">PAN</option>
-                  <option value="Voters Card">Voters Card</option>
-                  <option value="DL">DL</option>
-                  <option value="Passport">Passport</option>
-                  <option value="Others">Others</option>
+                  <option value="">Select type</option>
+                  {idProofTypeOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
                 {errors.idProofType && <p className="text-red-500 text-xs mt-1">{errors.idProofType.message as string}</p>}
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className={labelCls}>Company Name</label>
-                <input {...register('companyName')} className={inputCls} placeholder="Enter company name" />
+            {!isBusinessType ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className={labelCls}>Company name</label>
+                  <input {...register('companyName')} className={inputCls} placeholder="Optional — if billing under a company" />
+                </div>
+                <div>
+                  <label className={labelCls}>GSTIN</label>
+                  <input {...register('companyGst')} className={inputCls} placeholder="15-character GST number" />
+                </div>
               </div>
-              <div>
-                <label className={labelCls}>Company GST#</label>
-                <input {...register('companyGst')} className={inputCls} placeholder="Enter GST number" />
+            ) : (
+              <div className="max-w-md">
+                <label className={labelCls}>GSTIN</label>
+                <input {...register('companyGst')} className={inputCls} placeholder="15-character GST number" />
+                <p className="mt-1 text-xs text-[color:var(--text-muted)]">Saved for Tally and commercial records.</p>
               </div>
-            </div>
+            )}
           </CustomerFormSection>
 
           {(hasRole([UserRole.MANAGEMENT]) || hasRole([UserRole.ADMIN])) && (
@@ -617,18 +768,33 @@ export function CustomerForm({
                 <label className={labelCls}>
                   Salesperson {!customerData && <span className="normal-case font-normal text-red-500">*</span>}
                 </label>
-                <select
-                  {...register('salespersonId', {
-                    validate: (v) =>
-                      !customerData && hasRole([UserRole.ADMIN])
-                        ? (v && v.trim() !== '' ? true : 'Sales Person is required for a new customer')
-                        : true,
-                  })}
-                  className={`${selectCls} ${!customerData && hasRole([UserRole.ADMIN]) && !watch('salespersonId')?.trim() ? 'border-[color:var(--accent-red-border)] focus:border-[color:var(--accent-red)] focus:ring-[color:var(--accent-red-muted)]' : ''}`}
-                >
-                  <option value="">{customerData ? 'No Salesperson Assigned' : 'Select Sales Person'}</option>
-                  {salespersons?.map((sp: any) => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
-                </select>
+                {readOnly ? (
+                  <p className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2.5 text-sm font-medium text-[color:var(--text-primary)]">
+                    {salespersonsLoading && assignedSalespersonId
+                      ? 'Loading…'
+                      : assignedSalespersonName ?? (assignedSalespersonId ? 'Assigned salesperson' : 'No Salesperson Assigned')}
+                  </p>
+                ) : salespersonsLoading ? (
+                  <p className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2.5 text-sm text-[color:var(--text-muted)]">
+                    Loading sales team…
+                  </p>
+                ) : (
+                  <select
+                    key={`salesperson-${customerData?.id ?? 'new'}-${salespersons?.length ?? 0}`}
+                    {...register('salespersonId', {
+                      validate: (v) =>
+                        !customerData && hasRole([UserRole.ADMIN])
+                          ? (v && v.trim() !== '' ? true : 'Sales Person is required for a new customer')
+                          : true,
+                    })}
+                    className={`${selectCls} ${!customerData && hasRole([UserRole.ADMIN]) && !watch('salespersonId')?.trim() ? 'border-[color:var(--accent-red-border)] focus:border-[color:var(--accent-red)] focus:ring-[color:var(--accent-red-muted)]' : ''}`}
+                  >
+                    <option value="">{customerData ? 'No Salesperson Assigned' : 'Select Sales Person'}</option>
+                    {salespersons?.map((sp: { id: string; name: string }) => (
+                      <option key={sp.id} value={sp.id}>{sp.name}</option>
+                    ))}
+                  </select>
+                )}
                 {errors.salespersonId && <p className="text-red-500 text-xs mt-1">{errors.salespersonId.message as string}</p>}
                 <p className="mt-2 rounded-lg border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-3 py-2 text-xs leading-relaxed text-[color:var(--text-secondary)]">
                   {customerData ? 'Only Management and Admin can change the salesperson for a customer' : 'Admin must assign a Sales Person when creating a new customer'}

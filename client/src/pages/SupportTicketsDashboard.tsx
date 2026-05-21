@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import axiosInstance from '../utils/axios'
+import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
+import toast from 'react-hot-toast'
 import { SupportTicket, SupportTicketStatus } from '../types'
 import { format } from 'date-fns'
 import MetricCard from '../components/dashboard/MetricCard'
@@ -57,7 +58,7 @@ const SupportTicketsDashboard = () => {
   // Don't filter by status in API - we'll filter in frontend for table display
   // But we still need stats, so fetch all
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['support-tickets-dashboard'],
     queryFn: async () => {
       const res = await axiosInstance.get(`/api/support-tickets?${params.toString()}`)
@@ -223,8 +224,8 @@ const SupportTicketsDashboard = () => {
       const res = await axiosInstance.get(`/api/support-tickets/${ticket.id}`)
       setSelectedTicket(res.data)
       setIsDrawerOpen(true)
-    } catch (error: unknown) {
-      if (import.meta.env.DEV) console.error('Error fetching ticket details:', error)
+    } catch (err: unknown) {
+      toast.error(getFriendlyApiErrorMessage(err))
     }
   }
 
@@ -258,6 +259,26 @@ const SupportTicketsDashboard = () => {
   }
 
   const hasActiveFilters = selectedStatus !== null || showOverdueOnly
+
+  const listErrorPanel = (
+    <div
+      className="rounded-2xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] px-5 py-8 text-center shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]"
+      role="alert"
+    >
+      <p className="text-sm font-semibold text-[color:var(--accent-red)]">Could not load support tickets</p>
+      <p className="mx-auto mt-2 max-w-md text-xs text-[color:var(--text-secondary)]">
+        {getFriendlyApiErrorMessage(error)}
+      </p>
+      <button
+        type="button"
+        onClick={() => void refetch()}
+        disabled={isFetching}
+        className="mt-4 inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl bg-[color:var(--accent-gold)] px-5 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] shadow-lg transition-all hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {isFetching ? 'Retrying…' : 'Try again'}
+      </button>
+    </div>
+  )
 
   const shell = (children: React.ReactNode) => (
     <div className="zenith-root zenith-animated-bg w-full max-w-full min-w-0 min-h-[calc(100dvh-5rem)] min-h-[calc(100vh-5rem)] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-[max(0.35rem,env(safe-area-inset-top,0px))] [-webkit-tap-highlight-color:transparent]">
@@ -300,6 +321,10 @@ const SupportTicketsDashboard = () => {
       </header>
 
       <div className="min-w-0 space-y-6">
+        {isError ? (
+          listErrorPanel
+        ) : (
+        <>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <button type="button" onClick={() => handleKPIClick(SupportTicketStatus.OPEN)} className="text-left">
             <MetricCard variant="zenith" title="Open" value={stats.open} icon={<FaTicketAlt />} gradient="from-[color:var(--accent-blue)] to-[color:var(--accent-teal)]" />
@@ -529,6 +554,8 @@ const SupportTicketsDashboard = () => {
             )}
           </div>
         </div>
+        </>
+        )}
       </div>
 
       <TicketDetailDrawer

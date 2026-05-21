@@ -4,6 +4,7 @@ import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
 import { getProjectsByStageWithSLA, calculateStatusIndicator } from '../utils/projectLifecycle';
 import { predictProjectDelay } from '../utils/ai';
+import { aggregateProjectsByCustomerType, withChartPercentages } from '../utils/customerTypeCharts';
 
 const router = express.Router();
 
@@ -657,47 +658,12 @@ router.get('/management', authenticate, async (req: Request, res) => {
           }));
       })(),
       // Project value by type (for pie chart)
-      (async () => {
-        const projectValueByType = await prisma.project.groupBy({
-          by: ['type'],
-          where: { projectCost: { not: null } },
-          _sum: { projectCost: true },
-          _count: { id: true },
-        });
-
-        // Format the data for the chart
-        const valueByType = projectValueByType.map((item) => {
-          let label = '';
-          switch (item.type) {
-            case 'RESIDENTIAL_SUBSIDY':
-              label = 'Residential - Subsidy';
-              break;
-            case 'RESIDENTIAL_NON_SUBSIDY':
-              label = 'Residential - Non Subsidy';
-              break;
-            case 'COMMERCIAL_INDUSTRIAL':
-              label = 'Commercial Industrial';
-              break;
-            default:
-              label = item.type;
-          }
-          return {
-            type: item.type,
-            label,
-            value: item._sum.projectCost || 0,
-            count: item._count.id,
-          };
-        });
-
-        // Calculate total for percentage calculation
-        const totalValue = valueByType.reduce((sum, item) => sum + item.value, 0);
-
-        // Add percentage to each item
-        return valueByType.map((item) => ({
-          ...item,
-          percentage: totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0',
-        }));
-      })(),
+      (async () =>
+        withChartPercentages(
+          await aggregateProjectsByCustomerType({
+            projectCost: { not: null },
+          }),
+        ))(),
     ]);
 
     res.json({

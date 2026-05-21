@@ -17,6 +17,55 @@ import { getFinancingBankDisplayName } from '../utils/financingBankDisplay'
 import { FaProjectDiagram } from 'react-icons/fa'
 import { ArrowLeft, Edit3, Trash2 } from 'lucide-react'
 import { ErrorModal } from '@/components/common/ErrorModal'
+import { ProjectDetailSkeleton } from '../components/projects/ProjectDetailSkeleton'
+import { canDeleteProject, canEditProject } from '../utils/projectPermissions'
+import { getProjectDetailAccessNotice } from '../utils/projectAccessMessages'
+import ProjectAccessNotice from '../components/projects/ProjectAccessNotice'
+import { formatCustomerTypeDisplay } from '../utils/customerRecord'
+import { getCustomerTypeLegendSwatchClass } from '../utils/customerTypeStyles'
+import type { CustomerType } from '../utils/customerRecord'
+import { getProjectSegmentLabel, getProjectSegmentPillClasses } from '../utils/projectSegment'
+
+function formatLeadSourceDisplay(
+  leadSource?: string | null,
+  leadSourceDetails?: string | null,
+): ReactNode {
+  if (!leadSource) return null
+  const labels: Record<string, string> = {
+    WEBSITE: 'Website',
+    REFERRAL: 'Referral',
+    GOOGLE: 'Google',
+    CHANNEL_PARTNER: 'Channel Partner',
+    DIGITAL_MARKETING: 'Digital Marketing',
+    SALES: 'Sales',
+    MANAGEMENT_CONNECT: 'Management Connect',
+    OTHER: 'Other',
+  }
+  const label = labels[leadSource] || leadSource.replace(/_/g, ' ')
+  const detail =
+    leadSourceDetails &&
+    (leadSource === 'CHANNEL_PARTNER' || leadSource === 'REFERRAL' || leadSource === 'OTHER')
+      ? leadSourceDetails
+      : null
+  return (
+    <>
+      {label}
+      {detail ? (
+        <span className="mt-1 block text-[color:var(--text-muted)] sm:mt-0 sm:inline sm:pl-1">({detail})</span>
+      ) : null}
+    </>
+  )
+}
+
+const PROJECT_SERVICE_TYPE_LABELS: Record<string, string> = {
+  EPC_PROJECT: 'EPC Project',
+  PANEL_CLEANING: 'Panel Cleaning',
+  MAINTENANCE: 'Maintenance',
+  REPAIR: 'Repair',
+  CONSULTING: 'Consulting',
+  RESALE: 'Resale',
+  OTHER_SERVICES: 'Other Services',
+}
 
 /** Responsive label/value row: stacked on phones, two columns from sm (tablet+). */
 function DetailRow({ label, children, valueClassName = '' }: { label: string; children: ReactNode; valueClassName?: string }) {
@@ -80,7 +129,7 @@ const ProjectDetail = () => {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [navigate, showDeleteConfirm, showProposal])
 
-  const { data: project, isLoading, error } = useQuery({
+  const { data: project, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['project', id],
     queryFn: async () => {
       const res = await axiosInstance.get(`/api/projects/${id}`)
@@ -146,12 +195,9 @@ const ProjectDetail = () => {
     staleTime: 60_000,
   })
 
-  // Projects in Lost status cannot be edited (only Admin can delete)
-  const isLost = project?.projectStatus === ProjectStatus.LOST
-  const canEdit = !isLost && (hasRole([UserRole.ADMIN]) || 
-    (hasRole([UserRole.SALES]) && project?.salespersonId === user?.id) ||
-    hasRole([UserRole.OPERATIONS, UserRole.FINANCE]))
-  const canDelete = hasRole([UserRole.ADMIN])
+  const canEdit = canEditProject(project, user)
+  const canDelete = canDeleteProject(project, user)
+  const detailAccessNotice = getProjectDetailAccessNotice(project, user)
 
   // Fetch support tickets count for delete confirmation
   const { data: supportTickets } = useQuery({
@@ -185,18 +231,35 @@ const ProjectDetail = () => {
     },
   })
 
-  if (isLoading) {
-    return shell(
-      <div className="py-16 text-center text-[color:var(--text-secondary)]">
-        <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-[color:var(--border-default)] border-t-[color:var(--accent-gold)]" />
-        <p className="text-sm">Loading project details…</p>
-      </div>
-    )
+  if (isLoading && !project) {
+    return shell(<ProjectDetailSkeleton />)
   }
-  if (error) {
+  if (isError) {
     return shell(
-      <div className="rounded-2xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] p-6 text-center text-sm text-[color:var(--text-primary)]">
-        Error loading project: {(error as any).response?.data?.error || (error as any).message}
+      <div
+        className="rounded-2xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] px-5 py-8 text-center shadow-[var(--shadow-card)]"
+        role="alert"
+      >
+        <p className="text-sm font-semibold text-[color:var(--accent-red)]">Could not load project</p>
+        <p className="mx-auto mt-2 max-w-md text-xs text-[color:var(--text-secondary)]">
+          {getFriendlyApiErrorMessage(error)}
+        </p>
+        <button
+          type="button"
+          onClick={() => void refetch()}
+          disabled={isFetching}
+          className="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-[color:var(--accent-gold)] px-5 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] disabled:opacity-50"
+        >
+          {isFetching ? 'Retrying…' : 'Try again'}
+        </button>
+        <div className="mt-4">
+          <Link
+            to="/projects"
+            className="text-sm font-semibold text-[color:var(--accent-gold)] hover:underline"
+          >
+            Back to Projects
+          </Link>
+        </div>
       </div>
     )
   }
@@ -206,20 +269,6 @@ const ProjectDetail = () => {
         Project not found
       </div>
     )
-  }
-
-  // Segment pill classes (match Projects list)
-  const getSegmentPillClasses = (type: string): string => {
-    switch (type) {
-      case 'RESIDENTIAL_SUBSIDY':
-        return 'border border-[color:var(--accent-red-border)] bg-[color:color-mix(in srgb,var(--accent-red) 12%, var(--bg-card))] text-[color:var(--text-primary)]'
-      case 'RESIDENTIAL_NON_SUBSIDY':
-        return 'border border-[color:var(--accent-blue-border)] bg-[color:color-mix(in srgb,var(--accent-blue) 12%, var(--bg-card))] text-[color:var(--text-primary)]'
-      case 'COMMERCIAL_INDUSTRIAL':
-        return 'border border-emerald-400/35 bg-[color:color-mix(in srgb,var(--accent-green) 12%, var(--bg-card))] text-[color:var(--text-primary)]'
-      default:
-        return 'border border-[color:var(--border-default)] bg-[color:var(--bg-input)] text-[color:var(--text-secondary)]'
-    }
   }
 
   return (
@@ -265,6 +314,12 @@ const ProjectDetail = () => {
                   </h1>
                   <p className="mt-0.5 truncate text-sm text-[color:var(--text-secondary)]">
                     {project.customer?.customerName || 'Unknown Customer'}
+                    {project.customer?.customerType ? (
+                      <span className="text-[color:var(--text-muted)]">
+                        {' '}
+                        · {formatCustomerTypeDisplay(project.customer.customerType)}
+                      </span>
+                    ) : null}
                   </p>
                 </div>
               </div>
@@ -330,6 +385,8 @@ const ProjectDetail = () => {
             </div>
           </header>
 
+          {detailAccessNotice ? <ProjectAccessNotice notice={detailAccessNotice} /> : null}
+
           {/* ── Summary card: created date, status pills, financials, PE badge ── */}
           <div className="mb-5 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -344,9 +401,16 @@ const ProjectDetail = () => {
                   <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ${projectStatusStagePillClass(project.projectStatus)}`}>
                     {project.projectStatus.replace(/_/g, ' ')}
                   </span>
-                  <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ${getSegmentPillClasses(project.type)}`}>
-                    {project.type.replace(/_/g, ' ')}
+                  <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ${getProjectSegmentPillClasses(project.type)}`}>
+                    {getProjectSegmentLabel(project.type)}
                   </span>
+                  {project.customer?.customerType ? (
+                    <span
+                      className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold ${getCustomerTypeLegendSwatchClass(project.customer.customerType as CustomerType)}`}
+                    >
+                      {formatCustomerTypeDisplay(project.customer.customerType)}
+                    </span>
+                  ) : null}
                 </div>
               </div>
 
@@ -419,6 +483,26 @@ const ProjectDetail = () => {
               <DetailRow label="Customer Name" valueClassName="text-base font-semibold sm:text-lg">
                 {project.customer.customerName}
               </DetailRow>
+              <DetailRow label="Customer Type" valueClassName="font-medium">
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  <span
+                    className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-semibold ${getCustomerTypeLegendSwatchClass((project.customer.customerType ?? 'RESIDENTIAL') as CustomerType)}`}
+                  >
+                    {formatCustomerTypeDisplay(project.customer.customerType)}
+                  </span>
+                  <span className="text-xs font-normal text-[color:var(--text-muted)]">
+                    From Customer Master · change on the customer record
+                  </span>
+                  {project.customer.id ? (
+                    <Link
+                      to={`/customers/${project.customer.id}`}
+                      className="text-xs font-semibold text-[color:var(--accent-gold)] hover:underline"
+                    >
+                      Open customer →
+                    </Link>
+                  ) : null}
+                </span>
+              </DetailRow>
               {(project.customer.addressLine1 || project.customer.city) && (
                 <DetailRow label="Address" valueClassName="font-medium leading-relaxed text-[color:var(--text-primary)]">
                   {[
@@ -449,28 +533,6 @@ const ProjectDetail = () => {
                   {project.customer.consumerNumber}
                 </DetailRow>
               )}
-              {project.leadSource && (
-                <DetailRow label="Lead Source" valueClassName="font-medium">
-                  <>
-                    {project.leadSource === 'WEBSITE' && 'Website'}
-                    {project.leadSource === 'REFERRAL' && 'Referral'}
-                    {project.leadSource === 'GOOGLE' && 'Google'}
-                    {project.leadSource === 'CHANNEL_PARTNER' && 'Channel Partner'}
-                    {project.leadSource === 'DIGITAL_MARKETING' && 'Digital Marketing'}
-                    {project.leadSource === 'SALES' && 'Sales'}
-                    {project.leadSource === 'MANAGEMENT_CONNECT' && 'Management Connect'}
-                    {project.leadSource === 'OTHER' && 'Other'}
-                    {project.leadSourceDetails && (
-                      <span className="mt-1 block text-[color:var(--text-muted)] sm:mt-0 sm:inline sm:pl-1">
-                        (
-                        {project.leadSource === 'CHANNEL_PARTNER' && project.leadSourceDetails}
-                        {project.leadSource === 'REFERRAL' && project.leadSourceDetails}
-                        {project.leadSource === 'OTHER' && project.leadSourceDetails})
-                      </span>
-                    )}
-                  </>
-                </DetailRow>
-              )}
             </dl>
           ) : (
             <p className="py-2 text-sm text-[color:var(--text-muted)]">Customer information not available</p>
@@ -484,21 +546,20 @@ const ProjectDetail = () => {
         >
           <dl>
             <DetailRow label="Segment" valueClassName="font-medium">
-              {project.type.replace(/_/g, ' ')}
+              <span className="inline-flex flex-wrap items-center gap-2">
+                <span
+                  className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${getProjectSegmentPillClasses(project.type)}`}
+                >
+                  {getProjectSegmentLabel(project.type)}
+                </span>
+                <span className="text-xs font-normal text-[color:var(--text-muted)]">
+                  Subsidy eligibility on this project
+                </span>
+              </span>
             </DetailRow>
-            <DetailRow label="Project Type" valueClassName="font-medium">
-              {(() => {
-                const typeMap: Record<string, string> = {
-                  EPC_PROJECT: 'EPC Project',
-                  PANEL_CLEANING: 'Panel Cleaning',
-                  MAINTENANCE: 'Maintenance',
-                  REPAIR: 'Repair',
-                  CONSULTING: 'Consulting',
-                  RESALE: 'Resale',
-                  OTHER_SERVICES: 'Other Services',
-                }
-                return typeMap[project.projectServiceType] || project.projectServiceType.replace(/_/g, ' ')
-              })()}
+            <DetailRow label="Service type" valueClassName="font-medium">
+              {PROJECT_SERVICE_TYPE_LABELS[project.projectServiceType] ||
+                project.projectServiceType.replace(/_/g, ' ')}
             </DetailRow>
             {project.salesperson && (
               <DetailRow label="Salesperson" valueClassName="font-medium">
@@ -514,6 +575,11 @@ const ProjectDetail = () => {
           icon={<svg className="text-[color:var(--accent-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
         >
           <dl>
+            {project.leadSource && (
+              <DetailRow label="Lead source" valueClassName="font-medium">
+                {formatLeadSourceDisplay(project.leadSource, project.leadSourceDetails)}
+              </DetailRow>
+            )}
             {project.systemCapacity != null && project.systemCapacity !== undefined && (
               <DetailRow label="System Capacity" valueClassName="font-bold text-[color:var(--accent-gold)]">
                 {project.systemCapacity} kW
@@ -714,7 +780,7 @@ const ProjectDetail = () => {
               </>
             )}
           </dl>
-          {project.projectStatus === ProjectStatus.LOST && isLost && (
+          {project.projectStatus === ProjectStatus.LOST && (
             <div className="mt-4 rounded-lg border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] p-3">
               <p className="text-sm text-[color:var(--accent-red)]">
                 <strong>Note:</strong> This project is in Lost stage and cannot be edited. Only Admin can delete it.

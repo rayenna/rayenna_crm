@@ -22,6 +22,24 @@ import { FaUniversity, FaTicketAlt, FaBriefcase } from 'react-icons/fa'
 import { ErrorModal } from '@/components/common/ErrorModal'
 import { projectStatusStagePillClass } from '../components/zenith/zenithDealCardUi'
 import { ZenithSingleSelect } from '../components/zenith/ZenithSingleSelect'
+import {
+  buildProjectExportQueryParams,
+  buildProjectListQueryParams,
+  type PeBucketParam,
+} from '../utils/projectListQuery'
+import {
+  getProjectSegmentPillClasses,
+  PROJECT_SEGMENT_FILTER_OPTIONS,
+  projectSegmentLabels,
+} from '../utils/projectSegment'
+import {
+  getCustomerTypeLegendLabel,
+  getCustomerTypeLegendSwatchClass,
+  getProjectRowCustomerTypeClasses,
+} from '../utils/customerTypeStyles'
+import ProjectsActiveFilterChips from '../components/projects/ProjectsActiveFilterChips'
+import { buildProjectFilterChips } from '../utils/projectFilterChips'
+import { CUSTOMER_TYPE_OPTIONS, type CustomerType } from '../utils/customerRecord'
 
 const PROJECTS_FILTERS_STORAGE_KEY = 'rayenna_projects_filters'
 
@@ -42,7 +60,6 @@ function defaultOrderForProjectsSortKey(key: string): 'asc' | 'desc' {
 const VALID_PAYMENT_STATUS_VALUES = ['FULLY_PAID', 'PARTIAL', 'PENDING', 'NA'] as const
 
 const VALID_PE_BUCKET_VALUES = ['proposal-ready', 'draft', 'not-started', 'rest'] as const
-type PeBucketParam = (typeof VALID_PE_BUCKET_VALUES)[number]
 
 function parsePeBucketFromSearch(search: string): PeBucketParam | null {
   const p = new URLSearchParams(search)
@@ -377,47 +394,6 @@ const PaymentStatusBadge = ({ project, compact = false }: { project: Project; co
   )
 }
 
-// Segment pill: distinct color per segment for quick recognition
-const getSegmentPillClasses = (type: string): string => {
-  switch (type) {
-    case 'RESIDENTIAL_SUBSIDY':
-      return 'border border-red-400/35 bg-[color:color-mix(in srgb,var(--accent-red) 12%, var(--bg-card))] text-[color:var(--text-primary)]'
-    case 'RESIDENTIAL_NON_SUBSIDY':
-      return 'border border-sky-400/35 bg-[color:color-mix(in srgb,var(--accent-blue) 12%, var(--bg-card))] text-[color:var(--text-primary)]'
-    case 'COMMERCIAL_INDUSTRIAL':
-      return 'border border-emerald-400/35 bg-[color:color-mix(in srgb,var(--accent-green) 12%, var(--bg-card))] text-[color:var(--text-primary)]'
-    default:
-      return 'border border-[color:var(--border-default)] bg-[color:var(--bg-input)] text-[color:var(--text-secondary)]'
-  }
-}
-
-/** Full label + short label for laptop-width tables (tooltip keeps full text). */
-function projectSegmentLabels(type: string): { full: string; compact: string } {
-  let full: string
-  switch (type) {
-    case 'RESIDENTIAL_SUBSIDY':
-      full = 'Residential Subsidy'
-      break
-    case 'RESIDENTIAL_NON_SUBSIDY':
-      full = 'Residential - Non Subsidy'
-      break
-    case 'COMMERCIAL_INDUSTRIAL':
-      full = 'Commercial Industrial'
-      break
-    default:
-      full = String(type).replace(/_/g, ' ')
-  }
-  const compact =
-    type === 'RESIDENTIAL_SUBSIDY'
-      ? 'Res. subsidy'
-      : type === 'RESIDENTIAL_NON_SUBSIDY'
-        ? 'Res. non-subs.'
-        : type === 'COMMERCIAL_INDUSTRIAL'
-          ? 'Commercial'
-          : full
-  return { full, compact }
-}
-
 /** Visible data columns for thead/tbody (matches Tailwind lg/md/sm on table cells). Used for empty-state colspan below lg. */
 function getProjectsTableVisibleColumnCount(viewportWidth: number): number {
   if (viewportWidth >= 1024) return 9
@@ -507,6 +483,7 @@ const Projects = () => {
   const [filters, setFilters] = useState(() => ({
     status: (urlInit?.status ?? []) as string[],
     type: (urlInit?.type ?? []) as string[],
+    customerType: [] as string[],
     projectServiceType: [] as string[],
     salespersonId: (urlInit?.salespersonId ?? []) as string[],
     leadSource: (urlInit?.leadSource ?? []) as string[],
@@ -543,6 +520,7 @@ const Projects = () => {
     const quarterFromUrl = searchParams.getAll('quarter')
     const monthFromUrl = searchParams.getAll('month')
     const typeFromUrl = searchParams.getAll('type')
+    const customerTypeFromUrl = searchParams.getAll('customerType')
     const leadSourceFromUrl = searchParams.getAll('leadSource')
     const salespersonIdFromUrl = searchParams.getAll('salespersonId')
     const financingBankFromUrl = searchParams.getAll('financingBank')
@@ -566,6 +544,10 @@ const Projects = () => {
     const hasDateParams = fyFromUrl.length > 0 || quarterFromUrl.length > 0 || monthFromUrl.length > 0
     const peBucketValid = parsePeBucketFromSearch(searchParams.toString())
     const validTypeFromUrl = typeFromUrl.filter((t) => Object.values(ProjectType).includes(t as ProjectType))
+    const validCustomerTypes = CUSTOMER_TYPE_OPTIONS.map((o) => o.value)
+    const validCustomerTypeFromUrl = customerTypeFromUrl.filter((ct) =>
+      validCustomerTypes.includes(ct as CustomerType),
+    )
     const validLeadFromUrl = leadSourceFromUrl.filter((ls) => Object.values(LeadSource).includes(ls as LeadSource))
     const validFinancingFromUrl = financingBankFromUrl.map((b) => b.trim()).filter(Boolean)
     const hasZenithClosedParams =
@@ -573,6 +555,7 @@ const Projects = () => {
       (zenithClosedToUrl != null && zenithClosedToUrl.trim() !== '')
     const hasExtendedTileParams =
       validTypeFromUrl.length > 0 ||
+      validCustomerTypeFromUrl.length > 0 ||
       validLeadFromUrl.length > 0 ||
       salespersonIdFromUrl.length > 0 ||
       validFinancingFromUrl.length > 0 ||
@@ -612,6 +595,7 @@ const Projects = () => {
         ...(validPayment.length > 0 && { paymentStatus: validPayment }),
         ...(availingLoanFromUrl && { availingLoan: true }),
         ...(validTypeFromUrl.length > 0 && { type: validTypeFromUrl }),
+        ...(validCustomerTypeFromUrl.length > 0 && { customerType: validCustomerTypeFromUrl }),
         ...(leadSourceIsNullFromUrl
           ? { leadSourceIsNull: true, leadSource: [] as string[] }
           : validLeadFromUrl.length > 0
@@ -729,6 +713,7 @@ const Projects = () => {
   }, [
     filters.status,
     filters.type,
+    filters.customerType,
     filters.projectServiceType,
     filters.salespersonId,
     filters.leadSource,
@@ -772,6 +757,7 @@ const Projects = () => {
       ...prev,
       status: [...defaultStatusValues],
       type: [],
+      customerType: [],
       projectServiceType: [],
       salespersonId: [],
       leadSource: [],
@@ -813,6 +799,7 @@ const Projects = () => {
     return (
       (statusIsDefault ? 0 : 1) +
       (filters.type.length > 0 ? 1 : 0) +
+      (filters.customerType.length > 0 ? 1 : 0) +
       (filters.projectServiceType.length > 0 ? 1 : 0) +
       (filters.supportTicketStatus.length > 0 ? 1 : 0) +
       (filters.paymentStatus.length > 0 ? 1 : 0) +
@@ -827,11 +814,16 @@ const Projects = () => {
       (filters.leadSourceIsNull ? 1 : 0) +
       (filters.zenithSlice ? 1 : 0) +
       (filters.zenithFyProfit ? 1 : 0) +
-      (filters.panelBrand || filters.inverterBrand || filters.lifecycleSpecsComplete ? 1 : 0)
+      (filters.panelBrand || filters.inverterBrand || filters.lifecycleSpecsComplete ? 1 : 0) +
+      (selectedFYs.length > 0 ? 1 : 0) +
+      (selectedQuarters.length > 0 ? 1 : 0) +
+      (selectedMonths.length > 0 ? 1 : 0) +
+      (filters.sortBy ? 1 : 0)
     )
   }, [
     filters.status,
     filters.type,
+    filters.customerType,
     filters.projectServiceType,
     filters.supportTicketStatus,
     filters.paymentStatus,
@@ -850,8 +842,12 @@ const Projects = () => {
     filters.panelBrand,
     filters.inverterBrand,
     filters.lifecycleSpecsComplete,
+    filters.sortBy,
     defaultStatusValues,
     user?.role,
+    selectedFYs,
+    selectedQuarters,
+    selectedMonths,
   ])
 
   // Fetch sales users for the filter dropdown (only for non-SALES users)
@@ -875,6 +871,7 @@ const Projects = () => {
     searchParams.has('month') ||
     searchParams.has('peBucket') ||
     searchParams.getAll('type').length > 0 ||
+    searchParams.getAll('customerType').length > 0 ||
     searchParams.getAll('leadSource').length > 0 ||
     searchParams.getAll('salespersonId').length > 0 ||
     searchParams.getAll('financingBank').length > 0 ||
@@ -889,7 +886,16 @@ const Projects = () => {
     searchParams.has('inverterBrand') ||
     searchParams.get('lifecycleSpecsComplete') === 'true'
 
-  const { data, isLoading } = useQuery({
+  const listQueryInput = {
+    filters,
+    selectedFYs,
+    selectedQuarters,
+    selectedMonths,
+    page,
+    limit: 25,
+  }
+
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: [
       'projects',
       filters,
@@ -900,40 +906,7 @@ const Projects = () => {
     ],
     enabled: filtersReady,
     queryFn: async () => {
-      const params = new URLSearchParams()
-      // Always use React state as source of truth – URL only hydrates initial state.
-      // This ensures Project Stage filter (and all filters) work when page was opened via a tile.
-      filters.status.forEach((v) => params.append('status', v))
-      filters.type.forEach((v) => params.append('type', v))
-      filters.projectServiceType.forEach((v) => params.append('projectServiceType', v))
-      filters.salespersonId.forEach((v) => params.append('salespersonId', v))
-      filters.leadSource.forEach((v) => params.append('leadSource', v))
-      filters.supportTicketStatus.forEach((v) => params.append('supportTicketStatus', v))
-      filters.paymentStatus.forEach((v) => params.append('paymentStatus', v))
-      selectedFYs.forEach((fy) => params.append('fy', fy))
-      selectedQuarters.forEach((q) => params.append('quarter', q))
-      selectedMonths.forEach((m) => params.append('month', m))
-      if (filters.search) params.append('search', filters.search)
-      if (filters.hasDocuments) params.append('hasDocuments', 'true')
-      if (filters.availingLoan) params.append('availingLoan', 'true')
-      if (filters.peBucket) params.append('peBucket', filters.peBucket)
-      filters.financingBank.forEach((v) => params.append('financingBank', v))
-      if (filters.zenithClosedFrom) params.append('zenithClosedFrom', filters.zenithClosedFrom)
-      if (filters.zenithClosedTo) params.append('zenithClosedTo', filters.zenithClosedTo)
-      if (filters.salespersonUnassigned) params.append('salespersonUnassigned', 'true')
-      if (filters.leadSourceIsNull) params.append('leadSourceIsNull', 'true')
-      if (filters.zenithSlice) params.append('zenithSlice', filters.zenithSlice)
-      if (filters.zenithFyProfit) params.append('zenithFyProfit', 'true')
-      if (filters.lifecycleSpecsComplete) params.append('lifecycleSpecsComplete', 'true')
-      if (filters.panelBrand) params.append('panelBrand', filters.panelBrand)
-      if (filters.inverterBrand) params.append('inverterBrand', filters.inverterBrand)
-      // Deal Health Score sorts server-side (same /api/projects endpoint) so it works across the full dataset.
-      if (filters.sortBy) {
-        params.append('sortBy', filters.sortBy)
-        params.append('sortOrder', filters.sortOrder)
-      }
-      params.append('page', page.toString())
-      params.append('limit', '25')
+      const params = buildProjectListQueryParams(listQueryInput)
       const res = await axiosInstance.get(`/api/projects?${params.toString()}`)
       return res.data
     },
@@ -973,10 +946,16 @@ const Projects = () => {
     return map
   }, [proposalEngineProjects])
 
-  const typeOptions = Object.values(ProjectType).map(type => ({
-    value: type,
-    label: type.replace(/_/g, ' '),
-  }))
+  const typeOptions = PROJECT_SEGMENT_FILTER_OPTIONS
+
+  const customerTypeFilterOptions = useMemo(
+    () =>
+      CUSTOMER_TYPE_OPTIONS.map((o) => ({
+        value: o.value,
+        label: o.value === 'APARTMENT' ? 'Apartment' : o.label,
+      })),
+    [],
+  )
 
   const projectServiceTypeOptions = Object.values(ProjectServiceType).map(serviceType => ({
     value: serviceType,
@@ -998,6 +977,54 @@ const Projects = () => {
     value: salesUser.id,
     label: salesUser.name,
   })) || []
+
+  const pipelineFilterLabel =
+    user?.role === UserRole.OPERATIONS ? 'Confirmed pipeline' : 'Pipeline'
+
+  const activeFilterChips = useMemo(
+    () =>
+      buildProjectFilterChips({
+        filters,
+        searchInput,
+        selectedFYs,
+        selectedQuarters,
+        selectedMonths,
+        defaultStatusValues,
+        statusOptions,
+        salesUserOptions,
+        userRole: user?.role,
+        pipelineLabel: pipelineFilterLabel,
+        onPatchFilters: (patch) => {
+          setPage(1)
+          setFilters((prev) => ({ ...prev, ...patch }))
+        },
+        onClearSearch: () => setSearchInput(''),
+        onSetSelectedFYs: (fys) => {
+          setPage(1)
+          setSelectedFYs(fys)
+        },
+        onSetSelectedQuarters: (quarters) => {
+          setPage(1)
+          setSelectedQuarters(quarters)
+        },
+        onSetSelectedMonths: (months) => {
+          setPage(1)
+          setSelectedMonths(months)
+        },
+      }),
+    [
+      filters,
+      searchInput,
+      selectedFYs,
+      selectedQuarters,
+      selectedMonths,
+      defaultStatusValues,
+      statusOptions,
+      salesUserOptions,
+      user?.role,
+      pipelineFilterLabel,
+    ],
+  )
 
   // Lead Source filter options - labels match ProjectDetail display
   const leadSourceOptions = [
@@ -1043,36 +1070,13 @@ const Projects = () => {
     if (!pendingExportType) return
 
     try {
-      const params = new URLSearchParams()
-      
-      // Add all current filters
-      filters.status.forEach((value) => params.append('status', value))
-      filters.type.forEach((value) => params.append('type', value))
-      filters.projectServiceType.forEach((value) => params.append('projectServiceType', value))
-      filters.salespersonId.forEach((value) => params.append('salespersonId', value))
-      filters.leadSource.forEach((value) => params.append('leadSource', value))
-      filters.paymentStatus.forEach((value) => params.append('paymentStatus', value))
-      if (filters.search) params.append('search', filters.search)
-      if (filters.hasDocuments) params.append('hasDocuments', 'true')
-      if (filters.availingLoan) params.append('availingLoan', 'true')
-      filters.financingBank.forEach((v) => params.append('financingBank', v))
-      if (filters.zenithClosedFrom) params.append('zenithClosedFrom', filters.zenithClosedFrom)
-      if (filters.zenithClosedTo) params.append('zenithClosedTo', filters.zenithClosedTo)
-      if (filters.salespersonUnassigned) params.append('salespersonUnassigned', 'true')
-      if (filters.leadSourceIsNull) params.append('leadSourceIsNull', 'true')
-      if (filters.zenithSlice) params.append('zenithSlice', filters.zenithSlice)
-      if (filters.zenithFyProfit) params.append('zenithFyProfit', 'true')
-      if (filters.lifecycleSpecsComplete) params.append('lifecycleSpecsComplete', 'true')
-      if (filters.panelBrand) params.append('panelBrand', filters.panelBrand)
-      if (filters.inverterBrand) params.append('inverterBrand', filters.inverterBrand)
-      if (filters.sortBy) {
-        params.append('sortBy', filters.sortBy)
-        params.append('sortOrder', filters.sortOrder)
-      }
-      selectedFYs.forEach((fy) => params.append('fy', fy))
-      selectedQuarters.forEach((q) => params.append('quarter', q))
-      selectedMonths.forEach((m) => params.append('month', m))
-      
+      const params = buildProjectExportQueryParams({
+        filters,
+        selectedFYs,
+        selectedQuarters,
+        selectedMonths,
+      })
+
       const endpoint = pendingExportType === 'excel' 
         ? `/api/projects/export/excel` 
         : `/api/projects/export/csv`
@@ -1168,7 +1172,27 @@ const Projects = () => {
     'group flex min-h-[2rem] w-full min-w-0 flex-nowrap items-center gap-2 overflow-visible rounded-md px-1.5 py-1 text-left transition-colors hover:bg-[color:var(--bg-table-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] focus-visible:ring-offset-1 focus-visible:ring-offset-[color:var(--bg-page)] sm:min-h-[2.5rem] sm:gap-2 sm:px-2 sm:py-1.5'
   const sortLabelLeft =
     'min-w-0 flex-1 basis-0 whitespace-normal break-words text-left text-[11px] font-bold uppercase leading-snug tracking-wide text-[color:var(--text-secondary)] sm:text-xs sm:leading-tight sm:tracking-wider'
-  if (!filtersReady || isLoading) {
+  const listErrorPanel = (
+    <div
+      className="mt-4 rounded-2xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] px-5 py-8 text-center shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]"
+      role="alert"
+    >
+      <p className="text-sm font-semibold text-[color:var(--accent-red)]">Could not load projects</p>
+      <p className="mx-auto mt-2 max-w-md text-xs text-[color:var(--text-secondary)]">
+        {getFriendlyApiErrorMessage(error)}
+      </p>
+      <button
+        type="button"
+        onClick={() => void refetch()}
+        disabled={isFetching}
+        className="mt-4 inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl bg-[color:var(--accent-gold)] px-5 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] shadow-lg transition-all hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {isFetching ? 'Retrying…' : 'Try again'}
+      </button>
+    </div>
+  )
+
+  if (!filtersReady || (isLoading && !data)) {
     return shell(
       <div className="max-w-full min-w-0 overflow-x-hidden px-0 py-4 sm:py-6">
         <div className="mb-4 h-8 w-48 animate-pulse rounded-lg bg-[color:var(--bg-ticker)]" />
@@ -1252,6 +1276,11 @@ const Projects = () => {
             </div>
           </div>
 
+          <ProjectsActiveFilterChips
+            chips={activeFilterChips}
+            showExportHint={user?.role === UserRole.ADMIN}
+          />
+
           {/* Filter By + Sort By + export — hidden until Show Filters */}
           <div
             id="projects-more-filters"
@@ -1261,38 +1290,43 @@ const Projects = () => {
           >
             <div className={`${showMoreFilters ? 'pointer-events-auto' : 'pointer-events-none'} pt-2 space-y-2 sm:space-y-3`}>
               <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Filter By</label>
-              {/* Row 1: FY, Quarter, Month (2/3 width), Sales User (1/3 width = same as Project Types) */}
-              <div className="pt-1 flex flex-col lg:flex-row lg:items-start gap-2 sm:gap-3">
-                <div className="w-full lg:w-2/3">
-                  <DashboardFilters
-                    availableFYs={data?.availableFYs ?? []}
-                    selectedFYs={selectedFYs}
-                    selectedQuarters={selectedQuarters}
-                    selectedMonths={selectedMonths}
-                    onFYChange={setSelectedFYs}
-                    onQuarterChange={setSelectedQuarters}
-                    onMonthChange={setSelectedMonths}
+              {/* Uniform grid: 1 col mobile, 2 cols tablet, 3 cols laptop+ */}
+              <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
+                <DashboardFilters
+                  availableFYs={data?.availableFYs ?? []}
+                  selectedFYs={selectedFYs}
+                  selectedQuarters={selectedQuarters}
+                  selectedMonths={selectedMonths}
+                  onFYChange={setSelectedFYs}
+                  onQuarterChange={setSelectedQuarters}
+                  onMonthChange={setSelectedMonths}
+                  compact
+                  gridLayout
+                  variant="zenith"
+                />
+                {user?.role !== UserRole.SALES && (
+                  <MultiSelect
+                    className="min-w-0 w-full"
+                    options={salesUserOptions}
+                    selectedValues={filters.salespersonId}
+                    onChange={(values) => setFilters({ ...filters, salespersonId: values })}
+                    placeholder="Sales users"
                     compact
                     variant="zenith"
                   />
-                </div>
-                {user?.role !== UserRole.SALES && (
-                  <div className="w-full lg:w-1/3">
-                    <MultiSelect
-                      options={salesUserOptions}
-                      selectedValues={filters.salespersonId}
-                      onChange={(values) => setFilters({ ...filters, salespersonId: values })}
-                      placeholder="Sales Users"
-                      compact
-                      variant="zenith"
-                    />
-                  </div>
                 )}
-              </div>
-
-              {/* Filters: 2 cols on mobile landscape (sm), 3 cols on laptop (lg) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                 <MultiSelect
+                  className="min-w-0 w-full"
+                  options={customerTypeFilterOptions}
+                  selectedValues={filters.customerType}
+                  onChange={(values) => setFilters({ ...filters, customerType: values })}
+                  placeholder="Customer type"
+                  multiSelectedLabel="Types"
+                  compact
+                  variant="zenith"
+                />
+                <MultiSelect
+                  className="min-w-0 w-full"
                   options={statusOptions}
                   selectedValues={filters.status}
                   onChange={handleStatusChange}
@@ -1302,6 +1336,7 @@ const Projects = () => {
                   variant="zenith"
                 />
                 <MultiSelect
+                  className="min-w-0 w-full"
                   options={typeOptions}
                   selectedValues={filters.type}
                   onChange={(values) => setFilters({ ...filters, type: values })}
@@ -1310,6 +1345,7 @@ const Projects = () => {
                   variant="zenith"
                 />
                 <MultiSelect
+                  className="min-w-0 w-full"
                   options={projectServiceTypeOptions}
                   selectedValues={filters.projectServiceType}
                   onChange={(values) => setFilters({ ...filters, projectServiceType: values })}
@@ -1318,6 +1354,7 @@ const Projects = () => {
                   variant="zenith"
                 />
                 <MultiSelect
+                  className="min-w-0 w-full"
                   options={supportTicketStatusOptions}
                   selectedValues={filters.supportTicketStatus}
                   onChange={(values) => setFilters({ ...filters, supportTicketStatus: values })}
@@ -1327,6 +1364,7 @@ const Projects = () => {
                 />
                 {paymentStatusOptions.length > 0 && (
                   <MultiSelect
+                    className="min-w-0 w-full"
                     options={paymentStatusOptions}
                     selectedValues={filters.paymentStatus}
                     onChange={(values) => setFilters({ ...filters, paymentStatus: values })}
@@ -1336,6 +1374,7 @@ const Projects = () => {
                   />
                 )}
                 <MultiSelect
+                  className="min-w-0 w-full"
                   options={leadSourceOptions}
                   selectedValues={filters.leadSource}
                   onChange={(values) => setFilters({ ...filters, leadSource: values })}
@@ -1345,32 +1384,35 @@ const Projects = () => {
                 />
               </div>
 
-              {/* Has Artifacts checkbox */}
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="inline-flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.hasDocuments}
-                    onChange={(e) => setFilters(prev => ({ ...prev, hasDocuments: e.target.checked }))}
-                    className="h-4 w-4 rounded border-[color:var(--border-input)] bg-[color:var(--bg-input)] accent-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
-                  />
-                  <span className="text-sm text-[color:var(--text-primary)]">Has Artifacts</span>
-                </label>
-                <span className="text-xs text-[color:var(--text-secondary)]">(only projects with at least one attachment)</span>
-              </div>
-
-              {/* Availing Loan checkbox */}
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="inline-flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.availingLoan}
-                    onChange={(e) => setFilters(prev => ({ ...prev, availingLoan: e.target.checked }))}
-                    className="h-4 w-4 rounded border-[color:var(--border-input)] bg-[color:var(--bg-input)] accent-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
-                  />
-                  <span className="text-sm text-[color:var(--text-primary)]">Availing Loan</span>
-                </label>
-                <span className="text-xs text-[color:var(--text-secondary)]">(only projects where Availing Loan/Financing is Yes)</span>
+              <div className="grid grid-cols-1 gap-2 pt-1 lg:grid-cols-2 lg:gap-x-6">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                  <label className="inline-flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={filters.hasDocuments}
+                      onChange={(e) => setFilters((prev) => ({ ...prev, hasDocuments: e.target.checked }))}
+                      className="h-4 w-4 rounded border-[color:var(--border-input)] bg-[color:var(--bg-input)] accent-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
+                    />
+                    <span className="text-sm text-[color:var(--text-primary)]">Has Artifacts</span>
+                  </label>
+                  <span className="text-xs text-[color:var(--text-secondary)]">
+                    (only projects with at least one attachment)
+                  </span>
+                </div>
+                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                  <label className="inline-flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={filters.availingLoan}
+                      onChange={(e) => setFilters((prev) => ({ ...prev, availingLoan: e.target.checked }))}
+                      className="h-4 w-4 rounded border-[color:var(--border-input)] bg-[color:var(--bg-input)] accent-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
+                    />
+                    <span className="text-sm text-[color:var(--text-primary)]">Availing Loan</span>
+                  </label>
+                  <span className="text-xs text-[color:var(--text-secondary)]">
+                    (only projects where Availing Loan/Financing is Yes)
+                  </span>
+                </div>
               </div>
 
               <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Sort By</label>
@@ -1455,7 +1497,8 @@ const Projects = () => {
 
               {/* Export buttons - Only visible to Admin users */}
               {hasRole([UserRole.ADMIN]) && (
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                  <div className="flex gap-2">
                   <button
                     onClick={() => handleExportClick('excel')}
                     className="flex items-center gap-2 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2 text-sm font-extrabold text-[color:var(--text-inverse)] shadow-[var(--shadow-card)] transition-all hover:opacity-95 active:scale-[0.99]"
@@ -1474,6 +1517,10 @@ const Projects = () => {
                     </svg>
                     Export to CSV
                   </button>
+                  </div>
+                  <p className="text-xs text-[color:var(--text-muted)] sm:max-w-md">
+                    Export uses the same filters, search, and sort as this list (including chips above).
+                  </p>
                 </div>
               )}
 
@@ -1510,15 +1557,19 @@ Do you want to continue?`}
         ]}
       />
 
+      {isError ? (
+        listErrorPanel
+      ) : (
+        <>
       {/* Results summary */}
       <div className="mb-2 mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2 text-sm text-[color:var(--text-secondary)]">
           <span className="font-semibold text-[color:var(--text-primary)]">
             Showing {displayProjects.length} of {data?.pagination?.total ?? displayProjects.length}
           </span>
-          {(Boolean(filters.search) || moreFiltersActiveCount > 0) && (
+          {activeFilterChips.length > 0 && (
             <span className="inline-flex items-center rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-card)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--text-secondary)]">
-              {moreFiltersActiveCount + (filters.search ? 1 : 0)} active
+              {activeFilterChips.length} active
             </span>
           )}
         </div>
@@ -1850,7 +1901,7 @@ Do you want to continue?`}
                 <tr
                   key={project.id}
                   onClick={() => navigate(`/projects/${project.id}`)}
-                  className="group cursor-pointer transition-colors duration-150 ease-out odd:bg-[color:var(--bg-table-alt)] even:bg-[color:var(--bg-card)] hover:bg-[color:var(--bg-table-hover)]"
+                  className={`group cursor-pointer transition-colors duration-150 ease-out ${getProjectRowCustomerTypeClasses(project.customer?.customerType)}`}
                 >
                   <td className="min-w-0 px-2 py-2 sm:px-2.5 lg:py-1.5 lg:pl-2 lg:pr-2">
                     <p className="min-w-0 truncate text-sm font-semibold text-[color:var(--text-primary)] transition-colors group-hover:text-[color:var(--accent-gold)] lg:truncate-none lg:line-clamp-2 lg:leading-snug lg:break-words">
@@ -1894,7 +1945,7 @@ Do you want to continue?`}
                       return (
                         <span
                           title={seg.full}
-                          className={`inline-flex max-w-full items-center truncate rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight lg:text-[11px] ${getSegmentPillClasses(project.type)}`}
+                          className={`inline-flex max-w-full items-center truncate rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight lg:text-[11px] ${getProjectSegmentPillClasses(project.type)}`}
                         >
                           <span className="lg:hidden">{seg.full}</span>
                           <span className="hidden lg:inline">{seg.compact}</span>
@@ -2075,6 +2126,21 @@ Do you want to continue?`}
           Legend
         </p>
         <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2 text-[11px] leading-relaxed text-[color:var(--text-secondary)] sm:grid-cols-3 sm:gap-y-1.5 sm:text-xs lg:grid-cols-6">
+          <span className="col-span-2 inline-flex items-center gap-1.5 font-semibold text-[color:var(--text-primary)] sm:col-span-3 lg:col-span-6">
+            Row colour by customer type
+          </span>
+          {(['RESIDENTIAL', 'APARTMENT', 'COMMERCIAL'] as CustomerType[]).map((ct) => (
+            <span key={ct} className="inline-flex items-center gap-1.5 shrink-0">
+              <span
+                className={`inline-block h-3 w-8 rounded-sm shadow-sm ${getCustomerTypeLegendSwatchClass(ct)}`}
+                aria-hidden
+              />
+              {getCustomerTypeLegendLabel(ct)}
+            </span>
+          ))}
+          <span className="col-span-2 inline-flex items-center gap-1.5 font-semibold text-[color:var(--text-primary)] sm:col-span-3 lg:col-span-6 lg:mt-1">
+            Icons &amp; subtotals
+          </span>
           <span className="inline-flex items-center gap-1.5 shrink-0">
             <span className="text-[color:var(--accent-teal)]">
               <FiPaperclip className="w-3.5 h-3.5" strokeWidth={2} />
@@ -2107,6 +2173,8 @@ Do you want to continue?`}
           </span>
         </div>
       </div>
+        </>
+      )}
       </div>
     </>
   )

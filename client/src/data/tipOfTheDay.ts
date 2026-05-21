@@ -82,7 +82,7 @@ export const TIPS: string[] = [
   'Management Quick Access uses three rows: four funnel tiles, four execution tiles (including Subsidy Credited), then Payment Status, Availing Loan, and Proposal Engine in three equal columns on desktop.',
   'Year-on-Year tile on Management dashboard compares capacity, pipeline, revenue, and profit to the same period last year.',
   'Management role is read-only: you can view all dashboards, projects, and reports but cannot edit records.',
-  'Use Revenue by Sales Team and Pipeline by Customer Segment on the Management dashboard to spot trends and gaps.',
+  'Use Revenue by Sales Team and Pipeline by Customer Type charts on the Management dashboard to spot trends and gaps.',
   // Proposal Engine
   'Use the Proposals (New) button on Project Detail to open Proposal Engine with your CRM login and link proposals to that project.',
   'A project is marked Proposal Ready only when all four artifacts are saved in Proposal Engine: Costing Sheet, BOM, ROI, and Proposal.',

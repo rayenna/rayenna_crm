@@ -63,10 +63,10 @@ A compact notice **Sales**, **Operations**, and **Admin** may see **above** the 
 ## Customers
 
 ### How do I create a customer?
-Go to **Customers** (Customer Master) and click **New Customer**, or use **Ctrl+Shift+M** / **⌘⇧M**, or open **`/customers?new=1`** after login (when your role allows). Fill in name (or first/last for individuals), address, at least one contact number, and other optional details. **Sales**, **Management**, and **Admin** can create customers; Sales see **My Customers** and **All Customers** (view-only for others’ customers).
+Go to **Customers** (Customer Master) and click **New Customer**, or use **Ctrl+Shift+N** / **⌘⇧N**, or open **`/customers?new=1`** after login (when your role allows). Choose **Customer type** (Residential, Apartment, or Commercial), then fill in the matching name fields, address, and contacts. **Residential** uses main-form phone numbers (at least one required). **Apartment** and **Commercial** use a **Contacts** section (at least one person with a phone). **Sales**, **Management**, and **Admin** can create customers; Sales use **My Customers** / **All Customers** to filter the list.
 
 ### Who can edit or delete customers?
-Sales can edit their own customers (My Customers); Admin can edit any customer and delete customers who have no projects. Management can edit and change salesperson assignment but cannot create or delete.
+**Admin** and **Management** can edit any customer. **Sales** can edit customers **assigned to them** (open the customer detail page and **Edit** — you do not need to stay on **My Customers** if you are the salesperson). **Admin** can delete customers with **no projects**. **Management** can assign or change salesperson but cannot delete.
 
 ## Projects
 

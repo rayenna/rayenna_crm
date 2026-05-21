@@ -12,6 +12,7 @@ export function buildProjectsUrl(
     peBucket?: PeDashboardBucket
     leadSource?: string[]
     type?: string[]
+    customerType?: string[]
     salespersonId?: string[]
     financingBank?: string[]
     zenithClosedFrom?: string
@@ -40,6 +41,7 @@ export function buildProjectsUrl(
   if (params.peBucket) search.append('peBucket', params.peBucket)
   params.leadSource?.forEach((v) => search.append('leadSource', v))
   params.type?.forEach((v) => search.append('type', v))
+  params.customerType?.forEach((v) => search.append('customerType', v))
   params.salespersonId?.forEach((v) => search.append('salespersonId', v))
   params.financingBank?.forEach((v) => search.append('financingBank', v))
   if (params.zenithClosedFrom) search.append('zenithClosedFrom', params.zenithClosedFrom)

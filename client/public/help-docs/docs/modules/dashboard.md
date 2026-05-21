@@ -363,7 +363,7 @@ Each user role sees a customized dashboard tailored to their responsibilities an
 
 **What They See**:
 - **KPIs**: Total Leads, Total Capacity, Total Revenue, Total Pipeline, Approved Projects, Site Survey Stage, Proposal Stage, At Risk
-- **Charts**: Project Value and Profit by FY, Revenue by Lead Source, Pipeline by Lead Source, Project Value by Segment, Pipeline by Customer Segment, Customer Profitability (word cloud / Top 10), Projects Availing Loans by Bank, **Projects by panel brand** and **Projects by inverter brand** (lifecycle cohort — both brands required)
+- **Charts**: Project Value and Profit by FY, Revenue by Lead Source, Pipeline by Lead Source, Revenue by Customer Type, Pipeline by Customer Type, Customer Profitability (word cloud / Top 10), Projects Availing Loans by Bank, **Projects by panel brand** and **Projects by inverter brand** (lifecycle cohort — both brands required)
 - **Data Scope**: Only their own projects and leads
 - **Filters**: Financial Year, Quarter, and Month filters
 
@@ -380,7 +380,7 @@ Each user role sees a customized dashboard tailored to their responsibilities an
 
 **What They See**:
 - **KPIs**: Pending Installation, Submitted for Subsidy, Subsidy Credited
-- **Charts**: Project Value and Profit by FY, Revenue by Sales Team, Project Value by Segment, **Projects by panel brand** and **Projects by inverter brand**
+- **Charts**: Project Value and Profit by FY, Revenue by Sales Team, Revenue by Customer Type, **Projects by panel brand** and **Projects by inverter brand**
 - **Additional**: Pending Subsidy list with customer names and days pending
 - **Data Scope**: All projects (company-wide)
 - **Filters**: Financial Year, Quarter, and Month filters
@@ -417,7 +417,7 @@ Each user role sees a customized dashboard tailored to their responsibilities an
 
 **What They See**:
 - **KPIs**: Total Leads, Total Capacity, Total Revenue, Total Pipeline, Total Profit, Pending Installation, Pending Subsidy, Subsidy Credited
-- **Charts**: Project Value and Profit by FY, Revenue by Lead Source, Pipeline by Lead Source, Revenue by Sales Team, Sales Team Performance (column/treemap), Project Value by Segment, Pipeline by Customer Segment, Customer Profitability Word Cloud, Projects Availing Loans by Bank, **Projects by panel brand** and **Projects by inverter brand**
+- **Charts**: Project Value and Profit by FY, Revenue by Lead Source, Pipeline by Lead Source, Revenue by Sales Team, Sales Team Performance (column/treemap), Revenue by Customer Type, Pipeline by Customer Type, Customer Profitability Word Cloud, Projects Availing Loans by Bank, **Projects by panel brand** and **Projects by inverter brand**
 - **Data Scope**: All projects and all users (company-wide)
 - **Filters**: Financial Year, Quarter, and Month filters
 
@@ -645,11 +645,11 @@ This uses the **same slice ideas** as **Zenith** where both exist; the differenc
 - **Usage**: Track revenue and profitability trends
 - **Available**: All dashboards
 
-**Project Value by Segment**:
+**Revenue by Customer Type**:
 - **Type**: Pie chart
-- **Shows**: Distribution of project value by segment
-- **Usage**: Understand segment contribution
-- **Available**: Sales, Management dashboards
+- **Shows**: Distribution of order value by **customer type** (Residential, Apartment, Commercial from Customer Master)
+- **Usage**: Understand which customer types drive revenue (not Subsidy/Non-Subsidy project segment)
+- **Available**: Sales, Management, Operations, and Finance dashboards (role layout varies)
 
 **Customer Profitability Word Cloud**:
 - **Type**: Word cloud visualization

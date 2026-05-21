@@ -265,7 +265,7 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths, initial
         </div>
       </div>
 
-      {/* Row 3: Revenue by Customer Segment, Pipeline by Customer Segment */}
+      {/* Row 3: Revenue by Customer Type, Pipeline by Customer Type */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
         <div className="w-full min-h-[360px] flex flex-col min-w-0">
           <ProjectValuePieChart 

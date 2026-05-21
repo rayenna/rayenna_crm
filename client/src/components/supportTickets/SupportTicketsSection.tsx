@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
-import { SupportTicket, SupportTicketStatus, UserRole, ProjectStatus } from '../../types'
+import { SupportTicket, SupportTicketStatus, ProjectStatus } from '../../types'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import CreateTicketModal from './CreateTicketModal'
-import ViewTicketModal from './ViewTicketModal'
+import TicketDetailDrawer from './TicketDetailDrawer'
 import { ErrorModal } from '@/components/common/ErrorModal'
+import { canDeleteSupportTickets, canManageSupportTickets } from '../../utils/supportTicketPermissions'
 import {
   stPrimaryBtn,
   stTableThCls,
@@ -21,18 +22,22 @@ interface SupportTicketsSectionProps {
   projectStatus?: ProjectStatus
 }
 
+const touchActionBtn =
+  'inline-flex min-h-[44px] touch-manipulation flex-1 items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50'
+
 const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSectionProps) => {
   const { hasRole } = useAuth()
   const queryClient = useQueryClient()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null)
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [confirmState, setConfirmState] = useState<{ action: 'close' | 'delete'; ticket: SupportTicket } | null>(null)
 
-  const canManageTickets = hasRole([UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS])
-  const isAdmin = hasRole([UserRole.ADMIN])
+  const canManageTickets = canManageSupportTickets(hasRole)
+  const isAdmin = canDeleteSupportTickets(hasRole)
   const isProjectLost = projectStatus === ProjectStatus.LOST
 
-  const { data: tickets, isLoading } = useQuery({
+  const { data: tickets, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['support-tickets', projectId],
     queryFn: async () => {
       const res = await axiosInstance.get(`/api/support-tickets/project/${projectId}`)
@@ -49,9 +54,10 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
       toast.success('Ticket closed successfully')
       queryClient.invalidateQueries({ queryKey: ['support-tickets', projectId] })
       queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['support-tickets-dashboard'] })
     },
-    onError: (error: unknown) => {
-      toast.error(getFriendlyApiErrorMessage(error))
+    onError: (err: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(err))
     },
   })
 
@@ -63,11 +69,22 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
       toast.success('Ticket deleted successfully')
       queryClient.invalidateQueries({ queryKey: ['support-tickets', projectId] })
       queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['support-tickets-dashboard'] })
     },
-    onError: (error: unknown) => {
-      toast.error(getFriendlyApiErrorMessage(error))
+    onError: (err: unknown) => {
+      toast.error(getFriendlyApiErrorMessage(err))
     },
   })
+
+  const handleViewTicket = async (ticket: SupportTicket) => {
+    try {
+      const res = await axiosInstance.get(`/api/support-tickets/${ticket.id}`)
+      setSelectedTicket(res.data as SupportTicket)
+      setIsDrawerOpen(true)
+    } catch (err: unknown) {
+      toast.error(getFriendlyApiErrorMessage(err))
+    }
+  }
 
   const handleCloseTicket = (ticket: SupportTicket) => {
     setConfirmState({ action: 'close', ticket })
@@ -85,6 +102,12 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
       deleteTicketMutation.mutate(confirmState.ticket.id)
     }
     setConfirmState(null)
+  }
+
+  const handleDrawerRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['support-tickets', projectId] })
+    queryClient.invalidateQueries({ queryKey: ['projects'] })
+    queryClient.invalidateQueries({ queryKey: ['support-tickets-dashboard'] })
   }
 
   return (
@@ -117,8 +140,8 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
               disabled={isProjectLost}
               className={
                 isProjectLost
-                  ? 'cursor-not-allowed rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-semibold text-[color:var(--text-muted)]'
-                  : stPrimaryBtn
+                  ? 'inline-flex min-h-[44px] touch-manipulation cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-semibold text-[color:var(--text-muted)]'
+                  : `${stPrimaryBtn} min-h-[44px] touch-manipulation`
               }
               title={isProjectLost ? 'Cannot create tickets for projects in Lost stage' : 'Create Ticket'}
             >
@@ -130,7 +153,23 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
           )}
         </div>
 
-        {isLoading ? (
+        {isError ? (
+          <div
+            className="rounded-xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] px-4 py-6 text-center"
+            role="alert"
+          >
+            <p className="text-sm font-semibold text-[color:var(--accent-red)]">Could not load tickets</p>
+            <p className="mt-2 text-xs text-[color:var(--text-secondary)]">{getFriendlyApiErrorMessage(error)}</p>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              disabled={isFetching}
+              className="mt-4 inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl bg-[color:var(--accent-gold)] px-4 py-2 text-sm font-bold text-[color:var(--text-inverse)] disabled:opacity-50"
+            >
+              {isFetching ? 'Retrying…' : 'Try again'}
+            </button>
+          </div>
+        ) : isLoading ? (
           <div className="py-10 text-center text-sm text-[color:var(--text-muted)]">Loading tickets…</div>
         ) : !tickets || tickets.length === 0 ? (
           <div className="py-10 text-center">
@@ -148,69 +187,50 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
             )}
           </div>
         ) : (
-          <div className="zenith-scroll-x -mx-1 overflow-x-auto rounded-xl border border-[color:var(--border-default)] ring-1 ring-[color:var(--border-default)]">
-            <table className="min-w-full divide-y divide-[color:var(--border-default)]">
-              <thead className="bg-[color:var(--zenith-table-header-bg)]">
-                <tr>
-                  <th className={stTableThCls}>
-                    Ticket Number
-                  </th>
-                  <th className={stTableThCls}>
-                    Title
-                  </th>
-                  <th className={stTableThCls}>
-                    Status
-                  </th>
-                  <th className={stTableThCls}>
-                    Created Date
-                  </th>
-                  <th className={stTableThCls}>
-                    Closed Date
-                  </th>
-                  <th className={stTableThCls}>
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[color:var(--border-default)]">
-                {tickets.map((ticket) => (
-                  <tr key={ticket.id} className="transition-colors hover:bg-[color:var(--bg-table-hover)]">
-                    <td className="whitespace-nowrap px-4 py-3.5">
-                      <span className="text-sm font-semibold text-[color:var(--text-primary)]">{ticket.ticketNumber}</span>
-                    </td>
-                    <td className="max-w-[14rem] px-4 py-3.5 sm:max-w-xs">
-                      <div className="truncate text-sm text-[color:var(--text-secondary)]" title={ticket.title}>
-                        {ticket.title}
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3.5">
-                      <span className={supportTicketStatusPillClass(ticket.status)}>
-                        {supportTicketStatusLabel(ticket.status)}
+          <>
+            <ul className="space-y-3 md:hidden" aria-label="Support tickets for this project">
+              {tickets.map((ticket) => (
+                <li
+                  key={ticket.id}
+                  className="rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-input)] p-4 shadow-inner ring-1 ring-[color:var(--border-default)]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm font-semibold text-[color:var(--accent-teal)]">{ticket.ticketNumber}</p>
+                    <span className={`inline-flex max-w-[55%] shrink-0 items-center truncate ${supportTicketStatusPillClass(ticket.status)}`}>
+                      {supportTicketStatusLabel(ticket.status)}
+                    </span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-sm font-medium text-[color:var(--text-primary)]" title={ticket.title}>
+                    {ticket.title}
+                  </p>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[color:var(--text-secondary)]">
+                    <div>
+                      <span className="block text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Created</span>
+                      <span className="tabular-nums">{format(new Date(ticket.createdAt), 'MMM dd, yyyy')}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Closed</span>
+                      <span className="tabular-nums">
+                        {ticket.closedAt ? format(new Date(ticket.closedAt), 'MMM dd, yyyy') : '—'}
                       </span>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3.5 text-sm text-[color:var(--text-muted)]">
-                      {format(new Date(ticket.createdAt), 'MMM dd, yyyy')}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3.5 text-sm text-[color:var(--text-muted)]">
-                      {ticket.closedAt ? format(new Date(ticket.closedAt), 'MMM dd, yyyy') : '—'}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3.5">
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-semibold">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedTicket(ticket)}
-                          className="text-[color:var(--accent-gold)] hover:opacity-90 hover:underline"
-                          title="View ticket"
-                        >
-                          View
-                        </button>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleViewTicket(ticket)}
+                      className="inline-flex min-h-[44px] w-full touch-manipulation items-center justify-center rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-4 py-2.5 text-sm font-semibold text-[color:var(--accent-gold)] hover:opacity-95"
+                    >
+                      View ticket
+                    </button>
+                    {(canManageTickets && ticket.status !== SupportTicketStatus.CLOSED) || isAdmin ? (
+                      <div className="flex gap-2">
                         {canManageTickets && ticket.status !== SupportTicketStatus.CLOSED && (
                           <button
                             type="button"
                             onClick={() => handleCloseTicket(ticket)}
-                            className="text-[color:var(--accent-gold)] hover:underline"
-                            title="Close ticket"
                             disabled={closeTicketMutation.isPending}
+                            className={`${touchActionBtn} border border-[color:var(--accent-gold-border)] bg-[color:var(--bg-card)] text-[color:var(--accent-gold)] hover:bg-[color:var(--bg-card-hover)]`}
                           >
                             Close
                           </button>
@@ -219,20 +239,93 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
                           <button
                             type="button"
                             onClick={() => handleDeleteTicket(ticket)}
-                            className="text-[color:var(--accent-red)] hover:opacity-90 hover:underline"
-                            title="Delete ticket (Admin only)"
                             disabled={deleteTicketMutation.isPending}
+                            className={`${touchActionBtn} border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] text-[color:var(--accent-red)] hover:opacity-95`}
                           >
                             Delete
                           </button>
                         )}
                       </div>
-                    </td>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            <div className="zenith-scroll-x -mx-1 hidden overflow-x-auto rounded-xl border border-[color:var(--border-default)] ring-1 ring-[color:var(--border-default)] md:block">
+              <table className="min-w-full divide-y divide-[color:var(--border-default)]">
+                <thead className="bg-[color:var(--zenith-table-header-bg)]">
+                  <tr>
+                    <th className={stTableThCls}>Ticket Number</th>
+                    <th className={stTableThCls}>Title</th>
+                    <th className={stTableThCls}>Status</th>
+                    <th className={stTableThCls}>Created Date</th>
+                    <th className={stTableThCls}>Closed Date</th>
+                    <th className={stTableThCls}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-[color:var(--border-default)]">
+                  {tickets.map((ticket) => (
+                    <tr key={ticket.id} className="transition-colors hover:bg-[color:var(--bg-table-hover)]">
+                      <td className="whitespace-nowrap px-4 py-3.5">
+                        <span className="text-sm font-semibold text-[color:var(--text-primary)]">{ticket.ticketNumber}</span>
+                      </td>
+                      <td className="max-w-[14rem] px-4 py-3.5 sm:max-w-xs">
+                        <div className="truncate text-sm text-[color:var(--text-secondary)]" title={ticket.title}>
+                          {ticket.title}
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3.5">
+                        <span className={supportTicketStatusPillClass(ticket.status)}>
+                          {supportTicketStatusLabel(ticket.status)}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-sm text-[color:var(--text-muted)]">
+                        {format(new Date(ticket.createdAt), 'MMM dd, yyyy')}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-sm text-[color:var(--text-muted)]">
+                        {ticket.closedAt ? format(new Date(ticket.closedAt), 'MMM dd, yyyy') : '—'}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3.5">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-semibold">
+                          <button
+                            type="button"
+                            onClick={() => void handleViewTicket(ticket)}
+                            className="text-[color:var(--accent-gold)] hover:opacity-90 hover:underline"
+                            title="View ticket"
+                          >
+                            View
+                          </button>
+                          {canManageTickets && ticket.status !== SupportTicketStatus.CLOSED && (
+                            <button
+                              type="button"
+                              onClick={() => handleCloseTicket(ticket)}
+                              className="text-[color:var(--accent-gold)] hover:underline"
+                              title="Close ticket"
+                              disabled={closeTicketMutation.isPending}
+                            >
+                              Close
+                            </button>
+                          )}
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteTicket(ticket)}
+                              className="text-[color:var(--accent-red)] hover:opacity-90 hover:underline"
+                              title="Delete ticket (Admin only)"
+                              disabled={deleteTicketMutation.isPending}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </section>
 
@@ -243,19 +336,21 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
           onSuccess={() => {
             setShowCreateModal(false)
             queryClient.invalidateQueries({ queryKey: ['support-tickets', projectId] })
+            queryClient.invalidateQueries({ queryKey: ['support-tickets-dashboard'] })
           }}
         />
       )}
 
-      {selectedTicket && (
-        <ViewTicketModal
-          ticket={selectedTicket}
-          onClose={() => setSelectedTicket(null)}
-          onRefresh={() => {
-            queryClient.invalidateQueries({ queryKey: ['support-tickets', projectId] })
-          }}
-        />
-      )}
+      <TicketDetailDrawer
+        ticket={selectedTicket}
+        isOpen={isDrawerOpen}
+        projectId={projectId}
+        onClose={() => {
+          setIsDrawerOpen(false)
+          setSelectedTicket(null)
+        }}
+        onRefresh={handleDrawerRefresh}
+      />
 
       <ErrorModal
         open={!!confirmState}

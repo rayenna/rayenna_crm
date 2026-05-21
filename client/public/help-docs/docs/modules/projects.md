@@ -32,9 +32,8 @@ The Projects module is the core of Rayenna CRM, managing the complete lifecycle 
 **Customer & Project Details Section**:
 
 - **Segment** (Required): 
-  - Residential Subsidy
-  - Residential Non-Subsidy
-  - Commercial Industrial
+  - **Subsidy**
+  - **Non-Subsidy**
 
 - **Project Type** (Required):
   - EPC Project
@@ -101,8 +100,8 @@ The Projects module is the core of Rayenna CRM, managing the complete lifecycle 
 
 **Minimum Required**:
 - Customer (must be selected)
-- Segment (Project Type)
-- Project Type (Service Type)
+- **Segment** (Subsidy or Non-Subsidy — subsidy eligibility on the project)
+- **Service type** (EPC, Maintenance, etc. — labeled **Service type** on the form)
 - Confirmation Date
 
 **Conditional Requirements**:
@@ -786,70 +785,114 @@ Projects can have multiple support tickets and documents linked to them. These r
 - Archive completed tickets
 - Keep documentation up to date
 
+## Segment vs customer type (do not confuse)
+
+Two different fields appear on projects and in reports:
+
+| Term | Where it lives | Meaning | Examples |
+| :-- | :-- | :-- | :-- |
+| **Segment** | On the **project** (create/edit form, **Segments** filter) | Subsidy eligibility for that installation | **Subsidy**, **Non-Subsidy** |
+| **Customer type** | On the **customer** in **Customer Master** | Kind of customer account | **Residential**, **Apartment / housing society**, **Commercial** |
+
+- Dashboard and Zenith charts **Revenue by Customer Type** and **Pipeline by Customer Type** use the **customer’s type**, not project segment.
+- The Projects list can **filter by customer type** and tints rows by customer type (see legend above the table).
+- **Export** columns include **Segment** (project) and **Customer Type** (from the linked customer).
+
 ## Project Filtering and Search
 
 ### Search Functionality
 
 **Search Bar**:
-- Located at top of Projects page
-- Searches across multiple fields:
-  - Customer name
-  - Customer ID
-  - Consumer number
-- Real-time search with debounce
-- Case-insensitive search
+- At the top of the Projects page
+- Searches **customer name**, **customer ID**, and **consumer number**
+- Debounced (updates shortly after you stop typing)
+- Case-insensitive partial match
 
 **Search Tips**:
-- Use partial matches (e.g., "solar" finds "Solar Energy")
-- Search by customer ID for quick lookup
-- Use consumer number for utility-related searches
-- Clear search to see all projects
+- Use partial names (e.g. “solar” matches “Solar Energy”)
+- Search by customer ID or consumer number for quick lookup
+- Remove the search chip or use **Clear All** to reset
+
+### Show Filters panel
+
+Click **Show Filters** to expand the filter grid (FY, pipeline, segment, customer type, payment, tickets, etc.). Click **Hide Filters** to collapse it; **active filters stay applied** even when the panel is hidden.
+
+### Active filter chips
+
+When any filter, search, FY/quarter/month, or non-default sort is applied, an **Active filters** strip appears under the search bar:
+
+- Each chip shows what is applied (e.g. `FY: 2024-25`, `Customer type: Commercial`, `Segment: Subsidy`).
+- Click **×** on a chip to remove **only that** slice and refresh the list.
+- **Clear All** still resets everything (search, dates, filters, sort).
+- **Admins** see **Excel/CSV export uses these filters** on the active-filter chips, and a note beside the export buttons that export matches filters, search, and sort on the list.
+
+The result summary also shows how many filters are active (e.g. “3 active”).
 
 ### Filtering Options
 
-**Status Filter**:
-- Filter by project status
-- Multiple statuses can be selected
-- Options: Lead, Site Survey, Proposal, Confirmed, Installation, Completed, etc.
-- Shows projects in selected statuses
+**Financial year / quarter / month** (dashboard-style):
+- **Financial Years**, **Quarters**, **Months** — same rules as the Dashboard (quarter and month apply when exactly **one** FY is selected).
+- Used by Quick Access tiles and chart drill-downs from Dashboard / Zenith.
 
-**Type Filter**:
-- Filter by project segment
-- Options: Residential Subsidy, Residential Non-Subsidy, Commercial Industrial
+**Pipeline** (status):
+- Filter by project **stage** (Lead, Site Survey, Proposal, Confirmed, etc.).
+- Default view shows all **active** stages (everything except **Lost**).
+- Operations users see **Confirmed pipeline** labelling for allowed stages.
+
+**Segments** (project subsidy eligibility):
+- **Subsidy** or **Non-Subsidy**
+- Multiple segments can be selected
+
+**Customer type** (from Customer Master):
+- **Residential**, **Apartment**, **Commercial**
+- Filters by the **linked customer’s** type, not project segment
+
+**Project Types** (service type):
+- EPC Project, Panel Cleaning, Maintenance, Repair, Consulting, Resale, Other Services
 - Multiple types can be selected
 
-**Service Type Filter**:
-- Filter by project service type
-- Options: EPC Project, Panel Cleaning, Maintenance, Repair, Consulting, Resale, Other Services
-- Multiple service types can be selected
+**Sales users** (non-Sales roles only):
+- Filter by assigned salesperson, or **unassigned** (Zenith / dashboard links)
 
-**Salesperson Filter** (non-Sales users):
-- Filter by assigned salesperson
-- Select one or more salespersons
-- Shows projects for selected salespersons
-- Leave empty to see all projects
+**Lead sources**:
+- Website, Referral, Google, etc., or **lead source empty** (from Zenith)
 
-**Availing Loan Filter**:
-- Checkbox: **Availing Loan**
-- When checked, shows only projects where Availing Loan/Financing is **Yes**
-- Useful to see all projects tied to financing/loan
+**Payment status** (Finance, Management, Admin, Operations, and Sales on their projects):
+- Fully Paid, Partial, Pending, **N/A** (no order value or early/lost stages)
 
-**Support Ticket Status Filter**:
-- Filter projects by support ticket status
-- Options:
-  - Has Tickets: Projects with any tickets
-  - Open: Projects with open tickets
-  - In Progress: Projects with in-progress tickets
-  - Closed: Projects with closed tickets
-  - No Tickets: Projects without tickets
-- Multiple statuses can be selected
+**Support ticket status**:
+- Has tickets, Open, In Progress, Closed, No tickets
 
-**Filter Behavior**:
-- Filters apply immediately
-- Can combine multiple filters
-- Can combine with search
-- Pagination resets when filters change
-- Clear filters to see all projects
+**Checkboxes**:
+- **Has Artifacts** — at least one attachment on the project
+- **Availing Loan** — financing flag is Yes
+
+**Zenith / dashboard drill-down extras** (when opened from a chart or tile):
+- Revenue or pipeline slice, FY profit cohort, closed-date window, panel/inverter brand, lifecycle brands complete, PE bucket, financing bank
+
+**Filter behaviour**:
+- Filters apply immediately; list and counts update
+- Combine any filters with search
+- Page resets to 1 when filters change
+- Filters are **remembered** in the browser when you open a project and go **Back**
+- **Clear All** clears URL tile params too when you arrived from Dashboard
+
+### List row colours (customer type)
+
+Above the table, a short legend explains **row colour by customer type**:
+
+- **Residential** — default table background
+- **Apartment** — light blue tint
+- **Commercial** — light teal tint
+
+This is visual only; use the **Customer type** filter to narrow the list.
+
+### Exporting the project list (Admin)
+
+- **Who**: **Administrators** only (**Export to Excel** / **Export to CSV** on the Projects page).
+- **Filters**: Export uses the **same filters and search** as the current list (including FY, customer type, pipeline, payment, Zenith slice, etc.). Check the **Active filters** strip before exporting.
+- **Columns** include: SL No, customer IDs/names, **Customer Type**, **Segment**, **Project Service Type**, capacity, cost, status, payment, salesperson, FY, dates.
+- **How**: Apply filters → export → read the authorization notice → confirm **YES** → file downloads.
 
 **Popovers on the Projects list (balance and financing bank)**:
 - **Pending / Partial payment** — When there is a **positive outstanding balance**, **hover** the payment status pill on a **mouse/trackpad**, or **tap** it on **touch** devices, to see **Balance** and the **₹** amount in a **dark popover** styled like the **Deal Health** card on the same page.
@@ -903,7 +946,7 @@ The total is the **sum** of five parts. Each part has a **maximum**; the overall
 | :-- | :-- |
 | **Projects** list | A compact **Deal Health** **badge** (0–100) — **hover** or **tap** for the breakdown **popover**. **Pending** / **Partial** pills (with balance) and the **financing bank** icon use **matching** dark-card **popovers**. **Sort** by **Deal Health Score** (ascending = weakest first; same server data). |
 | **Project Detail** | A full **Deal Health Score** card with **all factors**, scores, and the insight line. |
-| **Zenith (Executive view)** | **Your pipeline today** (Sales / Management / Admin): each row can show a **Deal Health** badge; **hover** for the breakdown. **Today’s Hit List** also shows the badge on urgent deals with an **Open** link to the project. |
+| **Zenith (Executive view)** | **Your pipeline today** (Sales / Management / Admin): each row can show a **Deal Health** badge; **hover** for the breakdown; **Open →** opens **Quick Actions**. **Today’s Hit List** matches that layout with **filters**, **sort**, and **Alert**, for up to seven prioritised deals; when deals list, a short hint may remind you to **scroll right** and use **Open →**; **Open →** opens **Quick Actions**, which includes **Recent remarks** (same data as this **Remarks** section, read-only in the drawer) above **Log activity**, and a **Payment** snapshot (**status**, **total received**, **balance pending**) after **Deal value** when payment applies (**N/A** otherwise — same rules as **Payment tracking** below). |
 | **Tip of the Day** | Occasionally reminds you about Deal Health, sorting, and where to read the full rules (this section). |
 
 #### How each factor is scored (reference tables)
@@ -993,20 +1036,16 @@ The read-only **Individual Project** page uses **cards** with aligned **label / 
 
 **Customer Details**:
 - Customer ID and name
-- Address information
-- Contact numbers
-- Consumer number
-- Lead source
+- **Customer type** (read-only from **Customer Master**, with link to open the customer record)
+- Address, contact numbers, consumer number
 
 **Project Details**:
-- Segment (Project Type)
-- Project Type (Service Type)
+- **Segment** (Subsidy / Non-Subsidy — subsidy eligibility on this project)
+- **Service type** (EPC, Maintenance, etc.)
 - Salesperson assignment
-- System capacity (whole kW)
-- Order value
 
 **Sales & Commercial**:
-- Lead source and details
+- **Lead source** and details (moved here from Customer Details)
 - System capacity
 - Order value
 - Confirmation date
@@ -1038,12 +1077,13 @@ The read-only **Individual Project** page uses **cards** with aligned **label / 
 - Internal notes and comments
 - Created by and date
 - View-only on detail page
+- **Zenith:** opening **Quick Actions** or the **Operations** drawer for a project shows **Recent remarks** (read-only, newest first) above **Log activity** so you see the same history before adding a line — full edit/delete remains on **Project detail**. After **Deal value**, those drawers also show a **Payment** card (**status**, **total amount received**, **balance pending**), aligned with this **Payment tracking** section when amounts apply; **N/A** when order value is missing/zero or the project is in an early / **Lost** stage. The **Finance** drawer from **Payment radar** already includes its own payment block.
 
 **Support / Service Tickets**:
-- List of all tickets for project
-- Ticket status and details
-- Create new ticket button
-- View ticket details
+- List of tickets for this project (**cards on phones**, **table on desktop**)
+- **Create Ticket** (disabled for **Lost** projects)
+- **View ticket** opens the same **Ticket Detail Drawer** as the Support Tickets page
+- Optional **Close** / **Delete** (Admin) from the list; full follow-up and close in the drawer
 
 **Key Artifacts**:
 - List of uploaded documents
@@ -1053,11 +1093,16 @@ The read-only **Individual Project** page uses **cards** with aligned **label / 
 
 ### Actions Available
 
+**Access banners** (detail and edit):
+- **View-only** banner when your role can see the project but not edit it (e.g. Management, Sales on another rep’s project, Operations before Confirmed)
+- **Finance**: banner points you to **Payment Tracking** only on edit
+- **Lost**: locked except Admin delete
+
 **Edit Project** (if permitted):
 - Click **Edit** button
-- Modify project information
-- Update sections based on role
-- Save changes
+- **Selected customer** panel shows **customer type** (read-only; edit on Customer Master)
+- **Segment** and **Service type** fields include short hints (not the same as customer type)
+- Modify sections based on role; save changes
 
 **Proposals (New)** / Proposal Engine (Sales/Operations/Admin where enabled):
 - Use **Proposals (New)** on **Project Detail** for **Proposal** or **Confirmed** stages (see Proposal Engine help for full flow)

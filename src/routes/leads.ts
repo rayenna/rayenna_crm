@@ -202,7 +202,7 @@ router.post(
         data: {
           customerId: lead.customerId,
           leadId: lead.id,
-          type: lead.customer.customerType === 'COMMERCIAL' ? 'COMMERCIAL_INDUSTRIAL' : 'RESIDENTIAL_NON_SUBSIDY',
+          type: 'NON_SUBSIDY',
           year: currentYear,
           systemCapacity:
             lead.systemSizeKw != null ? Math.round(lead.systemSizeKw) : undefined,

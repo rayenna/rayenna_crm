@@ -1,15 +1,18 @@
 /**
- * Fixed color per customer segment type so Revenue by Customer Segment and
- * Pipeline by Customer Segment use the same color for the same segment in both charts.
- * Aligned with other dashboard charts (red, blue, green palette).
+ * Customer-type donut colours (Dashboard + Zenith).
+ * Uses Rayenna accent hues so slices are vivid and easy to tell apart on light/dark cards.
  */
 export const SEGMENT_COLORS: Record<string, string> = {
-  RESIDENTIAL_SUBSIDY: '#ef4444',
-  RESIDENTIAL_NON_SUBSIDY: '#3b82f6',
-  COMMERCIAL_INDUSTRIAL: '#10b981',
+  /** Warm gold — residential / home */
+  RESIDENTIAL: '#F5A623',
+  /** Indigo — apartment / society (distinct from teal commercial) */
+  APARTMENT: '#7C6CF0',
+  /** Brand teal — commercial */
+  COMMERCIAL: '#00D4B4',
 }
 
-const FALLBACK_COLORS = ['#64748b', '#94a3b8', '#cbd5e1']
+/** Extra slices if API returns an unexpected type */
+const FALLBACK_COLORS = ['#F59E0B', '#3B8BFF', '#10B981']
 
 export function getSegmentColor(segmentType: string, fallbackIndex: number): string {
   return SEGMENT_COLORS[segmentType] ?? FALLBACK_COLORS[fallbackIndex % FALLBACK_COLORS.length]

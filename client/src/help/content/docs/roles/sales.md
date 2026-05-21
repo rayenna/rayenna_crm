@@ -27,7 +27,7 @@ Your dashboard is your command center. It shows key metrics about your sales per
 ### Charts and Visualizations
 
 - **Project Value and Profit by Financial Year**: See how your sales performance has changed over time
-- **Project Value by Segment**: Visual breakdown of your projects by type (Residential Subsidy, Commercial, etc.)
+- **Revenue by Customer Type**: Pie chart by customer type from Customer Master (Residential, Apartment, Commercial) — not project Subsidy/Non-Subsidy segment
 - **Customer Profitability**: Word cloud showing your most profitable customers
 
 ### Using Dashboard Filters

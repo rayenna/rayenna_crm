@@ -138,10 +138,10 @@ There is **no** Availing Loan tile and **no** Proposal Engine card on this dashb
 
 ## Role-based dashboards (summary)
 
-- **Sales** — Year-on-Year summary, Quick Access (above), Projects by Stage and Revenue & Profit by FY, Revenue by Lead Source, Pipeline by Lead Source, Project Value by Segment, Pipeline by Customer Segment, Customer Profitability word cloud, Projects Availing Loans by Bank, **Projects by panel brand** and **Projects by inverter brand** (lifecycle cohort — both brands required per project). Data is **scoped to the logged-in salesperson**.
-- **Operations** — Quick Access, optional Pending Subsidy list, Projects by Stage, Revenue by Sales Team, Project Value and Profit by FY, Project Value by Segment, **Projects by panel brand** and **Projects by inverter brand**. **Company-wide** execution view.
-- **Finance** — Top KPIs (Total Revenue, Amount Received, Outstanding Balance), Quick Access row (above), Revenue by Lead Source, Revenue by Sales Team, Project Value and Profit by FY, Project Value by Segment, Customer Profitability word cloud, Projects Availing Loans by Bank. **Company-wide**.
-- **Management / Admin** — Year-on-Year summary, Quick Access (above), Projects by Stage and Revenue & Profit by FY, Revenue by Lead Source, Pipeline by Lead Source, Revenue by Sales Team, Sales Team treemap, Project Value by Segment, Pipeline by Customer Segment, Customer Profitability word cloud, Projects Availing Loans by Bank, **Projects by panel brand** and **Projects by inverter brand**. **Company-wide**.
+- **Sales** — Year-on-Year summary, Quick Access (above), Projects by Stage and Revenue & Profit by FY, Revenue by Lead Source, Pipeline by Lead Source, Revenue by Customer Type, Pipeline by Customer Type, Customer Profitability word cloud, Projects Availing Loans by Bank, **Projects by panel brand** and **Projects by inverter brand** (lifecycle cohort — both brands required per project). Data is **scoped to the logged-in salesperson**.
+- **Operations** — Quick Access, optional Pending Subsidy list, Projects by Stage, Revenue by Sales Team, Project Value and Profit by FY, Revenue by Customer Type, **Projects by panel brand** and **Projects by inverter brand**. **Company-wide** execution view.
+- **Finance** — Top KPIs (Total Revenue, Amount Received, Outstanding Balance), Quick Access row (above), Revenue by Lead Source, Revenue by Sales Team, Project Value and Profit by FY, Revenue by Customer Type, Customer Profitability word cloud, Projects Availing Loans by Bank. **Company-wide**.
+- **Management / Admin** — Year-on-Year summary, Quick Access (above), Projects by Stage and Revenue & Profit by FY, Revenue by Lead Source, Pipeline by Lead Source, Revenue by Sales Team, Sales Team treemap, Revenue by Customer Type, Pipeline by Customer Type, Customer Profitability word cloud, Projects Availing Loans by Bank, **Projects by panel brand** and **Projects by inverter brand**. **Company-wide**.
 
 ---
 
@@ -153,8 +153,8 @@ There is **no** Availing Loan tile and **no** Proposal Engine card on this dashb
 - **Revenue by Lead Source** / **Pipeline by Lead Source** — Where shown on your role’s dashboard.
 - **Revenue by Sales Team** — **Operations**, **Finance**, **Management**.
 - **Sales Team Performance (treemap)** — **Management** only.
-- **Project Value by Segment** — Pie chart.
-- **Pipeline by Customer Segment** — Pie chart (**Sales**, **Management**).
+- **Revenue by Customer Type** — Pie chart.
+- **Pipeline by Customer Type** — Pie chart (**Sales**, **Management**).
 - **Customer Profitability word cloud** — **Sales**, **Finance**, **Management**.
 - **Projects Availing Loans by Bank** — **Sales**, **Finance**, **Management** (not **Operations**).
 - **Projects by panel brand** / **Projects by inverter brand** — Horizontal bar charts (**Sales**, **Management**, **Admin**, **Operations**; not **Finance**). Same cohort as Zenith: only projects with **both** panel and inverter brands saved in Project Lifecycle.
@@ -166,7 +166,7 @@ Data refreshes when you load the Dashboard or change filters. If numbers look st
 On the **classic Dashboard** (not Zenith), most **charts are clickable**: clicking a **bar**, **FY column** (revenue vs profit separately), **pie slice**, **word** in the profitability cloud, or **Top 10** row opens the **Projects** page with filters that **match the slice** you clicked, plus your dashboard **FY / Quarter / Month** where applicable.
 
 - **Tooltips** often include a line such as **Click to open Projects →** (or **Click slice** / **Click bar**) as a hint.
-- **Semantics** align with **Zenith** drill-downs where the same slice exists (e.g. stage, lead source with revenue vs pipeline, customer segment, FY revenue vs FY profit, availing loan by bank, panel/inverter brand with lifecycle completeness). The classic Dashboard goes **straight to Projects**; Zenith usually opens the **Quick Actions** drawer first, with **Open in Projects →** in the footer.
+- **Semantics** align with **Zenith** drill-downs where the same slice exists (e.g. stage, lead source with revenue vs pipeline, **customer type** on donut charts, FY revenue vs FY profit, availing loan by bank, panel/inverter brand with lifecycle completeness). The classic Dashboard goes **straight to Projects**; Zenith usually opens the **Quick Actions** drawer first, with **Open in Projects →** in the footer.
 - **Customer profitability** — On the **classic Dashboard** and in **Zenith** (**Customer projects profitability**), clicking a **word** or a **Top 10** row opens **Projects** with a **search** term (customer name text) and the **revenue** analytics slice, plus date filters — same behaviour in both places. Zenith detail: [Customer projects profitability](/help/zenith#customer-projects-profitability-zenith).
 
 If your role does not see a given chart, that click path is not available on your dashboard.

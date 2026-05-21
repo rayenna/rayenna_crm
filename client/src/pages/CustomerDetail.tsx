@@ -1,30 +1,26 @@
 import { useState, useEffect, type ReactNode } from 'react'
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
 import { useModalEscape } from '../contexts/ModalEscapeContext'
 import { Customer, UserRole } from '../types'
 import { ArrowLeft, Edit3, Trash2, UserRound } from 'lucide-react'
-import { CustomerForm, getCustomerDisplayName } from '../components/customers/CustomerForm'
+import { CustomerForm } from '../components/customers/CustomerForm'
+import { getCustomerDisplayName } from '../utils/customerRecord'
+import { CustomerDetailSkeleton } from '../components/customers/CustomerDetailSkeleton'
 import { ErrorModal } from '@/components/common/ErrorModal'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
+import { canEditCustomer } from '../utils/customerPermissions'
 
 export default function CustomerDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const location = useLocation()
-  const { hasRole } = useAuth()
+  const { user, hasRole } = useAuth()
   const queryClient = useQueryClient()
   const [isEditing, setIsEditing] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-
-  const fromListFilter = (location.state as { fromListFilter?: 'all' | 'my' } | null)?.fromListFilter
-
-  const canEdit =
-    hasRole([UserRole.ADMIN, UserRole.MANAGEMENT]) ||
-    (hasRole([UserRole.SALES]) && fromListFilter === 'my')
 
   const canDelete = hasRole([UserRole.ADMIN])
 
@@ -55,6 +51,12 @@ export default function CustomerDetail() {
     enabled: !!id,
   })
 
+  const canEdit = canEditCustomer(customer, user)
+
+  useEffect(() => {
+    if (!canEdit && isEditing) setIsEditing(false)
+  }, [canEdit, isEditing])
+
   const deleteMutation = useMutation({
     mutationFn: async () => axiosInstance.delete(`/api/customers/${id}`),
     onSuccess: () => {
@@ -67,11 +69,7 @@ export default function CustomerDetail() {
   })
 
   if (isLoading) {
-    return shell(
-      <div className="rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-6 text-center text-[color:var(--text-muted)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
-        Loading customer…
-      </div>,
-    )
+    return shell(<CustomerDetailSkeleton />)
   }
 
   if (error || !customer) {

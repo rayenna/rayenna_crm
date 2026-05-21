@@ -9,9 +9,11 @@ The Customer Master module is your central database for managing all customer in
 ### Who Can Create Customers
 
 - **Sales users**: Can create customers for their own use
-- **Administrators**: Can create customers for any salesperson
+- **Management** and **Administrators**: Can open **New Customer** when the button is shown (Admin can assign any salesperson)
 
 ### Creating a New Customer
+
+**Quick open (same form)** — If your role can create customers, **Ctrl+Shift+N** (Windows/Linux) or **⌘⇧N** (Mac) opens **Customers** with the **New Customer** form ready (see [Keyboard shortcuts](/help/getting-started#keyboard-shortcuts)). You can also open **`/customers?new=1`** after login for the same behaviour.
 
 **Step 1: Access Customer Master**
 1. Go to **Customers** page from the top menu
@@ -19,15 +21,17 @@ The Customer Master module is your central database for managing all customer in
 
 **Step 2: Fill in Customer Information**
 
-**Name Fields** (Required for Individual Customers):
-- **Prefix**: Select from Mr., Ms., Mrs., Miss, Mx., Dr., Prof., or None
-- **First Name**: *Required* - Customer's first name
-- **Middle Name**: Optional - Middle name
-- **Last Name**: Optional - Last name
+**Customer Type** (required):
+- **Residential** (default): Individual homeowners
+- **Apartment**: Housing society / apartment complex
+- **Commercial**: Business or commercial establishment
 
-**Note**: For individual customers, you can use either:
-- Individual name fields (Prefix, First Name, Middle Name, Last Name), OR
-- Customer Name field (for business/company names)
+**Name Fields** (depends on type):
+- **Residential**: **Prefix** (Mr., Ms., Mrs., Miss, Mx., Dr., Prof., or None), **First Name** (*required*), **Middle Name**, **Last Name**
+- **Apartment**: **Society / apartment name** (*required*)
+- **Commercial**: **Company name** (*required*)
+
+There is no separate **Contact person** field next to the society or company name. Use the **Contacts** section for Apartment and Commercial (see below).
 
 **Address Information**:
 - **Address Line 1**: Street address, P.O. Box, etc.
@@ -43,25 +47,22 @@ The Customer Master module is your central database for managing all customer in
 - Coordinates are saved automatically when you set location on map
 
 **Contact Information**:
-- **Contact Numbers**: 
-  - Add one or more phone numbers
-  - Click "+ Add Contact Number" to add additional numbers
-  - At least one contact number is required
-  - Remove numbers using "Remove" button
-- **Email IDs**:
-  - Add one or more email addresses
-  - Click "+ Add E-mail ID" to add additional emails
-  - Remove emails using "Remove" button
+
+- **Residential**: On the main form — **Contact Numbers** (at least one required; use "+ Add Contact Number" for more) and optional **Email IDs** ("+ Add E-mail ID").
+- **Apartment** or **Commercial**: **Contacts** section — add one or more people. Each contact can have prefix, first/middle/last name, multiple phones, and emails. At least **one phone number** is required across all contacts. Use **+ Add contact** for additional people.
+
+All phones and emails are stored on the customer record for the list, projects, and exports.
 
 **Business Information**:
 - **DISCOM Consumer Number**: Consumer number from electricity board
-- **Company Name**: For commercial customers
-- **Company GST#**: GST number for business customers
+- **GSTIN**: Single GST field for Apartment and Commercial (used for compliance and Tally)
 
 **Identification**:
-- **Id Proof#**: ID proof number (Aadhaar, PAN, etc.)
-- **Type of Id Proof**: *Required if Id Proof# is provided*
-  - Options: Aadhaar, PAN, Voters Card, DL, Passport, Others
+- **Id Proof#**: ID proof number
+- **Type of Id Proof**: *Required if Id Proof# is provided* — options depend on **Customer type**:
+  - **Residential**: Aadhaar, PAN, Voters Card, DL, Passport, Others
+  - **Apartment**: PAN, Society Registration, RERA Registration, Occupancy Certificate
+  - **Commercial**: PAN, CIN, TAN
 
 **Salesperson Assignment** (Management and Admin only):
 - **Salesperson**: Assign customer to a sales team member
@@ -84,11 +85,12 @@ The Customer Master module is your central database for managing all customer in
 ### Required Fields
 
 **Minimum Required**:
-- Either Customer Name OR First Name (for individual customers)
-- At least one Contact Number
+- **Customer type**
+- **Residential**: First Name; at least one contact number on the main form
+- **Apartment / Commercial**: Society or company name; at least one contact with a phone number in **Contacts**
 
 **Conditional Requirements**:
-- Type of Id Proof is required if Id Proof# is provided
+- Type of Id Proof is required if Id Proof# is provided, and must be valid for the selected customer type
 - State selection requires Country to be selected first
 - City selection requires State to be selected first
 
@@ -120,15 +122,14 @@ Customer segmentation helps you organize and analyze your customer base by diffe
 
 ### Segmentation by Customer Type
 
-**Customer Types Available**:
+**Customer Types Available** (set on the **customer record** when creating or editing):
 - **Residential**: Individual homeowners
 - **Apartment**: Apartment complex or housing society
 - **Commercial**: Business or commercial establishments
 
 **How to View by Type**:
-- Customer type is set when creating projects linked to the customer
-- View customers by filtering projects by type
-- Analyze customer distribution by type
+- The customer list shows a **type badge** for Apartment and Commercial
+- Project filters still use project segment/type for pipeline analysis
 
 ### Segmentation by Salesperson
 
@@ -358,6 +359,8 @@ Every project in the CRM is linked to a customer. This relationship enables comp
 3. Project linked to existing customer
 4. Customer history updated
 
+**Payment and Zenith** — Detailed **payment status** and amounts live on each **project** (e.g. **Project detail → Payment tracking**), not on the customer list card. In **Zenith**, **Quick Actions** and the **Operations** drawer show a compact **Payment** readout (**status**, **total amount received**, **balance pending**) after **Deal value** when you open a single project; values show **N/A** when the CRM treats payment as not applicable (no positive order value or early / Lost stage). **Payment radar** on Finance Zenith uses the **Finance** drawer, which already includes payment context for that path. Changing payment data still follows your role’s normal **Project** / **Finance** workflows.
+
 **Customer Management**:
 - Keep customer information current
 - Update contact details as needed
@@ -369,42 +372,33 @@ Every project in the CRM is linked to a customer. This relationship enables comp
 ### Editing Customer Information
 
 **Who Can Edit**:
-- **Sales users**: Can edit their own customers (in "My Customers" view)
-- **Administrators**: Can edit any customer
-- **Management**: Can view but not edit
+- **Administrators** and **Management**: Any customer
+- **Sales users**: Customers where **you are the assigned salesperson** (same rule as the API — not limited to opening from **My Customers**)
 
 **How to Edit**:
-1. Go to Customers page
-2. Find the customer using search or filters
-3. Click **Edit** button next to customer
-4. Update information as needed
-5. Click **Update** to save changes
+1. Go to **Customers**
+2. Find the customer (search or filters)
+3. Open the **customer detail** page (click the card)
+4. Click **Edit**
+5. Update fields and click **Update**
 
 **What Can Be Edited**:
-- All customer information fields
-- Contact numbers and emails
-- Address details
-- Business information
+- Customer type, name fields, and (for Apartment/Commercial) **Contacts**
+- Contact numbers and emails (Residential on main form; business types per contact)
+- Address, DISCOM consumer number, GSTIN, ID proof
 - Location coordinates
-- Salesperson assignment (Management/Admin only)
+- Salesperson assignment (**Management** / **Admin** only)
 
 ### Viewing Customer Details
 
 **From Customer List**:
-- See customer name and ID
-- View address information
-- See contact numbers and emails
-- Check project count
-- View creation date
+- Click a customer card to open **`/customers/{id}`**
+- See full form in read-only mode until you choose **Edit**
 
 **Customer Information Displayed**:
-- Customer name (or individual name components)
-- Customer ID badge
-- Project count badge
-- Address (if available)
-- Consumer number (if available)
-- Contact information
-- Email addresses
+- Display name (residential person name, or company/society with primary contact label where relevant)
+- Customer ID, type badge on list for non-Residential
+- Project count, address, contacts, GSTIN, consumer number
 
 ### Searching Customers
 
@@ -458,10 +452,8 @@ Every project in the CRM is linked to a customer. This relationship enables comp
 5. File downloads automatically
 
 **Export Includes**:
-- All customer information
-- Current filter settings
-- Search results (if search applied)
-- Salesperson filter (if applied)
+- All customer information (including customer type and contact data aggregated from **Contacts** where used)
+- The same **search**, **My Customers / All Customers**, and **Sales Person** filters as the current list
 
 ## Best Practices
 
@@ -576,10 +568,19 @@ Every project in the CRM is linked to a customer. This relationship enables comp
 
 **Solutions**:
 - Check your user role permissions
-- For Sales users: Ensure you're in "My Customers" view
-- Verify customer belongs to you (Sales users)
-- Refresh page and try again
+- **Sales**: You must be the **assigned salesperson** on that customer (not only viewing them in **My Customers**)
+- **Management** and **Admin** can edit any customer from the detail page
+- Refresh the page and try again
 - Contact administrator if needed
+
+### Database or server errors
+
+**Issue**: Message such as “We could not reach the database…” on customer detail or list
+
+**Solutions**:
+- Use **Try again** on the customer list if shown
+- If the problem persists after a deployment, ask an administrator to confirm database migrations are applied (`customers.contacts` and related schema)
+- Contact administrator if the error continues
 
 ### Search Not Working
 

@@ -62,7 +62,7 @@ const PipelineByCustomerSegmentPieChart = memo(({ data: chartData = [], dashboar
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
             </svg>
           </div>
-          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">Pipeline by Customer Segment</h2>
+          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">Pipeline by Customer Type</h2>
         </div>
         <div className="flex items-center justify-center text-[color:var(--text-muted)]" style={{ height: '320px' }}>
           <p>No pipeline data available</p>
@@ -81,7 +81,7 @@ const PipelineByCustomerSegmentPieChart = memo(({ data: chartData = [], dashboar
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
             </svg>
           </div>
-          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">Pipeline by Customer Segment</h2>
+          <h2 className="text-base font-extrabold text-[color:var(--text-primary)] sm:text-lg">Pipeline by Customer Type</h2>
         </div>
       </div>
       {/* On mobile portrait use visible so chart isn’t clipped when page scrolls; from sm up allow horizontal scroll */}

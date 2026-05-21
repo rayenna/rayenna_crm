@@ -1,4 +1,5 @@
-import { LeadSource, ProjectStatus, ProjectType } from '../types'
+import { LeadSource, ProjectStatus } from '../types'
+import type { CustomerType } from './customerRecord'
 import type { ZenithDateFilter } from '../components/zenith/zenithTypes'
 import type { ZenithChartDrilldownDimension, ZenithExplorerProject } from '../types/zenithExplorer'
 import type { DrilldownOpts } from './zenithChartDrilldown'
@@ -45,10 +46,11 @@ const LEAD_LABEL_TO_ENUM: Record<string, LeadSource> = {
   Other: LeadSource.OTHER,
 }
 
-const SEGMENT_LABEL_TO_TYPE: Record<string, ProjectType> = {
-  'Residential - Subsidy': ProjectType.RESIDENTIAL_SUBSIDY,
-  'Residential - Non Subsidy': ProjectType.RESIDENTIAL_NON_SUBSIDY,
-  'Commercial Industrial': ProjectType.COMMERCIAL_INDUSTRIAL,
+/** Chart slice label → Customer Master `customerType` (Projects list filter). */
+const CUSTOMER_TYPE_LABEL_TO_ENUM: Record<string, CustomerType> = {
+  Residential: 'RESIDENTIAL',
+  Apartment: 'APARTMENT',
+  Commercial: 'COMMERCIAL',
 }
 
 /**
@@ -91,11 +93,11 @@ export function buildZenithDrawerListProjectsHref(
       )
     }
     case 'customer_segment': {
-      const t = SEGMENT_LABEL_TO_TYPE[value.trim()]
-      if (!t) return null
+      const ct = CUSTOMER_TYPE_LABEL_TO_ENUM[value.trim()]
+      if (!ct) return null
       return buildProjectsUrl(
         {
-          type: [t],
+          customerType: [ct],
           zenithSlice: opts?.segmentChart === 'pipeline' ? 'pipeline' : 'revenue',
         },
         dateFilter,

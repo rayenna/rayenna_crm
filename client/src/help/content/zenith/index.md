@@ -206,7 +206,7 @@ If a day has no qualifying deals, the card shows **All clear**.
 
 **Your Focus** — Collapsible role panels **below** the funnel (pipeline / payment radar / installation pulse / Proposal Engine — see [Your Focus](#your-focus-role-specific)).
 
-**Charts and panels** — Then **Explore the landscape**: **Revenue by lead source**, **Pipeline by lead source**, **Revenue vs pipeline by sales team**, **segment donuts** (revenue and pipeline), **Revenue & profit by financial year**, **Projects by stage**, **Projects availing loans by bank**, **Customer projects profitability** (word cloud / Top 10). **Proposal Engine** for executive roles is under **Your focus**, not in the chart grid.
+**Charts and panels** — Then **Explore the landscape**: **Revenue by lead source**, **Pipeline by lead source**, **Revenue vs pipeline by sales team**, **Revenue by Customer Type** and **Pipeline by Customer Type** donuts (from **Customer Master**, not project Subsidy/Non-Subsidy segment), **Revenue & profit by financial year**, **Projects by stage**, **Projects availing loans by bank**, **Customer projects profitability** (word cloud / Top 10). **Proposal Engine** for executive roles is under **Your focus**, not in the chart grid.
 
 **Links** — Chart drill-downs, **The Board** totals, **funnel** stages and payment pills, **Proposal Engine** rows under Your Focus, and the **Availing Loan** KPI tile (Finance + executive Zenith) open the **Quick Actions** drawer with a **filtered project list** and **Open in Projects →** where applicable (see [Explore charts & drill-down](#explore-charts-and-drill-down-zenith), [The Board](#the-board-leaderboard), [Deal flow funnel](#deal-flow-funnel-zenith), [KPI strip](#kpi-strip-and-year-on-year), and [Quick Actions drawer](#quick-actions-drawer-zenith)).
 
@@ -257,7 +257,7 @@ When a project **enters** **Confirmed**, **Under Installation**, **Completed**, 
 
 **Funnel** — Execution-oriented funnel (installation, subsidy, etc.). **Click** a **stage row** or **payment pill** to open the **Quick Actions** list for that slice; use **Open in Projects →** for the full filtered **Projects** page ([Deal flow funnel](#deal-flow-funnel-zenith)).
 
-**Charts** — **Revenue & Profit by FY** (axis respects selected FYs; [details](#revenue-and-profit-by-fy-chart-zenith)), **Projects by stage**, **segment** views, and **sales team** style charts where shown.
+**Charts** — **Revenue & Profit by FY** (axis respects selected FYs; [details](#revenue-and-profit-by-fy-chart-zenith)), **Projects by stage**, **Revenue by Customer Type** (where shown), and **sales team** style charts where shown.
 
 Use **Reset** when you want a fresh, unscoped overview before drilling into a single FY or quarter.
 
@@ -269,7 +269,7 @@ Use **Reset** when you want a fresh, unscoped overview before drilling into a si
 
 **Funnel** — Built from project statuses relevant to finance oversight. **Stage** and **payment** rows are **clickable** → **Quick Actions** list + **Open in Projects →**, same pattern as the executive funnel ([Deal flow funnel](#deal-flow-funnel-zenith)).
 
-**Charts** — **Revenue & Profit by FY** ([filtered years](#revenue-and-profit-by-fy-chart-zenith)), **Payment / segment** views, **customer profitability**, **lead source** revenue, and **loan by bank** where applicable.
+**Charts** — **Revenue & Profit by FY** ([filtered years](#revenue-and-profit-by-fy-chart-zenith)), **Revenue by Customer Type** donut, **customer profitability**, **lead source** revenue, and **loan by bank** where applicable.
 
 ### Charts, funnels, and shortcuts
 
@@ -287,7 +287,7 @@ Use **Reset** when you want a fresh, unscoped overview before drilling into a si
 
 **Subtitle** — **Expected from N open deals** is the count of those weighted deals.
 
-**Tabs: Source, Sales, Segment, Stage** — The **total** does not change when you switch tabs; tabs only **split the same weighted total** by lead source, assigned salesperson, customer segment, or stage. Each row shows that slice’s **weighted** sum; bars are relative to the **largest row in the current tab**. **+N more** means there are more categories than the three rows shown — click it to open the drawer with **all open deals** (sorted by weighted contribution).
+**Tabs: Source, Sales, Customer type, Stage** — The **total** does not change when you switch tabs; tabs only **split the same weighted total** by lead source, assigned salesperson, **customer type** (Residential, Apartment, Commercial from Customer Master), or stage. Each row shows that slice’s **weighted** sum; bars are relative to the **largest row in the current tab**. **+N more** means there are more categories than the three rows shown — click it to open the drawer with **all open deals** (sorted by weighted contribution).
 
 **Layout** — The tile uses a **fixed height** so switching tabs does not resize the KPI row (that keeps **Today’s Hit List** and the funnel from jumping on large screens).
 
@@ -332,7 +332,7 @@ Use **Reset** when you want a fresh, unscoped overview before drilling into a si
 
 **Layout** — Most bar and donut charts in this section share the **same chart height** on a given screen (aligned with the **inverter brand** chart). The bottom **panel / inverter** pair uses a **paired** height so the two lifecycle bars line up side by side.
 
-**Behaviour** — Clicking a bar, slice, stage, FY point, or bank (where implemented) opens the **Quick Actions** drawer in **list mode**: a **filter label** at the top (e.g. lead source, segment, stage, FY revenue or profit, loan bank) and a **scrollable project list** with **Open →** to jump to **Project detail**. Each list row shows the **customer / project name**, a compact **Sales** line (assigned salesperson, or **Unassigned**), **stage**, amounts, and health — so you can see who owns the deal before you open it. The projects are the same cohort the chart used for that slice, with **Zenith date filters** applied. The **Availing Loan** KPI tile (**Finance** and **executive** Zenith) uses the same **list mode** for its cohort ([KPI strip](#kpi-strip-and-year-on-year)).
+**Behaviour** — Clicking a bar, slice, stage, FY point, or bank (where implemented) opens the **Quick Actions** drawer in **list mode**: a **filter label** at the top (e.g. lead source, **customer type**, stage, FY revenue or profit, loan bank) and a **scrollable project list** with **Open →** to jump to **Project detail**. Each list row shows the **customer / project name**, a compact **Sales** line (assigned salesperson, or **Unassigned**), **stage**, amounts, and health — so you can see who owns the deal before you open it. The projects are the same cohort the chart used for that slice, with **Zenith date filters** applied. The **Availing Loan** KPI tile (**Finance** and **executive** Zenith) uses the same **list mode** for its cohort ([KPI strip](#kpi-strip-and-year-on-year)).
 
 **Open in Projects →** — When the footer link is shown, it opens the **Projects** page with URL parameters aligned to that drill-down (same slice definitions the server uses for **Projects** list filters — e.g. **zenithSlice** for revenue vs pipeline, **zenithFyProfit** for FY profit rows, **peBucket** for Proposal Engine buckets, stage and payment params for the funnel). Use it when you need the full grid, export context, or columns beyond the drawer.
 
@@ -342,7 +342,7 @@ Use **Reset** when you want a fresh, unscoped overview before drilling into a si
 
 **Revenue forecast “+N more”** — Opens the list of **all open deals** included in the forecast (not a single tab slice).
 
-**Segment donuts** — **Revenue** and **Pipeline** are separate charts; each drill-down uses the matching definition (revenue-eligible vs open pipeline).
+**Customer Type donuts** — Chart titles are **Revenue by Customer Type** and **Pipeline by Customer Type**. Slices use the linked customer’s **customer type** from **Customer Master** (**Residential**, **Apartment**, **Commercial**) — **not** the project **Segment** filter (Subsidy / Non-Subsidy). **Revenue** and **Pipeline** are separate charts with different cohort rules (revenue-eligible vs open pipeline). Click a slice → drawer list; **Open in Projects →** applies the **Customer type** filter on the Projects page (same as classic Dashboard donuts).
 
 **Proposal Engine (Your Focus)** — Not in this grid; see [Your Focus](#your-focus-role-specific). Row click → drawer list built from the **same bucket IDs** the summary API used for counts; **Open in Projects →** uses **peBucket** + command-bar dates.
 
@@ -383,8 +383,8 @@ On viewports **narrower than `lg` (~1024px)**, Zenith uses a **simplified layout
 | **Today** (Sales / Management / Admin) | **Today’s Hit List**, **KPI strip**, **Revenue forecast**, and **The Board** |
 | **Today** (Operations / Finance label may read **KPIs**) | **KPI strip** only |
 | **Pipeline** | **Deal flow funnel** and **Your Focus** (role-specific panels) |
-| **Charts** | **Explore the landscape** (stage, FY, lead source, sales team, segments on Operations, loans on Finance, etc.) |
-| **More** (Finance only) | **Segment donut** and **Customer profitability** |
+| **Charts** | **Explore the landscape** (stage, FY, lead source, sales team, **Revenue by Customer Type** on Operations, loans on Finance, etc.) |
+| **More** (Finance only) | **Revenue by Customer Type** donut and **Customer profitability** |
 
 - **Bottom tab bar** — Fixed above the safe area at the bottom; switching tabs **scrolls** to that section and shows **only** that tab’s content (desktop still shows everything in one scroll).
 - **Floating actions** (mobile only) — **✦ Briefing** (opens the daily briefing) and **back to top**, sitting above the tab bar.

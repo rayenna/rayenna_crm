@@ -189,7 +189,7 @@ By the end of this session, participants should be able to:
 
 - **Bottom tab bar** (below **`lg` ~1024px**): **Today** · **Pipeline** · **Charts** · **More** (Finance only). Only **one section** is visible at a time; switching tabs scrolls to that block.
 - **Today** (Sales / Management / Admin): Hit List + KPIs + Revenue forecast + The Board. **Operations:** KPIs only. **Finance “Today”** label may read **KPIs**.
-- **Pipeline:** Deal flow funnel + **Your Focus**. **Charts:** **Explore the landscape** (including paired **panel / inverter** bars at the bottom). **More** (Finance): segment donut + customer profitability.
+- **Pipeline:** Deal flow funnel + **Your Focus**. **Charts:** **Explore the landscape** (including paired **panel / inverter** bars at the bottom). **More** (Finance): **Revenue by Customer Type** donut + customer profitability.
 - **Floating actions:** **✦ Briefing** and **back to top** above the tab bar (mobile only).
 - **Live / Offline** on the command bar — API health, not only `navigator.onLine`. Gold banner when showing **saved dashboard data**; red strip when offline; **Sync** when drawer actions are **queued**.
 - **Quick Actions** on mobile: drawer **slides from the right**, full width. Supported edits queue until reconnect.
@@ -324,9 +324,9 @@ By the end of this session, participants should be able to:
 
 - Bars, slices, FY points, banks → drawer **list mode**.
 - **FY chart:** **Orange** = revenue (order value totals); **Teal** = profit (**gross profit** totals).
-- **Segment donuts:** Revenue vs pipeline = **different** definitions.
+- **Customer Type donuts** (**Revenue by Customer Type** / **Pipeline by Customer Type**): slices = **Residential**, **Apartment**, **Commercial** from Customer Master — **not** project Subsidy/Non-Subsidy. Revenue vs pipeline = **different** cohort definitions.
 - **Panel / inverter brand** horizontal bars: tooltip shows **Order value (sum)**, **System capacity (sum)** (kW), then estimated cost; each bar only includes projects with **both** lifecycle brands filled. **Sales** (and other roles with these charts) can use them on the **classic Dashboard** (**click** → **Projects**) and in **Zenith** (**click** → drawer).
-- **Classic Dashboard:** Other clickable charts (stage, lead source, FY revenue vs profit, segment pies, sales team bars, availing loan by bank, profitability cloud / Top 10) also jump to **Projects** with matching URL filters — train users who live on Dashboard to **hover for the hint**, then **click**.
+- **Classic Dashboard:** Other clickable charts (stage, lead source, FY revenue vs profit, **customer type** pies, sales team bars, availing loan by bank, profitability cloud / Top 10) also jump to **Projects** with matching URL filters — train users who live on Dashboard to **hover for the hint**, then **click**.
 - **Explorer batch:** up to **~5,000** recently updated projects in Zenith’s explorer; **Open in Projects →** uses full Projects API — rare mismatch at huge volume.
 
 **Exercise (5 min):** Projects by stage → list → **Open →** one project → **Back**; optional **Open in Projects →**.

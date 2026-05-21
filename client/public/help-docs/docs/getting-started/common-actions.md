@@ -14,17 +14,17 @@ This guide covers the most frequently performed actions in Rayenna Energy CRM. T
 1. Navigate to **Customers** page from the top menu
 2. Click the **New Customer** button (top right)
 3. Fill in the customer form:
-   - **Required fields**:
-     - Customer Name or Individual Name fields (Prefix, First Name, Last Name)
-     - Customer Type (Residential, Apartment, Commercial)
-     - At least one contact number
-   - **Optional fields**:
-     - Middle Name
-     - Email address
-     - Address details (Country, State, City, Pin Code)
-     - Consumer Number
-     - Map coordinates (for location mapping)
-4. Click **Save** to create the customer
+   - **Required**:
+     - **Customer type**: Residential, Apartment, or Commercial
+     - **Residential**: Prefix, **First Name**, at least one **contact number** on the main form
+     - **Apartment / Commercial**: **Society or company name**; **Contacts** section with at least one person and one **phone** (no separate “contact person” field beside the name)
+   - **Optional / common**:
+     - Middle and last name (Residential); extra phones and emails
+     - Address (Country → State → City), DISCOM consumer number, **GSTIN** (business types)
+     - **Id Proof#** and **Type of Id Proof** (options depend on customer type)
+     - Map coordinates (location selector)
+     - **Salesperson** (Management / Admin)
+4. Click **Create** to save the customer
 5. You'll see a success message confirming the customer was created
 
 **Tips**:

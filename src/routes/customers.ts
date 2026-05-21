@@ -4,6 +4,24 @@ import { UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { generateCustomerId } from '../utils/customerId';
+import {
+  buildCustomerNameForSave,
+  getCustomerDisplayNameForExport,
+  isBusinessCustomerType,
+  normalizeGstFields,
+  validateCustomerIdentity,
+} from '../utils/customerRecord';
+import {
+  aggregateEmailsFromContacts,
+  aggregatePhonesFromContacts,
+  contactsToPrismaJson,
+  normalizeContactsForSave,
+  parseContactsPayload,
+  stringifyContactArrays,
+  validateBusinessContacts,
+} from '../utils/customerContacts';
+import { validateIdProofTypeForCustomer } from '../utils/customerIdProof';
+import { CustomerType, Prisma } from '@prisma/client';
 import * as XLSX from 'xlsx';
 
 const router = express.Router();
@@ -165,6 +183,8 @@ router.get(
             createdAt: true,
             createdById: true,
             salespersonId: true,
+            customerType: true,
+            companyName: true,
             _count: {
               select: { projects: true },
             },
@@ -232,6 +252,7 @@ router.get('/:id', authenticate, async (req: Request, res: Response) => {
         idProofType: true,
         companyName: true,
         companyGst: true,
+        contacts: true,
         createdById: true,
         salespersonId: true,
         createdAt: true,
@@ -270,7 +291,11 @@ router.post(
   '/',
   authenticate,
   [
-    body('firstName').notEmpty().trim(),
+    body('firstName').optional().trim(),
+    body('customerType').optional().isIn(['RESIDENTIAL', 'APARTMENT', 'COMMERCIAL']),
+    body('contactPerson').optional().trim(),
+    body('companyName').optional().trim(),
+    body('companyGst').optional().trim(),
     body('prefix').optional().trim(),
     body('middleName').optional().trim(),
     body('lastName').optional().trim(),
@@ -303,6 +328,8 @@ router.post(
         firstName,
         middleName,
         lastName,
+        customerType: customerTypeFromBody,
+        contactPerson,
         addressLine1, 
         addressLine2, 
         city, 
@@ -318,12 +345,29 @@ router.post(
         idProofType,
         companyName,
         companyGst,
+        contacts: contactsFromBody,
         salespersonId: salespersonIdFromBody,
       } = req.body;
+
+      const customerType: CustomerType =
+        customerTypeFromBody && Object.values(CustomerType).includes(customerTypeFromBody as CustomerType)
+          ? (customerTypeFromBody as CustomerType)
+          : CustomerType.RESIDENTIAL;
+
+      const identityError = validateCustomerIdentity({
+        customerType,
+        companyName,
+        firstName,
+        middleName,
+        lastName,
+      });
+      if (identityError) {
+        return res.status(400).json({ error: identityError });
+      }
       
-      // Validate: If Id Proof# is provided, Type of Id Proof is mandatory
-      if (idProofNumber && idProofNumber.trim() !== '' && (!idProofType || idProofType.trim() === '')) {
-        return res.status(400).json({ error: 'Type of Id Proof is required when Id Proof# is provided' });
+      const idProofError = validateIdProofTypeForCustomer(customerType, idProofNumber, idProofType);
+      if (idProofError) {
+        return res.status(400).json({ error: idProofError });
       }
 
       // Admin must select a Sales Person when creating a new customer
@@ -348,40 +392,68 @@ router.post(
       // Generate unique customer ID
       const customerId = await generateCustomerId();
 
-      // Construct customerName from name parts for backward compatibility
-      const nameParts = [firstName, middleName, lastName].filter(Boolean).join(' ')
-      const customerName = nameParts || firstName // Fallback to firstName if all empty
+      const customerName = buildCustomerNameForSave({
+        customerType,
+        companyName,
+        firstName,
+        middleName,
+        lastName,
+      });
+      const gstFields = normalizeGstFields(companyGst);
 
-      // Handle contactNumbers - ensure it's a JSON string
       let contactNumbersStr: string | null = null;
-      if (contactNumbers) {
-        if (Array.isArray(contactNumbers)) {
-          contactNumbersStr = JSON.stringify(contactNumbers);
-        } else if (typeof contactNumbers === 'string') {
-          try {
-            // Validate it's valid JSON
-            JSON.parse(contactNumbers);
-            contactNumbersStr = contactNumbers;
-          } catch {
-            // If not valid JSON, wrap it as an array
-            contactNumbersStr = JSON.stringify([contactNumbers]);
+      let emailsStr: string | null = null;
+      let contactsJson: ReturnType<typeof contactsToPrismaJson> | null = null;
+      let savePrefix: string | null = prefix || null;
+      let saveFirstName: string | null = firstName?.trim() || null;
+      let saveMiddleName: string | null = middleName || null;
+      let saveLastName: string | null = lastName || null;
+
+      if (isBusinessCustomerType(customerType)) {
+        const parsedContacts = parseContactsPayload(contactsFromBody);
+        const contactErr = validateBusinessContacts(parsedContacts);
+        if (contactErr) {
+          return res.status(400).json({ error: contactErr });
+        }
+        const normalizedContacts = normalizeContactsForSave(parsedContacts);
+        const phones = aggregatePhonesFromContacts(normalizedContacts);
+        const emails = aggregateEmailsFromContacts(normalizedContacts);
+        const aggregated = stringifyContactArrays(phones, emails);
+        contactNumbersStr = aggregated.contactNumbersStr;
+        emailsStr = aggregated.emailsStr;
+        contactsJson = contactsToPrismaJson(normalizedContacts);
+        const primary = normalizedContacts[0];
+        savePrefix = primary.prefix || null;
+        saveFirstName = primary.firstName || null;
+        saveMiddleName = primary.middleName || null;
+        saveLastName = primary.lastName || null;
+      } else {
+        if (contactNumbers) {
+          if (Array.isArray(contactNumbers)) {
+            contactNumbersStr = JSON.stringify(contactNumbers);
+          } else if (typeof contactNumbers === 'string') {
+            try {
+              JSON.parse(contactNumbers);
+              contactNumbersStr = contactNumbers;
+            } catch {
+              contactNumbersStr = JSON.stringify([contactNumbers]);
+            }
           }
         }
-      }
+        if (!contactNumbersStr) {
+          return res.status(400).json({ error: 'At least one contact number is required.' });
+        }
 
-      // Handle emails - ensure it's a JSON string (similar to contactNumbers)
-      let emailsStr: string | null = null;
-      if (email !== undefined && email !== null) {
-        if (Array.isArray(email)) {
-          emailsStr = JSON.stringify(email);
-        } else if (typeof email === 'string') {
-          try {
-            // Validate it's valid JSON
-            JSON.parse(email);
-            emailsStr = email;
-          } catch {
-            // If not valid JSON, wrap it as an array
-            emailsStr = JSON.stringify([email]);
+        if (email !== undefined && email !== null) {
+          if (Array.isArray(email)) {
+            emailsStr = JSON.stringify(email);
+          } else if (typeof email === 'string') {
+            try {
+              JSON.parse(email);
+              emailsStr = email;
+            } catch {
+              emailsStr = JSON.stringify([email]);
+            }
           }
         }
       }
@@ -389,11 +461,14 @@ router.post(
       const customer = await prisma.customer.create({
         data: {
           customerId,
-          customerName, // Legacy field
-          prefix: prefix || null,
-          firstName,
-          middleName: middleName || null,
-          lastName: lastName || null,
+          customerName,
+          customerType,
+          contactPerson: null,
+          contacts: isBusinessCustomerType(customerType) ? contactsJson! : Prisma.JsonNull,
+          prefix: savePrefix,
+          firstName: saveFirstName,
+          middleName: saveMiddleName,
+          lastName: saveLastName,
           addressLine1: addressLine1 || null,
           addressLine2: addressLine2 || null,
           city: city || null,
@@ -411,8 +486,9 @@ router.post(
           email: emailsStr,
           idProofNumber: idProofNumber || null,
           idProofType: idProofType || null,
-          companyName: companyName || null,
-          companyGst: companyGst || null,
+          companyName: companyName?.trim() || null,
+          companyGst: gstFields.companyGst,
+          gstNumber: gstFields.gstNumber,
           createdById: req.user.id, // Track who created the customer
           salespersonId: resolvedSalespersonId,
         },
@@ -459,9 +535,15 @@ router.put(
           id: true,
           createdById: true,
           salespersonId: true,
+          customerType: true,
+          companyName: true,
+          contactPerson: true,
+          prefix: true,
           firstName: true,
           middleName: true,
           lastName: true,
+          idProofNumber: true,
+          idProofType: true,
         },
       });
 
@@ -509,6 +591,8 @@ router.put(
         firstName,
         middleName,
         lastName,
+        customerType: customerTypeFromBody,
+        contactPerson,
         addressLine1, 
         addressLine2, 
         city, 
@@ -523,46 +607,30 @@ router.put(
         idProofNumber,
         idProofType,
         companyName,
-        companyGst
+        companyGst,
+        contacts: contactsFromBody,
       } = req.body;
       
-      // Validate: If Id Proof# is provided, Type of Id Proof is mandatory
-      if (idProofNumber && idProofNumber.trim() !== '' && (!idProofType || idProofType.trim() === '')) {
-        return res.status(400).json({ error: 'Type of Id Proof is required when Id Proof# is provided' });
-      }
-
       const updateData: any = {};
 
-      // Update name fields
-      if (firstName !== undefined) {
-        updateData.firstName = firstName
-        // Reconstruct customerName for backward compatibility
-        const currentMiddleName = middleName !== undefined ? middleName : customer.middleName
-        const currentLastName = lastName !== undefined ? lastName : customer.lastName
-        const nameParts = [firstName, currentMiddleName, currentLastName].filter(Boolean).join(' ')
-        updateData.customerName = nameParts || firstName
+      if (customerTypeFromBody !== undefined) {
+        if (
+          customerTypeFromBody === null ||
+          customerTypeFromBody === '' ||
+          !Object.values(CustomerType).includes(customerTypeFromBody as CustomerType)
+        ) {
+          return res.status(400).json({ error: 'Invalid customer type' });
+        }
+        updateData.customerType = customerTypeFromBody as CustomerType;
+        if (!isBusinessCustomerType(customerTypeFromBody as CustomerType)) {
+          updateData.contacts = null;
+          updateData.contactPerson = null;
+        }
       }
       if (prefix !== undefined) updateData.prefix = prefix || null
-      if (middleName !== undefined) {
-        updateData.middleName = middleName || null
-        // Reconstruct customerName if firstName exists
-        const currentFirstName = firstName !== undefined ? firstName : customer.firstName
-        const currentLastName = lastName !== undefined ? lastName : customer.lastName
-        if (currentFirstName) {
-          const nameParts = [currentFirstName, middleName || null, currentLastName].filter(Boolean).join(' ')
-          updateData.customerName = nameParts || currentFirstName
-        }
-      }
-      if (lastName !== undefined) {
-        updateData.lastName = lastName || null
-        // Reconstruct customerName if firstName exists
-        const currentFirstName = firstName !== undefined ? firstName : customer.firstName
-        const currentMiddleName = middleName !== undefined ? middleName : customer.middleName
-        if (currentFirstName) {
-          const nameParts = [currentFirstName, currentMiddleName || null, lastName || null].filter(Boolean).join(' ')
-          updateData.customerName = nameParts || currentFirstName
-        }
-      }
+      if (firstName !== undefined) updateData.firstName = firstName?.trim() || null
+      if (middleName !== undefined) updateData.middleName = middleName || null
+      if (lastName !== undefined) updateData.lastName = lastName || null
       if (addressLine1 !== undefined) updateData.addressLine1 = addressLine1 || null;
       if (addressLine2 !== undefined) updateData.addressLine2 = addressLine2 || null;
       if (city !== undefined) updateData.city = city || null;
@@ -589,39 +657,100 @@ router.put(
       if (email !== undefined) updateData.email = email || null;
       if (idProofNumber !== undefined) updateData.idProofNumber = idProofNumber || null;
       if (idProofType !== undefined) updateData.idProofType = idProofType || null;
-      if (companyName !== undefined) updateData.companyName = companyName || null;
-      if (companyGst !== undefined) updateData.companyGst = companyGst || null;
+      if (companyName !== undefined) updateData.companyName = companyName?.trim() || null;
+      if (companyGst !== undefined) {
+        const gstFields = normalizeGstFields(companyGst);
+        updateData.companyGst = gstFields.companyGst;
+        updateData.gstNumber = gstFields.gstNumber;
+      }
 
-      // Handle contactNumbers
-      if (contactNumbers !== undefined) {
-        if (Array.isArray(contactNumbers)) {
-          updateData.contactNumbers = JSON.stringify(contactNumbers);
-        } else if (typeof contactNumbers === 'string') {
-          try {
-            JSON.parse(contactNumbers);
-            updateData.contactNumbers = contactNumbers;
-          } catch {
-            updateData.contactNumbers = JSON.stringify([contactNumbers]);
+      const effectiveCustomerType: CustomerType =
+        updateData.customerType ?? customer.customerType ?? CustomerType.RESIDENTIAL;
+
+      if (contactsFromBody !== undefined) {
+        if (isBusinessCustomerType(effectiveCustomerType)) {
+          const parsedContacts = parseContactsPayload(contactsFromBody);
+          const contactErr = validateBusinessContacts(parsedContacts);
+          if (contactErr) {
+            return res.status(400).json({ error: contactErr });
           }
-        } else if (contactNumbers === null || contactNumbers === '') {
-          updateData.contactNumbers = null;
+          const normalizedContacts = normalizeContactsForSave(parsedContacts);
+          const aggregated = stringifyContactArrays(
+            aggregatePhonesFromContacts(normalizedContacts),
+            aggregateEmailsFromContacts(normalizedContacts),
+          );
+          updateData.contacts = contactsToPrismaJson(normalizedContacts);
+          updateData.contactPerson = null;
+          updateData.contactNumbers = aggregated.contactNumbersStr;
+          updateData.email = aggregated.emailsStr;
+          const primary = normalizedContacts[0];
+          updateData.prefix = primary.prefix || null;
+          updateData.firstName = primary.firstName || null;
+          updateData.middleName = primary.middleName || null;
+          updateData.lastName = primary.lastName || null;
+        } else {
+          updateData.contacts = null;
+          updateData.contactPerson = null;
         }
       }
 
-      // Handle emails (similar to contactNumbers)
-      if (email !== undefined) {
-        if (Array.isArray(email)) {
-          updateData.email = JSON.stringify(email);
-        } else if (typeof email === 'string') {
-          try {
-            JSON.parse(email);
-            updateData.email = email;
-          } catch {
-            // If not valid JSON, wrap it as an array
-            updateData.email = JSON.stringify([email]);
+      const identityFieldsTouched = [
+        'customerType',
+        'companyName',
+        'prefix',
+        'firstName',
+        'middleName',
+        'lastName',
+        'contacts',
+      ].some((key) => req.body[key] !== undefined);
+
+      if (identityFieldsTouched) {
+        const mergedIdentity = {
+          customerType: updateData.customerType ?? customer.customerType,
+          companyName: updateData.companyName !== undefined ? updateData.companyName : customer.companyName,
+          firstName: updateData.firstName !== undefined ? updateData.firstName : customer.firstName,
+          middleName: updateData.middleName !== undefined ? updateData.middleName : customer.middleName,
+          lastName: updateData.lastName !== undefined ? updateData.lastName : customer.lastName,
+        };
+        const identityError = validateCustomerIdentity(mergedIdentity);
+        if (identityError) {
+          return res.status(400).json({ error: identityError });
+        }
+        updateData.customerName = buildCustomerNameForSave(mergedIdentity);
+      }
+
+      if (!isBusinessCustomerType(effectiveCustomerType)) {
+        if (contactNumbers !== undefined) {
+          if (Array.isArray(contactNumbers)) {
+            updateData.contactNumbers = JSON.stringify(contactNumbers);
+          } else if (typeof contactNumbers === 'string') {
+            try {
+              JSON.parse(contactNumbers);
+              updateData.contactNumbers = contactNumbers;
+            } catch {
+              updateData.contactNumbers = JSON.stringify([contactNumbers]);
+            }
+          } else if (contactNumbers === null || contactNumbers === '') {
+            updateData.contactNumbers = null;
           }
-        } else if (email === null || email === '') {
-          updateData.email = null;
+          if (!updateData.contactNumbers) {
+            return res.status(400).json({ error: 'At least one contact number is required.' });
+          }
+        }
+
+        if (email !== undefined) {
+          if (Array.isArray(email)) {
+            updateData.email = JSON.stringify(email);
+          } else if (typeof email === 'string') {
+            try {
+              JSON.parse(email);
+              updateData.email = email;
+            } catch {
+              updateData.email = JSON.stringify([email]);
+            }
+          } else if (email === null || email === '') {
+            updateData.email = null;
+          }
         }
       }
 
@@ -669,6 +798,20 @@ router.put(
           delete updateData[field];
         }
       });
+      const finalCustomerType: CustomerType =
+        updateData.customerType ?? customer.customerType ?? CustomerType.RESIDENTIAL;
+      const finalIdProofNumber =
+        idProofNumber !== undefined ? idProofNumber : customer.idProofNumber;
+      const finalIdProofType = idProofType !== undefined ? idProofType : customer.idProofType;
+      const idProofValidationError = validateIdProofTypeForCustomer(
+        finalCustomerType,
+        finalIdProofNumber,
+        finalIdProofType,
+      );
+      if (idProofValidationError) {
+        return res.status(400).json({ error: idProofValidationError });
+      }
+
       if (process.env.NODE_ENV === 'development') {
         console.log('[CUSTOMER UPDATE] About to update customer:', {
           customerId: req.params.id,
@@ -741,12 +884,6 @@ router.delete('/:id', authenticate, authorize(UserRole.ADMIN), async (req: Reque
     res.status(500).json({ error: error.message });
   }
 });
-
-// Helper function to get customer display name
-const getCustomerDisplayNameForExport = (customer: any): string => {
-  const parts = [customer.prefix, customer.firstName, customer.middleName, customer.lastName].filter(Boolean);
-  return parts.length > 0 ? parts.join(' ') : customer.customerName || '';
-};
 
 // Export customers to Excel (Admin only)
 router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req: Request, res: Response) => {
@@ -850,6 +987,8 @@ router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req:
       return {
         'Customer ID': customer.customerId || '',
         'Name': getCustomerDisplayNameForExport(customer),
+        'Customer Type': customer.customerType || '',
+        'Contact Person': customer.contactPerson || '',
         'Prefix': customer.prefix || '',
         'First Name': customer.firstName || '',
         'Middle Name': customer.middleName || '',
@@ -866,7 +1005,8 @@ router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req:
         'ID Proof Type': customer.idProofType || '',
         'ID Proof Number': customer.idProofNumber || '',
         'Company Name': customer.companyName || '',
-        'Company GST': customer.companyGst || '',
+        'Company GST': customer.companyGst || customer.gstNumber || '',
+        'GST Number': customer.gstNumber || customer.companyGst || '',
         'Salesperson': customer.salesperson?.name || '',
         'Salesperson Email': customer.salesperson?.email || '',
         'Total Projects': customer._count.projects || 0,
@@ -993,6 +1133,8 @@ router.get('/export/csv', authenticate, authorize(UserRole.ADMIN), async (req: R
       return {
         'Customer ID': customer.customerId || '',
         'Name': getCustomerDisplayNameForExport(customer),
+        'Customer Type': customer.customerType || '',
+        'Contact Person': customer.contactPerson || '',
         'Prefix': customer.prefix || '',
         'First Name': customer.firstName || '',
         'Middle Name': customer.middleName || '',
@@ -1009,7 +1151,8 @@ router.get('/export/csv', authenticate, authorize(UserRole.ADMIN), async (req: R
         'ID Proof Type': customer.idProofType || '',
         'ID Proof Number': customer.idProofNumber || '',
         'Company Name': customer.companyName || '',
-        'Company GST': customer.companyGst || '',
+        'Company GST': customer.companyGst || customer.gstNumber || '',
+        'GST Number': customer.gstNumber || customer.companyGst || '',
         'Salesperson': customer.salesperson?.name || '',
         'Salesperson Email': customer.salesperson?.email || '',
         'Total Projects': customer._count.projects || 0,
