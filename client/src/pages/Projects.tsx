@@ -34,8 +34,8 @@ import {
 } from '../utils/projectSegment'
 import {
   getCustomerTypeLegendLabel,
-  getCustomerTypeLegendSwatchClass,
-  getProjectRowCustomerTypeClasses,
+  getProjectNameCustomerTypeColorClass,
+  getProjectNameCustomerTypeTextClass,
 } from '../utils/customerTypeStyles'
 import ProjectsActiveFilterChips from '../components/projects/ProjectsActiveFilterChips'
 import { buildProjectFilterChips } from '../utils/projectFilterChips'
@@ -1901,10 +1901,10 @@ Do you want to continue?`}
                 <tr
                   key={project.id}
                   onClick={() => navigate(`/projects/${project.id}`)}
-                  className={`group cursor-pointer transition-colors duration-150 ease-out ${getProjectRowCustomerTypeClasses(project.customer?.customerType)}`}
+                  className="group cursor-pointer transition-colors duration-150 ease-out odd:bg-[color:var(--bg-table-alt)] even:bg-[color:var(--bg-card)] hover:bg-[color:var(--bg-table-hover)]"
                 >
                   <td className="min-w-0 px-2 py-2 sm:px-2.5 lg:py-1.5 lg:pl-2 lg:pr-2">
-                    <p className="min-w-0 truncate text-sm font-semibold text-[color:var(--text-primary)] transition-colors group-hover:text-[color:var(--accent-gold)] lg:truncate-none lg:line-clamp-2 lg:leading-snug lg:break-words">
+                    <p className={getProjectNameCustomerTypeTextClass(project.customer?.customerType)}>
                       #{project.slNo} · {project.customer?.customerName || 'Unknown Customer'}
                     </p>
                     <p className="mt-0.5 max-w-full truncate text-[11px] text-[color:var(--text-muted)] lg:text-xs">
@@ -2127,15 +2127,16 @@ Do you want to continue?`}
         </p>
         <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2 text-[11px] leading-relaxed text-[color:var(--text-secondary)] sm:grid-cols-3 sm:gap-y-1.5 sm:text-xs lg:grid-cols-6">
           <span className="col-span-2 inline-flex items-center gap-1.5 font-semibold text-[color:var(--text-primary)] sm:col-span-3 lg:col-span-6">
-            Row colour by customer type
+            Project name colour (customer type)
           </span>
           {(['RESIDENTIAL', 'APARTMENT', 'COMMERCIAL'] as CustomerType[]).map((ct) => (
             <span key={ct} className="inline-flex items-center gap-1.5 shrink-0">
-              <span
-                className={`inline-block h-3 w-8 rounded-sm shadow-sm ${getCustomerTypeLegendSwatchClass(ct)}`}
-                aria-hidden
-              />
-              {getCustomerTypeLegendLabel(ct)}
+              <span className={`text-sm font-semibold ${getProjectNameCustomerTypeColorClass(ct)}`}>
+                # · {getCustomerTypeLegendLabel(ct)}
+              </span>
+              {ct === 'RESIDENTIAL' ? (
+                <span className="text-[color:var(--text-muted)]">(default)</span>
+              ) : null}
             </span>
           ))}
           <span className="col-span-2 inline-flex items-center gap-1.5 font-semibold text-[color:var(--text-primary)] sm:col-span-3 lg:col-span-6 lg:mt-1">

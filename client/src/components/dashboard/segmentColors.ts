@@ -1,15 +1,10 @@
+import { CUSTOMER_TYPE_CHART_HEX } from '../../utils/customerTypeColors'
+
 /**
  * Customer-type donut colours (Dashboard + Zenith).
- * Uses Rayenna accent hues so slices are vivid and easy to tell apart on light/dark cards.
+ * Keep in sync with Projects row/badge colours — see `utils/customerTypeStyles.ts`.
  */
-export const SEGMENT_COLORS: Record<string, string> = {
-  /** Warm gold — residential / home */
-  RESIDENTIAL: '#F5A623',
-  /** Indigo — apartment / society (distinct from teal commercial) */
-  APARTMENT: '#7C6CF0',
-  /** Brand teal — commercial */
-  COMMERCIAL: '#00D4B4',
-}
+export const SEGMENT_COLORS: Record<string, string> = { ...CUSTOMER_TYPE_CHART_HEX }
 
 /** Extra slices if API returns an unexpected type */
 const FALLBACK_COLORS = ['#F59E0B', '#3B8BFF', '#10B981']

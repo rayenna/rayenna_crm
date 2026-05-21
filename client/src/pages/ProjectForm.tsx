@@ -14,12 +14,8 @@ import { INVERTER_BRAND_OPTIONS } from '../constants/inverterBrands'
 import { PANEL_BRAND_OPTIONS } from '../constants/panelBrands'
 import { FINANCING_BANK_FORM_OPTIONS } from '../utils/financingBankDisplay'
 import { formatCustomerStringList, parseCustomerStringList } from '../utils/customerContactFields'
-import {
-  formatCustomerTypeDisplay,
-  getCustomerDisplayName,
-  type CustomerType,
-} from '../utils/customerRecord'
-import { getCustomerTypeLegendSwatchClass } from '../utils/customerTypeStyles'
+import { formatCustomerTypeDisplay, getCustomerDisplayName } from '../utils/customerRecord'
+import { getCustomerTypeBadgeClasses } from '../utils/customerTypeStyles'
 import { getProjectFormAccessNotice } from '../utils/projectAccessMessages'
 import ProjectAccessNotice from '../components/projects/ProjectAccessNotice'
 import { defaultPanelTypeForProjectSegment, getProjectSegmentLabel } from '../utils/projectSegment'
@@ -1203,7 +1199,7 @@ const ProjectForm = () => {
                           <p className="flex flex-wrap items-center gap-2">
                             <span className="text-[color:var(--text-secondary)]">Customer type:</span>
                             <span
-                              className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-semibold ${getCustomerTypeLegendSwatchClass((customer.customerType ?? 'RESIDENTIAL') as CustomerType)}`}
+                              className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-semibold ${getCustomerTypeBadgeClasses(customer.customerType)}`}
                             >
                               {formatCustomerTypeDisplay(customer.customerType)}
                             </span>

@@ -324,6 +324,12 @@ npm start
 - Input validation using express-validator
 - File upload restrictions (type and size)
 
+## Developer documentation
+
+- **[CRM modernization progress](./docs/MODERNIZATION_PROGRESS.md)** — terminology (customer type vs segment), Batch 1 scope, file map, deploy notes, resume pointer for Cursor.
+- **[CRM smoke checklist](./docs/CRM_SMOKE_CHECKLIST.md)** — manual regression after CRM changes or deploy.
+- **Proposal Engine** (separate app in `proposal-engine/`): [modernization progress](./proposal-engine/docs/MODERNIZATION_PROGRESS.md).
+
 ## Future Enhancements
 
 - Mobile app (React Native)

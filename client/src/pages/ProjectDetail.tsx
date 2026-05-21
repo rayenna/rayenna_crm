@@ -22,8 +22,7 @@ import { canDeleteProject, canEditProject } from '../utils/projectPermissions'
 import { getProjectDetailAccessNotice } from '../utils/projectAccessMessages'
 import ProjectAccessNotice from '../components/projects/ProjectAccessNotice'
 import { formatCustomerTypeDisplay } from '../utils/customerRecord'
-import { getCustomerTypeLegendSwatchClass } from '../utils/customerTypeStyles'
-import type { CustomerType } from '../utils/customerRecord'
+import { getCustomerTypeBadgeClasses } from '../utils/customerTypeStyles'
 import { getProjectSegmentLabel, getProjectSegmentPillClasses } from '../utils/projectSegment'
 
 function formatLeadSourceDisplay(
@@ -315,9 +314,10 @@ const ProjectDetail = () => {
                   <p className="mt-0.5 truncate text-sm text-[color:var(--text-secondary)]">
                     {project.customer?.customerName || 'Unknown Customer'}
                     {project.customer?.customerType ? (
-                      <span className="text-[color:var(--text-muted)]">
-                        {' '}
-                        · {formatCustomerTypeDisplay(project.customer.customerType)}
+                      <span
+                        className={`ml-1.5 inline-flex align-middle rounded-md border px-2 py-0.5 text-[11px] font-semibold ${getCustomerTypeBadgeClasses(project.customer.customerType)}`}
+                      >
+                        {formatCustomerTypeDisplay(project.customer.customerType)}
                       </span>
                     ) : null}
                   </p>
@@ -406,7 +406,7 @@ const ProjectDetail = () => {
                   </span>
                   {project.customer?.customerType ? (
                     <span
-                      className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold ${getCustomerTypeLegendSwatchClass(project.customer.customerType as CustomerType)}`}
+                      className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold ${getCustomerTypeBadgeClasses(project.customer.customerType)}`}
                     >
                       {formatCustomerTypeDisplay(project.customer.customerType)}
                     </span>
@@ -486,7 +486,7 @@ const ProjectDetail = () => {
               <DetailRow label="Customer Type" valueClassName="font-medium">
                 <span className="inline-flex flex-wrap items-center gap-2">
                   <span
-                    className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-semibold ${getCustomerTypeLegendSwatchClass((project.customer.customerType ?? 'RESIDENTIAL') as CustomerType)}`}
+                    className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-semibold ${getCustomerTypeBadgeClasses(project.customer.customerType)}`}
                   >
                     {formatCustomerTypeDisplay(project.customer.customerType)}
                   </span>
