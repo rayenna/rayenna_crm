@@ -159,6 +159,8 @@ export default function FinanceQuickDrawer({
   const [paymentAmountInput, setPaymentAmountInput] = useState('')
   const [paymentDateInput, setPaymentDateInput] = useState('')
   const [narrowViewport, setNarrowViewport] = useState(false)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const openedAtRef = useRef(0)
 
   const canEdit =
     !readOnly && (user?.role === UserRole.FINANCE || user?.role === UserRole.ADMIN)
@@ -198,9 +200,16 @@ export default function FinanceQuickDrawer({
       clearZenithDrawerBodyLock()
       return
     }
+    openedAtRef.current = Date.now()
     document.body.classList.add('zenith-drawer-open')
     window.dispatchEvent(new CustomEvent(ZENITH_FLOATING_DISMISS_EVENT))
-    return () => clearZenithDrawerBodyLock()
+    const focusFrame = window.requestAnimationFrame(() => {
+      panelRef.current?.focus({ preventScroll: true })
+    })
+    return () => {
+      window.cancelAnimationFrame(focusFrame)
+      clearZenithDrawerBodyLock()
+    }
   }, [isOpen])
 
   const wasOpenRef = useRef(false)
@@ -289,10 +298,14 @@ export default function FinanceQuickDrawer({
         exit={{ opacity: 0 }}
         transition={{ duration: narrowViewport ? 0.18 : 0.25, ease: 'easeOut' }}
         className="fixed inset-0 z-[6000] zenith-quick-drawer-backdrop backdrop-blur-none lg:backdrop-blur-sm"
-        onClick={onClose}
+        onClick={() => {
+          if (Date.now() - openedAtRef.current < 400) return
+          onClose()
+        }}
       />
 
       <motion.div
+        ref={panelRef}
         key="zenith-fin-panel"
         initial={{ x: '100%' }}
         animate={{ x: 0 }}
@@ -306,7 +319,9 @@ export default function FinanceQuickDrawer({
           ...(narrowViewport ? { willChange: 'transform' as const } : {}),
         }}
         role="dialog"
+        aria-modal="true"
         aria-label="Payment quick view"
+        tabIndex={-1}
       >
         <div className="zenith-quick-drawer-header min-h-16 px-5 py-3 flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">

@@ -140,6 +140,8 @@ export default function QuickActionDrawer({
   const [dateInput, setDateInput] = useState<string>('')
   /** Narrow viewport: lighter motion + no backdrop blur (Android GPU / stutter). */
   const [narrowViewport, setNarrowViewport] = useState(false)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const openedAtRef = useRef(0)
 
   const effectiveProjectId = listMode
     ? listSubview === 'single' && listPickId
@@ -194,9 +196,16 @@ export default function QuickActionDrawer({
       clearZenithDrawerBodyLock()
       return
     }
+    openedAtRef.current = Date.now()
     document.body.classList.add('zenith-drawer-open')
     window.dispatchEvent(new CustomEvent(ZENITH_FLOATING_DISMISS_EVENT))
-    return () => clearZenithDrawerBodyLock()
+    const focusFrame = window.requestAnimationFrame(() => {
+      panelRef.current?.focus({ preventScroll: true })
+    })
+    return () => {
+      window.cancelAnimationFrame(focusFrame)
+      clearZenithDrawerBodyLock()
+    }
   }, [isOpen])
 
   useEffect(() => {
@@ -342,11 +351,15 @@ export default function QuickActionDrawer({
         exit={{ opacity: 0 }}
         transition={{ duration: narrowViewport ? 0.18 : 0.25, ease: 'easeOut' }}
         className="fixed inset-0 z-[6000] zenith-quick-drawer-backdrop backdrop-blur-none lg:backdrop-blur-sm"
-        onClick={onClose}
+        onClick={() => {
+          if (Date.now() - openedAtRef.current < 400) return
+          onClose()
+        }}
         aria-hidden={false}
       />
 
       <motion.div
+        ref={panelRef}
         key="zenith-qa-panel"
         initial={{ x: '100%' }}
         animate={{ x: 0 }}
@@ -360,7 +373,9 @@ export default function QuickActionDrawer({
           ...(narrowViewport ? { willChange: 'transform' as const } : {}),
         }}
         role="dialog"
+        aria-modal="true"
         aria-label="Quick actions"
+        tabIndex={-1}
       >
         {/* Header */}
         <div className="zenith-quick-drawer-header min-h-16 px-5 py-3 flex flex-col gap-2">

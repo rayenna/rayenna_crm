@@ -4,6 +4,15 @@ import { UserRole } from '../types'
 import { fetchZenithWithOfflineCache } from '../utils/zenithOfflineFetch'
 import { zenithQueryCacheKey } from '../utils/zenithOfflineCache'
 
+function hasZenithSeedPayload(data: unknown): data is Record<string, unknown> {
+  return (
+    data != null &&
+    typeof data === 'object' &&
+    !Array.isArray(data) &&
+    Object.keys(data as Record<string, unknown>).length > 0
+  )
+}
+
 function zenithEndpoint(role: UserRole | undefined): 'sales' | 'management' | 'operations' | 'finance' | null {
   if (!role) return null
   if (role === UserRole.SALES) return 'sales'
@@ -24,7 +33,7 @@ export function useZenithMainQuery(
     selectedFYs.length === 0 && selectedQuarters.length === 0 && selectedMonths.length === 0
   const skipFetch =
     filtersEmpty &&
-    initialDataWhenFiltersEmpty != null &&
+    hasZenithSeedPayload(initialDataWhenFiltersEmpty) &&
     (role === UserRole.SALES || role === UserRole.MANAGEMENT || role === UserRole.ADMIN)
 
   const endpoint = zenithEndpoint(role)

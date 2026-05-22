@@ -108,8 +108,14 @@ const Zenith = () => {
 
   const fyCacheKey = zenithQueryCacheKey(['dashboard', 'fys', user?.role])
 
-  const { data: dashboardData, error: fyError, isError: isFyError, refetch: refetchFYs } =
-    useQuery({
+  const {
+    data: dashboardData,
+    error: fyError,
+    isError: isFyError,
+    isLoading: isFyLoading,
+    isFetching: isFyFetching,
+    refetch: refetchFYs,
+  } = useQuery({
       queryKey: ['dashboard', 'fys', user?.role],
       queryFn: async () => {
         if (!user?.role) throw new Error('No role')
@@ -141,7 +147,17 @@ const Zenith = () => {
 
   const filtersEmpty =
     selectedFYs.length === 0 && selectedQuarters.length === 0 && selectedMonths.length === 0
-  const initialDataWhenFiltersEmpty = filtersEmpty ? dashboardDataClean : undefined
+  // Match Dashboard.tsx: only seed from FY fetch when payload exists (never `{}` from strip(undefined)).
+  const initialDataWhenFiltersEmpty =
+    filtersEmpty && dashboardData != null && Object.keys(dashboardDataClean).length > 0
+      ? dashboardDataClean
+      : undefined
+  const awaitingFySeedForExec =
+    filtersEmpty &&
+    execZenithRole &&
+    Object.keys(dashboardDataClean).length === 0 &&
+    !!user &&
+    (isFyLoading || isFyFetching)
 
   const {
     data: zenithData,
@@ -157,24 +173,32 @@ const Zenith = () => {
     initialDataWhenFiltersEmpty,
   )
 
+  // Stable close callbacks only — hook return objects (`quickAction`, etc.) are new every render.
+  const closeQuickActionDrawer = quickAction.closeDrawer
+  const closeFinanceQuickDrawer = financeQuickDrawer.close
+  const closeOperationsQuickDrawer = operationsQuickDrawer.close
+
   useEffect(() => {
-    clearZenithDrawerBodyLock()
     const onPageShow = (e: PageTransitionEvent) => {
       if (!e.persisted) return
       clearZenithDrawerBodyLock()
-      quickAction.closeDrawer()
-      financeQuickDrawer.close()
-      operationsQuickDrawer.close()
+      closeQuickActionDrawer()
+      closeFinanceQuickDrawer()
+      closeOperationsQuickDrawer()
     }
     window.addEventListener('pageshow', onPageShow)
+    return () => window.removeEventListener('pageshow', onPageShow)
+  }, [closeQuickActionDrawer, closeFinanceQuickDrawer, closeOperationsQuickDrawer])
+
+  useEffect(() => {
+    clearZenithDrawerBodyLock()
     return () => {
-      window.removeEventListener('pageshow', onPageShow)
       clearZenithDrawerBodyLock()
-      quickAction.closeDrawer()
-      financeQuickDrawer.close()
-      operationsQuickDrawer.close()
+      closeQuickActionDrawer()
+      closeFinanceQuickDrawer()
+      closeOperationsQuickDrawer()
     }
-  }, [quickAction, financeQuickDrawer, operationsQuickDrawer])
+  }, [closeQuickActionDrawer, closeFinanceQuickDrawer, closeOperationsQuickDrawer])
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -204,9 +228,15 @@ const Zenith = () => {
 
   const hasZenithBodyData = Object.keys(zenithDataClean).length > 0
   const showZenithLoadError = !isFyError && isError && !hasZenithBodyData
-  const showZenithBodyShell = !isFyError && !showZenithLoadError && (hasZenithBodyData || isLoading)
+  const showZenithBodyShell =
+    !isFyError && !showZenithLoadError && (hasZenithBodyData || isLoading || awaitingFySeedForExec)
   const showZenithEmptyState =
-    !isFyError && !showZenithLoadError && !hasZenithBodyData && !isLoading && !!user?.role
+    !isFyError &&
+    !showZenithLoadError &&
+    !hasZenithBodyData &&
+    !isLoading &&
+    !awaitingFySeedForExec &&
+    !!user?.role
 
   const dateFilter = useMemo(
     () => ({ selectedFYs, selectedQuarters, selectedMonths }),
