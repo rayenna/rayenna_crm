@@ -43,6 +43,7 @@ import {
   stripZenithOfflineSnapshotMeta,
   zenithQueryCacheKey,
 } from '../utils/zenithOfflineCache'
+import { clearZenithDrawerBodyLock } from '../utils/zenithDrawerLifecycle'
 
 const Zenith = () => {
   const { user } = useAuth()
@@ -157,6 +158,25 @@ const Zenith = () => {
   )
 
   useEffect(() => {
+    clearZenithDrawerBodyLock()
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (!e.persisted) return
+      clearZenithDrawerBodyLock()
+      quickAction.closeDrawer()
+      financeQuickDrawer.close()
+      operationsQuickDrawer.close()
+    }
+    window.addEventListener('pageshow', onPageShow)
+    return () => {
+      window.removeEventListener('pageshow', onPageShow)
+      clearZenithDrawerBodyLock()
+      quickAction.closeDrawer()
+      financeQuickDrawer.close()
+      operationsQuickDrawer.close()
+    }
+  }, [quickAction, financeQuickDrawer, operationsQuickDrawer])
+
+  useEffect(() => {
     const handler = (e: Event) => {
       const d = (e as CustomEvent<{ successCount: number }>).detail
       if (d?.successCount > 0) {
@@ -184,6 +204,9 @@ const Zenith = () => {
 
   const hasZenithBodyData = Object.keys(zenithDataClean).length > 0
   const showZenithLoadError = !isFyError && isError && !hasZenithBodyData
+  const showZenithBodyShell = !isFyError && !showZenithLoadError && (hasZenithBodyData || isLoading)
+  const showZenithEmptyState =
+    !isFyError && !showZenithLoadError && !hasZenithBodyData && !isLoading && !!user?.role
 
   const dateFilter = useMemo(
     () => ({ selectedFYs, selectedQuarters, selectedMonths }),
@@ -409,7 +432,27 @@ const Zenith = () => {
         </div>
       )}
 
-      {!isFyError && !showZenithLoadError && hasZenithBodyData ? body : null}
+      {showZenithBodyShell ? body : null}
+
+      {showZenithEmptyState ? (
+        <div className="mx-3 sm:mx-5 mt-6 max-w-xl rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-5 text-center shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
+          <p className="text-sm font-semibold text-[color:var(--text-primary)]">Zenith data is not available</p>
+          <p className="mt-2 text-xs text-[color:var(--text-secondary)]">
+            The dashboard returned no metrics for your filters. Try again, or refresh the app if the screen stays blank.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              clearZenithDrawerBodyLock()
+              void refetchFYs()
+              void refetch()
+            }}
+            className="mt-4 min-h-[44px] rounded-xl bg-[color:var(--accent-gold)] px-4 py-2 text-sm font-bold text-[color:var(--text-inverse)] touch-manipulation"
+          >
+            Reload Zenith
+          </button>
+        </div>
+      ) : null}
 
       {showQuickActionDrawer ? (
         <QuickActionDrawer

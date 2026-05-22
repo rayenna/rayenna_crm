@@ -6,16 +6,6 @@ import { VitePWA } from 'vite-plugin-pwa'
 // https://vitejs.dev/config/
 // base: '/' required so CSS/JS chunk paths work on hard reload (Fix Help reload losing formatting)
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, path.resolve(__dirname, '.'), '')
-  let apiOrigin = ''
-  try {
-    if (env.VITE_API_BASE_URL) {
-      apiOrigin = new URL(env.VITE_API_BASE_URL).origin
-    }
-  } catch {
-    /* ignore invalid URL */
-  }
-
   const apiNetworkFirst = {
     handler: 'NetworkFirst' as const,
     options: {
@@ -31,28 +21,23 @@ export default defineConfig(({ mode }) => {
     },
   }
 
+  // RegExp-only urlPatterns — never use build-time closures (old SW builds referenced
+  // `apiOrigin` at runtime and threw ReferenceError, breaking /api fetches on Zenith).
   const runtimeCaching = [
     {
-      urlPattern: ({ url }: { url: URL }) => url.pathname.startsWith('/api/'),
-      ...apiNetworkFirst,
-    },
-    ...(apiOrigin
-      ? [
-          {
-            urlPattern: ({ url }: { url: URL }) =>
-              url.origin === apiOrigin && url.pathname.startsWith('/api/'),
-            ...apiNetworkFirst,
-          },
-        ]
-      : []),
-    {
-      urlPattern: ({ url }: { url: URL }) =>
-        url.hostname.includes('render.com') || url.hostname.includes('onrender.com'),
+      urlPattern: /^\/api\//,
       ...apiNetworkFirst,
     },
     {
-      urlPattern: ({ url }: { url: URL }) =>
-        url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com',
+      urlPattern: /^https:\/\/[^/]+\.onrender\.com\/api\//,
+      ...apiNetworkFirst,
+    },
+    {
+      urlPattern: /^https:\/\/[^/]+\.render\.com\/api\//,
+      ...apiNetworkFirst,
+    },
+    {
+      urlPattern: /^https:\/\/fonts\.googleapis\.com\//,
       handler: 'CacheFirst' as const,
       options: {
         cacheName: 'google-fonts',
@@ -63,7 +48,18 @@ export default defineConfig(({ mode }) => {
       },
     },
     {
-      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
+      urlPattern: /^https:\/\/fonts\.gstatic\.com\//,
+      handler: 'CacheFirst' as const,
+      options: {
+        cacheName: 'google-fonts',
+        expiration: {
+          maxEntries: 20,
+          maxAgeSeconds: 60 * 60 * 24 * 365,
+        },
+      },
+    },
+    {
+      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,
       handler: 'CacheFirst' as const,
       options: {
         cacheName: 'images-cache',

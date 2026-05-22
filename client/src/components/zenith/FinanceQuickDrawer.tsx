@@ -21,6 +21,7 @@ import {
   ZENITH_DRAWER_PANEL_CLASS,
 } from './zenithDrawerMotion'
 import ZenithDrawerPortal from './ZenithDrawerPortal'
+import { clearZenithDrawerBodyLock } from '../../utils/zenithDrawerLifecycle'
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {
   [ProjectStatus.LEAD]: 'Lead',
@@ -193,12 +194,13 @@ export default function FinanceQuickDrawer({
   }, [])
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      clearZenithDrawerBodyLock()
+      return
+    }
     document.body.classList.add('zenith-drawer-open')
     window.dispatchEvent(new CustomEvent(ZENITH_FLOATING_DISMISS_EVENT))
-    return () => {
-      document.body.classList.remove('zenith-drawer-open')
-    }
+    return () => clearZenithDrawerBodyLock()
   }, [isOpen])
 
   const wasOpenRef = useRef(false)
@@ -277,18 +279,25 @@ export default function FinanceQuickDrawer({
 
   return (
     <ZenithDrawerPortal>
+      <AnimatePresence onExitComplete={clearZenithDrawerBodyLock}>
+        {isOpen ? (
+          <>
       <motion.div
+        key="zenith-fin-backdrop"
         initial={{ opacity: 0 }}
-        animate={{ opacity: isOpen ? 1 : 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         transition={{ duration: narrowViewport ? 0.18 : 0.25, ease: 'easeOut' }}
         className="fixed inset-0 z-[6000] zenith-quick-drawer-backdrop backdrop-blur-none lg:backdrop-blur-sm"
-        style={{ pointerEvents: isOpen ? 'auto' : 'none' }}
         onClick={onClose}
-        aria-hidden={!isOpen}
       />
 
       <motion.div
-        {...zenithDrawerMotion(isOpen)}
+        key="zenith-fin-panel"
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={zenithDrawerMotion(true).transition}
         className={ZENITH_DRAWER_PANEL_CLASS}
         style={{
           fontFamily: 'DM Sans, sans-serif',
@@ -549,6 +558,9 @@ export default function FinanceQuickDrawer({
           </button>
         </div>
       </motion.div>
+          </>
+        ) : null}
+      </AnimatePresence>
 
       {toast ? (
         <div

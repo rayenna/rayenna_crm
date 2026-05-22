@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useModalEscape } from '../../contexts/ModalEscapeContext'
 import { motion, AnimatePresence } from 'framer-motion'
+import { clearZenithDrawerBodyLock } from '../../utils/zenithDrawerLifecycle'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
@@ -189,12 +190,13 @@ export default function QuickActionDrawer({
 
   const wasOpenRef = useRef(false)
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      clearZenithDrawerBodyLock()
+      return
+    }
     document.body.classList.add('zenith-drawer-open')
     window.dispatchEvent(new CustomEvent(ZENITH_FLOATING_DISMISS_EVENT))
-    return () => {
-      document.body.classList.remove('zenith-drawer-open')
-    }
+    return () => clearZenithDrawerBodyLock()
   }, [isOpen])
 
   useEffect(() => {
@@ -330,18 +332,26 @@ export default function QuickActionDrawer({
 
   return (
     <ZenithDrawerPortal>
+      <AnimatePresence onExitComplete={clearZenithDrawerBodyLock}>
+        {isOpen ? (
+          <>
       <motion.div
+        key="zenith-qa-backdrop"
         initial={{ opacity: 0 }}
-        animate={{ opacity: isOpen ? 1 : 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         transition={{ duration: narrowViewport ? 0.18 : 0.25, ease: 'easeOut' }}
         className="fixed inset-0 z-[6000] zenith-quick-drawer-backdrop backdrop-blur-none lg:backdrop-blur-sm"
-        style={{ pointerEvents: isOpen ? 'auto' : 'none' }}
         onClick={onClose}
-        aria-hidden={!isOpen}
+        aria-hidden={false}
       />
 
       <motion.div
-        {...zenithDrawerMotion(isOpen)}
+        key="zenith-qa-panel"
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={zenithDrawerMotion(true).transition}
         className={ZENITH_DRAWER_PANEL_CLASS}
         style={{
           fontFamily: 'DM Sans, sans-serif',
@@ -802,6 +812,9 @@ export default function QuickActionDrawer({
           )}
         </div>
       </motion.div>
+          </>
+        ) : null}
+      </AnimatePresence>
 
       {toast ? (
         <div

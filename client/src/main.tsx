@@ -18,6 +18,7 @@ registerSW({
   },
   onRegistered(swRegistration) {
     console.log('Service Worker registered', swRegistration)
+    void swRegistration?.update()
   },
   onRegisterError(error) {
     console.error('SW registration failed:', error)
