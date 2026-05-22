@@ -11,7 +11,7 @@ import MultiSelect from '../components/MultiSelect'
 import { Users, Plus, Download, Search } from 'lucide-react'
 import { ErrorModal } from '@/components/common/ErrorModal'
 import { CustomerForm } from '../components/customers/CustomerForm'
-import { CUSTOMER_TYPE_OPTIONS, getCustomerDisplayName } from '../utils/customerRecord'
+import { formatCustomerTypeDisplay, getCustomerDisplayName } from '../utils/customerRecord'
 import { getCustomerTypeBadgeClasses } from '../utils/customerTypeStyles'
 import { GoogleMapsIconButton } from '../components/customers/GoogleMapsIconButton'
 import { formatCustomerStringList, parseCustomerStringList } from '../utils/customerContactFields'
@@ -336,14 +336,12 @@ const CustomerMaster = () => {
                     <h3 className="truncate text-base font-semibold text-[color:var(--text-primary)] transition-colors group-hover:text-[color:var(--accent-gold)] sm:text-lg">
                       {getCustomerDisplayName(customer)}
                     </h3>
-                    {customer.customerType ? (
-                      <span
-                        className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold ${getCustomerTypeBadgeClasses(customer.customerType)}`}
-                      >
-                        {CUSTOMER_TYPE_OPTIONS.find((o) => o.value === customer.customerType)?.label ??
-                          customer.customerType}
-                      </span>
-                    ) : null}
+                    <span
+                      className={`inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 text-xs font-semibold ${getCustomerTypeBadgeClasses(customer.customerType)}`}
+                      title="Customer type"
+                    >
+                      {formatCustomerTypeDisplay(customer.customerType)}
+                    </span>
                     {customer._count != null && customer._count.projects > 0 && (
                       <span className="inline-flex items-center rounded-md border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-2 py-0.5 text-xs font-semibold text-[color:var(--accent-teal)]">
                         {customer._count.projects} Project{customer._count.projects !== 1 ? 's' : ''}
