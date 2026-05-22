@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../utils/axios'
 import { UserRole } from '../types'
 import { fetchZenithWithOfflineCache } from '../utils/zenithOfflineFetch'
+import { ZENITH_QUERY_STALE_MS } from '../constants/zenithQueryStale'
 import { zenithQueryCacheKey } from '../utils/zenithOfflineCache'
 
 function hasZenithSeedPayload(data: unknown): data is Record<string, unknown> {
@@ -61,6 +62,7 @@ export function useZenithMainQuery(
     },
     enabled: !!endpoint && !skipFetch,
     initialData: skipFetch ? (initialDataWhenFiltersEmpty as Record<string, unknown>) : undefined,
+    staleTime: ZENITH_QUERY_STALE_MS,
     retry: (failureCount, error: unknown) => {
       const status = (error as { response?: { status?: number } })?.response?.status
       if (status === 401 || status === 403) return false

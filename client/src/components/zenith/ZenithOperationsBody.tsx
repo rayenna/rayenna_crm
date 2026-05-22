@@ -25,10 +25,11 @@ import {
   filterExplorerProjectsByFunnelStage,
   type ZenithFunnelStage,
 } from './zenithFunnel'
+import { ZENITH_QUERY_STALE_MS } from '../../constants/zenithQueryStale'
 import type { ZenithDateFilter } from './zenithTypes'
 import type {
-  ZenithQuickActionHandle,
   QuickActionProjectRef,
+  ZenithListAmountMode,
   ZenithAutoFocusSection,
 } from '../../hooks/useQuickAction'
 import KPICard from './KPICard'
@@ -103,7 +104,7 @@ export default function ZenithOperationsBody({
   data,
   isLoading,
   dateFilter,
-  quickAction,
+  onOpenDrawerListMode,
   onOpenOperationsDrawer,
   onOpenProjectQuickDrawer,
   mobileTab = null,
@@ -111,7 +112,12 @@ export default function ZenithOperationsBody({
   data: Record<string, unknown>
   isLoading: boolean
   dateFilter: ZenithDateFilter
-  quickAction: ZenithQuickActionHandle
+  onOpenDrawerListMode: (args: {
+    filterLabel: string
+    filteredProjects: ZenithExplorerProject[]
+    listAmountMode?: ZenithListAmountMode
+    projectsPageHref?: string | null
+  }) => void
   onOpenOperationsDrawer?: (projectId: string) => void
   onOpenProjectQuickDrawer: (p: QuickActionProjectRef, section?: ZenithAutoFocusSection | null) => void
   mobileTab?: ZenithMobileTab | null
@@ -136,6 +142,7 @@ export default function ZenithOperationsBody({
       }
     },
     enabled: !!user && !isLoading,
+    staleTime: ZENITH_QUERY_STALE_MS,
   })
 
   const explorerProjects = (data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]
@@ -159,13 +166,13 @@ export default function ZenithOperationsBody({
       (p) =>
         p.projectStatus === ProjectStatus.CONFIRMED || p.projectStatus === ProjectStatus.UNDER_INSTALLATION,
     )
-    quickAction.openDrawerListMode({
+    onOpenDrawerListMode({
       filterLabel: 'Pending installation',
       filteredProjects: filtered,
       listAmountMode: 'deal_value',
       projectsPageHref: pendingInstallationProjectsUrl,
     })
-  }, [explorerProjects, quickAction.openDrawerListMode, pendingInstallationProjectsUrl])
+  }, [explorerProjects, onOpenDrawerListMode, pendingInstallationProjectsUrl])
 
   const onCompletedInstallationKpiClick = useCallback(() => {
     const filtered = explorerProjects.filter(
@@ -173,25 +180,25 @@ export default function ZenithOperationsBody({
         p.projectStatus === ProjectStatus.COMPLETED ||
         p.projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
     )
-    quickAction.openDrawerListMode({
+    onOpenDrawerListMode({
       filterLabel: 'Completed installation',
       filteredProjects: filtered,
       listAmountMode: 'deal_value',
       projectsPageHref: completedInstallationProjectsUrl,
     })
-  }, [explorerProjects, quickAction.openDrawerListMode, completedInstallationProjectsUrl])
+  }, [explorerProjects, onOpenDrawerListMode, completedInstallationProjectsUrl])
 
   const onSubsidyCreditedKpiClick = useCallback(() => {
     const filtered = explorerProjects.filter(
       (p) => p.projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
     )
-    quickAction.openDrawerListMode({
+    onOpenDrawerListMode({
       filterLabel: 'Subsidy credited',
       filteredProjects: filtered,
       listAmountMode: 'deal_value',
       projectsPageHref: subsidyCreditedProjectsUrl,
     })
-  }, [explorerProjects, quickAction.openDrawerListMode, subsidyCreditedProjectsUrl])
+  }, [explorerProjects, onOpenDrawerListMode, subsidyCreditedProjectsUrl])
 
   const drill = useCallback(
     (dimension: ZenithChartDrilldownDimension, value: string, opts?: DrilldownOpts) => {
@@ -212,20 +219,20 @@ export default function ZenithOperationsBody({
         opts,
         sample,
       )
-      quickAction.openDrawerListMode({
+      onOpenDrawerListMode({
         filterLabel: label,
         filteredProjects: filtered,
         listAmountMode,
         projectsPageHref,
       })
     },
-    [explorerProjects, quickAction.openDrawerListMode, dateFilter],
+    [explorerProjects, onOpenDrawerListMode, dateFilter],
   )
 
   const onPaymentStatusPillClick = useCallback(
     (paymentUrlParam: string) => {
       const filtered = filterProjectsByChartSlice(explorerProjects, 'payment_status', paymentUrlParam)
-      quickAction.openDrawerListMode({
+      onOpenDrawerListMode({
         filterLabel: buildFilterLabel('payment_status', paymentUrlParam),
         filteredProjects: filtered,
         listAmountMode: 'deal_value',
@@ -238,20 +245,20 @@ export default function ZenithOperationsBody({
         ),
       })
     },
-    [explorerProjects, quickAction.openDrawerListMode, dateFilter],
+    [explorerProjects, onOpenDrawerListMode, dateFilter],
   )
 
   const onDealFlowStageClick = useCallback(
     (stage: ZenithFunnelStage) => {
       const filtered = filterExplorerProjectsByFunnelStage(stage.id, explorerProjects)
-      quickAction.openDrawerListMode({
+      onOpenDrawerListMode({
         filterLabel: buildDealFlowDrawerFilterLabel(stage),
         filteredProjects: filtered,
         listAmountMode: 'deal_value',
         projectsPageHref: stage.to,
       })
     },
-    [explorerProjects, quickAction.openDrawerListMode],
+    [explorerProjects, onOpenDrawerListMode],
   )
 
   const panelBrandBarRows = useMemo(

@@ -36,7 +36,8 @@ import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
 import { getLoanBankBarColor } from '../dashboard/loanBankChartColors'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
-import type { ZenithQuickActionHandle } from '../../hooks/useQuickAction'
+import type { ZenithListAmountMode } from '../../hooks/useQuickAction'
+import { ZENITH_QUERY_STALE_MS } from '../../constants/zenithQueryStale'
 import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../../types/zenithExplorer'
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
@@ -98,14 +99,19 @@ export default function ZenithFinanceBody({
   data,
   isLoading,
   dateFilter,
-  quickAction,
+  onOpenDrawerListMode,
   onOpenFinanceDrawer,
   mobileTab = null,
 }: {
   data: Record<string, unknown>
   isLoading: boolean
   dateFilter: ZenithDateFilter
-  quickAction: ZenithQuickActionHandle
+  onOpenDrawerListMode: (args: {
+    filterLabel: string
+    filteredProjects: ZenithExplorerProject[]
+    listAmountMode?: ZenithListAmountMode
+    projectsPageHref?: string | null
+  }) => void
   onOpenFinanceDrawer?: (projectId: string) => void
   mobileTab?: ZenithMobileTab | null
 }) {
@@ -131,6 +137,7 @@ export default function ZenithFinanceBody({
         .revenueByLeadSource
     },
     enabled: !!user && !isLoading,
+    staleTime: ZENITH_QUERY_STALE_MS,
   })
 
   const { data: perfData } = useQuery({
@@ -147,6 +154,7 @@ export default function ZenithFinanceBody({
       }
     },
     enabled: !!user && !isLoading,
+    staleTime: ZENITH_QUERY_STALE_MS,
   })
 
   const explorerProjects = (data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]
@@ -171,20 +179,20 @@ export default function ZenithFinanceBody({
         opts,
         sample,
       )
-      quickAction.openDrawerListMode({
+      onOpenDrawerListMode({
         filterLabel: label,
         filteredProjects: filtered,
         listAmountMode,
         projectsPageHref,
       })
     },
-    [explorerProjects, quickAction.openDrawerListMode, dateFilter],
+    [explorerProjects, onOpenDrawerListMode, dateFilter],
   )
 
   const onPaymentStatusPillClick = useCallback(
     (paymentUrlParam: string) => {
       const filtered = filterProjectsByChartSlice(explorerProjects, 'payment_status', paymentUrlParam)
-      quickAction.openDrawerListMode({
+      onOpenDrawerListMode({
         filterLabel: buildFilterLabel('payment_status', paymentUrlParam),
         filteredProjects: filtered,
         listAmountMode: 'deal_value',
@@ -197,33 +205,33 @@ export default function ZenithFinanceBody({
         ),
       })
     },
-    [explorerProjects, quickAction.openDrawerListMode, dateFilter],
+    [explorerProjects, onOpenDrawerListMode, dateFilter],
   )
 
   const onDealFlowStageClick = useCallback(
     (stage: ZenithFunnelStage) => {
       const filtered = filterExplorerProjectsByFunnelStage(stage.id, explorerProjects)
-      quickAction.openDrawerListMode({
+      onOpenDrawerListMode({
         filterLabel: buildDealFlowDrawerFilterLabel(stage),
         filteredProjects: filtered,
         listAmountMode: 'deal_value',
         projectsPageHref: stage.to,
       })
     },
-    [explorerProjects, quickAction.openDrawerListMode],
+    [explorerProjects, onOpenDrawerListMode],
   )
 
   const onAvailingLoanKpiClick = useCallback(() => {
     const filtered = explorerProjects.filter(
       (p) => p.availing_loan === true && p.projectStatus !== ProjectStatus.LOST,
     )
-    quickAction.openDrawerListMode({
+    onOpenDrawerListMode({
       filterLabel: 'Availing loan',
       filteredProjects: filtered,
       listAmountMode: 'deal_value',
       projectsPageHref: availingLoanProjectsUrl,
     })
-  }, [explorerProjects, quickAction.openDrawerListMode, availingLoanProjectsUrl])
+  }, [explorerProjects, onOpenDrawerListMode, availingLoanProjectsUrl])
 
   if (isLoading) {
     return (

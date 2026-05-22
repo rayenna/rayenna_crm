@@ -15,6 +15,7 @@ import {
   YAxis,
 } from 'recharts'
 import axiosInstance from '../../utils/axios'
+import { ZENITH_QUERY_STALE_MS } from '../../constants/zenithQueryStale'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole, ProjectStatus } from '../../types'
 import type { ZenithDateFilter } from './zenithTypes'
@@ -1929,6 +1930,7 @@ export default function ZenithYourFocus({
       return res.data as ZenithFocusResponse
     },
     enabled: !!user?.id && showForRole && !zenithMainLoading,
+    staleTime: ZENITH_QUERY_STALE_MS,
   })
 
   if (!showForRole) return null

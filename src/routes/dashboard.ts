@@ -300,6 +300,9 @@ function formatLeadSourceForExplorer(ls: LeadSource | null | undefined): string 
 }
 
 
+/** Max projects scanned for Zenith funnel avg-days (aligned with explorer batch cap). */
+const ZENITH_FUNNEL_METRICS_PROJECT_CAP = 5000;
+
 /** Lightweight project rows for Zenith chart drill-down + revenue forecast (same FY/date scope as dashboard). */
 async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
   const rows = await prisma.project.findMany({
@@ -327,7 +330,7 @@ async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
       salesperson: { select: { name: true } },
       customer: { select: { firstName: true, customerName: true, customerType: true } },
     },
-    take: 5000,
+    take: ZENITH_FUNNEL_METRICS_PROJECT_CAP,
     orderBy: { updatedAt: 'desc' },
   });
   return rows.map((p) => ({
@@ -373,6 +376,8 @@ async function computeAvgDaysByProjectStatus(where: Prisma.ProjectWhereInput): P
   const rows = await prisma.project.findMany({
     where,
     select: { projectStatus: true, stageEnteredAt: true, createdAt: true },
+    take: ZENITH_FUNNEL_METRICS_PROJECT_CAP,
+    orderBy: { updatedAt: 'desc' },
   });
   const acc: Record<string, { sum: number; n: number }> = {};
   const now = Date.now();

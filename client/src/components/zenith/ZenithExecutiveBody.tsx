@@ -39,10 +39,11 @@ import HitList from './HitList'
 import Leaderboard from './Leaderboard'
 import { useHitList, type HitListProjectRow } from '../../hooks/useHitList'
 import type {
-  ZenithQuickActionHandle,
   QuickActionProjectRef,
   ZenithAutoFocusSection,
+  ZenithListAmountMode,
 } from '../../hooks/useQuickAction'
+import { ZENITH_QUERY_STALE_MS } from '../../constants/zenithQueryStale'
 import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../../types/zenithExplorer'
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
@@ -153,7 +154,7 @@ export default function ZenithExecutiveBody({
   data,
   isLoading,
   dateFilter,
-  quickAction,
+  onOpenDrawerListMode,
   onOpenFinanceDrawer,
   onOpenOperationsDrawer,
   onOpenProjectQuickDrawer,
@@ -163,7 +164,12 @@ export default function ZenithExecutiveBody({
   data: Record<string, unknown>
   isLoading: boolean
   dateFilter: ZenithDateFilter
-  quickAction: ZenithQuickActionHandle
+  onOpenDrawerListMode: (args: {
+    filterLabel: string
+    filteredProjects: ZenithExplorerProject[]
+    listAmountMode?: ZenithListAmountMode
+    projectsPageHref?: string | null
+  }) => void
   onOpenFinanceDrawer?: (projectId: string) => void
   onOpenOperationsDrawer?: (projectId: string) => void
   /** Hit List, pipeline, etc.: QuickAction (Sales/Finance) or operations drawer (Admin/Mgmt/Ops). */
@@ -205,6 +211,7 @@ export default function ZenithExecutiveBody({
       }
     },
     enabled: !!user?.id && showHitList && !isLoading,
+    staleTime: ZENITH_QUERY_STALE_MS,
   })
 
   const pipelineRows: HitListProjectRow[] =
@@ -240,20 +247,20 @@ export default function ZenithExecutiveBody({
         opts,
         sample,
       )
-      quickAction.openDrawerListMode({
+      onOpenDrawerListMode({
         filterLabel: label,
         filteredProjects: filtered,
         listAmountMode,
         projectsPageHref,
       })
     },
-    [explorerProjects, quickAction.openDrawerListMode, dateFilter],
+    [explorerProjects, onOpenDrawerListMode, dateFilter],
   )
 
   const onPaymentStatusPillClick = useCallback(
     (paymentUrlParam: string) => {
       const filtered = filterProjectsByChartSlice(explorerProjects, 'payment_status', paymentUrlParam)
-      quickAction.openDrawerListMode({
+      onOpenDrawerListMode({
         filterLabel: buildFilterLabel('payment_status', paymentUrlParam),
         filteredProjects: filtered,
         listAmountMode: 'deal_value',
@@ -266,20 +273,20 @@ export default function ZenithExecutiveBody({
         ),
       })
     },
-    [explorerProjects, quickAction.openDrawerListMode, dateFilter],
+    [explorerProjects, onOpenDrawerListMode, dateFilter],
   )
 
   const onDealFlowStageClick = useCallback(
     (stage: ZenithFunnelStage) => {
       const filtered = filterExplorerProjectsByFunnelStage(stage.id, explorerProjects)
-      quickAction.openDrawerListMode({
+      onOpenDrawerListMode({
         filterLabel: buildDealFlowDrawerFilterLabel(stage),
         filteredProjects: filtered,
         listAmountMode: 'deal_value',
         projectsPageHref: stage.to,
       })
     },
-    [explorerProjects, quickAction.openDrawerListMode],
+    [explorerProjects, onOpenDrawerListMode],
   )
 
   const onPeBucketListClick = useCallback(
@@ -287,37 +294,37 @@ export default function ZenithExecutiveBody({
       row: { key: string; label: string }
       filteredProjects: ZenithExplorerProject[]
     }) => {
-      quickAction.openDrawerListMode({
+      onOpenDrawerListMode({
         filterLabel: `Proposal Engine — ${args.row.label}`,
         filteredProjects: args.filteredProjects,
         listAmountMode: 'deal_value',
         projectsPageHref: buildProjectsUrl({ peBucket: args.row.key as PeDashboardBucket }, dateFilter),
       })
     },
-    [quickAction.openDrawerListMode, dateFilter],
+    [onOpenDrawerListMode, dateFilter],
   )
 
   const onAvailingLoanKpiClick = useCallback(() => {
     const filtered = explorerProjects.filter(
       (p) => p.availing_loan === true && p.projectStatus !== ProjectStatus.LOST,
     )
-    quickAction.openDrawerListMode({
+    onOpenDrawerListMode({
       filterLabel: 'Availing loan',
       filteredProjects: filtered,
       listAmountMode: 'deal_value',
       projectsPageHref: availingLoanProjectsUrl,
     })
-  }, [explorerProjects, quickAction.openDrawerListMode, availingLoanProjectsUrl])
+  }, [explorerProjects, onOpenDrawerListMode, availingLoanProjectsUrl])
 
   const onLostProjectsKpiClick = useCallback(() => {
     const filtered = explorerProjects.filter((p) => p.projectStatus === ProjectStatus.LOST)
-    quickAction.openDrawerListMode({
+    onOpenDrawerListMode({
       filterLabel: 'Lost projects',
       filteredProjects: filtered,
       listAmountMode: 'deal_value',
       projectsPageHref: lostProjectsUrl,
     })
-  }, [explorerProjects, quickAction.openDrawerListMode, lostProjectsUrl])
+  }, [explorerProjects, onOpenDrawerListMode, lostProjectsUrl])
 
   /** Match Hit List height to KPI grid on lg+. Row must use items-start (not stretch) so the grid keeps its natural height; if the row stretches the grid to the Hit List, offsetHeight equals the list and the widget never shrinks. */
   const kpiBandRef = useRef<HTMLDivElement>(null)
@@ -362,6 +369,7 @@ export default function ZenithExecutiveBody({
         .revenueByLeadSource
     },
     enabled: !!user && !isLoading,
+    staleTime: ZENITH_QUERY_STALE_MS,
   })
 
   const { data: perfData } = useQuery({
@@ -378,6 +386,7 @@ export default function ZenithExecutiveBody({
       }
     },
     enabled: !!user && !isLoading,
+    staleTime: ZENITH_QUERY_STALE_MS,
   })
 
   const panelBrandBarRows = useMemo(
@@ -551,7 +560,7 @@ export default function ZenithExecutiveBody({
               <ForecastKPI
                 projects={explorerProjects}
                 onOpenForecastList={(args) =>
-                  quickAction.openDrawerListMode({
+                  onOpenDrawerListMode({
                     ...args,
                     projectsPageHref: buildForecastOpenDealsProjectsHref(dateFilter),
                   })
@@ -593,7 +602,7 @@ export default function ZenithExecutiveBody({
             <ForecastKPI
               projects={explorerProjects}
               onOpenForecastList={(args) =>
-                quickAction.openDrawerListMode({
+                onOpenDrawerListMode({
                   ...args,
                   projectsPageHref: buildForecastOpenDealsProjectsHref(dateFilter),
                 })
@@ -611,7 +620,7 @@ export default function ZenithExecutiveBody({
             projects={explorerProjects}
             currentUser={{ id: user?.id ?? '', name: user?.name ?? '' }}
             dateFilter={dateFilter}
-            onOpenListMode={quickAction.openDrawerListMode}
+            onOpenListMode={onOpenDrawerListMode}
           />
         </div>
       ) : null}

@@ -44,6 +44,7 @@ import {
   zenithQueryCacheKey,
 } from '../utils/zenithOfflineCache'
 import { clearZenithDrawerBodyLock } from '../utils/zenithDrawerLifecycle'
+import { ZENITH_QUERY_STALE_MS } from '../constants/zenithQueryStale'
 
 const Zenith = () => {
   const { user } = useAuth()
@@ -133,6 +134,7 @@ const Zenith = () => {
         })
       },
       enabled: !!user,
+      staleTime: ZENITH_QUERY_STALE_MS,
     })
 
   const dashboardDataClean = useMemo(
@@ -259,6 +261,7 @@ const Zenith = () => {
       return res.data as { salesTeamData: { salespersonName: string; totalOrderValue: number }[] }
     },
     enabled: !!user && execForInsights,
+    staleTime: ZENITH_QUERY_STALE_MS,
   })
 
   const insights = useMemo(() => {
@@ -290,7 +293,7 @@ const Zenith = () => {
         operationsQuickDrawer.open(p.id)
       }
     },
-    [user?.role, quickAction, operationsQuickDrawer],
+    [user?.role, quickAction.openDrawer, operationsQuickDrawer.open],
   )
 
   const handOffListPickToOperationsDrawer = useCallback(
@@ -298,8 +301,10 @@ const Zenith = () => {
       operationsQuickDrawer.open(projectId)
       quickAction.closeDrawer()
     },
-    [operationsQuickDrawer, quickAction],
+    [operationsQuickDrawer.open, quickAction.closeDrawer],
   )
+
+  const openDrawerListMode = quickAction.openDrawerListMode
 
   const mobileTabProp = narrow ? mobileTab : null
 
@@ -316,7 +321,7 @@ const Zenith = () => {
             data={data}
             isLoading={isLoading}
             dateFilter={dateFilter}
-            quickAction={quickAction}
+            onOpenDrawerListMode={openDrawerListMode}
             mobileTab={mobileTabProp}
             onOpenFinanceDrawer={
               user.role === UserRole.ADMIN || user.role === UserRole.MANAGEMENT
@@ -333,7 +338,7 @@ const Zenith = () => {
             data={data}
             isLoading={isLoading}
             dateFilter={dateFilter}
-            quickAction={quickAction}
+            onOpenDrawerListMode={openDrawerListMode}
             mobileTab={mobileTabProp}
             onOpenOperationsDrawer={operationsQuickDrawer.open}
             onOpenProjectQuickDrawer={openZenithProjectQuickDrawer}
@@ -345,7 +350,7 @@ const Zenith = () => {
             data={data}
             isLoading={isLoading}
             dateFilter={dateFilter}
-            quickAction={quickAction}
+            onOpenDrawerListMode={openDrawerListMode}
             mobileTab={mobileTabProp}
             onOpenFinanceDrawer={financeQuickDrawer.open}
           />
@@ -362,7 +367,7 @@ const Zenith = () => {
     zenithDataClean,
     isLoading,
     dateFilter,
-    quickAction,
+    openDrawerListMode,
     financeQuickDrawer.open,
     operationsQuickDrawer.open,
     openZenithProjectQuickDrawer,
