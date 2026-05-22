@@ -162,18 +162,8 @@ export default function SolarNewsTicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchEnabled, refreshIntervalMs])
 
-  if (!fetchEnabled) {
-    return (
-      <div
-        className="zenith-solar-news-root border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 96%, transparent)]"
-        aria-hidden
-      >
-        <div className="h-9 sm:h-10" />
-      </div>
-    )
-  }
-
   useEffect(() => {
+    if (!fetchEnabled) return
     const el = marqueeRef.current
     if (!el || typeof ResizeObserver === 'undefined') return
 
@@ -192,13 +182,24 @@ export default function SolarNewsTicker({
     const ro = new ResizeObserver(() => compute())
     ro.observe(el)
     return () => ro.disconnect()
-  }, [items.length])
+  }, [fetchEnabled, items.length])
 
   const marqueeItems = useMemo(() => {
     const safe = items.length ? items : []
     // Duplicate once for seamless loop.
     return [...safe, ...safe]
   }, [items])
+
+  if (!fetchEnabled) {
+    return (
+      <div
+        className="zenith-solar-news-root border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 96%, transparent)]"
+        aria-hidden
+      >
+        <div className="h-9 sm:h-10" />
+      </div>
+    )
+  }
 
   if (items.length === 0) return null
 
