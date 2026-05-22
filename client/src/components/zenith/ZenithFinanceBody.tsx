@@ -36,6 +36,13 @@ import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
 import { getLoanBankBarColor } from '../dashboard/loanBankChartColors'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
+import { ZENITH_CHART_GROUP } from '../../constants/zenithChartGroups'
+import type { ZenithChartGroup } from '../../constants/zenithChartGroups'
+import {
+  chartResetGroupForDrill,
+  exploreChartResetGroup,
+  funnelChartResetGroup,
+} from '../../utils/zenithChartResetGroup'
 import type { ZenithListAmountMode } from '../../hooks/useQuickAction'
 import { ZENITH_QUERY_STALE_MS } from '../../constants/zenithQueryStale'
 import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../../types/zenithExplorer'
@@ -111,6 +118,7 @@ export default function ZenithFinanceBody({
     filteredProjects: ZenithExplorerProject[]
     listAmountMode?: ZenithListAmountMode
     projectsPageHref?: string | null
+    chartResetGroup?: ZenithChartGroup
   }) => void
   onOpenFinanceDrawer?: (projectId: string) => void
   mobileTab?: ZenithMobileTab | null
@@ -184,6 +192,7 @@ export default function ZenithFinanceBody({
         filteredProjects: filtered,
         listAmountMode,
         projectsPageHref,
+        chartResetGroup: chartResetGroupForDrill(dimension, 'fin'),
       })
     },
     [explorerProjects, onOpenDrawerListMode, dateFilter],
@@ -203,6 +212,7 @@ export default function ZenithFinanceBody({
           undefined,
           filtered[0] ?? null,
         ),
+        chartResetGroup: exploreChartResetGroup('fin'),
       })
     },
     [explorerProjects, onOpenDrawerListMode, dateFilter],
@@ -216,6 +226,7 @@ export default function ZenithFinanceBody({
         filteredProjects: filtered,
         listAmountMode: 'deal_value',
         projectsPageHref: stage.to,
+        chartResetGroup: funnelChartResetGroup('fin'),
       })
     },
     [explorerProjects, onOpenDrawerListMode],
@@ -230,6 +241,7 @@ export default function ZenithFinanceBody({
       filteredProjects: filtered,
       listAmountMode: 'deal_value',
       projectsPageHref: availingLoanProjectsUrl,
+      chartResetGroup: exploreChartResetGroup('fin'),
     })
   }, [explorerProjects, onOpenDrawerListMode, availingLoanProjectsUrl])
 
@@ -349,7 +361,7 @@ export default function ZenithFinanceBody({
         >
           <div id="zenith-lead-source" className="min-w-0 scroll-mt-24 lg:scroll-mt-0">
             <ChartPanel title="Revenue by lead source" showExploreHint>
-              <ZenithChartTouchReset>
+              <ZenithChartTouchReset chartGroup={ZENITH_CHART_GROUP.FIN_EXPLORE}>
                 {(rk) => (
                   <ResponsiveContainer key={rk} width="100%" height={exploreChartHeight} minWidth={0}>
                     <BarChart layout="vertical" data={leadChart} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
@@ -393,7 +405,7 @@ export default function ZenithFinanceBody({
           </div>
           <div id="zenith-sales-team" className="min-w-0 scroll-mt-24 lg:scroll-mt-0">
             <ChartPanel title="Revenue vs pipeline by sales team" showExploreHint>
-              <ZenithChartTouchReset>
+              <ZenithChartTouchReset chartGroup={ZENITH_CHART_GROUP.FIN_EXPLORE}>
                 {(rk) => (
                   <ResponsiveContainer key={rk} width="100%" height={exploreChartHeight} minWidth={0}>
                     <BarChart layout="vertical" data={salesMerge} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
@@ -465,6 +477,7 @@ export default function ZenithFinanceBody({
               <ZenithRevenueProfitFyChart
                 data={fyChart}
                 height={exploreChartHeight}
+                chartGroup={ZENITH_CHART_GROUP.FIN_EXPLORE}
                 onFyClick={({ fy, metric }) =>
                   drill('fy', fy, { fyMetric: metric === 'profit' ? 'profit' : 'revenue' })
                 }
@@ -473,7 +486,7 @@ export default function ZenithFinanceBody({
           </div>
           <div id="zenith-loans" className="min-w-0 scroll-mt-24 lg:scroll-mt-0">
             <ChartPanel title="Loans by bank" showExploreHint>
-              <ZenithChartTouchReset>
+              <ZenithChartTouchReset chartGroup={ZENITH_CHART_GROUP.FIN_EXPLORE}>
                 {(rk) => (
                   <ResponsiveContainer key={rk} width="100%" height={exploreChartHeight} minWidth={0}>
                     <BarChart layout="vertical" data={loans} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
@@ -523,6 +536,7 @@ export default function ZenithFinanceBody({
               stretchToRowHeight
               title="Revenue by Customer Type"
               showExploreHint
+              chartGroup={ZENITH_CHART_GROUP.FIN_DONUT}
               chartHeightPx={exploreChartHeight}
               data={seg.map((s) => ({
                 name: s.label,

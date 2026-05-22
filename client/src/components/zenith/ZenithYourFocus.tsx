@@ -25,6 +25,7 @@ import HealthBadge from './HealthBadge'
 import { computeDealHealth, pipelineRowToHealthProject } from '../../utils/dealHealthScore'
 import ReminderModal from './ReminderModal'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
+import { ZENITH_CHART_GROUP } from '../../constants/zenithChartGroups'
 import ZenithFocusCollapsible from './ZenithFocusCollapsible'
 import ZenithProposalEngineCard from './ZenithProposalEngineCard'
 import ZenithScrollHint from './ZenithScrollHint'
@@ -1266,7 +1267,10 @@ function FinanceRadarBlock({
                       No payment mix data
                     </p>
                   ) : (
-                    <ZenithChartTouchReset className="h-full w-full min-w-0 min-h-[160px] max-lg:min-h-[200px]">
+                    <ZenithChartTouchReset
+                      chartGroup={ZENITH_CHART_GROUP.FOCUS}
+                      className="h-full w-full min-w-0 min-h-[160px] max-lg:min-h-[200px]"
+                    >
                       {(rk) => (
                         <ResponsiveContainer
                           key={rk}
@@ -1347,7 +1351,10 @@ function FinanceRadarBlock({
                   <span className="max-lg:block lg:inline max-lg:mt-0.5">last 6 months</span>
                 </h4>
                   <div className="zenith-chart-slot zenith-payment-radar-bar-slot w-full max-lg:h-[240px] max-lg:flex-none lg:flex-1 lg:min-h-[140px] relative">
-                    <ZenithChartTouchReset className="h-full w-full min-w-0 min-h-[140px] max-lg:min-h-[240px]">
+                    <ZenithChartTouchReset
+                      chartGroup={ZENITH_CHART_GROUP.FOCUS}
+                      className="h-full w-full min-w-0 min-h-[140px] max-lg:min-h-[240px]"
+                    >
                       {(rk) => (
                         <ResponsiveContainer
                           key={rk}

@@ -14,7 +14,7 @@ import type { ZenithAutoFocusSection, ZenithListAmountMode } from '../../hooks/u
 import DrawerProjectList from './DrawerProjectList'
 import HealthBadge from './HealthBadge'
 import { projectDetailToHealthProject } from '../../utils/dealHealthScore'
-import { ZENITH_CHARTS_TOUCH_RESET_EVENT, ZENITH_FLOATING_DISMISS_EVENT } from '../../utils/zenithEvents'
+import { ZENITH_FLOATING_DISMISS_EVENT } from '../../utils/zenithEvents'
 import { fireVictoryToast } from '../../hooks/useVictoryToast'
 import { zenithDrawerStagePillClass } from './zenithDealCardUi'
 import ZenithDrawerRemarksPanel from './ZenithDrawerRemarksPanel'
@@ -209,9 +209,6 @@ export default function QuickActionDrawer({
   }, [isOpen])
 
   useEffect(() => {
-    if (wasOpenRef.current && !isOpen) {
-      window.dispatchEvent(new CustomEvent(ZENITH_CHARTS_TOUCH_RESET_EVENT))
-    }
     wasOpenRef.current = isOpen
   }, [isOpen])
 

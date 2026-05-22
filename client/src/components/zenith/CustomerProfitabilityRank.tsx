@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type RefCallback } from 'react'
+import { useInViewOnce } from '../../hooks/useInViewOnce'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import WordCloud from 'wordcloud'
@@ -56,9 +57,18 @@ export default function CustomerProfitabilityRank({
   const navigate = useNavigate()
   const { theme } = useTheme()
   const [view, setView] = useState<'cloud' | 'top10'>('cloud')
-  const wrapRef = useRef<HTMLDivElement>(null)
+  const wrapRef = useRef<HTMLDivElement | null>(null)
   const hostRef = useRef<HTMLDivElement>(null)
   const [hostSize, setHostSize] = useState({ w: 520, h: 280 })
+  const { ref: inViewRef, seen: wordCloudInView } = useInViewOnce('160px 0px')
+
+  const setWrapRef: RefCallback<HTMLDivElement> = useCallback(
+    (el) => {
+      wrapRef.current = el
+      inViewRef(el)
+    },
+    [inViewRef],
+  )
 
   useEffect(() => {
     const el = wrapRef.current
@@ -96,7 +106,7 @@ export default function CustomerProfitabilityRank({
   )
 
   useEffect(() => {
-    if (view !== 'cloud') {
+    if (view !== 'cloud' || !wordCloudInView) {
       WordCloud.stop()
       const h = hostRef.current
       if (h) h.textContent = ''
@@ -178,7 +188,7 @@ export default function CustomerProfitabilityRank({
       WordCloud.stop()
       clearGlow()
     }
-  }, [rows, hostSize.w, hostSize.h, view, clearGlow, applyGlow, dateFilter, navigate, theme])
+  }, [rows, hostSize.w, hostSize.h, view, wordCloudInView, clearGlow, applyGlow, dateFilter, navigate, theme])
 
   const top10 = [...rows].sort((a, b) => b.value - a.value).slice(0, 10)
   const maxVal = Math.max(...rows.map((d) => d.value), 1)
@@ -247,7 +257,7 @@ export default function CustomerProfitabilityRank({
           ) : (
             <>
               <div
-                ref={wrapRef}
+                ref={setWrapRef}
                 className="zenith-wordcloud-host flex-1 min-h-[280px] w-full rounded-xl border border-[color:var(--border-default)] overflow-visible lg:overflow-hidden cursor-pointer"
               >
                 <div ref={hostRef} className="relative h-full min-h-[280px] w-full" />

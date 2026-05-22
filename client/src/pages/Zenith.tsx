@@ -411,7 +411,7 @@ const Zenith = () => {
       <div id="zenith-mobile-nav-sentinel" className="h-0 w-0 overflow-hidden" aria-hidden />
 
       {/* Solar news — place above AI insights bar */}
-      {user?.role ? <SolarNewsTicker /> : null}
+      {user?.role ? <SolarNewsTicker deferLoadMs={2000} /> : null}
 
       {!isFyError && user?.role && (hasZenithBodyData || !isError) ? (
         <ZenithAiInsightsTicker insights={insights} isLoading={isLoading && !hasZenithBodyData} />

@@ -12,6 +12,7 @@ import {
   Scatter,
 } from 'recharts'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
+import type { ZenithChartGroup } from '../../constants/zenithChartGroups'
 import { useChartColors } from '../../hooks/useChartColors'
 import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTooltipStyles'
 import { ZENITH_CHART_HEIGHT_FLOOR } from './zenithChartHeight'
@@ -152,11 +153,13 @@ export default function ZenithRevenueProfitFyChart({
   data,
   onFyClick,
   height = ZENITH_CHART_HEIGHT_FLOOR,
+  chartGroup,
 }: {
   data: ZenithFyRevenueProfitPoint[]
   onFyClick?: (args: { fy: string; metric: 'revenue' | 'profit' }) => void
   /** Align with other Explore charts (see `zenithStandardChartHeight`). */
   height?: number
+  chartGroup: ZenithChartGroup
 }) {
   const c = useChartColors()
   const onFyClickRef = useRef(onFyClick)
@@ -213,7 +216,7 @@ export default function ZenithRevenueProfitFyChart({
       className="zenith-fy-revenue-profit-chart zenith-chart-slot w-full min-w-0"
       style={{ height, minHeight: height }}
     >
-      <ZenithChartTouchReset>
+      <ZenithChartTouchReset chartGroup={chartGroup}>
         {(rk) => (
           <ResponsiveContainer key={rk} width="100%" height={height} minWidth={0}>
             <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>

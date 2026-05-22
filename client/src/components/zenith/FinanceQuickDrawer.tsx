@@ -10,7 +10,7 @@ import { Project, ProjectStatus, PaymentStatus, UserRole } from '../../types'
 import { useAuth } from '../../contexts/AuthContext'
 import HealthBadge from './HealthBadge'
 import { projectDetailToHealthProject } from '../../utils/dealHealthScore'
-import { ZENITH_CHARTS_TOUCH_RESET_EVENT, ZENITH_FLOATING_DISMISS_EVENT } from '../../utils/zenithEvents'
+import { ZENITH_FLOATING_DISMISS_EVENT } from '../../utils/zenithEvents'
 import { zenithDrawerStagePillClass } from './zenithDealCardUi'
 import ZenithDrawerRemarksPanel from './ZenithDrawerRemarksPanel'
 import ZenithDrawerProjectTitle from './ZenithDrawerProjectTitle'
@@ -214,9 +214,6 @@ export default function FinanceQuickDrawer({
 
   const wasOpenRef = useRef(false)
   useEffect(() => {
-    if (wasOpenRef.current && !isOpen) {
-      window.dispatchEvent(new CustomEvent(ZENITH_CHARTS_TOUCH_RESET_EVENT))
-    }
     wasOpenRef.current = isOpen
   }, [isOpen])
 

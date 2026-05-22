@@ -49,6 +49,13 @@ import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
 import ForecastKPI from './ForecastKPI'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
+import { ZENITH_CHART_GROUP } from '../../constants/zenithChartGroups'
+import type { ZenithChartGroup } from '../../constants/zenithChartGroups'
+import {
+  chartResetGroupForDrill,
+  exploreChartResetGroup,
+  funnelChartResetGroup,
+} from '../../utils/zenithChartResetGroup'
 import { buildProjectsUrl, type PeDashboardBucket } from '../../utils/dashboardTileLinks'
 import {
   buildForecastOpenDealsProjectsHref,
@@ -169,6 +176,7 @@ export default function ZenithExecutiveBody({
     filteredProjects: ZenithExplorerProject[]
     listAmountMode?: ZenithListAmountMode
     projectsPageHref?: string | null
+    chartResetGroup?: ZenithChartGroup
   }) => void
   onOpenFinanceDrawer?: (projectId: string) => void
   onOpenOperationsDrawer?: (projectId: string) => void
@@ -252,6 +260,7 @@ export default function ZenithExecutiveBody({
         filteredProjects: filtered,
         listAmountMode,
         projectsPageHref,
+        chartResetGroup: chartResetGroupForDrill(dimension, 'exec'),
       })
     },
     [explorerProjects, onOpenDrawerListMode, dateFilter],
@@ -271,6 +280,7 @@ export default function ZenithExecutiveBody({
           undefined,
           filtered[0] ?? null,
         ),
+        chartResetGroup: exploreChartResetGroup('exec'),
       })
     },
     [explorerProjects, onOpenDrawerListMode, dateFilter],
@@ -284,6 +294,7 @@ export default function ZenithExecutiveBody({
         filteredProjects: filtered,
         listAmountMode: 'deal_value',
         projectsPageHref: stage.to,
+        chartResetGroup: funnelChartResetGroup('exec'),
       })
     },
     [explorerProjects, onOpenDrawerListMode],
@@ -299,6 +310,7 @@ export default function ZenithExecutiveBody({
         filteredProjects: args.filteredProjects,
         listAmountMode: 'deal_value',
         projectsPageHref: buildProjectsUrl({ peBucket: args.row.key as PeDashboardBucket }, dateFilter),
+        chartResetGroup: ZENITH_CHART_GROUP.EXEC_HITLIST,
       })
     },
     [onOpenDrawerListMode, dateFilter],
@@ -313,6 +325,7 @@ export default function ZenithExecutiveBody({
       filteredProjects: filtered,
       listAmountMode: 'deal_value',
       projectsPageHref: availingLoanProjectsUrl,
+      chartResetGroup: exploreChartResetGroup('exec'),
     })
   }, [explorerProjects, onOpenDrawerListMode, availingLoanProjectsUrl])
 
@@ -323,6 +336,7 @@ export default function ZenithExecutiveBody({
       filteredProjects: filtered,
       listAmountMode: 'deal_value',
       projectsPageHref: lostProjectsUrl,
+      chartResetGroup: exploreChartResetGroup('exec'),
     })
   }, [explorerProjects, onOpenDrawerListMode, lostProjectsUrl])
 
@@ -678,7 +692,7 @@ export default function ZenithExecutiveBody({
         >
           <div className="min-w-0">
             <ChartPanel title="Projects by stage" showExploreHint>
-              <ZenithChartTouchReset>
+              <ZenithChartTouchReset chartGroup={ZENITH_CHART_GROUP.EXEC_EXPLORE}>
                 {(rk) => (
                   <ResponsiveContainer key={rk} width="100%" height={exploreChartHeight} minWidth={0}>
                     <BarChart
@@ -731,6 +745,7 @@ export default function ZenithExecutiveBody({
               <ZenithRevenueProfitFyChart
                 data={fyChart}
                 height={exploreChartHeight}
+                chartGroup={ZENITH_CHART_GROUP.EXEC_FY}
                 onFyClick={({ fy, metric }) =>
                   drill('fy', fy, { fyMetric: metric === 'profit' ? 'profit' : 'revenue' })
                 }
@@ -742,7 +757,7 @@ export default function ZenithExecutiveBody({
             <>
               <div id="zenith-lead-source" className="min-w-0 scroll-mt-24 lg:scroll-mt-0">
                 <ChartPanel title="Revenue vs pipeline by lead source" showExploreHint>
-                  <ZenithChartTouchReset>
+                  <ZenithChartTouchReset chartGroup={ZENITH_CHART_GROUP.EXEC_EXPLORE}>
                     {(rk) => (
                       <ResponsiveContainer key={rk} width="100%" height={exploreChartHeight} minWidth={0}>
                         <BarChart
@@ -816,7 +831,7 @@ export default function ZenithExecutiveBody({
 
               <div id="zenith-sales-team" className="min-w-0 scroll-mt-24 lg:scroll-mt-0">
                 <ChartPanel title="Revenue vs pipeline by sales team" showExploreHint>
-                  <ZenithChartTouchReset>
+                  <ZenithChartTouchReset chartGroup={ZENITH_CHART_GROUP.EXEC_EXPLORE}>
                     {(rk) => (
                       <ResponsiveContainer key={rk} width="100%" height={exploreChartHeight} minWidth={0}>
                         <BarChart
@@ -897,6 +912,7 @@ export default function ZenithExecutiveBody({
               panelRows={panelBrandBarRows}
               inverterRows={inverterBrandBarRows}
               chartHeight={ZENITH_CHART_HEIGHT_FLOOR}
+              chartGroup={ZENITH_CHART_GROUP.EXEC_LIFECYCLE}
               onPanelBrandClick={onPanelBrandBarClick}
               onInverterBrandClick={onInverterBrandBarClick}
             />
@@ -912,6 +928,7 @@ export default function ZenithExecutiveBody({
         <SegmentDonut
           title="Revenue by Customer Type"
           showExploreHint
+          chartGroup={ZENITH_CHART_GROUP.EXEC_DONUT}
           chartHeightPx={exploreChartHeight}
           data={revenueSeg.map((s) => ({
             name: s.label,
@@ -926,6 +943,7 @@ export default function ZenithExecutiveBody({
         <SegmentDonut
           title="Pipeline by Customer Type"
           showExploreHint
+          chartGroup={ZENITH_CHART_GROUP.EXEC_DONUT}
           chartHeightPx={exploreChartHeight}
           data={pipeSeg.map((s) => ({
             name: s.label,
@@ -950,7 +968,10 @@ export default function ZenithExecutiveBody({
             contentClassName="flex min-h-0 min-w-0 flex-1 flex-col overflow-visible lg:overflow-hidden"
           >
             <div className="w-full min-w-0 shrink-0" style={{ height: exploreChartHeight, minHeight: exploreChartHeight }}>
-              <ZenithChartTouchReset className="h-full w-full min-w-0">
+              <ZenithChartTouchReset
+                chartGroup={ZENITH_CHART_GROUP.EXEC_EXPLORE}
+                className="h-full w-full min-w-0"
+              >
                 {(rk) => (
                   <ResponsiveContainer key={rk} width="100%" height={exploreChartHeight} minWidth={0}>
                     <BarChart

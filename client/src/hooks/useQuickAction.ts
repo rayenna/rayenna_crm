@@ -1,5 +1,7 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
+import type { ZenithChartGroup } from '../constants/zenithChartGroups'
+import { dispatchZenithChartsTouchReset } from '../utils/zenithEvents'
 import type { ZenithExplorerProject } from '../types/zenithExplorer'
 
 export type QuickActionProjectRef = {
@@ -34,6 +36,8 @@ export type ZenithQuickActionHandle = {
     filteredProjects: ZenithExplorerProject[]
     listAmountMode?: ZenithListAmountMode
     projectsPageHref?: string | null
+    /** Remount only this chart group when the drawer closes. */
+    chartResetGroup?: ZenithChartGroup
   }) => void
   closeDrawer: () => void
   setSaving: Dispatch<SetStateAction<boolean>>
@@ -53,8 +57,10 @@ export function useQuickAction(): ZenithQuickActionHandle {
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const chartResetGroupRef = useRef<ZenithChartGroup | null>(null)
 
   const openDrawer = useCallback((p: QuickActionProjectRef, focus: ZenithAutoFocusSection = null) => {
+    chartResetGroupRef.current = null
     setProject(p)
     setListMode(false)
     setFilteredProjects([])
@@ -73,7 +79,9 @@ export function useQuickAction(): ZenithQuickActionHandle {
       filteredProjects: ZenithExplorerProject[]
       listAmountMode?: ZenithListAmountMode
       projectsPageHref?: string | null
+      chartResetGroup?: ZenithChartGroup
     }) => {
+      chartResetGroupRef.current = args.chartResetGroup ?? null
       setProject(null)
       setListMode(true)
       setFilterLabel(args.filterLabel)
@@ -89,6 +97,8 @@ export function useQuickAction(): ZenithQuickActionHandle {
   )
 
   const closeDrawer = useCallback(() => {
+    const resetGroup = chartResetGroupRef.current
+    chartResetGroupRef.current = null
     setIsOpen(false)
     setListMode(false)
     setFilteredProjects([])
@@ -97,6 +107,7 @@ export function useQuickAction(): ZenithQuickActionHandle {
     setFilterLabel('')
     setAutoFocusSection(null)
     window.setTimeout(() => setProject(null), 300)
+    if (resetGroup) dispatchZenithChartsTouchReset(resetGroup)
   }, [])
 
   return useMemo<ZenithQuickActionHandle>(

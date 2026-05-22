@@ -16,6 +16,8 @@ export type SolarNewsItem = {
 
 export interface SolarNewsTickerProps {
   refreshIntervalMs?: number
+  /** Delay first fetch so Zenith KPIs/charts load first (default 2s). */
+  deferLoadMs?: number
   onItemClick?: (url: string) => void
 }
 
@@ -97,8 +99,10 @@ function normalizeListKey(items: SolarNewsItem[]): string {
 
 export default function SolarNewsTicker({
   refreshIntervalMs = 30 * 60 * 1000,
+  deferLoadMs = 2000,
   onItemClick,
 }: SolarNewsTickerProps) {
+  const [fetchEnabled, setFetchEnabled] = useState(deferLoadMs <= 0)
   const [items, setItems] = useState<SolarNewsItem[]>([])
   const [lastOkAt, setLastOkAt] = useState<number | null>(null)
   const [durationS, setDurationS] = useState<number>(32)
@@ -140,13 +144,34 @@ export default function SolarNewsTicker({
   }
 
   useEffect(() => {
+    if (deferLoadMs <= 0) {
+      setFetchEnabled(true)
+      return
+    }
+    const id = window.setTimeout(() => setFetchEnabled(true), deferLoadMs)
+    return () => window.clearTimeout(id)
+  }, [deferLoadMs])
+
+  useEffect(() => {
+    if (!fetchEnabled) return
     void load()
     const id = window.setInterval(() => {
       void load()
     }, refreshIntervalMs)
     return () => window.clearInterval(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshIntervalMs])
+  }, [fetchEnabled, refreshIntervalMs])
+
+  if (!fetchEnabled) {
+    return (
+      <div
+        className="zenith-solar-news-root border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 96%, transparent)]"
+        aria-hidden
+      >
+        <div className="h-9 sm:h-10" />
+      </div>
+    )
+  }
 
   useEffect(() => {
     const el = marqueeRef.current

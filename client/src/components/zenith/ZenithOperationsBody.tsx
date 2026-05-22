@@ -39,6 +39,13 @@ import ChartPanel from './ChartPanel'
 import SegmentDonut from './SegmentDonut'
 import ZenithRevenueProfitFyChart from './ZenithRevenueProfitFyChart'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
+import { ZENITH_CHART_GROUP } from '../../constants/zenithChartGroups'
+import type { ZenithChartGroup } from '../../constants/zenithChartGroups'
+import {
+  chartResetGroupForDrill,
+  exploreChartResetGroup,
+  funnelChartResetGroup,
+} from '../../utils/zenithChartResetGroup'
 import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
 import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../../types/zenithExplorer'
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
@@ -117,6 +124,7 @@ export default function ZenithOperationsBody({
     filteredProjects: ZenithExplorerProject[]
     listAmountMode?: ZenithListAmountMode
     projectsPageHref?: string | null
+    chartResetGroup?: ZenithChartGroup
   }) => void
   onOpenOperationsDrawer?: (projectId: string) => void
   onOpenProjectQuickDrawer: (p: QuickActionProjectRef, section?: ZenithAutoFocusSection | null) => void
@@ -171,6 +179,7 @@ export default function ZenithOperationsBody({
       filteredProjects: filtered,
       listAmountMode: 'deal_value',
       projectsPageHref: pendingInstallationProjectsUrl,
+      chartResetGroup: exploreChartResetGroup('ops'),
     })
   }, [explorerProjects, onOpenDrawerListMode, pendingInstallationProjectsUrl])
 
@@ -185,6 +194,7 @@ export default function ZenithOperationsBody({
       filteredProjects: filtered,
       listAmountMode: 'deal_value',
       projectsPageHref: completedInstallationProjectsUrl,
+      chartResetGroup: exploreChartResetGroup('ops'),
     })
   }, [explorerProjects, onOpenDrawerListMode, completedInstallationProjectsUrl])
 
@@ -197,6 +207,7 @@ export default function ZenithOperationsBody({
       filteredProjects: filtered,
       listAmountMode: 'deal_value',
       projectsPageHref: subsidyCreditedProjectsUrl,
+      chartResetGroup: exploreChartResetGroup('ops'),
     })
   }, [explorerProjects, onOpenDrawerListMode, subsidyCreditedProjectsUrl])
 
@@ -224,6 +235,7 @@ export default function ZenithOperationsBody({
         filteredProjects: filtered,
         listAmountMode,
         projectsPageHref,
+        chartResetGroup: chartResetGroupForDrill(dimension, 'ops'),
       })
     },
     [explorerProjects, onOpenDrawerListMode, dateFilter],
@@ -243,6 +255,7 @@ export default function ZenithOperationsBody({
           undefined,
           filtered[0] ?? null,
         ),
+        chartResetGroup: exploreChartResetGroup('ops'),
       })
     },
     [explorerProjects, onOpenDrawerListMode, dateFilter],
@@ -256,6 +269,7 @@ export default function ZenithOperationsBody({
         filteredProjects: filtered,
         listAmountMode: 'deal_value',
         projectsPageHref: stage.to,
+        chartResetGroup: funnelChartResetGroup('ops'),
       })
     },
     [explorerProjects, onOpenDrawerListMode],
@@ -413,7 +427,7 @@ export default function ZenithOperationsBody({
         >
           <div id="zenith-charts-row-1" className="scroll-mt-28 flex min-h-0 flex-col lg:h-full">
             <ChartPanel className="min-h-0 flex-1 lg:h-full" title="Projects by stage" showExploreHint>
-              <ZenithChartTouchReset>
+              <ZenithChartTouchReset chartGroup={ZENITH_CHART_GROUP.OPS_EXPLORE}>
                 {(rk) => (
                   <ResponsiveContainer key={rk} width="100%" height={exploreChartHeight} minWidth={0}>
                     <BarChart layout="vertical" data={projectsByStatus} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
@@ -452,7 +466,7 @@ export default function ZenithOperationsBody({
           </div>
           <div id="zenith-sales-team" className="scroll-mt-28 flex min-h-0 flex-col lg:h-full">
             <ChartPanel className="min-h-0 flex-1 lg:h-full" title="Revenue vs pipeline by sales team" showExploreHint>
-              <ZenithChartTouchReset>
+              <ZenithChartTouchReset chartGroup={ZENITH_CHART_GROUP.OPS_EXPLORE}>
                 {(rk) => (
                   <ResponsiveContainer key={rk} width="100%" height={exploreChartHeight} minWidth={0}>
                     <BarChart layout="vertical" data={salesMerge} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
@@ -524,6 +538,7 @@ export default function ZenithOperationsBody({
               <ZenithRevenueProfitFyChart
                 data={fyChart}
                 height={exploreChartHeight}
+                chartGroup={ZENITH_CHART_GROUP.OPS_EXPLORE}
                 onFyClick={({ fy, metric }) =>
                   drill('fy', fy, { fyMetric: metric === 'profit' ? 'profit' : 'revenue' })
                 }
@@ -534,6 +549,7 @@ export default function ZenithOperationsBody({
             <SegmentDonut
               title="Revenue by Customer Type"
               showExploreHint
+              chartGroup={ZENITH_CHART_GROUP.OPS_DONUT}
               chartHeightPx={exploreChartHeight}
               stretchToRowHeight
               data={seg.map((s) => ({
@@ -554,6 +570,7 @@ export default function ZenithOperationsBody({
             panelRows={panelBrandBarRows}
             inverterRows={inverterBrandBarRows}
             chartHeight={ZENITH_CHART_HEIGHT_FLOOR}
+            chartGroup={ZENITH_CHART_GROUP.OPS_EXPLORE}
             onPanelBrandClick={onPanelBrandBarClick}
             onInverterBrandClick={onInverterBrandBarClick}
           />

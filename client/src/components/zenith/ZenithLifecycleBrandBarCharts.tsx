@@ -14,6 +14,7 @@ import {
 import type { YAxisProps } from 'recharts'
 import ChartPanel from './ChartPanel'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
+import type { ZenithChartGroup } from '../../constants/zenithChartGroups'
 import { getLoanBankBarColor } from '../dashboard/loanBankChartColors'
 import type { ZenithLifecycleBrandBarRow } from '../../utils/zenithPanelInverterBrandChartData'
 import { lifecycleBrandPairedYAxisWidth } from '../../utils/zenithPanelInverterBrandChartData'
@@ -184,6 +185,7 @@ function LifecycleBrandChartCard({
   yAxisWidth,
   costTitle,
   onBarClick,
+  chartGroup,
 }: {
   id: string
   title: string
@@ -192,6 +194,7 @@ function LifecycleBrandChartCard({
   yAxisWidth: number
   costTitle: string
   onBarClick: (brandLabel: string) => void
+  chartGroup: ZenithChartGroup
 }) {
   return (
     <div
@@ -201,7 +204,7 @@ function LifecycleBrandChartCard({
     >
       <ChartPanel title={title} showExploreHint className="flex h-full w-full min-w-0 flex-1 flex-col">
         <div className="w-full min-w-0 flex-1" style={{ minHeight: plotHeight }}>
-          <ZenithChartTouchReset className="h-full w-full min-w-0">
+          <ZenithChartTouchReset chartGroup={chartGroup} className="h-full w-full min-w-0">
             {(rk) => (
               <HorizontalBrandBarChart
                 key={rk}
@@ -229,12 +232,14 @@ export default function ZenithLifecycleBrandBarCharts({
   chartHeight,
   onPanelBrandClick,
   onInverterBrandClick,
+  chartGroup,
 }: {
   panelRows: ZenithLifecycleBrandBarRow[]
   inverterRows: ZenithLifecycleBrandBarRow[]
   chartHeight: number
   onPanelBrandClick: (brandLabel: string) => void
   onInverterBrandClick: (brandLabel: string) => void
+  chartGroup: ZenithChartGroup
 }) {
   const plotHeight = useMemo(
     () => zenithLifecycleBrandPairChartHeight(panelRows.length, inverterRows.length, chartHeight),
@@ -259,6 +264,7 @@ export default function ZenithLifecycleBrandBarCharts({
         yAxisWidth={yAxisWidth}
         costTitle="Panel cost (est.)"
         onBarClick={onPanelBrandClick}
+        chartGroup={chartGroup}
       />
       <LifecycleBrandChartCard
         id="zenith-inverter-brands"
@@ -268,6 +274,7 @@ export default function ZenithLifecycleBrandBarCharts({
         yAxisWidth={yAxisWidth}
         costTitle="Inverter cost (est.)"
         onBarClick={onInverterBrandClick}
+        chartGroup={chartGroup}
       />
     </div>
   )

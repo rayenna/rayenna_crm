@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import { ZENITH_DONUT_CHART_HEIGHT_PX, ZENITH_DONUT_PIE_ONLY_MOBILE_PX } from './zenithDonutConstants'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
+import type { ZenithChartGroup } from '../../constants/zenithChartGroups'
 import ZenithExploreHint from './ZenithExploreHint'
 import { useZenithNarrowLayout } from '../../hooks/useZenithNarrowLayout'
 import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTooltipStyles'
@@ -31,11 +32,13 @@ export default function SegmentDonut({
    */
   stretchToRowHeight = false,
   chartHeightPx,
+  chartGroup,
 }: {
   title: string
   data: SegmentSlice[]
   onSegmentClick?: (segmentName: string) => void
   showExploreHint?: boolean
+  chartGroup: ZenithChartGroup
   stretchToRowHeight?: boolean
   /** Desktop chart slot height; mobile uses a proportional slice. Matches `zenithStandardChartHeight`. */
   chartHeightPx?: number
@@ -87,6 +90,7 @@ export default function SegmentDonut({
           </p>
         ) : (
           <ZenithChartTouchReset
+            chartGroup={chartGroup}
             className={stretchToRowHeight ? 'h-full min-h-0 w-full min-w-0' : 'w-full min-w-0'}
           >
             {(rk) => (
