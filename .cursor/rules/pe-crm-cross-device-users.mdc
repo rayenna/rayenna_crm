@@ -11,6 +11,7 @@ The main users of **Rayenna Proposal Engine** and **Rayenna CRM** do **not** hav
 
 1. **Authoritative data** for CRM-linked work should live on the **server** (CRM API / Prisma), not only in `localStorage` or a single browser profile.
 2. **localStorage / session** may be used for UX (drafts, WIP, cache) but must be **rehydrated** from the backend when opening a linked project so another device sees the same truth.
+3. **Proposal Engine Customers list** (`/customers`): every card must use **`GET /api/proposal-engine/projects`** fields (`peArtifacts`, `peStatus`, CRM map coordinates). **Never** branch list UI on `localStorage` / `isAdmin && localRecord` — shared workstations must see the same badges and artifact dots after login without opening the project on that browser first.
 3. When adding new artifacts or fields (e.g. proposal snapshots, edits, layouts), **extend sync + GET merge** paths (e.g. `syncProject*`, `fetchProjectWithArtifacts`, `mapApiArtifactsToRecord`) so a fresh login elsewhere still loads them.
 4. Call out in code or PR description when something is **intentionally local-only** (e.g. no `crmProjectId`) so we do not assume continuity across devices.
 5. Avoid designs that assume a stable browser fingerprint, long-lived uncleared storage, or “this machine only” without documenting the limitation.

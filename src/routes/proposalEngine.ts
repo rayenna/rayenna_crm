@@ -17,6 +17,11 @@ import {
 } from '../utils/peProjectListQuery';
 import crypto from 'crypto';
 import { repairAndPersistRoofLayoutUrls } from '../services/roofLayoutImageStorage';
+import {
+  loadPeArtifactFlagSets,
+  peArtifactFlagsForProject,
+  peDocumentStatusFromFlags,
+} from '../utils/peProjectArtifactFlags';
 
 const router = express.Router();
 
@@ -239,54 +244,17 @@ router.get('/projects', authenticate, async (req: Request, res: Response) => {
     });
 
     const projectIds = selections.map((s) => s.projectId);
-
-    // Determine artifact completion per project so CRM/PE both agree (labels in CRM: Not Yet Created, PE Draft, PE Ready):
-    // - "proposal-ready" (PE Ready) when all four artifacts exist.
-    // - "draft" (PE Draft) when at least one artifact exists but the set is incomplete.
-    // - "not-started" (Not Yet Created) when the project is selected in PE but no artifacts yet.
-    const [costings, boms, rois, proposals] = projectIds.length
-      ? await Promise.all([
-          prisma.pECostingSheet.findMany({
-            where: { projectId: { in: projectIds } },
-            select: { projectId: true },
-          }),
-          prisma.pEBomSheet.findMany({
-            where: { projectId: { in: projectIds } },
-            select: { projectId: true },
-          }),
-          prisma.pERoiResult.findMany({
-            where: { projectId: { in: projectIds } },
-            select: { projectId: true },
-          }),
-          prisma.pEProposal.findMany({
-            where: { projectId: { in: projectIds } },
-            select: { projectId: true },
-          }),
-        ])
-      : [[], [], [], []];
-
-    const hasCosting = new Set(costings.map((p) => p.projectId));
-    const hasBom = new Set(boms.map((p) => p.projectId));
-    const hasRoi = new Set(rois.map((p) => p.projectId));
-    const hasProposal = new Set(proposals.map((p) => p.projectId));
+    const artifactSets = await loadPeArtifactFlagSets(projectIds);
 
     const payload = selections
       .map((s) => {
-        const hasAny =
-          hasCosting.has(s.projectId) ||
-          hasBom.has(s.projectId) ||
-          hasRoi.has(s.projectId) ||
-          hasProposal.has(s.projectId);
-
-        const allFour =
-          hasCosting.has(s.projectId) &&
-          hasBom.has(s.projectId) &&
-          hasRoi.has(s.projectId) &&
-          hasProposal.has(s.projectId);
+        const peArtifacts = peArtifactFlagsForProject(s.projectId, artifactSets);
+        const peStatus = peDocumentStatusFromFlags(peArtifacts);
 
         return {
           ...s.project,
-          peStatus: allFour ? 'proposal-ready' : hasAny ? 'draft' : 'not-started',
+          peStatus,
+          peArtifacts,
           peSelectedAt: s.selectedAt,
           peSelectedById: s.selectedById,
         };
