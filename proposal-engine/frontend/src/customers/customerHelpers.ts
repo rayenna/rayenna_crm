@@ -5,7 +5,10 @@
 import { formatEmailForDisplay, deriveProposalStatusFromArtifacts } from '../lib/customerStore';
 import type { CustomerRecord, CustomerMaster } from '../lib/customerStore';
 import type { ProposalEngineProjectFromApi } from '../lib/apiClient';
-import type { ProjectOption } from './types';
+import { PE_ARTIFACT_COUNT } from '../lib/customerStore';
+import type { PeProjectArtifacts, ProjectOption } from './types';
+import { EMPTY_PE_PROJECT_ARTIFACTS } from './types';
+import type { PeArtifactsFromApi } from '../lib/api/proposalEngine';
 
 /** Customer Master Google Map coordinates (both required, finite, in range). */
 export function hasValidMapCoordinates(
@@ -20,6 +23,34 @@ export function hasValidMapCoordinates(
   // Treat exact 0,0 as unset (common data-entry mistake).
   if (lat === 0 && lng === 0) return false;
   return true;
+}
+
+export function peArtifactsFromApi(
+  raw?: PeArtifactsFromApi | null,
+): PeProjectArtifacts {
+  if (!raw) return { ...EMPTY_PE_PROJECT_ARTIFACTS };
+  return {
+    hasCosting: !!raw.hasCosting,
+    hasBom: !!raw.hasBom,
+    hasRoi: !!raw.hasRoi,
+    hasProposal: !!raw.hasProposal,
+    hasRoofLayout: !!raw.hasRoofLayout,
+  };
+}
+
+export function countPeProjectArtifacts(a: PeProjectArtifacts): number {
+  return [
+    a.hasCosting,
+    a.hasBom,
+    a.hasRoi,
+    a.hasProposal,
+    a.hasRoofLayout,
+  ].filter(Boolean).length;
+}
+
+/** e.g. "3 / 5 artifacts" — uses server flags only. */
+export function artifactSummaryFromPeArtifacts(a: PeProjectArtifacts): string {
+  return `${countPeProjectArtifacts(a)} / ${PE_ARTIFACT_COUNT} artifacts`;
 }
 
 export function deriveCustomerName(
@@ -82,6 +113,8 @@ export function mapApiProjectToProjectOption(p: ProposalEngineProjectFromApi): P
     confirmationDate: p.confirmationDate ?? undefined,
     createdAt: p.createdAt ?? undefined,
     hasMapCoordinates: hasValidMapCoordinates(cust.latitude, cust.longitude),
+    peArtifacts: peArtifactsFromApi(p.peArtifacts),
+    listUpdatedAt: p.peSelectedAt ?? p.updatedAt ?? undefined,
   };
 }
 

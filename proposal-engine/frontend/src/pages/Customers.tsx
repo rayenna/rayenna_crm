@@ -40,6 +40,7 @@ import { ProjectCard } from '../customers/ProjectCard';
 import { ProjectPickerModal } from '../customers/ProjectPickerModal';
 import { ProjectConflictModal } from '../customers/ProjectConflictModal';
 import { CustomerCard } from '../customers/CustomerCard';
+import { EMPTY_PE_PROJECT_ARTIFACTS } from '../customers/types';
 
 // Re-export for consumers (NewCustomerModal is reserved for manual add flow)
 export { NewCustomerModal } from '../customers/NewCustomerModal';
@@ -828,27 +829,23 @@ export default function Customers() {
                   {filteredProjects.map((p) => {
                     const localRecord = customersByCrmProjectId.get(p.id) ?? null;
                     const effectiveId = localRecord?.id ?? `crm_${p.id}`;
-                    if (isAdmin && localRecord) {
-                      return (
-                        <CustomerCard
-                          key={localRecord.id}
-                          record={localRecord}
-                          isActive={activeId === localRecord.id}
-                          hasMapCoordinatesFromCrm={!!p.hasMapCoordinates}
-                          onOpen={() => handleOpen(localRecord.id)}
-                          onDelete={() => void handleDelete(localRecord)}
-                        />
-                      );
-                    }
+                    const projectForCard = {
+                      ...p,
+                      peArtifacts: p.peArtifacts ?? EMPTY_PE_PROJECT_ARTIFACTS,
+                    };
                     return (
                       <ProjectCard
                         key={p.id}
-                        project={p}
-                        record={localRecord}
-                        isActive={activeId === effectiveId}
+                        project={projectForCard}
+                        isActive={
+                          activeId === effectiveId ||
+                          activeId === localRecord?.id
+                        }
                         isReadOnly={isReadOnlyRole}
                         onOpen={() => void handleOpenProjectFromApi(p)}
-                        onRemoveFromList={isAdmin ? () => setRemoveConfirmProject(p) : undefined}
+                        onRemoveFromList={
+                          isAdmin ? () => setRemoveConfirmProject(p) : undefined
+                        }
                       />
                     );
                   })}

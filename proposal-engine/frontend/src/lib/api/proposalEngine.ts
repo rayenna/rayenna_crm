@@ -24,6 +24,15 @@ export type PeProjectsStatsResponse = {
   confirmed: number;
 };
 
+/** Authoritative artifact flags from GET /proposal-engine/projects (never infer from localStorage). */
+export type PeArtifactsFromApi = {
+  hasCosting: boolean;
+  hasBom: boolean;
+  hasRoi: boolean;
+  hasProposal: boolean;
+  hasRoofLayout: boolean;
+};
+
 export interface ProposalEngineProjectFromApi {
   id: string;
   slNo?: number | null;
@@ -31,8 +40,10 @@ export interface ProposalEngineProjectFromApi {
   projectStage?: string | null;
   panelCapacityW?: number | null;
   peStatus?: 'not-started' | 'draft' | 'proposal-ready' | string;
+  peArtifacts?: PeArtifactsFromApi;
   peSelectedAt?: string | null;
   peSelectedById?: string | null;
+  updatedAt?: string | null;
   systemCapacity?: number | null;
   siteAddress?: string | null;
   type?: string | null;

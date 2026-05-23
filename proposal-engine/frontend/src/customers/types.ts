@@ -1,5 +1,22 @@
 /** Shared types and constants for the Customers / Projects list page. */
 
+/** Server-backed PE artifact flags (GET /api/proposal-engine/projects). */
+export interface PeProjectArtifacts {
+  hasCosting: boolean;
+  hasBom: boolean;
+  hasRoi: boolean;
+  hasProposal: boolean;
+  hasRoofLayout: boolean;
+}
+
+export const EMPTY_PE_PROJECT_ARTIFACTS: PeProjectArtifacts = {
+  hasCosting: false,
+  hasBom: false,
+  hasRoi: false,
+  hasProposal: false,
+  hasRoofLayout: false,
+};
+
 export interface ProjectOption {
   id: string;
   projectStage: string;
@@ -26,6 +43,10 @@ export interface ProjectOption {
   createdAt?: string;
   /** True when Customer Master has valid Google Map lat/lng (AI Roof Layout ready). */
   hasMapCoordinates?: boolean;
+  /** Authoritative artifact completion from CRM API (not browser localStorage). */
+  peArtifacts: PeProjectArtifacts;
+  /** PE selection or project update — shown on list cards. */
+  listUpdatedAt?: string;
 }
 
 export const PROJECTS_PAGE_SIZE = 24;

@@ -10,6 +10,10 @@ import {
 import { hasSavedRoofLayout } from '../lib/customerStore';
 import { hasValidMapCoordinates } from './customerHelpers';
 
+/**
+ * Legacy card when browsing local-only customer records (non–API list mode).
+ * The main Customers grid uses {@link ProjectCard} with server `peArtifacts` instead.
+ */
 export function CustomerCard({
   record,
   isActive,

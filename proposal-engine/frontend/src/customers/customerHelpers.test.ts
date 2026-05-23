@@ -26,4 +26,20 @@ describe('mapApiProjectToProjectOption', () => {
     } as ProposalEngineProjectFromApi);
     expect(p.hasMapCoordinates).toBe(true);
   });
+
+  it('maps peArtifacts from API (server truth for list cards)', () => {
+    const p = mapApiProjectToProjectOption({
+      id: 'proj-2',
+      peArtifacts: {
+        hasCosting: true,
+        hasBom: true,
+        hasRoi: false,
+        hasProposal: false,
+        hasRoofLayout: true,
+      },
+      customer: { id: 'c' },
+    } as ProposalEngineProjectFromApi);
+    expect(p.peArtifacts.hasRoofLayout).toBe(true);
+    expect(p.peArtifacts.hasCosting).toBe(true);
+  });
 });

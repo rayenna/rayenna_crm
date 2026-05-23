@@ -1,29 +1,41 @@
-import { STATUS_COLORS, STATUS_LABELS, artifactSummary } from '../lib/customerStore';
-import { normalizeProposalStatus } from '../lib/customerStore';
-import type { CustomerRecord } from '../lib/customerStore';
-import { ArtifactDots, MapCoordinatesBadge } from './CustomerBadges';
+import {
+  MapCoordinatesBadge,
+  ProposalReadinessBadgeFromPeStatus,
+  RoofLayoutSavedBadge,
+  ServerArtifactDots,
+} from './CustomerBadges';
+import { artifactSummaryFromPeArtifacts } from './customerHelpers';
 import type { ProjectOption } from './types';
 
+/**
+ * Customers / Projects list card. All badges and artifact dots come from
+ * GET /api/proposal-engine/projects (`peArtifacts`, `peStatus`) — never localStorage.
+ */
 export function ProjectCard({
   project,
-  record,
   isActive,
   isReadOnly,
   onOpen,
   onRemoveFromList,
   onHideFromList,
 }: {
-  project:          ProjectOption;
-  record:           CustomerRecord | null;
-  isActive:         boolean;
-  isReadOnly:       boolean;
-  onOpen:           () => void;
+  project: ProjectOption;
+  isActive: boolean;
+  isReadOnly: boolean;
+  onOpen: () => void;
   onRemoveFromList?: () => void;
-  /** Hide from my list only (view-only roles); does not delete from system */
-  onHideFromList?:  () => void;
+  onHideFromList?: () => void;
 }) {
   const name = project.customerName;
   const location = project.siteAddress || project.city || '';
+  const { peArtifacts } = project;
+  const listDate = project.listUpdatedAt
+    ? new Date(project.listUpdatedAt).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+    : null;
 
   return (
     <div
@@ -46,7 +58,9 @@ export function ProjectCard({
                   Active
                 </span>
               )}
+              <ProposalReadinessBadgeFromPeStatus peStatus={project.peStatus} />
               {project.hasMapCoordinates && <MapCoordinatesBadge />}
+              {peArtifacts.hasRoofLayout && <RoofLayoutSavedBadge />}
             </div>
             {location && (
               <p className="text-xs text-secondary-500 truncate">📍 {location}</p>
@@ -58,29 +72,20 @@ export function ProjectCard({
             )}
             {(project.contactPerson || project.phone) && (
               <p className="text-xs text-secondary-400 mt-0.5 truncate">
-                👤 {project.contactPerson || ''}{project.phone ? ` · ${project.phone}` : ''}
+                👤 {project.contactPerson || ''}
+                {project.phone ? ` · ${project.phone}` : ''}
               </p>
             )}
             {project.salespersonName && (
-              <p className="text-[10px] text-secondary-400 mt-0.5">Sales: {project.salespersonName}</p>
-            )}
-            {/* Show PE document readiness when no local record (otherwise CustomerCard shows record.status) */}
-            {!record && (
-              <p className="mt-1.5">
-                {(() => {
-                  const st = normalizeProposalStatus(project.peStatus);
-                  return (
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${STATUS_COLORS[st]}`}
-                    >
-                      {STATUS_LABELS[st]}
-                    </span>
-                  );
-                })()}
+              <p className="text-[10px] text-secondary-400 mt-0.5">
+                Sales: {project.salespersonName}
               </p>
             )}
           </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="flex items-center gap-1.5 flex-shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          >
             {onRemoveFromList && (
               <button
                 onClick={onRemoveFromList}
@@ -104,19 +109,32 @@ export function ProjectCard({
               title="Open project"
               className="text-xs text-white font-semibold px-3 py-1.5 rounded-lg transition-all min-h-[32px]"
               style={{ background: '#0d1b3a' }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#0a1530')}
-              onMouseLeave={e => (e.currentTarget.style.background = '#0d1b3a')}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#0a1530';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#0d1b3a';
+              }}
             >
               Open
             </button>
           </div>
         </div>
-        {record && (
-          <div className="mt-3 pt-3 border-t border-secondary-100 flex items-center justify-between gap-3">
-            <ArtifactDots record={record} />
-            <span className="text-[10px] text-secondary-400">{artifactSummary(record)}</span>
+
+        <div className="mt-3 pt-3 border-t border-secondary-100 flex items-center justify-between gap-3">
+          <ServerArtifactDots artifacts={peArtifacts} />
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-[10px] text-secondary-400">
+              {artifactSummaryFromPeArtifacts(peArtifacts)}
+            </span>
+            {listDate && (
+              <>
+                <span className="text-[10px] text-secondary-300">·</span>
+                <span className="text-[10px] text-secondary-400">{listDate}</span>
+              </>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
