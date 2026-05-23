@@ -37,63 +37,38 @@ export function CustomerCard({
 
   return (
     <div
-      className={`bg-white rounded-xl border shadow-sm hover:shadow-md transition-all cursor-pointer ${isActive ? 'border-primary-400 ring-2 ring-primary-200' : 'border-secondary-200'}`}
+      className={`min-w-0 overflow-hidden bg-white rounded-xl border shadow-sm hover:shadow-md transition-all cursor-pointer ${isActive ? 'border-primary-400 ring-2 ring-primary-200' : 'border-secondary-200'}`}
       style={{ borderLeftWidth: '4px', borderLeftColor: isActive ? '#0d1b3a' : '#e2e8f0' }}
       onClick={onOpen}
     >
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <div className="flex items-center gap-1 min-w-0">
-                <p className="text-sm font-bold text-secondary-900 truncate min-w-0">{record.master.name}</p>
-                {typeof record.proposalIndex === 'number' && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-semibold flex-shrink-0">
-                    #{record.proposalIndex}
-                  </span>
-                )}
-              </div>
-              {isActive && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 border border-primary-200 font-semibold flex-shrink-0">
-                  Active
-                </span>
-              )}
-              <ProposalReadinessBadge record={record} />
-              {showMapCoordinates && <MapCoordinatesBadge />}
-              {hasSavedRoofLayout(record) && <RoofLayoutSavedBadge />}
-            </div>
-            {record.master.location && (
-              <p className="text-xs text-secondary-500 truncate">📍 {record.master.location}</p>
-            )}
-            {typeof record.master.systemSizeKw === 'number' && record.master.systemSizeKw > 0 && (
-              <p className="text-[11px] text-secondary-400 mt-0.5">
-                ⚡ {record.master.systemSizeKw} kW system
-              </p>
-            )}
-            {record.master.contactPerson && (
-              <p className="text-xs text-secondary-400 mt-0.5 truncate">
-                👤 {record.master.contactPerson}{record.master.phone ? ` · ${record.master.phone}` : ''}
-              </p>
+      <div className="p-3 sm:p-4 min-w-0">
+        <div className="flex items-start justify-between gap-2 min-w-0">
+          <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
+            <p className="text-sm font-bold text-secondary-900 break-words line-clamp-2 sm:truncate min-w-0">
+              {record.master.name}
+            </p>
+            {typeof record.proposalIndex === 'number' && (
+              <span className="inline-flex shrink-0 items-center rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700">
+                #{record.proposalIndex}
+              </span>
             )}
           </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
             <button
+              type="button"
               onClick={onOpen}
               title="Open on Dashboard"
-              className="text-xs text-white font-semibold px-3 py-1.5 rounded-lg transition-all min-h-[32px]"
+              className="text-xs text-white font-semibold px-3 py-2 rounded-lg min-h-[36px] touch-manipulation"
               style={{ background: '#0d1b3a' }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#0a1530')}
-              onMouseLeave={e => (e.currentTarget.style.background = '#0d1b3a')}
             >
               Open
             </button>
             {onDelete && (
               <button
+                type="button"
                 onClick={() => setConfirmDelete(true)}
                 title="Remove from Proposal Engine (Admin only)"
-                className="p-2 rounded-lg text-secondary-400 hover:text-red-500 hover:bg-red-50 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
+                className="p-2 rounded-lg text-secondary-400 hover:text-red-500 hover:bg-red-50 min-h-[36px] min-w-[36px] flex items-center justify-center touch-manipulation"
               >
                 🗑
               </button>
@@ -101,13 +76,39 @@ export function CustomerCard({
           </div>
         </div>
 
-        {/* Artifact dots + date */}
-        <div className="mt-3 pt-3 border-t border-secondary-100 flex items-center justify-between gap-3">
-          <ArtifactDots record={record} />
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-secondary-400">{artifactSummary(record)}</span>
-            <span className="text-[10px] text-secondary-300">·</span>
-            <span className="text-[10px] text-secondary-400">{date}</span>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 max-w-full min-w-0">
+          {isActive && (
+            <span className="inline-flex shrink-0 items-center rounded-full border border-primary-200 bg-primary-100 px-2 py-0.5 text-[10px] font-semibold text-primary-700">
+              Active
+            </span>
+          )}
+          <ProposalReadinessBadge record={record} />
+          {showMapCoordinates && <MapCoordinatesBadge />}
+          {hasSavedRoofLayout(record) && <RoofLayoutSavedBadge />}
+        </div>
+
+        <div className="mt-2 space-y-0.5 min-w-0">
+          {record.master.location && (
+            <p className="text-xs text-secondary-500 line-clamp-2 sm:truncate">📍 {record.master.location}</p>
+          )}
+          {typeof record.master.systemSizeKw === 'number' && record.master.systemSizeKw > 0 && (
+            <p className="text-[11px] text-secondary-400">
+              ⚡ {record.master.systemSizeKw} kW system
+            </p>
+          )}
+          {record.master.contactPerson && (
+            <p className="text-xs text-secondary-400 truncate">
+              👤 {record.master.contactPerson}
+              {record.master.phone ? ` · ${record.master.phone}` : ''}
+            </p>
+          )}
+        </div>
+
+        <div className="mt-3 pt-3 border-t border-secondary-100 min-w-0 space-y-2">
+          <ArtifactDots record={record} layout="card" />
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-[10px] text-secondary-400">
+            <span className="tabular-nums shrink-0">{artifactSummary(record)}</span>
+            <span className="tabular-nums shrink-0">{date}</span>
           </div>
         </div>
       </div>
