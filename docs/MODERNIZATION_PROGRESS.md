@@ -1,8 +1,8 @@
 # Rayenna CRM — modernization progress
 
 **Purpose:** Resume structural and product-clarity work without re-discovering context.  
-**Last updated:** 2026-05-21  
-**Status:** **Batch 1** shipped (`09e4838` on `main`) — Customer Master, Projects, Dashboard/Zenith terminology, Support Tickets, help, and list safety net. **Batch 2** not started (see [Not started](#not-started-planned)).
+**Last updated:** 2026-05-22  
+**Status:** **Batch 1** shipped (`09e4838` on `main`) — Customer Master, Projects, Dashboard/Zenith terminology, Support Tickets, help, and list safety net. **Zenith stabilization & performance** shipped May 2026 (`55e4f22` → `400cd9a`). **Batch 2** not started (see [Not started](#not-started-planned)).
 
 ---
 
@@ -108,6 +108,56 @@ User-facing **Help** in the CRM app reads from `public/help-docs/`.
 
 ---
 
+## Completed — Zenith stability & performance (May 2026)
+
+Work focused on **Zenith** (`/zenith`) after production reports of drawer flicker, hard-refresh blank body, and perceived slowness. Performance audit (DevTools) showed admin dashboard API waits ~0.6–1.1s server-side; Tier C (smaller explorer payload) remains **not started**.
+
+### Commits (newest first)
+
+| Commit | Message | Deploy |
+|--------|---------|--------|
+| `400cd9a` | `fix(crm): Zenith crash — keep SolarNewsTicker hooks above defer return` | **Frontend only** — hotfix for React #310 |
+| `3a8e7ce` | `perf(crm): Zenith Tier B — defer solar news, scoped chart reset, lazy word cloud` | **Frontend only** |
+| `fb58d6e` | `perf(crm): Zenith Tier A — cap avg-days query, cache, stable body memo` | **API + frontend** |
+| `55e4f22` | `fix(crm): Zenith hard-refresh load race and quick drawer stability` | **Frontend only** |
+
+### Bug fixes
+
+| Issue | Cause | Fix |
+|-------|--------|-----|
+| Quick drawer opens then closes; console focus errors | `Zenith.tsx` effect cleanup depended on unstable `quickAction` object refs; backdrop received opening click | Stable `closeDrawer` callbacks only; split bfcache vs unmount effects; drawer backdrop 400ms guard; panel `tabIndex={-1}` + safe focus (`QuickActionDrawer`, `FinanceQuickDrawer`, `OperationsQuickDrawer`) |
+| Hard refresh → black body under tickers; sometimes forced re-login | Empty offline seed treated as valid → main query skipped fetch; any 401 clears auth | Seed only when `dashboardData != null`; `awaitingFySeedForExec` loading state; `useZenithMainQuery` rejects empty seed |
+| Production crash after Tier B deploy (React **#310**) | `SolarNewsTicker` early return before `useEffect` / `useMemo` when `fetchEnabled` was false | All hooks run every render; defer placeholder return moved below hooks |
+
+### Tier A — backend + frontend
+
+| # | Item | Location |
+|---|------|----------|
+| 1 | Cap Zenith funnel / avg-days project scan | `src/routes/dashboard.ts` — `ZENITH_FUNNEL_METRICS_PROJECT_CAP = 5000` on `computeAvgDaysByProjectStatus` + explorer load |
+| 2 | React Query stale window (2 min) for Zenith | `client/src/constants/zenithQueryStale.ts` — `ZENITH_QUERY_STALE_MS = 120_000`; wired in `useZenithMainQuery`, `Zenith.tsx` FY query, `ZenithYourFocus`, role bodies |
+| 3 | Stable drawer drill callback (fewer body re-renders) | `Zenith.tsx` passes `onOpenDrawerListMode` only; `ZenithExecutiveBody`, `ZenithFinanceBody`, `ZenithOperationsBody` |
+
+### Tier B — frontend only
+
+| # | Item | Location |
+|---|------|----------|
+| 4 | Defer Solar News fetch 2s after paint | `SolarNewsTicker.tsx` (`deferLoadMs`), `Zenith.tsx` |
+| 7 | Scoped Recharts remount after drawer close | `zenithChartGroups.ts`, `ZenithChartTouchReset.tsx` (`chartGroup`), `useQuickAction.ts` (`chartResetGroup`), `zenithChartResetGroup.ts`, role bodies + `ZenithYourFocus` (`FOCUS`); removed global reset from drawer `wasOpenRef` effects |
+| 8 | Word cloud in viewport only | `useInViewOnce.ts`, `CustomerProfitabilityRank.tsx` |
+
+### Not done (performance roadmap)
+
+| Tier | Item | Notes |
+|------|------|--------|
+| **C** | Shrink Zenith explorer API payload / slimmer DTO | Largest remaining win if Zenith still feels slow after A+B |
+| — | Vercel CRM frontend | Confirm same commit as Render when using dual static hosts |
+
+### Verify Zenith after deploy
+
+See [CRM_SMOKE_CHECKLIST.md](./CRM_SMOKE_CHECKLIST.md) §6 (Zenith): hard refresh loads KPIs/charts (not black); chart drill → drawer → close (tooltips clear; only matching chart group remounts); Solar News ~2s after load; profitability word cloud initializes on scroll into view.
+
+---
+
 ## Key file map (quick navigation)
 
 ```
@@ -133,6 +183,10 @@ client/src/
   pages/SupportTicketsDashboard.tsx
   components/supportTickets/TicketDetailDrawer.tsx
   components/zenith/Zenith*Body.tsx | SegmentDonut.tsx | ForecastKPI.tsx
+  components/zenith/SolarNewsTicker.tsx | ZenithChartTouchReset.tsx
+  constants/zenithQueryStale.ts | zenithChartGroups.ts
+  hooks/useZenithMainQuery.ts | useQuickAction.ts | useInViewOnce.ts
+  utils/zenithChartResetGroup.ts | zenithEvents.ts
   help/content/   → sync to public/help-docs/
 ```
 
@@ -148,6 +202,7 @@ client/src/
 | **Rename legacy filenames** | e.g. `PipelineByCustomerSegmentPieChart.tsx` → `*CustomerType*` | Cosmetic; avoid churn unless touching files anyway |
 | **Management role doc** | README still says Management is read-only | Update root `README.md` when doing a docs pass |
 | **Cloudinary for PE images** | Not CRM | See `docs/pe-image-storage-migration-plan.md` |
+| **Zenith Tier C** | Slimmer explorer payload / API | After A+B; see [Completed — Zenith stability & performance](#completed--zenith-stability--performance-may-2026) |
 
 ---
 

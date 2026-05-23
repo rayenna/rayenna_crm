@@ -19,6 +19,7 @@ build/
 
 # Uploads and generated files
 uploads/
+generated_layouts/
 *.log
 .DS_Store
 

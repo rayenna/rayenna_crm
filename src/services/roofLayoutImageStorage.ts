@@ -235,6 +235,40 @@ export async function repairAndPersistRoofLayoutUrls(projectId: string): Promise
   return { layoutImageUrl, layoutImage3dUrl, satelliteImageUrl, repaired };
 }
 
+const LOCAL_ROOF_LAYOUT_SUFFIXES = [
+  '_satellite.png',
+  '_ai_layout.png',
+  '_manual_layout.json',
+  '_manual_layout.jpg',
+  '_manual_layout.png',
+  '_manual_layout.jpeg',
+  '_3d_layout.png',
+  '_3d_layout.jpg',
+] as const;
+
+/** Remove on-disk (and Cloudinary, when configured) roof layout assets for a CRM project. */
+export async function deleteProjectRoofLayoutArtifacts(projectId: string): Promise<void> {
+  const pid = String(projectId || '').trim();
+  if (!pid) return;
+
+  const dir = getGeneratedLayoutsDir();
+  await Promise.all(
+    LOCAL_ROOF_LAYOUT_SUFFIXES.map((suffix) =>
+      fs.promises.unlink(path.join(dir, `${pid}${suffix}`)).catch(() => undefined),
+    ),
+  );
+
+  if (!isCloudinaryConfigured()) return;
+
+  configureCloudinaryIfNeeded();
+  const publicIds = [layoutPublicId(pid), layout3dPublicId(pid), satellitePublicId(pid)];
+  await Promise.all(
+    publicIds.map((publicId) =>
+      cloudinary.uploader.destroy(publicId, { resource_type: 'image', invalidate: true }).catch(() => undefined),
+    ),
+  );
+}
+
 export async function ensureSatelliteOnDiskFromCloudinary(projectId: string): Promise<string | null> {
   if (!isCloudinaryConfigured()) return null;
   configureCloudinaryIfNeeded();

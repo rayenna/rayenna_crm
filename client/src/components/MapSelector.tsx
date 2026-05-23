@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { ErrorModal } from '@/components/common/ErrorModal'
+import { getKeralaMapGpsWarning } from '@/utils/mapGpsValidation'
 
 interface MapSelectorProps {
   latitude?: number | null
@@ -17,6 +18,14 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
   const [mapUrl, setMapUrl] = useState<string>('')
   const [locationError, setLocationError] = useState<{ message: string; type: 'error' | 'info' } | null>(null)
   const mapRef = useRef<HTMLIFrameElement>(null)
+
+  const keralaMapGpsWarning = useMemo(() => {
+    if (latitude == null || longitude == null) return null
+    const lat = Number(latitude)
+    const lng = Number(longitude)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+    return getKeralaMapGpsWarning(lat, lng)
+  }, [latitude, longitude])
 
   // Function to generate Google Maps link from coordinates
   const generateMapLink = (lat: number | null, lng: number | null): string => {
@@ -462,6 +471,16 @@ const MapSelector = ({ latitude, longitude, onLocationChange, readOnly }: MapSel
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {keralaMapGpsWarning && !readOnly && (
+        <div
+          className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+          role="alert"
+        >
+          <p className="font-semibold">Map GPS — satellite may not load</p>
+          <p className="mt-1 text-xs leading-relaxed">{keralaMapGpsWarning}</p>
         </div>
       )}
 

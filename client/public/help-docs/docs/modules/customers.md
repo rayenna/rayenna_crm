@@ -45,6 +45,7 @@ There is no separate **Contact person** field next to the society or company nam
 - **Map Selector**: Click to open map and set customer location coordinates
 - Use map to pinpoint exact customer location
 - Coordinates are saved automatically when you set location on map
+- For sites in **Kerala** (latitude about 8°–13°N), if longitude is **west of 76°**, an amber warning explains that **Proposal Engine AI Roof Layout** satellite imagery often fails at that pin — verify in Google Maps (many Kerala addresses use ~76.2°–77.4°E) before generating a roof layout
 
 **Contact Information**:
 

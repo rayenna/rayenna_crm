@@ -21,10 +21,19 @@ import {
   validateBusinessContacts,
 } from '../utils/customerContacts';
 import { validateIdProofTypeForCustomer } from '../utils/customerIdProof';
+import { getKeralaMapGpsWarning } from '../utils/mapGpsValidation';
 import { CustomerType, Prisma } from '@prisma/client';
 import * as XLSX from 'xlsx';
 
 const router = express.Router();
+
+function customerResponseWithMapGpsWarning<T extends { latitude: number | null; longitude: number | null }>(
+  record: T,
+): T & { mapGpsWarning?: string } {
+  if (record.latitude == null || record.longitude == null) return record;
+  const mapGpsWarning = getKeralaMapGpsWarning(record.latitude, record.longitude);
+  return mapGpsWarning ? { ...record, mapGpsWarning } : record;
+}
 
 // Helper function to check if user can create customers (Sales, Management, Admin)
 const canCreateCustomer = (role: UserRole): boolean => {
@@ -494,7 +503,7 @@ router.post(
         },
       });
 
-      res.status(201).json(customer);
+      res.status(201).json(customerResponseWithMapGpsWarning(customer));
     } catch (error: any) {
       console.error('Error creating customer:', error);
       res.status(500).json({ error: error.message });
@@ -838,7 +847,7 @@ router.put(
       }
 
       if (process.env.NODE_ENV === 'development') console.log('[CUSTOMER UPDATE] Customer updated successfully:', updatedCustomer.id);
-      res.json(updatedCustomer);
+      res.json(customerResponseWithMapGpsWarning(updatedCustomer));
     } catch (error: any) {
       console.error('[CUSTOMER UPDATE] Error updating customer:', error);
       console.error('[CUSTOMER UPDATE] Error details:', {

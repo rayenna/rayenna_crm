@@ -3,7 +3,12 @@ import fs from 'fs';
 import path from 'path';
 import { authenticate } from '../middleware/auth';
 import { generateRoofLayoutJob } from '../workers/layoutGenerationWorker';
-import { parseRoofLayoutGeometry, type RoofLayoutGeometryV1 } from '../types/roofLayoutGeometry';
+import {
+  legacyCoordinatesFromGeometry,
+  parseRoofLayoutGeometry,
+  type ParsedRoofLayoutGeometry,
+} from '../types/roofLayoutGeometry';
+import { getKeralaMapGpsWarning } from '../utils/mapGpsValidation';
 import prisma from '../prisma';
 import { Prisma, UserRole } from '@prisma/client';
 import {
@@ -11,6 +16,7 @@ import {
   ensurePersistentLayoutImageUrl,
   ensurePersistentSatelliteImageUrl,
   ensureSatelliteOnDiskFromCloudinary,
+  deleteProjectRoofLayoutArtifacts,
   repairAndPersistRoofLayoutUrls,
   getGeneratedLayoutsDir,
   isCloudinaryConfigured,
@@ -93,16 +99,17 @@ async function ensureProjectReadAccess(projectId: string, reqUserId: string, req
 
 function manualLayoutJsonResponse(
   parsed: Record<string, unknown>,
-  geomFromFile: RoofLayoutGeometryV1 | null,
+  geomFromFile: ParsedRoofLayoutGeometry | null,
 ) {
+  const legacy = geomFromFile ? legacyCoordinatesFromGeometry(geomFromFile) : null;
   return {
     ...parsed,
     source: parsed.source ?? 'MANUAL',
-    ...(geomFromFile
+    ...(geomFromFile && legacy
       ? {
           geometry: geomFromFile,
-          roof_polygon_coordinates: geomFromFile.roofPolygon,
-          panel_coordinates: geomFromFile.panelRects,
+          roof_polygon_coordinates: legacy.roof_polygon_coordinates,
+          panel_coordinates: legacy.panel_coordinates,
         }
       : {}),
   };
@@ -131,10 +138,17 @@ router.post('/ai-layout', authenticate, async (req, res) => {
     );
     if (!access.ok) return res.status(access.status).json({ error: 'No access to this project' });
 
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    const mapGpsWarning = getKeralaMapGpsWarning(lat, lng);
+    if (mapGpsWarning) {
+      return res.status(422).json({ error: mapGpsWarning, code: 'MAP_GPS_KERALA_LONGITUDE' });
+    }
+
     const result = await generateRoofLayoutJob({
       projectId,
-      latitude: Number(latitude),
-      longitude: Number(longitude),
+      latitude: lat,
+      longitude: lng,
       systemSizeKw: Number(systemSizeKw),
       panelWattage: Number(panelWattage),
     });
@@ -193,7 +207,8 @@ router.post('/ai-layout', authenticate, async (req, res) => {
     });
   } catch (err) {
     console.error('Failed to generate AI roof layout:', err);
-    return res.status(500).json({ error: 'Failed to generate AI roof layout' });
+    const message = err instanceof Error ? err.message : 'Failed to generate AI roof layout';
+    return res.status(500).json({ error: message });
   }
 });
 
@@ -446,7 +461,8 @@ router.get('/manual-layout/:projectId', authenticate, async (req, res) => {
       const urls = await repairAndPersistRoofLayoutUrls(projectId);
       const geom = parseRoofLayoutGeometry(record.geometryJson);
 
-      if (!fs.existsSync(path.join(getGeneratedLayoutsDir(), `${projectId}_satellite.png`))) {
+      const satellitePath = path.join(getGeneratedLayoutsDir(), `${projectId}_satellite.png`);
+      if (!fs.existsSync(satellitePath)) {
         await ensureSatelliteOnDiskFromCloudinary(projectId);
       }
 
@@ -464,11 +480,14 @@ router.get('/manual-layout/:projectId', authenticate, async (req, res) => {
         projectId: record.projectId,
         source: record.source,
         ...(geom
-          ? {
-              geometry: geom,
-              roof_polygon_coordinates: geom.roofPolygon,
-              panel_coordinates: geom.panelRects,
-            }
+          ? (() => {
+              const legacy = legacyCoordinatesFromGeometry(geom);
+              return {
+                geometry: geom,
+                roof_polygon_coordinates: legacy.roof_polygon_coordinates,
+                panel_coordinates: legacy.panel_coordinates,
+              };
+            })()
           : {}),
       });
     }
@@ -528,6 +547,28 @@ router.get('/manual-layout/:projectId', authenticate, async (req, res) => {
   } catch (err) {
     console.error('Failed to load manual roof layout meta:', err);
     return res.status(500).json({ error: 'Failed to load manual layout' });
+  }
+});
+
+router.delete('/layout/:projectId', authenticate, async (req, res) => {
+  const projectId = String(req.params.projectId || '').trim();
+  if (!projectId) return res.status(400).json({ error: 'projectId is required' });
+
+  try {
+    const access = await ensureProjectWriteAccess(
+      projectId,
+      req.user!.id,
+      req.user!.role as UserRole,
+    );
+    if (!access.ok) return res.status(access.status).json({ error: 'Access denied' });
+
+    await deleteProjectRoofLayoutArtifacts(projectId);
+    await prisma.projectRoofLayout.deleteMany({ where: { projectId } });
+
+    return res.json({ ok: true, projectId });
+  } catch (err) {
+    console.error('Failed to delete roof layout:', err);
+    return res.status(500).json({ error: 'Failed to delete roof layout' });
   }
 });
 

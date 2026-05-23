@@ -4,6 +4,16 @@ import path from 'path';
 
 const OUTPUT_DIR = path.join(process.cwd(), 'generated_layouts');
 
+/** Real static-map tiles are hundreds of KB; Google's grey "no imagery" placeholder is ~7–12 KB. */
+const PLACEHOLDER_SATELLITE_MAX_BYTES = 30_000;
+
+function noImageryError(latitude: number, longitude: number): string {
+  return (
+    `Google Maps has no satellite imagery for ${latitude.toFixed(5)}, ${longitude.toFixed(5)}. ` +
+    'Verify Map GPS in Customer Master or paste a corrected Google Maps URL on the layout page, then Regenerate.'
+  );
+}
+
 export async function fetchSatelliteImage(
   projectId: string,
   latitude: number,
@@ -29,8 +39,13 @@ export async function fetchSatelliteImage(
     `&key=${apiKey}`;
 
   const res = await axios.get(url, { responseType: 'arraybuffer' });
+  const buf = Buffer.from(res.data);
+  if (buf.length < PLACEHOLDER_SATELLITE_MAX_BYTES) {
+    throw new Error(noImageryError(latitude, longitude));
+  }
+
   const filePath = path.join(OUTPUT_DIR, `${projectId}_satellite.png`);
-  fs.writeFileSync(filePath, res.data);
+  fs.writeFileSync(filePath, buf);
   return filePath;
 }
 

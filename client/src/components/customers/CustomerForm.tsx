@@ -278,7 +278,11 @@ export function CustomerForm({
         return axiosInstance.post('/api/customers', data)
       }
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
+      const mapGpsWarning = response?.data?.mapGpsWarning as string | undefined
+      if (mapGpsWarning) {
+        toast(mapGpsWarning, { icon: '⚠️', duration: 10000 })
+      }
       toast.success(customerData ? 'Customer updated successfully' : 'Customer created successfully')
       onSuccess()
     },

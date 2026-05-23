@@ -43,7 +43,9 @@
    ```
    DATABASE_URL="postgresql://user:password@localhost:5432/rayenna_crm?schema=public"
    JWT_SECRET="your-secret-key-here"
+   GOOGLE_MAPS_API_KEY="your-google-static-maps-key"
    ```
+   `GOOGLE_MAPS_API_KEY` is required for **AI Roof Layout** satellite images (used by the CRM API).
 
 4. **Initialize database**
    ```bash
@@ -58,7 +60,8 @@
    ```
 
 6. **Login**
-   - Open http://localhost:5173
+   - **CRM UI:** http://localhost:5173
+   - **Proposal Engine UI (optional):** second terminal — `cd proposal-engine/frontend && npm run dev` → http://localhost:5174 (API must already be on port 3000). See `proposal-engine/README.md`.
    - Login with:
      - **Admin**: admin@rayenna.com / admin123
      - **Sales**: sales@rayenna.com / sales123
