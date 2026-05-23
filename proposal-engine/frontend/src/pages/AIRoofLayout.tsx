@@ -138,6 +138,7 @@ import {
 } from '../lib/roofLayoutFacets';
 import {
   closestPolygonEdge,
+  edgeLengthLabelPosition,
   type PolygonEdgeInfo,
 } from '../lib/roofLayoutEdgeMeasure';
 import { isPlaceholderSatelliteBytes } from '../lib/roofLayoutSatelliteImage';
@@ -2534,20 +2535,6 @@ export default function AIRoofLayout() {
                           </Layer>
                         )}
 
-                        {layoutMode === 'editing' && hoveredEdge && (
-                          <Layer listening={false}>
-                            <Label x={hoveredEdge.mid.x} y={hoveredEdge.mid.y - 16}>
-                              <Tag fill="rgba(15,23,42,0.9)" cornerRadius={4} />
-                              <Text
-                                text={`${hoveredEdge.lengthM.toFixed(1)} m`}
-                                fill="#ffffff"
-                                fontSize={12}
-                                padding={5}
-                              />
-                            </Label>
-                          </Layer>
-                        )}
-
                         {layoutMode === 'editing' && keepouts.length > 0 && (
                           <Layer ref={keepoutLayerRef}>
                             {keepouts.map((k) => (
@@ -2745,6 +2732,50 @@ export default function AIRoofLayout() {
                             ))}
                           </Layer>
                         )}
+
+                        {/* Edge length callout — above corner handles so green circles do not clip it. */}
+                        {layoutMode === 'editing' &&
+                          hoveredEdge &&
+                          polygon &&
+                          !isDragging &&
+                          (() => {
+                            const anchor = edgeLengthLabelPosition(
+                              polygon,
+                              hoveredEdge,
+                              controlPointRadius + 22,
+                            );
+                            const labelText = `${hoveredEdge.lengthM.toFixed(1)} m`;
+                            return (
+                              <Layer listening={false}>
+                                <Label
+                                  x={anchor.x}
+                                  y={anchor.y}
+                                  offsetX={28}
+                                  offsetY={12}
+                                >
+                                  <Tag
+                                    fill="rgba(15,23,42,0.92)"
+                                    cornerRadius={6}
+                                    pointerDirection="down"
+                                    pointerWidth={8}
+                                    pointerHeight={6}
+                                    lineJoin="round"
+                                    shadowColor="rgba(0,0,0,0.35)"
+                                    shadowBlur={6}
+                                    shadowOffsetY={2}
+                                    shadowOpacity={0.8}
+                                  />
+                                  <Text
+                                    text={labelText}
+                                    fill="#ffffff"
+                                    fontSize={12}
+                                    fontStyle="bold"
+                                    padding={6}
+                                  />
+                                </Label>
+                              </Layer>
+                            );
+                          })()}
 
                         {/* Scale bar — bottom-right corner of the canvas.
                             Renders in all modes (saved + editing) so the saved proposal image includes it. */}

@@ -54,6 +54,39 @@ export function closestPolygonEdge(
   return bestDist <= maxDistancePx ? best : null;
 }
 
+/**
+ * Position for an edge-length callout: midpoint shifted outward (away from polygon centroid)
+ * so Konva corner handles do not cover the label.
+ */
+export function edgeLengthLabelPosition(
+  polygon: Point2[],
+  edge: PolygonEdgeInfo,
+  offsetPx = 32,
+): Point2 {
+  const n = polygon.length;
+  if (n < 2) return { ...edge.mid };
+  const i = edge.index;
+  const a = polygon[i]!;
+  const b = polygon[(i + 1) % n]!;
+  const ex = b.x - a.x;
+  const ey = b.y - a.y;
+  const edgeLen = Math.hypot(ex, ey) || 1;
+  let nx = -ey / edgeLen;
+  let ny = ex / edgeLen;
+  const cx = polygon.reduce((s, p) => s + p.x, 0) / n;
+  const cy = polygon.reduce((s, p) => s + p.y, 0) / n;
+  const toMidX = edge.mid.x - cx;
+  const toMidY = edge.mid.y - cy;
+  if (nx * toMidX + ny * toMidY < 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+  return {
+    x: edge.mid.x + nx * offsetPx,
+    y: edge.mid.y + ny * offsetPx,
+  };
+}
+
 function pointToSegmentDistance(p: Point2, a: Point2, b: Point2): number {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
