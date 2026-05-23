@@ -50,6 +50,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { setMenuOpen(false); setHelpOpen(false); }, [pathname]);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
+
   // Inactivity timer helpers
   const clearIdleTimers = () => {
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
@@ -233,8 +247,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </Link>
             </div>
 
-            {/* Desktop nav (md and above). Only NAV links scroll; Help dropdown stays visible (no overflow clip). */}
-            <div className="hidden md:flex items-center flex-1 justify-center min-w-0">
+            {/* Desktop nav (xl+). Tablet / iPad use hamburger drawer — md was too narrow for 7 links + actions. */}
+            <div className="hidden xl:flex items-center flex-1 justify-center min-w-0">
               <div className="flex items-center gap-1.5 flex-nowrap overflow-x-auto">
                 {NAV.map((n) => (
                   <Link
@@ -302,7 +316,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {activeCustomer && (
                 <Link
                   to="/dashboard"
-                  className="hidden md:flex items-center gap-1.5 text-xs text-white/90 bg-white/15 hover:bg-white/25 border border-white/30 px-2.5 py-1 rounded-full transition-colors max-w-[160px] xl:max-w-[200px]"
+                  className="hidden xl:flex items-center gap-1.5 text-xs text-white/90 bg-white/15 hover:bg-white/25 border border-white/30 px-2.5 py-1 rounded-full transition-colors max-w-[160px] 2xl:max-w-[200px]"
                   title={`Active on dashboard: ${activeCustomer.master.name}`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-sky-300 inline-block flex-shrink-0 animate-pulse" />
@@ -314,7 +328,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {activeCustomer && (
                 <Link
                   to="/dashboard"
-                  className="md:hidden flex items-center gap-1 text-[11px] text-white/90 bg-white/15 border border-white/30 px-2 py-0.5 rounded-full max-w-[110px]"
+                  className="xl:hidden flex items-center gap-1 text-[11px] text-white/90 bg-white/15 border border-white/30 px-2 py-0.5 rounded-full max-w-[min(42vw,11rem)] sm:max-w-[12rem]"
                   title={`Active on dashboard: ${activeCustomer.master.name}`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-sky-300 inline-block flex-shrink-0 animate-pulse" />
@@ -324,7 +338,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
               {/* Logout button — desktop only */}
               {hasToken && (
-                <div className="hidden md:flex items-center gap-2">
+                <div className="hidden xl:flex items-center gap-2">
                   {userName && (
                     <span
                       className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold text-white/95 bg-white/15 border border-white/30 max-w-[180px] xl:max-w-[240px]"
@@ -343,11 +357,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </div>
               )}
 
-              {/* Hamburger — mobile only */}
+              {/* Hamburger — phone + tablet / iPad (below xl) */}
               <button
+                type="button"
                 onClick={() => setMenuOpen((o) => !o)}
-                aria-label="Toggle menu"
-                className="md:hidden flex flex-col justify-center items-center w-8 h-8 gap-1.5 rounded-md hover:bg-white/20 transition-colors flex-shrink-0"
+                aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                aria-expanded={menuOpen}
+                className="xl:hidden flex flex-col justify-center items-center w-11 h-11 min-w-[44px] min-h-[44px] gap-1.5 rounded-lg hover:bg-white/20 active:bg-white/30 transition-colors flex-shrink-0 touch-manipulation"
               >
                 <span className={`block w-5 h-0.5 bg-white transition-transform duration-200 ${menuOpen ? 'rotate-45 translate-y-2' : ''}`} />
                 <span className={`block w-5 h-0.5 bg-white transition-opacity duration-200 ${menuOpen ? 'opacity-0' : ''}`} />
@@ -357,28 +373,30 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* ── Mobile dropdown — scrollable, compact in landscape ── */}
+        {/* ── Tablet / phone menu drawer — scrollable, touch-friendly (iPad-safe) ── */}
         {menuOpen && (
-          <div
-            className="md:hidden border-t border-white/20 backdrop-blur-sm"
-            style={{ background: '#0d1b3aF2' }}
-          >
-            {/*
-              max-h: limits height so it never covers the whole screen.
-              In portrait: up to 70vh. In landscape: up to 60vh (less vertical room).
-              overflow-y-auto: enables scrolling when content overflows.
-            */}
-            <nav
-              className="max-w-7xl mx-auto px-3 py-2 overflow-y-auto"
-              style={{ maxHeight: 'min(70vh, 480px)' }}
+          <>
+            <button
+              type="button"
+              aria-label="Close menu"
+              className="xl:hidden fixed inset-0 z-10 bg-black/40 touch-manipulation"
+              onClick={() => setMenuOpen(false)}
+            />
+            <div
+              className="xl:hidden relative z-20 border-t border-white/20 backdrop-blur-sm"
+              style={{ background: '#0d1b3aF2' }}
             >
-              {/* Nav links — 2-column grid in landscape, 1-column in portrait */}
-              <div className="grid grid-cols-1 landscape:grid-cols-2 gap-1">
+            <nav
+              className="max-w-7xl mx-auto px-3 sm:px-4 py-3 overflow-y-auto overscroll-contain pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+              style={{ maxHeight: 'min(75dvh, 560px)' }}
+            >
+              {/* Nav links — 2 columns from sm+ landscape-friendly on iPad */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                 {NAV.map((n) => (
                   <Link
                     key={n.to}
                     to={n.to}
-                    className={`flex items-center px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                    className={`flex items-center min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors touch-manipulation ${
                       pathname === n.to
                         ? 'bg-white/30 text-white border border-white/40'
                         : 'text-white/90 hover:bg-white/20 hover:text-white'
@@ -389,12 +407,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 ))}
               </div>
 
-              {/* Help group — 3-column grid in landscape */}
-              <div className="mt-1 pt-1 border-t border-white/20">
-                <div className="grid grid-cols-1 landscape:grid-cols-3 gap-1">
+              {/* Help group */}
+              <div className="mt-2 pt-2 border-t border-white/20">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
                   <Link
                     to="/help"
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                    className={`flex items-center gap-2 min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors touch-manipulation ${
                       pathname === '/help'
                         ? 'bg-white/30 text-white border border-white/40'
                         : 'text-white/90 hover:bg-white/20 hover:text-white'
@@ -405,14 +423,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </Link>
                   <button
                     onClick={() => { setMenuOpen(false); navigate(`${pathname}?showTip=1`); }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-white/90 hover:bg-white/20 hover:text-white transition-colors"
+                    className="flex items-center gap-2 min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-semibold text-white/90 hover:bg-white/20 hover:text-white transition-colors touch-manipulation"
                   >
                     <span>💡</span>
                     <span>Tip of the Day</span>
                   </button>
                   <Link
                     to="/about"
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                    className={`flex items-center gap-2 min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors touch-manipulation ${
                       pathname === '/about'
                         ? 'bg-white/30 text-white border border-white/40'
                         : 'text-white/90 hover:bg-white/20 hover:text-white'
@@ -440,7 +458,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <button
                     type="button"
                     onClick={() => { setMenuOpen(false); handleLogout(); }}
-                    className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-slate-900 bg-white/90 hover:bg-amber-300 border border-white/70 shadow-sm transition-colors"
+                    className="mt-2 w-full flex items-center justify-center gap-2 min-h-[44px] px-3 py-2.5 rounded-lg text-sm font-semibold text-slate-900 bg-white/90 hover:bg-amber-300 border border-white/70 shadow-sm transition-colors touch-manipulation"
                   >
                     <span>⎋</span>
                     <span>Logout</span>
@@ -448,7 +466,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 )}
               </div>
             </nav>
-          </div>
+            </div>
+          </>
         )}
       </nav>
 
