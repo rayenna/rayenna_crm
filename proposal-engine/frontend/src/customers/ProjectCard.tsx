@@ -1,7 +1,7 @@
 import { STATUS_COLORS, STATUS_LABELS, artifactSummary } from '../lib/customerStore';
 import { normalizeProposalStatus } from '../lib/customerStore';
 import type { CustomerRecord } from '../lib/customerStore';
-import { ArtifactDots } from './CustomerBadges';
+import { ArtifactDots, MapCoordinatesBadge } from './CustomerBadges';
 import type { ProjectOption } from './types';
 
 export function ProjectCard({
@@ -46,6 +46,7 @@ export function ProjectCard({
                   Active
                 </span>
               )}
+              {project.hasMapCoordinates && <MapCoordinatesBadge />}
             </div>
             {location && (
               <p className="text-xs text-secondary-500 truncate">📍 {location}</p>

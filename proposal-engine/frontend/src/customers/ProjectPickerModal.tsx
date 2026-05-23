@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { AlertCard } from '../components/AlertCard';
 import { formatEmailForDisplay } from '../lib/customerStore';
+import { MapCoordinatesBadge } from './CustomerBadges';
 import type { ProjectOption } from './types';
 
 export function ProjectPickerModal({
@@ -288,6 +289,7 @@ export function ProjectPickerModal({
                       )}
                     </div>
                     <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      {p.hasMapCoordinates && <MapCoordinatesBadge />}
                       {typeof p.systemSizeKw === 'number' && p.systemSizeKw > 0 && (
                         <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-900 text-amber-300 border border-amber-400/70">
                           ⚡ {p.systemSizeKw} kW

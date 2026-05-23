@@ -33,9 +33,13 @@ Use after PE frontend and/or CRM API deploys, or before merging large PE PRs.
 
 ## AI roof layout
 
-- [ ] Regenerate layout for project with CRM lat/lng
+- [ ] Customer Master Map GPS set; Kerala test: warning if lat 8–13°N and lng &lt; 76°
+- [ ] Generate / Regenerate layout for project with valid CRM lat/lng → satellite visible (not grey “no imagery”)
 - [ ] Override Google Maps URL (full URL or `lat, lng`) → regenerate → satellite image changes
+- [ ] Multi-facet: add second roof section → switch facet → panels independent
 - [ ] Edit polygon / keepouts → Save to proposal → reopen `/ai-layout` → geometry restored
+- [ ] **Delete layout** → confirm modal → blank page + **Generate AI Layout** → no layout on reopen until regenerated
+- [ ] Customers card: **Map GPS** / **Roof layout** badges and **5** artifact dots when applicable
 - [ ] Proposal embed shows layout image when enabled
 
 ## Roles (spot-check one role you care about)

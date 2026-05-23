@@ -1,4 +1,4 @@
-import type { RoofLayoutGeometryV1 } from '../roofLayoutGeometry';
+import type { ParsedRoofLayoutGeometry } from '../roofLayoutGeometry';
 import { apiFetch } from './core';
 
 export interface AiRoofLayoutPolygonPoint {
@@ -13,7 +13,11 @@ export interface AiRoofLayoutPanelRect {
   height: number;
 }
 
-export type { RoofLayoutGeometryV1 } from '../roofLayoutGeometry';
+export type {
+  RoofLayoutGeometryV1,
+  RoofLayoutGeometryV2,
+  ParsedRoofLayoutGeometry,
+} from '../roofLayoutGeometry';
 export { parseRoofLayoutGeometry, buildRoofLayoutGeometry } from '../roofLayoutGeometry';
 
 export interface AiRoofLayoutResponse {
@@ -31,7 +35,7 @@ export interface AiRoofLayoutResponse {
   source?: 'AI' | 'MANUAL';
   savedAt?: string;
   projectId?: string;
-  geometry?: RoofLayoutGeometryV1;
+  geometry?: ParsedRoofLayoutGeometry;
 }
 
 export async function generateAiRoofLayout(params: {
@@ -59,9 +63,9 @@ export async function saveManualRoofLayoutImage(params: {
   roof_area_m2?: number;
   usable_area_m2?: number;
   panel_count?: number;
-  geometry?: RoofLayoutGeometryV1;
-}): Promise<{ layout_image_url: string; geometry?: RoofLayoutGeometryV1 }> {
-  return apiFetch<{ layout_image_url: string; geometry?: RoofLayoutGeometryV1 }>(
+  geometry?: ParsedRoofLayoutGeometry;
+}): Promise<{ layout_image_url: string; geometry?: ParsedRoofLayoutGeometry }> {
+  return apiFetch<{ layout_image_url: string; geometry?: ParsedRoofLayoutGeometry }>(
     '/api/roof/save-layout-image',
     {
       method: 'POST',
@@ -101,6 +105,13 @@ export async function saveRoofLayout3dImage(params: {
   );
 }
 
+export async function deleteRoofLayout(projectId: string): Promise<{ ok: boolean; projectId: string }> {
+  return apiFetch<{ ok: boolean; projectId: string }>(
+    `/api/roof/layout/${encodeURIComponent(projectId)}`,
+    { method: 'DELETE' },
+  );
+}
+
 export async function fetchManualRoofLayout(projectId: string): Promise<{
   roof_area_m2: number;
   usable_area_m2: number;
@@ -113,7 +124,7 @@ export async function fetchManualRoofLayout(projectId: string): Promise<{
   source?: 'AI' | 'MANUAL';
   roof_polygon_coordinates?: AiRoofLayoutPolygonPoint[];
   panel_coordinates?: AiRoofLayoutPanelRect[];
-  geometry?: RoofLayoutGeometryV1;
+  geometry?: ParsedRoofLayoutGeometry;
 }> {
   return apiFetch(`/api/roof/manual-layout/${encodeURIComponent(projectId)}`);
 }

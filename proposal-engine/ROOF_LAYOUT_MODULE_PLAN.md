@@ -1,256 +1,328 @@
 
-# AI Roof Detection & Solar Layout — Implementation Plan
+# AI Roof Layout — Implementation Plan & Status
 
-> **Status: SUPERSEDED (2026-05-16)**  
-> Core feature is **shipped** (API in `src/routes/roofLayout.ts`, UI in `AIRoofLayout.tsx`).  
-> **Active roadmap:** [docs/ai-roof-layout-2d-roadmap.md](./docs/ai-roof-layout-2d-roadmap.md) (P0/P1/P2, session log).  
-> Keep this file for historical repo-map notes only; do not treat “PENDING / deferred” as current.
+> **Last updated:** 2026-05-23  
+> **Status:** **Core 2D module shipped** and in active use. This file is the **module plan + delivery record** for the original “AI roof detection & solar layout” initiative.  
+> **Active roadmap (P1/P2 backlog):** [docs/ai-roof-layout-2d-roadmap.md](./docs/ai-roof-layout-2d-roadmap.md)  
+> **Structural / refactor log:** [docs/MODERNIZATION_PROGRESS.md](./docs/MODERNIZATION_PROGRESS.md)
 
-**Goal:** Automatically generate a rooftop solar panel layout image from coordinates and insert it into the Proposal Engine customer proposal.
+**Goal:** Generate a satellite-assisted rooftop solar layout from CRM coordinates, let sales draw and adjust the roof in 2D, persist layout on the CRM project, and embed it in the Proposal Engine proposal.
 
-**Scope:** This module lives inside the Proposal Engine product. The **UI and proposal integration** are in `proposal-engine/frontend/`. The **API, services, worker, and image storage** live in the **shared CRM backend** (`src/`) under the existing Proposal Engine API prefix, so the feature stays logically “inside” Proposal Engine and reuses the same auth and project context.
+**Scope:** Proposal Engine **UI** in `proposal-engine/frontend/`. **API, persistence, satellite fetch, and image storage** on the shared CRM backend (`src/`), mounted at `/api/roof/*`, same auth and project access as the rest of PE.
 
 ---
 
-## 1. Constraints & Clarifications
+## 1. Executive summary
 
-| Constraint | Interpretation |
+| Area | Original plan (2026) | As built (May 2026) |
+|------|----------------------|---------------------|
+| Satellite imagery | Google Static Maps | ✅ `src/services/satelliteFetcher.ts` — zoom 19, 1024×2 scale (~2048 px) |
+| Roof detection | OpenCV / AI trace | ❌ Not implemented — **centred rectangle** seeded in worker; user draws outline (honest copy in UI) |
+| Panel placement | Backend grid in polygon | ✅ Konva editor + `computePanelsForPolygon` / refill; geometry-driven on save |
+| API | `/proposal-engine/roof-layout/generate` | ✅ `/api/roof/ai-layout` (+ save, manual-layout GET, delete) |
+| UI page | `RoofLayoutGenerator.tsx` | ✅ `pages/AIRoofLayout.tsx` (+ `components/roofLayout/*`) |
+| Proposal embed | ProposalPreview section | ✅ “Proposed Rooftop Solar Layout” toggle + saved artifact |
+| Worker / async | Background queue | ❌ **Synchronous** in-request generation (no separate worker process) |
+| OpenCV | Phase 2 | ❌ Still deferred |
+| Multi-facet roofs | Not in original plan | ✅ **Phase 4 v1** — up to 3 sections, v2 `geometryJson`, azimuth per facet |
+| 3D simulation | Deferred (§10 below) | ✅ **Partial** — `Solar3DView.tsx`, 2D/3D tabs, optional 3D PNG + proposal preference |
+| Cross-device | Cache files only | ✅ `ProjectRoofLayout` (Prisma) + Cloudinary when configured + `geometryJson` |
+| Delete layout | Not in original plan | ✅ `DELETE /api/roof/layout/:projectId` + PE confirm modal |
+
+---
+
+## 2. Constraints (unchanged intent)
+
+| Constraint | Implementation |
 |------------|----------------|
-| Module runs inside Proposal Engine | PE frontend: new UI + proposal insertion. Backend: new routes under `/api/proposal-engine/roof-layout/*` in the existing Node server (`src/`). |
-| Coordinates from CRM | Fetched from **Customer** (`latitude`, `longitude`) and **Project** (`systemCapacity`). Project is linked to Customer; PE already gets project+customer via `GET /api/proposal-engine/projects/:id`. |
-| Manual fallback if CRM fails | Roof layout UI allows manual entry of lat/long, system_size_kw, panel_wattage when CRM data is missing or user wants to override. |
-| Input data | `customer_id`, `project_id` from CRM; `latitude`, `longitude` from Customer (or manual); `system_size_kw` from Project (or manual); `panel_wattage` default **550** (CRM has no `panelWattage` today; optional: add to Project later). |
+| Module inside Proposal Engine | PE frontend + CRM API under `/api/roof` |
+| Coordinates from CRM | **Customer** `latitude` / `longitude`; **Project** `systemCapacity`; **Project** `panelCapacityW` (watts) with 550 W default |
+| Manual fallback | Maps link override + panel wattage override on `AIRoofLayout` |
+| Cross-device truth | Server `project_roof_layouts` + optional Cloudinary URLs; PE `customerStore.roofLayout` mirror |
 
-**CRM schema (current):**
-- **Customer:** `latitude`, `longitude` (Float?)
-- **Project:** `systemCapacity` (Float?, kW), `panelType` (String?). No `panelWattage` → use **550** as default.
+**Map GPS quality (2026-05):** Kerala sites (lat ~8°–13°N) with longitude **&lt; 76°** often return Google’s grey “no imagery” tile. Warnings in **CRM Customer Master** (`MapSelector`) and **PE** before generate; fix coordinates in CRM or use override URL.
+
+**Env (CRM API):** `GOOGLE_MAPS_API_KEY` required for satellite fetch (see root `.env` / Render env).
 
 ---
 
-## 2. Where Things Live (Repo Map)
+## 3. Where things live (current repo map)
 
 | Component | Location | Notes |
 |-----------|----------|--------|
-| API routes | `src/routes/roofLayout.ts` | Mounted as `apiRouter.use('/proposal-engine/roof-layout', roofLayoutRoutes)` (or nested under proposalEngine router). |
-| Services | `src/services/roof/` | roofImageFetcher.ts, roofDetector.ts, panelLayoutEngine.ts, layoutRenderer.ts |
-| Worker | `src/workers/roofLayoutWorker.ts` | Background job runner (see §6). |
-| Generated images | Server disk: e.g. `generated_layouts/` (or `uploads/roof-layouts/`) | Path must be configurable (env); served via static route or GET endpoint. |
-| Static serving | `src/server.ts` | e.g. `app.use('/generated_layouts', express.static(path.join(__dirname, '../generated_layouts')))` so frontend can use URL like `{API_BASE}/generated_layouts/{projectId}_roof_layout.png`. |
-| PE frontend UI | `proposal-engine/frontend/src/components/RoofLayoutGenerator.tsx` (or `pages/`) | Button, preview, manual override form. |
-| Proposal integration | `proposal-engine/frontend/src/pages/ProposalPreview.tsx` | New section “Proposed Rooftop Solar Layout” + image when layout exists. |
-| PE API client | `proposal-engine/frontend/src/lib/apiClient.ts` | `generateRoofLayout(projectId, payload)`, `getRoofLayoutUrl(projectId)`. |
+| API routes | `src/routes/roofLayout.ts` | Mounted: `apiRouter.use('/roof', roofLayoutRoutes)` |
+| Geometry types (server) | `src/types/roofLayoutGeometry.ts` | v2 facets; `legacyCoordinatesFromGeometry()` for API compat |
+| Satellite fetch | `src/services/satelliteFetcher.ts` | Google Static Maps → `generated_layouts/{projectId}_satellite.png` |
+| Layout job | `src/workers/layoutGenerationWorker.ts` | Sync pipeline: satellite → area/obstacle stubs → pack count → AI layout PNG |
+| Area / obstacles | `src/services/roofSegmentationService.ts`, `obstacleDetector.ts` | Heuristic / stub (not real CV segmentation) |
+| Panel packing (job) | `src/services/panelPackingEngine.ts` | Used at **generate** time for metrics + initial count |
+| AI layout render | `src/services/layoutRenderer.ts` | `{projectId}_ai_layout.png` |
+| Image persistence | `src/services/roofLayoutImageStorage.ts` | Cloudinary upload/repair; `deleteProjectRoofLayoutArtifacts()` |
+| Map GPS validation | `src/utils/mapGpsValidation.ts` | Kerala longitude warning (shared logic in PE `mapGpsValidation.ts`) |
+| Generated files | `generated_layouts/` (repo root) | Also served at `/api/generated_layouts` and `/generated_layouts` |
+| DB | `prisma` → `ProjectRoofLayout` | `geometryJson`, `satelliteImageUrl`, `layoutImage3dUrl`, `prefer3dForProposal` |
+| PE page | `proposal-engine/frontend/src/pages/AIRoofLayout.tsx` | Konva canvas, hydrate from `GET manual-layout` |
+| PE components | `proposal-engine/frontend/src/components/roofLayout/` | Stepper, facet bar, status strip, map chrome, undo, panels, keepouts, adjust |
+| PE libs | `lib/roofLayoutGeometry.ts`, `roofLayoutFacets.ts`, `roofLayoutConstants.ts`, `roofLayoutEdgeMeasure.ts`, `roofLayoutSatelliteImage.ts` | v2 geometry; facet state; edge lengths |
+| PE API client | `lib/api/roofLayout.ts` | `generateAiRoofLayout`, `saveManualRoofLayoutImage`, `fetchManualRoofLayout`, `deleteRoofLayout`, 3D save |
+| Proposal | `pages/ProposalPreview.tsx`, `proposal/roofLayoutForProposal.ts` | Include layout in proposal; availability checks |
+| 3D view | `components/Solar3DView.tsx`, `lib/solar3DHelpers.ts` | Lazy-loaded; optional export |
+| Confirm delete | `components/ConfirmDangerModal.tsx` | Same pattern as Customers delete modal |
+| Customers UI | `CustomerBadges.tsx`, `customerStore.ts` | **Map GPS**, **Roof layout** badges; **5** artifact dots (roof = 5th dot; PE Ready still = 4 core) |
+| Help | `pages/HelpPage.tsx` (Quick Start + AI Roof section) | Regenerate vs Delete, Kerala GPS, multi-facet |
+
+**Not used (original plan paths):** `src/services/roof/*` package layout, `RoofLayoutGenerator.tsx`, `opencv4nodejs`, separate `roofLayoutWorker` queue.
 
 ---
 
-## 3. Input / Output Contract
+## 4. API contract (implemented)
 
-**POST /api/proposal-engine/roof-layout/generate**
+Base path: **`/api/roof`** (authenticated).
 
-- **Request body:**  
-  `{ project_id: string, latitude: number, longitude: number, system_size_kw: number, panel_wattage?: number }`  
-  - `panel_wattage` optional; default **550**.
-- **Response:**  
-  `{ layout_image_url: string, panel_count: number, warning?: string }`  
-  - `layout_image_url`: path or URL the frontend can use to display/save (e.g. `/generated_layouts/{project_id}_roof_layout.png` or full URL if served from same origin).  
-  - `warning`: e.g. `"Roof detection failed. Layout generated using default rectangle."`
+| Method | Path | Purpose |
+|--------|------|---------|
+| `POST` | `/ai-layout` | Generate satellite + AI layout PNG; upsert `ProjectRoofLayout` (AI source); returns metrics + URLs + seed polygon |
+| `POST` | `/save-layout-image` | Save cropped 2D JPEG + **v2 geometry** (`geometryJson`) |
+| `POST` | `/save-3d-layout-image` | Save 3D PNG; optional prefer-for-proposal flag |
+| `POST` | `/set-layout-embed-preference` | Toggle 2D vs 3D for proposal embed |
+| `GET` | `/manual-layout/:projectId` | Load saved layout + geometry + satellite URL for editor hydrate |
+| `DELETE` | `/layout/:projectId` | Remove DB row, local `generated_layouts/*`, Cloudinary assets (if configured) |
 
-**Caching (Step 10):**  
-- Key: `project_id` + `system_size_kw` (+ optionally `panel_wattage`).  
-- If file already exists for that key and is recent, return cached image URL and panel count without recomputing.  
-- Store metadata (panel_count, path) in memory or in a small JSON/DB table so we don’t need to re-read the image.
+**Generate body:** `{ projectId, latitude, longitude, systemSizeKw, panelWattage }`  
+**Generate errors:** Missing fields, access denied, **422** if Kerala Map GPS rule fails (`MAP_GPS_KERALA_LONGITUDE`), satellite placeholder / missing imagery, missing `GOOGLE_MAPS_API_KEY`.
 
----
-
-## 4. Step-by-Step Implementation Plan
-
-### Step 1 — Fetch Google Maps satellite image
-
-- **Service:** `src/services/roof/roofImageFetcher.ts`
-- **Input:** `lat`, `lng`, optional `zoom` (default 20), `size` (default 1024x1024).
-- **Process:** Build Google Static Maps URL; use `axios` (or node `https`) to GET image; save to temp file (e.g. `tmp/roof_{projectId}_satellite.png` or similar).
-- **Env:** `GOOGLE_MAPS_KEY` or `GOOGLE_STATIC_MAP_API_KEY` (required for this step).
-- **Error:** If key missing or request fails, return clear error so caller can fallback (e.g. to default rectangle layout).
-
-### Step 2 — Roof detection (OpenCV)
-
-- **Service:** `src/services/roof/roofDetector.ts`
-- **Input:** Path to satellite image file.
-- **Process:**  
-  1. Load image; convert to grayscale.  
-  2. Canny edge detection.  
-  3. Contour detection; filter by area/shape to get “roof-like” polygons.  
-  4. Pick largest suitable polygon; return as `{ roof_polygon: [[x1,y1], ...] }`.
-- **Dependency risk:** `opencv4nodejs` has native bindings and requires OpenCV installed on the host (and can be painful on Windows/CI). **Recommendation:**  
-  - **Phase 1:** Implement a **simple fallback only** (no OpenCV): e.g. use a default rectangle (e.g. 80% of image center) and set `warning: "Roof detection failed. Layout generated using default rectangle."`  
-  - **Phase 2:** Add optional OpenCV path: if `opencv4nodejs` is available and detection runs, use it; otherwise fallback.  
-  - **Alternative:** Use `sharp` for basic operations (grayscale, etc.) and a simple heuristic (e.g. largest contour by area with `sharp` or a lightweight JS lib) to avoid OpenCV on the server; quality will be lower but no native deps.
-- **Output:** `{ roof_polygon, success: boolean }` so renderer can draw polygon or fallback.
-
-### Step 3 — Panel layout algorithm
-
-- **Service:** `src/services/roof/panelLayoutEngine.ts`
-- **Input:** `roof_polygon`, `system_size_kw`, `panel_wattage`, image dimensions.
-- **Logic:**  
-  - `panels_required = ceil((system_size_kw * 1000) / panel_wattage)`.  
-  - Panel aspect: 2.2m x 1.1m for 550W → scale to pixel size relative to image (e.g. 1024px image → panel width/height in px).  
-  - Grid packing inside polygon: place rectangles (panels) in rows; clip to polygon boundary; add small gap between panels; stop when `panels_required` is reached.
-- **Output:** `{ panels: [{ x, y, w, h }, ...], panel_count }`.
-
-### Step 4 — Layout rendering
-
-- **Service:** `src/services/roof/layoutRenderer.ts`
-- **Input:** Satellite image path, `roof_polygon`, `panels`, labels (panel count, system size).
-- **Process:** Use `canvas` (node-canvas) or `sharp` (composite) to:  
-  - Draw satellite image as base.  
-  - Draw roof polygon outline.  
-  - Draw panel rectangles.  
-  - Draw text: “Proposed {system_size_kw} kW Solar PV Layout”, panel count, system size.
-- **Output:** Save to `generated_layouts/{project_id}_roof_layout.png` (or env-configured dir). Create directory if missing.
-
-### Step 5 — API endpoint
-
-- **File:** `src/routes/roofLayout.ts` (or add to `proposalEngine.ts` as a sub-router).
-- **POST /generate:**  
-  - Validate body (project_id, latitude, longitude, system_size_kw; panel_wattage optional).  
-  - Auth: reuse `authenticate` and project access (same as PE: ensure user can access this project).  
-  - **Caching:** If cache hit (same project_id + system_size_kw + panel_wattage), return existing `layout_image_url` and `panel_count`.  
-  - **Sync or async:** Phase 1 can be **synchronous** (generate in request, return when done; may need longer timeout for Render). Phase 2: queue job, return 202 + job id; frontend polls or uses webhook.  
-  - Call services in order: fetch image → detect roof (or fallback) → panel layout → render → save; return URL and panel_count.
-- **GET /image/:projectId** (optional): Serve the generated image if you don’t expose `generated_layouts` as static; or rely on static middleware and return 302 to file path.
-
-### Step 6 — Proposal integration (frontend)
-
-- **ProposalPreview.tsx:**  
-  - When building the proposal document (e.g. docx or HTML), if a roof layout exists for the current project:  
-    - Add a section “Proposed Rooftop Solar Layout”.  
-    - Include image (same way as existing diagram/logo: ImageRun from URL or embedded; if image is from API origin, fetch as blob and embed).  
-    - Show panel count and system capacity.  
-  - Data source: either from “last generate” response stored in component/context, or GET endpoint that returns `{ layout_image_url, panel_count }` for project.
-
-### Step 7 — UI component (frontend)
-
-- **RoofLayoutGenerator.tsx:**  
-  - Props: `projectId`, optional initial data (lat, lng, system_size_kw, panel_wattage) from project/customer.  
-  - “Generate Roof Layout” button; on click call POST `/api/proposal-engine/roof-layout/generate` with payload (from CRM data or manual form).  
-  - Show loading state; on success show preview image (e.g. `<img src={layout_image_url} />`) and panel count.  
-  - “Regenerate” if user changes system size (or manual params).  
-  - Place this component where it makes sense in the PE flow (e.g. Customer Workspace or a step before Proposal, or inside Proposal page as an optional block).
-
-### Step 8 — Background worker
-
-- **File:** `src/workers/roofLayoutWorker.ts`
-- **Options:**  
-  - **A. In-process queue:** Simple in-memory queue; a setInterval or `process.nextTick` loop processes one job at a time; job payload = same as POST body. API enqueues and returns 202 with job id; frontend polls GET `/roof-layout/status/:jobId` until done.  
-  - **B. External queue:** Bull/BullMQ + Redis; API pushes job; worker in same process or separate; same polling or webhook.  
-  - **C. Defer worker to Phase 2:** Keep generation synchronous in API (with timeout ~60s); add worker later when needed.  
-- **Recommendation:** Start with **synchronous** generation in the API (Step 5). If timeouts or load become an issue, introduce worker (A or B) and change API to enqueue + return 202.
-
-### Step 9 — Error handling
-
-- **Roof detection failure:** As in Step 2, fallback to default rectangle; set `warning` in response.  
-- **Google Maps failure:** Return 4xx/5xx with message; UI shows “Unable to fetch satellite image; check coordinates and API key.”  
-- **Rendering failure:** Log; return 500; optional retry or fallback (e.g. text-only placeholder in proposal).
-
-### Step 10 — Caching
-
-- **Key:** `project_id` + `system_size_kw` + `panel_wattage` (normalized).  
-- **Storage:** File path `generated_layouts/{project_id}_{system_size_kw}_{panel_wattage}_roof_layout.png` (or include hash of params). Before generating, check if file exists and is valid; if yes, return its URL and stored `panel_count`.  
-- **Metadata:** Optional: small JSON file next to image or a DB table (e.g. `PERoofLayoutCache`: projectId, systemSizeKw, panelWattage, filePath, panelCount, generatedAt) for quick lookup without filesystem scan.
+**Static assets:** `{API}/api/generated_layouts/{projectId}_satellite.png`, `_ai_layout.png`, `_manual_layout.jpg`, `_3d_layout.png`, etc.
 
 ---
 
-## 5. Dependencies
+## 5. Data model
 
-| Package | Where | Purpose | Note |
-|---------|--------|--------|------|
-| axios | Backend (likely already present) | Fetch Google Static Map image | - |
-| sharp | Backend | Image processing (resize, composite, draw) | Lighter than OpenCV; can do fallback rendering. |
-| canvas (node-canvas) | Backend | Draw polygon, panels, text on image | Native deps (Cairo); may need install notes for Render/Windows. |
-| opencv4nodejs | Backend (optional, Phase 2) | Roof detection (Canny, contours) | **Optional;** heavy native dep; consider Phase 2 or alternative. |
-| react-image or plain img | Frontend | Display layout preview | Or use native `<img>`; `react-image` only if you need loading/error states. |
+**`ProjectRoofLayout`** (`project_roof_layouts`):
 
-**Recommendation:**  
-- **Phase 1:** `axios`, `sharp`, `canvas` (or `sharp`-only rendering if canvas is problematic). No OpenCV; use rectangular fallback and `warning` message.  
-- **Phase 2:** Add `opencv4nodejs` (or Python microservice) for real roof detection if needed.
+- Metrics: `roofAreaM2`, `usableAreaM2`, `panelCount`
+- URLs: `layoutImageUrl` (2D proposal/export), `satelliteImageUrl`, optional `layoutImage3dUrl`, `prefer3dForProposal`
+- **`geometryJson`:** version **2** — `facets[]` (id, label, azimuthDeg, roofPolygon, panelRects), global `keepouts`, panel orientation/spacing, `imageWidth` / `imageHeight`, `metersPerPixel`
+- **v1** geometry still parsed server-side into v2 for legacy rows
+- `source`: `AI` | `MANUAL`
+
+PE mirrors saved layout on `CustomerRecord.roofLayout` and optionally `proposal.roofLayout` for cards and proposal flow.
 
 ---
 
-## 6. Data Flow Summary
+## 6. Backend pipeline (generate)
 
-1. **PE frontend** loads project (and customer) via existing `GET /api/proposal-engine/projects/:id` → gets `customer.latitude`, `customer.longitude`, `project.systemCapacity`.  
-2. User optionally edits (manual fallback) and clicks “Generate Roof Layout”.  
-3. **Frontend** calls `POST /api/proposal-engine/roof-layout/generate` with `project_id`, `latitude`, `longitude`, `system_size_kw`, `panel_wattage` (default 550).  
-4. **Backend** checks cache → if miss: fetch satellite image → roof detection (or fallback) → panel layout → render → save to `generated_layouts/` → return `layout_image_url` and `panel_count`.  
-5. **Frontend** shows preview; proposal generator includes this image and labels in the document when layout exists.
+```text
+POST /ai-layout
+  → ensureProjectWriteAccess
+  → getKeralaMapGpsWarning (422 if failed)
+  → generateRoofLayoutJob
+       → fetchSatelliteImage (Google, validate non-placeholder size)
+       → computeRoofAreaM2 / detectObstaclesM2 (stubs)
+       → computePanelPacking (target kW → panel count estimate)
+       → renderLayoutImage → ai_layout.png
+  → optional Cloudinary upload
+  → prisma.projectRoofLayout.upsert
+  → JSON response (metrics, URLs, roof_polygon_coordinates seed)
+```
 
----
-
-## 7. Phased Delivery Suggestion
-
-| Phase | Scope | Delivers |
-|-------|--------|----------|
-| **Phase 1** | No OpenCV; rectangular fallback; sync API; cache by project_id + system_size_kw + panel_wattage | End-to-end: button → generate → preview → insert into proposal. All steps 1–7 and 9–10; Step 8 (worker) deferred. |
-| **Phase 2** | Optional OpenCV roof detection; background worker if needed | Better roof shape; offload long runs to worker. |
-| **Phase 3** | Optional: store layout URL in PE artifact or DB; panel_wattage in CRM Project | Persist “last layout” per project; avoid re-fetching from CRM. |
-
----
-
-## 8. Checklist Before Coding
-
-- [ ] Confirm **Google Static Maps API** key (and enable Static Map API in Google Cloud).  
-- [ ] Decide **Phase 1 vs Phase 2** for OpenCV (recommend Phase 1 without OpenCV).  
-- [ ] Decide **sync vs async** for generate (recommend sync for Phase 1 with 60s timeout).  
-- [ ] Add **panelWattage** to Project in Prisma (optional) or keep default 550 in API.  
-- [ ] Ensure **generated_layouts** (or chosen dir) is writable and not committed to git; document in .gitignore.  
-- [ ] Serve generated images (static route or GET) so PE frontend (and docx export) can load them (same-origin or CORS).
+**Not implemented:** OpenCV roof polygon, async job queue, param-based file cache separate from DB (regenerate overwrites satellite file per project).
 
 ---
 
-## 9. File Summary (Phase 1)
+## 7. Frontend workflow (2D design studio)
 
-**Backend (src/):**
-- `src/services/roof/roofImageFetcher.ts`
-- `src/services/roof/roofDetector.ts` (fallback polygon only in Phase 1)
-- `src/services/roof/panelLayoutEngine.ts`
-- `src/services/roof/layoutRenderer.ts`
-- `src/routes/roofLayout.ts`
-- Mount in `server.ts`: `apiRouter.use('/proposal-engine/roof-layout', roofLayoutRoutes)`
-- Static serve: `app.use('/generated_layouts', express.static(...))` (or equivalent)
-- Env: `GOOGLE_MAPS_KEY`, `ROOF_LAYOUT_OUTPUT_DIR` (optional, default `generated_layouts`)
+**Route:** `/ai-layout` → `AIRoofLayout.tsx`
 
-**Frontend (proposal-engine/frontend/):**
-- `src/components/RoofLayoutGenerator.tsx` (or under `pages/`)
-- `src/lib/apiClient.ts`: `generateRoofLayout`, optional `getRoofLayoutStatus`
-- `ProposalPreview.tsx`: section “Proposed Rooftop Solar Layout” + image when available
+**Guided steps (stepper):** Locate site → Outline roof → Place panels → Review & save
 
-**Worker (Phase 2):**
-- `src/workers/roofLayoutWorker.ts`
+| Feature | Status |
+|---------|--------|
+| Generate / Regenerate AI Layout | ✅ |
+| Delete layout (modal confirm, blank + Generate) | ✅ May 2026 |
+| Satellite base + Konva panels | ✅ |
+| Drag roof polygon + move whole roof | ✅ |
+| Undo / redo polygon | ✅ |
+| Rectangular keepouts | ✅ |
+| Panel density, portrait/landscape, opacity, zoom | ✅ |
+| Refill / clear panels (active facet + refill all) | ✅ |
+| Edge length on hover (m) | ✅ |
+| North arrow + legend (`RoofLayoutMapChrome`) | ✅ |
+| Status strip (kW vs CRM, fill %, areas) | ✅ |
+| Multi-facet (≤3), azimuth presets, facet bar | ✅ Phase 4 v1 |
+| Save to Proposal (JPEG + geometry to server) | ✅ |
+| Mobile: Scroll map / Edit polygon / Keepouts | ✅ |
+| 2D / 3D tabs + 3D export | ✅ |
+| Draft vs saved indicators | ✅ |
+| Map GPS / Kerala warnings | ✅ May 2026 |
+
+**Honest product copy:** Satellite-assisted **draft**; roof outline is **user-drawn**, not auto-traced.
 
 ---
 
-If you confirm this plan (and Phase 1 scope: no OpenCV, sync API, rectangular fallback), the next step is to implement Phase 1 in the order: backend services → route → static serve → frontend component → proposal integration.
+## 8. Proposal integration
+
+- After **Save to Proposal**, layout is on the CRM project.
+- **Proposal** page: **Include AI Roof Layout (Beta) in proposal** when layout exists (`roofLayoutForProposal` availability).
+- Exported **2D** save image is panels-on-satellite (no green edit handles); geometry remains editable on return to AI Roof Layout.
+- Optional **3D** image in proposal when saved and preference set.
 
 ---
 
-## 10. 3D Solar Installation Simulation (DEFERRED — Revisit Later)
+## 9. Phased delivery — plan vs reality
 
-> **Note (saved for later):** The following 3D simulation plan was agreed in chat and intentionally deferred. Revisit when ready to add the feature.
+| Phase | Original intent | Outcome |
+|-------|-----------------|--------|
+| **Phase 1** | Rectangular fallback, sync API, no OpenCV, proposal embed | ✅ **Done** (evolved into full Konva editor + DB persistence) |
+| **Phase 2** | OpenCV + background worker | ❌ **Not started** |
+| **Phase 3** | Persist layout URL; panel wattage in CRM | ✅ **Done** (`ProjectRoofLayout` + `panelCapacityW` on Project) |
+| **P0 UX** (roadmap) | Stepper, undo, chrome, desktop layout | ✅ Largely done (see roadmap) |
+| **P1** (roadmap) | Keepouts, multi-facet, measurements, PDF site plan | 🟡 Keepouts + multi-facet + measurements **done**; **PDF site plan pending** |
+| **P2** (roadmap) | Yield hints, SKU dimensions, India copy | ❌ Not started |
+| **Phase 4 v1** | SolarEdge-style multi-facet | ✅ **Done** (May 2026) |
+| **Ops** | Delete layout, GPS validation | ✅ **Done** (May 2026) |
 
-**Goal:** Add an optional interactive 3D rooftop + solar panel view inside the AI Roof Layout module, with export to PNG for the proposal PDF.
+---
 
-**Requirements (to implement when revisiting):**
-1. Use **Three.js** to render a 3D rooftop model.
-2. Convert the detected **roof polygon** (from current 2D Konva flow) into a 3D mesh (pixel→meter, triangulate, flat or thin extrusion).
-3. Render **solar panels** as thin rectangular meshes from existing **panelCoordinates** (from `computePanelsForPolygon`).
-4. **Configurable tilt angle** for panels (e.g. slider 0°–45°).
-5. **Directional sunlight** (DirectionalLight; optional azimuth/elevation).
-6. **Camera rotation** for interactive viewing (e.g. OrbitControls).
-7. **Export** the 3D view as PNG to embed in the proposal (same pattern as current layout image; optional second image slot or “2D vs 3D” choice).
+## 10. 3D solar view (updated from “deferred only”)
 
-**Inputs (reuse existing):** `roofPolygon` (pixel coords), `panelCoordinates` (pixel rects), `imageSize`, `METERS_PER_PIXEL`.
+Originally deferred in this plan; **now partially shipped:**
 
-**Suggested placement:** Optional “View 3D simulation” (or 2D | 3D tab) in the AI Roof Layout page when polygon + panels exist.
+| Item | Status |
+|------|--------|
+| Three.js scene (`Solar3DView`) | ✅ Lazy-loaded |
+| Roof polygon → mesh, panels from coords | ✅ |
+| Tilt / orbit / export PNG | ✅ |
+| Save 3D to server + proposal embed preference | ✅ |
+| Full engineering / shade / stringing | ❌ Out of scope |
 
-**Suggested implementation order:** Three.js dependency → minimal 3D scene → polygon→roof mesh → panel meshes → tilt slider → sunlight → OrbitControls → PNG export → proposal/PDF integration.
+Treat 3D as **optional sales visual**, not a replacement for 2D editing truth (`geometryJson`).
 
-**File ideas:** `Solar3DView.tsx`, helpers for polygon→mesh and panelCoords→3D; dynamic import to limit bundle size.
+---
+
+## 11. Still deferred / backlog
+
+From original plan and [ai-roof-layout-2d-roadmap.md](./docs/ai-roof-layout-2d-roadmap.md):
+
+- [ ] Real roof segmentation (OpenCV or external CV) instead of rectangle seed  
+- [ ] Background worker + 202/poll for long-running generates  
+- [ ] PDF **site plan** export (logo, scale, north, customer block)  
+- [ ] Circle keepouts, 90° / parallel snap  
+- [ ] Param-based image cache keyed by `systemSizeKw` + `panelWattage` (today: per-`projectId` files + DB)  
+- [ ] Smarter obstacle detection (currently stub)  
+- [ ] P2 yield / module SKU dimensions from BOM  
+
+**Quick wins (roadmap):** centralise `METERS_PER_PIXEL` with worker; keyboard shortcuts (`Esc` / `E` / undo); further split `AIRoofLayout.tsx` into canvas/toolbar modules.
+
+---
+
+## 12. Pre-flight checklist (updated)
+
+- [x] Google Static Maps API key — `GOOGLE_MAPS_API_KEY` on CRM API  
+- [x] Phase 1 without OpenCV — rectangle seed + user edit  
+- [x] Sync generate (no worker)  
+- [x] `panelCapacityW` on Project (CRM) + 550 W default in PE  
+- [x] `generated_layouts/` gitignored; served via Express  
+- [x] CORS / static URLs for PE (Render + Vercel); local Vite proxy `/api` → :3000  
+- [x] Cloudinary optional for production persistence  
+- [x] Cross-device geometry via `geometryJson`  
+- [ ] Production monitoring for satellite placeholder rate by region  
+
+---
+
+## 13. How to verify
+
+```bash
+# Terminal 1 — repo root
+npm run dev   # API :3000, CRM UI :5173
+
+# Terminal 2
+cd proposal-engine/frontend && npm run dev   # PE :5174
+```
+
+See [docs/SMOKE_CHECKLIST.md](./docs/SMOKE_CHECKLIST.md) — AI roof layout section (generate, override URL, multi-facet, save/reopen, delete, badges, proposal embed).
+
+Unit tests: `proposal-engine/frontend` (`roofLayoutGeometry.test.ts`, etc.); root `src/utils/mapGpsValidation.test.ts`.
+
+---
+
+## 14. Session log (implementation history)
+
+| Date | Notes |
+|------|--------|
+| 2026-05 (early) | Phase 1 pipeline: `satelliteFetcher`, `layoutGenerationWorker`, `roofLayout` routes, `AIRoofLayout`, proposal embed |
+| 2026-05-16 | P0/P1 slices: stepper, undo, keepouts, `geometryJson`, status strip, edge measure, satellite opacity, Cloudinary + Prisma persist |
+| 2026-05-16 | Plan marked superseded by [ai-roof-layout-2d-roadmap.md](./docs/ai-roof-layout-2d-roadmap.md) for ongoing prioritisation |
+| 2026-05-18–20 | 3D view, save 3D, embed preference; PE help Quick Start |
+| 2026-05-22 | **Phase 4 v1:** Multi-facet (≤3), v2 geometry (PE + `src/types`), azimuth, refill-all, aggregated metrics |
+| 2026-05-23 | Customers: **Map GPS** + **Roof layout** badges, **5** artifact dots; Kerala GPS validation (CRM + API + PE); **Delete layout** + `ConfirmDangerModal`; satellite/URL fixes; help docs updated |
+
+---
+
+## 15. Related documents
+
+| Doc | Use |
+|-----|-----|
+| [docs/ai-roof-layout-2d-roadmap.md](./docs/ai-roof-layout-2d-roadmap.md) | P0/P1/P2 priorities, SaaS acceptance bar, mobile rules |
+| [docs/MODERNIZATION_PROGRESS.md](./docs/MODERNIZATION_PROGRESS.md) | PE refactor phases (api split, etc.) |
+| [docs/SMOKE_CHECKLIST.md](./docs/SMOKE_CHECKLIST.md) | Manual regression |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | CRM + PE system architecture |
+| [README.md](./README.md) | PE local quick start, env vars |
+| `docs/pe-image-storage-migration-plan.md` (repo root) | When to migrate PE images to Cloudinary at scale |
+
+---
+
+## Appendix A — Original step-by-step plan (archived)
+
+The sections below describe the **initial 2026 design** before implementation. They are kept for historical context; **§3–§7** reflect what was actually built.
+
+<details>
+<summary>Original Steps 1–10, dependencies, and file list (click to expand)</summary>
+
+### Original Step 1 — Fetch Google Maps satellite image
+
+- Planned: `src/services/roof/roofImageFetcher.ts`, env `GOOGLE_MAPS_KEY`
+- **Built as:** `src/services/satelliteFetcher.ts`, env `GOOGLE_MAPS_API_KEY`
+
+### Original Step 2 — Roof detection (OpenCV)
+
+- Planned: Canny/contours or Phase 1 rectangle fallback  
+- **Built:** Rectangle seed only in `layoutGenerationWorker`; user edits in Konva; **no OpenCV**
+
+### Original Steps 3–4 — Panel layout + rendering
+
+- Planned: `panelLayoutEngine.ts`, `layoutRenderer.ts` on server only  
+- **Built:** Server `layoutRenderer` for AI preview PNG; **primary** panel layout in PE Konva + geometry on save
+
+### Original Step 5 — API
+
+- Planned: `POST .../roof-layout/generate` with cache key on kW + wattage  
+- **Built:** `POST /api/roof/ai-layout` + save/load/delete routes; cache = per-project files + DB row
+
+### Original Steps 6–7 — Proposal + UI
+
+- Planned: `RoofLayoutGenerator.tsx`  
+- **Built:** `AIRoofLayout.tsx` + `ProposalPreview` embed
+
+### Original Step 8 — Background worker
+
+- **Not implemented** — synchronous generation remains
+
+### Original Steps 9–10 — Errors + caching
+
+- Partially: warnings for bad satellite; Kerala GPS validation added later  
+- Caching: overwrite/regenerate per project, not original multi-param filename scheme
+
+### Original dependencies
+
+| Package | Planned | Used |
+|---------|---------|------|
+| axios | Yes | Yes |
+| sharp / canvas | Yes | Partial (renderer path) |
+| opencv4nodejs | Phase 2 | No |
+| react-konva / use-image | Not listed | Yes (PE) |
+
+</details>
+
+---
+
+*When resuming product work, start from [docs/ai-roof-layout-2d-roadmap.md](./docs/ai-roof-layout-2d-roadmap.md). When resuming “what did we ship?”, use **§1–§14** above.*

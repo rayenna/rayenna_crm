@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  artifactSummary,
   deriveProposalStatusFromArtifacts,
+  hasSavedRoofLayout,
   normalizeProposalStatus,
+  PE_ARTIFACT_COUNT,
 } from './customerStore';
+import type { CustomerRecord } from './customerStore';
 
 describe('deriveProposalStatusFromArtifacts', () => {
   const empty = { costing: null, bom: null, roi: null, proposal: null };
@@ -29,6 +33,36 @@ describe('deriveProposalStatusFromArtifacts', () => {
         proposal: {},
       }),
     ).toBe('proposal-ready');
+  });
+});
+
+describe('artifactSummary', () => {
+  const shell = {
+    id: 'x',
+    createdAt: '',
+    updatedAt: '',
+    status: 'draft' as const,
+    master: { name: 'T' },
+    costing: null,
+    bom: null,
+    roi: null,
+    proposal: null,
+    roofLayout: null,
+  } satisfies CustomerRecord;
+
+  it(`counts roof layout toward ${PE_ARTIFACT_COUNT} artifacts`, () => {
+    const withRoof: CustomerRecord = {
+      ...shell,
+      roofLayout: {
+        savedAt: '2026-01-01',
+        roof_area_m2: 100,
+        usable_area_m2: 80,
+        panel_count: 10,
+        layout_image_url: 'https://example.com/layout.jpg',
+      },
+    };
+    expect(hasSavedRoofLayout(withRoof)).toBe(true);
+    expect(artifactSummary(withRoof)).toBe('1 / 5 artifacts');
   });
 });
 

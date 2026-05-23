@@ -13,6 +13,8 @@ type Props = {
   fillPercent?: number | null;
   /** systemKw − targetSystemKw when both known. */
   kwVsTarget?: number | null;
+  /** When &gt; 1, multi-facet layout (Phase 4). */
+  facetCount?: number;
 };
 
 export function RoofLayoutStatusStrip({
@@ -28,6 +30,7 @@ export function RoofLayoutStatusStrip({
   moduleWatts,
   fillPercent,
   kwVsTarget,
+  facetCount = 1,
 }: Props) {
   const panelsLabel =
     !panelCountReady || panelCount == null ? '—' : String(panelCount);
@@ -100,6 +103,12 @@ export function RoofLayoutStatusStrip({
       <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-[11px] text-slate-500">
         <span>
           Module: <strong className="text-slate-700">{moduleWatts} W</strong>
+          {facetCount > 1 && (
+            <>
+              {' '}
+              · <strong className="text-slate-700">{facetCount} roof sections</strong>
+            </>
+          )}
         </span>
         <span
           className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${

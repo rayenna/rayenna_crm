@@ -7,6 +7,21 @@ import type { CustomerRecord, CustomerMaster } from '../lib/customerStore';
 import type { ProposalEngineProjectFromApi } from '../lib/apiClient';
 import type { ProjectOption } from './types';
 
+/** Customer Master Google Map coordinates (both required, finite, in range). */
+export function hasValidMapCoordinates(
+  latitude?: number | null,
+  longitude?: number | null,
+): boolean {
+  if (latitude == null || longitude == null) return false;
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
+  // Treat exact 0,0 as unset (common data-entry mistake).
+  if (lat === 0 && lng === 0) return false;
+  return true;
+}
+
 export function deriveCustomerName(
   c: ProposalEngineProjectFromApi['customer'] | null | undefined,
 ): string {
@@ -66,6 +81,7 @@ export function mapApiProjectToProjectOption(p: ProposalEngineProjectFromApi): P
     orderValue: typeof p.projectCost === 'number' ? p.projectCost : undefined,
     confirmationDate: p.confirmationDate ?? undefined,
     createdAt: p.createdAt ?? undefined,
+    hasMapCoordinates: hasValidMapCoordinates(cust.latitude, cust.longitude),
   };
 }
 

@@ -1,7 +1,7 @@
 # AI Roof Layout — 2D roadmap (bookmark)
 
-**Status:** In progress — P0 largely started (see session log); 3D secondary  
-**Last updated:** 2026-05-16  
+**Status:** Phase 4 in progress — multi-facet v1 shipped (2026-05-22); P0/P1 UX largely done  
+**Last updated:** 2026-05-22  
 **Architecture:** [ARCHITECTURE.md](./ARCHITECTURE.md)  
 **Scope:** 2D layout only (3D deferred until 2D reaches SaaS bar)  
 **Primary UI:** `proposal-engine/frontend/src/pages/AIRoofLayout.tsx`  
@@ -31,7 +31,7 @@ Win on **workflow integration** first; match **design-studio feel** in P0/P1.
 | Roof outline | **Centered rectangle** seeded in worker; user drags corners | AI trace or CAD/LIDAR facets |
 | Panels | One polygon; grid fill; density + orientation | Multi-facet arrays, keepouts, setbacks |
 | Obstacles | Backend stub (`detectObstaclesM2`); **keepouts in 2D UI** (rect) | Shade, setbacks, auto-detect |
-| Roofs | Single polygon | Multiple facets + azimuth each |
+| Roofs | **Up to 3 facets** + azimuth per section (v2 geometry) | Multiple facets + azimuth each |
 | Electrical | None in 2D | Stringing, MPPT (out of 2D scope for now) |
 | Output | Cropped JPEG + m² / panel count → proposal | Site plan PDF, BOM tie-in |
 | UX | Konva; stepper/status/undo; keepouts; mobile toolbar (2026-05) | Multi-facet, PDF site plan, shortcuts |
@@ -167,6 +167,7 @@ A salesperson on a phone or laptop can:
 | 2026-05-16 | — | **Slice A started:** stepper, status strip, undo/redo, north arrow/legend, panel styling, 2-col desktop layout |
 | 2026-05-16 | — | **Slice B:** `geometryJson` on `ProjectRoofLayout`; save/load geometry; keepouts UI + panel fill skips keepouts; module dims from CRM wattage; target kW cap; hydrate editing session from server geometry + satellite |
 | 2026-05-16 | — | **Slice C:** Refill/clear panels; desktop 3-col tools sidebar; edge length on hover; satellite opacity; fill % + kW vs target in status strip; honest copy (not auto-traced) |
+| 2026-05-22 | — | **Phase 4 v1:** Multi-facet (≤3 roofs), azimuth presets, v2 `geometryJson`, Refill all sections, aggregated kW/m² status strip (SolarEdge Designer benchmark) |
 | | | |
 
 ---

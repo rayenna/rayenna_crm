@@ -35,6 +35,7 @@ import {
   canCreateOrEditProposals,
   ROLES_VIEW_ONLY_PE,
 } from '../customers/customerHelpers';
+import { MapCoordinatesBadge, RoofLayoutSavedBadge } from '../customers/CustomerBadges';
 import { ProjectCard } from '../customers/ProjectCard';
 import { ProjectPickerModal } from '../customers/ProjectPickerModal';
 import { ProjectConflictModal } from '../customers/ProjectConflictModal';
@@ -674,6 +675,17 @@ export default function Customers() {
             ))}
           </div>
 
+          <p className="text-[11px] text-secondary-500 mb-4 flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1">
+            <span className="inline-flex items-center gap-2 flex-wrap">
+              <MapCoordinatesBadge />
+              <span>Google Map coordinates in Customer Master.</span>
+            </span>
+            <span className="inline-flex items-center gap-2 flex-wrap">
+              <RoofLayoutSavedBadge />
+              <span>saved roof layout (orange dot in footer). PE Ready still requires Costing, BOM, ROI, and Proposal.</span>
+            </span>
+          </p>
+
           {/* Search, filters, sort (server-side for API list) */}
           <div className="mb-5 space-y-3">
             <div className="flex flex-col lg:flex-row lg:items-end gap-3">
@@ -822,6 +834,7 @@ export default function Customers() {
                           key={localRecord.id}
                           record={localRecord}
                           isActive={activeId === localRecord.id}
+                          hasMapCoordinatesFromCrm={!!p.hasMapCoordinates}
                           onOpen={() => handleOpen(localRecord.id)}
                           onDelete={() => void handleDelete(localRecord)}
                         />

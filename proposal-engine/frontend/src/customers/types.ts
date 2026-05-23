@@ -24,6 +24,8 @@ export interface ProjectOption {
   orderValue?: number;
   confirmationDate?: string;
   createdAt?: string;
+  /** True when Customer Master has valid Google Map lat/lng (AI Roof Layout ready). */
+  hasMapCoordinates?: boolean;
 }
 
 export const PROJECTS_PAGE_SIZE = 24;

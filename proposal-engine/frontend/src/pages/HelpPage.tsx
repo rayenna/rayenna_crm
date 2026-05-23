@@ -268,7 +268,8 @@ export default function HelpPage() {
             <li>Workflow data is stored on the <strong>Rayenna CRM server</strong> when you save — not only in your browser.</li>
             <li>You must start from <strong>+ Select Project</strong> (or <strong>Open</strong> on an existing CRM-linked project). Standalone customers without a CRM project link do not sync across laptops.</li>
             <li>After <strong>Open</strong>, the <Link to="/dashboard" className="text-indigo-600 underline font-medium">Dashboard</Link> may show a green <strong>Up to date</strong> banner confirming data was loaded from the server.</li>
-            <li>Local development: run the CRM API on <strong>port 3000</strong> and Proposal Engine UI on <strong>5174</strong> (see README). If the API is down, saves may stay on this device only and reopening elsewhere will look empty.</li>
+            <li>On <strong>Customers / Projects</strong>, each card shows coloured <strong>artifact dots</strong> (Costing, BOM, ROI, Proposal, <strong>Roof layout</strong>) and optional <strong>Map GPS</strong> / <strong>Roof layout</strong> badges when those are set.</li>
+            <li>Local development: run the CRM API on <strong>port 3000</strong> and Proposal Engine UI on <strong>5174</strong> (see README). Set <strong>GOOGLE_MAPS_API_KEY</strong> on the CRM API (<code className="text-xs bg-white px-1 rounded">.env</code> at repo root) for satellite imagery. If the API is down, saves may stay on this device only and reopening elsewhere will look empty.</li>
           </ul>
         </div>
 
@@ -279,16 +280,19 @@ export default function HelpPage() {
           </p>
           <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
             <li>
-              <strong>Locate:</strong> CRM latitude/longitude load automatically. If the pin is wrong, paste a full <strong>Google Maps URL</strong> (or <code className="text-xs bg-white px-1 rounded">lat, lng</code>) in <strong>Override location</strong> and click <strong>Regenerate AI Layout</strong>. Short <code className="text-xs">maps.app.goo.gl</code> links will not work — open them in a browser and copy the full <code className="text-xs">google.com/maps/…</code> address.
+              <strong>Locate:</strong> Map GPS from <strong>Rayenna CRM Customer Master</strong> loads automatically. In CRM, set the pin under the customer&apos;s address — if latitude is in Kerala (about 8°–13°N) and longitude is <strong>west of 76°</strong>, CRM and PE show a warning because Google satellite often fails there; most Kerala sites use ~<strong>76.2°–77.4°E</strong>. If the pin is wrong, paste a full <strong>Google Maps URL</strong> (or <code className="text-xs bg-white px-1 rounded">lat, lng</code>) under <strong>Override Google Maps location</strong> and click <strong>Regenerate AI Layout</strong>. Short <code className="text-xs">maps.app.goo.gl</code> links will not work — open them in a browser and copy the full <code className="text-xs">google.com/maps/…</code> address.
             </li>
             <li>
-              <strong>Outline:</strong> Drag green corner handles to match the flat roof. The first outline is a <strong>starting rectangle</strong> (not auto-traced AI). Use <strong>Undo</strong> / <strong>Redo</strong> if you mis-click.
+              <strong>Outline:</strong> Drag green corner handles to match each roof face. The first outline is a <strong>starting rectangle</strong> (not auto-traced AI). Up to <strong>three roof sections</strong> (multi-facet) — use <strong>+ Add section</strong> in the left column. <strong>Undo</strong> / <strong>Redo</strong> if you mis-click.
             </li>
             <li>
               <strong>Panels:</strong> Add <strong>keepouts</strong> (vents, tanks) so panels skip those areas. Use <strong>Refill panels</strong> toward CRM target kW; adjust density and portrait/landscape. Hover a roof edge to see length in metres.
             </li>
             <li>
-              <strong>Save:</strong> Click <strong>Save to Proposal</strong> — satellite image (panels only, no green edit outline), metrics, and layout geometry are stored on the <strong>CRM project</strong> (same layout when you log in from another laptop). <strong>Regenerate AI Layout</strong> fetches fresh satellite imagery and clears your saved draft — use only when you need a new location or image.
+              <strong>Save:</strong> Click <strong>Save to Proposal</strong> — satellite image (panels only, no green edit outline), metrics, and layout geometry are stored on the <strong>CRM project</strong> (same layout when you log in from another laptop).
+            </li>
+            <li>
+              <strong>Start over:</strong> <strong>Regenerate AI Layout</strong> fetches new satellite imagery and a new draft (keeps working on the same project). <strong>Delete layout</strong> (red button, confirm in the standard PE modal) removes saved layout images and geometry on the server and returns you to a blank page with <strong>Generate AI Layout</strong> — use when you want to discard the layout entirely.
             </li>
           </ol>
           <p className="text-xs text-gray-600">
@@ -374,7 +378,7 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Proposal Progress</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              The Dashboard shows a <strong>Proposal Progress</strong> bar for the active project (<strong>0–4</strong> core artifacts: Costing, BOM, ROI, and Proposal). Below that, <strong>five</strong> tiles match the main workflow — Costing Sheet, BOM, ROI Calculator, <strong>Roof Layout</strong> (opens AI Roof Layout), and Proposal — each with a <strong>✓ Saved</strong> or <strong>Pending</strong> badge, summary, and an <strong>Open &amp; edit</strong> link. The active project banner also includes shortcut buttons (including <strong>Roof Layout</strong> between ROI and Proposal). The Roof Layout tile reflects a saved AI layout or a layout stored with the proposal; it does not change the 0–4 progress count. On <Link to="/customers" className="text-indigo-600 underline font-medium">Customers / Projects</Link>, a read-only badge matches CRM: <strong>Not Yet Created</strong>, <strong>PE Draft</strong>, or <strong>PE Ready</strong> — based on saved artifacts. Deal stages and sales tracking stay in <strong>CRM</strong> (see <em>Project status (CRM)</em> above).
+              The Dashboard shows a <strong>Proposal Progress</strong> bar for the active project (<strong>0–4</strong> core artifacts: Costing, BOM, ROI, and Proposal). Below that, <strong>five</strong> tiles match the main workflow — Costing Sheet, BOM, ROI Calculator, <strong>Roof Layout</strong> (opens AI Roof Layout), and Proposal — each with a <strong>✓ Saved</strong> or <strong>Pending</strong> badge, summary, and an <strong>Open &amp; edit</strong> link. The active project banner also includes shortcut buttons (including <strong>Roof Layout</strong> between ROI and Proposal). The Roof Layout tile reflects a saved AI layout or a layout stored with the proposal; it does not change the 0–4 progress count. On <Link to="/customers" className="text-indigo-600 underline font-medium">Customers / Projects</Link>, each card shows <strong>artifact dots</strong> (including an orange <strong>Roof</strong> dot when a layout is saved), a <strong>Map GPS</strong> badge when Customer Master has coordinates, and a <strong>Roof layout</strong> badge when applicable. The summary line shows <strong>X / 5 artifacts</strong> (roof layout counts toward the five dots but <strong>PE Ready</strong> still requires the four core artifacts). Read-only readiness badges: <strong>Not Yet Created</strong>, <strong>PE Draft</strong>, or <strong>PE Ready</strong>. Deal stages and sales tracking stay in <strong>CRM</strong> (see <em>Project status (CRM)</em> above).
             </p>
           </div>
         </div>
@@ -812,23 +816,33 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Locate site — CRM data and overrides</h3>
             <p className="text-sm text-gray-600 leading-relaxed mb-2">
-              In the tools area (right sidebar on desktop, or below the map on smaller screens), use <strong>Overrides</strong> when CRM data needs correction:
+              Coordinates come from <strong>Customer Master</strong> (Map GPS on the customer record). In CRM, an amber alert appears under the map when Kerala-range latitude has longitude <strong>below 76°</strong> — fix the pin before generating in PE. In the tools area (right sidebar on desktop, or below the map on smaller screens), use <strong>Overrides</strong> when CRM data needs correction:
             </p>
             <ul className="mt-1 space-y-1 text-sm text-gray-600 list-disc list-inside">
               <li><strong>Google Maps link</strong> — paste a full <code className="text-xs bg-gray-100 px-1 rounded">google.com/maps/…</code> URL or <code className="text-xs bg-gray-100 px-1 rounded">lat, lng</code>, then <strong>Regenerate AI Layout</strong>.</li>
               <li><strong>Panel wattage (W)</strong> — override module size; CRM value appears as a pill when available.</li>
             </ul>
             <Note>Short <code className="text-xs">maps.app.goo.gl</code> links have no coordinates — open in a browser and copy the full Maps URL.</Note>
+            <Note>Grey map with &quot;no imagery&quot; usually means wrong coordinates or no Google coverage at that pin — verify in Maps and correct Customer Master; the CRM API needs <strong>GOOGLE_MAPS_API_KEY</strong> in production.</Note>
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-800 mb-2">Generate, edit, export, and save</h3>
+            <h3 className="font-semibold text-gray-800 mb-2">Multi-facet roofs (up to 3 sections)</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Use the <strong>Roof sections</strong> column (left on desktop) for buildings with more than one flat roof face. <strong>Roof 1</strong>, <strong>Roof 2</strong>, … each has its own outline, panel grid, and azimuth. Switch sections to edit one face at a time; metrics aggregate across sections. <strong>Refill panels</strong> can refill the active section or all sections toward CRM target kW.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Generate, delete, edit, export, and save</h3>
             <ul className="mt-2 space-y-1 text-sm text-gray-600 list-disc list-inside">
-              <li><strong>Generate AI Layout</strong> / <strong>Regenerate AI Layout</strong> — fetches satellite imagery and a new starting roof rectangle + panel grid.</li>
+              <li><strong>Generate AI Layout</strong> — first-time satellite fetch and starting rectangle (blank page).</li>
+              <li><strong>Regenerate AI Layout</strong> — new satellite image and new draft; clears unsaved edits but keeps you in the editor.</li>
+              <li><strong>Delete layout</strong> — confirmation modal (same style as Customers delete); removes server layout files, DB record, and PE roof artifact; page resets to <strong>Generate AI Layout</strong>.</li>
               <li>Optional <strong>PNG</strong> / <strong>JPG</strong> export from the toolbar.</li>
               <li><strong>Save to Proposal</strong> — stores image, metrics, and editable geometry on the CRM project (available on another device after login).</li>
             </ul>
-            <Warn><strong>Regenerate</strong> fetches a new satellite image and clears saved server geometry — use for a new location, not small outline tweaks.</Warn>
+            <Warn><strong>Regenerate</strong> is for a new location or fresh satellite — not small polygon tweaks. Use <strong>Delete layout</strong> only when you want to remove the saved layout completely.</Warn>
           </div>
 
           <div>
@@ -1119,6 +1133,14 @@ export default function HelpPage() {
 
           <FaqItem q="Can I continue a roof layout on another laptop?">
             Yes — after <strong>Save to Proposal</strong>, open the same CRM project on the other device and go to <strong>AI Roof Layout</strong>. The saved polygon, keepouts, and panels reload from the server. Unsaved work-in-progress on one browser is not synced until you save.
+          </FaqItem>
+
+          <FaqItem q="What is the difference between Regenerate and Delete layout?">
+            <strong>Regenerate AI Layout</strong> fetches a new satellite image and starts a new editing draft on the same project (geometry on the server is replaced when you save again). <strong>Delete layout</strong> removes the saved layout entirely (images, geometry, CRM roof-layout record) and returns the page to empty with <strong>Generate AI Layout</strong>. Delete asks for confirmation in the standard PE modal (No / Yes).
+          </FaqItem>
+
+          <FaqItem q="The satellite map is grey or says no imagery — what should I check?">
+            Open the site in Google Maps and compare with <strong>Customer Master</strong> coordinates. For Kerala (latitude about 8°–13°N), longitude <strong>below 76°</strong> often has no Google satellite tiles — correct to ~76.2°–77.4°E if the building is inland. Paste a corrected full Maps URL under overrides and <strong>Regenerate</strong>. Ensure the CRM API has <strong>GOOGLE_MAPS_API_KEY</strong> set in production.
           </FaqItem>
 
         </div>

@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { Suspense, lazy, useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { flushSync } from 'react-dom';
 import { Stage, Layer, Image as KonvaImage, Line, Rect, Circle, Text, Tag, Label } from 'react-konva';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -6,6 +6,7 @@ import { Stage, Layer, Image as KonvaImage, Line, Rect, Circle, Text, Tag, Label
 import useImage from 'use-image';
 import {
   generateAiRoofLayout,
+  deleteRoofLayout,
   AiRoofLayoutResponse,
   fetchCrmProjectForAiLayout,
   fetchManualRoofLayout,
@@ -124,10 +125,23 @@ import { deriveRoofLayoutWorkflowStep } from '../components/roofLayout/roofLayou
 import { usePolygonHistory } from '../components/roofLayout/usePolygonHistory';
 import { RoofLayoutPanelActions } from '../components/roofLayout/RoofLayoutPanelActions';
 import { RoofLayoutAdjustPanel } from '../components/roofLayout/RoofLayoutAdjustPanel';
+import { RoofLayoutFacetBar } from '../components/roofLayout/RoofLayoutFacetBar';
+import { ConfirmDangerModal } from '../components/ConfirmDangerModal';
+import {
+  createRoofFacet,
+  flattenFacetPanels,
+  MAX_ROOF_FACETS,
+  offsetPolygonForNewFacet,
+  splitTargetKwAcrossFacets,
+  totalFacetPanelCount,
+  type RoofFacetState,
+} from '../lib/roofLayoutFacets';
 import {
   closestPolygonEdge,
   type PolygonEdgeInfo,
 } from '../lib/roofLayoutEdgeMeasure';
+import { isPlaceholderSatelliteBytes } from '../lib/roofLayoutSatelliteImage';
+import { getKeralaMapGpsWarning } from '../lib/mapGpsValidation';
 
 /** Visual gap between adjacent module rects on the 2D canvas (px, image space). */
 const PANEL_VISUAL_INSET_PX = 0.85;
@@ -141,11 +155,6 @@ function rectsOverlap(
   b: { x: number; y: number; w: number; h: number },
 ): boolean {
   return !(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y);
-}
-
-function satelliteEditorUrlForProject(projectId: string): string | null {
-  const base = getApiBaseUrl() || '';
-  return `${base}/api/generated_layouts/${projectId}_satellite.png`;
 }
 
 /** Same path is overwritten on regenerate — bust cache so the browser loads the new satellite. */
@@ -184,6 +193,11 @@ function absolutizeLayoutImageUrl(raw: string | null | undefined): string | null
   if (s.startsWith('http')) return s;
   const base = getApiBaseUrl() || '';
   return `${base}${s.startsWith('/') ? s : `/${s}`}`;
+}
+
+function satelliteEditorUrlForProject(projectId: string): string | null {
+  const base = getApiBaseUrl() || '';
+  return `${base}/api/generated_layouts/${projectId}_satellite.png`;
 }
 
 function persistRoofLayoutToActiveCustomer(params: {
@@ -235,11 +249,25 @@ function persistRoofLayoutToActiveCustomer(params: {
   });
 }
 
+function clearRoofLayoutFromActiveCustomer() {
+  const ac = getActiveCustomer();
+  if (!ac?.id) return;
+  const fresh = getCustomer(ac.id);
+  if (!fresh) return;
+  upsertCustomer({
+    ...fresh,
+    roofLayout: null,
+    proposal: fresh.proposal ? { ...fresh.proposal, roofLayout: null } : fresh.proposal,
+  });
+}
+
 const LazySolar3DView = lazy(() => import('../components/Solar3DView'));
 
 export default function AIRoofLayout() {
   const activeProject = getActiveCustomer();
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AiRoofLayoutResponse | null>(null);
   const [lastLatitude, setLastLatitude] = useState<number | null>(null);
@@ -371,13 +399,43 @@ export default function AIRoofLayout() {
   type Point = { x: number; y: number };
   type PanelRect = { x: number; y: number; w: number; h: number };
 
-  const [polygon, setPolygon] = useState<Point[] | null>(null);
+  const [facetSession] = useState(() => {
+    const f = createRoofFacet(1);
+    return { facets: [f] as RoofFacetState[], activeId: f.id };
+  });
+  const [facets, setFacets] = useState<RoofFacetState[]>(facetSession.facets);
+  const [activeFacetId, setActiveFacetId] = useState(facetSession.activeId);
+  const activeFacet = facets.find((f) => f.id === activeFacetId) ?? facets[0]!;
+  const polygon = activeFacet.polygon;
+  const panels = activeFacet.panels;
   const polygonHistory = usePolygonHistory();
-  const [panels, setPanels] = useState<PanelRect[]>([]);
+
+  const patchActiveFacet = (patch: Partial<RoofFacetState>) => {
+    setFacets((prev) =>
+      prev.map((f) => (f.id === activeFacetId ? { ...f, ...patch } : f)),
+    );
+  };
+
+  const resetFacetsToSingle = () => {
+    const f = createRoofFacet(1);
+    setFacets([f]);
+    setActiveFacetId(f.id);
+  };
   const [bgImageUrl, setBgImageUrl] = useState<string | null>(null);
-  // Use crossOrigin='anonymous' so we can safely export the canvas to a data URL in production
   const [bgImage] = useImage(bgImageUrl ?? '', 'anonymous');
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
+  const [satelliteImageryWarning, setSatelliteImageryWarning] = useState<string | null>(null);
+
+  const keralaMapGpsWarning = useMemo(() => {
+    const lat = activeProject?.master?.latitude;
+    const lng = activeProject?.master?.longitude;
+    if (lat == null || lng == null) return null;
+    return getKeralaMapGpsWarning(Number(lat), Number(lng));
+  }, [
+    activeProject?.master?.crmProjectId,
+    activeProject?.master?.latitude,
+    activeProject?.master?.longitude,
+  ]);
 
   // Konva redraw after zoom / viewport / tab / image changes. Only when 2D tab is active — the Stage
   // unmounts on the saved-3D tab; coming back to 2D otherwise left a torn / empty canvas until zoom nudged it.
@@ -407,8 +465,11 @@ export default function AIRoofLayout() {
     };
   }, [isMobileView, zoom, roofViewTab, imageSize, layoutMode, bgImage]);
 
+  const allPanelsFlat = flattenFacetPanels(facets);
   const has3DRoofData =
-    polygon != null && polygon.length >= 3 && panels.length > 0 && imageSize != null;
+    facets.some((f) => f.polygon != null && f.polygon.length >= 3) &&
+    allPanelsFlat.length > 0 &&
+    imageSize != null;
 
   const crmProjectId = activeProject?.master?.crmProjectId;
   const isSavedForThisProject =
@@ -420,7 +481,7 @@ export default function AIRoofLayout() {
     hasActiveProject: !!activeProject,
     hasLayoutResult: !!result,
     layoutMode,
-    hasPolygon: !!polygon && polygon.length >= 3,
+    hasPolygon: facets.some((f) => f.polygon != null && f.polygon.length >= 3),
     isSavedForProject: isSavedForThisProject,
     mapTool: mapEditTool,
   });
@@ -443,7 +504,7 @@ export default function AIRoofLayout() {
 
   const displayedPanelCount =
     layoutMode === 'editing' && isPolygonSummaryReady && result
-      ? result.panel_count
+      ? totalFacetPanelCount(facets)
       : result?.panel_count ?? null;
 
   const displayedSystemKw =
@@ -454,7 +515,7 @@ export default function AIRoofLayout() {
   const layoutFillPercent = (() => {
     if (!isPolygonSummaryReady || !result?.usable_area_m2 || result.usable_area_m2 <= 0) return null;
     const { widthM, heightM } = getOrientedPanelSizeM(effectiveWattage, panelOrientation);
-    const placed = panels.length * widthM * heightM;
+    const placed = allPanelsFlat.length * widthM * heightM;
     return (placed / result.usable_area_m2) * 100;
   })();
 
@@ -467,17 +528,17 @@ export default function AIRoofLayout() {
     if (!opts?.skipHistory && polygon && next) {
       polygonHistory.commitChange(polygon, next);
     }
-    setPolygon(next);
+    patchActiveFacet({ polygon: next });
   };
 
   const handleUndoPolygon = () => {
     const next = polygonHistory.undo(polygon);
-    if (next) setPolygon(next);
+    if (next) patchActiveFacet({ polygon: next });
   };
 
   const handleRedoPolygon = () => {
     const next = polygonHistory.redo(polygon);
-    if (next) setPolygon(next);
+    if (next) patchActiveFacet({ polygon: next });
   };
 
   useEffect(() => {
@@ -637,13 +698,16 @@ export default function AIRoofLayout() {
           next.prefer_3d_for_proposal = manual.prefer_3d_for_proposal;
         }
         if (geom) {
-          next.roof_polygon_coordinates = geom.roofPolygon;
-          next.panel_coordinates = geom.panelRects.map((r) => ({
-            x: r.x,
-            y: r.y,
-            width: r.width,
-            height: r.height,
-          }));
+          const primary = geom.facets[0]!;
+          next.roof_polygon_coordinates = primary.roofPolygon;
+          next.panel_coordinates = geom.facets.flatMap((facet) =>
+            facet.panelRects.map((r) => ({
+              x: r.x,
+              y: r.y,
+              width: r.width,
+              height: r.height,
+            })),
+          );
         }
 
         setError(null);
@@ -680,6 +744,20 @@ export default function AIRoofLayout() {
               h: k.height,
             })),
           );
+          const loadedFacets: RoofFacetState[] = geom.facets.map((facet, i) => ({
+            id: facet.id || `facet-${i}`,
+            label: facet.label || `Roof ${i + 1}`,
+            azimuthDeg: facet.azimuthDeg,
+            polygon: facet.roofPolygon.map((p) => ({ x: p.x, y: p.y })),
+            panels: facet.panelRects.map((r) => ({
+              x: r.x,
+              y: r.y,
+              w: r.width,
+              h: r.height,
+            })),
+          }));
+          setFacets(loadedFacets);
+          setActiveFacetId(loadedFacets[0]!.id);
           const satFromSaved =
             manual.satellite_image_url && String(manual.satellite_image_url).trim()
               ? absolutizeLayoutImageUrl(String(manual.satellite_image_url))
@@ -693,9 +771,9 @@ export default function AIRoofLayout() {
           setBgImageUrl(satUrl);
           satelliteEditorUrlRef.current = satFromSaved ? satUrl.split('?')[0] ?? satUrl : satUrl;
           setLayoutMode('editing');
-          setIsPolygonSummaryReady(false);
+          setIsPolygonSummaryReady(true);
           polygonHistory.resetHistory();
-          applyPolygon(geom.roofPolygon.map((p) => ({ x: p.x, y: p.y })), { skipHistory: true });
+          applyAggregatedMetrics(loadedFacets);
           setMapTool(isMobileView ? 'scroll' : 'roof');
         } else {
           setLayoutMode('saved');
@@ -709,8 +787,7 @@ export default function AIRoofLayout() {
               : `${getApiBaseUrl() || ''}${rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`}`
             : null;
           setBgImageUrl(imageUrl);
-          setPolygon(null);
-          setPanels([]);
+          resetFacetsToSingle();
           setKeepouts([]);
           setImageSize(null);
           satelliteEditorUrlRef.current = null;
@@ -732,6 +809,31 @@ export default function AIRoofLayout() {
       setImageSize({ width: bgImage.width, height: bgImage.height });
     }
   }, [bgImage, imageSize]);
+
+  // Detect Google "no imagery" placeholder PNG (~11 KB) on disk.
+  useEffect(() => {
+    if (!bgImageUrl || layoutMode !== 'editing') {
+      setSatelliteImageryWarning(null);
+      return;
+    }
+    let cancelled = false;
+    void fetch(bgImageUrl, { method: 'HEAD' })
+      .then((res) => {
+        if (cancelled || !res.ok) return;
+        const len = Number(res.headers.get('content-length') || 0);
+        if (isPlaceholderSatelliteBytes(len)) {
+          setSatelliteImageryWarning(
+            'Google Maps has no satellite imagery for this Map GPS pin. Open the location in Google Maps, confirm latitude/longitude in Customer Master, or paste a corrected Maps URL in the layout tools — then Regenerate.',
+          );
+        } else {
+          setSatelliteImageryWarning(null);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [bgImageUrl, layoutMode]);
 
   // Saved view: centre the 2D scroll viewport on image/panel focal whenever the 2D tab is visible
   // (toggling 3D → 2D must re-run — scroll metrics and content size change between tabs).
@@ -782,6 +884,62 @@ export default function AIRoofLayout() {
     }
   }, [layoutMode, roofViewTab, imageSize, bgImage, bgImageUrl, result, polygon, zoom, layoutScrollViewport.w, layoutScrollViewport.h]);
 
+  const resetLayoutEditorToBlank = () => {
+    layoutHydrateGenerationRef.current += 1;
+    solar3dPersistentLayoutKeyRef.current = '';
+    solar3dOrbitRef.current = null;
+    setResult(null);
+    setError(null);
+    setLastSavedProjectId(null);
+    setLoadedSavedAt(null);
+    setLayoutMode('editing');
+    setIsPolygonSummaryReady(false);
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    polygonDragRef.current = null;
+    polygonBaseRef.current = null;
+    resetFacetsToSingle();
+    polygonHistory.resetHistory();
+    setKeepouts([]);
+    setMapTool(isMobileView ? 'scroll' : 'roof');
+    setBgImageUrl(null);
+    setImageSize(null);
+    satelliteEditorUrlRef.current = null;
+    setLast3dPngDataUrl(null);
+    setProposalImageSource('2d');
+    setRoofViewTab('2d');
+    setSatelliteImageryWarning(null);
+    scrollCenterMetaRef.current = { url: '', lastSig: '' };
+  };
+
+  const handleDeleteLayout = async () => {
+    if (!activeProject?.master?.crmProjectId) {
+      setError('This proposal is not linked to a Rayenna CRM project yet.');
+      return;
+    }
+
+    setDeleting(true);
+    setError(null);
+    layoutHydrateGenerationRef.current += 1;
+
+    const crmProjectId = String(activeProject.master.crmProjectId);
+
+    try {
+      await deleteRoofLayout(crmProjectId);
+      clearRoofLayoutFromActiveCustomer();
+      resetLayoutEditorToBlank();
+      setDeleteConfirmOpen(false);
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as { message: string }).message)
+          : 'Failed to delete roof layout';
+      setError(msg);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!activeProject) {
       setError('Please open a project from Customers dashboard first.');
@@ -812,11 +970,10 @@ export default function AIRoofLayout() {
     setIsDragging(false);
     polygonDragRef.current = null;
     polygonBaseRef.current = null;
-    setPolygon(null);
+    resetFacetsToSingle();
     polygonHistory.resetHistory();
     setKeepouts([]);
     setMapTool(isMobileView ? 'scroll' : 'roof');
-    setPanels([]);
     // Prevent the default polygon from initializing using the *previous* background image size
     // while the new AI layout is still loading (otherwise we get a brief "old AI" flash).
     setBgImageUrl(null);
@@ -886,6 +1043,12 @@ export default function AIRoofLayout() {
 
       setLastLatitude(latitude as number);
       setLastLongitude(longitude as number);
+
+      const keralaWarn = getKeralaMapGpsWarning(latitude as number, longitude as number);
+      if (keralaWarn) {
+        setError(keralaWarn);
+        return;
+      }
 
       const data = await generateAiRoofLayout({
         projectId: crmProject.id,
@@ -1108,8 +1271,12 @@ export default function AIRoofLayout() {
       };
 
       // Tight crop around panels only — independent of preview zoom/viewport so embed stays consistent.
+      const cropPoly =
+        facets.find((f) => f.polygon && f.polygon.length >= 3)?.polygon ?? polygon;
       const proposalCrop =
-        polygon && imageSize ? computeProposalExportCrop(polygon, panels, imageSize) : undefined;
+        cropPoly && imageSize
+          ? computeProposalExportCrop(cropPoly, allPanelsFlat, imageSize)
+          : undefined;
 
       const dataUrl = await captureLayoutImage({
         format: 'jpeg',
@@ -1124,18 +1291,25 @@ export default function AIRoofLayout() {
 
       const moduleSize = getOrientedPanelSizeM(effectiveWattage, panelOrientation);
       const geometry =
-        polygon && imageSize
+        imageSize && facets.some((f) => f.polygon && f.polygon.length >= 3)
           ? buildRoofLayoutGeometry({
               imageWidth: imageSize.width,
               imageHeight: imageSize.height,
               metersPerPixel: METERS_PER_PIXEL,
-              roofPolygon: polygon,
-              panelRects: panels.map((p) => ({
-                x: p.x,
-                y: p.y,
-                width: p.w,
-                height: p.h,
-              })),
+              facets: facets
+                .filter((f) => f.polygon && f.polygon.length >= 3)
+                .map((f) => ({
+                  id: f.id,
+                  label: f.label,
+                  azimuthDeg: f.azimuthDeg,
+                  roofPolygon: f.polygon!,
+                  panelRects: f.panels.map((p) => ({
+                    x: p.x,
+                    y: p.y,
+                    width: p.w,
+                    height: p.h,
+                  })),
+                })),
               keepouts: keepouts.map((k) => ({
                 id: k.id,
                 x: k.x,
@@ -1346,6 +1520,63 @@ export default function AIRoofLayout() {
     };
   }
 
+  const applyAggregatedMetrics = (facetList: RoofFacetState[]) => {
+    let roofAreaM2 = 0;
+    let usableAreaM2 = 0;
+    for (const f of facetList) {
+      if (!f.polygon?.length) continue;
+      const m = computePanelsForPolygon(f.polygon, 99999, keepouts, null, effectiveWattage);
+      roofAreaM2 += m.roofAreaM2;
+      usableAreaM2 += m.usableAreaM2;
+    }
+    const panelCount = totalFacetPanelCount(facetList);
+    setIsPolygonSummaryReady(true);
+    setResult((prev) =>
+      prev
+        ? {
+            ...prev,
+            roof_area_m2: roofAreaM2,
+            usable_area_m2: usableAreaM2,
+            panel_count: panelCount,
+          }
+        : prev,
+    );
+  };
+
+  const handleSelectFacet = (id: string) => {
+    setActiveFacetId(id);
+    polygonHistory.resetHistory();
+    setMapTool(isMobileView ? 'scroll' : 'roof');
+  };
+
+  const handleAddFacet = () => {
+    if (facets.length >= MAX_ROOF_FACETS || !imageSize) return;
+    const index = facets.length + 1;
+    const next = createRoofFacet(index);
+    if (polygon && polygon.length >= 3) {
+      next.polygon = offsetPolygonForNewFacet(polygon, imageSize, index);
+    }
+    setFacets((prev) => [...prev, next]);
+    setActiveFacetId(next.id);
+    polygonHistory.resetHistory();
+    setMapTool('roof');
+  };
+
+  const handleRemoveFacet = (id: string) => {
+    if (facets.length <= 1) return;
+    const nextList = facets.filter((f) => f.id !== id);
+    setFacets(nextList);
+    if (activeFacetId === id) {
+      setActiveFacetId(nextList[0]!.id);
+      polygonHistory.resetHistory();
+    }
+    applyAggregatedMetrics(nextList);
+  };
+
+  const handleFacetAzimuth = (id: string, azimuthDeg: number) => {
+    setFacets((prev) => prev.map((f) => (f.id === id ? { ...f, azimuthDeg } : f)));
+  };
+
   // Initialise default polygon once we know the image size.
   // Prefer polygon coordinates returned by the AI layout API (if any) so the initial shape
   // is closer to the actual roof rather than a generic centred rectangle.
@@ -1402,45 +1633,21 @@ export default function AIRoofLayout() {
     }
     recomputeTimeoutRef.current = window.setTimeout(() => {
       const maxCap = typeof window !== 'undefined' && window.innerWidth < 768 ? 150 : 300;
-      const { panels: nextPanels, roofAreaM2, usableAreaM2, panelCount } =
-        computePanelsForPolygon(polygon, maxCap, keepouts, targetSystemKw, effectiveWattage);
+      const kwEach = splitTargetKwAcrossFacets(targetSystemKw, facets.length);
+      const { panels: nextPanels } = computePanelsForPolygon(
+        polygon,
+        maxCap,
+        keepouts,
+        kwEach,
+        effectiveWattage,
+      );
 
-      // DEV diagnostics for debugging panel/area mismatches.
-      if (import.meta.env.DEV) {
-        const minX = polygon.reduce((m, p) => Math.min(m, p.x), Infinity);
-        const maxX = polygon.reduce((m, p) => Math.max(m, p.x), -Infinity);
-        const minY = polygon.reduce((m, p) => Math.min(m, p.y), Infinity);
-        const maxY = polygon.reduce((m, p) => Math.max(m, p.y), -Infinity);
-        console.log('[AIRoofLayout] recompute polygon px bounds:', { minX, maxX, minY, maxY });
-        console.log(
-          '[AIRoofLayout] METERS_PER_PIXEL:',
-          METERS_PER_PIXEL,
-          'area m2:',
-          roofAreaM2,
-          'usable m2:',
-          usableAreaM2,
+      setFacets((prev) => {
+        const updated = prev.map((f) =>
+          f.id === activeFacetId ? { ...f, panels: nextPanels } : f,
         );
-        console.log(
-          '[AIRoofLayout] panelCount ideal:',
-          panelCount,
-          'panels rendered (capped):',
-          nextPanels.length,
-          'panelOrientation:',
-          panelOrientation,
-        );
-      }
-
-      setPanels(nextPanels);
-      setIsPolygonSummaryReady(true);
-      setResult((prev) => {
-        return prev
-          ? {
-              ...prev,
-              roof_area_m2: roofAreaM2,
-              usable_area_m2: usableAreaM2,
-              panel_count: panelCount,
-            }
-          : prev;
+        applyAggregatedMetrics(updated);
+        return updated;
       });
     }, 200);
     return () => {
@@ -1450,6 +1657,8 @@ export default function AIRoofLayout() {
     };
   }, [
     polygon,
+    activeFacetId,
+    facets.length,
     panelSpacingMultiplier,
     panelOrientation,
     layoutMode,
@@ -1461,21 +1670,51 @@ export default function AIRoofLayout() {
   const applyPanelLayoutFromPolygon = () => {
     if (!polygon) return;
     const maxCap = typeof window !== 'undefined' && window.innerWidth < 768 ? 150 : 300;
-    const { panels: nextPanels, roofAreaM2, usableAreaM2, panelCount } =
-      computePanelsForPolygon(polygon, maxCap, keepouts, targetSystemKw, effectiveWattage);
-    setPanels(nextPanels);
-    setIsPolygonSummaryReady(true);
-    setResult((prev) =>
-      prev
-        ? { ...prev, roof_area_m2: roofAreaM2, usable_area_m2: usableAreaM2, panel_count: panelCount }
-        : prev,
+    const kwEach = splitTargetKwAcrossFacets(targetSystemKw, facets.length);
+    const { panels: nextPanels } = computePanelsForPolygon(
+      polygon,
+      maxCap,
+      keepouts,
+      kwEach,
+      effectiveWattage,
     );
+    setFacets((prev) => {
+      const updated = prev.map((f) =>
+        f.id === activeFacetId ? { ...f, panels: nextPanels } : f,
+      );
+      applyAggregatedMetrics(updated);
+      return updated;
+    });
+  };
+
+  const refillAllFacets = () => {
+    const maxCap = typeof window !== 'undefined' && window.innerWidth < 768 ? 150 : 300;
+    const kwEach = splitTargetKwAcrossFacets(targetSystemKw, facets.length);
+    setFacets((prev) => {
+      const updated = prev.map((f) => {
+        if (!f.polygon?.length) return f;
+        const { panels: nextPanels } = computePanelsForPolygon(
+          f.polygon,
+          maxCap,
+          keepouts,
+          kwEach,
+          effectiveWattage,
+        );
+        return { ...f, panels: nextPanels };
+      });
+      applyAggregatedMetrics(updated);
+      return updated;
+    });
   };
 
   const clearPanelsOnMap = () => {
-    setPanels([]);
-    setIsPolygonSummaryReady(true);
-    setResult((prev) => (prev ? { ...prev, panel_count: 0 } : prev));
+    setFacets((prev) => {
+      const updated = prev.map((f) =>
+        f.id === activeFacetId ? { ...f, panels: [] } : f,
+      );
+      applyAggregatedMetrics(updated);
+      return updated;
+    });
   };
 
   const handleSnapOutlineToGrid = () => {
@@ -1552,11 +1791,24 @@ export default function AIRoofLayout() {
                   </span>
                 </div>
               )}
-              <div className="flex justify-start sm:justify-end">
+              <div className="flex flex-wrap justify-start sm:justify-end gap-2">
+                {(result ||
+                  (lastSavedProjectId &&
+                    activeProject?.master?.crmProjectId &&
+                    lastSavedProjectId === String(activeProject.master.crmProjectId))) && (
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirmOpen(true)}
+                    disabled={loading || deleting}
+                    className="inline-flex items-center justify-center gap-1.5 bg-red-500/90 hover:bg-red-600 border-2 border-red-300/80 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl transition-all min-h-[40px] disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {deleting ? 'Deleting…' : 'Delete layout'}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={handleGenerate}
-                  disabled={loading}
+                  disabled={loading || deleting}
                   className="inline-flex items-center justify-center gap-1.5 bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl transition-all min-h-[40px] disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Generating…' : result ? 'Regenerate AI Layout' : 'Generate AI Layout'}
@@ -1625,6 +1877,11 @@ export default function AIRoofLayout() {
         {(error || activeProject) && (
           <div className="mb-4 rounded-xl border border-sky-100 bg-sky-50 px-4 py-3 text-xs text-sky-900 space-y-2">
             {error && <p className="text-[11px] text-red-700 font-medium">{error}</p>}
+            {(keralaMapGpsWarning || satelliteImageryWarning) && layoutMode === 'editing' && (
+              <p className="text-[11px] text-amber-900 font-medium bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                {keralaMapGpsWarning ?? satelliteImageryWarning}
+              </p>
+            )}
             <p className="font-semibold text-[11px] uppercase tracking-wide text-sky-700">
               Override Google Maps location / panel wattage (optional)
             </p>
@@ -1719,6 +1976,16 @@ export default function AIRoofLayout() {
                   </h2>
                   <RoofLayoutDesignStepper activeStep={workflowStep} compact />
                 </div>
+                {layoutMode === 'editing' && (
+                  <RoofLayoutFacetBar
+                    facets={facets}
+                    activeFacetId={activeFacetId}
+                    onSelectFacet={handleSelectFacet}
+                    onAddFacet={handleAddFacet}
+                    onRemoveFacet={handleRemoveFacet}
+                    onAzimuthChange={handleFacetAzimuth}
+                  />
+                )}
                 <div className="md:max-lg:space-y-2 lg:hidden">
                 <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                   Layout summary
@@ -1769,6 +2036,17 @@ export default function AIRoofLayout() {
                   <RoofLayoutDesignStepper activeStep={workflowStep} />
                 </div>
 
+                {layoutMode === 'editing' && result && (
+                  <RoofLayoutFacetBar
+                    facets={facets}
+                    activeFacetId={activeFacetId}
+                    onSelectFacet={handleSelectFacet}
+                    onAddFacet={handleAddFacet}
+                    onRemoveFacet={handleRemoveFacet}
+                    onAzimuthChange={handleFacetAzimuth}
+                  />
+                )}
+
                 <RoofLayoutStatusStrip
                   panelCount={displayedPanelCount}
                   panelCountReady={layoutMode !== 'editing' || isPolygonSummaryReady}
@@ -1786,6 +2064,7 @@ export default function AIRoofLayout() {
                   moduleWatts={effectiveWattage}
                   fillPercent={layoutFillPercent}
                   kwVsTarget={kwVsTarget}
+                  facetCount={facets.length}
                 />
 
                 <div className="w-full flex flex-col gap-4 min-w-0">
@@ -1921,7 +2200,7 @@ export default function AIRoofLayout() {
                                     fillParent
                                     resolutionScale={1}
                                     roofPolygon={polygon!}
-                                    panelCoordinates={panels.map((p) => ({
+                                    panelCoordinates={allPanelsFlat.map((p) => ({
                                       x: p.x,
                                       y: p.y,
                                       width: p.w,
@@ -2029,7 +2308,7 @@ export default function AIRoofLayout() {
                                     controlsPortalHost={narrow3dLive ? solar3dControlsHost : null}
                                     fillParent
                                     roofPolygon={polygon!}
-                                    panelCoordinates={panels.map((p) => ({
+                                    panelCoordinates={allPanelsFlat.map((p) => ({
                                       x: p.x,
                                       y: p.y,
                                       width: p.w,
@@ -2207,7 +2486,40 @@ export default function AIRoofLayout() {
                           />
                         </Layer>
 
-                        {/* Green outline draws under panels (restores earlier look). */}
+                        {/* Inactive roof sections (multi-facet). */}
+                        {layoutMode === 'editing' &&
+                          facets.map(
+                            (f) =>
+                              f.id !== activeFacetId &&
+                              f.polygon &&
+                              f.polygon.length >= 3 && (
+                                <Layer key={f.id} listening={false}>
+                                  <Line
+                                    points={f.polygon.flatMap((p) => [p.x, p.y])}
+                                    closed
+                                    stroke="#64748b"
+                                    strokeWidth={polygonStrokeWidth}
+                                    dash={[10, 6]}
+                                    fill="rgba(100,116,139,0.06)"
+                                  />
+                                  {f.panels.map((rect, idx) => (
+                                    <Rect
+                                      key={`${f.id}-p-${idx}`}
+                                      x={rect.x + PANEL_VISUAL_INSET_PX}
+                                      y={rect.y + PANEL_VISUAL_INSET_PX}
+                                      width={Math.max(2, rect.w - PANEL_VISUAL_INSET_PX * 2)}
+                                      height={Math.max(2, rect.h - PANEL_VISUAL_INSET_PX * 2)}
+                                      fill="rgba(100,116,139,0.45)"
+                                      stroke="#94a3b8"
+                                      strokeWidth={1}
+                                      listening={false}
+                                    />
+                                  ))}
+                                </Layer>
+                              ),
+                          )}
+
+                        {/* Active section outline (green). */}
                         {layoutMode === 'editing' && polygon && (
                           <Layer ref={polygonOutlineLayerRef}>
                             <Line
@@ -2604,9 +2916,11 @@ export default function AIRoofLayout() {
                       {layoutMode === 'editing' && (
                         <RoofLayoutPanelActions
                           disabled={!polygon}
-                          panelCount={panels.length}
+                          panelCount={totalFacetPanelCount(facets)}
+                          facetCount={facets.length}
                           onClear={clearPanelsOnMap}
                           onRefill={applyPanelLayoutFromPolygon}
+                          onRefillAll={facets.length > 1 ? refillAllFacets : undefined}
                         />
                       )}
                       <RoofLayoutAdjustPanel
@@ -2640,9 +2954,11 @@ export default function AIRoofLayout() {
                   {layoutMode === 'editing' && (
                     <RoofLayoutPanelActions
                       disabled={!polygon}
-                      panelCount={panels.length}
+                      panelCount={totalFacetPanelCount(facets)}
+                      facetCount={facets.length}
                       onClear={clearPanelsOnMap}
                       onRefill={applyPanelLayoutFromPolygon}
+                      onRefillAll={facets.length > 1 ? refillAllFacets : undefined}
                     />
                   )}
                   <RoofLayoutAdjustPanel
@@ -2695,9 +3011,11 @@ export default function AIRoofLayout() {
                 {layoutMode === 'editing' && (
                   <RoofLayoutPanelActions
                     disabled={!polygon}
-                    panelCount={panels.length}
+                    panelCount={totalFacetPanelCount(facets)}
+                    facetCount={facets.length}
                     onClear={clearPanelsOnMap}
                     onRefill={applyPanelLayoutFromPolygon}
+                    onRefillAll={facets.length > 1 ? refillAllFacets : undefined}
                   />
                 )}
                 <RoofLayoutAdjustPanel
@@ -2767,6 +3085,21 @@ export default function AIRoofLayout() {
           </div>
         </div>
       </div>
+
+      <ConfirmDangerModal
+        open={deleteConfirmOpen}
+        message={
+          <>
+            Delete the roof layout for{' '}
+            <strong>{activeProject?.master?.name ?? 'this project'}</strong>? Saved layout images,
+            satellite cache, and geometry on the server will be removed. You can generate a new layout
+            afterward.
+          </>
+        }
+        onCancel={() => setDeleteConfirmOpen(false)}
+        onConfirm={() => void handleDeleteLayout()}
+        confirming={deleting}
+      />
     </div>
   );
 }

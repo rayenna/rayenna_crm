@@ -1,22 +1,35 @@
 import { useState } from 'react';
 import { artifactSummary } from '../lib/customerStore';
 import type { CustomerRecord } from '../lib/customerStore';
-import { ProposalReadinessBadge, ArtifactDots } from './CustomerBadges';
+import {
+  ProposalReadinessBadge,
+  ArtifactDots,
+  MapCoordinatesBadge,
+  RoofLayoutSavedBadge,
+} from './CustomerBadges';
+import { hasSavedRoofLayout } from '../lib/customerStore';
+import { hasValidMapCoordinates } from './customerHelpers';
 
 export function CustomerCard({
   record,
   isActive,
   onOpen,
   onDelete,
+  /** From CRM project list when local master has not been hydrated with lat/lng yet. */
+  hasMapCoordinatesFromCrm,
 }: {
   record:    CustomerRecord;
   isActive:  boolean;
   onOpen:    () => void;
   /** When omitted, trash control is hidden (e.g. Sales — only Admin may delete PE data server-side). */
   onDelete?: () => void;
+  hasMapCoordinatesFromCrm?: boolean;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const date = new Date(record.updatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const showMapCoordinates =
+    hasMapCoordinatesFromCrm === true ||
+    hasValidMapCoordinates(record.master.latitude, record.master.longitude);
 
   return (
     <div
@@ -42,6 +55,8 @@ export function CustomerCard({
                 </span>
               )}
               <ProposalReadinessBadge record={record} />
+              {showMapCoordinates && <MapCoordinatesBadge />}
+              {hasSavedRoofLayout(record) && <RoofLayoutSavedBadge />}
             </div>
             {record.master.location && (
               <p className="text-xs text-secondary-500 truncate">📍 {record.master.location}</p>

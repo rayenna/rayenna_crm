@@ -775,10 +775,24 @@ export const STATUS_COLORS: Record<ProposalStatus, string> = {
   'proposal-ready': 'bg-blue-50 text-blue-700 border-blue-200',
 };
 
-/** Returns a compact artifact completion summary, e.g. "3 / 4 artifacts" */
+/** Core PE artifacts shown on customer cards (costing → proposal + roof layout). */
+export const PE_ARTIFACT_COUNT = 5;
+
+/** True when a saved AI/manual roof layout exists on the record or embedded in the proposal. */
+export function hasSavedRoofLayout(r: CustomerRecord): boolean {
+  return getResolvedRoofLayout(r) != null;
+}
+
+/** Returns a compact artifact completion summary, e.g. "3 / 5 artifacts" */
 export function artifactSummary(r: CustomerRecord): string {
-  const count = [r.costing, r.bom, r.roi, r.proposal].filter(Boolean).length;
-  return `${count} / 4 artifacts`;
+  const count = [
+    r.costing,
+    r.bom,
+    r.roi,
+    r.proposal,
+    hasSavedRoofLayout(r) ? true : null,
+  ].filter(Boolean).length;
+  return `${count} / ${PE_ARTIFACT_COUNT} artifacts`;
 }
 
 /**

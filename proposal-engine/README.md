@@ -60,10 +60,13 @@ CRM backend routes: `src/routes/proposalEngine.ts`, `src/routes/roofLayout.ts`.
 | Variable | Where | Purpose |
 |----------|--------|---------|
 | `DATABASE_URL` | Root `.env` | Neon (API only) |
+| `GOOGLE_MAPS_API_KEY` | Root `.env` (CRM API) | **AI Roof Layout** satellite imagery (Google Static Maps) |
 | `VITE_API_BASE_URL` | Render/Vercel PE project | Production API origin, e.g. `https://rayenna-crm.onrender.com` |
 | `VITE_SENTRY_DSN` | Optional on PE | Frontend error reporting |
 
 Leave `VITE_API_BASE_URL` **unset** locally so Vite proxies `/api` to port 3000.
+
+**AI Roof Layout:** Map GPS is set in **Rayenna CRM → Customer Master**. Kerala sites with longitude west of **76°** get a warning in CRM and PE before generate. Use **Regenerate** for a new satellite draft; **Delete layout** clears saved layout and resets the page.
 
 ## Tests
 
