@@ -67,6 +67,17 @@ function stagesToProjectWhere(stages: string[]): Prisma.ProjectWhereInput | null
       ors.push({ projectStatus: ProjectStatus.CONFIRMED });
       continue;
     }
+    if (u === 'COMPLETED') {
+      ors.push({
+        projectStatus: {
+          in: [
+            ProjectStatus.COMPLETED,
+            ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
+          ],
+        },
+      });
+      continue;
+    }
     if (PROJECT_STATUS_VALUES.has(u)) {
       ors.push({ projectStatus: u as ProjectStatus });
     } else if (PROJECT_STAGE_VALUES.has(u)) {
