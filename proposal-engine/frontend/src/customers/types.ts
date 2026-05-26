@@ -51,6 +51,24 @@ export interface ProjectOption {
 
 export const PROJECTS_PAGE_SIZE = 24;
 
+export const CRM_STAGE_FILTER_OPTIONS: {
+  value: string;
+  label: string;
+  summaryLabel?: string;
+}[] = [
+  { value: 'PROPOSAL', label: 'Proposal' },
+  { value: 'CONFIRMED', label: 'Confirmed' },
+  { value: 'LEAD', label: 'Lead' },
+  { value: 'SITE_SURVEY', label: 'Site survey' },
+  { value: 'UNDER_INSTALLATION', label: 'Under installation' },
+  {
+    value: 'COMPLETED',
+    label: 'Completed + Subsidy Credited',
+    summaryLabel: 'Completed',
+  },
+  { value: 'LOST', label: 'Lost' },
+];
+
 export const PROJECT_LIST_SORT_OPTIONS: { value: string; label: string }[] = [
   { value: 'selectionUpdatedAt', label: 'Last updated (PE)' },
   { value: 'projectUpdatedAt', label: 'Project updated' },

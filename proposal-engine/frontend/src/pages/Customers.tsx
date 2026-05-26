@@ -25,7 +25,11 @@ import {
 } from '../lib/apiClient';
 
 // Sub-modules
-import { PROJECTS_PAGE_SIZE, PROJECT_LIST_SORT_OPTIONS } from '../customers/types';
+import {
+  CRM_STAGE_FILTER_OPTIONS,
+  PROJECTS_PAGE_SIZE,
+  PROJECT_LIST_SORT_OPTIONS,
+} from '../customers/types';
 import type { ProjectOption } from '../customers/types';
 import {
   mapApiProjectToProjectOption,
@@ -59,7 +63,8 @@ export default function Customers() {
   const [projectListPage, setProjectListPage] = useState(0);
   const [listSortBy, setListSortBy] = useState('selectionUpdatedAt');
   const [listSortOrder, setListSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [filterStage, setFilterStage] = useState('');
+  const [filterStages, setFilterStages] = useState<string[]>([]);
+  const [showStageMenu, setShowStageMenu] = useState(false);
   const [filterPeStatus, setFilterPeStatus] = useState<
     '' | 'not-started' | 'draft' | 'proposal-ready'
   >('');
@@ -82,6 +87,7 @@ export default function Customers() {
 
   // Delete confirmation (ProjectCard trash): Admin only (server enforces).
   const [removeConfirmProject, setRemoveConfirmProject] = useState<ProjectOption | null>(null);
+  const stageFilterRef = useRef<HTMLDivElement | null>(null);
 
   const userRole = getCurrentUserRole();
   // Per clarified requirement: the list view is always API-driven (selected projects).
@@ -106,7 +112,28 @@ export default function Customers() {
 
   useEffect(() => {
     setProjectListPage(0);
-  }, [debouncedSearch, filterStage, filterPeStatus, listSortBy, listSortOrder]);
+  }, [debouncedSearch, filterStages, filterPeStatus, listSortBy, listSortOrder]);
+
+  useEffect(() => {
+    if (!showStageMenu) return;
+    function handlePointerDown(event: MouseEvent | TouchEvent) {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (stageFilterRef.current?.contains(target)) return;
+      setShowStageMenu(false);
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setShowStageMenu(false);
+    }
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showStageMenu]);
 
   const customersByCrmProjectId = useMemo(() => {
     const m = new Map<string, CustomerRecord>();
@@ -131,11 +158,11 @@ export default function Customers() {
     setProjectsError(null);
     try {
       const q = debouncedSearch.trim() || undefined;
-      const stage = filterStage.trim() || undefined;
+      const stages = filterStages.length ? filterStages.join(',') : undefined;
       const peStatus = filterPeStatus || undefined;
       const sharedFilters = {
         ...(q ? { q } : {}),
-        ...(stage ? { stage } : {}),
+        ...(stages ? { stages } : {}),
         ...(peStatus ? { peStatus } : {}),
       };
 
@@ -168,7 +195,7 @@ export default function Customers() {
   }, [
     debouncedSearch,
     filterPeStatus,
-    filterStage,
+    filterStages,
     listSortBy,
     listSortOrder,
     projectListPage,
@@ -176,7 +203,7 @@ export default function Customers() {
 
   const hasActiveListFilters =
     search.trim() !== '' ||
-    filterStage !== '' ||
+    filterStages.length > 0 ||
     filterPeStatus !== '' ||
     listSortBy !== 'selectionUpdatedAt' ||
     listSortOrder !== 'desc';
@@ -184,12 +211,34 @@ export default function Customers() {
   const handleResetListFilters = useCallback(() => {
     setSearch('');
     setDebouncedSearch('');
-    setFilterStage('');
+    setFilterStages([]);
+    setShowStageMenu(false);
     setFilterPeStatus('');
     setListSortBy('selectionUpdatedAt');
     setListSortOrder('desc');
     setProjectListPage(0);
   }, []);
+
+  const toggleFilterStage = useCallback((stageValue: string) => {
+    setFilterStages((prev) =>
+      prev.includes(stageValue)
+        ? prev.filter((value) => value !== stageValue)
+        : [...prev, stageValue],
+    );
+  }, []);
+
+  const stageFilterButtonLabel = useMemo(() => {
+    if (filterStages.length === 0) return 'All stages';
+    const labels = filterStages
+      .map(
+        (value) =>
+          CRM_STAGE_FILTER_OPTIONS.find((option) => option.value === value)?.summaryLabel ??
+          CRM_STAGE_FILTER_OPTIONS.find((option) => option.value === value)?.label ??
+          value,
+      );
+    if (labels.length <= 2) return labels.join(', ');
+    return `${labels.length} stages`;
+  }, [filterStages]);
 
   const loadEligibleProjects = useCallback(async () => {
     setProjectsLoading(true);
@@ -705,21 +754,75 @@ export default function Customers() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 flex-1 min-w-0 lg:max-w-none">
                 <div className="min-w-0">
                   <label className="block text-xs font-semibold text-secondary-500 uppercase tracking-wide mb-1">
-                    CRM stage
+                    CRM stages
                   </label>
-                  <select
-                    value={filterStage}
-                    onChange={(e) => setFilterStage(e.target.value)}
-                    className="w-full min-w-0 border border-secondary-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-primary-500 bg-white"
-                  >
-                    <option value="">All stages</option>
-                    <option value="PROPOSAL">Proposal</option>
-                    <option value="CONFIRMED">Confirmed</option>
-                    <option value="LEAD">Lead</option>
-                    <option value="SITE_SURVEY">Site survey</option>
-                    <option value="UNDER_INSTALLATION">Under installation</option>
-                    <option value="COMPLETED">Completed</option>
-                  </select>
+                  <div ref={stageFilterRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowStageMenu((prev) => !prev)}
+                      className={`flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition-all ${
+                        showStageMenu
+                          ? 'border-primary-500 ring-2 ring-primary-100 bg-white'
+                          : 'border-secondary-300 bg-white hover:border-primary-300'
+                      }`}
+                      aria-haspopup="menu"
+                      aria-expanded={showStageMenu}
+                    >
+                      <span className="min-w-0 truncate">
+                        {stageFilterButtonLabel}
+                      </span>
+                      <span
+                        className={`text-xs text-secondary-500 transition-transform ${
+                          showStageMenu ? 'rotate-180' : ''
+                        }`}
+                        aria-hidden
+                      >
+                        ▼
+                      </span>
+                    </button>
+                    {showStageMenu && (
+                      <div className="absolute left-0 right-0 z-30 mt-2 overflow-hidden rounded-xl border border-secondary-200 bg-white shadow-xl">
+                        <div className="border-b border-secondary-100 px-3 py-2 text-[11px] text-secondary-500">
+                          Select one or more CRM stages. `Completed` includes subsidy credited projects.
+                        </div>
+                        <div className="max-h-72 overflow-auto py-1">
+                          {CRM_STAGE_FILTER_OPTIONS.map((option) => {
+                            const checked = filterStages.includes(option.value);
+                            return (
+                              <label
+                                key={option.value}
+                                className="flex cursor-pointer items-start gap-3 px-3 py-2 text-sm hover:bg-secondary-50"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => toggleFilterStage(option.value)}
+                                  className="mt-0.5 h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
+                                />
+                                <span className="min-w-0 leading-snug text-secondary-700">
+                                  {option.label}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <div className="flex items-center justify-between gap-2 border-t border-secondary-100 px-3 py-2">
+                          <span className="text-[11px] text-secondary-500">
+                            {filterStages.length === 0
+                              ? 'All stages selected'
+                              : `${filterStages.length} selected`}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setFilterStages([])}
+                            className="text-xs font-medium text-primary-600 hover:text-primary-700"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="min-w-0">
                   <label className="block text-xs font-semibold text-secondary-500 uppercase tracking-wide mb-1">
@@ -819,7 +922,7 @@ export default function Customers() {
                 <div className="rounded-xl border-2 border-dashed border-secondary-200 p-12 text-center">
                   <p className="text-4xl mb-3">👥</p>
                   <p className="text-secondary-500 font-semibold text-sm">
-                    {debouncedSearch || filterStage || filterPeStatus
+                    {debouncedSearch || filterStages.length > 0 || filterPeStatus
                       ? 'No projects match your filters'
                       : 'No projects in Proposal stage yet'}
                   </p>
