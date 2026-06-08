@@ -1,5 +1,11 @@
 /** Editable 2D roof layout geometry — persisted server-side for cross-device sync. */
 
+import { keepoutFromGeometryJson, keepoutToGeometryJson } from './roofLayout/keepoutGeometry';
+
+export type RoofLayoutKeepoutGeometry =
+  | { id: string; shape?: 'rect'; x: number; y: number; width: number; height: number }
+  | { id: string; shape: 'circle'; cx: number; cy: number; radius: number };
+
 export type RoofLayoutFacetGeometry = {
   id: string;
   label: string;
@@ -15,7 +21,7 @@ export type RoofLayoutGeometryV1 = {
   metersPerPixel: number;
   roofPolygon: { x: number; y: number }[];
   panelRects: { x: number; y: number; width: number; height: number }[];
-  keepouts: { id: string; x: number; y: number; width: number; height: number }[];
+  keepouts: RoofLayoutKeepoutGeometry[];
   panelOrientation: 'portrait' | 'landscape';
   panelSpacingMultiplier: number;
   panelWidthM: number;
@@ -28,7 +34,7 @@ export type RoofLayoutGeometryV2 = {
   imageHeight: number;
   metersPerPixel: number;
   facets: RoofLayoutFacetGeometry[];
-  keepouts: { id: string; x: number; y: number; width: number; height: number }[];
+  keepouts: RoofLayoutKeepoutGeometry[];
   panelOrientation: 'portrait' | 'landscape';
   panelSpacingMultiplier: number;
   panelWidthM: number;
@@ -43,22 +49,12 @@ const validPoint = (p: unknown) =>
   Number.isFinite(Number((p as { x: unknown }).x)) &&
   Number.isFinite(Number((p as { y: unknown }).y));
 
-function parseKeepouts(raw: unknown): RoofLayoutGeometryV2['keepouts'] {
+function parseKeepouts(raw: unknown): RoofLayoutKeepoutGeometry[] {
   if (!Array.isArray(raw)) return [];
   return raw
-    .filter(
-      (k) =>
-        k &&
-        typeof k === 'object' &&
-        Number.isFinite(Number((k as { width: number }).width)),
-    )
-    .map((k) => ({
-      id: String((k as { id?: string }).id ?? crypto.randomUUID()),
-      x: Number((k as { x: number }).x),
-      y: Number((k as { y: number }).y),
-      width: Number((k as { width: number }).width),
-      height: Number((k as { height: number }).height),
-    }));
+    .map((k) => keepoutFromGeometryJson(k))
+    .filter((k) => k != null)
+    .map((k) => keepoutToGeometryJson(k!) as RoofLayoutKeepoutGeometry);
 }
 
 function parsePanelRects(raw: unknown): { x: number; y: number; width: number; height: number }[] {

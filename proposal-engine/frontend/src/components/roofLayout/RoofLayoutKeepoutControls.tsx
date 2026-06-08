@@ -1,8 +1,9 @@
-type KeepoutItem = { id: string; w: number; h: number };
+import { isKeepoutCircle, type RoofLayoutKeepout } from '../../lib/roofLayout/roofLayoutTypes';
 
 type Props = {
-  keepouts: KeepoutItem[];
-  onAdd: () => void;
+  keepouts: RoofLayoutKeepout[];
+  onAddRect: () => void;
+  onAddCircle: () => void;
   onRemove: (id: string) => void;
   onClear: () => void;
   mapTool: 'scroll' | 'roof' | 'keepout';
@@ -10,9 +11,15 @@ type Props = {
   isMobile?: boolean;
 };
 
+function keepoutLabel(k: RoofLayoutKeepout, index: number): string {
+  const shape = isKeepoutCircle(k) ? 'circle' : 'rectangle';
+  return `Keepout ${index + 1} (${shape})`;
+}
+
 export function RoofLayoutKeepoutControls({
   keepouts,
-  onAdd,
+  onAddRect,
+  onAddCircle,
   onRemove,
   onClear,
   mapTool,
@@ -23,7 +30,8 @@ export function RoofLayoutKeepoutControls({
     <div className="rounded-lg border border-orange-200 bg-orange-50/80 p-3 space-y-2">
       <p className="text-xs font-semibold text-orange-900">Roof keepouts</p>
       <p className="text-[11px] text-orange-800/90 leading-snug">
-        Mark vents, tanks, or skylights so panels are not placed there. Optional — skip if the roof is clear.
+        Mark vents, tanks, or skylights so panels are not placed there. Drag on the map in keepout
+        mode. Corners snap to 90° and parallel edges while editing the roof outline.
       </p>
       {isMobile && (
         <div className="flex flex-wrap gap-2">
@@ -43,10 +51,17 @@ export function RoofLayoutKeepoutControls({
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={onAdd}
+          onClick={onAddRect}
           className="min-h-[36px] px-3 rounded-lg border border-orange-300 bg-white text-xs font-semibold text-orange-900 hover:bg-orange-50 touch-manipulation"
         >
-          + Add keepout
+          + Rectangle
+        </button>
+        <button
+          type="button"
+          onClick={onAddCircle}
+          className="min-h-[36px] px-3 rounded-lg border border-orange-300 bg-white text-xs font-semibold text-orange-900 hover:bg-orange-50 touch-manipulation"
+        >
+          + Circle
         </button>
         {keepouts.length > 0 && (
           <button
@@ -62,9 +77,7 @@ export function RoofLayoutKeepoutControls({
         <ul className="text-[11px] text-orange-900 space-y-1 max-h-24 overflow-y-auto">
           {keepouts.map((k, i) => (
             <li key={k.id} className="flex items-center justify-between gap-2">
-              <span>
-                Keepout {i + 1}
-              </span>
+              <span>{keepoutLabel(k, i)}</span>
               <button
                 type="button"
                 onClick={() => onRemove(k.id)}

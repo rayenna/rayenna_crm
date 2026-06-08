@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
+import type { RoofLayoutKeepout } from '../../lib/roofLayout/roofLayoutTypes';
 import { RoofLayoutKeepoutControls } from './RoofLayoutKeepoutControls';
 
 type Props = {
@@ -17,8 +18,9 @@ type Props = {
   setSatelliteOpacity: (v: number) => void;
   hasPolygon: boolean;
   onSnapToGrid: () => void;
-  keepouts: { id: string; w: number; h: number }[];
-  onAddKeepout: () => void;
+  keepouts: RoofLayoutKeepout[];
+  onAddRectKeepout: () => void;
+  onAddCircleKeepout: () => void;
   onRemoveKeepout: (id: string) => void;
   onClearKeepouts: () => void;
   mapEditTool: 'scroll' | 'roof' | 'keepout';
@@ -44,7 +46,8 @@ export function RoofLayoutAdjustPanel({
   hasPolygon,
   onSnapToGrid,
   keepouts,
-  onAddKeepout,
+  onAddRectKeepout,
+  onAddCircleKeepout,
   onRemoveKeepout,
   onClearKeepouts,
   mapEditTool,
@@ -152,7 +155,8 @@ export function RoofLayoutAdjustPanel({
       {layoutMode === 'editing' && roofViewTab === '2d' && (
         <RoofLayoutKeepoutControls
           keepouts={keepouts}
-          onAdd={onAddKeepout}
+          onAddRect={onAddRectKeepout}
+          onAddCircle={onAddCircleKeepout}
           onRemove={onRemoveKeepout}
           onClear={onClearKeepouts}
           mapTool={mapEditTool}

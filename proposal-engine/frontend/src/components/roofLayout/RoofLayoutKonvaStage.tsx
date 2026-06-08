@@ -8,9 +8,11 @@ import {
   edgeLengthLabelPosition,
   type PolygonEdgeInfo,
 } from '../../lib/roofLayoutEdgeMeasure';
+import { snapPolygonVertex } from '../../lib/roofLayout/polygonVertexSnap';
 import {
   ROOF_LAYOUT_PANEL_VISUAL_INSET_PX,
-  type RoofLayoutKeepoutRect,
+  isKeepoutCircle,
+  type RoofLayoutKeepout,
   type RoofLayoutPanelRect,
   type RoofLayoutPoint,
 } from '../../lib/roofLayout/roofLayoutTypes';
@@ -39,7 +41,7 @@ export type RoofLayoutKonvaStageProps = {
   activeFacetId: string;
   polygon: RoofLayoutPoint[] | null;
   panels: RoofLayoutPanelRect[];
-  keepouts: RoofLayoutKeepoutRect[];
+  keepouts: RoofLayoutKeepout[];
   mapEditTool: 'scroll' | 'roof' | 'keepout';
   isDragging: boolean;
   hoveredEdge: PolygonEdgeInfo | null;
@@ -49,7 +51,7 @@ export type RoofLayoutKonvaStageProps = {
   controlPointHitStrokeWidth: number;
   refs: RoofLayoutKonvaStageRefs;
   onApplyPolygon: (next: RoofLayoutPoint[] | null) => void;
-  onSetKeepouts: Dispatch<SetStateAction<RoofLayoutKeepoutRect[]>>;
+  onSetKeepouts: Dispatch<SetStateAction<RoofLayoutKeepout[]>>;
   onSetHoveredEdge: (edge: PolygonEdgeInfo | null) => void;
   onSetIsDragging: (dragging: boolean) => void;
 };
@@ -163,27 +165,52 @@ export function RoofLayoutKonvaStage({
 
       {layoutMode === 'editing' && keepouts.length > 0 && (
         <Layer ref={keepoutLayerRef as LegacyRef<Konva.Layer>}>
-          {keepouts.map((k) => (
-            <Rect
-              key={k.id}
-              x={k.x}
-              y={k.y}
-              width={k.w}
-              height={k.h}
-              fill="rgba(249,115,22,0.35)"
-              stroke="#ea580c"
-              strokeWidth={1.5}
-              draggable={mapEditTool === 'keepout'}
-              onDragEnd={(e) => {
-                const node = e.target;
-                onSetKeepouts((prev) =>
-                  prev.map((item) =>
-                    item.id === k.id ? { ...item, x: node.x(), y: node.y() } : item,
-                  ),
-                );
-              }}
-            />
-          ))}
+          {keepouts.map((k) =>
+            isKeepoutCircle(k) ? (
+              <Circle
+                key={k.id}
+                x={k.cx}
+                y={k.cy}
+                radius={k.r}
+                fill="rgba(249,115,22,0.35)"
+                stroke="#ea580c"
+                strokeWidth={1.5}
+                draggable={mapEditTool === 'keepout'}
+                onDragEnd={(e) => {
+                  const node = e.target;
+                  onSetKeepouts((prev) =>
+                    prev.map((item) =>
+                      item.id === k.id && isKeepoutCircle(item)
+                        ? { ...item, cx: node.x(), cy: node.y() }
+                        : item,
+                    ),
+                  );
+                }}
+              />
+            ) : (
+              <Rect
+                key={k.id}
+                x={k.x}
+                y={k.y}
+                width={k.w}
+                height={k.h}
+                fill="rgba(249,115,22,0.35)"
+                stroke="#ea580c"
+                strokeWidth={1.5}
+                draggable={mapEditTool === 'keepout'}
+                onDragEnd={(e) => {
+                  const node = e.target;
+                  onSetKeepouts((prev) =>
+                    prev.map((item) =>
+                      item.id === k.id && !isKeepoutCircle(item)
+                        ? { ...item, x: node.x(), y: node.y() }
+                        : item,
+                    ),
+                  );
+                }}
+              />
+            ),
+          )}
         </Layer>
       )}
 
@@ -334,19 +361,24 @@ export function RoofLayoutKonvaStage({
               }}
               onDragMove={(e) => {
                 if (!lineRef.current || !polygon) return;
-                const nx = e.target.x();
-                const ny = e.target.y();
+                const snapped = snapPolygonVertex(polygon, idx, e.target.x(), e.target.y());
+                e.target.position({ x: snapped.x, y: snapped.y });
                 const flat = polygon.flatMap((pt, i) =>
-                  i === idx ? [nx, ny] : [pt.x, pt.y],
+                  i === idx ? [snapped.x, snapped.y] : [pt.x, pt.y],
                 );
                 lineRef.current.points(flat);
                 lineRef.current.getLayer()?.batchDraw();
               }}
-              onDragEnd={() => {
+              onDragEnd={(e) => {
                 isDraggingRef.current = false;
                 onSetIsDragging(false);
-                if (lineRef.current) {
-                  const flat = lineRef.current.points();
+                if (lineRef.current && polygon) {
+                  const snapped = snapPolygonVertex(polygon, idx, e.target.x(), e.target.y());
+                  e.target.position({ x: snapped.x, y: snapped.y });
+                  const flat = polygon.flatMap((pt, i) =>
+                    i === idx ? [snapped.x, snapped.y] : [pt.x, pt.y],
+                  );
+                  lineRef.current.points(flat);
                   const next: RoofLayoutPoint[] = [];
                   for (let i = 0; i < flat.length; i += 2)
                     next.push({ x: flat[i]!, y: flat[i + 1]! });

@@ -34,6 +34,30 @@ describe('parseRoofLayoutGeometry', () => {
     expect(parsed?.facets[0]?.panelRects).toEqual(validGeomV1.panelRects);
   });
 
+  it('parses circle keepouts in v2 geometry', () => {
+    const v2 = buildRoofLayoutGeometry({
+      imageWidth: 2048,
+      imageHeight: 2048,
+      metersPerPixel: 0.149,
+      facets: [
+        {
+          id: 'a',
+          label: 'Roof 1',
+          azimuthDeg: 180,
+          roofPolygon: validGeomV1.roofPolygon,
+          panelRects: [],
+        },
+      ],
+      keepouts: [{ id: 'c1', shape: 'circle', cx: 200, cy: 300, radius: 40 }],
+      panelOrientation: 'portrait',
+      panelSpacingMultiplier: 1.5,
+      panelWidthM: 1.1,
+      panelHeightM: 2.2,
+    });
+    const parsed = parseRoofLayoutGeometry(v2);
+    expect(parsed?.keepouts[0]).toMatchObject({ shape: 'circle', cx: 200, cy: 300, radius: 40 });
+  });
+
   it('parses native v2 multi-facet geometry', () => {
     const v2 = buildRoofLayoutGeometry({
       imageWidth: 2048,

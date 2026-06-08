@@ -7,7 +7,8 @@ import {
   cacheBustImageUrl,
   satelliteEditorUrlForProject,
 } from './roofLayoutPageUtils';
-import type { RoofLayoutKeepoutRect } from './roofLayoutTypes';
+import { keepoutFromGeometryJson } from './keepoutGeometry';
+import type { RoofLayoutKeepout } from './roofLayoutTypes';
 
 export type ManualLayoutApiResponse = {
   layout_image_url?: string;
@@ -33,7 +34,7 @@ export type HydratedEditingLayout = {
   layout3dUrl: string | null;
   facets: RoofFacetState[];
   activeFacetId: string;
-  keepouts: RoofLayoutKeepoutRect[];
+  keepouts: RoofLayoutKeepout[];
   panelOrientation: 'portrait' | 'landscape';
   panelSpacingMultiplier: number;
   bgImageUrl: string;
@@ -151,13 +152,9 @@ export function parseManualRoofLayoutHydrate(
         layout3dUrl,
         facets: loadedFacets,
         activeFacetId: loadedFacets[0]!.id,
-        keepouts: geom.keepouts.map((k) => ({
-          id: k.id,
-          x: k.x,
-          y: k.y,
-          w: k.width,
-          h: k.height,
-        })),
+        keepouts: geom.keepouts
+          .map((k) => keepoutFromGeometryJson(k))
+          .filter((k): k is RoofLayoutKeepout => k != null),
         panelOrientation: geom.panelOrientation,
         panelSpacingMultiplier: geom.panelSpacingMultiplier,
         bgImageUrl: satUrl,

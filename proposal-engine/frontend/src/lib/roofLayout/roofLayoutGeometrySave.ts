@@ -1,7 +1,8 @@
-import { buildRoofLayoutGeometry } from '../api/roofLayout';
+import { buildRoofLayoutGeometry, type RoofLayoutKeepoutGeometry } from '../roofLayoutGeometry';
 import { getOrientedPanelSizeM } from '../roofLayoutConstants';
 import type { RoofFacetState } from '../roofLayoutFacets';
-import type { RoofLayoutKeepoutRect, RoofLayoutPoint } from './roofLayoutTypes';
+import { keepoutToGeometryJson } from './keepoutGeometry';
+import type { RoofLayoutKeepout, RoofLayoutPoint } from './roofLayoutTypes';
 
 export function pickPrimaryCropPolygon(
   facets: RoofFacetState[],
@@ -15,7 +16,7 @@ export function buildSavedRoofLayoutGeometry(params: {
   imageSize: { width: number; height: number };
   metersPerPixel: number;
   facets: RoofFacetState[];
-  keepouts: RoofLayoutKeepoutRect[];
+  keepouts: RoofLayoutKeepout[];
   panelOrientation: 'portrait' | 'landscape';
   panelSpacingMultiplier: number;
   panelWatts: number;
@@ -43,13 +44,7 @@ export function buildSavedRoofLayoutGeometry(params: {
           height: p.h,
         })),
       })),
-    keepouts: keepouts.map((k) => ({
-      id: k.id,
-      x: k.x,
-      y: k.y,
-      width: k.w,
-      height: k.h,
-    })),
+    keepouts: keepouts.map((k) => keepoutToGeometryJson(k) as RoofLayoutKeepoutGeometry),
     panelOrientation,
     panelSpacingMultiplier,
     panelWidthM: moduleSize.widthM,

@@ -5,8 +5,8 @@ import {
   ROOF_LAYOUT_USABLE_AREA_FACTOR,
   getOrientedPanelSizeM,
 } from '../roofLayoutConstants';
-import { rectsOverlap } from './roofLayoutPageUtils';
-import type { RoofLayoutKeepoutRect, RoofLayoutPanelRect, RoofLayoutPoint } from './roofLayoutTypes';
+import { panelOverlapsKeepout } from './keepoutGeometry';
+import type { RoofLayoutKeepout, RoofLayoutPanelRect, RoofLayoutPoint } from './roofLayoutTypes';
 
 export type ComputePanelsOptions = {
   metersPerPixel?: number;
@@ -14,7 +14,7 @@ export type ComputePanelsOptions = {
   panelSpacingMultiplier: number;
   panelWatts: number;
   maxPanelsCap?: number;
-  keepoutRects?: RoofLayoutKeepoutRect[];
+  keepoutRects?: RoofLayoutKeepout[];
   targetKw?: number | null;
 };
 
@@ -119,7 +119,7 @@ export function computePanelsForPolygon(
 
       panelRect.x = x;
       panelRect.y = y;
-      if (keepoutRects.some((k) => rectsOverlap(panelRect, k))) continue;
+      if (keepoutRects.some((k) => panelOverlapsKeepout(panelRect, k))) continue;
 
       panels.push({ x, y, w: panelWidthPx, h: panelHeightPx });
       if (panels.length >= maxPanelsRendered) break;

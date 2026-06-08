@@ -17,7 +17,7 @@ import {
   waitForKonvaStageReady,
 } from './roofLayoutCapture';
 import { absolutizeLayoutImageUrl } from './roofLayoutPageUtils';
-import type { RoofLayoutCaptureRefs, RoofLayoutKeepoutRect, RoofLayoutPanelRect, RoofLayoutPoint } from './roofLayoutTypes';
+import type { RoofLayoutCaptureRefs, RoofLayoutKeepout, RoofLayoutPanelRect, RoofLayoutPoint } from './roofLayoutTypes';
 
 export type LayoutMetrics = {
   roof_area_m2?: number;
@@ -87,7 +87,7 @@ export type SaveRoofLayoutForProposalParams = {
   activePolygon: RoofLayoutPoint[] | null;
   allPanelsFlat: RoofLayoutPanelRect[];
   imageSize: { width: number; height: number };
-  keepouts: RoofLayoutKeepoutRect[];
+  keepouts: RoofLayoutKeepout[];
   panelOrientation: 'portrait' | 'landscape';
   panelSpacingMultiplier: number;
   effectiveWattage: number;

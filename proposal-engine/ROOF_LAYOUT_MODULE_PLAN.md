@@ -206,7 +206,7 @@ From original plan and [ai-roof-layout-2d-roadmap.md](./docs/ai-roof-layout-2d-r
 - [ ] Real roof segmentation (OpenCV or external CV) instead of rectangle seed  
 - [ ] Background worker + 202/poll for long-running generates  
 - [x] PDF **site plan** export (logo, scale, north, customer block) — browser print from AI Roof Layout (May 2026)  
-- [ ] Circle keepouts, 90° / parallel snap  
+- [x] Circle keepouts, 90° / parallel snap (May 2026)  
 - [ ] Param-based image cache keyed by `systemSizeKw` + `panelWattage` (today: per-`projectId` files + DB)  
 - [ ] Smarter obstacle detection (currently stub)  
 - [ ] P2 yield / module SKU dimensions from BOM  
@@ -255,7 +255,7 @@ Unit tests: `proposal-engine/frontend` (`roofLayoutGeometry.test.ts`, etc.); roo
 | 2026-05-18–20 | 3D view, save 3D, embed preference; PE help Quick Start |
 | 2026-05-22 | **Phase 4 v1:** Multi-facet (≤3), v2 geometry (PE + `src/types`), azimuth, refill-all, aggregated metrics |
 | 2026-05-23 | Customers: **Map GPS** + **Roof layout** badges, **5** artifact dots; Kerala GPS validation (CRM + API + PE); **Delete layout** + `ConfirmDangerModal`; satellite/URL fixes; help docs updated |
-| 2026-05-20 | **Track B slice 2:** extract generate/hydrate/save/export + page chrome from `AIRoofLayout.tsx` (~2k lines); tests + build green |
+| 2026-05-20 | **Track C:** 90°/parallel vertex snap on polygon drag; circle keepouts (geometry JSON v2, panel packing, cross-device hydrate) |
 
 ---
 

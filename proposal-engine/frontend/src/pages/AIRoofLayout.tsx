@@ -33,7 +33,7 @@ import {
   exportSitePlanPdfFromLayout,
   saveRoofLayoutForProposal,
 } from '../lib/roofLayout/roofLayoutSaveExport';
-import type { RoofLayoutKeepoutRect, RoofLayoutPoint } from '../lib/roofLayout/roofLayoutTypes';
+import type { RoofLayoutKeepout, RoofLayoutPoint } from '../lib/roofLayout/roofLayoutTypes';
 import {
   getActiveCustomer,
 } from '../lib/customerStore';
@@ -174,7 +174,7 @@ export default function AIRoofLayout() {
   const isDraggingRef = useRef(false);
   // When true, canvas captures touch (edit polygon); when false, touches pass through so map scroll works (mobile)
   const [mapEditTool, setMapEditTool] = useState<'scroll' | 'roof' | 'keepout'>('scroll');
-  const [keepouts, setKeepouts] = useState<RoofLayoutKeepoutRect[]>([]);
+  const [keepouts, setKeepouts] = useState<RoofLayoutKeepout[]>([]);
   const [satelliteOpacity, setSatelliteOpacity] = useState(1);
   const [hoveredEdge, setHoveredEdge] = useState<PolygonEdgeInfo | null>(null);
   const [mobileControlsOpen, setMobileControlsOpen] = useState(false);
@@ -1104,7 +1104,7 @@ export default function AIRoofLayout() {
     );
   };
 
-  const addKeepout = () => {
+  const addRectKeepout = () => {
     if (!imageSize) return;
     let cx = imageSize.width / 2;
     let cy = imageSize.height / 2;
@@ -1117,7 +1117,24 @@ export default function AIRoofLayout() {
     const h = sizeM / METERS_PER_PIXEL;
     setKeepouts((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), x: cx - w / 2, y: cy - h / 2, w, h },
+      { id: crypto.randomUUID(), shape: 'rect', x: cx - w / 2, y: cy - h / 2, w, h },
+    ]);
+    setMapTool('keepout');
+  };
+
+  const addCircleKeepout = () => {
+    if (!imageSize) return;
+    let cx = imageSize.width / 2;
+    let cy = imageSize.height / 2;
+    if (polygon && polygon.length) {
+      cx = polygon.reduce((s, p) => s + p.x, 0) / polygon.length;
+      cy = polygon.reduce((s, p) => s + p.y, 0) / polygon.length;
+    }
+    const diameterM = 1.5;
+    const r = diameterM / METERS_PER_PIXEL / 2;
+    setKeepouts((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), shape: 'circle', cx, cy, r },
     ]);
     setMapTool('keepout');
   };
@@ -1849,7 +1866,8 @@ export default function AIRoofLayout() {
                         hasPolygon={!!polygon}
                         onSnapToGrid={handleSnapOutlineToGrid}
                         keepouts={keepouts}
-                        onAddKeepout={addKeepout}
+                        onAddRectKeepout={addRectKeepout}
+                        onAddCircleKeepout={addCircleKeepout}
                         onRemoveKeepout={(id) => setKeepouts((prev) => prev.filter((k) => k.id !== id))}
                         onClearKeepouts={() => setKeepouts([])}
                         mapEditTool={mapEditTool}
@@ -1888,7 +1906,8 @@ export default function AIRoofLayout() {
                     hasPolygon={!!polygon}
                     onSnapToGrid={handleSnapOutlineToGrid}
                     keepouts={keepouts}
-                    onAddKeepout={addKeepout}
+                    onAddRectKeepout={addRectKeepout}
+                    onAddCircleKeepout={addCircleKeepout}
                     onRemoveKeepout={(id) => setKeepouts((prev) => prev.filter((k) => k.id !== id))}
                     onClearKeepouts={() => setKeepouts([])}
                     mapEditTool={mapEditTool}
@@ -1944,7 +1963,8 @@ export default function AIRoofLayout() {
                   hasPolygon={!!polygon}
                   onSnapToGrid={handleSnapOutlineToGrid}
                   keepouts={keepouts}
-                  onAddKeepout={addKeepout}
+                  onAddRectKeepout={addRectKeepout}
+                  onAddCircleKeepout={addCircleKeepout}
                   onRemoveKeepout={(id) => setKeepouts((prev) => prev.filter((k) => k.id !== id))}
                   onClearKeepouts={() => setKeepouts([])}
                   mapEditTool={mapEditTool}

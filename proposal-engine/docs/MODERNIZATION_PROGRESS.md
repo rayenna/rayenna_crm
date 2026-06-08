@@ -121,7 +121,7 @@ Slice 3 (deferred): scroll/viewport effects, 3D tab shell, optional `useRoofLayo
 | ~~**2e**~~ | ~~Bundle measurement~~ — done (`chunkSizeWarningLimit: 600`; dynamic import deferred — low payoff vs risk) |
 | ~~**3a**~~ | ~~WIP vs server sync banner~~ — done (`ServerSyncBanner` on Dashboard; `markServerSynced` in Dashboard + CustomerWorkspace) |
 | **3b** | Central save pipeline (deferred — higher effort, lower urgency than Phase 4) |
-| **4** | Product — AI Roof Layout P1 (see [ai-roof-layout-2d-roadmap.md](./ai-roof-layout-2d-roadmap.md)): **v1 done** multi-facet + azimuth + refill-all + **site plan PDF**; **Track B slice 2 (May 2026):** generate/hydrate/save/export libs + header/banner/override/export components — `AIRoofLayout.tsx` ~2,000 lines; **next** slice 3 (scroll/viewport effects, 3D shell) then 90° snap, circle keepouts |
+| **4** | Product — AI Roof Layout P1: **Track C done (May 2026)** — 90°/parallel vertex snap + circle keepouts; **next** keyboard shortcuts, honest copy, or Track B slice 3 |
 | **4 quick wins** | Anytime: centralise `METERS_PER_PIXEL` + panel size; always save full geometry JSON; keyboard shortcuts (`Esc` pan, `E` edit, `Ctrl+Z`/`Y` undo) |
 
 ---
