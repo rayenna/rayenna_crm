@@ -117,7 +117,9 @@ Pick-up options when resuming:
 - [ ] Copy: “AI-assisted draft” OK; don’t imply auto-traced roof while rectangle seed remains  
 - [ ] Centralize `METERS_PER_PIXEL`, panel size (shared with backend worker)  
 - [ ] Save full geometry JSON on manual layout API every time  
-- [ ] Split UI: `RoofLayoutCanvas`, `RoofLayoutToolbar`, `RoofLayoutMetrics`  
+- [x] Split UI slice 1: `RoofLayoutKonvaStage`, `lib/roofLayout/*` (page utils, capture, panel packing, customer sync) — May 2026
+- [x] Split UI slice 2: generate/hydrate/save/export libs + header/banner/override/export chrome — May 2026 (`AIRoofLayout.tsx` ~2k lines)
+- [ ] Split UI slice 3: scroll/viewport effects, 3D tab shell, editor-state hook
 - [ ] Keyboard: `Esc` pan, `E` edit, `Ctrl+Z` / `Ctrl+Y` undo  
 
 ---

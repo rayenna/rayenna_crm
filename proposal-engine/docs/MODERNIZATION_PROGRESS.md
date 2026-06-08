@@ -100,6 +100,15 @@ Tests added: `costing/format.test.ts`. Route unchanged: lazy `CostingSheet` in `
 
 Route unchanged: lazy `Customers` in `App.tsx`. `NewCustomerModal` still re-exported from page shell for backwards compatibility.
 
+### Phase 4 Track B — Split `AIRoofLayout.tsx` (maintainability, no behaviour change)
+
+| Slice | Extracted | Page size (approx.) |
+|-------|-----------|---------------------|
+| **1** | `RoofLayoutKonvaStage`, `lib/roofLayout/*` (types, page utils, capture, panel packing, customer sync) | ~2,526 lines |
+| **2** | `generateRoofLayoutDraft`, `hydrateManualRoofLayout`, `roofLayoutGeometrySave`, `roofLayoutSaveExport`; `RoofLayoutPageHeader`, `RoofLayoutActiveCustomerBanner`, `RoofLayoutOverridePanel`, `RoofLayoutExportActions` | ~1,997 lines |
+
+Slice 3 (deferred): scroll/viewport effects, 3D tab shell, optional `useRoofLayoutEditorState` hook — target ~1,500 lines.
+
 ---
 
 ## Not started (planned)
@@ -112,7 +121,7 @@ Route unchanged: lazy `Customers` in `App.tsx`. `NewCustomerModal` still re-expo
 | ~~**2e**~~ | ~~Bundle measurement~~ — done (`chunkSizeWarningLimit: 600`; dynamic import deferred — low payoff vs risk) |
 | ~~**3a**~~ | ~~WIP vs server sync banner~~ — done (`ServerSyncBanner` on Dashboard; `markServerSynced` in Dashboard + CustomerWorkspace) |
 | **3b** | Central save pipeline (deferred — higher effort, lower urgency than Phase 4) |
-| **4** | Product — AI Roof Layout P1 (see [ai-roof-layout-2d-roadmap.md](./ai-roof-layout-2d-roadmap.md)): **v1 done** multi-facet + azimuth + refill-all + **site plan PDF**; **next** 90° snap, circle keepouts |
+| **4** | Product — AI Roof Layout P1 (see [ai-roof-layout-2d-roadmap.md](./ai-roof-layout-2d-roadmap.md)): **v1 done** multi-facet + azimuth + refill-all + **site plan PDF**; **Track B slice 2 (May 2026):** generate/hydrate/save/export libs + header/banner/override/export components — `AIRoofLayout.tsx` ~2,000 lines; **next** slice 3 (scroll/viewport effects, 3D shell) then 90° snap, circle keepouts |
 | **4 quick wins** | Anytime: centralise `METERS_PER_PIXEL` + panel size; always save full geometry JSON; keyboard shortcuts (`Esc` pan, `E` edit, `Ctrl+Z`/`Y` undo) |
 
 ---

@@ -211,7 +211,7 @@ From original plan and [ai-roof-layout-2d-roadmap.md](./docs/ai-roof-layout-2d-r
 - [ ] Smarter obstacle detection (currently stub)  
 - [ ] P2 yield / module SKU dimensions from BOM  
 
-**Quick wins (roadmap):** centralise `METERS_PER_PIXEL` with worker; keyboard shortcuts (`Esc` / `E` / undo); further split `AIRoofLayout.tsx` into canvas/toolbar modules.
+**Quick wins (roadmap):** centralise `METERS_PER_PIXEL` with worker; keyboard shortcuts (`Esc` / `E` / undo); ~~further split `AIRoofLayout.tsx`~~ slices 1–2 done (~2k lines; slice 3 deferred).
 
 ---
 
@@ -255,6 +255,7 @@ Unit tests: `proposal-engine/frontend` (`roofLayoutGeometry.test.ts`, etc.); roo
 | 2026-05-18–20 | 3D view, save 3D, embed preference; PE help Quick Start |
 | 2026-05-22 | **Phase 4 v1:** Multi-facet (≤3), v2 geometry (PE + `src/types`), azimuth, refill-all, aggregated metrics |
 | 2026-05-23 | Customers: **Map GPS** + **Roof layout** badges, **5** artifact dots; Kerala GPS validation (CRM + API + PE); **Delete layout** + `ConfirmDangerModal`; satellite/URL fixes; help docs updated |
+| 2026-05-20 | **Track B slice 2:** extract generate/hydrate/save/export + page chrome from `AIRoofLayout.tsx` (~2k lines); tests + build green |
 
 ---
 
