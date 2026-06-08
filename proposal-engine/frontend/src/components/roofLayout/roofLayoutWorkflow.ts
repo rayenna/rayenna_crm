@@ -23,7 +23,8 @@ export function deriveRoofLayoutWorkflowStep(input: {
   mapTool?: 'scroll' | 'roof' | 'keepout';
 }): RoofLayoutWorkflowStepId {
   if (!input.hasActiveProject || !input.hasLayoutResult) return 'locate';
-  if (input.layoutMode === 'saved' && input.isSavedForProject) return 'review';
+  if (input.isSavedForProject) return 'review';
+  if (input.layoutMode === 'saved') return 'review';
   if (!input.hasPolygon) return 'outline';
   if (input.mapTool === 'keepout') return 'keepouts';
   return 'place';

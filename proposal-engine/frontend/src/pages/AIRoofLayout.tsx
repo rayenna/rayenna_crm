@@ -320,7 +320,7 @@ export default function AIRoofLayout() {
 
   const layoutStateLabel: 'draft' | 'saved' | 'idle' = !result
     ? 'idle'
-    : isSavedForThisProject && layoutMode === 'saved'
+    : isSavedForThisProject
       ? 'saved'
       : 'draft';
 
@@ -818,6 +818,7 @@ export default function AIRoofLayout() {
         if (!prev) return prev;
         const next = {
           ...prev,
+          source: 'MANUAL' as const,
           layout_image_url: saved.layout_image_url,
           ...(saved.layout_image_3d_url != null && { layout_image_3d_url: saved.layout_image_3d_url }),
           prefer_3d_for_proposal: saved.prefer_3d_for_proposal,
@@ -833,6 +834,7 @@ export default function AIRoofLayout() {
         return next;
       });
       setLastSavedProjectId(String(crmProjectId));
+      setLoadedSavedAt(new Date().toISOString());
 
       const sat = satelliteEditorUrlRef.current;
       if (sat && layoutMode === 'editing') {
