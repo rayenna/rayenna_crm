@@ -8,7 +8,7 @@ export type RoofLayoutWorkflowStep = {
 
 export const ROOF_LAYOUT_WORKFLOW_STEPS: RoofLayoutWorkflowStep[] = [
   { id: 'locate', label: 'Locate site', short: 'Locate' },
-  { id: 'outline', label: 'Outline roof', short: 'Outline' },
+  { id: 'outline', label: 'Draw roof outline', short: 'Outline' },
   { id: 'keepouts', label: 'Keepouts (optional)', short: 'Keepouts' },
   { id: 'place', label: 'Place panels', short: 'Panels' },
   { id: 'review', label: 'Review & save', short: 'Review' },

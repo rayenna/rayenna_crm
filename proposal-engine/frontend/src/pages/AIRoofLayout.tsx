@@ -41,6 +41,7 @@ import type { Solar3DOrbitSnapshot, Solar3DViewHandle } from '../components/Sola
 import { RoofLayoutDesignStepper } from '../components/roofLayout/RoofLayoutDesignStepper';
 import { RoofLayoutStatusStrip } from '../components/roofLayout/RoofLayoutStatusStrip';
 import { RoofLayoutMapChrome } from '../components/roofLayout/RoofLayoutMapChrome';
+import { RoofLayoutKeyboardHints } from '../components/roofLayout/RoofLayoutKeyboardHints';
 import { deriveRoofLayoutWorkflowStep } from '../components/roofLayout/roofLayoutWorkflow';
 import { usePolygonHistory } from '../components/roofLayout/usePolygonHistory';
 import { RoofLayoutPanelActions } from '../components/roofLayout/RoofLayoutPanelActions';
@@ -388,6 +389,8 @@ export default function AIRoofLayout() {
         setMapTool('scroll');
       } else if (e.key === 'e' || e.key === 'E') {
         setMapTool('roof');
+      } else if (e.key === 'k' || e.key === 'K') {
+        setMapTool('keepout');
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -781,6 +784,7 @@ export default function AIRoofLayout() {
     try {
       const saved = await saveRoofLayoutForProposal({
         crmProjectId,
+        layoutMode,
         captureRefs,
         stageRef,
         solar3dRef,
@@ -1164,10 +1168,10 @@ export default function AIRoofLayout() {
         {result && lastSavedProjectId && activeProject?.master?.crmProjectId && lastSavedProjectId === String(activeProject.master.crmProjectId) && (
           result.source === 'AI' ? (
             <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              <div className="font-semibold">⚠ Layout not yet saved with panels</div>
+              <div className="font-semibold">AI-assisted draft — draw the roof outline</div>
               <div className="mt-0.5 text-xs text-amber-800">
-                The outline starts as a sizing rectangle (not auto-traced). Drag corners to match the roof, use{' '}
-                <strong>Refill panels</strong>, then <strong>Save to Proposal</strong>.
+                Satellite image + a starting rectangle (not auto-traced). Drag green corners to match
+                the roof, use <strong>Refill panels</strong>, then <strong>Save to Proposal</strong>.
               </div>
             </div>
           ) : (
@@ -1814,6 +1818,7 @@ export default function AIRoofLayout() {
                           </button>
                         </div>
                       </div>
+                      <RoofLayoutKeyboardHints compact className="hidden sm:block lg:hidden px-0.5" />
                     </div>
                   )}
 

@@ -121,8 +121,8 @@ Slice 3 (deferred): scroll/viewport effects, 3D tab shell, optional `useRoofLayo
 | ~~**2e**~~ | ~~Bundle measurement~~ — done (`chunkSizeWarningLimit: 600`; dynamic import deferred — low payoff vs risk) |
 | ~~**3a**~~ | ~~WIP vs server sync banner~~ — done (`ServerSyncBanner` on Dashboard; `markServerSynced` in Dashboard + CustomerWorkspace) |
 | **3b** | Central save pipeline (deferred — higher effort, lower urgency than Phase 4) |
-| **4** | Product — AI Roof Layout P1: **Track C done (May 2026)** — 90°/parallel vertex snap + circle keepouts; **next** keyboard shortcuts, honest copy, or Track B slice 3 |
-| **4 quick wins** | Anytime: centralise `METERS_PER_PIXEL` + panel size; always save full geometry JSON; keyboard shortcuts (`Esc` pan, `E` edit, `Ctrl+Z`/`Y` undo) |
+| **4** | Product — AI Roof Layout P1: Track C + **quick wins (May 2026)** — honest copy, keyboard hints, geometryJson guard on save; **next** Track B slice 3 or P1 polish (setbacks / mobile viewport) |
+| **4 quick wins** | Remaining: centralise `METERS_PER_PIXEL` + panel size with backend worker |
 
 ---
 

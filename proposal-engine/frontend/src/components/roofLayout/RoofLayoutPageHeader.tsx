@@ -30,7 +30,7 @@ export function RoofLayoutPageHeader({
           <div className="min-w-0">
             <h1 className="text-lg sm:text-2xl font-extrabold text-white drop-shadow">AI Roof Layout</h1>
             <p className="mt-0.5 text-white/90 text-sm hidden sm:block">
-              Satellite-assisted draft — draw the roof outline, place panels, save to proposal.
+              AI-assisted draft — you draw the roof outline; panels and keepouts follow your edits.
             </p>
           </div>
         </div>
@@ -46,7 +46,7 @@ export function RoofLayoutPageHeader({
           {layoutMode === 'editing' && hasResult && (
             <div className="flex justify-start sm:justify-end">
               <span className="text-xs px-3 py-1.5 rounded-full border font-semibold bg-white/20 text-white border-white/40">
-                ⚡ Layout draft
+                AI-assisted draft
               </span>
             </div>
           )}

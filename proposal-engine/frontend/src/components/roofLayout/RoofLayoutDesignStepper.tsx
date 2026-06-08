@@ -45,7 +45,9 @@ export function RoofLayoutDesignStepper({ activeStep, compact }: Props) {
                 <span className="block font-semibold leading-tight">{step.label}</span>
                 {!compact && state === 'current' && (
                   <span className="block text-[10px] font-normal text-indigo-700/90 mt-0.5">
-                    You are here
+                    {step.id === 'outline'
+                      ? 'Drag green handles — not auto-traced'
+                      : 'You are here'}
                   </span>
                 )}
               </span>

@@ -283,10 +283,10 @@ export default function HelpPage() {
               <strong>Locate:</strong> Map GPS from <strong>Rayenna CRM Customer Master</strong> loads automatically. In CRM, set the pin under the customer&apos;s address — if latitude is in Kerala (about 8°–13°N) and longitude is <strong>west of 76°</strong>, CRM and PE show a warning because Google satellite often fails there; most Kerala sites use ~<strong>76.2°–77.4°E</strong>. If the pin is wrong, paste a full <strong>Google Maps URL</strong> (or <code className="text-xs bg-white px-1 rounded">lat, lng</code>) under <strong>Override Google Maps location</strong> and click <strong>Regenerate AI Layout</strong>. Short <code className="text-xs">maps.app.goo.gl</code> links will not work — open them in a browser and copy the full <code className="text-xs">google.com/maps/…</code> address.
             </li>
             <li>
-              <strong>Outline:</strong> Drag green corner handles to match each roof face. The first outline is a <strong>starting rectangle</strong> (not auto-traced AI). Up to <strong>three roof sections</strong> (multi-facet) — use <strong>+ Add section</strong> in the left column. <strong>Undo</strong> / <strong>Redo</strong> if you mis-click.
+              <strong>Outline:</strong> Drag green corner handles to match each roof face. This is an <strong>AI-assisted draft</strong> — the first outline is a <strong>starting rectangle</strong> (not auto-traced). Up to <strong>three roof sections</strong> (multi-facet) — use <strong>+ Add section</strong> in the left column. Corners snap to 90° while you drag. <strong>Undo</strong> / <strong>Redo</strong> (<strong>Ctrl+Z</strong> / <strong>Ctrl+Y</strong> on desktop; <strong>Esc</strong> = scroll map, <strong>E</strong> = draw outline, <strong>K</strong> = keepouts).
             </li>
             <li>
-              <strong>Panels:</strong> Add <strong>keepouts</strong> (vents, tanks) so panels skip those areas. Use <strong>Refill panels</strong> toward CRM target kW; adjust density and portrait/landscape. Hover a roof edge to see length in metres.
+              <strong>Panels:</strong> Add rectangular or circular <strong>keepouts</strong> (vents, tanks) so panels skip those areas. Use <strong>Refill panels</strong> toward CRM target kW; adjust density and portrait/landscape. Hover a roof edge to see length in metres.
             </li>
             <li>
               <strong>Save:</strong> Click <strong>Save to Proposal</strong> — satellite image (panels only, no green edit outline), metrics, and layout geometry are stored on the <strong>CRM project</strong> (same layout when you log in from another laptop).
@@ -855,7 +855,7 @@ export default function HelpPage() {
                 <strong>Polygon:</strong> Drag <strong>green corner handles</strong> or move the whole roof from inside. <strong>Undo</strong> / <strong>Redo</strong> available. Hover a roof edge for length in metres.
               </li>
               <li>
-                <strong>Keepouts:</strong> Draw rectangular obstructions (vents, tanks); panels will not fill those areas. Use the keepout tool on mobile or in the tools sidebar on desktop.
+                <strong>Keepouts:</strong> Add <strong>rectangle</strong> or <strong>circle</strong> obstructions (vents, tanks); panels will not fill those areas. Use the keepout tool on mobile or in the tools sidebar on desktop.
               </li>
               <li>
                 <strong>Refill panels</strong> / <strong>Clear panels</strong> — refill toward CRM system kW inside the current outline (respects keepouts).

@@ -79,6 +79,7 @@ export async function captureProposalLayoutJpeg(params: {
 
 export type SaveRoofLayoutForProposalParams = {
   crmProjectId: string;
+  layoutMode: 'saved' | 'editing';
   captureRefs: RoofLayoutCaptureRefs;
   stageRef: RefObject<{ batchDraw?: () => void } | null>;
   solar3dRef: RefObject<Solar3DViewHandle | null>;
@@ -147,6 +148,14 @@ export async function saveRoofLayoutForProposal(
     panelSpacingMultiplier: params.panelSpacingMultiplier,
     panelWatts: params.effectiveWattage,
   });
+
+  if (params.layoutMode === 'editing' && !geometry) {
+    return {
+      ok: false,
+      error:
+        'Could not build roof geometry for sync. Draw the roof outline (at least three corners), then save again.',
+    };
+  }
 
   const saved2d = await saveManualRoofLayoutImage({
     projectId: params.crmProjectId,

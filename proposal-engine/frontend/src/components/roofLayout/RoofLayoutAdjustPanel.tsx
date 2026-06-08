@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { RoofLayoutKeepout } from '../../lib/roofLayout/roofLayoutTypes';
 import { RoofLayoutKeepoutControls } from './RoofLayoutKeepoutControls';
+import { RoofLayoutKeyboardHints } from './RoofLayoutKeyboardHints';
 
 type Props = {
   roofViewTab: '2d' | '3d';
@@ -153,7 +154,8 @@ export function RoofLayoutAdjustPanel({
       </div>
 
       {layoutMode === 'editing' && roofViewTab === '2d' && (
-        <RoofLayoutKeepoutControls
+        <>
+          <RoofLayoutKeepoutControls
           keepouts={keepouts}
           onAddRect={onAddRectKeepout}
           onAddCircle={onAddCircleKeepout}
@@ -163,6 +165,8 @@ export function RoofLayoutAdjustPanel({
           onMapToolChange={onMapToolChange}
           isMobile={isMobileView}
         />
+          <RoofLayoutKeyboardHints className="hidden xl:block" />
+        </>
       )}
 
       {roofViewTab !== '3d' && hasPolygon && (

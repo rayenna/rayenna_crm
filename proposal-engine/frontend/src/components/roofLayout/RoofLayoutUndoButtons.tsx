@@ -14,7 +14,7 @@ export function RoofLayoutUndoButtons({ canUndo, canRedo, onUndo, onRedo, classN
         onClick={onUndo}
         disabled={!canUndo}
         className="min-h-[36px] px-3 rounded-lg border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation"
-        title="Undo (Ctrl+Z)"
+        title="Undo polygon edit (Ctrl+Z)"
         aria-label="Undo"
       >
         Undo
@@ -24,7 +24,7 @@ export function RoofLayoutUndoButtons({ canUndo, canRedo, onUndo, onRedo, classN
         onClick={onRedo}
         disabled={!canRedo}
         className="min-h-[36px] px-3 rounded-lg border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation"
-        title="Redo (Ctrl+Shift+Z)"
+        title="Redo polygon edit (Ctrl+Y or Ctrl+Shift+Z)"
         aria-label="Redo"
       >
         Redo
