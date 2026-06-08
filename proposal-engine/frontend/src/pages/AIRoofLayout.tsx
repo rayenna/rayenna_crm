@@ -115,7 +115,14 @@ function scrollLayoutPreviewToFocal(
   el.scrollTop = Math.max(0, Math.min(Math.max(0, sh - ch), cy - ch / 2));
 }
 import { Link } from 'react-router-dom';
-import { getActiveCustomer, getCustomer, getResolvedRoofLayout, upsertCustomer } from '../lib/customerStore';
+import {
+  formatEmailForDisplay,
+  getActiveCustomer,
+  getCustomer,
+  getResolvedRoofLayout,
+  upsertCustomer,
+} from '../lib/customerStore';
+import { exportRoofLayoutSitePlanPdf } from '../lib/exportRoofLayoutSitePlanPdf';
 import type { Solar3DOrbitSnapshot, Solar3DViewHandle } from '../components/Solar3DView';
 import { RoofLayoutDesignStepper } from '../components/roofLayout/RoofLayoutDesignStepper';
 import { RoofLayoutStatusStrip } from '../components/roofLayout/RoofLayoutStatusStrip';
@@ -300,6 +307,7 @@ export default function AIRoofLayout() {
   const [zoom3d, setZoom3d] = useState(1);
   const [layoutScrollViewport, setLayoutScrollViewport] = useState({ w: 0, h: 0 });
   const [savingToProposal, setSavingToProposal] = useState(false);
+  const [exportingSitePlan, setExportingSitePlan] = useState(false);
   const [lastSavedProjectId, setLastSavedProjectId] = useState<string | null>(null);
   const [loadedSavedAt, setLoadedSavedAt] = useState<string | null>(null);
   const [layoutMode, setLayoutMode] = useState<'saved' | 'editing'>('editing');
@@ -1399,6 +1407,118 @@ export default function AIRoofLayout() {
     }
   };
 
+  const handleExportSitePlanPdf = async () => {
+    if (!bgImage || !imageSize) {
+      setError('Nothing to export yet. Generate a layout first.');
+      return;
+    }
+    if (layoutMode === 'editing' && !isPolygonSummaryReady) {
+      setError('Draw the roof outline and place panels before exporting a site plan.');
+      return;
+    }
+
+    const prevViewTab = roofViewTab;
+    const needTemp2d = prevViewTab === '3d';
+
+    setExportingSitePlan(true);
+    setError(null);
+
+    try {
+      if (needTemp2d) {
+        flushSync(() => setRoofViewTab('2d'));
+        const deadline = Date.now() + 900;
+        let ready = false;
+        while (Date.now() < deadline) {
+          if (stageRef.current) {
+            await new Promise<void>((r) =>
+              requestAnimationFrame(() => requestAnimationFrame(() => r())),
+            );
+            try {
+              stageRef.current.batchDraw?.();
+            } catch {
+              /* ignore */
+            }
+            ready = true;
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 20));
+        }
+        if (!ready) {
+          setError('Could not prepare the 2D view for export. Open the 2D tab, then try again.');
+          return;
+        }
+      }
+
+      const cropPoly =
+        facets.find((f) => f.polygon && f.polygon.length >= 3)?.polygon ?? polygon;
+      const proposalCrop =
+        cropPoly && imageSize
+          ? computeProposalExportCrop(cropPoly, allPanelsFlat, imageSize)
+          : undefined;
+
+      const dataUrl = await captureLayoutImage({
+        format: 'jpeg',
+        quality: 0.9,
+        pixelRatio: 2,
+        crop: proposalCrop,
+      });
+      if (!dataUrl) {
+        setError('Could not capture the layout image. Open the 2D tab, then try again.');
+        return;
+      }
+
+      const master = activeProject?.master;
+      const exportWidthPx = proposalCrop?.width ?? imageSize.width;
+      const facetSummary =
+        facets.length > 1
+          ? facets
+              .filter((f) => f.polygon && f.polygon.length >= 3)
+              .map((f) => ({
+                label: f.label,
+                azimuthDeg: f.azimuthDeg,
+                panelCount: f.panels.length,
+              }))
+          : undefined;
+
+      const opened = exportRoofLayoutSitePlanPdf({
+        layoutImageDataUrl: dataUrl,
+        imageWidthPx: exportWidthPx,
+        metersPerPixel: METERS_PER_PIXEL,
+        customerName: master?.name?.trim() || 'Customer',
+        location: master?.location,
+        contactPerson: master?.contactPerson,
+        phone: master?.phone,
+        email: formatEmailForDisplay(master?.email),
+        customerNumber: master?.customerNumber,
+        projectNumber: master?.projectNumber,
+        latitude: master?.latitude ?? null,
+        longitude: master?.longitude ?? null,
+        panelCount: displayedPanelCount,
+        systemKw: displayedSystemKw,
+        targetSystemKw,
+        roofAreaM2:
+          layoutMode === 'editing' && !isPolygonSummaryReady ? null : (result?.roof_area_m2 ?? null),
+        usableAreaM2:
+          layoutMode === 'editing' && !isPolygonSummaryReady
+            ? null
+            : (result?.usable_area_m2 ?? null),
+        moduleWatts: effectiveWattage,
+        facetCount: facets.length,
+        facets: facetSummary,
+      });
+
+      if (!opened) {
+        setError('Pop-up blocked. Allow pop-ups for this site, then export again.');
+      }
+    } catch (e) {
+      setError('Could not export site plan PDF. Try again.');
+      if (import.meta.env.DEV) console.error('Site plan PDF export failed:', e);
+    } finally {
+      if (needTemp2d) setRoofViewTab(prevViewTab);
+      setExportingSitePlan(false);
+    }
+  };
+
   function computePanelsForPolygon(
     poly: Point[],
     maxPanelsCap: number = 120,
@@ -2120,8 +2240,17 @@ export default function AIRoofLayout() {
                     )}
                     <button
                       type="button"
+                      onClick={handleExportSitePlanPdf}
+                      disabled={exportingSitePlan || savingToProposal}
+                      className="min-h-[40px] inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                      title="Opens a print dialog — choose Save as PDF. Enable Background graphics for best output."
+                    >
+                      {exportingSitePlan ? 'Preparing…' : '⬇ Site plan PDF'}
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleSaveForProposal}
-                      disabled={savingToProposal}
+                      disabled={savingToProposal || exportingSitePlan}
                       className={`min-h-[40px] inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold border ${
                         lastSavedProjectId && activeProject?.master?.crmProjectId != null
                           ? 'bg-emerald-50 text-emerald-800 border-emerald-400'
@@ -3081,22 +3210,32 @@ export default function AIRoofLayout() {
                 role="region"
                 aria-label="Save layout"
               >
-                <button
-                  type="button"
-                  onClick={handleSaveForProposal}
-                  disabled={savingToProposal}
-                  className={`w-full min-h-[48px] inline-flex items-center justify-center px-5 py-3 rounded-xl text-sm font-semibold border touch-manipulation ${
-                    lastSavedProjectId && activeProject?.master?.crmProjectId != null
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-400'
-                      : 'bg-emerald-600 text-white border-emerald-700'
-                  } disabled:opacity-60`}
-                >
-                  {savingToProposal
-                    ? 'Saving…'
-                    : lastSavedProjectId && activeProject?.master?.crmProjectId != null
-                      ? '✓ Saved for Proposal'
-                      : 'Save to Proposal'}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleExportSitePlanPdf}
+                    disabled={exportingSitePlan || savingToProposal}
+                    className="min-h-[48px] flex-1 inline-flex items-center justify-center px-3 py-3 rounded-xl text-sm font-semibold border border-slate-300 bg-white text-slate-700 touch-manipulation disabled:opacity-60"
+                  >
+                    {exportingSitePlan ? '…' : '⬇ PDF'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveForProposal}
+                    disabled={savingToProposal || exportingSitePlan}
+                    className={`min-h-[48px] flex-[1.4] inline-flex items-center justify-center px-5 py-3 rounded-xl text-sm font-semibold border touch-manipulation ${
+                      lastSavedProjectId && activeProject?.master?.crmProjectId != null
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-400'
+                        : 'bg-emerald-600 text-white border-emerald-700'
+                    } disabled:opacity-60`}
+                  >
+                    {savingToProposal
+                      ? 'Saving…'
+                      : lastSavedProjectId && activeProject?.master?.crmProjectId != null
+                        ? '✓ Saved'
+                        : 'Save to Proposal'}
+                  </button>
+                </div>
                 <p className="mt-1.5 text-center text-[10px] text-gray-500">
                   Proposal embed:{' '}
                   <strong className="text-gray-700">

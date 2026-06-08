@@ -794,7 +794,7 @@ export default function HelpPage() {
               <li><strong>Locate site</strong> — CRM coordinates, optional Maps override, <strong>Generate / Regenerate AI Layout</strong></li>
               <li><strong>Outline roof</strong> — drag corners; <strong>Undo</strong> / <strong>Redo</strong></li>
               <li><strong>Place panels</strong> — keepouts, density, orientation, <strong>Refill panels</strong> toward target kW</li>
-              <li><strong>Review &amp; save</strong> — status strip, then <strong>Save to Proposal</strong></li>
+              <li><strong>Review &amp; save</strong> — status strip, then <strong>Save to Proposal</strong> or export a standalone <strong>⬇ Site plan PDF</strong> (letterhead, customer block, north arrow, scale bar — use <em>Save as PDF</em> in the print dialog; enable <strong>Background graphics</strong>)</li>
             </ol>
           </div>
 

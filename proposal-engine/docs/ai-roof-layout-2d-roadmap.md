@@ -78,7 +78,7 @@ Principles:
 | 10 | **Smarter fill** | Target kW from CRM; respect keepouts; Fill / Clear / Refill |
 | 11 | **Measurements** | Edge length (m) on hover; snap 90° / parallel |
 | 12 | **Imagery** | Opacity; optional contrast; proper pan/zoom viewport on mobile |
-| 13 | **Export** | PNG + PDF site plan (logo, customer, scale, north) |
+| 13 | **Export** | PNG + PDF site plan (logo, customer, scale, north) | ✅ Site plan PDF (browser print, May 2026) |
 
 Align backend `computePanelPacking` with **polygon geometry**, not only `usableAreaM2`.
 

@@ -112,7 +112,7 @@ Route unchanged: lazy `Customers` in `App.tsx`. `NewCustomerModal` still re-expo
 | ~~**2e**~~ | ~~Bundle measurement~~ — done (`chunkSizeWarningLimit: 600`; dynamic import deferred — low payoff vs risk) |
 | ~~**3a**~~ | ~~WIP vs server sync banner~~ — done (`ServerSyncBanner` on Dashboard; `markServerSynced` in Dashboard + CustomerWorkspace) |
 | **3b** | Central save pipeline (deferred — higher effort, lower urgency than Phase 4) |
-| **4** | Product — AI Roof Layout P1 (see [ai-roof-layout-2d-roadmap.md](./ai-roof-layout-2d-roadmap.md)): **v1 done** multi-facet + azimuth + refill-all; **next** PDF site plan, 90° snap, circle keepouts |
+| **4** | Product — AI Roof Layout P1 (see [ai-roof-layout-2d-roadmap.md](./ai-roof-layout-2d-roadmap.md)): **v1 done** multi-facet + azimuth + refill-all + **site plan PDF**; **next** 90° snap, circle keepouts |
 | **4 quick wins** | Anytime: centralise `METERS_PER_PIXEL` + panel size; always save full geometry JSON; keyboard shortcuts (`Esc` pan, `E` edit, `Ctrl+Z`/`Y` undo) |
 
 ---

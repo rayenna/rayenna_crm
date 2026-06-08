@@ -176,7 +176,7 @@ POST /ai-layout
 | **Phase 2** | OpenCV + background worker | ❌ **Not started** |
 | **Phase 3** | Persist layout URL; panel wattage in CRM | ✅ **Done** (`ProjectRoofLayout` + `panelCapacityW` on Project) |
 | **P0 UX** (roadmap) | Stepper, undo, chrome, desktop layout | ✅ Largely done (see roadmap) |
-| **P1** (roadmap) | Keepouts, multi-facet, measurements, PDF site plan | 🟡 Keepouts + multi-facet + measurements **done**; **PDF site plan pending** |
+| **P1** (roadmap) | Keepouts, multi-facet, measurements, PDF site plan | ✅ Keepouts + multi-facet + measurements + **site plan PDF** (May 2026); 90° snap + circle keepouts pending |
 | **P2** (roadmap) | Yield hints, SKU dimensions, India copy | ❌ Not started |
 | **Phase 4 v1** | SolarEdge-style multi-facet | ✅ **Done** (May 2026) |
 | **Ops** | Delete layout, GPS validation | ✅ **Done** (May 2026) |
@@ -205,7 +205,7 @@ From original plan and [ai-roof-layout-2d-roadmap.md](./docs/ai-roof-layout-2d-r
 
 - [ ] Real roof segmentation (OpenCV or external CV) instead of rectangle seed  
 - [ ] Background worker + 202/poll for long-running generates  
-- [ ] PDF **site plan** export (logo, scale, north, customer block)  
+- [x] PDF **site plan** export (logo, scale, north, customer block) — browser print from AI Roof Layout (May 2026)  
 - [ ] Circle keepouts, 90° / parallel snap  
 - [ ] Param-based image cache keyed by `systemSizeKw` + `panelWattage` (today: per-`projectId` files + DB)  
 - [ ] Smarter obstacle detection (currently stub)  
