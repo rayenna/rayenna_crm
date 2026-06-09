@@ -200,6 +200,7 @@ export function applyProposalEngineProjectDetail(
     salespersonName: (p.salesperson?.name ?? '').trim() || existing.master.salespersonName,
     projectStage: projectStage ?? existing.master.projectStage,
     panelType: (p.panelType ?? '').trim() || existing.master.panelType,
+    panelBrand: (p.panelBrand ?? '').trim() || existing.master.panelBrand,
     latitude: typeof cust.latitude === 'number' ? cust.latitude : existing.master.latitude,
     longitude: typeof cust.longitude === 'number' ? cust.longitude : existing.master.longitude,
     panelWattage: typeof p.panelCapacityW === 'number' ? p.panelCapacityW : existing.master.panelWattage,

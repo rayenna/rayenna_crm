@@ -1,5 +1,9 @@
 import { buildRoofLayoutGeometry, type RoofLayoutKeepoutGeometry } from '../roofLayoutGeometry';
-import { getOrientedPanelSizeM } from '../roofLayoutConstants';
+import {
+  orientModuleDimensions,
+  resolveModuleDimensions,
+  type ResolvedModuleDimensions,
+} from './resolveModuleDimensions';
 import type { RoofFacetState } from '../roofLayoutFacets';
 import { keepoutToGeometryJson } from './keepoutGeometry';
 import type { RoofLayoutKeepout, RoofLayoutPoint } from './roofLayoutTypes';
@@ -21,6 +25,7 @@ export function buildSavedRoofLayoutGeometry(params: {
   panelSpacingMultiplier: number;
   panelWatts: number;
   edgeSetbackM?: number;
+  resolvedModule?: ResolvedModuleDimensions;
 }) {
   const {
     imageSize,
@@ -31,10 +36,13 @@ export function buildSavedRoofLayoutGeometry(params: {
     panelWatts,
     metersPerPixel,
     edgeSetbackM = 0,
+    resolvedModule,
   } = params;
   if (!facets.some((f) => f.polygon && f.polygon.length >= 3)) return undefined;
 
-  const moduleSize = getOrientedPanelSizeM(panelWatts, panelOrientation);
+  const resolved =
+    resolvedModule ?? resolveModuleDimensions({ panelWattage: panelWatts });
+  const moduleSize = orientModuleDimensions(resolved, panelOrientation);
   return buildRoofLayoutGeometry({
     imageWidth: imageSize.width,
     imageHeight: imageSize.height,

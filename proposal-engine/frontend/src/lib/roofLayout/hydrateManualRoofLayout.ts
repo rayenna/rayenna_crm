@@ -1,7 +1,11 @@
 import { parseRoofLayoutGeometry, type AiRoofLayoutResponse } from '../api/roofLayout';
 import { getApiBaseUrl } from '../api/core';
 import type { RoofFacetState } from '../roofLayoutFacets';
-import { ROOF_LAYOUT_METERS_PER_PIXEL } from '../roofLayoutConstants';
+import {
+  ROOF_LAYOUT_DEFAULT_PANEL_HEIGHT_M,
+  ROOF_LAYOUT_DEFAULT_PANEL_WIDTH_M,
+  ROOF_LAYOUT_METERS_PER_PIXEL,
+} from '../roofLayoutConstants';
 import {
   absolutizeLayoutImageUrl,
   cacheBustImageUrl,
@@ -85,8 +89,8 @@ export function parseManualRoofLayoutHydrate(
           keepouts: [],
           panelOrientation: 'portrait',
           panelSpacingMultiplier: 1.5,
-          panelWidthM: 1.1,
-          panelHeightM: 2.2,
+          panelWidthM: ROOF_LAYOUT_DEFAULT_PANEL_WIDTH_M,
+          panelHeightM: ROOF_LAYOUT_DEFAULT_PANEL_HEIGHT_M,
         })
       : null);
 

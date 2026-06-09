@@ -14,6 +14,8 @@ export type ComputePanelsOptions = {
   panelOrientation: 'portrait' | 'landscape';
   panelSpacingMultiplier: number;
   panelWatts: number;
+  /** Oriented module size (m). When set, overrides wattage-table lookup. */
+  moduleSizeM?: { widthM: number; heightM: number };
   maxPanelsCap?: number;
   keepoutRects?: RoofLayoutKeepout[];
   targetKw?: number | null;
@@ -62,7 +64,9 @@ export function computePanelsForPolygon(
   const packUsableAreaM2 =
     packAreaPx * metersPerPixel * metersPerPixel * ROOF_LAYOUT_USABLE_AREA_FACTOR;
 
-  const { widthM, heightM } = getOrientedPanelSizeM(options.panelWatts, options.panelOrientation);
+  const { widthM, heightM } =
+    options.moduleSizeM ??
+    getOrientedPanelSizeM(options.panelWatts, options.panelOrientation);
   const panelAreaM2 = widthM * heightM;
 
   const idealPanelCount = Math.max(

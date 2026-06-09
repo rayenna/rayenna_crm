@@ -2,7 +2,7 @@
 
 **Purpose:** Resume structural improvement work without re-discovering context.  
 **Last updated:** 2026-05-20  
-**Status:** **Phase 4 v1** in progress — multi-facet roof layout (≤3 sections, v2 geometry). Structural modernisation (2a–3a) complete. Benchmark: **SolarEdge Designer** (imagery + multi-facet placement).
+**Status:** **Phase 4 P1 complete**; **P2 SKU panel dimensions** shipped (costing/BOM spec → brand catalog → wattage fallback). Structural modernisation (2a–3a) complete. **Next:** P2 yield hints / India copy or Track B slice 3 (`AIRoofLayout.tsx`).
 
 ---
 
@@ -106,6 +106,7 @@ Route unchanged: lazy `Customers` in `App.tsx`. `NewCustomerModal` still re-expo
 |-------|-----------|---------------------|
 | **1** | `RoofLayoutKonvaStage`, `lib/roofLayout/*` (types, page utils, capture, panel packing, customer sync) | ~2,526 lines |
 | **2** | `generateRoofLayoutDraft`, `hydrateManualRoofLayout`, `roofLayoutGeometrySave`, `roofLayoutSaveExport`; `RoofLayoutPageHeader`, `RoofLayoutActiveCustomerBanner`, `RoofLayoutOverridePanel`, `RoofLayoutExportActions` | ~1,997 lines |
+| **2b** (Jun 2026) | `RoofLayoutPreviewToolbar` — preview chrome only (2D/3D + undo); export moved to xl sidebar / md–lg stacked row | `AIRoofLayout.tsx` ~2.1k lines |
 
 Slice 3 (deferred): scroll/viewport effects, 3D tab shell, optional `useRoofLayoutEditorState` hook — target ~1,500 lines.
 
@@ -121,8 +122,8 @@ Slice 3 (deferred): scroll/viewport effects, 3D tab shell, optional `useRoofLayo
 | ~~**2e**~~ | ~~Bundle measurement~~ — done (`chunkSizeWarningLimit: 600`; dynamic import deferred — low payoff vs risk) |
 | ~~**3a**~~ | ~~WIP vs server sync banner~~ — done (`ServerSyncBanner` on Dashboard; `markServerSynced` in Dashboard + CustomerWorkspace) |
 | **3b** | Central save pipeline (deferred — higher effort, lower urgency than Phase 4) |
-| **4** | Product — AI Roof Layout P1: Track C + **quick wins (May 2026)** — honest copy, keyboard hints, geometryJson guard on save; **next** Track B slice 3 or P1 polish (setbacks / mobile viewport) |
-| **4 quick wins** | Remaining: centralise `METERS_PER_PIXEL` + panel size with backend worker |
+| **4** | Product — AI Roof Layout **P1 complete** (Jun 2026); **P2 SKU dimensions** (May 2026): `resolveModuleDimensions`, status strip source label; **next** P2 yield / India copy or Track B slice 3 |
+| ~~**4 quick wins**~~ | ~~Centralise `METERS_PER_PIXEL`~~ — done Jun 2026 (`src/constants/roofLayoutScale.ts` + `roofLayoutConstants.ts` + parity tests) |
 
 ---
 
@@ -143,7 +144,7 @@ Staging: [SMOKE_CHECKLIST.md](./SMOKE_CHECKLIST.md). Costing smoke: save sheet, 
 | Render service | Redeploy? | Why |
 |----------------|-----------|-----|
 | **rayenna-proposal-engine** (static) | **Yes** | Changes under `proposal-engine/frontend/` |
-| **CRM API** (Web Service) | **No** | Unless `src/` / `prisma/` changed in same batch |
+| **CRM API** (Web Service) | **No** | Unless `src/` / `prisma/` changed in same batch (e.g. `roofLayoutScale.ts` Jun 2026 → redeploy API) |
 | **rayenna-crm-frontend** | **No** | Unless `client/` changed |
 
 Vercel PE project: redeploy if used (same as Render PE).
@@ -154,7 +155,22 @@ Vercel PE project: redeploy if used (same as Render PE).
 
 PE-only commits under `proposal-engine/`. Do not mix with CRM paths in one commit.
 
-When resuming in Cursor: *“Continue PE modernization from `proposal-engine/docs/MODERNIZATION_PROGRESS.md`, start Phase 4.”*
+When resuming in Cursor: *“Continue PE modernization from `proposal-engine/docs/MODERNIZATION_PROGRESS.md` — next: P2 yield hints or Track B slice 3.”*
+
+---
+
+## AI Roof Layout — product log (Jun 2026)
+
+| Commit | Summary |
+|--------|---------|
+| `33a3344` | Save sync: workflow stepper + status badge follow `lastSavedProjectId` |
+| `e34d67a` | **Saved — unsaved changes** via `roofLayoutGeometryFingerprint` |
+| `5163656` | Edge setback (0–0.6 m), mobile scroll margin, **Center** map button |
+| `40c6e4e` | Preview toolbar redesign; export in xl sidebar; mobile UX/accessibility |
+| `a1bdec8` / `4174f6a` | `METERS_PER_PIXEL` + seed polygon constants (CRM authoritative, PE parity tests) |
+| *(local)* | **P2 SKU dimensions:** `resolveModuleDimensions` chain; panel pack + save geometry + status strip |
+
+Prod smoke verified on Render after `40c6e4e` + scale deploy.
 
 ---
 

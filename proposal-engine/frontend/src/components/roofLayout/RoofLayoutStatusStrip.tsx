@@ -9,6 +9,10 @@ type Props = {
   layoutState: 'draft' | 'saved' | 'saved-dirty' | 'idle';
   savedAt: string | null;
   moduleWatts: number;
+  /** Oriented module width × height (m) when known from CRM SKU resolution. */
+  moduleWidthM?: number | null;
+  moduleHeightM?: number | null;
+  moduleSizeSource?: string | null;
   /** Placed module area ÷ usable roof area (0–100+). */
   fillPercent?: number | null;
   /** systemKw − targetSystemKw when both known. */
@@ -28,6 +32,9 @@ export function RoofLayoutStatusStrip({
   layoutState,
   savedAt,
   moduleWatts,
+  moduleWidthM,
+  moduleHeightM,
+  moduleSizeSource,
   fillPercent,
   kwVsTarget,
   facetCount = 1,
@@ -101,8 +108,26 @@ export function RoofLayoutStatusStrip({
         </p>
       )}
       <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-[11px] text-slate-500">
-        <span>
+        <span
+          title={
+            moduleSizeSource
+              ? `Module size from ${moduleSizeSource}`
+              : undefined
+          }
+        >
           Module: <strong className="text-slate-700">{moduleWatts} W</strong>
+          {moduleWidthM != null &&
+            moduleHeightM != null &&
+            Number.isFinite(moduleWidthM) &&
+            Number.isFinite(moduleHeightM) && (
+              <>
+                {' '}
+                ·{' '}
+                <strong className="text-slate-700 tabular-nums">
+                  {moduleWidthM.toFixed(2)} × {moduleHeightM.toFixed(2)} m
+                </strong>
+              </>
+            )}
           {facetCount > 1 && (
             <>
               {' '}

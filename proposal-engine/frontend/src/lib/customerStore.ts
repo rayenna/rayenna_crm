@@ -134,6 +134,9 @@ export interface CustomerMaster {
   /** Panel type from the CRM Project, e.g. DCR, Non-DCR, Mono PERC. */
   panelType?:       string;
 
+  /** Panel brand from CRM Project lifecycle (e.g. Waaree, Adani). Used for module SKU dimensions. */
+  panelBrand?:      string;
+
   /** Latitude for site (e.g. for AI Roof Layout or maps). Filled from CRM customer when available. */
   latitude?:        number;
 

@@ -12,8 +12,12 @@ import { saveRoofLayout3dImage } from '../lib/api/roofLayout';
 import {
   ROOF_LAYOUT_METERS_PER_PIXEL,
   ROOF_LAYOUT_PANEL_SPACING_M,
-  getOrientedPanelSizeM,
 } from '../lib/roofLayoutConstants';
+import { findPvModuleArtifactLine } from '../lib/roofLayout/pvModuleFromArtifacts';
+import {
+  orientModuleDimensions,
+  resolveModuleDimensions,
+} from '../lib/roofLayout/resolveModuleDimensions';
 import {
   absolutizeLayoutImageUrl,
   focalPointForEditingPolygon,
@@ -103,6 +107,28 @@ export default function AIRoofLayout() {
     if (crmPanelWattage != null) return crmPanelWattage;
     return 550;
   })();
+
+  const pvModuleLine = useMemo(
+    () => findPvModuleArtifactLine(activeProject?.costing, activeProject?.bom),
+    [activeProject?.costing, activeProject?.bom],
+  );
+
+  const resolvedModule = useMemo(
+    () =>
+      resolveModuleDimensions({
+        panelWattage: effectiveWattage,
+        panelBrand: activeProject?.master?.panelBrand,
+        artifactSpecification: pvModuleLine?.specification,
+        artifactBrand: pvModuleLine?.brand,
+      }),
+    [
+      effectiveWattage,
+      activeProject?.master?.panelBrand,
+      pvModuleLine?.specification,
+      pvModuleLine?.brand,
+    ],
+  );
+
   // 75% zoom gives a good first view at zoom=19 (307 m coverage).
   const [zoom, setZoom] = useState(0.75);
   /** 3D layout preview zoom (separate from 2D Konva zoom). Scales scroll content so WebGL resizes — stays sharp. */
@@ -118,6 +144,12 @@ export default function AIRoofLayout() {
   const [panelSpacingMultiplier, setPanelSpacingMultiplier] = useState(1.5);
   const [edgeSetbackM, setEdgeSetbackM] = useState(0);
   const [panelOrientation, setPanelOrientation] = useState<'portrait' | 'landscape'>('portrait');
+
+  const orientedModuleSizeM = useMemo(
+    () => orientModuleDimensions(resolvedModule, panelOrientation),
+    [resolvedModule, panelOrientation],
+  );
+
   const [roofViewTab, setRoofViewTab] = useState<'2d' | '3d'>('2d');
   const [last3dPngDataUrl, setLast3dPngDataUrl] = useState<string | null>(null);
   // Controls which image we embed when the user clicks "Save for proposal".
@@ -299,8 +331,16 @@ export default function AIRoofLayout() {
       keepoutRects: keepouts,
       edgeSetbackM,
       metersPerPixel: ROOF_LAYOUT_METERS_PER_PIXEL,
+      moduleSizeM: orientedModuleSizeM,
     }),
-    [panelOrientation, panelSpacingMultiplier, effectiveWattage, keepouts, edgeSetbackM],
+    [
+      panelOrientation,
+      panelSpacingMultiplier,
+      effectiveWattage,
+      keepouts,
+      edgeSetbackM,
+      orientedModuleSizeM,
+    ],
   );
 
   const allPanelsFlat = flattenFacetPanels(facets);
@@ -326,8 +366,18 @@ export default function AIRoofLayout() {
         imageSize,
         metersPerPixel: ROOF_LAYOUT_METERS_PER_PIXEL,
         edgeSetbackM,
+        resolvedModule,
       }),
-    [facets, keepouts, panelOrientation, panelSpacingMultiplier, effectiveWattage, imageSize, edgeSetbackM],
+    [
+      facets,
+      keepouts,
+      panelOrientation,
+      panelSpacingMultiplier,
+      effectiveWattage,
+      imageSize,
+      edgeSetbackM,
+      resolvedModule,
+    ],
   );
 
   const hasUnsavedLayoutChanges =
@@ -377,7 +427,7 @@ export default function AIRoofLayout() {
 
   const layoutFillPercent = (() => {
     if (!isPolygonSummaryReady || !result?.usable_area_m2 || result.usable_area_m2 <= 0) return null;
-    const { widthM, heightM } = getOrientedPanelSizeM(effectiveWattage, panelOrientation);
+    const { widthM, heightM } = orientedModuleSizeM;
     const placed = allPanelsFlat.length * widthM * heightM;
     return (placed / result.usable_area_m2) * 100;
   })();
@@ -849,6 +899,7 @@ export default function AIRoofLayout() {
         panelOrientation,
         panelSpacingMultiplier,
         effectiveWattage,
+        resolvedModule,
         edgeSetbackM,
         metersPerPixel: ROOF_LAYOUT_METERS_PER_PIXEL,
         roofViewTab,
@@ -1044,7 +1095,7 @@ export default function AIRoofLayout() {
     const cy = imageSize.height / 2;
     const { halfWPx, halfHPx } = initialPolygonHalfExtentsPx(systemKw, effectiveWattage, cx);
 
-    const { widthM, heightM } = getOrientedPanelSizeM(effectiveWattage, panelOrientation);
+    const { widthM, heightM } = orientedModuleSizeM;
     const panelWidthPx = widthM / ROOF_LAYOUT_METERS_PER_PIXEL;
     const panelHeightPx = heightM / ROOF_LAYOUT_METERS_PER_PIXEL;
     const spacingPx = (ROOF_LAYOUT_PANEL_SPACING_M / ROOF_LAYOUT_METERS_PER_PIXEL) * panelSpacingMultiplier;
@@ -1159,7 +1210,7 @@ export default function AIRoofLayout() {
 
   const handleSnapOutlineToGrid = () => {
     if (!polygon) return;
-    const { widthM, heightM } = getOrientedPanelSizeM(effectiveWattage, panelOrientation);
+    const { widthM, heightM } = orientedModuleSizeM;
     const panelWidthPx = widthM / ROOF_LAYOUT_METERS_PER_PIXEL;
     const panelHeightPx = heightM / ROOF_LAYOUT_METERS_PER_PIXEL;
     const spacingPx = (ROOF_LAYOUT_PANEL_SPACING_M / ROOF_LAYOUT_METERS_PER_PIXEL) * panelSpacingMultiplier;
@@ -1378,6 +1429,9 @@ export default function AIRoofLayout() {
                   layoutState={layoutStateLabel}
                   savedAt={loadedSavedAt}
                   moduleWatts={effectiveWattage}
+                  moduleWidthM={orientedModuleSizeM.widthM}
+                  moduleHeightM={orientedModuleSizeM.heightM}
+                  moduleSizeSource={resolvedModule.sourceLabel}
                   fillPercent={layoutFillPercent}
                   kwVsTarget={kwVsTarget}
                   facetCount={facets.length}

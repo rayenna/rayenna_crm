@@ -1,7 +1,7 @@
 
 # AI Roof Layout — Implementation Plan & Status
 
-> **Last updated:** 2026-05-23  
+> **Last updated:** 2026-06-09  
 > **Status:** **Core 2D module shipped** and in active use. This file is the **module plan + delivery record** for the original “AI roof detection & solar layout” initiative.  
 > **Active roadmap (P1/P2 backlog):** [docs/ai-roof-layout-2d-roadmap.md](./docs/ai-roof-layout-2d-roadmap.md)  
 > **Structural / refactor log:** [docs/MODERNIZATION_PROGRESS.md](./docs/MODERNIZATION_PROGRESS.md)
@@ -53,7 +53,8 @@
 | API routes | `src/routes/roofLayout.ts` | Mounted: `apiRouter.use('/roof', roofLayoutRoutes)` |
 | Geometry types (server) | `src/types/roofLayoutGeometry.ts` | v2 facets; `legacyCoordinatesFromGeometry()` for API compat |
 | Satellite fetch | `src/services/satelliteFetcher.ts` | Google Static Maps → `generated_layouts/{projectId}_satellite.png` |
-| Layout job | `src/workers/layoutGenerationWorker.ts` | Sync pipeline: satellite → area/obstacle stubs → pack count → AI layout PNG |
+| Scale constants (authoritative) | `src/constants/roofLayoutScale.ts` | `METERS_PER_PIXEL`, seed polygon math; PE mirror in `roofLayoutConstants.ts` + parity tests |
+| Layout job | `src/workers/layoutGenerationWorker.ts` | Sync pipeline: satellite → area/obstacle stubs → pack count → AI layout PNG; seed polygon via `computeSeedRoofPolygonCoords` |
 | Area / obstacles | `src/services/roofSegmentationService.ts`, `obstacleDetector.ts` | Heuristic / stub (not real CV segmentation) |
 | Panel packing (job) | `src/services/panelPackingEngine.ts` | Used at **generate** time for metrics + initial count |
 | AI layout render | `src/services/layoutRenderer.ts` | `{projectId}_ai_layout.png` |
@@ -62,8 +63,8 @@
 | Generated files | `generated_layouts/` (repo root) | Also served at `/api/generated_layouts` and `/generated_layouts` |
 | DB | `prisma` → `ProjectRoofLayout` | `geometryJson`, `satelliteImageUrl`, `layoutImage3dUrl`, `prefer3dForProposal` |
 | PE page | `proposal-engine/frontend/src/pages/AIRoofLayout.tsx` | Konva canvas, hydrate from `GET manual-layout` |
-| PE components | `proposal-engine/frontend/src/components/roofLayout/` | Stepper, facet bar, status strip, map chrome, undo, panels, keepouts, adjust |
-| PE libs | `lib/roofLayoutGeometry.ts`, `roofLayoutFacets.ts`, `roofLayoutConstants.ts`, `roofLayoutEdgeMeasure.ts`, `roofLayoutSatelliteImage.ts` | v2 geometry; facet state; edge lengths |
+| PE components | `proposal-engine/frontend/src/components/roofLayout/` | Stepper, facet bar, status strip, `RoofLayoutPreviewToolbar`, map chrome, undo, panels, keepouts, adjust, export actions |
+| PE libs | `lib/roofLayoutGeometry.ts`, `roofLayoutFacets.ts`, `roofLayoutConstants.ts`, `lib/roofLayout/*` | v2 geometry; facet state; edge lengths; `polygonEdgeSetback`, `roofLayoutGeometryFingerprint`, panel packing |
 | PE API client | `lib/api/roofLayout.ts` | `generateAiRoofLayout`, `saveManualRoofLayoutImage`, `fetchManualRoofLayout`, `deleteRoofLayout`, 3D save |
 | Proposal | `pages/ProposalPreview.tsx`, `proposal/roofLayoutForProposal.ts` | Include layout in proposal; availability checks |
 | 3D view | `components/Solar3DView.tsx`, `lib/solar3DHelpers.ts` | Lazy-loaded; optional export |
@@ -141,8 +142,9 @@ POST /ai-layout
 | Delete layout (modal confirm, blank + Generate) | ✅ May 2026 |
 | Satellite base + Konva panels | ✅ |
 | Drag roof polygon + move whole roof | ✅ |
-| Undo / redo polygon | ✅ |
-| Rectangular keepouts | ✅ |
+| Undo / redo polygon | ✅ (shown only when history exists) |
+| Rectangular + circle keepouts | ✅ |
+| Edge setback band (0–0.6 m) for panel packing | ✅ Jun 2026 |
 | Panel density, portrait/landscape, opacity, zoom | ✅ |
 | Refill / clear panels (active facet + refill all) | ✅ |
 | Edge length on hover (m) | ✅ |
@@ -153,9 +155,14 @@ POST /ai-layout
 | Mobile: Scroll map / Edit polygon / Keepouts | ✅ |
 | 2D / 3D tabs + 3D export | ✅ |
 | Draft vs saved indicators | ✅ |
+| **Saved — unsaved changes** after post-save edits | ✅ Jun 2026 (`roofLayoutGeometryFingerprint`) |
+| Desktop preview toolbar (2D/3D + undo only; export in xl sidebar) | ✅ Jun 2026 (`RoofLayoutPreviewToolbar`) |
+| Mobile: 44px touch targets, sticky Save/PDF, layout-tools accordion | ✅ Jun 2026 |
 | Map GPS / Kerala warnings | ✅ May 2026 |
 
 **Honest product copy:** Satellite-assisted **draft**; roof outline is **user-drawn**, not auto-traced.
+
+**Desktop layout (xl):** Left stepper · Centre map + preview chrome · Right **Proposal export** + layout tools.
 
 ---
 
@@ -176,8 +183,8 @@ POST /ai-layout
 | **Phase 2** | OpenCV + background worker | ❌ **Not started** |
 | **Phase 3** | Persist layout URL; panel wattage in CRM | ✅ **Done** (`ProjectRoofLayout` + `panelCapacityW` on Project) |
 | **P0 UX** (roadmap) | Stepper, undo, chrome, desktop layout | ✅ Largely done (see roadmap) |
-| **P1** (roadmap) | Keepouts, multi-facet, measurements, PDF site plan | ✅ Keepouts + multi-facet + measurements + **site plan PDF** (May 2026); 90° snap + circle keepouts pending |
-| **P2** (roadmap) | Yield hints, SKU dimensions, India copy | ❌ Not started |
+| **P1** (roadmap) | Keepouts, multi-facet, measurements, PDF site plan | ✅ **Done** (May–Jun 2026): keepouts, multi-facet, measurements, site plan PDF, 90° snap, circle keepouts, edge setback, toolbar/mobile polish |
+| **P2** (roadmap) | Yield hints, SKU dimensions, India copy | 🟡 SKU dimensions ✅ (May 2026); yield + India copy pending |
 | **Phase 4 v1** | SolarEdge-style multi-facet | ✅ **Done** (May 2026) |
 | **Ops** | Delete layout, GPS validation | ✅ **Done** (May 2026) |
 
@@ -209,9 +216,10 @@ From original plan and [ai-roof-layout-2d-roadmap.md](./docs/ai-roof-layout-2d-r
 - [x] Circle keepouts, 90° / parallel snap (May 2026)  
 - [ ] Param-based image cache keyed by `systemSizeKw` + `panelWattage` (today: per-`projectId` files + DB)  
 - [ ] Smarter obstacle detection (currently stub)  
-- [ ] P2 yield / module SKU dimensions from BOM  
+- [x] P2 module SKU dimensions from costing/BOM + `panelBrand` catalog (May 2026)  
+- [ ] P2 yield hints / India spacing copy  
 
-**Quick wins (roadmap):** centralise `METERS_PER_PIXEL` with worker; keyboard shortcuts (`Esc` / `E` / undo); ~~further split `AIRoofLayout.tsx`~~ slices 1–2 done (~2k lines; slice 3 deferred).
+**Quick wins (roadmap):** ~~centralise `METERS_PER_PIXEL` with worker~~ ✅ Jun 2026 (`src/constants/roofLayoutScale.ts` + PE parity tests); keyboard shortcuts (`Esc` / `E` / `K` / undo) ✅; ~~further split `AIRoofLayout.tsx`~~ slices 1–2 done (~2k lines; slice 3 deferred).
 
 ---
 
@@ -256,6 +264,10 @@ Unit tests: `proposal-engine/frontend` (`roofLayoutGeometry.test.ts`, etc.); roo
 | 2026-05-22 | **Phase 4 v1:** Multi-facet (≤3), v2 geometry (PE + `src/types`), azimuth, refill-all, aggregated metrics |
 | 2026-05-23 | Customers: **Map GPS** + **Roof layout** badges, **5** artifact dots; Kerala GPS validation (CRM + API + PE); **Delete layout** + `ConfirmDangerModal`; satellite/URL fixes; help docs updated |
 | 2026-05-20 | **Track C:** 90°/parallel vertex snap on polygon drag; circle keepouts (geometry JSON v2, panel packing, cross-device hydrate) |
+| 2026-06-09 | **Track A:** Save sync stepper + **Saved — unsaved changes** badge (`e34d67a`, `33a3344`) |
+| 2026-06-09 | **Track B P1:** Edge setback slider (0–0.6 m), mobile scroll buffer + **Center** map (`5163656`) |
+| 2026-06-09 | **Toolbar redesign:** slim preview chrome; PDF/Save in xl sidebar; mobile sticky export (`40c6e4e`) |
+| 2026-06-09 | **Scale centralisation:** `src/constants/roofLayoutScale.ts` + PE mirror + parity tests (`a1bdec8`, `4174f6a`); prod smoke pass |
 
 ---
 

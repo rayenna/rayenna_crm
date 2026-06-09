@@ -39,6 +39,7 @@ export interface ProposalEngineProjectFromApi {
   projectStatus?: string | null;
   projectStage?: string | null;
   panelCapacityW?: number | null;
+  panelBrand?: string | null;
   peStatus?: 'not-started' | 'draft' | 'proposal-ready' | string;
   peArtifacts?: PeArtifactsFromApi;
   peSelectedAt?: string | null;

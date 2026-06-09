@@ -2,6 +2,7 @@ import type { ParsedRoofLayoutGeometry } from '../roofLayoutGeometry';
 import { ROOF_LAYOUT_METERS_PER_PIXEL } from '../roofLayoutConstants';
 import type { RoofFacetState } from '../roofLayoutFacets';
 import { buildSavedRoofLayoutGeometry } from './roofLayoutGeometrySave';
+import type { ResolvedModuleDimensions } from './resolveModuleDimensions';
 import type { RoofLayoutKeepout } from './roofLayoutTypes';
 
 function roundCoord(n: number): number {
@@ -82,6 +83,7 @@ export function fingerprintRoofLayoutEditorState(params: {
   imageSize: { width: number; height: number } | null;
   metersPerPixel?: number;
   edgeSetbackM?: number;
+  resolvedModule?: ResolvedModuleDimensions;
 }): string | null {
   if (!params.imageSize) return null;
 
@@ -94,6 +96,7 @@ export function fingerprintRoofLayoutEditorState(params: {
     panelSpacingMultiplier: params.panelSpacingMultiplier,
     panelWatts: params.panelWatts,
     edgeSetbackM: params.edgeSetbackM ?? 0,
+    resolvedModule: params.resolvedModule,
   });
   if (!built) return null;
 

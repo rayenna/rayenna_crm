@@ -1,7 +1,7 @@
 # AI Roof Layout — 2D roadmap (bookmark)
 
-**Status:** Phase 4 in progress — multi-facet v1 shipped (2026-05-22); P0/P1 UX largely done  
-**Last updated:** 2026-05-22  
+**Status:** P1 complete; **P2 item 15 (SKU dimensions)** shipped (2026-05-20); **next** P2 yield hints / India copy or Track B slice 3 refactor  
+**Last updated:** 2026-05-20  
 **Architecture:** [ARCHITECTURE.md](./ARCHITECTURE.md)  
 **Scope:** 2D layout only (3D deferred until 2D reaches SaaS bar)  
 **Primary UI:** `proposal-engine/frontend/src/pages/AIRoofLayout.tsx`  
@@ -29,14 +29,15 @@ Win on **workflow integration** first; match **design-studio feel** in P0/P1.
 |------|--------|----------------|
 | Imagery | Single Google static satellite (~2048×2048, zoom 19) | HD tiles, layers |
 | Roof outline | **Centered rectangle** seeded in worker; user drags corners | AI trace or CAD/LIDAR facets |
-| Panels | One polygon; grid fill; density + orientation | Multi-facet arrays, keepouts, setbacks |
-| Obstacles | Backend stub (`detectObstaclesM2`); **keepouts in 2D UI** (rect) | Shade, setbacks, auto-detect |
+| Panels | Multi-facet grid fill; density + orientation; **edge setback band** (0–0.6 m) | Multi-facet arrays, keepouts, setbacks |
+| Obstacles | Backend stub (`detectObstaclesM2`); **keepouts in 2D UI** (rect + circle) | Shade, setbacks, auto-detect |
 | Roofs | **Up to 3 facets** + azimuth per section (v2 geometry) | Multiple facets + azimuth each |
 | Electrical | None in 2D | Stringing, MPPT (out of 2D scope for now) |
 | Output | Cropped JPEG + m² / panel count → proposal | Site plan PDF, BOM tie-in |
-| UX | Konva; stepper/status/undo; keepouts; mobile toolbar (2026-05) | Multi-facet, PDF site plan, shortcuts |
+| UX | Konva; stepper/status/undo; keepouts; xl sidebar export; mobile sticky Save/PDF (2026-06) | Multi-facet, PDF site plan, shortcuts |
+| Scale | **`src/constants/roofLayoutScale.ts`** ↔ PE `roofLayoutConstants.ts` (parity tests) | Single source across worker + editor |
 
-Backend note: `layoutGenerationWorker.ts` comment says real segmentation replaces rectangle coords when added.
+Backend note: seed polygon uses `computeSeedRoofPolygonCoords` from `roofLayoutScale.ts`. Real segmentation replaces rectangle coords when added.
 
 ---
 
@@ -73,11 +74,11 @@ Principles:
 
 | # | Item | Notes |
 |---|------|--------|
-| 8 | **Keepouts** | Rect/circle obstructions; optional edge setback band | ✅ Rect + circle keepouts (May 2026) |
+| 8 | **Keepouts** | Rect/circle obstructions; optional edge setback band | ✅ Rect + circle keepouts (May 2026); edge setback band (Jun 2026) |
 | 9 | **Multi-facet (2–3)** | Multiple polygons; azimuth per facet; rolled-up kW |
 | 10 | **Smarter fill** | Target kW from CRM; respect keepouts; Fill / Clear / Refill |
 | 11 | **Measurements** | Edge length (m) on hover; snap 90° / parallel | ✅ Vertex snap on drag (May 2026) |
-| 12 | **Imagery** | Opacity; optional contrast; proper pan/zoom viewport on mobile |
+| 12 | **Imagery** | Opacity; optional contrast; proper pan/zoom viewport on mobile | ✅ Opacity + mobile scroll buffer + Center (Jun 2026); contrast deferred |
 | 13 | **Export** | PNG + PDF site plan (logo, customer, scale, north) | ✅ Site plan PDF (browser print, May 2026) |
 
 Align backend `computePanelPacking` with **polygon geometry**, not only `usableAreaM2`.
@@ -87,7 +88,7 @@ Align backend `computePanelPacking` with **polygon geometry**, not only `usableA
 | # | Item | Notes |
 |---|------|--------|
 | 14 | **Simplified yield** | Azimuth/tilt factor per facet (India table); % loss badge |
-| 15 | **Equipment truth** | Panel dimensions from CRM module SKU (not hardcoded 1.1×2.2 m) |
+| 15 | **Equipment truth** | Panel dimensions from CRM module SKU (not hardcoded 1.1×2.2 m) | ✅ Costing/BOM spec → brand catalog → wattage table (`resolveModuleDimensions.ts`, May 2026) |
 | 16 | **India hints** | Informational spacing/setback copy (not full rule engine) |
 
 **Defer (not 2D v1):** stringing, inverter design, LIDAR, DXF import.
@@ -101,7 +102,7 @@ Align backend `computePanelPacking` with **polygon geometry**, not only `usableA
 1. Guided stepper + desktop 3-column layout  
 2. Undo/redo + north arrow + live kW status strip  
 3. Persist `roof_polygon_coordinates` + `panel_coordinates` on every save (not JPEG-only)  
-4. Panel dimensions from CRM (`panelWattage` / module spec)  
+4. ~~Panel dimensions from CRM (`panelWattage` / module spec)~~ ✅ May 2026  
 5. Keepouts v1 (rectangles only)  
 
 Pick-up options when resuming:
@@ -115,7 +116,7 @@ Pick-up options when resuming:
 ## Quick wins (anytime)
 
 - [x] Copy: “AI-assisted draft” / “Draw roof outline” — not auto-traced (May 2026)
-- [ ] Centralize `METERS_PER_PIXEL`, panel size (shared with backend worker)  
+- [x] Centralize `METERS_PER_PIXEL`, seed polygon math (shared with backend worker) — Jun 2026 (`roofLayoutScale.ts` + parity tests)  
 - [x] Save full geometry JSON on manual layout API every time — enforced on Save to Proposal in editing mode (May 2026)
 - [x] Split UI slice 1: `RoofLayoutKonvaStage`, `lib/roofLayout/*` (page utils, capture, panel packing, customer sync) — May 2026
 - [x] Split UI slice 2: generate/hydrate/save/export libs + header/banner/override/export chrome — May 2026 (`AIRoofLayout.tsx` ~2k lines)
@@ -133,6 +134,8 @@ Pick-up options when resuming:
 | Proposal embed | `proposal-engine/frontend/src/pages/ProposalPreview.tsx` |
 | Routes | `src/routes/roofLayout.ts` |
 | Job worker | `src/workers/layoutGenerationWorker.ts` |
+| Scale constants | `src/constants/roofLayoutScale.ts` (CRM); `lib/roofLayoutConstants.ts` (PE mirror) |
+| Preview toolbar | `components/roofLayout/RoofLayoutPreviewToolbar.tsx` |
 | Satellite | `src/services/satelliteFetcher.ts` |
 | Segmentation / area | `src/services/roofSegmentationService.ts` |
 | Packing | `src/services/panelPackingEngine.ts` |
@@ -140,12 +143,20 @@ Pick-up options when resuming:
 
 ---
 
-## Mobile (done 2026-05 — don’t regress)
+## Mobile (done 2026-06 — don’t regress)
 
-- Map-first column order; summary below  
-- Scroll / Edit / Zoom **above** map (not overlaid)  
-- Collapsible “Adjust layout (density, orientation)” **above** map, expands in place  
-- Sticky bottom **Save to Proposal** with safe-area padding  
+- Map-first column order; status strip above preview  
+- Preview row: **2D Layout | 3D View** + **Undo/Redo** (text labels; only after polygon edit)  
+- Below map: **Scroll map** / **Edit polygon** / **Keepouts** + zoom + **Center**  
+- Collapsible **Layout tools (panels, density, keepouts)** — accordion with 44px controls  
+- Sticky bottom **Site plan PDF** + **Save to Proposal**; page padding clears footer + safe area  
+- Map legend hidden on xs; export only in sticky bar (not duplicated under preview)  
+
+## Desktop xl (done 2026-06 — don’t regress)
+
+- Centre column: preview toolbar (2D/3D + undo only) → map  
+- Right sidebar: **Proposal export** (stacked PDF + Save) → panel actions → layout tools  
+- No export buttons crowding the map chrome  
 
 ---
 
@@ -170,8 +181,11 @@ A salesperson on a phone or laptop can:
 | 2026-05-16 | — | **Slice B:** `geometryJson` on `ProjectRoofLayout`; save/load geometry; keepouts UI + panel fill skips keepouts; module dims from CRM wattage; target kW cap; hydrate editing session from server geometry + satellite |
 | 2026-05-16 | — | **Slice C:** Refill/clear panels; desktop 3-col tools sidebar; edge length on hover; satellite opacity; fill % + kW vs target in status strip; honest copy (not auto-traced) |
 | 2026-05-22 | — | **Phase 4 v1:** Multi-facet (≤3 roofs), azimuth presets, v2 `geometryJson`, Refill all sections, aggregated kW/m² status strip (SolarEdge Designer benchmark) |
-| | | |
+| 2026-06-09 | `e34d67a` | **Saved — unsaved changes** fingerprint after Save to Proposal |
+| 2026-06-09 | `5163656` | Edge setback (0–0.6 m), mobile scroll margin, Center map |
+| 2026-06-09 | `40c6e4e` | Preview toolbar redesign; xl sidebar export; mobile a11y/touch targets |
+| 2026-06-09 | `a1bdec8`, `4174f6a` | `METERS_PER_PIXEL` centralisation + seed polygon parity tests; prod smoke pass |
 
 ---
 
-*When starting a Cursor chat: “Continue from `proposal-engine/docs/ai-roof-layout-2d-roadmap.md`, slice A/B/C.”*
+*When starting a Cursor chat: “Continue from `proposal-engine/docs/ai-roof-layout-2d-roadmap.md` — next P2 SKU dimensions or Track B slice 3.”*

@@ -18,6 +18,7 @@ import {
 } from './roofLayoutCapture';
 import { absolutizeLayoutImageUrl } from './roofLayoutPageUtils';
 import type { RoofLayoutCaptureRefs, RoofLayoutKeepout, RoofLayoutPanelRect, RoofLayoutPoint } from './roofLayoutTypes';
+import type { ResolvedModuleDimensions } from './resolveModuleDimensions';
 
 export type LayoutMetrics = {
   roof_area_m2?: number;
@@ -92,6 +93,7 @@ export type SaveRoofLayoutForProposalParams = {
   panelOrientation: 'portrait' | 'landscape';
   panelSpacingMultiplier: number;
   effectiveWattage: number;
+  resolvedModule: ResolvedModuleDimensions;
   edgeSetbackM?: number;
   metersPerPixel: number;
   roofViewTab: '2d' | '3d';
@@ -149,6 +151,7 @@ export async function saveRoofLayoutForProposal(
     panelSpacingMultiplier: params.panelSpacingMultiplier,
     panelWatts: params.effectiveWattage,
     edgeSetbackM: params.edgeSetbackM ?? 0,
+    resolvedModule: params.resolvedModule,
   });
 
   if (params.layoutMode === 'editing' && !geometry) {
