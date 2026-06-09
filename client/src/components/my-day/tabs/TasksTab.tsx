@@ -1,11 +1,15 @@
+import type { MyDaySuggestion } from '../../../lib/myDaySuggestions'
 import type { Task, PinOption } from '../types'
 import TaskItem from '../components/TaskItem'
 import AddTaskInput from '../components/AddTaskInput'
+import SuggestedTaskRow from '../components/SuggestedTaskRow'
 
 interface Props {
   tasks: Task[]
   loading: boolean
   error: string | null
+  suggestions?: MyDaySuggestion[]
+  suggestionsLoading?: boolean
   onToggle: (id: string) => void
   onEdit: (id: string, content: string) => void
   onDelete: (id: string) => void
@@ -13,7 +17,18 @@ interface Props {
   pinOptions: PinOption[]
 }
 
-export default function TasksTab({ tasks, loading, error, onToggle, onEdit, onDelete, onAdd, pinOptions }: Props) {
+export default function TasksTab({
+  tasks,
+  loading,
+  error,
+  suggestions = [],
+  suggestionsLoading = false,
+  onToggle,
+  onEdit,
+  onDelete,
+  onAdd,
+  pinOptions,
+}: Props) {
   const today = new Date().toISOString().slice(0, 10)
 
   const todayTasks = tasks.filter((t) => !t.isReminder && (t.dueDate === today || t.dueDate === null))
@@ -42,6 +57,20 @@ export default function TasksTab({ tasks, loading, error, onToggle, onEdit, onDe
 
         {!loading && !error && (
           <>
+            {(suggestionsLoading || suggestions.length > 0) && (
+              <>
+                <span className="myday-section-label">Suggested from CRM</span>
+                {suggestionsLoading ? (
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>
+                    Loading suggestions…
+                  </p>
+                ) : null}
+                {suggestions.map((s) => (
+                  <SuggestedTaskRow key={s.id} suggestion={s} />
+                ))}
+              </>
+            )}
+
             {/* Carryovers */}
             {carryovers.length > 0 && (
               <>

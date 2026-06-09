@@ -306,48 +306,7 @@ export default function DailyBriefing({
             <div className="mt-1 text-[13px] text-[color:var(--text-muted)]">{formatDateLine(today)}</div>
           </div>
 
-          <div>
-            {briefing.lines.map((line, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.08 }}
-              >
-                <div className="flex items-start gap-3 mb-3.5">
-                  <span
-                    style={{
-                      fontSize: 16,
-                      width: 28,
-                      height: 28,
-                      borderRadius: 999,
-                      background: 'var(--bg-badge)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {line.icon}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 14,
-                      lineHeight: 1.6,
-                      color: line.color,
-                      paddingTop: 3,
-                      fontWeight: 600,
-                      textShadow: '0 1px 0 rgba(0,0,0,0.12)',
-                    }}
-                  >
-                    {line.text}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="mt-5 pt-4 border-t border-[color:var(--border-default)]">
+          <div className="mb-5 pb-4 border-b border-[color:var(--border-default)]">
             <div className="flex items-center gap-2 mb-3">
               <Sun className="w-4 h-4 text-[color:var(--accent-gold)] shrink-0" aria-hidden />
               <span
@@ -388,8 +347,8 @@ export default function DailyBriefing({
 
                 {myDaySnapshot.isQuietPersonal && myDaySnapshot.summaryFragments.length === 0 ? (
                   <p className="text-[13px] text-[color:var(--text-primary)] leading-relaxed">
-                    You&apos;re caught up on tasks and reminders. Add items anytime, or start today&apos;s journal
-                    note.
+                    You&apos;re caught up on tasks and reminders. Use Zenith Hit List{' '}
+                    <strong className="font-semibold">+ My Day</strong> to pin follow-ups.
                   </p>
                 ) : null}
 
@@ -407,6 +366,47 @@ export default function DailyBriefing({
                 ) : null}
               </>
             ) : null}
+          </div>
+
+          <div>
+            {briefing.lines.map((line, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.08 }}
+              >
+                <div className="flex items-start gap-3 mb-3.5">
+                  <span
+                    style={{
+                      fontSize: 16,
+                      width: 28,
+                      height: 28,
+                      borderRadius: 999,
+                      background: 'var(--bg-badge)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {line.icon}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 14,
+                      lineHeight: 1.6,
+                      color: line.color,
+                      paddingTop: 3,
+                      fontWeight: 600,
+                      textShadow: '0 1px 0 rgba(0,0,0,0.12)',
+                    }}
+                  >
+                    {line.text}
+                  </span>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
 

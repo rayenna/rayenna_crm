@@ -8,6 +8,7 @@ import RemindersTab from './tabs/RemindersTab'
 import axiosInstance from '../../utils/axios'
 import type { MyDayTabId, PinOption } from './types'
 import { buildMyDaySnapshot, groupRemindersByDue } from '../../lib/myDaySnapshot'
+import { useMyDaySuggestionsQuery } from '../../hooks/useMyDaySuggestionsQuery'
 
 const TABS: { id: MyDayTabId; label: string }[] = [
   { id: 'tasks',     label: 'Tasks'     },
@@ -49,6 +50,7 @@ export default function MyDayDrawer() {
   const [mounted, setMounted] = useState(false)
 
   const md = useMyDay()
+  const suggestionsQ = useMyDaySuggestionsQuery(mounted)
 
   // Mount once on first open — never unmount (preserves state in memory)
   useEffect(() => {
@@ -335,6 +337,8 @@ export default function MyDayDrawer() {
               tasks={md.tasks}
               loading={md.tasksLoading}
               error={md.tasksError}
+              suggestions={suggestionsQ.data ?? []}
+              suggestionsLoading={suggestionsQ.isLoading}
               onToggle={md.toggleTask}
               onEdit={md.editTask}
               onDelete={md.removeTask}

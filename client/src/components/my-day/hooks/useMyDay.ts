@@ -13,6 +13,7 @@ import {
   createReminder,
 } from '../../../lib/my-day-api'
 import { MY_DAY_SNAPSHOT_QUERY_KEY } from '../../../lib/myDaySnapshot'
+import { MY_DAY_SUGGESTIONS_QUERY_KEY } from '../../../hooks/useMyDaySuggestionsQuery'
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
@@ -23,6 +24,7 @@ export function useMyDay() {
 
   const bumpSnapshot = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: MY_DAY_SNAPSHOT_QUERY_KEY })
+    queryClient.invalidateQueries({ queryKey: MY_DAY_SUGGESTIONS_QUERY_KEY })
   }, [queryClient])
 
   // ── Tasks ──────────────────────────────────────────────────────────────────

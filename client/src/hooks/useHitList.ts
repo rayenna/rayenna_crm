@@ -82,42 +82,41 @@ function formatInrMillions(value: number): string {
   return `Rs. ${mm.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M`
 }
 
-export function useHitList(
+export function buildHitListFromProjects(
   projects: HitListProjectRow[] | undefined | null,
   role: UserRole | undefined,
   currentUser: { id: string } | null | undefined,
 ) {
-  return useMemo(() => {
-    const empty = {
-      hitList: [] as HitListItem[],
-      totalAtRisk: '₹0',
-      allClear: true,
-      criticalCount: 0,
-      warningCount: 0,
-    }
+  const empty = {
+    hitList: [] as HitListItem[],
+    totalAtRisk: '₹0',
+    allClear: true,
+    criticalCount: 0,
+    warningCount: 0,
+  }
 
-    if (!projects || !role || !currentUser?.id) {
-      return empty
-    }
+  if (!projects || !role || !currentUser?.id) {
+    return empty
+  }
 
-    const relevantProjects =
-      role === UserRole.ADMIN || role === UserRole.MANAGEMENT
-        ? projects
-        : projects.filter((p) => p.salespersonId === currentUser.id)
+  const relevantProjects =
+    role === UserRole.ADMIN || role === UserRole.MANAGEMENT
+      ? projects
+      : projects.filter((p) => p.salespersonId === currentUser.id)
 
-    const today = new Date()
+  const today = new Date()
 
-    const diffDays = (date: string) => {
-      const d = new Date(date)
-      return Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-    }
+  const diffDays = (date: string) => {
+    const d = new Date(date)
+    return Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  }
 
-    const daysSince = (date: string) =>
-      Math.floor((today.getTime() - new Date(date).getTime()) / (1000 * 60 * 60 * 24))
+  const daysSince = (date: string) =>
+    Math.floor((today.getTime() - new Date(date).getTime()) / (1000 * 60 * 60 * 24))
 
-    const scored: HitListItem[] = []
+  const scored: HitListItem[] = []
 
-    for (const p of relevantProjects) {
+  for (const p of relevantProjects) {
       const stage = (p.stage || '').trim()
       const dealValue = p.dealValue ?? 0
       const id = p.projectId
@@ -237,12 +236,36 @@ export function useHitList(
     const visibleValue = hitList.reduce((sum, i) => sum + (i.dealValue || 0), 0)
     const totalAtRisk = formatInrMillions(criticalVisibleValue > 0 ? criticalVisibleValue : visibleValue)
 
-    return {
-      hitList,
-      totalAtRisk,
-      allClear: hitList.length === 0,
-      criticalCount: hitList.filter((d) => d.urgency === 'critical').length,
-      warningCount: hitList.filter((d) => d.urgency === 'warning').length,
-    }
-  }, [projects, role, currentUser?.id])
+  return {
+    hitList,
+    totalAtRisk,
+    allClear: hitList.length === 0,
+    criticalCount: hitList.filter((d) => d.urgency === 'critical').length,
+    warningCount: hitList.filter((d) => d.urgency === 'warning').length,
+  }
+}
+
+export function useHitList(
+  projects: HitListProjectRow[] | undefined | null,
+  role: UserRole | undefined,
+  currentUser: { id: string } | null | undefined,
+) {
+  return useMemo(
+    () => buildHitListFromProjects(projects, role, currentUser),
+    [projects, role, currentUser?.id],
+  )
+}
+
+/** Pre-filled My Day task from a Hit List row. */
+export function hitListItemToMyDayTask(item: HitListItem): {
+  content: string
+  projectId: string
+  projectLabel: string
+} {
+  const prefix = item.projectSerialNumber != null ? `#${item.projectSerialNumber} ` : ''
+  return {
+    content: `Follow up — ${item.label}: ${item.customerName} (${item.stage})`,
+    projectId: item.id,
+    projectLabel: `${prefix}${item.customerName}`.trim(),
+  }
 }

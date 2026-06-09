@@ -4,7 +4,8 @@ import { motion } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
 import { Target, CheckCircle2 } from 'lucide-react'
 import { UserRole } from '../../types'
-import type { HitListItem, HitListLabel } from '../../hooks/useHitList'
+import { hitListItemToMyDayTask, type HitListItem, type HitListLabel } from '../../hooks/useHitList'
+import AddToMyDayButton from '../my-day/components/AddToMyDayButton'
 import HealthBadge from './HealthBadge'
 import { computeDealHealth, pipelineRowToHealthProject } from '../../utils/dealHealthScore'
 import {
@@ -463,24 +464,27 @@ export default function HitList({
                         <HealthBadge project={hitListHealthProject(project)} size="sm" showLabel={false} />
                       </td>
                       <td className="py-2.5 pl-1">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            if (!onOpenDrawer) return
-                            e.preventDefault()
-                            e.stopPropagation()
-                            onOpenDrawer({
-                              id: project.id,
-                              customerName: project.customerName,
-                              stageLabel: project.stage,
-                            })
-                          }}
-                          className={ZENITH_DEAL_OPEN_BUTTON_CLASS}
-                          style={{ fontFamily: 'var(--zenith-font-body)' }}
-                          aria-label={`Open quick actions for ${project.customerName}`}
-                        >
-                          Open →
-                        </button>
+                        <div className="flex flex-wrap items-center justify-end gap-1.5">
+                          <AddToMyDayButton compact {...hitListItemToMyDayTask(project)} />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              if (!onOpenDrawer) return
+                              e.preventDefault()
+                              e.stopPropagation()
+                              onOpenDrawer({
+                                id: project.id,
+                                customerName: project.customerName,
+                                stageLabel: project.stage,
+                              })
+                            }}
+                            className={ZENITH_DEAL_OPEN_BUTTON_CLASS}
+                            style={{ fontFamily: 'var(--zenith-font-body)' }}
+                            aria-label={`Open quick actions for ${project.customerName}`}
+                          >
+                            Open →
+                          </button>
+                        </div>
                       </td>
                     </motion.tr>
                   )
@@ -573,24 +577,27 @@ export default function HitList({
                     </p>
                     <div className="mt-2 flex items-center justify-between gap-3">
                       <HealthBadge project={hitListHealthProject(project)} size="sm" showLabel={false} />
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          if (!onOpenDrawer) return
-                          e.preventDefault()
-                          e.stopPropagation()
-                          onOpenDrawer({
-                            id: project.id,
-                            customerName: project.customerName,
-                            stageLabel: project.stage,
-                          })
-                        }}
-                        className={ZENITH_DEAL_OPEN_BUTTON_CLASS}
-                        style={{ fontFamily: 'var(--zenith-font-body)' }}
-                        aria-label={`Open quick actions for ${project.customerName}`}
-                      >
-                        Open →
-                      </button>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <AddToMyDayButton compact {...hitListItemToMyDayTask(project)} />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            if (!onOpenDrawer) return
+                            e.preventDefault()
+                            e.stopPropagation()
+                            onOpenDrawer({
+                              id: project.id,
+                              customerName: project.customerName,
+                              stageLabel: project.stage,
+                            })
+                          }}
+                          className={ZENITH_DEAL_OPEN_BUTTON_CLASS}
+                          style={{ fontFamily: 'var(--zenith-font-body)' }}
+                          aria-label={`Open quick actions for ${project.customerName}`}
+                        >
+                          Open →
+                        </button>
+                      </div>
                     </div>
                   </motion.div>
                 )
