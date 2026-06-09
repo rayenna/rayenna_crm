@@ -3,6 +3,7 @@ import { computeRoofAreaM2 } from '../services/roofSegmentationService';
 import { detectObstaclesM2 } from '../services/obstacleDetector';
 import { computePanelPacking } from '../services/panelPackingEngine';
 import { renderLayoutImage } from '../services/layoutRenderer';
+import { computeSeedRoofPolygonCoords } from '../constants/roofLayoutScale';
 
 export interface LayoutJobInput {
   projectId: string;
@@ -44,30 +45,10 @@ export async function generateRoofLayoutJob(input: LayoutJobInput): Promise<Layo
     satelliteImagePath: imagePath,
   });
 
-  // Satellite image is always 2048×2048 (zoom=19, size=1024x1024, scale=2).
-  // Seed a centre rectangle sized from CRM system kW + module wattage (not a fixed 35×30 m box).
-  const IMG_CENTER = 1024;
-  const METERS_PER_PIXEL = 0.149;
-  const PANEL_AREA_M2 = 2.42;
-  const SPACING_FACTOR = 1.2;
-  const USABLE_FACTOR = 0.75;
-  const panelsForTarget = Math.max(
-    4,
-    Math.ceil((input.systemSizeKw * 1000) / Math.max(input.panelWattage, 1)),
-  );
-  const seedRoofAreaM2 = (panelsForTarget * PANEL_AREA_M2 * SPACING_FACTOR) / USABLE_FACTOR;
-  const areaPx = seedRoofAreaM2 / (METERS_PER_PIXEL * METERS_PER_PIXEL);
-  const aspect = 1.12;
-  const heightPx = Math.sqrt(areaPx / aspect);
-  const widthPx = areaPx / heightPx;
-  const halfWPx = Math.round(Math.min(widthPx / 2, IMG_CENTER - 40));
-  const halfHPx = Math.round(Math.min(heightPx / 2, IMG_CENTER - 40));
-  const roofPolygonCoords = [
-    { x: IMG_CENTER - halfWPx, y: IMG_CENTER - halfHPx },
-    { x: IMG_CENTER + halfWPx, y: IMG_CENTER - halfHPx },
-    { x: IMG_CENTER + halfWPx, y: IMG_CENTER + halfHPx },
-    { x: IMG_CENTER - halfWPx, y: IMG_CENTER + halfHPx },
-  ];
+  const roofPolygonCoords = computeSeedRoofPolygonCoords({
+    systemSizeKw: input.systemSizeKw,
+    panelWattage: input.panelWattage,
+  });
 
   return {
     roofAreaM2,

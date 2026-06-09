@@ -1,5 +1,11 @@
 /** Server-side mirror of proposal-engine/frontend/src/lib/roofLayoutGeometry.ts */
 
+import {
+  ROOF_LAYOUT_DEFAULT_PANEL_HEIGHT_M,
+  ROOF_LAYOUT_DEFAULT_PANEL_WIDTH_M,
+  ROOF_LAYOUT_METERS_PER_PIXEL,
+  ROOF_LAYOUT_SATELLITE_IMAGE_PX,
+} from '../constants/roofLayoutScale';
 export type RoofLayoutFacetGeometry = {
   id: string;
   label: string;
@@ -68,9 +74,9 @@ export function parseRoofLayoutGeometry(raw: unknown): ParsedRoofLayoutGeometry 
   if (o.version === 1 && Array.isArray(o.roofPolygon) && o.roofPolygon.length >= 3) {
     return {
       version: 2,
-      imageWidth: Number(o.imageWidth) || 2048,
-      imageHeight: Number(o.imageHeight) || 2048,
-      metersPerPixel: Number(o.metersPerPixel) || 0.149,
+      imageWidth: Number(o.imageWidth) || ROOF_LAYOUT_SATELLITE_IMAGE_PX,
+      imageHeight: Number(o.imageHeight) || ROOF_LAYOUT_SATELLITE_IMAGE_PX,
+      metersPerPixel: Number(o.metersPerPixel) || ROOF_LAYOUT_METERS_PER_PIXEL,
       facets: [
         {
           id: 'legacy-1',
@@ -87,8 +93,8 @@ export function parseRoofLayoutGeometry(raw: unknown): ParsedRoofLayoutGeometry 
         : [],
       panelOrientation: o.panelOrientation === 'landscape' ? 'landscape' : 'portrait',
       panelSpacingMultiplier: Number(o.panelSpacingMultiplier) || 1.5,
-      panelWidthM: Number(o.panelWidthM) || 1.1,
-      panelHeightM: Number(o.panelHeightM) || 2.2,
+      panelWidthM: Number(o.panelWidthM) || ROOF_LAYOUT_DEFAULT_PANEL_WIDTH_M,
+      panelHeightM: Number(o.panelHeightM) || ROOF_LAYOUT_DEFAULT_PANEL_HEIGHT_M,
     };
   }
 
