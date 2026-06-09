@@ -820,6 +820,11 @@ export default function AIRoofLayout() {
         isPolygonSummaryReady,
         result,
         effectiveWattage,
+        moduleWidthM: orientedModuleSizeM.widthM,
+        moduleHeightM: orientedModuleSizeM.heightM,
+        moduleSizeSource: resolvedModule.sourceLabel,
+        effectiveSystemKw: yieldEstimate?.effectiveKw ?? null,
+        orientationLossPercent: yieldEstimate?.orientationLossPercent ?? null,
       });
 
       if (!exported.ok) {
@@ -1323,6 +1328,10 @@ export default function AIRoofLayout() {
                       panelCount={result?.panel_count}
                       last3dPngDataUrl={last3dPngDataUrl}
                       onExportPNG={handle3dExportPng}
+                      portraitModuleSizeM={{
+                        widthM: resolvedModule.portraitWidthM,
+                        heightM: resolvedModule.portraitHeightM,
+                      }}
                     />
                   ) : (
                     <div

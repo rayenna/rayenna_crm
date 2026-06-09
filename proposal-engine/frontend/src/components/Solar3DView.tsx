@@ -23,6 +23,10 @@ import {
   panelToMesh,
   type Solar3DPanel,
 } from '../lib/solar3DHelpers';
+import {
+  ROOF_LAYOUT_DEFAULT_PANEL_HEIGHT_M,
+  ROOF_LAYOUT_DEFAULT_PANEL_WIDTH_M,
+} from '../lib/roofLayoutConstants';
 
 /** Orbit snapshot written on every OrbitControls change; parent ref survives 3D unmount (e.g. Save → 2D tab). */
 export type Solar3DOrbitSnapshot = {
@@ -56,6 +60,8 @@ export interface Solar3DViewProps {
   persistentLayoutKeyRef?: React.MutableRefObject<string>;
   /** When set, the control panel is portaled here (outside the WebGL frame) instead of floating over the canvas. */
   controlsPortalHost?: HTMLElement | null;
+  /** Portrait module footprint (m); matches 2D `resolveModuleDimensions` when passed from roof layout. */
+  portraitModuleSizeM?: { widthM: number; heightM: number };
   /**
    * Multiplies WebGL buffer size vs CSS size (supersampling). Use on narrow viewports instead of a scrollable
    * oversized wrapper so touch orbit works and layout does not fight scrollbars. Clamped internally.
@@ -100,6 +106,7 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
     persistentLayoutKeyRef,
     controlsPortalHost = null,
     resolutionScale: resolutionScaleProp = 1,
+    portraitModuleSizeM,
   },
   ref,
 ) {
@@ -650,12 +657,24 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
     const panelsToRender = candidatePanels;
 
     type PanelInst = { centerX: number; centerY: number; widthM: number; heightM: number };
+    const portraitW =
+      portraitModuleSizeM?.widthM != null &&
+      Number.isFinite(portraitModuleSizeM.widthM) &&
+      portraitModuleSizeM.widthM > 0
+        ? portraitModuleSizeM.widthM
+        : ROOF_LAYOUT_DEFAULT_PANEL_WIDTH_M;
+    const portraitH =
+      portraitModuleSizeM?.heightM != null &&
+      Number.isFinite(portraitModuleSizeM.heightM) &&
+      portraitModuleSizeM.heightM > 0
+        ? portraitModuleSizeM.heightM
+        : ROOF_LAYOUT_DEFAULT_PANEL_HEIGHT_M;
     const panelInsts: PanelInst[] = panelsToRender.map((p) => {
       const centerX = (p.x + p.width / 2 - effectiveImageSize.width / 2) * metersPerPixel;
       const centerY = -((p.y + p.height / 2 - effectiveImageSize.height / 2) * metersPerPixel);
       const isPortrait = p.width <= p.height;
-      const panelWidthM = isPortrait ? 1.0 : 1.65;
-      const panelHeightM = isPortrait ? 1.65 : 1.0;
+      const panelWidthM = isPortrait ? portraitW : portraitH;
+      const panelHeightM = isPortrait ? portraitH : portraitW;
       return { centerX, centerY, widthM: panelWidthM, heightM: panelHeightM };
     });
 
@@ -1018,6 +1037,8 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
     roofTexture,
     tiltDeg,
     applySunLightPositionsFromAngles,
+    portraitModuleSizeM?.widthM,
+    portraitModuleSizeM?.heightM,
   ]);
 
   // Swap satellite texture onto the roof TOP cap when it finishes loading.

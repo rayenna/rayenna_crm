@@ -26,6 +26,8 @@ type Props = {
   panelCount?: number;
   last3dPngDataUrl: string | null;
   onExportPNG: (dataUrl: string) => void | Promise<void>;
+  /** Portrait module footprint (m) from CRM SKU resolution — visual parity with 2D packing. */
+  portraitModuleSizeM?: { widthM: number; heightM: number };
 };
 
 export function RoofLayout3DPreviewShell({
@@ -47,6 +49,7 @@ export function RoofLayout3DPreviewShell({
   panelCount,
   last3dPngDataUrl,
   onExportPNG,
+  portraitModuleSizeM,
 }: Props) {
   const panelCoordinates = allPanelsFlat.map((p) => ({
     x: p.x,
@@ -66,6 +69,7 @@ export function RoofLayout3DPreviewShell({
     metersPerPixel: ROOF_LAYOUT_METERS_PER_PIXEL,
     panelCount,
     onExportPNG,
+    portraitModuleSizeM,
   };
 
   return (

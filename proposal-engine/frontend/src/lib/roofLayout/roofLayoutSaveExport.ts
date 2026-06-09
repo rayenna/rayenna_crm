@@ -228,6 +228,11 @@ export type ExportSitePlanParams = {
   isPolygonSummaryReady: boolean;
   result: AiRoofLayoutResponse | null;
   effectiveWattage: number;
+  moduleWidthM?: number | null;
+  moduleHeightM?: number | null;
+  moduleSizeSource?: string | null;
+  effectiveSystemKw?: number | null;
+  orientationLossPercent?: number | null;
 };
 
 export async function exportSitePlanPdfFromLayout(
@@ -246,16 +251,13 @@ export async function exportSitePlanPdfFromLayout(
   if ('error' in captured) return { ok: false, error: captured.error };
 
   const master = params.master;
-  const facetSummary =
-    params.facets.length > 1
-      ? params.facets
-          .filter((f) => f.polygon && f.polygon.length >= 3)
-          .map((f) => ({
-            label: f.label,
-            azimuthDeg: f.azimuthDeg,
-            panelCount: f.panels.length,
-          }))
-      : undefined;
+  const facetSummary = params.facets
+    .filter((f) => f.polygon && f.polygon.length >= 3)
+    .map((f) => ({
+      label: f.label,
+      azimuthDeg: f.azimuthDeg,
+      panelCount: f.panels.length,
+    }));
 
   const opened = exportRoofLayoutSitePlanPdf({
     layoutImageDataUrl: captured.dataUrl,
@@ -282,8 +284,13 @@ export async function exportSitePlanPdfFromLayout(
         ? null
         : (params.result?.usable_area_m2 ?? null),
     moduleWatts: params.effectiveWattage,
+    moduleWidthM: params.moduleWidthM,
+    moduleHeightM: params.moduleHeightM,
+    moduleSizeSource: params.moduleSizeSource,
+    effectiveSystemKw: params.effectiveSystemKw,
+    orientationLossPercent: params.orientationLossPercent,
     facetCount: params.facets.length,
-    facets: facetSummary,
+    facets: facetSummary.length > 0 ? facetSummary : undefined,
   });
 
   if (!opened) {

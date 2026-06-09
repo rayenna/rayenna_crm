@@ -40,8 +40,9 @@ export function RoofLayoutFacetBar({
         </span>
       </div>
       <p className="text-[11px] text-slate-600 leading-snug">
-        Add separate outlines for each roof face. Panels and azimuth are per section; totals roll up in the
-        status bar.
+        {facets.length > 1
+          ? 'Add separate outlines for each roof face. Panels and azimuth are per section; totals roll up in the status bar.'
+          : 'Set roof orientation (azimuth) for yield estimates. Add a second section for multi-facet roofs.'}
       </p>
       <div className="flex flex-wrap gap-1.5">
         {facets.map((f) => {
@@ -79,10 +80,10 @@ export function RoofLayoutFacetBar({
           </button>
         )}
       </div>
-      {active && facets.length > 1 && (
+      {active && (
         <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100">
           <label className="text-[11px] font-medium text-slate-600 shrink-0" htmlFor="facet-azimuth">
-            Azimuth ({active.label})
+            Azimuth{facets.length > 1 ? ` (${active.label})` : ''}
           </label>
           <select
             id="facet-azimuth"
@@ -107,14 +108,16 @@ export function RoofLayoutFacetBar({
               ≈ {(activeYieldFactor * 100).toFixed(0)}% of south yield
             </span>
           )}
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => onRemoveFacet(active.id)}
-            className="text-[11px] font-semibold text-red-700 hover:text-red-800 px-2 py-1 rounded touch-manipulation"
-          >
-            Remove section
-          </button>
+          {facets.length > 1 && (
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => onRemoveFacet(active.id)}
+              className="text-[11px] font-semibold text-red-700 hover:text-red-800 px-2 py-1 rounded touch-manipulation"
+            >
+              Remove section
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -25,6 +25,14 @@ export type RoofLayoutSitePlanExportInput = {
   roofAreaM2: number | null;
   usableAreaM2: number | null;
   moduleWatts: number;
+  /** Oriented module width × height (m) when known from CRM SKU resolution. */
+  moduleWidthM?: number | null;
+  moduleHeightM?: number | null;
+  moduleSizeSource?: string | null;
+  /** Panel-weighted effective kW (simplified India orientation estimate). */
+  effectiveSystemKw?: number | null;
+  /** Percent loss from nameplate kW due to facet azimuth (0–100). */
+  orientationLossPercent?: number | null;
   facetCount?: number;
   facets?: RoofLayoutSitePlanFacet[];
   generatedAt?: Date;
@@ -77,6 +85,48 @@ function formatMetric(value: number | null, digits: number, suffix = ''): string
   return `${value.toFixed(digits)}${suffix}`;
 }
 
+/** HTML for placed kW metric cell — mirrors status strip eff. kW badge when loss ≥ 0.5%. */
+export function formatSitePlanPlacedKwHtml(input: {
+  systemKw: number | null;
+  effectiveSystemKw?: number | null;
+  orientationLossPercent?: number | null;
+}): string {
+  const placed = formatMetric(input.systemKw, 2, ' kW');
+  const loss =
+    input.orientationLossPercent != null && Number.isFinite(input.orientationLossPercent)
+      ? input.orientationLossPercent
+      : null;
+  const effective =
+    input.effectiveSystemKw != null && Number.isFinite(input.effectiveSystemKw)
+      ? input.effectiveSystemKw
+      : null;
+  const showYield = loss != null && loss >= 0.5 && effective != null;
+  if (!showYield) return placed;
+  return `${placed}<span class="metric-sub">eff. ${effective.toFixed(2)} kW · −${loss.toFixed(0)}% orient.</span>`;
+}
+
+/** Plain-text module label for metrics cell. */
+export function formatSitePlanModuleLabel(input: {
+  moduleWatts: number;
+  moduleWidthM?: number | null;
+  moduleHeightM?: number | null;
+  moduleSizeSource?: string | null;
+}): string {
+  const parts = [`${input.moduleWatts} W`];
+  if (
+    input.moduleWidthM != null &&
+    input.moduleHeightM != null &&
+    Number.isFinite(input.moduleWidthM) &&
+    Number.isFinite(input.moduleHeightM)
+  ) {
+    parts.push(`${input.moduleWidthM.toFixed(2)} × ${input.moduleHeightM.toFixed(2)} m`);
+  }
+  if (input.moduleSizeSource?.trim()) {
+    parts.push(input.moduleSizeSource.trim());
+  }
+  return parts.join(' · ');
+}
+
 function buildProjectLabel(input: RoofLayoutSitePlanExportInput): string {
   const parts: string[] = [];
   if (input.projectNumber != null) parts.push(`Project #${input.projectNumber}`);
@@ -104,7 +154,7 @@ function buildSitePlanHtml(input: RoofLayoutSitePlanExportInput): string {
       : null;
 
   const facetRows =
-    input.facets && input.facets.length > 1
+    input.facets && input.facets.length > 0
       ? input.facets
           .map(
             (f) =>
@@ -112,6 +162,18 @@ function buildSitePlanHtml(input: RoofLayoutSitePlanExportInput): string {
           )
           .join('')
       : '';
+
+  const placedKwHtml = formatSitePlanPlacedKwHtml({
+    systemKw: input.systemKw,
+    effectiveSystemKw: input.effectiveSystemKw,
+    orientationLossPercent: input.orientationLossPercent,
+  });
+  const moduleLabel = formatSitePlanModuleLabel({
+    moduleWatts: input.moduleWatts,
+    moduleWidthM: input.moduleWidthM,
+    moduleHeightM: input.moduleHeightM,
+    moduleSizeSource: input.moduleSizeSource,
+  });
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -138,6 +200,7 @@ function buildSitePlanHtml(input: RoofLayoutSitePlanExportInput): string {
     .metric { border: 1px solid #d1fae5; background: #ecfdf5; border-radius: 6px; padding: 6px 8px; }
     .metric dt { font-size: 7px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #047857; margin: 0; }
     .metric dd { margin: 3px 0 0; font-size: 12px; font-weight: 700; color: #064e3b; }
+    .metric-sub { display: block; margin-top: 2px; font-size: 8px; font-weight: 600; color: #047857; line-height: 1.3; }
     .figure { position: relative; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #0f172a; min-height: 0; }
     .figure img { display: block; width: 100%; height: auto; max-height: 145mm; object-fit: contain; margin: 0 auto; background: #1e293b; }
     .map-overlay { position: absolute; inset: 0; pointer-events: none; }
@@ -190,11 +253,11 @@ function buildSitePlanHtml(input: RoofLayoutSitePlanExportInput): string {
 
   <dl class="metrics">
     <div class="metric"><dt>Panels</dt><dd>${input.panelCount ?? '—'}</dd></div>
-    <div class="metric"><dt>Placed kW</dt><dd>${formatMetric(input.systemKw, 2, ' kW')}</dd></div>
+    <div class="metric"><dt>Placed kW</dt><dd>${placedKwHtml}</dd></div>
     <div class="metric"><dt>CRM target</dt><dd>${formatMetric(input.targetSystemKw, 1, ' kW')}</dd></div>
     <div class="metric"><dt>Roof area</dt><dd>${formatMetric(input.roofAreaM2, 1, ' m²')}</dd></div>
     <div class="metric"><dt>Usable area</dt><dd>${formatMetric(input.usableAreaM2, 1, ' m²')}</dd></div>
-    <div class="metric"><dt>Module</dt><dd>${input.moduleWatts} W</dd></div>
+    <div class="metric"><dt>Module</dt><dd>${escapeHtml(moduleLabel)}</dd></div>
   </dl>
 
   ${
