@@ -2,7 +2,7 @@
 
 > **Note:** The **Dashboard** is your main analytics view. Use the filter bar at the top to choose **Financial Year**, **Quarter**, and **Month**; Quick Access counts, the **Payment Status** and **Proposal Engine** summaries, and most KPI tiles follow those filters. Charts may have their own controls where noted. A **scrolling announcement** under the page title highlights **My Day** and **Zenith**.
 
-**Jump to:** [Scrolling announcements](#scrolling-announcements-dashboard) · [Dashboard filters](#dashboard-filters) · [Things needing attention](#things-needing-attention-dashboard) · [Quick Access tiles](#quick-access-tiles) · [Payment Status](#payment-status-card) · [Proposal Engine](#proposal-engine-card) · [Layout by role](#layout-by-role) · [Charts](#charts-and-visualizations) · [Dashboard chart click-through](#classic-dashboard-chart-click-through-to-projects) · [Zenith Command Center](/help/zenith#zenith-command-center) (full-screen analytics)
+**Jump to:** [Scrolling announcements](#scrolling-announcements-dashboard) · [Today's plan](#todays-plan-dashboard) · [Dashboard filters](#dashboard-filters) · [Things needing attention](#things-needing-attention-dashboard) · [Quick Access tiles](#quick-access-tiles) · [Payment Status](#payment-status-card) · [Proposal Engine](#proposal-engine-card) · [Layout by role](#layout-by-role) · [Charts](#charts-and-visualizations) · [Dashboard chart click-through](#classic-dashboard-chart-click-through-to-projects) · [Zenith Command Center](/help/zenith#zenith-command-center) (full-screen analytics)
 
 ---
 
@@ -10,10 +10,22 @@
 
 Below the **Dashboard** title, a **marquee** scrolls product updates. It currently alternates:
 
-1. **My Day** — Personal **Tasks**, **Journal**, and **Reminders** drawer. Open with **Ctrl+Shift+M** (**⌘⇧M** on Mac) from any page, or tap the **sunrise ☀** icon in the top navigation bar (badge shows incomplete task count).
+1. **My Day** — CRM-linked personal **Tasks**, **Journal**, and **Reminders**. Open with **Ctrl+Shift+M** (**⌘⇧M** on Mac) or the **sunrise ☀** icon (badge = incomplete tasks). Pin follow-ups from Zenith **Hit List** with **+ My Day**.
 2. **Zenith** — Full-screen **Command Center** under **Dashboard** menu → **Zenith ✦** (same FY / Quarter / Month rules as this page).
 
 Full **My Day** behaviour: [Zenith help → My Day](/help/zenith#my-day-personal-productivity-drawer) (also available from every role, not only in Zenith).
+
+---
+
+## Today's plan (Dashboard)
+
+Below the scrolling marquee, the classic Dashboard shows a **Today's plan** card (sun icon):
+
+- **Summary** — Short lines from your **My Day** snapshot (open tasks, reminders, whether you started today’s journal).
+- **Suggested from CRM** — Follow-ups from the same **Zenith focus** pipeline family as **Today’s Hit List** (one-tap **+ My Day** per suggestion).
+- **Open My Day** — Opens the ☀ drawer on the **Tasks** tab.
+
+Use this card when you want a morning read on the Dashboard without opening Zenith. Data is **server-backed** and matches what you see in the drawer on another device after login.
 
 ---
 
@@ -190,7 +202,7 @@ Use **Ctrl+Shift+**_letter_ on Windows/Linux or **⌘⇧**_letter_ on Mac. They 
 | ⌘⇧P / Ctrl+Shift+P | **Projects** (same roles as Customers) |
 | ⌘⇧K / Ctrl+Shift+K | **Support Tickets** (Admin, Sales, Operations, Management — not Finance) |
 | ⌘⇧Z / Ctrl+Shift+Z | **Zenith** (roles that see Zenith under the Dashboard menu) |
-| ⌘⇧M / Ctrl+Shift+M | **My Day** — Tasks, Journal & Reminders (all roles). **Edit** or **Delete** tasks from the **⋯** menu on each row. Journal: **Load more** for older entries. Reminders include **overdue** items with any past due date. |
+| ⌘⇧M / Ctrl+Shift+M | **My Day** — Tasks (incl. **Suggested from CRM**), Journal & Reminders (all roles). **+ My Day** on Zenith Hit List / suggestions. Project-pinned tasks: optional **Log to project remarks when done**. **Edit** / **Delete** via **⋯**. Journal: **Load more**. Reminders: **overdue** = any past due date. |
 | ⌘⇧N / Ctrl+Shift+N | **New customer** — opens the create form (Sales, Management, Admin) |
 | ⌘⇧E / Ctrl+Shift+E | **New project** — opens the new-project screen (Admin, Sales). Route: projects/new |
 

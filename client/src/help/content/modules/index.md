@@ -353,7 +353,14 @@ Filters are remembered when you navigate to a project and use **Back** to return
 
 The read-only **Individual Project** view groups information into **cards** with a consistent **label / value** layout: on **phones**, each field stacks vertically; from **tablet and desktop** widths, labels and values align in a clear **two-column** row pattern so sections are easier to scan. **Payment Tracking** lists **installments** (Payment 1–3, Last Payment) each in its **own block** with amount and date.
 
-The detail page shows:
+**Your open My Day tasks** — A full-width strip (gold accent) appears **above** Deal Health / Payment / Remarks when you have (or want to add) personal follow-ups **pinned to this project**:
+
+- Lists your **incomplete My Day tasks** for this project only (private to your login).
+- **Complete** inline or use **Open My Day** for the full drawer.
+- **Quick-add** a follow-up and **Add to My Day** (always pins this project).
+- Optional **Log completions to project remarks** — when enabled, marking a task done appends **`[My Day ✓] {task text}`** to **Remarks** below (same permission rules as manual remarks).
+
+The detail page also shows:
 
 - **Customer** information, **Project** and **Sales & Commercial** details (including **System Capacity** in whole kW where set)
 - **Project Lifecycle** (execution dates, costs, equipment — including **Panel / Inverter** brands, **Panel Capacity (W)**, and **Inverter Capacity (kW)** when captured)
@@ -364,6 +371,8 @@ The detail page shows:
 - **Key Artifacts** (view, download, manage documents)
 
 From here you can **Edit** the project (within your role’s permissions), open **Proposals (New)** / Proposal Engine where your role allows (for **Proposal** or **Confirmed** stages), or use **Back** to return to the Projects list.
+
+Full **My Day** behaviour (Hit List pin, CRM suggestions, journal nudges): [Zenith → My Day](/help/zenith#my-day-personal-productivity-drawer).
 
 ## Deal Health Score
 

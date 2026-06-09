@@ -193,7 +193,7 @@ By the end of this session, participants should be able to:
 - **Floating actions:** **✦ Briefing** and **back to top** above the tab bar (mobile only).
 - **Live / Offline** on the command bar — API health, not only `navigator.onLine`. Gold banner when showing **saved dashboard data**; red strip when offline; **Sync** when drawer actions are **queued**.
 - **Quick Actions** on mobile: drawer **slides from the right**, full width. Supported edits queue until reconnect.
-- **My Day** needs live network — not part of the offline queue. Promoted on classic **Dashboard** scrolling banner (**Ctrl+Shift+M** / ☀).
+- **My Day** needs live network — not part of the offline queue. **Today’s plan** on the classic Dashboard, **+ My Day** on Hit List, **Suggested from CRM** in the drawer, and **Project detail** task strip link personal follow-ups to pipeline work. Optional **`[My Day ✓]`** remark when completing project-pinned tasks.
 
 **Speaker notes:** Install CRM as **Add to Home Screen** before a site visit. Open Zenith online once with usual FY filters. Demo one queued **Log activity** offline if your sandbox allows.
 

@@ -53,6 +53,8 @@ The **command bar** and **offline / sync status** strip stay pinned at the top a
 
 Shortly after you open **Zenith**, a **Smart daily briefing** dialog may appear (use **✦ Briefing** in the command bar to open it again where shown). Close it any time, or tick **Don’t show again today** — that preference is stored **in this browser** for the current day only (it does not sync across devices).
 
+The briefing may include a **Your My Day** block (above CRM pipeline lines) with a short summary of open tasks and a link to open the ☀ drawer — same cross-device **My Day** data as the nav icon and classic **Dashboard → Today’s plan** card.
+
 For **Sales**, **Admin**, and **Operations** — not **Management** or **Finance** — if any projects in **Under Installation**, **Completed**, or **Completed – Subsidy Credited** are missing **panel and/or inverter brand**, the briefing can add a **top reminder line** with a **count** and **customer names**, using the same server-backed **Zenith explorer** slice as your command-bar **FY / Quarter / Month**. This mirrors the [Things needing attention](/help/dashboard#things-needing-attention-dashboard) idea on the classic Dashboard (Management users do not see the dashboard strip; they also do not see this lifecycle line in the briefing).
 
 ### Solar News ticker
@@ -174,7 +176,7 @@ These controls work on the rows already loaded for your current FY / Quarter / M
 **Where it shows in Zenith**
 
 - **Your pipeline today** (in **Your Focus**): one badge per row for your deals, plus **Log activity** when you need to record a touchpoint.
-- **Today’s Hit List** (beside the KPI strip on wide layouts for Sales / Management / Admin): the **same column style** as **Your pipeline today** — including **Sl No.** / **Prj #**, **last activity** (*N*d ago), **confirmation date**, and the badge; use **Open →** to open **Quick Actions** for that project (then **Open full project** if you need **Project detail**).
+- **Today’s Hit List** (beside the KPI strip on wide layouts for Sales / Management / Admin): the **same column style** as **Your pipeline today** — including **Sl No.** / **Prj #**, **last activity** (*N*d ago), **confirmation date**, and the badge; use **+ My Day** on a row to pin a follow-up to your personal task list (optionally linked to that project), or **Open →** to open **Quick Actions** (then **Open full project** if you need **Project detail**).
 
 **Why it helps**
 
@@ -195,6 +197,8 @@ For the **full explanation** of weights, sort behaviour, and sales tips, open th
 **Layout (desktop / tablet)** — A **filter bar** above the table (**Filter customer…**, **All stages**, **All salespeople** — same controls as **Company pipeline today**), then a **scrollable table** with **sortable** column headers: **Sl No.** / **Prj #**, **Customer**, **Stage**, **Sales person**, **Deal value**, **Last activity** (*N*d ago, coloured pill), **Alert** (the hit-list reason), **Confirmation** (order **confirmation date**, or **—** if not set), **Deal Health** (badge + hover breakdown), and **Open →**. When there are deals on the list, a short note under the title may remind you to **scroll horizontally** and use **Open →** — shown on **tablet / laptop widths** (not on small phones, where stacked cards already surface **Open →** clearly).
 
 **Narrow screens** — The same **filters** wrap in the Hit List header area; **stacked cards** show the same deal facts (no wide multi-column row).
+
+**+ My Day** — On each Hit List row, adds a **personal follow-up task** to the **My Day** drawer (see [My Day](#my-day-personal-productivity-drawer)). The task can carry the **project pin** so you see **#SL No. Customer** context on the task. This does **not** change the CRM project record until you complete the task (optional remark logging — below).
 
 **Open →** — Opens **Quick Actions** for that project (stage, log activity, dates, etc., per your permissions — same entry point as **Open →** on **Your pipeline today**). Management remains **view-only** where that rule already applies.
 
@@ -460,15 +464,33 @@ The rotation includes many **Zenith**-oriented hints, for example: **Solar News*
 
 #### My Day — personal productivity drawer
 
-**My Day** is a private, cross-device productivity space available to every role. Open it with **Ctrl+Shift+M** (⌘⇧M) from any page, or click the **sunrise icon ☀** in the top navigation bar. A count badge on the icon shows how many incomplete tasks are waiting.
+**My Day** is a private, cross-device productivity space available to every role. It is **fed by CRM context** (pipeline focus, Hit List, project pages) — not a standalone todo app. Open it with **Ctrl+Shift+M** (⌘⇧M) from any page, or click the **sunrise icon ☀** in the top navigation bar. A count badge on the icon shows how many incomplete tasks are waiting.
 
 The drawer has three tabs:
 
 | Tab | What it does |
 | :-- | :-- |
-| **Tasks** | Personal to-do items. Add tasks with an optional due date and project pin. Tasks due today appear under **Today**; overdue or older open items surface under **Carry-overs**. Tap a checkbox to complete; use the **⋯** menu to **Edit** or **Delete**. |
+| **Tasks** | Personal to-do items. At the top, **Suggested from CRM** lists follow-ups derived from your **Zenith focus** pipeline (same family of data as **Today’s Hit List**). Tap **+ My Day** on a suggestion to add it. Below that: **Carry-overs** (older open items), then **Today**. Add tasks at the bottom with an optional **project pin**. Tap a checkbox to complete; use the **⋯** menu to **Edit** or **Delete**. |
 | **Journal** | A private daily note. One entry per day — type freely and it auto-saves after a short pause (look for the **Saved** / **Saving…** / **Retry** status). **Recent entries** load below the editor (newest first); use **Load more** when you have older notes. Each past entry can expand from a short preview. |
 | **Reminders** | Tasks with a specific due date and the reminder flag set. **Overdue** reminders (any past due date) always appear under **Overdue**, not only from today onward. Grouped by urgency: **Overdue** (red), **Today** (amber), **This Week** (teal), and **Later** (grey). Add a new reminder with the date picker at the bottom. |
+
+**CRM entry points (besides the ☀ icon):**
+
+| Where | What |
+| :-- | :-- |
+| **Today’s Hit List** | **+ My Day** on each row — pins a follow-up, usually with that **project** attached. |
+| **Classic Dashboard** | **Today’s plan** card — summary + CRM suggestions + link to the drawer ([Dashboard → Today’s plan](/help/dashboard#todays-plan-dashboard)). |
+| **Daily briefing** | **Your My Day** summary when the briefing opens ([Daily briefing](#daily-briefing-zenith)). |
+| **Project detail** | **Your open My Day tasks** strip — complete or add follow-ups for that project ([Projects → Project detail](/help/modules#project-detail-page)). |
+
+**Completing project-pinned tasks — optional remark:**
+
+When a task has a **project pin**, you may tick **Log to project remarks when done** (shown on the task row in the drawer, and once for the whole strip on **Project detail**). Default is **on**; your choice is remembered per user in this browser. On complete, the CRM appends a remark like **`[My Day ✓] Call customer about subsidy`** under **Project detail → Remarks** (same API as manual remarks). Uncheck the box if you only want to clear the personal task without logging activity.
+
+**Onboarding nudges:**
+
+- **First visit** — A short **coach mark** may highlight the ☀ icon in the top nav (~1.4s after load) until dismissed once.
+- **End of day** — Between about **4:30pm and 9pm**, if today’s **journal** is still empty, a bottom **banner** may invite you to open the **Journal** tab (dismissible for the day).
 
 **Key behaviours:**
 - All data is **private to your account** — no team sharing or collaboration.
@@ -476,7 +498,7 @@ The drawer has three tabs:
 - On **mobile** the drawer is **full-screen** (slides up from the bottom). On **desktop** it slides in from the **right** as a side panel.
 - Press **Esc** to close the drawer from any tab.
 - **Edit** or **Delete** a task from the **⋯** menu on each row (not swipe gestures).
-- You can **pin a project** to a task or reminder for context — this is a label only and does not change the project record.
+- **Project pin** on a task is a **link for your list**; optional remark logging is the only My Day action that writes to the shared project record.
 - **My Day** requires a live connection — it does not use the Zenith offline queue.
 
 #### Support Tickets (dashboard + project)

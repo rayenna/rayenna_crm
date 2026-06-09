@@ -57,7 +57,7 @@ When focus is **not** in a text field, **textarea**, **select**, or **contentedi
 | **Ctrl+Shift+P** | **⌘⇧P** | **Projects** (same roles as Customers) |
 | **Ctrl+Shift+K** | **⌘⇧K** | **Support Tickets** (Admin, Sales, Operations, Management — not Finance) |
 | **Ctrl+Shift+Z** | **⌘⇧Z** | **Zenith** (roles that see Zenith under the Dashboard menu) |
-| **Ctrl+Shift+M** | **⌘⇧M** | **My Day** — Tasks, Journal & Reminders (all roles). Edit/delete via **⋯** on each row; journal **Load more**; requires live connection (not Zenith offline queue) |
+| **Ctrl+Shift+M** | **⌘⇧M** | **My Day** — Tasks (incl. **Suggested from CRM**), Journal & Reminders (all roles). **+ My Day** on Zenith Hit List; optional remark on project-pinned task complete; **⋯** edit/delete; journal **Load more**; live connection required (not Zenith offline queue) |
 | **Ctrl+Shift+N** | **⌘⇧N** | **New customer** — opens the create-customer form (Sales, Management, Admin) |
 | **Ctrl+Shift+E** | **⌘⇧E** | **New project** — opens the new-project screen (Admin, Sales). Route: projects/new |
 
