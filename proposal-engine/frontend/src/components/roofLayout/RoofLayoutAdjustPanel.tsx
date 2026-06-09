@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { RoofLayoutKeepout } from '../../lib/roofLayout/roofLayoutTypes';
+import { RoofLayoutIndiaHints } from './RoofLayoutIndiaHints';
 import { RoofLayoutKeepoutControls } from './RoofLayoutKeepoutControls';
 import { RoofLayoutKeyboardHints } from './RoofLayoutKeyboardHints';
 
@@ -162,6 +163,13 @@ export function RoofLayoutAdjustPanel({
           {panelSpacingMultiplier < 1.2 ? 'Tighter' : panelSpacingMultiplier > 1.6 ? 'Looser' : 'Medium'}
         </span>
       </div>
+
+      {roofViewTab === '2d' && layoutMode === 'editing' && (
+        <RoofLayoutIndiaHints
+          edgeSetbackM={edgeSetbackM}
+          panelSpacingMultiplier={panelSpacingMultiplier}
+        />
+      )}
 
       <div className="flex items-center gap-2">
         <span className="text-xs font-medium text-gray-600">Orientation</span>

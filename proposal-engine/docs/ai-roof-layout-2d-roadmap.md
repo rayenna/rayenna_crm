@@ -89,7 +89,7 @@ Align backend `computePanelPacking` with **polygon geometry**, not only `usableA
 |---|------|--------|
 | 14 | **Simplified yield** | Azimuth/tilt factor per facet (India table); % loss badge | ✅ Panel-weighted effective kW + `−N% orient.` badge (`estimateRoofLayoutYield.ts`, May 2026) |
 | 15 | **Equipment truth** | Panel dimensions from CRM module SKU (not hardcoded 1.1×2.2 m) | ✅ Costing/BOM spec → brand catalog → wattage table (`resolveModuleDimensions.ts`, May 2026) |
-| 16 | **India hints** | Informational spacing/setback copy (not full rule engine) |
+| 16 | **India hints** | Informational spacing/setback copy (not full rule engine) | ✅ Adjust panel callout (`RoofLayoutIndiaHints`, May 2026) |
 
 **Defer (not 2D v1):** stringing, inverter design, LIDAR, DXF import.
 

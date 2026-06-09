@@ -184,7 +184,7 @@ POST /ai-layout
 | **Phase 3** | Persist layout URL; panel wattage in CRM | ✅ **Done** (`ProjectRoofLayout` + `panelCapacityW` on Project) |
 | **P0 UX** (roadmap) | Stepper, undo, chrome, desktop layout | ✅ Largely done (see roadmap) |
 | **P1** (roadmap) | Keepouts, multi-facet, measurements, PDF site plan | ✅ **Done** (May–Jun 2026): keepouts, multi-facet, measurements, site plan PDF, 90° snap, circle keepouts, edge setback, toolbar/mobile polish |
-| **P2** (roadmap) | Yield hints, SKU dimensions, India copy | 🟡 SKU dimensions ✅ (May 2026); yield + India copy pending |
+| **P2** (roadmap) | Yield hints, SKU dimensions, India copy | ✅ Done (May 2026) |
 | **Phase 4 v1** | SolarEdge-style multi-facet | ✅ **Done** (May 2026) |
 | **Ops** | Delete layout, GPS validation | ✅ **Done** (May 2026) |
 
@@ -218,7 +218,7 @@ From original plan and [ai-roof-layout-2d-roadmap.md](./docs/ai-roof-layout-2d-r
 - [ ] Smarter obstacle detection (currently stub)  
 - [x] P2 module SKU dimensions from costing/BOM + `panelBrand` catalog (May 2026)  
 - [x] P2 simplified yield hints (azimuth-weighted effective kW, India table) — May 2026  
-- [ ] P2 India spacing/setback copy  
+- [x] P2 India spacing/setback copy in Adjust panel — May 2026  
 
 **Quick wins (roadmap):** ~~centralise `METERS_PER_PIXEL` with worker~~ ✅ Jun 2026 (`src/constants/roofLayoutScale.ts` + PE parity tests); keyboard shortcuts (`Esc` / `E` / `K` / undo) ✅; ~~further split `AIRoofLayout.tsx`~~ slices 1–2 done (~2k lines; slice 3 deferred).
 

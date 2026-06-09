@@ -2,7 +2,7 @@
 
 **Purpose:** Resume structural improvement work without re-discovering context.  
 **Last updated:** 2026-05-20  
-**Status:** **P2 item 15 + 14 shipped** (SKU dimensions, simplified yield hints). **Next:** P2 India copy or Track B slice 3.
+**Status:** **P2 complete** (SKU dimensions, yield hints, India spacing copy). **Next:** Track B slice 3 or backlog (segmentation, worker).
 
 ---
 
