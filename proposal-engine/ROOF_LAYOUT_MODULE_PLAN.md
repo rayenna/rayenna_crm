@@ -217,7 +217,8 @@ From original plan and [ai-roof-layout-2d-roadmap.md](./docs/ai-roof-layout-2d-r
 - [ ] Param-based image cache keyed by `systemSizeKw` + `panelWattage` (today: per-`projectId` files + DB)  
 - [ ] Smarter obstacle detection (currently stub)  
 - [x] P2 module SKU dimensions from costing/BOM + `panelBrand` catalog (May 2026)  
-- [ ] P2 yield hints / India spacing copy  
+- [x] P2 simplified yield hints (azimuth-weighted effective kW, India table) — May 2026  
+- [ ] P2 India spacing/setback copy  
 
 **Quick wins (roadmap):** ~~centralise `METERS_PER_PIXEL` with worker~~ ✅ Jun 2026 (`src/constants/roofLayoutScale.ts` + PE parity tests); keyboard shortcuts (`Esc` / `E` / `K` / undo) ✅; ~~further split `AIRoofLayout.tsx`~~ slices 1–2 done (~2k lines; slice 3 deferred).
 

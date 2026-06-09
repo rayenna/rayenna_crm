@@ -19,6 +19,12 @@ type Props = {
   kwVsTarget?: number | null;
   /** When &gt; 1, multi-facet layout (Phase 4). */
   facetCount?: number;
+  /** Panel-weighted effective kW after simplified orientation loss (India estimate). */
+  effectiveSystemKw?: number | null;
+  /** Percent loss from nameplate kW due to facet azimuth (0–100). */
+  orientationLossPercent?: number | null;
+  /** Tooltip for yield estimate disclaimer. */
+  yieldTooltip?: string | null;
 };
 
 export function RoofLayoutStatusStrip({
@@ -38,6 +44,9 @@ export function RoofLayoutStatusStrip({
   fillPercent,
   kwVsTarget,
   facetCount = 1,
+  effectiveSystemKw,
+  orientationLossPercent,
+  yieldTooltip,
 }: Props) {
   const panelsLabel =
     !panelCountReady || panelCount == null ? '—' : String(panelCount);
@@ -49,6 +58,14 @@ export function RoofLayoutStatusStrip({
     targetSystemKw != null && Number.isFinite(targetSystemKw)
       ? `${targetSystemKw.toFixed(1)} kW target`
       : null;
+  const showYieldLoss =
+    orientationLossPercent != null &&
+    Number.isFinite(orientationLossPercent) &&
+    orientationLossPercent >= 0.5 &&
+    effectiveSystemKw != null &&
+    Number.isFinite(effectiveSystemKw);
+  const effectiveKwLabel = showYieldLoss ? effectiveSystemKw.toFixed(2) : null;
+  const lossLabel = showYieldLoss ? orientationLossPercent.toFixed(0) : null;
 
   return (
     <div
@@ -69,6 +86,20 @@ export function RoofLayoutStatusStrip({
           <span className="font-normal text-slate-600"> kW</span>
           {targetLabel && (
             <span className="ml-1 text-[11px] font-normal text-slate-500">({targetLabel})</span>
+          )}
+          {effectiveKwLabel && (
+            <span
+              className="ml-1 text-[11px] font-normal text-slate-600 tabular-nums"
+              title={yieldTooltip ?? undefined}
+            >
+              · eff.{' '}
+              <strong className="text-slate-700">{effectiveKwLabel} kW</strong>
+              {lossLabel && (
+                <span className="ml-1 inline-flex items-center rounded-full bg-amber-100 px-1.5 py-px text-[10px] font-semibold text-amber-900">
+                  −{lossLabel}% orient.
+                </span>
+              )}
+            </span>
           )}
         </span>
         <span className="text-slate-300 hidden sm:inline" aria-hidden>

@@ -3,6 +3,10 @@ import {
   ROOF_AZIMUTH_PRESETS,
   type RoofFacetState,
 } from '../../lib/roofLayoutFacets';
+import {
+  ROOF_LAYOUT_DEFAULT_TILT_DEG,
+  indiaFacetYieldFactor,
+} from '../../lib/roofLayout/estimateRoofLayoutYield';
 
 type Props = {
   facets: RoofFacetState[];
@@ -25,6 +29,7 @@ export function RoofLayoutFacetBar({
 }: Props) {
   const active = facets.find((f) => f.id === activeFacetId);
   const canAdd = facets.length < MAX_ROOF_FACETS;
+  const activeYieldFactor = active ? indiaFacetYieldFactor(active.azimuthDeg) : null;
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
@@ -94,6 +99,14 @@ export function RoofLayoutFacetBar({
               </option>
             ))}
           </select>
+          {activeYieldFactor != null && (
+            <span
+              className="text-[10px] text-slate-500 tabular-nums"
+              title={`Simplified India estimate at ${ROOF_LAYOUT_DEFAULT_TILT_DEG}° tilt. Not a production guarantee.`}
+            >
+              ≈ {(activeYieldFactor * 100).toFixed(0)}% of south yield
+            </span>
+          )}
           <button
             type="button"
             disabled={disabled}

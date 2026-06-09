@@ -2,7 +2,7 @@
 
 **Purpose:** Resume structural improvement work without re-discovering context.  
 **Last updated:** 2026-05-20  
-**Status:** **Phase 4 P1 complete**; **P2 SKU panel dimensions** shipped (costing/BOM spec → brand catalog → wattage fallback). Structural modernisation (2a–3a) complete. **Next:** P2 yield hints / India copy or Track B slice 3 (`AIRoofLayout.tsx`).
+**Status:** **P2 item 15 + 14 shipped** (SKU dimensions, simplified yield hints). **Next:** P2 India copy or Track B slice 3.
 
 ---
 
@@ -169,6 +169,7 @@ When resuming in Cursor: *“Continue PE modernization from `proposal-engine/doc
 | `40c6e4e` | Preview toolbar redesign; export in xl sidebar; mobile UX/accessibility |
 | `a1bdec8` / `4174f6a` | `METERS_PER_PIXEL` + seed polygon constants (CRM authoritative, PE parity tests) |
 | *(local)* | **P2 SKU dimensions:** `resolveModuleDimensions` chain; panel pack + save geometry + status strip |
+| *(local)* | **P2 yield hints:** `estimateRoofLayoutYield` — effective kW + orientation loss badge |
 
 Prod smoke verified on Render after `40c6e4e` + scale deploy.
 

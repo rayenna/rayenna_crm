@@ -34,6 +34,11 @@ import {
   persistRoofLayoutToActiveCustomer,
 } from '../lib/roofLayout/roofLayoutCustomerSync';
 import { computePanelsForPolygon } from '../lib/roofLayout/computePanelsForPolygon';
+import {
+  estimateRoofLayoutYield,
+  roofLayoutYieldTooltip,
+  yieldFacetsFromEditorState,
+} from '../lib/roofLayout/estimateRoofLayoutYield';
 import { runGenerateRoofLayoutDraft } from '../lib/roofLayout/generateRoofLayoutDraft';
 import { parseManualRoofLayoutHydrate } from '../lib/roofLayout/hydrateManualRoofLayout';
 import {
@@ -436,6 +441,29 @@ export default function AIRoofLayout() {
     displayedSystemKw != null && targetSystemKw != null
       ? targetSystemKw - displayedSystemKw
       : null;
+
+  const panelCountReady = layoutMode !== 'editing' || isPolygonSummaryReady;
+
+  const yieldEstimate = useMemo(() => {
+    if (!panelCountReady || displayedPanelCount == null || displayedPanelCount <= 0) return null;
+
+    const fromEditor = yieldFacetsFromEditorState(facets);
+    const withPanels = fromEditor.filter((f) => f.panelCount > 0);
+    const facetInputs =
+      withPanels.length > 0
+        ? withPanels
+        : [
+            {
+              azimuthDeg: facets[0]?.azimuthDeg ?? 180,
+              panelCount: displayedPanelCount,
+            },
+          ];
+
+    return estimateRoofLayoutYield({
+      facets: facetInputs,
+      moduleWatts: effectiveWattage,
+    });
+  }, [facets, effectiveWattage, displayedPanelCount, panelCountReady]);
 
   const applyPolygon = (next: Point[] | null, opts?: { skipHistory?: boolean }) => {
     if (!opts?.skipHistory && polygon && next) {
@@ -1425,7 +1453,7 @@ export default function AIRoofLayout() {
                   usableAreaM2={
                     layoutMode === 'editing' && !isPolygonSummaryReady ? null : result.usable_area_m2
                   }
-                  metricsReady={layoutMode !== 'editing' || isPolygonSummaryReady}
+                  metricsReady={panelCountReady}
                   layoutState={layoutStateLabel}
                   savedAt={loadedSavedAt}
                   moduleWatts={effectiveWattage}
@@ -1435,6 +1463,9 @@ export default function AIRoofLayout() {
                   fillPercent={layoutFillPercent}
                   kwVsTarget={kwVsTarget}
                   facetCount={facets.length}
+                  effectiveSystemKw={yieldEstimate?.effectiveKw ?? null}
+                  orientationLossPercent={yieldEstimate?.orientationLossPercent ?? null}
+                  yieldTooltip={yieldEstimate ? roofLayoutYieldTooltip(yieldEstimate) : null}
                 />
 
                 <div className="w-full flex flex-col gap-4 min-w-0">
