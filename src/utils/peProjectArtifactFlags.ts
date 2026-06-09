@@ -91,3 +91,45 @@ export function peDocumentStatusFromFlags(
   if (hasAny) return 'draft';
   return 'not-started';
 }
+
+/** Saved roof layout metrics for Customers list cards (batch-loaded with artifact flags). */
+export type PeRoofLayoutListSummary = {
+  panelCount: number;
+  placedKw: number;
+};
+
+export async function loadPeRoofLayoutSummariesForList(
+  projects: { id: string; panelCapacityW: number | null | undefined }[],
+): Promise<Map<string, PeRoofLayoutListSummary>> {
+  const ids = projects.map((p) => p.id).filter(Boolean);
+  const out = new Map<string, PeRoofLayoutListSummary>();
+  if (!ids.length) return out;
+
+  const rows = await prisma.projectRoofLayout.findMany({
+    where: { projectId: { in: ids } },
+    select: { projectId: true, panelCount: true, layoutImageUrl: true },
+  });
+
+  const wattsById = new Map(
+    projects.map((p) => {
+      const w =
+        typeof p.panelCapacityW === 'number' && p.panelCapacityW > 0
+          ? p.panelCapacityW
+          : 550;
+      return [p.id, w] as const;
+    }),
+  );
+
+  for (const row of rows) {
+    if (!String(row.layoutImageUrl ?? '').trim()) continue;
+    const panelCount = row.panelCount ?? 0;
+    if (panelCount <= 0) continue;
+    const moduleW = wattsById.get(row.projectId) ?? 550;
+    out.set(row.projectId, {
+      panelCount,
+      placedKw: Math.round((panelCount * moduleW) / 10) / 100,
+    });
+  }
+
+  return out;
+}

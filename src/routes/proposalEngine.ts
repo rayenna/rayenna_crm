@@ -20,6 +20,7 @@ import { repairAndPersistRoofLayoutUrls } from '../services/roofLayoutImageStora
 import {
   loadPeArtifactFlagSets,
   peArtifactFlagsForProject,
+  loadPeRoofLayoutSummariesForList,
   peDocumentStatusFromFlags,
 } from '../utils/peProjectArtifactFlags';
 
@@ -245,16 +246,24 @@ router.get('/projects', authenticate, async (req: Request, res: Response) => {
 
     const projectIds = selections.map((s) => s.projectId);
     const artifactSets = await loadPeArtifactFlagSets(projectIds);
+    const roofLayoutSummaries = await loadPeRoofLayoutSummariesForList(
+      selections.map((s) => ({
+        id: s.projectId,
+        panelCapacityW: s.project.panelCapacityW,
+      })),
+    );
 
     const payload = selections
       .map((s) => {
         const peArtifacts = peArtifactFlagsForProject(s.projectId, artifactSets);
         const peStatus = peDocumentStatusFromFlags(peArtifacts);
+        const roofLayoutSummary = roofLayoutSummaries.get(s.projectId);
 
         return {
           ...s.project,
           peStatus,
           peArtifacts,
+          ...(roofLayoutSummary ? { roofLayoutSummary } : {}),
           peSelectedAt: s.selectedAt,
           peSelectedById: s.selectedById,
         };
