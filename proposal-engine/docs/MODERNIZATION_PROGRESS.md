@@ -2,7 +2,7 @@
 
 **Purpose:** Resume structural improvement work without re-discovering context.  
 **Last updated:** 2026-05-20  
-**Status:** **P2 complete** (SKU dimensions, yield hints, India spacing copy). **Next:** Track B slice 3 or backlog (segmentation, worker).
+**Status:** **Track B slice 3 complete** (~1,695 lines). **Next:** backlog (segmentation, worker) or Phase 3b save pipeline.
 
 ---
 
@@ -108,7 +108,7 @@ Route unchanged: lazy `Customers` in `App.tsx`. `NewCustomerModal` still re-expo
 | **2** | `generateRoofLayoutDraft`, `hydrateManualRoofLayout`, `roofLayoutGeometrySave`, `roofLayoutSaveExport`; `RoofLayoutPageHeader`, `RoofLayoutActiveCustomerBanner`, `RoofLayoutOverridePanel`, `RoofLayoutExportActions` | ~1,997 lines |
 | **2b** (Jun 2026) | `RoofLayoutPreviewToolbar` — preview chrome only (2D/3D + undo); export moved to xl sidebar / md–lg stacked row | `AIRoofLayout.tsx` ~2.1k lines |
 
-Slice 3 (deferred): scroll/viewport effects, 3D tab shell, optional `useRoofLayoutEditorState` hook — target ~1,500 lines.
+| **3** (May 2026) | `useRoofLayoutEditorState`, `useRoofLayoutScrollViewport`, `useRoofLayout3DTab`, `useRoofLayoutViewport`, `RoofLayout3DPreviewShell`, `RoofLayoutMobileMapTools`, `roofLayout3dExport` | ~1,695 lines |
 
 ---
 
@@ -155,7 +155,7 @@ Vercel PE project: redeploy if used (same as Render PE).
 
 PE-only commits under `proposal-engine/`. Do not mix with CRM paths in one commit.
 
-When resuming in Cursor: *“Continue PE modernization from `proposal-engine/docs/MODERNIZATION_PROGRESS.md` — next: P2 yield hints or Track B slice 3.”*
+When resuming in Cursor: *“Continue PE modernization from `proposal-engine/docs/MODERNIZATION_PROGRESS.md` — next: roof segmentation backlog or Phase 3b.”*
 
 ---
 
