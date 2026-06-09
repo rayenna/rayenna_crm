@@ -33,6 +33,7 @@ import {
   exportSitePlanPdfFromLayout,
   saveRoofLayoutForProposal,
 } from '../lib/roofLayout/roofLayoutSaveExport';
+import { fingerprintRoofLayoutEditorState } from '../lib/roofLayout/roofLayoutGeometryFingerprint';
 import type { RoofLayoutKeepout, RoofLayoutPoint } from '../lib/roofLayout/roofLayoutTypes';
 import {
   getActiveCustomer,
@@ -109,6 +110,8 @@ export default function AIRoofLayout() {
   const [exportingSitePlan, setExportingSitePlan] = useState(false);
   const [lastSavedProjectId, setLastSavedProjectId] = useState<string | null>(null);
   const [loadedSavedAt, setLoadedSavedAt] = useState<string | null>(null);
+  /** Fingerprint of geometry last persisted to the server (save or hydrate). */
+  const [savedLayoutFingerprint, setSavedLayoutFingerprint] = useState<string | null>(null);
   const [layoutMode, setLayoutMode] = useState<'saved' | 'editing'>('editing');
   const [panelSpacingMultiplier, setPanelSpacingMultiplier] = useState(1.5);
   const [panelOrientation, setPanelOrientation] = useState<'portrait' | 'landscape'>('portrait');
@@ -305,6 +308,28 @@ export default function AIRoofLayout() {
     lastSavedProjectId != null &&
     String(lastSavedProjectId) === String(crmProjectId);
 
+  const currentLayoutFingerprint = useMemo(
+    () =>
+      fingerprintRoofLayoutEditorState({
+        facets,
+        keepouts,
+        panelOrientation,
+        panelSpacingMultiplier,
+        panelWatts: effectiveWattage,
+        imageSize,
+        metersPerPixel: METERS_PER_PIXEL,
+      }),
+    [facets, keepouts, panelOrientation, panelSpacingMultiplier, effectiveWattage, imageSize],
+  );
+
+  const hasUnsavedLayoutChanges =
+    isSavedForThisProject &&
+    savedLayoutFingerprint != null &&
+    currentLayoutFingerprint != null &&
+    currentLayoutFingerprint !== savedLayoutFingerprint;
+
+  const isLayoutSyncedToServer = isSavedForThisProject && !hasUnsavedLayoutChanges;
+
   const workflowStep = deriveRoofLayoutWorkflowStep({
     hasActiveProject: !!activeProject,
     hasLayoutResult: !!result,
@@ -318,11 +343,13 @@ export default function AIRoofLayout() {
     setMapEditTool(tool);
   };
 
-  const layoutStateLabel: 'draft' | 'saved' | 'idle' = !result
+  const layoutStateLabel: 'draft' | 'saved' | 'saved-dirty' | 'idle' = !result
     ? 'idle'
-    : isSavedForThisProject
-      ? 'saved'
-      : 'draft';
+    : hasUnsavedLayoutChanges
+      ? 'saved-dirty'
+      : isSavedForThisProject
+        ? 'saved'
+        : 'draft';
 
   const targetSystemKw: number | null =
     typeof activeProject?.master?.systemSizeKw === 'number' &&
@@ -500,6 +527,7 @@ export default function AIRoofLayout() {
           setResult(data.result);
           setLastSavedProjectId(String(crmProjectId));
           setLoadedSavedAt(data.savedAt);
+          setSavedLayoutFingerprint(data.geometryFingerprint);
           if (data.layout3dUrl) setLast3dPngDataUrl(data.layout3dUrl);
           else setLast3dPngDataUrl(null);
           setProposalImageSource(data.proposalImageSource);
@@ -534,6 +562,7 @@ export default function AIRoofLayout() {
         setResult(data.result);
         setLastSavedProjectId(String(crmProjectId));
         setLoadedSavedAt(data.savedAt);
+        setSavedLayoutFingerprint(null);
         if (data.layout3dUrl) setLast3dPngDataUrl(data.layout3dUrl);
         else setLast3dPngDataUrl(null);
         setProposalImageSource(data.proposalImageSource);
@@ -656,6 +685,7 @@ export default function AIRoofLayout() {
     setError(null);
     setLastSavedProjectId(null);
     setLoadedSavedAt(null);
+    setSavedLayoutFingerprint(null);
     setLayoutMode('editing');
     setIsPolygonSummaryReady(false);
     isDraggingRef.current = false;
@@ -724,6 +754,7 @@ export default function AIRoofLayout() {
     solar3dPersistentLayoutKeyRef.current = '';
     solar3dOrbitRef.current = null;
     setLastSavedProjectId(null);
+    setSavedLayoutFingerprint(null);
     setLayoutMode('editing');
     setIsPolygonSummaryReady(false);
     isDraggingRef.current = false;
@@ -835,6 +866,16 @@ export default function AIRoofLayout() {
       });
       setLastSavedProjectId(String(crmProjectId));
       setLoadedSavedAt(new Date().toISOString());
+      const savedFingerprint = fingerprintRoofLayoutEditorState({
+        facets,
+        keepouts,
+        panelOrientation,
+        panelSpacingMultiplier,
+        panelWatts: effectiveWattage,
+        imageSize,
+        metersPerPixel: METERS_PER_PIXEL,
+      });
+      if (savedFingerprint) setSavedLayoutFingerprint(savedFingerprint);
 
       const sat = satelliteEditorUrlRef.current;
       if (sat && layoutMode === 'editing') {
@@ -1176,6 +1217,15 @@ export default function AIRoofLayout() {
                 the roof, use <strong>Refill panels</strong>, then <strong>Save to Proposal</strong>.
               </div>
             </div>
+          ) : hasUnsavedLayoutChanges ? (
+            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <div className="font-semibold">Saved layout — unsaved changes</div>
+              <div className="mt-0.5 text-xs text-amber-800">
+                {loadedSavedAt ? `Last saved: ${new Date(loadedSavedAt).toLocaleString()}. ` : ''}
+                You edited the roof or panels since the last save. Click <strong>Save to Proposal</strong> to
+                update the server copy.
+              </div>
+            </div>
           ) : (
             <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
               <div className="font-semibold">✓ Saved layout loaded</div>
@@ -1358,7 +1408,7 @@ export default function AIRoofLayout() {
                     onRedo={handleRedoPolygon}
                     savingToProposal={savingToProposal}
                     exportingSitePlan={exportingSitePlan}
-                    isSavedForProject={!!(lastSavedProjectId && activeProject?.master?.crmProjectId != null)}
+                    isSavedForProject={isLayoutSyncedToServer}
                     onExportSitePlan={() => void handleExportSitePlanPdf()}
                     onSaveForProposal={() => void handleSaveForProposal()}
                   />
@@ -1985,7 +2035,7 @@ export default function AIRoofLayout() {
                 variant="mobile"
                 savingToProposal={savingToProposal}
                 exportingSitePlan={exportingSitePlan}
-                isSavedForProject={!!(lastSavedProjectId && activeProject?.master?.crmProjectId != null)}
+                isSavedForProject={isLayoutSyncedToServer}
                 proposalImageSource={proposalImageSource}
                 canChoose3dForProposal={canChoose3dForProposal}
                 onExportSitePlan={() => void handleExportSitePlanPdf()}

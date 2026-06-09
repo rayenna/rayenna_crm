@@ -6,7 +6,7 @@ type Props = {
   roofAreaM2: number | null;
   usableAreaM2: number | null;
   metricsReady: boolean;
-  layoutState: 'draft' | 'saved' | 'idle';
+  layoutState: 'draft' | 'saved' | 'saved-dirty' | 'idle';
   savedAt: string | null;
   moduleWatts: number;
   /** Placed module area ÷ usable roof area (0–100+). */
@@ -114,18 +114,22 @@ export function RoofLayoutStatusStrip({
           className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${
             layoutState === 'saved'
               ? 'bg-emerald-100 text-emerald-800'
-              : layoutState === 'draft'
+              : layoutState === 'saved-dirty'
                 ? 'bg-amber-100 text-amber-900'
-                : 'bg-gray-100 text-gray-600'
+                : layoutState === 'draft'
+                  ? 'bg-amber-100 text-amber-900'
+                  : 'bg-gray-100 text-gray-600'
           }`}
         >
           {layoutState === 'saved'
             ? savedAt
               ? `Saved ${new Date(savedAt).toLocaleString()}`
               : 'Saved to proposal'
-            : layoutState === 'draft'
-              ? 'Draft — not saved'
-              : 'No layout'}
+            : layoutState === 'saved-dirty'
+              ? 'Saved — unsaved changes'
+              : layoutState === 'draft'
+                ? 'Draft — not saved'
+                : 'No layout'}
         </span>
       </div>
     </div>

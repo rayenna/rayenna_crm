@@ -8,6 +8,7 @@ import {
   satelliteEditorUrlForProject,
 } from './roofLayoutPageUtils';
 import { keepoutFromGeometryJson } from './keepoutGeometry';
+import { fingerprintParsedRoofLayoutGeometry } from './roofLayoutGeometryFingerprint';
 import type { RoofLayoutKeepout } from './roofLayoutTypes';
 
 export type ManualLayoutApiResponse = {
@@ -39,6 +40,7 @@ export type HydratedEditingLayout = {
   panelSpacingMultiplier: number;
   bgImageUrl: string;
   satelliteEditorBaseUrl: string;
+  geometryFingerprint: string;
 };
 
 export type HydratedSavedLayout = {
@@ -159,6 +161,7 @@ export function parseManualRoofLayoutHydrate(
         panelSpacingMultiplier: geom.panelSpacingMultiplier,
         bgImageUrl: satUrl,
         satelliteEditorBaseUrl: satFromSaved ? satUrl.split('?')[0] ?? satUrl : satUrl,
+        geometryFingerprint: fingerprintParsedRoofLayoutGeometry(geom),
       },
     };
   }
