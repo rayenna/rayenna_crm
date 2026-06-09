@@ -20,9 +20,18 @@ export function buildSavedRoofLayoutGeometry(params: {
   panelOrientation: 'portrait' | 'landscape';
   panelSpacingMultiplier: number;
   panelWatts: number;
+  edgeSetbackM?: number;
 }) {
-  const { imageSize, facets, keepouts, panelOrientation, panelSpacingMultiplier, panelWatts, metersPerPixel } =
-    params;
+  const {
+    imageSize,
+    facets,
+    keepouts,
+    panelOrientation,
+    panelSpacingMultiplier,
+    panelWatts,
+    metersPerPixel,
+    edgeSetbackM = 0,
+  } = params;
   if (!facets.some((f) => f.polygon && f.polygon.length >= 3)) return undefined;
 
   const moduleSize = getOrientedPanelSizeM(panelWatts, panelOrientation);
@@ -49,5 +58,6 @@ export function buildSavedRoofLayoutGeometry(params: {
     panelSpacingMultiplier,
     panelWidthM: moduleSize.widthM,
     panelHeightM: moduleSize.heightM,
+    edgeSetbackM: Math.max(0, edgeSetbackM),
   });
 }

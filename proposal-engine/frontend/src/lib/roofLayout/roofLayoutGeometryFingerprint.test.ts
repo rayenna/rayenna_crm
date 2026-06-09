@@ -30,6 +30,7 @@ const baseGeom: ParsedRoofLayoutGeometry = {
   panelSpacingMultiplier: 1.5,
   panelWidthM: 1.134,
   panelHeightM: 2.278,
+  edgeSetbackM: 0,
 };
 
 describe('roofLayoutGeometryFingerprint', () => {

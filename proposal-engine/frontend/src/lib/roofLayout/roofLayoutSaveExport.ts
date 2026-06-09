@@ -92,6 +92,7 @@ export type SaveRoofLayoutForProposalParams = {
   panelOrientation: 'portrait' | 'landscape';
   panelSpacingMultiplier: number;
   effectiveWattage: number;
+  edgeSetbackM?: number;
   metersPerPixel: number;
   roofViewTab: '2d' | '3d';
   proposalImageSource: '2d' | '3d';
@@ -147,6 +148,7 @@ export async function saveRoofLayoutForProposal(
     panelOrientation: params.panelOrientation,
     panelSpacingMultiplier: params.panelSpacingMultiplier,
     panelWatts: params.effectiveWattage,
+    edgeSetbackM: params.edgeSetbackM ?? 0,
   });
 
   if (params.layoutMode === 'editing' && !geometry) {

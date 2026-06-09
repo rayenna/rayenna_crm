@@ -1,4 +1,4 @@
-import type { Dispatch, LegacyRef, MutableRefObject, RefObject, SetStateAction } from 'react';
+import { useMemo, type Dispatch, type LegacyRef, type MutableRefObject, type RefObject, type SetStateAction } from 'react';
 import { Stage, Layer, Image as KonvaImage, Line, Rect, Circle, Text, Tag, Label } from 'react-konva';
 import type Konva from 'konva';
 import { ROOF_LAYOUT_METERS_PER_PIXEL } from '../../lib/roofLayoutConstants';
@@ -9,6 +9,7 @@ import {
   type PolygonEdgeInfo,
 } from '../../lib/roofLayoutEdgeMeasure';
 import { snapPolygonVertex } from '../../lib/roofLayout/polygonVertexSnap';
+import { insetPolygonByDistance, setbackMetersToPixels } from '../../lib/roofLayout/polygonEdgeSetback';
 import {
   ROOF_LAYOUT_PANEL_VISUAL_INSET_PX,
   isKeepoutCircle,
@@ -49,6 +50,7 @@ export type RoofLayoutKonvaStageProps = {
   polygonStrokeWidth: number;
   controlPointRadius: number;
   controlPointHitStrokeWidth: number;
+  edgeSetbackM?: number;
   refs: RoofLayoutKonvaStageRefs;
   onApplyPolygon: (next: RoofLayoutPoint[] | null) => void;
   onSetKeepouts: Dispatch<SetStateAction<RoofLayoutKeepout[]>>;
@@ -73,12 +75,20 @@ export function RoofLayoutKonvaStage({
   polygonStrokeWidth,
   controlPointRadius,
   controlPointHitStrokeWidth,
+  edgeSetbackM = 0,
   refs,
   onApplyPolygon,
   onSetKeepouts,
   onSetHoveredEdge,
   onSetIsDragging,
 }: RoofLayoutKonvaStageProps) {
+  const setbackInsetPolygon = useMemo(() => {
+    if (!polygon || polygon.length < 3 || edgeSetbackM <= 0) return null;
+    const insetPx = setbackMetersToPixels(edgeSetbackM, METERS_PER_PIXEL);
+    if (insetPx <= 0) return null;
+    return insetPolygonByDistance(polygon, insetPx);
+  }, [polygon, edgeSetbackM]);
+
   const {
     stageRef,
     lineRef,
@@ -160,6 +170,16 @@ export function RoofLayoutKonvaStage({
             fill="rgba(34,197,94,0.08)"
             listening={false}
           />
+          {setbackInsetPolygon && setbackInsetPolygon.length >= 3 && (
+            <Line
+              points={setbackInsetPolygon.flatMap((p) => [p.x, p.y])}
+              closed
+              stroke="#d97706"
+              strokeWidth={Math.max(1, polygonStrokeWidth * 0.85)}
+              dash={[10, 8]}
+              listening={false}
+            />
+          )}
         </Layer>
       )}
 

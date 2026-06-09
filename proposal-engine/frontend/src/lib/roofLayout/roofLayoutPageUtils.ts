@@ -8,8 +8,15 @@ import {
 } from '../roofLayoutConstants';
 import type { RoofLayoutPoint } from './roofLayoutTypes';
 
-/** Scroll padding around the 2D Konva map — 0 = scroll extent matches scaled image only. */
+/** Scroll padding around the 2D Konva map on desktop — 0 = scroll extent matches scaled image only. */
 export const ROOF_LAYOUT_SCROLL_BUFFER_PX = 0;
+
+/** Extra pan margin on phone/tablet so users can scroll past roof edges when zoomed in. */
+export const ROOF_LAYOUT_MOBILE_SCROLL_BUFFER_PX = 72;
+
+export function roofLayoutScrollBufferPx(isMobileView: boolean): number {
+  return isMobileView ? ROOF_LAYOUT_MOBILE_SCROLL_BUFFER_PX : ROOF_LAYOUT_SCROLL_BUFFER_PX;
+}
 
 export function focalPointForSavedView(
   imageSize: { width: number; height: number },

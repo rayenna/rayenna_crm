@@ -19,7 +19,7 @@ import {
   focalPointForEditingPolygon,
   focalPointForSavedView,
   initialPolygonHalfExtentsPx,
-  ROOF_LAYOUT_SCROLL_BUFFER_PX,
+  roofLayoutScrollBufferPx,
   scrollLayoutPreviewToFocal,
 } from '../lib/roofLayout/roofLayoutPageUtils';
 import {
@@ -114,6 +114,7 @@ export default function AIRoofLayout() {
   const [savedLayoutFingerprint, setSavedLayoutFingerprint] = useState<string | null>(null);
   const [layoutMode, setLayoutMode] = useState<'saved' | 'editing'>('editing');
   const [panelSpacingMultiplier, setPanelSpacingMultiplier] = useState(1.5);
+  const [edgeSetbackM, setEdgeSetbackM] = useState(0);
   const [panelOrientation, setPanelOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const [roofViewTab, setRoofViewTab] = useState<'2d' | '3d'>('2d');
   const [last3dPngDataUrl, setLast3dPngDataUrl] = useState<string | null>(null);
@@ -286,14 +287,18 @@ export default function AIRoofLayout() {
     [],
   );
 
+  const layoutScrollBufferPx = roofLayoutScrollBufferPx(isMobileView);
+
   const panelPackBase = useMemo(
     () => ({
       panelOrientation,
       panelSpacingMultiplier,
       panelWatts: effectiveWattage,
       keepoutRects: keepouts,
+      edgeSetbackM,
+      metersPerPixel: METERS_PER_PIXEL,
     }),
-    [panelOrientation, panelSpacingMultiplier, effectiveWattage, keepouts],
+    [panelOrientation, panelSpacingMultiplier, effectiveWattage, keepouts, edgeSetbackM],
   );
 
   const allPanelsFlat = flattenFacetPanels(facets);
@@ -318,8 +323,9 @@ export default function AIRoofLayout() {
         panelWatts: effectiveWattage,
         imageSize,
         metersPerPixel: METERS_PER_PIXEL,
+        edgeSetbackM,
       }),
-    [facets, keepouts, panelOrientation, panelSpacingMultiplier, effectiveWattage, imageSize],
+    [facets, keepouts, panelOrientation, panelSpacingMultiplier, effectiveWattage, imageSize, edgeSetbackM],
   );
 
   const hasUnsavedLayoutChanges =
@@ -545,6 +551,7 @@ export default function AIRoofLayout() {
 
           setPanelOrientation(data.panelOrientation);
           setPanelSpacingMultiplier(data.panelSpacingMultiplier);
+          setEdgeSetbackM(data.edgeSetbackM);
           setKeepouts(data.keepouts);
           setFacets(data.facets);
           setActiveFacetId(data.activeFacetId);
@@ -657,25 +664,35 @@ export default function AIRoofLayout() {
       const run = () => {
         const el = layoutScrollRef.current;
         if (!el) return;
-        scrollLayoutPreviewToFocal(el, focal.x, focal.y, zoom, ROOF_LAYOUT_SCROLL_BUFFER_PX);
+        scrollLayoutPreviewToFocal(el, focal.x, focal.y, zoom, layoutScrollBufferPx);
       };
       requestAnimationFrame(() => requestAnimationFrame(run));
       return;
     }
 
     if (layoutMode === 'editing' && polygon && polygon.length >= 2) {
-      const scrollSig = `editing|${zoom}|${Math.round(vw)}|${Math.round(vh)}`;
+      const scrollSig = `editing|${zoom}|${Math.round(vw)}|${Math.round(vh)}|${layoutScrollBufferPx}`;
       if (scrollCenterMetaRef.current.lastSig === scrollSig) return;
       scrollCenterMetaRef.current.lastSig = scrollSig;
       const focal = focalPointForEditingPolygon(imageSize, polygon);
       const run = () => {
         const el = layoutScrollRef.current;
         if (!el) return;
-        scrollLayoutPreviewToFocal(el, focal.x, focal.y, zoom, ROOF_LAYOUT_SCROLL_BUFFER_PX);
+        scrollLayoutPreviewToFocal(el, focal.x, focal.y, zoom, layoutScrollBufferPx);
       };
       requestAnimationFrame(() => requestAnimationFrame(run));
     }
-  }, [layoutMode, roofViewTab, imageSize, bgImage, bgImageUrl, result, polygon, zoom, layoutScrollViewport.w, layoutScrollViewport.h]);
+  }, [layoutMode, roofViewTab, imageSize, bgImage, bgImageUrl, result, polygon, zoom, layoutScrollViewport.w, layoutScrollViewport.h, layoutScrollBufferPx]);
+
+  const centerMapOnActiveRoof = () => {
+    const el = layoutScrollRef.current;
+    if (!el || !imageSize) return;
+    const activePoly = polygon;
+    if (!activePoly?.length) return;
+    scrollCenterMetaRef.current.lastSig = '';
+    const focal = focalPointForEditingPolygon(imageSize, activePoly);
+    scrollLayoutPreviewToFocal(el, focal.x, focal.y, zoom, layoutScrollBufferPx);
+  };
 
   const resetLayoutEditorToBlank = () => {
     layoutHydrateGenerationRef.current += 1;
@@ -695,6 +712,7 @@ export default function AIRoofLayout() {
     resetFacetsToSingle();
     polygonHistory.resetHistory();
     setKeepouts([]);
+    setEdgeSetbackM(0);
     setMapTool(isMobileView ? 'scroll' : 'roof');
     setBgImageUrl(null);
     setImageSize(null);
@@ -755,6 +773,7 @@ export default function AIRoofLayout() {
     solar3dOrbitRef.current = null;
     setLastSavedProjectId(null);
     setSavedLayoutFingerprint(null);
+    setEdgeSetbackM(0);
     setLayoutMode('editing');
     setIsPolygonSummaryReady(false);
     isDraggingRef.current = false;
@@ -828,6 +847,7 @@ export default function AIRoofLayout() {
         panelOrientation,
         panelSpacingMultiplier,
         effectiveWattage,
+        edgeSetbackM,
         metersPerPixel: METERS_PER_PIXEL,
         roofViewTab,
         proposalImageSource,
@@ -874,6 +894,7 @@ export default function AIRoofLayout() {
         panelWatts: effectiveWattage,
         imageSize,
         metersPerPixel: METERS_PER_PIXEL,
+        edgeSetbackM,
       });
       if (savedFingerprint) setSavedLayoutFingerprint(savedFingerprint);
 
@@ -1704,14 +1725,13 @@ export default function AIRoofLayout() {
                         className="flex w-full justify-center items-start box-border"
                         style={{ minHeight: '100%' }}
                       >
-                        {/* Scroll extent matches scaled map (ROOF_LAYOUT_SCROLL_BUFFER_PX = 0); centre below without flex on overflow parent (fixes Konva drag). */}
                         <div
                           className="relative flex-shrink-0 bg-white"
                         style={{
-                          width: imageSize.width * zoom + 2 * ROOF_LAYOUT_SCROLL_BUFFER_PX,
-                          height: imageSize.height * zoom + 2 * ROOF_LAYOUT_SCROLL_BUFFER_PX,
-                          minWidth: imageSize.width * zoom + 2 * ROOF_LAYOUT_SCROLL_BUFFER_PX,
-                          minHeight: imageSize.height * zoom + 2 * ROOF_LAYOUT_SCROLL_BUFFER_PX,
+                          width: imageSize.width * zoom + 2 * layoutScrollBufferPx,
+                          height: imageSize.height * zoom + 2 * layoutScrollBufferPx,
+                          minWidth: imageSize.width * zoom + 2 * layoutScrollBufferPx,
+                          minHeight: imageSize.height * zoom + 2 * layoutScrollBufferPx,
                           ...(layoutMode === 'editing' &&
                           bgImageUrl &&
                           imageSize.width >= 1800 &&
@@ -1729,8 +1749,8 @@ export default function AIRoofLayout() {
                         <div
                           style={{
                             position: 'absolute',
-                            top: ROOF_LAYOUT_SCROLL_BUFFER_PX,
-                            left: ROOF_LAYOUT_SCROLL_BUFFER_PX,
+                            top: layoutScrollBufferPx,
+                            left: layoutScrollBufferPx,
                             transform: `scale(${zoom})`,
                             transformOrigin: '0 0',
                             width: imageSize.width,
@@ -1759,6 +1779,7 @@ export default function AIRoofLayout() {
                             polygonStrokeWidth={polygonStrokeWidth}
                             controlPointRadius={controlPointRadius}
                             controlPointHitStrokeWidth={controlPointHitStrokeWidth}
+                            edgeSetbackM={edgeSetbackM}
                             refs={{
                               stageRef,
                               lineRef,
@@ -1807,7 +1828,8 @@ export default function AIRoofLayout() {
                     <div className="w-full lg:hidden space-y-2">
                       {mapEditTool === 'scroll' && layoutMode === 'editing' && (
                         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-snug text-amber-800">
-                          Tap <strong>Edit polygon</strong> or <strong>Keepouts</strong> to adjust the map.
+                          Drag the map to pan · use <strong>+/−</strong> to zoom · <strong>Center</strong> returns to
+                          the roof. Tap <strong>Edit polygon</strong> or <strong>Keepouts</strong> to adjust the layout.
                         </p>
                       )}
                       <div className="flex items-stretch gap-2 flex-wrap">
@@ -1869,6 +1891,15 @@ export default function AIRoofLayout() {
                             +
                           </button>
                         </div>
+                        <button
+                          type="button"
+                          onClick={centerMapOnActiveRoof}
+                          disabled={!polygon?.length}
+                          className="min-h-[44px] shrink-0 px-3 rounded-lg text-xs font-semibold border border-gray-300 bg-white text-gray-700 touch-manipulation disabled:opacity-50"
+                          title="Center map on the active roof outline"
+                        >
+                          Center
+                        </button>
                       </div>
                       <RoofLayoutKeyboardHints compact className="hidden sm:block lg:hidden px-0.5" />
                     </div>
@@ -1916,6 +1947,8 @@ export default function AIRoofLayout() {
                         setLayoutZoom={setLayoutZoom}
                         panelSpacingMultiplier={panelSpacingMultiplier}
                         setPanelSpacingMultiplier={setPanelSpacingMultiplier}
+                        edgeSetbackM={edgeSetbackM}
+                        setEdgeSetbackM={setEdgeSetbackM}
                         panelOrientation={panelOrientation}
                         setPanelOrientation={setPanelOrientation}
                         satelliteOpacity={satelliteOpacity}
@@ -1956,6 +1989,8 @@ export default function AIRoofLayout() {
                     setLayoutZoom={setLayoutZoom}
                     panelSpacingMultiplier={panelSpacingMultiplier}
                     setPanelSpacingMultiplier={setPanelSpacingMultiplier}
+                    edgeSetbackM={edgeSetbackM}
+                    setEdgeSetbackM={setEdgeSetbackM}
                     panelOrientation={panelOrientation}
                     setPanelOrientation={setPanelOrientation}
                     satelliteOpacity={satelliteOpacity}
@@ -2013,6 +2048,8 @@ export default function AIRoofLayout() {
                   setLayoutZoom={setLayoutZoom}
                   panelSpacingMultiplier={panelSpacingMultiplier}
                   setPanelSpacingMultiplier={setPanelSpacingMultiplier}
+                  edgeSetbackM={edgeSetbackM}
+                  setEdgeSetbackM={setEdgeSetbackM}
                   panelOrientation={panelOrientation}
                   setPanelOrientation={setPanelOrientation}
                   satelliteOpacity={satelliteOpacity}

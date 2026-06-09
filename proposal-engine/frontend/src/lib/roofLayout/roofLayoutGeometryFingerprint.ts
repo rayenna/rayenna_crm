@@ -12,7 +12,11 @@ function roundCoord(n: number): number {
 export function normalizeRoofLayoutGeometryFingerprint(
   geom: Pick<
     ParsedRoofLayoutGeometry,
-    'facets' | 'keepouts' | 'panelOrientation' | 'panelSpacingMultiplier' | 'panelWidthM' | 'panelHeightM'
+    'facets' | 'keepouts' | 'panelOrientation'
+    | 'panelSpacingMultiplier'
+    | 'panelWidthM'
+    | 'panelHeightM'
+    | 'edgeSetbackM'
   >,
 ): string {
   const facets = [...geom.facets]
@@ -61,6 +65,7 @@ export function normalizeRoofLayoutGeometryFingerprint(
     panelSpacingMultiplier: roundCoord(geom.panelSpacingMultiplier),
     panelWidthM: roundCoord(geom.panelWidthM),
     panelHeightM: roundCoord(geom.panelHeightM),
+    edgeSetbackM: roundCoord(geom.edgeSetbackM ?? 0),
   });
 }
 
@@ -76,6 +81,7 @@ export function fingerprintRoofLayoutEditorState(params: {
   panelWatts: number;
   imageSize: { width: number; height: number } | null;
   metersPerPixel?: number;
+  edgeSetbackM?: number;
 }): string | null {
   if (!params.imageSize) return null;
 
@@ -87,6 +93,7 @@ export function fingerprintRoofLayoutEditorState(params: {
     panelOrientation: params.panelOrientation,
     panelSpacingMultiplier: params.panelSpacingMultiplier,
     panelWatts: params.panelWatts,
+    edgeSetbackM: params.edgeSetbackM ?? 0,
   });
   if (!built) return null;
 

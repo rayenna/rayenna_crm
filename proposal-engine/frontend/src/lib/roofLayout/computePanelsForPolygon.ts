@@ -6,6 +6,7 @@ import {
   getOrientedPanelSizeM,
 } from '../roofLayoutConstants';
 import { panelOverlapsKeepout } from './keepoutGeometry';
+import { insetPolygonByDistance, setbackMetersToPixels } from './polygonEdgeSetback';
 import type { RoofLayoutKeepout, RoofLayoutPanelRect, RoofLayoutPoint } from './roofLayoutTypes';
 
 export type ComputePanelsOptions = {
@@ -16,6 +17,8 @@ export type ComputePanelsOptions = {
   maxPanelsCap?: number;
   keepoutRects?: RoofLayoutKeepout[];
   targetKw?: number | null;
+  /** Uniform inset from roof edges before placing modules (metres). Default 0. */
+  edgeSetbackM?: number;
 };
 
 export function computePanelsForPolygon(
@@ -33,6 +36,13 @@ export function computePanelsForPolygon(
 
   if (!poly.length) return { panels: [], roofAreaM2: 0, usableAreaM2: 0, panelCount: 0 };
 
+  const setbackPx = setbackMetersToPixels(options.edgeSetbackM ?? 0, metersPerPixel);
+  const packPoly =
+    setbackPx > 0 ? insetPolygonByDistance(poly, setbackPx) : poly;
+  if (!packPoly || packPoly.length < 3) {
+    return { panels: [], roofAreaM2: 0, usableAreaM2: 0, panelCount: 0 };
+  }
+
   const areaPx = Math.abs(
     poly.reduce((sum, p, idx) => {
       const next = poly[(idx + 1) % poly.length]!;
@@ -43,23 +53,32 @@ export function computePanelsForPolygon(
   const roofAreaM2 = areaPx * metersPerPixel * metersPerPixel;
   const usableAreaM2 = roofAreaM2 * ROOF_LAYOUT_USABLE_AREA_FACTOR;
 
+  const packAreaPx = Math.abs(
+    packPoly.reduce((sum, p, idx) => {
+      const next = packPoly[(idx + 1) % packPoly.length]!;
+      return sum + p.x * next.y - next.x * p.y;
+    }, 0) / 2,
+  );
+  const packUsableAreaM2 =
+    packAreaPx * metersPerPixel * metersPerPixel * ROOF_LAYOUT_USABLE_AREA_FACTOR;
+
   const { widthM, heightM } = getOrientedPanelSizeM(options.panelWatts, options.panelOrientation);
   const panelAreaM2 = widthM * heightM;
 
   const idealPanelCount = Math.max(
     0,
-    Math.floor(usableAreaM2 / (panelAreaM2 * ROOF_LAYOUT_PANEL_SPACING_FACTOR)),
+    Math.floor(packUsableAreaM2 / (panelAreaM2 * ROOF_LAYOUT_PANEL_SPACING_FACTOR)),
   );
 
   const panelWidthPx = widthM / metersPerPixel;
   const panelHeightPx = heightM / metersPerPixel;
   const spacingPx = (ROOF_LAYOUT_PANEL_SPACING_M / metersPerPixel) * options.panelSpacingMultiplier;
 
-  let minX = poly[0]!.x;
-  let maxX = poly[0]!.x;
-  let minY = poly[0]!.y;
-  let maxY = poly[0]!.y;
-  for (const p of poly) {
+  let minX = packPoly[0]!.x;
+  let maxX = packPoly[0]!.x;
+  let minY = packPoly[0]!.y;
+  let maxY = packPoly[0]!.y;
+  for (const p of packPoly) {
     if (p.x < minX) minX = p.x;
     if (p.x > maxX) maxX = p.x;
     if (p.y < minY) minY = p.y;
@@ -108,14 +127,14 @@ export function computePanelsForPolygon(
   const maxPanelsRendered = Math.min(
     maxPanelsCap,
     targetPanelCap,
-    idealPanelCount || Math.max(1, Math.floor(areaPx / approxPanelArea)),
+    idealPanelCount || Math.max(1, Math.floor(packAreaPx / approxPanelArea)),
   );
 
   const panelRect = { x: 0, y: 0, w: panelWidthPx, h: panelHeightPx };
 
   for (let y = minY; y + panelHeightPx <= maxY; y += stepY) {
     for (let x = minX; x + panelWidthPx <= maxX; x += stepX) {
-      if (!rectFullyInsidePolygon(x, y, panelWidthPx, panelHeightPx, poly)) continue;
+      if (!rectFullyInsidePolygon(x, y, panelWidthPx, panelHeightPx, packPoly)) continue;
 
       panelRect.x = x;
       panelRect.y = y;

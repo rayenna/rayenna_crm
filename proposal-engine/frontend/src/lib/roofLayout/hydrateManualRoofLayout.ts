@@ -38,6 +38,7 @@ export type HydratedEditingLayout = {
   keepouts: RoofLayoutKeepout[];
   panelOrientation: 'portrait' | 'landscape';
   panelSpacingMultiplier: number;
+  edgeSetbackM: number;
   bgImageUrl: string;
   satelliteEditorBaseUrl: string;
   geometryFingerprint: string;
@@ -159,6 +160,7 @@ export function parseManualRoofLayoutHydrate(
           .filter((k): k is RoofLayoutKeepout => k != null),
         panelOrientation: geom.panelOrientation,
         panelSpacingMultiplier: geom.panelSpacingMultiplier,
+        edgeSetbackM: geom.edgeSetbackM ?? 0,
         bgImageUrl: satUrl,
         satelliteEditorBaseUrl: satFromSaved ? satUrl.split('?')[0] ?? satUrl : satUrl,
         geometryFingerprint: fingerprintParsedRoofLayoutGeometry(geom),

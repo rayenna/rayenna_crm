@@ -26,6 +26,7 @@ export type RoofLayoutGeometryV1 = {
   panelSpacingMultiplier: number;
   panelWidthM: number;
   panelHeightM: number;
+  edgeSetbackM?: number;
 };
 
 export type RoofLayoutGeometryV2 = {
@@ -39,6 +40,8 @@ export type RoofLayoutGeometryV2 = {
   panelSpacingMultiplier: number;
   panelWidthM: number;
   panelHeightM: number;
+  /** Uniform edge inset for module packing (metres). Optional; 0 = pack to outline. */
+  edgeSetbackM?: number;
 };
 
 export type ParsedRoofLayoutGeometry = RoofLayoutGeometryV2;
@@ -87,6 +90,7 @@ function parseSharedFields(o: Record<string, unknown>) {
       : 1.5,
     panelWidthM: Number.isFinite(Number(o.panelWidthM)) ? Number(o.panelWidthM) : 1.1,
     panelHeightM: Number.isFinite(Number(o.panelHeightM)) ? Number(o.panelHeightM) : 2.2,
+    edgeSetbackM: Number.isFinite(Number(o.edgeSetbackM)) ? Math.max(0, Number(o.edgeSetbackM)) : 0,
   };
 }
 

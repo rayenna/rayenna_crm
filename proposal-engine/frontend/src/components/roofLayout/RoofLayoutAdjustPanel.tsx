@@ -13,6 +13,8 @@ type Props = {
   setLayoutZoom: Dispatch<SetStateAction<number>>;
   panelSpacingMultiplier: number;
   setPanelSpacingMultiplier: (v: number) => void;
+  edgeSetbackM: number;
+  setEdgeSetbackM: (v: number) => void;
   panelOrientation: 'portrait' | 'landscape';
   setPanelOrientation: Dispatch<SetStateAction<'portrait' | 'landscape'>>;
   satelliteOpacity: number;
@@ -40,6 +42,8 @@ export function RoofLayoutAdjustPanel({
   setLayoutZoom,
   panelSpacingMultiplier,
   setPanelSpacingMultiplier,
+  edgeSetbackM,
+  setEdgeSetbackM,
   panelOrientation,
   setPanelOrientation,
   satelliteOpacity,
@@ -121,6 +125,26 @@ export function RoofLayoutAdjustPanel({
             className="w-full h-8 accent-slate-600"
           />
           <span className="text-[10px] text-gray-500">Lower to see panel grid over the map</span>
+        </div>
+      )}
+
+      {roofViewTab === '2d' && layoutMode === 'editing' && (
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-medium text-gray-600">Edge setback</span>
+          <input
+            type="range"
+            min={0}
+            max={0.6}
+            step={0.1}
+            value={edgeSetbackM}
+            onChange={(e) => setEdgeSetbackM(Number(e.target.value))}
+            className="w-full h-8 accent-amber-600"
+          />
+          <span className="text-[10px] text-gray-500 leading-snug">
+            {edgeSetbackM <= 0
+              ? 'Off — modules pack to the roof outline'
+              : `${edgeSetbackM.toFixed(1)} m inset from edges · use Refill panels to apply`}
+          </span>
         </div>
       )}
 
