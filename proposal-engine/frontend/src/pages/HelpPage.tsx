@@ -283,13 +283,16 @@ export default function HelpPage() {
               <strong>Locate:</strong> Map GPS from <strong>Rayenna CRM Customer Master</strong> loads automatically. In CRM, set the pin under the customer&apos;s address — if latitude is in Kerala (about 8°–13°N) and longitude is <strong>west of 76°</strong>, CRM and PE show a warning because Google satellite often fails there; most Kerala sites use ~<strong>76.2°–77.4°E</strong>. If the pin is wrong, paste a full <strong>Google Maps URL</strong> (or <code className="text-xs bg-white px-1 rounded">lat, lng</code>) under <strong>Override Google Maps location</strong> and click <strong>Regenerate AI Layout</strong>. Short <code className="text-xs">maps.app.goo.gl</code> links will not work — open them in a browser and copy the full <code className="text-xs">google.com/maps/…</code> address.
             </li>
             <li>
-              <strong>Outline:</strong> Drag green corner handles to match each roof face. This is an <strong>AI-assisted draft</strong> — the first outline is a <strong>starting rectangle</strong> (not auto-traced). Up to <strong>three roof sections</strong> (multi-facet) — use <strong>+ Add section</strong> in the left column. Corners snap to 90° while you drag. <strong>Undo</strong> / <strong>Redo</strong> (<strong>Ctrl+Z</strong> / <strong>Ctrl+Y</strong> on desktop; <strong>Esc</strong> = scroll map, <strong>E</strong> = draw outline, <strong>K</strong> = keepouts).
+              <strong>Outline:</strong> Drag green corner handles to match each roof face. This is an <strong>AI-assisted draft</strong> — the first outline is a <strong>starting rectangle</strong> (not auto-traced). Set <strong>Azimuth</strong> under <strong>Roof sections</strong> (even for one roof). Up to <strong>three roof sections</strong> (multi-facet) — use <strong>+ Add section</strong> in the left column. Corners snap to 90° while you drag. <strong>Undo</strong> / <strong>Redo</strong> (<strong>Ctrl+Z</strong> / <strong>Ctrl+Y</strong> on desktop; <strong>Esc</strong> = scroll map, <strong>E</strong> = draw outline, <strong>K</strong> = keepouts).
             </li>
             <li>
-              <strong>Panels:</strong> Add rectangular or circular <strong>keepouts</strong> (vents, tanks) so panels skip those areas. Use <strong>Refill panels</strong> toward CRM target kW; adjust density and portrait/landscape. Hover a roof edge to see length in metres.
+              <strong>Panels:</strong> Add rectangular or circular <strong>keepouts</strong> (vents, tanks) so panels skip those areas. Use <strong>Refill panels</strong> toward CRM target kW; adjust density, portrait/landscape, and <strong>edge setback</strong> (0–0.6 m). Hover a roof edge to see length in metres. In <strong>Layout tools</strong>, read <strong>India layout notes</strong> for typical parapet clearance and module gaps (informational only).
             </li>
             <li>
-              <strong>Save:</strong> Click <strong>Save to Proposal</strong> — satellite image (panels only, no green edit outline), metrics, and layout geometry are stored on the <strong>CRM project</strong> (same layout when you log in from another laptop).
+              <strong>Review:</strong> The <strong>status strip</strong> shows panel count, placed kW vs CRM target, roof/usable m², module <strong>W + physical size</strong> (from costing/BOM when available), and an optional <strong>eff. kW</strong> / orientation hint when the roof faces away from south.
+            </li>
+            <li>
+              <strong>Save:</strong> Click <strong>Save to Proposal</strong> — satellite image (panels only, no green edit outline), metrics, and layout geometry are stored on the <strong>CRM project</strong> (same layout when you log in from another laptop). Or export a standalone <strong>⬇ Site plan PDF</strong> (letterhead, customer block, module metrics, north arrow, scale bar — choose <em>Save as PDF</em> in the print dialog with <strong>Background graphics</strong> on).
             </li>
             <li>
               <strong>Start over:</strong> <strong>Regenerate AI Layout</strong> fetches new satellite imagery and a new draft (keeps working on the same project). <strong>Delete layout</strong> (red button, confirm in the standard PE modal) removes saved layout images and geometry on the server and returns you to a blank page with <strong>Generate AI Layout</strong> — use when you want to discard the layout entirely.
@@ -794,7 +797,7 @@ export default function HelpPage() {
               <li><strong>Locate site</strong> — CRM coordinates, optional Maps override, <strong>Generate / Regenerate AI Layout</strong></li>
               <li><strong>Outline roof</strong> — drag corners; <strong>Undo</strong> / <strong>Redo</strong></li>
               <li><strong>Place panels</strong> — keepouts, density, orientation, <strong>Refill panels</strong> toward target kW</li>
-              <li><strong>Review &amp; save</strong> — status strip, then <strong>Save to Proposal</strong> or export a standalone <strong>⬇ Site plan PDF</strong> (letterhead, customer block, north arrow, scale bar — use <em>Save as PDF</em> in the print dialog; enable <strong>Background graphics</strong>)</li>
+              <li><strong>Review &amp; save</strong> — status strip (panels, kW, module size, yield hint), then <strong>Save to Proposal</strong> or <strong>⬇ Site plan PDF</strong> (letterhead, customer block, module metrics, north arrow, scale bar — use <em>Save as PDF</em> in the print dialog; enable <strong>Background graphics</strong>)</li>
             </ol>
           </div>
 
@@ -820,16 +823,82 @@ export default function HelpPage() {
             </p>
             <ul className="mt-1 space-y-1 text-sm text-gray-600 list-disc list-inside">
               <li><strong>Google Maps link</strong> — paste a full <code className="text-xs bg-gray-100 px-1 rounded">google.com/maps/…</code> URL or <code className="text-xs bg-gray-100 px-1 rounded">lat, lng</code>, then <strong>Regenerate AI Layout</strong>.</li>
-              <li><strong>Panel wattage (W)</strong> — override module size; CRM value appears as a pill when available.</li>
+              <li><strong>Panel wattage (W)</strong> — override nameplate watts when CRM is wrong; CRM value appears as a pill when available. Physical module size (metres) is resolved automatically — see <strong>Module size from CRM</strong> below.</li>
             </ul>
             <Note>Short <code className="text-xs">maps.app.goo.gl</code> links have no coordinates — open in a browser and copy the full Maps URL.</Note>
             <Note>Grey map with &quot;no imagery&quot; usually means wrong coordinates or no Google coverage at that pin — verify in Maps and correct Customer Master; the CRM API needs <strong>GOOGLE_MAPS_API_KEY</strong> in production.</Note>
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-800 mb-2">Multi-facet roofs (up to 3 sections)</h3>
+            <h3 className="font-semibold text-gray-800 mb-2">Module size from CRM (SKU dimensions)</h3>
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">
+              Panel packing, the status strip, site plan PDF, and the <strong>3D</strong> preview use the same module footprint when CRM data is available. Resolution order:
+            </p>
+            <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside mb-2">
+              <li><strong>Costing/BOM spec</strong> — mm dimensions on the PV module line in your saved costing/BOM (e.g. <em>2278×1134 mm</em> in the specification column)</li>
+              <li><strong>Brand catalog</strong> — CRM <strong>panel brand</strong> on the project when it matches a known module SKU</li>
+              <li><strong>Wattage estimate</strong> — typical size for the selected module watts when no spec is found</li>
+            </ol>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Use the <strong>Roof sections</strong> column (left on desktop) for buildings with more than one flat roof face. <strong>Roof 1</strong>, <strong>Roof 2</strong>, … each has its own outline, panel grid, and azimuth. Switch sections to edit one face at a time; metrics aggregate across sections. <strong>Refill panels</strong> can refill the active section or all sections toward CRM target kW.
+              The status strip footer shows <strong>Module: … W · W × H m</strong> with a tooltip naming the source (e.g. <em>Costing/BOM spec</em>). Hover for detail. If costing/BOM is missing dimensions, save an updated PV line with mm in the spec — then reopen AI Roof Layout on the linked project.
+            </p>
+            <Tip>For credible customer-facing PDFs, keep the costing/BOM PV module line specification aligned with what you will install — the site plan PDF prints the same module size and source.</Tip>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Status strip — yield and orientation hints</h3>
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">
+              Above the map, the grey <strong>status strip</strong> rolls up live metrics as you edit:
+            </p>
+            <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside mb-2">
+              <li><strong>Panels</strong> and <strong>placed kW</strong> vs CRM target (with above/below target note)</li>
+              <li><strong>Roof area</strong>, <strong>usable area</strong>, and <strong>fill %</strong> (module area ÷ usable roof)</li>
+              <li><strong>Module</strong> watts and oriented size (m) — see SKU section above</li>
+              <li>
+                <strong>eff. kW</strong> and an amber <strong>−N% orient.</strong> badge when roof orientation reduces simplified yield by about 0.5% or more (India estimate at ~10° tilt — <strong>not</strong> a production guarantee or DISCOM approval)
+              </li>
+              <li><strong>Saved</strong> / <strong>Saved — unsaved changes</strong> after you save to the CRM project and edit again</li>
+            </ul>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Set <strong>Azimuth</strong> under <strong>Roof sections</strong> (even for a single roof) to reflect which way modules face — south ≈ 180°. Multi-facet roofs show <strong>≈ N% of south yield</strong> per section. Changing azimuth updates the yield badge; it does not change panel count or saved geometry by itself.
+            </p>
+            <Note>The yield hint helps sales conversations about orientation loss. Final energy and approvals still come from detailed design and the Bill of Quantities.</Note>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">India layout notes (informational)</h3>
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">
+              In <strong>Layout tools</strong> (right sidebar on desktop, accordion on mobile) while editing in <strong>2D</strong>, a blue <strong>India layout notes</strong> callout summarizes typical Indian rooftop practice:
+            </p>
+            <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside mb-2">
+              <li><strong>Edge clearance</strong> — about 0.3–0.6 m from parapet/wall; use the <strong>Edge setback</strong> slider (0–0.6 m), then <strong>Refill panels</strong></li>
+              <li><strong>Module gaps</strong> — live readout of edge-to-edge gap from your <strong>Panel density</strong> setting (Medium ≈ 300 mm between module edges)</li>
+            </ul>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              This is <strong>guidance only</strong> — not a compliance check. Confirm setbacks, wind zones, and DISCOM rules on site.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Roof sections and azimuth (single or multi-facet)</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Use the <strong>Roof sections</strong> column (left on desktop) for one or more flat roof faces. Even a <strong>single</strong> roof shows an <strong>Azimuth</strong> dropdown — set south, east, west, etc. for yield hints. For buildings with multiple faces, use <strong>+ Add section</strong> (up to <strong>three</strong>): <strong>Roof 1</strong>, <strong>Roof 2</strong>, … each has its own outline, panel grid, and azimuth. Switch sections to edit one face at a time; metrics aggregate across sections. <strong>Refill panels</strong> can refill the active section or all sections toward CRM target kW. The site plan PDF lists each section&apos;s azimuth and panel count when saved.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-2">Site plan PDF (standalone export)</h3>
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">
+              From the right sidebar on desktop (or the sticky bar on mobile), click <strong>⬇ Site plan PDF</strong> to open a print-ready letterhead page without saving to the proposal first. It includes:
+            </p>
+            <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside mb-2">
+              <li>Customer / site block, contact, GPS when available</li>
+              <li>Panels, placed kW (with <strong>eff. kW</strong> and orientation loss when applicable), CRM target, roof/usable m²</li>
+              <li><strong>Module</strong> watts, physical size (m), and source label (same as the status strip)</li>
+              <li>Layout image with north arrow, scale bar, and facet azimuth table (single or multi-roof)</li>
+            </ul>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              In the browser print dialog, choose <strong>Save as PDF</strong> and turn on <strong>Background graphics</strong> so the logo and map colours print correctly. Allow pop-ups if the tab does not open.
             </p>
           </div>
 
@@ -839,7 +908,7 @@ export default function HelpPage() {
               <li><strong>Generate AI Layout</strong> — first-time satellite fetch and starting rectangle (blank page).</li>
               <li><strong>Regenerate AI Layout</strong> — new satellite image and new draft; clears unsaved edits but keeps you in the editor.</li>
               <li><strong>Delete layout</strong> — confirmation modal (same style as Customers delete); removes server layout files, DB record, and PE roof artifact; page resets to <strong>Generate AI Layout</strong>.</li>
-              <li>Optional <strong>PNG</strong> / <strong>JPG</strong> export from the toolbar.</li>
+              <li><strong>⬇ Site plan PDF</strong> — standalone letterhead export (see section above); does not replace <strong>Save to Proposal</strong>.</li>
               <li><strong>Save to Proposal</strong> — stores image, metrics, and editable geometry on the CRM project (available on another device after login).</li>
             </ul>
             <Warn><strong>Regenerate</strong> is for a new location or fresh satellite — not small polygon tweaks. Use <strong>Delete layout</strong> only when you want to remove the saved layout completely.</Warn>
@@ -848,7 +917,7 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Using the polygon to match roof size and panel count</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              The <strong>status strip</strong> and layout summary show <strong>Roof area</strong>, <strong>Usable area</strong>, <strong>Panel count</strong>, approximate <strong>kW</strong> vs CRM target, and fill %. Numbers update as you edit.
+              The <strong>status strip</strong> rolls up panel count, kW, areas, module size, and yield hints — see <strong>Status strip</strong> and <strong>Module size from CRM</strong> above. Below, layout tools control the polygon and panel grid:
             </p>
             <ul className="mt-2 space-y-1.5 text-sm text-gray-600 list-disc list-inside">
               <li>
@@ -862,6 +931,9 @@ export default function HelpPage() {
               </li>
               <li>
                 <strong>Panel density (slider):</strong> Tighter vs looser packing inside the polygon.
+              </li>
+              <li>
+                <strong>Edge setback:</strong> Inset panels from the roof outline (0–0.6 m); use with <strong>Refill panels</strong> after changing.
               </li>
               <li>
                 <strong>Orientation:</strong> <strong>Portrait</strong> / <strong>Landscape</strong> module layout.
@@ -916,7 +988,7 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">2D vs 3D preview</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Use the <strong>2D</strong> / <strong>3D</strong> tabs above the map. <strong>2D</strong> is the editable layout used for proposals by default. <strong>3D</strong> is an optional perspective view — you can capture a 3D PNG and choose 2D or 3D for the proposal embed when saving.
+              Use the <strong>2D</strong> / <strong>3D</strong> tabs above the map. <strong>2D</strong> is the editable layout used for proposals by default. <strong>3D</strong> is an optional perspective view — module blocks use the same CRM module size as 2D (not a generic placeholder). You can capture a 3D PNG and choose 2D or 3D for the proposal embed when saving.
             </p>
           </div>
 
@@ -1125,6 +1197,18 @@ export default function HelpPage() {
 
           <FaqItem q="I pasted a Google Maps link but Regenerate still shows the old site.">
             Use a <strong>full</strong> <code className="text-xs bg-gray-100 px-1 rounded">google.com/maps/…</code> URL (with <code className="text-xs">@lat,lng</code> or <code className="text-xs">!3d…!4d…</code>) or type coordinates as <code className="text-xs">latitude, longitude</code>. Short <code className="text-xs">maps.app.goo.gl</code> links cannot be read. If the field is empty or invalid, the app keeps CRM coordinates.
+          </FaqItem>
+
+          <FaqItem q="What does eff. kW and −N% orient. mean on AI Roof Layout?">
+            After panels are placed, the status strip may show <strong>eff. kW</strong> (effective kilowatts) and an amber <strong>−N% orient.</strong> badge when the roof azimuth differs enough from south that a simplified India yield estimate drops by about half a percent or more. It is a <strong>sales hint only</strong> — not a guaranteed production figure or DISCOM approval. Set azimuth under <strong>Roof sections</strong> to match the real module direction; panel count does not change when you change azimuth alone.
+          </FaqItem>
+
+          <FaqItem q="Why does AI Roof Layout show a different module size than I expected?">
+            Module width and height (metres) come from your linked CRM project in this order: dimensions parsed from the <strong>PV module line specification</strong> in saved costing/BOM (e.g. mm in the spec text), then CRM <strong>panel brand</strong> catalog, then a wattage-based estimate. Update the costing/BOM spec or panel brand in CRM, save, and reopen the project in PE — the status strip footer shows the source (e.g. <em>Costing/BOM spec</em> or <em>Wattage estimate</em>).
+          </FaqItem>
+
+          <FaqItem q="What are India layout notes on the roof layout page?">
+            While editing in <strong>2D</strong>, <strong>Layout tools</strong> includes a blue <strong>India layout notes</strong> box with typical parapet clearance (0.3–0.6 m) and module gap guidance tied to your <strong>Edge setback</strong> and <strong>Panel density</strong> settings. It is informational only — confirm final setbacks and DISCOM requirements on site.
           </FaqItem>
 
           <FaqItem q="Why did my saved roof layout disappear after Regenerate?">
