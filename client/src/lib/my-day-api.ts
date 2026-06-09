@@ -8,6 +8,11 @@ export async function fetchTasks(): Promise<Task[]> {
   return data
 }
 
+export async function fetchTasksForProject(projectId: string): Promise<Task[]> {
+  const { data } = await axiosInstance.get<Task[]>(`/api/my-day/tasks/for-project/${projectId}`)
+  return data
+}
+
 export async function createTask(payload: {
   content: string
   dueDate?: string | null

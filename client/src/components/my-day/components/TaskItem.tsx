@@ -1,15 +1,25 @@
 import { useState, useRef, useEffect } from 'react'
+import { useAuth } from '../../../contexts/AuthContext'
+import {
+  getLogRemarkOnCompletePref,
+  setLogRemarkOnCompletePref,
+} from '../../../lib/myDayHabits'
+import type { ToggleTaskOptions } from '../hooks/useMyDay'
 import type { Task } from '../types'
 import ProjectPinBadge from './ProjectPinBadge'
 
 interface Props {
   task: Task
-  onToggle: (id: string) => void
+  onToggle: (id: string, opts?: ToggleTaskOptions) => void
   onEdit: (id: string, content: string) => void
   onDelete: (id: string) => void
 }
 
 export default function TaskItem({ task, onToggle, onEdit, onDelete }: Props) {
+  const { user } = useAuth()
+  const [logRemark, setLogRemark] = useState(() =>
+    user?.id ? getLogRemarkOnCompletePref(user.id) : true,
+  )
   const [menuOpen, setMenuOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState(task.content)
@@ -62,7 +72,9 @@ export default function TaskItem({ task, onToggle, onEdit, onDelete }: Props) {
       <button
         type="button"
         aria-label={task.isDone ? 'Mark incomplete' : 'Mark complete'}
-        onClick={() => onToggle(task.id)}
+        onClick={() =>
+          onToggle(task.id, task.projectId && !task.isDone ? { logRemarkToProject: logRemark } : undefined)
+        }
         className="myday-touch-target"
         style={{
           flexShrink: 0,
@@ -140,6 +152,30 @@ export default function TaskItem({ task, onToggle, onEdit, onDelete }: Props) {
               <div style={{ marginTop: 4 }}>
                 <ProjectPinBadge label={task.projectLabel} />
               </div>
+            )}
+            {task.projectId && !task.isDone && (
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  marginTop: 6,
+                  fontSize: 11,
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={logRemark}
+                  onChange={(e) => {
+                    const enabled = e.target.checked
+                    setLogRemark(enabled)
+                    if (user?.id) setLogRemarkOnCompletePref(user.id, enabled)
+                  }}
+                />
+                Log to project remarks when done
+              </label>
             )}
           </>
         )}

@@ -1,4 +1,5 @@
 import type { MyDaySuggestion } from '../../../lib/myDaySuggestions'
+import type { ToggleTaskOptions } from '../hooks/useMyDay'
 import type { Task, PinOption } from '../types'
 import TaskItem from '../components/TaskItem'
 import AddTaskInput from '../components/AddTaskInput'
@@ -10,7 +11,7 @@ interface Props {
   error: string | null
   suggestions?: MyDaySuggestion[]
   suggestionsLoading?: boolean
-  onToggle: (id: string) => void
+  onToggle: (id: string, opts?: ToggleTaskOptions) => void
   onEdit: (id: string, content: string) => void
   onDelete: (id: string) => void
   onAdd: (content: string, projectId?: string | null, projectLabel?: string | null) => void

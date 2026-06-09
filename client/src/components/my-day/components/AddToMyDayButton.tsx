@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createTask } from '../../../lib/my-day-api'
 import { MY_DAY_SNAPSHOT_QUERY_KEY } from '../../../lib/myDaySnapshot'
 import { MY_DAY_SUGGESTIONS_QUERY_KEY } from '../../../hooks/useMyDaySuggestionsQuery'
+import { myDayProjectTasksQueryKey } from '../../../lib/myDayProjectTasksQuery'
 import { recordMyDayUsage, type MyDayUsageEvent } from '../../../lib/myDayHabits'
 import { useAuth } from '../../../contexts/AuthContext'
 
@@ -14,7 +15,9 @@ interface Props {
   /** Compact icon+label for table rows */
   compact?: boolean
   className?: string
-  usageEvent?: Extract<MyDayUsageEvent, 'pin_hit_list' | 'pin_suggestion'>
+  usageEvent?: Extract<MyDayUsageEvent, 'pin_hit_list' | 'pin_suggestion' | 'task_added'>
+  disabled?: boolean
+  onSuccess?: () => void
 }
 
 export default function AddToMyDayButton({
@@ -24,6 +27,8 @@ export default function AddToMyDayButton({
   compact = false,
   className = '',
   usageEvent = 'pin_hit_list',
+  disabled = false,
+  onSuccess,
 }: Props) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -32,15 +37,22 @@ export default function AddToMyDayButton({
   const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (adding) return
+    if (adding || disabled || !content.trim()) return
     setAdding(true)
     try {
-      await createTask({ content, projectId, projectLabel })
+      await createTask({ content: content.trim(), projectId, projectLabel })
       if (user?.id) recordMyDayUsage(user.id, usageEvent)
-      await Promise.all([
+      const invalidations = [
         queryClient.invalidateQueries({ queryKey: MY_DAY_SNAPSHOT_QUERY_KEY }),
         queryClient.invalidateQueries({ queryKey: MY_DAY_SUGGESTIONS_QUERY_KEY }),
-      ])
+      ]
+      if (projectId) {
+        invalidations.push(
+          queryClient.invalidateQueries({ queryKey: myDayProjectTasksQueryKey(projectId) }),
+        )
+      }
+      await Promise.all(invalidations)
+      onSuccess?.()
       toast.success('Added to My Day')
     } catch {
       toast.error('Could not add to My Day')
@@ -54,7 +66,7 @@ export default function AddToMyDayButton({
       <button
         type="button"
         onClick={handleClick}
-        disabled={adding}
+        disabled={adding || disabled || !content.trim()}
         className={[
           'inline-flex min-h-[36px] shrink-0 items-center justify-center rounded-lg border px-2.5 py-1 text-[11px] font-bold transition-colors',
           'border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]',
@@ -73,7 +85,7 @@ export default function AddToMyDayButton({
     <button
       type="button"
       onClick={handleClick}
-      disabled={adding}
+      disabled={adding || disabled || !content.trim()}
       className={[
         'myday-touch-target inline-flex min-h-[44px] items-center justify-center rounded-xl border px-4 text-sm font-bold transition-colors',
         'border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]',

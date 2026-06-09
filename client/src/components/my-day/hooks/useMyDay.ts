@@ -15,7 +15,11 @@ import {
 import { MY_DAY_SNAPSHOT_QUERY_KEY } from '../../../lib/myDaySnapshot'
 import { MY_DAY_SUGGESTIONS_QUERY_KEY } from '../../../hooks/useMyDaySuggestionsQuery'
 import { recordMyDayUsage } from '../../../lib/myDayHabits'
+import { applyMyDayTaskCompletionSideEffects } from '../../../lib/myDayCompleteTask'
+import { myDayProjectTasksQueryKey } from '../../../lib/myDayProjectTasksQuery'
 import { useAuth } from '../../../contexts/AuthContext'
+
+export type ToggleTaskOptions = { logRemarkToProject?: boolean }
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
@@ -48,24 +52,40 @@ export function useMyDay() {
     }
   }, [])
 
-  const toggleTask = useCallback(async (id: string) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, isDone: !t.isDone } : t)),
-    )
+  const toggleTask = useCallback(async (id: string, opts?: ToggleTaskOptions) => {
+    let taskBefore: Task | undefined
+    setTasks((prev) => {
+      taskBefore = prev.find((t) => t.id === id)
+      return prev.map((t) => (t.id === id ? { ...t, isDone: !t.isDone } : t))
+    })
+    if (!taskBefore) return
+
+    const markingComplete = !taskBefore.isDone
+
     try {
-      const updated = await patchTask(id, {
-        isDone: !tasks.find((t) => t.id === id)?.isDone,
-      })
+      const updated = await patchTask(id, { isDone: markingComplete })
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)))
-      bumpSnapshot()
+
+      if (markingComplete) {
+        await applyMyDayTaskCompletionSideEffects(
+          queryClient,
+          taskBefore,
+          user?.id,
+          opts?.logRemarkToProject,
+        )
+      } else {
+        bumpSnapshot()
+        if (taskBefore.projectId) {
+          queryClient.invalidateQueries({ queryKey: myDayProjectTasksQueryKey(taskBefore.projectId) })
+        }
+      }
     } catch {
-      // revert
       setTasks((prev) =>
         prev.map((t) => (t.id === id ? { ...t, isDone: !t.isDone } : t)),
       )
       toast.error('Failed to update task')
     }
-  }, [tasks, bumpSnapshot])
+  }, [bumpSnapshot, queryClient, user?.id])
 
   const addTask = useCallback(async (
     content: string,
@@ -89,11 +109,14 @@ export function useMyDay() {
       setTasks((prev) => prev.map((t) => (t.id === optimistic.id ? created : t)))
       if (user?.id) recordMyDayUsage(user.id, 'task_added')
       bumpSnapshot()
+      if (projectId) {
+        queryClient.invalidateQueries({ queryKey: myDayProjectTasksQueryKey(projectId) })
+      }
     } catch {
       setTasks((prev) => prev.filter((t) => t.id !== optimistic.id))
       toast.error('Failed to add task')
     }
-  }, [tasks.length, bumpSnapshot])
+  }, [tasks.length, bumpSnapshot, queryClient])
 
   const removeTask = useCallback(async (id: string) => {
     const removed = tasks.find((t) => t.id === id)

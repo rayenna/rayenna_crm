@@ -7,6 +7,7 @@ import { setLocalStorageItem } from './safeLocalStorage'
 const COACH_KEY = 'rayenna_myday_coach_seen_v1'
 const JOURNAL_NUDGE_KEY = 'rayenna_myday_journal_nudge_dismissed'
 const USAGE_KEY = 'rayenna_myday_usage_v1'
+const REMARK_ON_COMPLETE_KEY = 'rayenna_myday_log_remark_on_complete'
 
 export type MyDayUsageEvent = 'drawer_open' | 'pin_hit_list' | 'pin_suggestion' | 'task_added'
 
@@ -98,6 +99,17 @@ function defaultUsage(): MyDayUsageStats {
 
 export function getMyDayUsageStats(userId: string): MyDayUsageStats {
   return readJson<MyDayUsageStats>(userKey(USAGE_KEY, userId)) ?? defaultUsage()
+}
+
+/** Default true — log completion to CRM remarks when task has a project pin. */
+export function getLogRemarkOnCompletePref(userId: string): boolean {
+  const entry = readJson<{ enabled: boolean }>(userKey(REMARK_ON_COMPLETE_KEY, userId))
+  if (!entry) return true
+  return entry.enabled !== false
+}
+
+export function setLogRemarkOnCompletePref(userId: string, enabled: boolean): void {
+  setLocalStorageItem(userKey(REMARK_ON_COMPLETE_KEY, userId), JSON.stringify({ enabled }))
 }
 
 export function recordMyDayUsage(userId: string, event: MyDayUsageEvent): void {

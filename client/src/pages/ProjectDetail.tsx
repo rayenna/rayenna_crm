@@ -24,6 +24,7 @@ import ProjectAccessNotice from '../components/projects/ProjectAccessNotice'
 import { formatCustomerTypeDisplay } from '../utils/customerRecord'
 import { getCustomerTypeBadgeClasses } from '../utils/customerTypeStyles'
 import { getProjectSegmentLabel, getProjectSegmentPillClasses } from '../utils/projectSegment'
+import ProjectMyDayTasks from '../components/projects/ProjectMyDayTasks'
 
 function formatLeadSourceDisplay(
   leadSource?: string | null,
@@ -790,6 +791,11 @@ const ProjectDetail = () => {
         </InfoSection>
 
       </div>
+
+      <ProjectMyDayTasks
+        projectId={project.id}
+        projectLabel={`#${project.slNo} ${project.customer?.customerName ?? ''}`.trim()}
+      />
 
       {/* Deal Health + Payment + Remarks: stack on phone; 3 columns on large desktop */}
       <div className="mt-5 grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 md:items-stretch xl:grid-cols-3 xl:gap-6">

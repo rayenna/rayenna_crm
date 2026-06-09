@@ -84,6 +84,34 @@ function validErr(req: Request, res: Response): boolean {
 
 // ─── Tasks ────────────────────────────────────────────────────────────────────
 
+/** Open (incomplete) tasks pinned to a CRM project — for Project detail strip. */
+router.get(
+  '/tasks/for-project/:projectId',
+  authenticate,
+  [param('projectId').isString().trim().notEmpty()],
+  async (req: Request, res: Response) => {
+    if (validErr(req, res)) return
+    try {
+      const userId = req.user!.id
+      const { projectId } = req.params
+
+      const rows = await prisma.$queryRaw<TaskRow[]>`
+        SELECT * FROM user_tasks
+        WHERE user_id = ${userId}
+          AND project_id = ${projectId}
+          AND is_reminder = false
+          AND is_done = false
+        ORDER BY sort_order ASC, created_at DESC
+        LIMIT 25
+      `
+      res.json(rows.map(serTask))
+    } catch (err) {
+      console.error('[my-day] GET tasks/for-project:', err)
+      res.status(500).json({ error: 'Failed to load project tasks' })
+    }
+  },
+)
+
 router.get('/tasks', authenticate, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id
