@@ -6,7 +6,7 @@ import { formatEmailForDisplay, deriveProposalStatusFromArtifacts } from '../lib
 import type { CustomerRecord, CustomerMaster } from '../lib/customerStore';
 import type { ProposalEngineProjectFromApi } from '../lib/apiClient';
 import { PE_ARTIFACT_COUNT } from '../lib/customerStore';
-import type { PeProjectArtifacts, ProjectOption } from './types';
+import type { PeProjectArtifacts, ProjectOption, PeRoofLayoutListSummary } from './types';
 import { EMPTY_PE_PROJECT_ARTIFACTS } from './types';
 import type { PeArtifactsFromApi } from '../lib/api/proposalEngine';
 
@@ -51,6 +51,32 @@ export function countPeProjectArtifacts(a: PeProjectArtifacts): number {
 /** e.g. "3 / 5 artifacts" — uses server flags only. */
 export function artifactSummaryFromPeArtifacts(a: PeProjectArtifacts): string {
   return `${countPeProjectArtifacts(a)} / ${PE_ARTIFACT_COUNT} artifacts`;
+}
+
+/** Module label for Customers list when roof layout is saved (brand + watts from CRM project). */
+export function formatRoofLayoutModuleLabel(project: {
+  panelBrand?: string;
+  panelCapacityW?: number;
+  panelType?: string;
+}): string | null {
+  const brand = project.panelBrand?.trim() || project.panelType?.trim() || '';
+  const watts =
+    typeof project.panelCapacityW === 'number' && project.panelCapacityW > 0
+      ? project.panelCapacityW
+      : null;
+  if (brand && watts != null) return `${brand} · ${watts} W`;
+  if (watts != null) return `${watts} W module`;
+  if (brand) return brand;
+  return null;
+}
+
+/** e.g. "24 panels · 13.20 kW · Waaree · 550 W" */
+export function formatRoofLayoutCardSummary(
+  summary: PeRoofLayoutListSummary,
+  moduleLabel: string | null,
+): string {
+  const base = `${summary.panelCount} panels · ${summary.placedKw.toFixed(2)} kW`;
+  return moduleLabel ? `${base} · ${moduleLabel}` : base;
 }
 
 export function deriveCustomerName(
@@ -109,6 +135,18 @@ export function mapApiProjectToProjectOption(p: ProposalEngineProjectFromApi): P
     segment: (cust.customerType ?? p.type ?? '').trim() || undefined,
     salespersonName: (p.salesperson?.name ?? '').trim() || undefined,
     panelType: (p.panelType ?? '').trim() || undefined,
+    panelCapacityW:
+      typeof p.panelCapacityW === 'number' && p.panelCapacityW > 0 ? p.panelCapacityW : undefined,
+    panelBrand: (p.panelBrand ?? '').trim() || undefined,
+    roofLayoutSummary:
+      p.roofLayoutSummary &&
+      typeof p.roofLayoutSummary.panelCount === 'number' &&
+      p.roofLayoutSummary.panelCount > 0
+        ? {
+            panelCount: p.roofLayoutSummary.panelCount,
+            placedKw: Number(p.roofLayoutSummary.placedKw),
+          }
+        : undefined,
     orderValue: typeof p.projectCost === 'number' ? p.projectCost : undefined,
     confirmationDate: p.confirmationDate ?? undefined,
     createdAt: p.createdAt ?? undefined,

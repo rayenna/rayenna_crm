@@ -33,6 +33,11 @@ export type PeArtifactsFromApi = {
   hasRoofLayout: boolean;
 };
 
+export type PeRoofLayoutListSummary = {
+  panelCount: number;
+  placedKw: number;
+};
+
 export interface ProposalEngineProjectFromApi {
   id: string;
   slNo?: number | null;
@@ -42,6 +47,7 @@ export interface ProposalEngineProjectFromApi {
   panelBrand?: string | null;
   peStatus?: 'not-started' | 'draft' | 'proposal-ready' | string;
   peArtifacts?: PeArtifactsFromApi;
+  roofLayoutSummary?: PeRoofLayoutListSummary;
   peSelectedAt?: string | null;
   peSelectedById?: string | null;
   updatedAt?: string | null;

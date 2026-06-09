@@ -1,6 +1,6 @@
-import { useMemo, type Dispatch, type LegacyRef, type MutableRefObject, type RefObject, type SetStateAction } from 'react';
+import { useEffect, useMemo, useRef, type Dispatch, type LegacyRef, type MutableRefObject, type RefObject, type SetStateAction } from 'react';
 import { Stage, Layer, Image as KonvaImage, Line, Rect, Circle, Text, Tag, Label } from 'react-konva';
-import type Konva from 'konva';
+import Konva from 'konva';
 import { ROOF_LAYOUT_METERS_PER_PIXEL } from '../../lib/roofLayoutConstants';
 import type { RoofFacetState } from '../../lib/roofLayoutFacets';
 import {
@@ -35,6 +35,8 @@ export type RoofLayoutKonvaStageProps = {
   imageSize: { width: number; height: number };
   bgImage: HTMLImageElement | undefined;
   satelliteOpacity: number;
+  /** Konva contrast filter (−40…+40, 0 = off). Display-only — does not affect save geometry. */
+  satelliteContrast?: number;
   layoutMode: 'saved' | 'editing';
   facets: RoofFacetState[];
   activeFacetId: string;
@@ -60,6 +62,7 @@ export function RoofLayoutKonvaStage({
   imageSize,
   bgImage,
   satelliteOpacity,
+  satelliteContrast = 0,
   layoutMode,
   facets,
   activeFacetId,
@@ -100,6 +103,24 @@ export function RoofLayoutKonvaStage({
     isDraggingRef,
   } = refs;
 
+  const satelliteImageRef = useRef<Konva.Image>(null);
+  const contrastActive = satelliteContrast !== 0;
+  const satelliteFilters = useMemo(
+    () => (contrastActive ? [Konva.Filters.Contrast] : undefined),
+    [contrastActive],
+  );
+
+  useEffect(() => {
+    const node = satelliteImageRef.current;
+    if (!node || !bgImage) return;
+    if (contrastActive) {
+      node.cache();
+    } else {
+      node.clearCache();
+    }
+    node.getLayer()?.batchDraw();
+  }, [bgImage, contrastActive, satelliteContrast, imageSize.width, imageSize.height]);
+
   return (
     <Stage
       ref={stageRef as LegacyRef<Konva.Stage>}
@@ -116,10 +137,13 @@ export function RoofLayoutKonvaStage({
       {/* Base image */}
       <Layer>
         <KonvaImage
+          ref={satelliteImageRef}
           image={bgImage}
           width={imageSize.width}
           height={imageSize.height}
           opacity={satelliteOpacity}
+          filters={satelliteFilters}
+          contrast={satelliteContrast}
         />
       </Layer>
 

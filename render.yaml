@@ -41,6 +41,16 @@ services:
     rootDir: proposal-engine/frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
+    headers:
+      - path: /
+        name: Cache-Control
+        value: no-cache, no-store, must-revalidate
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache, no-store, must-revalidate
+      - path: /404.html
+        name: Cache-Control
+        value: no-cache, no-store, must-revalidate
     envVars:
       - key: NODE_OPTIONS
         value: "--max-old-space-size=2048"

@@ -9,6 +9,12 @@ export interface PeProjectArtifacts {
   hasRoofLayout: boolean;
 }
 
+/** Saved roof layout summary from GET /api/proposal-engine/projects (server-backed). */
+export interface PeRoofLayoutListSummary {
+  panelCount: number;
+  placedKw: number;
+}
+
 export const EMPTY_PE_PROJECT_ARTIFACTS: PeProjectArtifacts = {
   hasCosting: false,
   hasBom: false,
@@ -38,6 +44,12 @@ export interface ProjectOption {
   segment?: string;
   salespersonName?: string;
   panelType?: string;
+  /** CRM module watts (for list card module label). */
+  panelCapacityW?: number;
+  /** CRM panel brand / make (for list card module label). */
+  panelBrand?: string;
+  /** When a saved roof layout exists — panel count and nameplate kW from server. */
+  roofLayoutSummary?: PeRoofLayoutListSummary;
   orderValue?: number;
   confirmationDate?: string;
   createdAt?: string;

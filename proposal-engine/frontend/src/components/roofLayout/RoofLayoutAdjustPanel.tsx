@@ -20,6 +20,8 @@ type Props = {
   setPanelOrientation: Dispatch<SetStateAction<'portrait' | 'landscape'>>;
   satelliteOpacity: number;
   setSatelliteOpacity: (v: number) => void;
+  satelliteContrast: number;
+  setSatelliteContrast: (v: number) => void;
   hasPolygon: boolean;
   onSnapToGrid: () => void;
   keepouts: RoofLayoutKeepout[];
@@ -47,6 +49,8 @@ export function RoofLayoutAdjustPanel({
   setPanelOrientation,
   satelliteOpacity,
   setSatelliteOpacity,
+  satelliteContrast,
+  setSatelliteContrast,
   hasPolygon,
   onSnapToGrid,
   keepouts,
@@ -123,6 +127,29 @@ export function RoofLayoutAdjustPanel({
             className="w-full h-11 md:h-8 accent-slate-600 touch-manipulation"
           />
           <span className="text-[10px] text-gray-500">Lower to see panel grid over the map</span>
+        </div>
+      )}
+
+      {roofViewTab === '2d' && layoutMode === 'editing' && (
+        <div className="flex flex-col gap-2">
+          <span className="text-xs font-medium text-gray-600">Satellite contrast</span>
+          <input
+            type="range"
+            min={-40}
+            max={40}
+            step={5}
+            value={satelliteContrast}
+            onChange={(e) => setSatelliteContrast(Number(e.target.value))}
+            aria-label="Satellite image contrast"
+            className="w-full h-11 md:h-8 accent-slate-600 touch-manipulation"
+          />
+          <span className="text-[10px] text-gray-500">
+            {satelliteContrast === 0
+              ? 'Neutral — increase to read faint roof edges'
+              : satelliteContrast > 0
+                ? `+${satelliteContrast} — sharper edges`
+                : `${satelliteContrast} — softer image`}
+          </span>
         </div>
       )}
 

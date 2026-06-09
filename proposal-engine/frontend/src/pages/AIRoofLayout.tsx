@@ -206,6 +206,7 @@ export default function AIRoofLayout() {
   const [mapEditTool, setMapEditTool] = useState<'scroll' | 'roof' | 'keepout'>('scroll');
   const [keepouts, setKeepouts] = useState<RoofLayoutKeepout[]>([]);
   const [satelliteOpacity, setSatelliteOpacity] = useState(1);
+  const [satelliteContrast, setSatelliteContrast] = useState(0);
   const [hoveredEdge, setHoveredEdge] = useState<PolygonEdgeInfo | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const { isMobileView, isNarrowViewport, mobileControlsOpen, setMobileControlsOpen } =
@@ -1415,6 +1416,7 @@ export default function AIRoofLayout() {
                             imageSize={imageSize}
                             bgImage={bgImage}
                             satelliteOpacity={satelliteOpacity}
+                            satelliteContrast={satelliteContrast}
                             layoutMode={layoutMode}
                             facets={facets}
                             activeFacetId={activeFacetId}
@@ -1537,6 +1539,8 @@ export default function AIRoofLayout() {
                         setPanelOrientation={setPanelOrientation}
                         satelliteOpacity={satelliteOpacity}
                         setSatelliteOpacity={setSatelliteOpacity}
+                        satelliteContrast={satelliteContrast}
+                        setSatelliteContrast={setSatelliteContrast}
                         hasPolygon={!!polygon}
                         onSnapToGrid={handleSnapOutlineToGrid}
                         keepouts={keepouts}
@@ -1577,6 +1581,8 @@ export default function AIRoofLayout() {
                     setPanelOrientation={setPanelOrientation}
                     satelliteOpacity={satelliteOpacity}
                     setSatelliteOpacity={setSatelliteOpacity}
+                    satelliteContrast={satelliteContrast}
+                    setSatelliteContrast={setSatelliteContrast}
                     hasPolygon={!!polygon}
                     onSnapToGrid={handleSnapOutlineToGrid}
                     keepouts={keepouts}
@@ -1648,6 +1654,8 @@ export default function AIRoofLayout() {
                   setPanelOrientation={setPanelOrientation}
                   satelliteOpacity={satelliteOpacity}
                   setSatelliteOpacity={setSatelliteOpacity}
+                  satelliteContrast={satelliteContrast}
+                  setSatelliteContrast={setSatelliteContrast}
                   hasPolygon={!!polygon}
                   onSnapToGrid={handleSnapOutlineToGrid}
                   keepouts={keepouts}

@@ -4,7 +4,7 @@ import {
   RoofLayoutSavedBadge,
   ServerArtifactDots,
 } from './CustomerBadges';
-import { artifactSummaryFromPeArtifacts } from './customerHelpers';
+import { artifactSummaryFromPeArtifacts, formatRoofLayoutCardSummary, formatRoofLayoutModuleLabel } from './customerHelpers';
 import type { ProjectOption } from './types';
 
 /**
@@ -36,6 +36,13 @@ export function ProjectCard({
         year: 'numeric',
       })
     : null;
+  const roofLayoutLine =
+    peArtifacts.hasRoofLayout && project.roofLayoutSummary
+      ? formatRoofLayoutCardSummary(
+          project.roofLayoutSummary,
+          formatRoofLayoutModuleLabel(project),
+        )
+      : null;
 
   const statusBadges = (
     <>
@@ -117,6 +124,11 @@ export function ProjectCard({
           {typeof project.systemSizeKw === 'number' && project.systemSizeKw > 0 && (
             <p className="text-[11px] text-secondary-400">
               ⚡ {project.systemSizeKw} kW system
+            </p>
+          )}
+          {roofLayoutLine && (
+            <p className="text-[11px] text-emerald-700 font-medium tabular-nums" title="Saved roof layout">
+              📐 {roofLayoutLine}
             </p>
           )}
           {(project.contactPerson || project.phone) && (

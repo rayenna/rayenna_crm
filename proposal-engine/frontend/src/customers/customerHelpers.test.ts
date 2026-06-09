@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { hasValidMapCoordinates, mapApiProjectToProjectOption } from './customerHelpers';
+import {
+  hasValidMapCoordinates,
+  mapApiProjectToProjectOption,
+  formatRoofLayoutCardSummary,
+  formatRoofLayoutModuleLabel,
+} from './customerHelpers';
 import type { ProposalEngineProjectFromApi } from '../lib/apiClient';
 
 describe('hasValidMapCoordinates', () => {
@@ -41,5 +46,34 @@ describe('mapApiProjectToProjectOption', () => {
     } as ProposalEngineProjectFromApi);
     expect(p.peArtifacts.hasRoofLayout).toBe(true);
     expect(p.peArtifacts.hasCosting).toBe(true);
+  });
+
+  it('maps roofLayoutSummary and module fields from API', () => {
+    const p = mapApiProjectToProjectOption({
+      id: 'proj-3',
+      panelCapacityW: 550,
+      panelBrand: 'Waaree',
+      roofLayoutSummary: { panelCount: 24, placedKw: 13.2 },
+      customer: { id: 'c' },
+    } as ProposalEngineProjectFromApi);
+    expect(p.roofLayoutSummary?.panelCount).toBe(24);
+    expect(p.panelBrand).toBe('Waaree');
+    expect(p.panelCapacityW).toBe(550);
+  });
+});
+
+describe('formatRoofLayoutModuleLabel', () => {
+  it('combines brand and watts', () => {
+    expect(formatRoofLayoutModuleLabel({ panelBrand: 'Waaree', panelCapacityW: 550 })).toBe(
+      'Waaree · 550 W',
+    );
+  });
+});
+
+describe('formatRoofLayoutCardSummary', () => {
+  it('includes module label when present', () => {
+    expect(
+      formatRoofLayoutCardSummary({ panelCount: 20, placedKw: 11 }, 'Waaree · 550 W'),
+    ).toBe('20 panels · 11.00 kW · Waaree · 550 W');
   });
 });
