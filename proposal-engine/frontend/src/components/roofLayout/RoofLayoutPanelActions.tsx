@@ -27,7 +27,7 @@ export function RoofLayoutPanelActions({
           type="button"
           disabled={disabled}
           onClick={onRefill}
-          className="min-h-[36px] px-3 rounded-lg bg-indigo-600 border border-indigo-700 text-white text-xs font-semibold hover:bg-indigo-700 disabled:opacity-50 touch-manipulation"
+          className="min-h-[44px] md:min-h-[36px] px-3 rounded-lg bg-indigo-600 border border-indigo-700 text-white text-xs font-semibold hover:bg-indigo-700 disabled:opacity-50 touch-manipulation"
         >
           {facetCount > 1 ? 'Refill active section' : 'Refill panels'}
         </button>
@@ -36,7 +36,7 @@ export function RoofLayoutPanelActions({
             type="button"
             disabled={disabled}
             onClick={onRefillAll}
-            className="min-h-[36px] px-3 rounded-lg bg-indigo-500 border border-indigo-600 text-white text-xs font-semibold hover:bg-indigo-600 disabled:opacity-50 touch-manipulation"
+            className="min-h-[44px] md:min-h-[36px] px-3 rounded-lg bg-indigo-500 border border-indigo-600 text-white text-xs font-semibold hover:bg-indigo-600 disabled:opacity-50 touch-manipulation"
           >
             Refill all sections
           </button>
@@ -45,7 +45,7 @@ export function RoofLayoutPanelActions({
           type="button"
           disabled={disabled || panelCount === 0}
           onClick={onClear}
-          className="min-h-[36px] px-3 rounded-lg border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 touch-manipulation"
+          className="min-h-[44px] md:min-h-[36px] px-3 rounded-lg border border-gray-300 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 touch-manipulation"
         >
           Clear panels
         </button>

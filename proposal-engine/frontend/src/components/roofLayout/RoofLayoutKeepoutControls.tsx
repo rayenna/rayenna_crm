@@ -6,9 +6,6 @@ type Props = {
   onAddCircle: () => void;
   onRemove: (id: string) => void;
   onClear: () => void;
-  mapTool: 'scroll' | 'roof' | 'keepout';
-  onMapToolChange: (tool: 'scroll' | 'roof' | 'keepout') => void;
-  isMobile?: boolean;
 };
 
 function keepoutLabel(k: RoofLayoutKeepout, index: number): string {
@@ -22,44 +19,26 @@ export function RoofLayoutKeepoutControls({
   onAddCircle,
   onRemove,
   onClear,
-  mapTool,
-  onMapToolChange,
-  isMobile,
 }: Props) {
   return (
     <div className="rounded-lg border border-orange-200 bg-orange-50/80 p-3 space-y-2">
       <p className="text-xs font-semibold text-orange-900">Roof keepouts</p>
       <p className="text-[11px] text-orange-800/90 leading-snug">
-        Mark vents, tanks, or skylights so panels are not placed there. Drag on the map in keepout
-        mode. Corners snap to 90° and parallel edges while editing the roof outline.
+        Mark vents, tanks, or skylights so panels are not placed there. On phone, tap{' '}
+        <strong>Keepouts</strong> under the map to draw. Corners snap to 90° while editing the roof outline.
       </p>
-      {isMobile && (
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => onMapToolChange('keepout')}
-            className={`min-h-[40px] px-3 rounded-lg text-xs font-semibold border touch-manipulation ${
-              mapTool === 'keepout'
-                ? 'bg-orange-600 border-orange-700 text-white'
-                : 'bg-white border-orange-200 text-orange-900'
-            }`}
-          >
-            Draw keepouts
-          </button>
-        </div>
-      )}
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={onAddRect}
-          className="min-h-[36px] px-3 rounded-lg border border-orange-300 bg-white text-xs font-semibold text-orange-900 hover:bg-orange-50 touch-manipulation"
+          className="min-h-[44px] md:min-h-[36px] px-3 rounded-lg border border-orange-300 bg-white text-xs font-semibold text-orange-900 hover:bg-orange-50 touch-manipulation"
         >
           + Rectangle
         </button>
         <button
           type="button"
           onClick={onAddCircle}
-          className="min-h-[36px] px-3 rounded-lg border border-orange-300 bg-white text-xs font-semibold text-orange-900 hover:bg-orange-50 touch-manipulation"
+          className="min-h-[44px] md:min-h-[36px] px-3 rounded-lg border border-orange-300 bg-white text-xs font-semibold text-orange-900 hover:bg-orange-50 touch-manipulation"
         >
           + Circle
         </button>
@@ -67,7 +46,7 @@ export function RoofLayoutKeepoutControls({
           <button
             type="button"
             onClick={onClear}
-            className="min-h-[36px] px-3 rounded-lg border border-gray-300 bg-white text-xs font-semibold text-gray-600 hover:bg-gray-50 touch-manipulation"
+            className="min-h-[44px] md:min-h-[36px] px-3 rounded-lg border border-gray-300 bg-white text-xs font-semibold text-gray-600 hover:bg-gray-50 touch-manipulation"
           >
             Clear all
           </button>

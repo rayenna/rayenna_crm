@@ -3,7 +3,7 @@ import { RoofLayoutKeyboardHints } from './RoofLayoutKeyboardHints';
 /** North arrow, legend, and keyboard hints (HTML overlay, bottom-left of map viewport). */
 export function RoofLayoutMapChrome() {
   return (
-    <div className="absolute bottom-3 left-3 z-10 pointer-events-none flex flex-col gap-2 max-w-[12rem]">
+    <div className="absolute bottom-3 left-3 z-10 pointer-events-none hidden sm:flex flex-col gap-2 max-w-[12rem]">
       <div
         className="rounded-lg bg-white/95 border border-slate-200 shadow-md px-2.5 py-2 flex items-center gap-2"
         aria-hidden

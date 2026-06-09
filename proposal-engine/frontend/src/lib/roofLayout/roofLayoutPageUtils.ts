@@ -14,6 +14,10 @@ export const ROOF_LAYOUT_SCROLL_BUFFER_PX = 0;
 /** Extra pan margin on phone/tablet so users can scroll past roof edges when zoomed in. */
 export const ROOF_LAYOUT_MOBILE_SCROLL_BUFFER_PX = 72;
 
+/** Page bottom padding so the fixed Save/PDF bar does not cover layout tools on phone. */
+export const ROOF_LAYOUT_MOBILE_FOOTER_CLEARANCE =
+  'calc(7rem + env(safe-area-inset-bottom))';
+
 export function roofLayoutScrollBufferPx(isMobileView: boolean): number {
   return isMobileView ? ROOF_LAYOUT_MOBILE_SCROLL_BUFFER_PX : ROOF_LAYOUT_SCROLL_BUFFER_PX;
 }

@@ -26,8 +26,6 @@ type Props = {
   onAddCircleKeepout: () => void;
   onRemoveKeepout: (id: string) => void;
   onClearKeepouts: () => void;
-  mapEditTool: 'scroll' | 'roof' | 'keepout';
-  onMapToolChange: (tool: 'scroll' | 'roof' | 'keepout') => void;
   /** Sidebar column vs inline row under the map (lg–xl). */
   variant?: 'sidebar' | 'inline';
 };
@@ -55,8 +53,6 @@ export function RoofLayoutAdjustPanel({
   onAddCircleKeepout,
   onRemoveKeepout,
   onClearKeepouts,
-  mapEditTool,
-  onMapToolChange,
   variant = 'sidebar',
 }: Props) {
   return (
@@ -122,7 +118,8 @@ export function RoofLayoutAdjustPanel({
             step={0.05}
             value={satelliteOpacity}
             onChange={(e) => setSatelliteOpacity(Number(e.target.value))}
-            className="w-full h-8 accent-slate-600"
+            aria-label="Satellite image opacity"
+            className="w-full h-11 md:h-8 accent-slate-600 touch-manipulation"
           />
           <span className="text-[10px] text-gray-500">Lower to see panel grid over the map</span>
         </div>
@@ -138,7 +135,8 @@ export function RoofLayoutAdjustPanel({
             step={0.1}
             value={edgeSetbackM}
             onChange={(e) => setEdgeSetbackM(Number(e.target.value))}
-            className="w-full h-8 accent-amber-600"
+            aria-label="Edge setback distance in metres"
+            className="w-full h-11 md:h-8 accent-amber-600 touch-manipulation"
           />
           <span className="text-[10px] text-gray-500 leading-snug">
             {edgeSetbackM <= 0
@@ -157,7 +155,8 @@ export function RoofLayoutAdjustPanel({
           step={0.2}
           value={panelSpacingMultiplier}
           onChange={(e) => setPanelSpacingMultiplier(Number(e.target.value))}
-          className="w-full h-8 accent-indigo-600"
+          aria-label="Panel spacing density"
+          className="w-full h-11 md:h-8 accent-indigo-600 touch-manipulation"
         />
         <span className="text-xs text-gray-500">
           {panelSpacingMultiplier < 1.2 ? 'Tighter' : panelSpacingMultiplier > 1.6 ? 'Looser' : 'Medium'}
@@ -171,7 +170,7 @@ export function RoofLayoutAdjustPanel({
           onClick={() =>
             setPanelOrientation((prev) => (prev === 'portrait' ? 'landscape' : 'portrait'))
           }
-          className="min-h-[36px] px-3 rounded-full border border-gray-300 bg-white text-xs font-semibold hover:bg-gray-50 touch-manipulation"
+          className="min-h-[44px] md:min-h-[36px] px-4 md:px-3 rounded-full border border-gray-300 bg-white text-xs font-semibold hover:bg-gray-50 touch-manipulation"
         >
           {panelOrientation === 'portrait' ? 'Portrait' : 'Landscape'}
         </button>
@@ -180,15 +179,12 @@ export function RoofLayoutAdjustPanel({
       {layoutMode === 'editing' && roofViewTab === '2d' && (
         <>
           <RoofLayoutKeepoutControls
-          keepouts={keepouts}
-          onAddRect={onAddRectKeepout}
-          onAddCircle={onAddCircleKeepout}
-          onRemove={onRemoveKeepout}
-          onClear={onClearKeepouts}
-          mapTool={mapEditTool}
-          onMapToolChange={onMapToolChange}
-          isMobile={isMobileView}
-        />
+            keepouts={keepouts}
+            onAddRect={onAddRectKeepout}
+            onAddCircle={onAddCircleKeepout}
+            onRemove={onRemoveKeepout}
+            onClear={onClearKeepouts}
+          />
           <RoofLayoutKeyboardHints className="hidden xl:block" />
         </>
       )}
@@ -197,7 +193,7 @@ export function RoofLayoutAdjustPanel({
         <button
           type="button"
           onClick={onSnapToGrid}
-          className="min-h-[36px] w-full px-3 rounded-lg border border-gray-300 bg-white text-xs font-semibold hover:bg-gray-50 touch-manipulation"
+          className="min-h-[44px] md:min-h-[36px] w-full px-3 rounded-lg border border-gray-300 bg-white text-xs font-semibold hover:bg-gray-50 touch-manipulation"
         >
           Snap outline to grid
         </button>

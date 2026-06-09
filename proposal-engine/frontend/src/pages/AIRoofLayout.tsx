@@ -19,9 +19,12 @@ import {
   focalPointForEditingPolygon,
   focalPointForSavedView,
   initialPolygonHalfExtentsPx,
+  ROOF_LAYOUT_MOBILE_FOOTER_CLEARANCE,
   roofLayoutScrollBufferPx,
   scrollLayoutPreviewToFocal,
 } from '../lib/roofLayout/roofLayoutPageUtils';
+
+const ROOF_LAYOUT_MOBILE_ADJUST_PANEL_ID = 'roof-layout-mobile-adjust-panel';
 import {
   clearRoofLayoutFromActiveCustomer,
   persistRoofLayoutToActiveCustomer,
@@ -53,6 +56,7 @@ import { RoofLayoutPageHeader } from '../components/roofLayout/RoofLayoutPageHea
 import { RoofLayoutActiveCustomerBanner } from '../components/roofLayout/RoofLayoutActiveCustomerBanner';
 import { RoofLayoutOverridePanel } from '../components/roofLayout/RoofLayoutOverridePanel';
 import { RoofLayoutExportActions } from '../components/roofLayout/RoofLayoutExportActions';
+import { RoofLayoutPreviewToolbar } from '../components/roofLayout/RoofLayoutPreviewToolbar';
 import { ConfirmDangerModal } from '../components/ConfirmDangerModal';
 import {
   createRoofFacet,
@@ -1277,7 +1281,10 @@ export default function AIRoofLayout() {
         {result && (
           <div
             ref={exportRef}
-            className={`mt-3 w-full max-w-none space-y-4 ${isMobileView ? 'pb-[max(5.5rem,env(safe-area-inset-bottom))]' : ''}`}
+            className="mt-3 w-full max-w-none space-y-4"
+            style={
+              isMobileView ? { paddingBottom: ROOF_LAYOUT_MOBILE_FOOTER_CLEARANCE } : undefined
+            }
           >
             <div className="w-full grid grid-cols-1 gap-4 lg:grid-cols-[minmax(12rem,14rem)_minmax(0,1fr)] lg:gap-5 xl:grid-cols-[minmax(12rem,14rem)_minmax(0,1fr)_minmax(16rem,18rem)] xl:gap-6 items-start">
               <aside className="hidden lg:block space-y-3 min-w-0">
@@ -1339,7 +1346,7 @@ export default function AIRoofLayout() {
                 </p>
               </aside>
 
-              <section className="w-full min-w-0 max-w-none flex flex-col gap-4">
+              <section className="w-full min-w-0 max-w-full overflow-hidden flex flex-col gap-4">
                 <div className="md:hidden">
                   <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                     Design workflow
@@ -1379,60 +1386,37 @@ export default function AIRoofLayout() {
                 />
 
                 <div className="w-full flex flex-col gap-4 min-w-0">
-                  <div className="w-full flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                  <div className="space-y-2 min-w-0 flex-1">
-                  <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                    Layout preview
-                  </h2>
-                  {canToggle2d3dPreview && (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRoofViewTab('2d');
-                          setProposalImageSource('2d');
-                        }}
-                        className={`min-h-[44px] px-4 py-2 rounded-full border text-xs font-semibold touch-manipulation ${
-                          roofViewTab === '2d'
-                            ? 'bg-indigo-100 border-indigo-400 text-indigo-800'
-                            : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                        }`}
-                      >
-                        2D Layout
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!canChoose3dForProposal) return;
-                          setRoofViewTab('3d');
-                          setProposalImageSource('3d');
-                        }}
-                        disabled={!canChoose3dForProposal}
-                        className={`min-h-[44px] px-4 py-2 rounded-full border text-xs font-semibold touch-manipulation ${
-                          roofViewTab === '3d'
-                            ? 'bg-indigo-100 border-indigo-400 text-indigo-800'
-                            : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
-                      >
-                        3D View
-                      </button>
-                    </div>
-                  )}
-                  </div>
-                  <RoofLayoutExportActions
-                    variant="desktop"
-                    layoutMode={layoutMode}
+                  <RoofLayoutPreviewToolbar
+                    canToggle2d3d={canToggle2d3dPreview}
+                    canChoose3dForProposal={canChoose3dForProposal}
                     roofViewTab={roofViewTab}
+                    onSelect2d={() => {
+                      setRoofViewTab('2d');
+                      setProposalImageSource('2d');
+                    }}
+                    onSelect3d={() => {
+                      if (!canChoose3dForProposal) return;
+                      setRoofViewTab('3d');
+                      setProposalImageSource('3d');
+                    }}
+                    layoutMode={layoutMode}
                     canUndo={polygonHistory.canUndo}
                     canRedo={polygonHistory.canRedo}
                     onUndo={handleUndoPolygon}
                     onRedo={handleRedoPolygon}
-                    savingToProposal={savingToProposal}
-                    exportingSitePlan={exportingSitePlan}
-                    isSavedForProject={isLayoutSyncedToServer}
-                    onExportSitePlan={() => void handleExportSitePlanPdf()}
-                    onSaveForProposal={() => void handleSaveForProposal()}
                   />
+
+                  {/* md–lg: export under preview. xl+ uses right sidebar instead. */}
+                  <div className="hidden md:block xl:hidden max-w-xs">
+                    <RoofLayoutExportActions
+                      variant="desktop"
+                      stacked
+                      savingToProposal={savingToProposal}
+                      exportingSitePlan={exportingSitePlan}
+                      isSavedForProject={isLayoutSyncedToServer}
+                      onExportSitePlan={() => void handleExportSitePlanPdf()}
+                      onSaveForProposal={() => void handleSaveForProposal()}
+                    />
                   </div>
 
                 <div
@@ -1897,6 +1881,7 @@ export default function AIRoofLayout() {
                           disabled={!polygon?.length}
                           className="min-h-[44px] shrink-0 px-3 rounded-lg text-xs font-semibold border border-gray-300 bg-white text-gray-700 touch-manipulation disabled:opacity-50"
                           title="Center map on the active roof outline"
+                          aria-label="Center map on roof outline"
                         >
                           Center
                         </button>
@@ -1909,13 +1894,14 @@ export default function AIRoofLayout() {
                     <button
                       type="button"
                       onClick={() => setMobileControlsOpen((o) => !o)}
-                      className="xl:hidden flex items-center justify-between w-full min-h-[44px] px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700 touch-manipulation"
+                      className="xl:hidden flex items-center justify-between w-full min-h-[48px] px-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700 touch-manipulation"
                       aria-expanded={mobileControlsOpen}
+                      aria-controls={ROOF_LAYOUT_MOBILE_ADJUST_PANEL_ID}
                     >
                       <span>
                         {isMobileView && roofViewTab === '2d'
-                          ? 'Adjust layout (density, orientation)'
-                          : 'Adjust layout (zoom, density, orientation)'}
+                          ? 'Layout tools (panels, density, keepouts)'
+                          : 'Layout tools (zoom, density, keepouts)'}
                       </span>
                       <span className="text-gray-400" aria-hidden>
                         {mobileControlsOpen ? '▲' : '▼'}
@@ -1923,9 +1909,12 @@ export default function AIRoofLayout() {
                     </button>
 
                     <div
+                      id={ROOF_LAYOUT_MOBILE_ADJUST_PANEL_ID}
+                      role="region"
+                      aria-label="Layout tools"
                       className={`flex flex-col gap-3 rounded-lg border border-gray-100 bg-gray-50/80 p-3 xl:hidden ${
                         !mobileControlsOpen ? 'hidden' : ''
-                      }`}
+                      } ${isMobileView ? 'scroll-mt-4' : ''}`}
                     >
                       {layoutMode === 'editing' && (
                         <RoofLayoutPanelActions
@@ -1960,8 +1949,6 @@ export default function AIRoofLayout() {
                         onAddCircleKeepout={addCircleKeepout}
                         onRemoveKeepout={(id) => setKeepouts((prev) => prev.filter((k) => k.id !== id))}
                         onClearKeepouts={() => setKeepouts([])}
-                        mapEditTool={mapEditTool}
-                        onMapToolChange={setMapTool}
                       />
                     </div>
                   </div>
@@ -2002,8 +1989,6 @@ export default function AIRoofLayout() {
                     onAddCircleKeepout={addCircleKeepout}
                     onRemoveKeepout={(id) => setKeepouts((prev) => prev.filter((k) => k.id !== id))}
                     onClearKeepouts={() => setKeepouts([])}
-                    mapEditTool={mapEditTool}
-                    onMapToolChange={setMapTool}
                   />
                 </div>
 
@@ -2028,6 +2013,20 @@ export default function AIRoofLayout() {
               </section>
 
               <aside className="hidden xl:flex xl:flex-col gap-4 min-w-0 xl:sticky xl:top-4 self-start">
+                <div className="space-y-2">
+                  <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Proposal export
+                  </h2>
+                  <RoofLayoutExportActions
+                    variant="desktop"
+                    stacked
+                    savingToProposal={savingToProposal}
+                    exportingSitePlan={exportingSitePlan}
+                    isSavedForProject={isLayoutSyncedToServer}
+                    onExportSitePlan={() => void handleExportSitePlanPdf()}
+                    onSaveForProposal={() => void handleSaveForProposal()}
+                  />
+                </div>
                 {layoutMode === 'editing' && (
                   <RoofLayoutPanelActions
                     disabled={!polygon}
@@ -2061,8 +2060,6 @@ export default function AIRoofLayout() {
                   onAddCircleKeepout={addCircleKeepout}
                   onRemoveKeepout={(id) => setKeepouts((prev) => prev.filter((k) => k.id !== id))}
                   onClearKeepouts={() => setKeepouts([])}
-                  mapEditTool={mapEditTool}
-                  onMapToolChange={setMapTool}
                 />
               </aside>
             </div>
