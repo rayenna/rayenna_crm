@@ -1151,3 +1151,144 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   min-height: 44px;
 }
 
+/* My Day Phase 2 — coach mark */
+.myday-coach-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2099;
+  border: none;
+  background: transparent;
+  cursor: default;
+}
+
+.myday-coach-card {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--accent-gold-border);
+  background: var(--bg-modal);
+  box-shadow: var(--shadow-modal);
+}
+
+.myday-coach-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--accent-gold);
+  font-family: 'Syne', sans-serif;
+}
+
+.myday-coach-body {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.myday-coach-body strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.myday-coach-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.myday-coach-dismiss,
+.myday-coach-primary {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.myday-coach-dismiss {
+  border: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.myday-coach-primary {
+  border: none;
+  background: var(--accent-gold);
+  color: var(--text-inverse);
+}
+
+/* My Day Phase 2 — journal nudge (bottom banner) */
+.myday-journal-nudge {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5000;
+  padding: 12px 12px max(12px, env(safe-area-inset-bottom, 12px));
+  pointer-events: none;
+}
+
+.myday-journal-nudge-inner {
+  pointer-events: auto;
+  margin: 0 auto;
+  max-width: 36rem;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--accent-gold-border);
+  background: color-mix(in srgb, var(--bg-modal) 94%, transparent);
+  box-shadow: var(--shadow-modal);
+  backdrop-filter: blur(12px);
+}
+
+@media (min-width: 640px) {
+  .myday-journal-nudge-inner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+}
+
+.myday-journal-nudge-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.myday-journal-nudge-text strong {
+  color: var(--text-primary);
+}
+
+.myday-journal-nudge-actions {
+  display: flex;
+  shrink: 0;
+  gap: 8px;
+}
+
+.myday-journal-nudge-secondary,
+.myday-journal-nudge-primary {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.myday-journal-nudge-secondary {
+  border: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.myday-journal-nudge-primary {
+  border: none;
+  background: var(--accent-gold);
+  color: var(--text-inverse);
+}
+

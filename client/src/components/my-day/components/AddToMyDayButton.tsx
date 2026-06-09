@@ -4,6 +4,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { createTask } from '../../../lib/my-day-api'
 import { MY_DAY_SNAPSHOT_QUERY_KEY } from '../../../lib/myDaySnapshot'
 import { MY_DAY_SUGGESTIONS_QUERY_KEY } from '../../../hooks/useMyDaySuggestionsQuery'
+import { recordMyDayUsage, type MyDayUsageEvent } from '../../../lib/myDayHabits'
+import { useAuth } from '../../../contexts/AuthContext'
 
 interface Props {
   content: string
@@ -12,6 +14,7 @@ interface Props {
   /** Compact icon+label for table rows */
   compact?: boolean
   className?: string
+  usageEvent?: Extract<MyDayUsageEvent, 'pin_hit_list' | 'pin_suggestion'>
 }
 
 export default function AddToMyDayButton({
@@ -20,7 +23,9 @@ export default function AddToMyDayButton({
   projectLabel = null,
   compact = false,
   className = '',
+  usageEvent = 'pin_hit_list',
 }: Props) {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   const [adding, setAdding] = useState(false)
 
@@ -31,6 +36,7 @@ export default function AddToMyDayButton({
     setAdding(true)
     try {
       await createTask({ content, projectId, projectLabel })
+      if (user?.id) recordMyDayUsage(user.id, usageEvent)
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: MY_DAY_SNAPSHOT_QUERY_KEY }),
         queryClient.invalidateQueries({ queryKey: MY_DAY_SUGGESTIONS_QUERY_KEY }),

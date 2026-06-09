@@ -57,6 +57,7 @@ export default function SuggestedTaskRow({ suggestion }: Props) {
       >
         <AddToMyDayButton
           compact
+          usageEvent="pin_suggestion"
           content={suggestion.content}
           projectId={suggestion.projectId}
           projectLabel={suggestion.projectLabel}

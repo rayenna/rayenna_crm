@@ -84,9 +84,10 @@ export default function TasksTab({
             {/* Today */}
             <span className="myday-section-label">Today</span>
 
-            {todayPending.length === 0 && todayDone.length === 0 && (
+            {todayPending.length === 0 && todayDone.length === 0 && suggestions.length === 0 && (
               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.6 }}>
-                Nothing planned yet. Add your first task below.
+                Nothing planned yet. In Zenith, tap <strong style={{ color: 'var(--text-secondary)' }}>+ My Day</strong> on
+                Hit List rows, or add a task below.
               </p>
             )}
 

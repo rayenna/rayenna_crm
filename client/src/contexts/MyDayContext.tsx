@@ -7,6 +7,8 @@ import {
   type MutableRefObject,
 } from 'react'
 import type { MyDayTabId } from '../components/my-day/types'
+import { recordMyDayUsage } from '../lib/myDayHabits'
+import { useAuth } from './AuthContext'
 
 interface MyDayContextValue {
   isOpen: boolean
@@ -33,22 +35,34 @@ const MyDayContext = createContext<MyDayContextValue>({
 })
 
 export function MyDayProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const [incompleteTasks, setIncompleteTasks] = useState(0)
   const pendingTabRef = useRef<MyDayTabId | null>(null)
 
+  const trackOpen = useCallback(() => {
+    if (user?.id) recordMyDayUsage(user.id, 'drawer_open')
+  }, [user?.id])
+
   const open = useCallback(() => {
     pendingTabRef.current = null
     setIsOpen(true)
-  }, [])
+    trackOpen()
+  }, [trackOpen])
 
   const openTab = useCallback((tab: MyDayTabId) => {
     pendingTabRef.current = tab
     setIsOpen(true)
-  }, [])
+    trackOpen()
+  }, [trackOpen])
 
   const close = useCallback(() => setIsOpen(false), [])
-  const toggle = useCallback(() => setIsOpen((v) => !v), [])
+  const toggle = useCallback(() => {
+    setIsOpen((v) => {
+      if (!v) trackOpen()
+      return !v
+    })
+  }, [trackOpen])
 
   return (
     <MyDayContext.Provider

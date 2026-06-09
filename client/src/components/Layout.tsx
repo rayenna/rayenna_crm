@@ -10,8 +10,9 @@ import '../styles/zenith.css'
 import VictoryToast from './zenith/VictoryToast'
 import { useVictoryToast } from '../hooks/useVictoryToast'
 import { MyDayProvider } from '../contexts/MyDayContext'
-import MyDayButton from './my-day/MyDayButton'
 import MyDayDrawer from './my-day/MyDayDrawer'
+import MyDayNavEntry from './my-day/MyDayNavEntry'
+import MyDayJournalNudge from './my-day/MyDayJournalNudge'
 
 /** For `/help/dashboard#foo`, `pathname` is `/help/dashboard` and `hash` is `#foo`. */
 function isHelpMenuPathActive(itemPath: string, pathname: string, locHash: string): boolean {
@@ -505,7 +506,7 @@ const Layout = () => {
               </span>
 
               {/* My Day button — visible at all breakpoints */}
-              <MyDayButton variant="nav" />
+              <MyDayNavEntry />
 
               {/* Profile menu — lg+; consolidates role + theme + actions */}
               <div ref={profileDropdownRef} className="relative hidden lg:block">
@@ -747,6 +748,7 @@ const Layout = () => {
       <TipOfTheDay />
 
       {/* My Day drawer — mounted once at layout level; persists state across route changes */}
+      {user ? <MyDayJournalNudge /> : null}
       {user ? <MyDayDrawer /> : null}
     </div>
     </MyDayProvider>

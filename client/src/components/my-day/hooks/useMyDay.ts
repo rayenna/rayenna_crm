@@ -14,12 +14,15 @@ import {
 } from '../../../lib/my-day-api'
 import { MY_DAY_SNAPSHOT_QUERY_KEY } from '../../../lib/myDaySnapshot'
 import { MY_DAY_SUGGESTIONS_QUERY_KEY } from '../../../hooks/useMyDaySuggestionsQuery'
+import { recordMyDayUsage } from '../../../lib/myDayHabits'
+import { useAuth } from '../../../contexts/AuthContext'
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
 export function useMyDay() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
 
   const bumpSnapshot = useCallback(() => {
@@ -84,6 +87,7 @@ export function useMyDay() {
     try {
       const created = await createTask({ content, projectId, projectLabel })
       setTasks((prev) => prev.map((t) => (t.id === optimistic.id ? created : t)))
+      if (user?.id) recordMyDayUsage(user.id, 'task_added')
       bumpSnapshot()
     } catch {
       setTasks((prev) => prev.filter((t) => t.id !== optimistic.id))
