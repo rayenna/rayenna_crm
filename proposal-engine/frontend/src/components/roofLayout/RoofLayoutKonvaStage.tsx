@@ -18,8 +18,6 @@ import {
   type RoofLayoutPoint,
 } from '../../lib/roofLayout/roofLayoutTypes';
 
-const METERS_PER_PIXEL = ROOF_LAYOUT_METERS_PER_PIXEL;
-
 export type RoofLayoutKonvaStageRefs = {
   stageRef: RefObject<Konva.Stage | null>;
   lineRef: RefObject<Konva.Line | null>;
@@ -84,7 +82,7 @@ export function RoofLayoutKonvaStage({
 }: RoofLayoutKonvaStageProps) {
   const setbackInsetPolygon = useMemo(() => {
     if (!polygon || polygon.length < 3 || edgeSetbackM <= 0) return null;
-    const insetPx = setbackMetersToPixels(edgeSetbackM, METERS_PER_PIXEL);
+    const insetPx = setbackMetersToPixels(edgeSetbackM, ROOF_LAYOUT_METERS_PER_PIXEL);
     if (insetPx <= 0) return null;
     return insetPolygonByDistance(polygon, insetPx);
   }, [polygon, edgeSetbackM]);
@@ -111,7 +109,7 @@ export function RoofLayoutKonvaStage({
         if (layoutMode !== 'editing' || !polygon?.length) return;
         const pos = e.target.getStage()?.getPointerPosition();
         if (!pos) return;
-        onSetHoveredEdge(closestPolygonEdge(polygon, METERS_PER_PIXEL, pos));
+        onSetHoveredEdge(closestPolygonEdge(polygon, ROOF_LAYOUT_METERS_PER_PIXEL, pos));
       }}
       onMouseLeave={() => onSetHoveredEdge(null)}
     >
@@ -454,7 +452,7 @@ export function RoofLayoutKonvaStage({
       {imageSize &&
         (() => {
           const scaleBarM = 20; // show a 20-metre reference bar
-          const scaleBarPx = scaleBarM / METERS_PER_PIXEL;
+          const scaleBarPx = scaleBarM / ROOF_LAYOUT_METERS_PER_PIXEL;
           const margin = 16;
           const barY = imageSize.height - margin - 4;
           const barX = imageSize.width - margin - scaleBarPx;

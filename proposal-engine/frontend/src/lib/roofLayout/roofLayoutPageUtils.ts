@@ -4,6 +4,8 @@ import {
   ROOF_LAYOUT_METERS_PER_PIXEL,
   ROOF_LAYOUT_PANEL_AREA_M2,
   ROOF_LAYOUT_PANEL_SPACING_FACTOR,
+  ROOF_LAYOUT_SEED_POLYGON_ASPECT,
+  ROOF_LAYOUT_SEED_POLYGON_EDGE_MARGIN_PX,
   ROOF_LAYOUT_USABLE_AREA_FACTOR,
 } from '../roofLayoutConstants';
 import type { RoofLayoutPoint } from './roofLayoutTypes';
@@ -132,12 +134,12 @@ export function initialPolygonHalfExtentsPx(
     (panelsForTarget * ROOF_LAYOUT_PANEL_AREA_M2 * ROOF_LAYOUT_PANEL_SPACING_FACTOR) /
     ROOF_LAYOUT_USABLE_AREA_FACTOR;
   const areaPx = seedRoofAreaM2 / (metersPerPixel * metersPerPixel);
-  const aspect = 1.12;
-  const heightPx = Math.sqrt(areaPx / aspect);
+  const heightPx = Math.sqrt(areaPx / ROOF_LAYOUT_SEED_POLYGON_ASPECT);
   const widthPx = areaPx / heightPx;
+  const maxHalf = imgCenter - ROOF_LAYOUT_SEED_POLYGON_EDGE_MARGIN_PX;
   return {
-    halfWPx: Math.round(Math.min(widthPx / 2, imgCenter - 40)),
-    halfHPx: Math.round(Math.min(heightPx / 2, imgCenter - 40)),
+    halfWPx: Math.round(Math.min(widthPx / 2, maxHalf)),
+    halfHPx: Math.round(Math.min(heightPx / 2, maxHalf)),
   };
 }
 

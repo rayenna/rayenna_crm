@@ -71,8 +71,6 @@ import type { PolygonEdgeInfo } from '../lib/roofLayoutEdgeMeasure';
 import { isPlaceholderSatelliteBytes } from '../lib/roofLayoutSatelliteImage';
 import { getKeralaMapGpsWarning } from '../lib/mapGpsValidation';
 
-const METERS_PER_PIXEL = ROOF_LAYOUT_METERS_PER_PIXEL;
-
 const LazySolar3DView = lazy(() => import('../components/Solar3DView'));
 
 export default function AIRoofLayout() {
@@ -300,7 +298,7 @@ export default function AIRoofLayout() {
       panelWatts: effectiveWattage,
       keepoutRects: keepouts,
       edgeSetbackM,
-      metersPerPixel: METERS_PER_PIXEL,
+      metersPerPixel: ROOF_LAYOUT_METERS_PER_PIXEL,
     }),
     [panelOrientation, panelSpacingMultiplier, effectiveWattage, keepouts, edgeSetbackM],
   );
@@ -326,7 +324,7 @@ export default function AIRoofLayout() {
         panelSpacingMultiplier,
         panelWatts: effectiveWattage,
         imageSize,
-        metersPerPixel: METERS_PER_PIXEL,
+        metersPerPixel: ROOF_LAYOUT_METERS_PER_PIXEL,
         edgeSetbackM,
       }),
     [facets, keepouts, panelOrientation, panelSpacingMultiplier, effectiveWattage, imageSize, edgeSetbackM],
@@ -852,7 +850,7 @@ export default function AIRoofLayout() {
         panelSpacingMultiplier,
         effectiveWattage,
         edgeSetbackM,
-        metersPerPixel: METERS_PER_PIXEL,
+        metersPerPixel: ROOF_LAYOUT_METERS_PER_PIXEL,
         roofViewTab,
         proposalImageSource,
         last3dPngDataUrl,
@@ -897,7 +895,7 @@ export default function AIRoofLayout() {
         panelSpacingMultiplier,
         panelWatts: effectiveWattage,
         imageSize,
-        metersPerPixel: METERS_PER_PIXEL,
+        metersPerPixel: ROOF_LAYOUT_METERS_PER_PIXEL,
         edgeSetbackM,
       });
       if (savedFingerprint) setSavedLayoutFingerprint(savedFingerprint);
@@ -939,7 +937,7 @@ export default function AIRoofLayout() {
         activePolygon: polygon,
         allPanelsFlat,
         imageSize,
-        metersPerPixel: METERS_PER_PIXEL,
+        metersPerPixel: ROOF_LAYOUT_METERS_PER_PIXEL,
         roofViewTab,
         switchTo2dForCapture: needTemp2d ? switchTo2dForCapture : undefined,
         master: activeProject?.master,
@@ -1047,9 +1045,9 @@ export default function AIRoofLayout() {
     const { halfWPx, halfHPx } = initialPolygonHalfExtentsPx(systemKw, effectiveWattage, cx);
 
     const { widthM, heightM } = getOrientedPanelSizeM(effectiveWattage, panelOrientation);
-    const panelWidthPx = widthM / METERS_PER_PIXEL;
-    const panelHeightPx = heightM / METERS_PER_PIXEL;
-    const spacingPx = (ROOF_LAYOUT_PANEL_SPACING_M / METERS_PER_PIXEL) * panelSpacingMultiplier;
+    const panelWidthPx = widthM / ROOF_LAYOUT_METERS_PER_PIXEL;
+    const panelHeightPx = heightM / ROOF_LAYOUT_METERS_PER_PIXEL;
+    const spacingPx = (ROOF_LAYOUT_PANEL_SPACING_M / ROOF_LAYOUT_METERS_PER_PIXEL) * panelSpacingMultiplier;
     const stepX = panelWidthPx + spacingPx;
     const stepY = panelHeightPx + spacingPx;
     const snap = (v: number, step: number) => Math.round(v / step) * step;
@@ -1162,9 +1160,9 @@ export default function AIRoofLayout() {
   const handleSnapOutlineToGrid = () => {
     if (!polygon) return;
     const { widthM, heightM } = getOrientedPanelSizeM(effectiveWattage, panelOrientation);
-    const panelWidthPx = widthM / METERS_PER_PIXEL;
-    const panelHeightPx = heightM / METERS_PER_PIXEL;
-    const spacingPx = (ROOF_LAYOUT_PANEL_SPACING_M / METERS_PER_PIXEL) * panelSpacingMultiplier;
+    const panelWidthPx = widthM / ROOF_LAYOUT_METERS_PER_PIXEL;
+    const panelHeightPx = heightM / ROOF_LAYOUT_METERS_PER_PIXEL;
+    const spacingPx = (ROOF_LAYOUT_PANEL_SPACING_M / ROOF_LAYOUT_METERS_PER_PIXEL) * panelSpacingMultiplier;
     const stepX = panelWidthPx + spacingPx;
     const stepY = panelHeightPx + spacingPx;
     const snap = (v: number, step: number) => Math.round(v / step) * step;
@@ -1185,8 +1183,8 @@ export default function AIRoofLayout() {
       cy = polygon.reduce((s, p) => s + p.y, 0) / polygon.length;
     }
     const sizeM = 1.5;
-    const w = sizeM / METERS_PER_PIXEL;
-    const h = sizeM / METERS_PER_PIXEL;
+    const w = sizeM / ROOF_LAYOUT_METERS_PER_PIXEL;
+    const h = sizeM / ROOF_LAYOUT_METERS_PER_PIXEL;
     setKeepouts((prev) => [
       ...prev,
       { id: crypto.randomUUID(), shape: 'rect', x: cx - w / 2, y: cy - h / 2, w, h },
@@ -1203,7 +1201,7 @@ export default function AIRoofLayout() {
       cy = polygon.reduce((s, p) => s + p.y, 0) / polygon.length;
     }
     const diameterM = 1.5;
-    const r = diameterM / METERS_PER_PIXEL / 2;
+    const r = diameterM / ROOF_LAYOUT_METERS_PER_PIXEL / 2;
     setKeepouts((prev) => [
       ...prev,
       { id: crypto.randomUUID(), shape: 'circle', cx, cy, r },
@@ -1491,7 +1489,7 @@ export default function AIRoofLayout() {
                                     }))}
                                     imageSize={imageSize!}
                                     roofImageUrl={bgImageUrl ?? undefined}
-                                    metersPerPixel={METERS_PER_PIXEL}
+                                    metersPerPixel={ROOF_LAYOUT_METERS_PER_PIXEL}
                                     panelCount={result?.panel_count}
                                     onExportPNG={async (dataUrl) => {
                                       setLast3dPngDataUrl(dataUrl);
@@ -1599,7 +1597,7 @@ export default function AIRoofLayout() {
                                     }))}
                                     imageSize={imageSize!}
                                     roofImageUrl={bgImageUrl ?? undefined}
-                                    metersPerPixel={METERS_PER_PIXEL}
+                                    metersPerPixel={ROOF_LAYOUT_METERS_PER_PIXEL}
                                     panelCount={result?.panel_count}
                                     onExportPNG={async (dataUrl) => {
                                       setLast3dPngDataUrl(dataUrl);

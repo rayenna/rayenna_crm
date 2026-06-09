@@ -1,6 +1,12 @@
 /** Editable 2D roof layout geometry — persisted server-side for cross-device sync. */
 
 import { keepoutFromGeometryJson, keepoutToGeometryJson } from './roofLayout/keepoutGeometry';
+import {
+  ROOF_LAYOUT_DEFAULT_PANEL_HEIGHT_M,
+  ROOF_LAYOUT_DEFAULT_PANEL_WIDTH_M,
+  ROOF_LAYOUT_METERS_PER_PIXEL,
+  ROOF_LAYOUT_SATELLITE_IMAGE_PX,
+} from './roofLayoutConstants';
 
 export type RoofLayoutKeepoutGeometry =
   | { id: string; shape?: 'rect'; x: number; y: number; width: number; height: number }
@@ -80,16 +86,16 @@ function parsePanelRects(raw: unknown): { x: number; y: number; width: number; h
 
 function parseSharedFields(o: Record<string, unknown>) {
   return {
-    imageWidth: Number(o.imageWidth) || 2048,
-    imageHeight: Number(o.imageHeight) || 2048,
-    metersPerPixel: Number(o.metersPerPixel) || 0.149,
+    imageWidth: Number(o.imageWidth) || ROOF_LAYOUT_SATELLITE_IMAGE_PX,
+    imageHeight: Number(o.imageHeight) || ROOF_LAYOUT_SATELLITE_IMAGE_PX,
+    metersPerPixel: Number(o.metersPerPixel) || ROOF_LAYOUT_METERS_PER_PIXEL,
     keepouts: parseKeepouts(o.keepouts),
     panelOrientation: o.panelOrientation === 'landscape' ? 'landscape' as const : 'portrait' as const,
     panelSpacingMultiplier: Number.isFinite(Number(o.panelSpacingMultiplier))
       ? Number(o.panelSpacingMultiplier)
       : 1.5,
-    panelWidthM: Number.isFinite(Number(o.panelWidthM)) ? Number(o.panelWidthM) : 1.1,
-    panelHeightM: Number.isFinite(Number(o.panelHeightM)) ? Number(o.panelHeightM) : 2.2,
+    panelWidthM: Number.isFinite(Number(o.panelWidthM)) ? Number(o.panelWidthM) : ROOF_LAYOUT_DEFAULT_PANEL_WIDTH_M,
+    panelHeightM: Number.isFinite(Number(o.panelHeightM)) ? Number(o.panelHeightM) : ROOF_LAYOUT_DEFAULT_PANEL_HEIGHT_M,
     edgeSetbackM: Number.isFinite(Number(o.edgeSetbackM)) ? Math.max(0, Number(o.edgeSetbackM)) : 0,
   };
 }
