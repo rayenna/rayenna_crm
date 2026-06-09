@@ -13,16 +13,26 @@ import {
 } from '../lib/customerStore';
 import type { CustomerRecord } from '../lib/customerStore';
 import {
-  fetchProposalEngineProjects,
-  fetchProposalEngineEligibleProjects,
-  fetchProposalEngineProjectsStats,
-  fetchProjectWithArtifacts,
-  applyProposalEngineProjectDetail,
   getCurrentUserRole,
   deleteProjectFromProposalEngine,
   selectProposalEngineProject,
   type PeProjectsStatsResponse,
+  fetchProposalEngineProjects,
+  fetchProposalEngineEligibleProjects,
+  fetchProposalEngineProjectsStats,
+  fetchProjectWithArtifacts,
 } from '../lib/apiClient';
+import { loadProjectFromServer } from '../lib/projectLoadPipeline';
+
+function replaceCustomerInList(prev: CustomerRecord[], record: CustomerRecord): CustomerRecord[] {
+  const idx = prev.findIndex((c) => c.id === record.id);
+  if (idx >= 0) {
+    const next = prev.slice();
+    next[idx] = record;
+    return next;
+  }
+  return [...prev, record];
+}
 
 // Sub-modules
 import {
@@ -292,16 +302,9 @@ export default function Customers() {
       const master = buildMasterFromProject(project);
       const record = createCustomer(master);
       const indexed: CustomerRecord = { ...record, proposalIndex };
-      try {
-        const res = await fetchProjectWithArtifacts(project.id);
-        const final = applyProposalEngineProjectDetail(indexed, res);
-        upsertCustomer(final);
-        return final;
-      } catch {
-        // No backend data or network error — keep local shell only
-        upsertCustomer(indexed);
-        return indexed;
-      }
+      upsertCustomer(indexed);
+      const result = await loadProjectFromServer(indexed.id, { markServerSynced: false });
+      return result.record ?? indexed;
     },
     [],
   );
@@ -347,27 +350,22 @@ export default function Customers() {
     async (project: ProjectOption) => {
       setHydratingProjectId(project.id);
       try {
-        const res = await fetchProjectWithArtifacts(project.id);
-        const now = new Date().toISOString();
         const existing = customersByCrmProjectId.get(project.id) ?? null;
         const base: CustomerRecord = existing
-          ? { ...existing, updatedAt: now }
+          ? { ...existing, updatedAt: new Date().toISOString() }
           : buildShellCustomerRecordFromProject(project);
-        const record = applyProposalEngineProjectDetail(base, res);
-        switchActiveCustomer(record.id);
-        upsertCustomer(record);
-        setCustomers((prev) => {
-          const idx = prev.findIndex((c) => c.id === record.id);
-          if (idx >= 0) {
-            const next = prev.slice();
-            next[idx] = record;
-            return next;
-          }
-          return [...prev, record];
-        });
-        navigate('/dashboard');
+        if (!existing) upsertCustomer(base);
+
+        const result = await loadProjectFromServer(base.id, { activate: true });
+        if (result.ok && result.record) {
+          setCustomers((prev) => replaceCustomerInList(prev, result.record!));
+          navigate('/dashboard');
+          return;
+        }
+
+        throw new Error(result.errorMessage ?? 'Failed to load project');
       } catch {
-        // Same resilience as Dashboard: detail API can 500 (e.g. missing DB columns) while list API still works.
+        // Same resilience as Dashboard: detail API can 500 while list API still works.
         const existing = customersByCrmProjectId.get(project.id) ?? null;
         const now = new Date().toISOString();
         const record: CustomerRecord = existing
@@ -379,15 +377,7 @@ export default function Customers() {
           : buildShellCustomerRecordFromProject(project);
         switchActiveCustomer(record.id);
         upsertCustomer(record);
-        setCustomers((prev) => {
-          const idx = prev.findIndex((c) => c.id === record.id);
-          if (idx >= 0) {
-            const next = prev.slice();
-            next[idx] = record;
-            return next;
-          }
-          return [...prev, record];
-        });
+        setCustomers((prev) => replaceCustomerInList(prev, record));
         setProjectsError(null);
         navigate('/dashboard');
       } finally {
@@ -438,27 +428,26 @@ export default function Customers() {
         if (cancelled) return;
 
         const projectOption = mapApiProjectToProjectOption(detail.project);
-        const now = new Date().toISOString();
         const existing =
           getLatestLocalRecordForCrmProject(projectId, loadCustomers()) ?? null;
         const base: CustomerRecord = existing
-          ? { ...existing, updatedAt: now }
+          ? { ...existing, updatedAt: new Date().toISOString() }
           : buildShellCustomerRecordFromProject(projectOption);
-        const record = applyProposalEngineProjectDetail(base, detail);
+        if (!existing) upsertCustomer(base);
+
+        const result = await loadProjectFromServer(base.id, {
+          activate: true,
+          preloadedDetail: detail,
+        });
         if (cancelled) return;
 
-        switchActiveCustomer(record.id);
-        upsertCustomer(record);
-        setCustomers((prev) => {
-          const idx = prev.findIndex((c) => c.id === record.id);
-          if (idx >= 0) {
-            const next = prev.slice();
-            next[idx] = record;
-            return next;
-          }
-          return [...prev, record];
-        });
-        navigate('/dashboard');
+        if (result.ok && result.record) {
+          setCustomers((prev) => replaceCustomerInList(prev, result.record!));
+          navigate('/dashboard');
+          return;
+        }
+
+        throw new Error(result.errorMessage ?? 'Failed to load project');
       } catch {
         if (cancelled) return;
         // Detail API often fails when DB is behind schema (e.g. missing pe_proposals.proposalView) while
@@ -491,15 +480,7 @@ export default function Customers() {
         if (record) {
           switchActiveCustomer(record.id);
           upsertCustomer(record);
-          setCustomers((prev) => {
-            const idx = prev.findIndex((c) => c.id === record.id);
-            if (idx >= 0) {
-              const next = prev.slice();
-              next[idx] = record;
-              return next;
-            }
-            return [...prev, record];
-          });
+          setCustomers((prev) => replaceCustomerInList(prev, record));
           setProjectsError(null);
           navigate('/dashboard');
           return;

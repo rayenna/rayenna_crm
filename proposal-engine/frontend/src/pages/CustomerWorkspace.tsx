@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect, type ReactNode } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   getCustomer,
-  upsertCustomer,
   switchActiveCustomer,
   getActiveCustomerId,
   clearProposalArtifact,
@@ -12,13 +11,11 @@ import {
 } from '../lib/customerStore';
 import type { CustomerRecord, CustomerMaster } from '../lib/customerStore';
 import {
-  fetchProjectWithArtifacts,
-  applyProposalEngineProjectDetail,
   getCurrentUserRole,
   canDeleteProposalEngineArtifacts,
   clearProjectProposalArtifact,
 } from '../lib/apiClient';
-import { markServerSynced } from '../lib/serverSyncStatus';
+import { loadProjectFromServer } from '../lib/projectLoadPipeline';
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -212,25 +209,14 @@ export default function CustomerWorkspace() {
   useEffect(() => {
     if (!id) return;
     const rec = getCustomer(id);
-    const projectId = rec?.master?.crmProjectId;
-    if (!projectId) return;
+    if (!rec?.master?.crmProjectId) return;
     let cancelled = false;
     setHydrating(true);
     void (async () => {
-      try {
-        const res = await fetchProjectWithArtifacts(projectId);
-        if (cancelled) return;
-        const latest = getCustomer(id) ?? rec;
-        const merged = applyProposalEngineProjectDetail(latest, res);
-        switchActiveCustomer(merged.id);
-        upsertCustomer(merged);
-        markServerSynced(merged.id);
-        setRecord(getCustomer(id)!);
-      } catch {
-        // Network or auth error — keep local data
-      } finally {
-        if (!cancelled) setHydrating(false);
-      }
+      const result = await loadProjectFromServer(id, { activate: true });
+      if (cancelled) return;
+      if (result.record) setRecord(result.record);
+      if (!cancelled) setHydrating(false);
     })();
     return () => { cancelled = true; };
   }, [id]);

@@ -145,7 +145,7 @@ POST /ai-layout
 | Undo / redo polygon | ✅ (shown only when history exists) |
 | Rectangular + circle keepouts | ✅ |
 | Edge setback band (0–0.6 m) for panel packing | ✅ Jun 2026 |
-| Panel density, portrait/landscape, opacity, zoom | ✅ |
+| Panel density, portrait/landscape, opacity, **satellite contrast**, zoom | ✅ |
 | Refill / clear panels (active facet + refill all) | ✅ |
 | Edge length on hover (m) | ✅ |
 | North arrow + legend (`RoofLayoutMapChrome`) | ✅ |
@@ -158,6 +158,10 @@ POST /ai-layout
 | **Saved — unsaved changes** after post-save edits | ✅ Jun 2026 (`roofLayoutGeometryFingerprint`) |
 | Desktop preview toolbar (2D/3D + undo only; export in xl sidebar) | ✅ Jun 2026 (`RoofLayoutPreviewToolbar`) |
 | Mobile: 44px touch targets, sticky Save/PDF, layout-tools accordion | ✅ Jun 2026 |
+| Site plan PDF metrics (module size, yield, azimuth table) | ✅ Jun 2026 (Option A) |
+| Single-facet azimuth in facet bar | ✅ Jun 2026 (Option A) |
+| 3D view uses CRM module dimensions (`portraitModuleSizeM`) | ✅ Jun 2026 (Option A) |
+| Customers list card: panel count · placed kW · module label | ✅ Jun 2026 (Option C + API `roofLayoutSummary`) |
 | Map GPS / Kerala warnings | ✅ May 2026 |
 
 **Honest product copy:** Satellite-assisted **draft**; roof outline is **user-drawn**, not auto-traced.
@@ -220,7 +224,7 @@ From original plan and [ai-roof-layout-2d-roadmap.md](./docs/ai-roof-layout-2d-r
 - [x] P2 simplified yield hints (azimuth-weighted effective kW, India table) — May 2026  
 - [x] P2 India spacing/setback copy in Adjust panel — May 2026  
 
-**Quick wins (roadmap):** ~~centralise `METERS_PER_PIXEL` with worker~~ ✅ Jun 2026 (`src/constants/roofLayoutScale.ts` + PE parity tests); keyboard shortcuts (`Esc` / `E` / `K` / undo) ✅; ~~further split `AIRoofLayout.tsx`~~ slices 1–2 done (~2k lines; slice 3 deferred).
+**Quick wins (roadmap):** ~~centralise `METERS_PER_PIXEL` with worker~~ ✅ Jun 2026; keyboard shortcuts ✅; ~~further split `AIRoofLayout.tsx`~~ slices 1–3 done (~1,695 lines). **Next engineering:** [Phase 3b save pipeline](./docs/PHASE_3B_SAVE_PIPELINE.md).
 
 ---
 
@@ -269,6 +273,8 @@ Unit tests: `proposal-engine/frontend` (`roofLayoutGeometry.test.ts`, etc.); roo
 | 2026-06-09 | **Track B P1:** Edge setback slider (0–0.6 m), mobile scroll buffer + **Center** map (`5163656`) |
 | 2026-06-09 | **Toolbar redesign:** slim preview chrome; PDF/Save in xl sidebar; mobile sticky export (`40c6e4e`) |
 | 2026-06-09 | **Scale centralisation:** `src/constants/roofLayoutScale.ts` + PE mirror + parity tests (`a1bdec8`, `4174f6a`); prod smoke pass |
+| 2026-06-09 | **Option A:** 3D SKU parity, site plan PDF metrics, single-facet azimuth (`90fd4fe`) |
+| 2026-06-09 | **Option C:** satellite contrast, `404.html` build guard, Customers card summary line (`3000ddb`); API `roofLayoutSummary` (`3567529`) |
 
 ---
 
@@ -278,6 +284,7 @@ Unit tests: `proposal-engine/frontend` (`roofLayoutGeometry.test.ts`, etc.); roo
 |-----|-----|
 | [docs/ai-roof-layout-2d-roadmap.md](./docs/ai-roof-layout-2d-roadmap.md) | P0/P1/P2 priorities, SaaS acceptance bar, mobile rules |
 | [docs/MODERNIZATION_PROGRESS.md](./docs/MODERNIZATION_PROGRESS.md) | PE refactor phases (api split, etc.) |
+| [docs/PHASE_3B_SAVE_PIPELINE.md](./docs/PHASE_3B_SAVE_PIPELINE.md) | Next: central save/sync pipeline |
 | [docs/SMOKE_CHECKLIST.md](./docs/SMOKE_CHECKLIST.md) | Manual regression |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | CRM + PE system architecture |
 | [README.md](./README.md) | PE local quick start, env vars |

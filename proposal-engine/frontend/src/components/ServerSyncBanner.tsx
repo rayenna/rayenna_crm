@@ -23,7 +23,7 @@ export function ServerSyncBanner({ syncedAt, onDismiss }: Props) {
         <span className="text-emerald-500 text-sm leading-none flex-shrink-0">✓</span>
         <span className="min-w-0">
           <strong>Up to date.</strong>{' '}
-          Proposal data loaded from server at {timeStr} — you're seeing the latest saved version across all devices.
+          Synced with server at {timeStr} — latest saved version on all your devices.
         </span>
       </div>
       <button

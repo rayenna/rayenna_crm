@@ -3,8 +3,6 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import {
   getActiveCustomer,
-  upsertCustomer,
-  deriveProposalStatusFromArtifacts,
 } from '../lib/customerStore';
 import type { CostingArtifact, BomArtifact } from '../lib/customerStore';
 import {
@@ -15,14 +13,13 @@ import {
 import type { LineItem, SavedSheet, StoredBom, RoiAutofill } from '../lib/costingConstants';
 import { removeLocalStorageItem, setLocalStorageItem } from '../lib/safeLocalStorage';
 import {
-  syncProjectCosting,
-  syncProjectBom,
   canEditProposalArtifacts,
   getCurrentUserRole,
   fetchCostingTemplates,
   createCostingTemplate,
   deleteCostingTemplate,
 } from '../lib/apiClient';
+import { saveProjectArtifacts, PIPELINE_MARK_SYNCED } from '../lib/projectSavePipeline';
 import { getWipKeysForCurrentUser } from '../lib/customerStore';
 import type { FormValues, CostingTemplate } from '../costing/types';
 import { EMPTY_ROW, BUILT_IN_TEMPLATES, loadTemplates } from '../costing/builtInTemplates';
@@ -287,35 +284,25 @@ export default function CostingSheet() {
         systemSizeKw:  sizeKw,
       };
       const bomArtifact: BomArtifact = { savedAt: now, rows: bomRows };
-      const nextRecord = {
-        ...activeCustomer,
-        costing: costingArtifact,
-        bom:     bomArtifact,
-        updatedAt: now,
-      };
-      upsertCustomer({
-        ...nextRecord,
-        status: deriveProposalStatusFromArtifacts(nextRecord),
-      });
 
-      // Sync both to CRM backend so BOM page and Proposal use the same values everywhere.
-      if (activeCustomer.master.crmProjectId) {
-        try {
-          await syncProjectCosting(activeCustomer.master.crmProjectId, costingArtifact);
-          await syncProjectBom(activeCustomer.master.crmProjectId, bomArtifact);
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Server sync failed';
-          setShowSaveSheetModal(false);
-          showToast(
-            `Saved on this device, but could not sync to the server: ${msg}. Open the project again after fixing the API connection.`,
-          );
-          return;
-        }
-      } else {
+      const result = await saveProjectArtifacts(
+        activeCustomer.id,
+        {
+          costing: costingArtifact,
+          bom: bomArtifact,
+        },
+        PIPELINE_MARK_SYNCED,
+      );
+
+      if (!result.ok) {
         setShowSaveSheetModal(false);
-        showToast(
-          'Saved locally only — link this customer to a CRM project (Select Project) so costing syncs across devices.',
-        );
+        showToast(result.errorMessage ?? 'Server sync failed');
+        return;
+      }
+
+      if (result.localOnly) {
+        setShowSaveSheetModal(false);
+        showToast(result.userMessage ?? 'Saved locally only — link this customer to a CRM project (Select Project) so costing syncs across devices.');
         return;
       }
     }

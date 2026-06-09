@@ -40,6 +40,7 @@ Use after PE frontend and/or CRM API deploys, or before merging large PE PRs.
 - [ ] Edit polygon / keepouts → Save to proposal → reopen `/ai-layout` → geometry restored
 - [ ] **Delete layout** → confirm modal → blank page + **Generate AI Layout** → no layout on reopen until regenerated
 - [ ] Customers card: **Map GPS** / **Roof layout** badges and **5** artifact dots when applicable
+- [ ] Customers card (saved layout): **📐 N panels · X.XX kW · brand · W** when `roofLayoutSummary` present
 - [ ] Proposal embed shows layout image when enabled
 - [ ] **Site plan PDF:** ⬇ Site plan PDF → print dialog → Save as PDF (logo, customer block, north arrow, scale bar, metrics)
 

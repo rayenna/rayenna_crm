@@ -1,7 +1,7 @@
 # AI Roof Layout — 2D roadmap (bookmark)
 
-**Status:** P1 complete; **P2 item 15 (SKU dimensions)** shipped (2026-05-20); **next** P2 yield hints / India copy or Track B slice 3 refactor  
-**Last updated:** 2026-05-20  
+**Status:** **P0–P2 complete** (Jun 2026). Option A/C polish shipped. **Next product backlog:** segmentation / worker (deferred). **Next engineering:** [Phase 3b save pipeline](./PHASE_3B_SAVE_PIPELINE.md).  
+**Last updated:** 2026-06-09  
 **Architecture:** [ARCHITECTURE.md](./ARCHITECTURE.md)  
 **Scope:** 2D layout only (3D deferred until 2D reaches SaaS bar)  
 **Primary UI:** `proposal-engine/frontend/src/pages/AIRoofLayout.tsx`  
@@ -34,7 +34,7 @@ Win on **workflow integration** first; match **design-studio feel** in P0/P1.
 | Roofs | **Up to 3 facets** + azimuth per section (v2 geometry) | Multiple facets + azimuth each |
 | Electrical | None in 2D | Stringing, MPPT (out of 2D scope for now) |
 | Output | Cropped JPEG + m² / panel count → proposal | Site plan PDF, BOM tie-in |
-| UX | Konva; stepper/status/undo; keepouts; xl sidebar export; mobile sticky Save/PDF (2026-06) | Multi-facet, PDF site plan, shortcuts |
+| UX | Konva; stepper/status/undo; keepouts; xl sidebar export; mobile sticky Save/PDF; **satellite contrast** (display-only); Customers card **panel · kW · module** line | Multi-facet, PDF site plan, shortcuts |
 | Scale | **`src/constants/roofLayoutScale.ts`** ↔ PE `roofLayoutConstants.ts` (parity tests) | Single source across worker + editor |
 
 Backend note: seed polygon uses `computeSeedRoofPolygonCoords` from `roofLayoutScale.ts`. Real segmentation replaces rectangle coords when added.
@@ -78,7 +78,7 @@ Principles:
 | 9 | **Multi-facet (2–3)** | Multiple polygons; azimuth per facet; rolled-up kW |
 | 10 | **Smarter fill** | Target kW from CRM; respect keepouts; Fill / Clear / Refill |
 | 11 | **Measurements** | Edge length (m) on hover; snap 90° / parallel | ✅ Vertex snap on drag (May 2026) |
-| 12 | **Imagery** | Opacity; optional contrast; proper pan/zoom viewport on mobile | ✅ Opacity + mobile scroll buffer + Center (Jun 2026); contrast deferred |
+| 12 | **Imagery** | Opacity; optional contrast; proper pan/zoom viewport on mobile | ✅ Opacity + mobile scroll buffer + Center (Jun 2026); **contrast slider** (Jun 2026, display-only) |
 | 13 | **Export** | PNG + PDF site plan (logo, customer, scale, north) | ✅ Site plan PDF (browser print, May 2026) |
 
 Align backend `computePanelPacking` with **polygon geometry**, not only `usableAreaM2`.
@@ -120,7 +120,7 @@ Pick-up options when resuming:
 - [x] Save full geometry JSON on manual layout API every time — enforced on Save to Proposal in editing mode (May 2026)
 - [x] Split UI slice 1: `RoofLayoutKonvaStage`, `lib/roofLayout/*` (page utils, capture, panel packing, customer sync) — May 2026
 - [x] Split UI slice 2: generate/hydrate/save/export libs + header/banner/override/export chrome — May 2026 (`AIRoofLayout.tsx` ~2k lines)
-- [ ] Split UI slice 3: scroll/viewport effects, 3D tab shell, `useRoofLayoutEditorState` — ✅ May 2026 (~1,695 lines)
+- [x] Split UI slice 3: scroll/viewport effects, 3D tab shell, `useRoofLayoutEditorState` — ✅ Jun 2026 (~1,695 lines)
 - [x] Keyboard: `Esc` pan, `E` edit, `K` keepouts, `Ctrl+Z` / `Ctrl+Y` undo — hints in UI (May 2026)
 
 ---
@@ -185,7 +185,10 @@ A salesperson on a phone or laptop can:
 | 2026-06-09 | `5163656` | Edge setback (0–0.6 m), mobile scroll margin, Center map |
 | 2026-06-09 | `40c6e4e` | Preview toolbar redesign; xl sidebar export; mobile a11y/touch targets |
 | 2026-06-09 | `a1bdec8`, `4174f6a` | `METERS_PER_PIXEL` centralisation + seed polygon parity tests; prod smoke pass |
+| 2026-06-09 | `90fd4fe` | **Option A:** 3D module SKU parity, site plan PDF metrics (module/yield/azimuth), single-facet azimuth control |
+| 2026-06-09 | `339bfa1` | HelpPage updated for credibility features |
+| 2026-06-09 | `3567529`, `3000ddb` | **Option C:** `roofLayoutSummary` on Customers API/cards; satellite contrast; `404.html` build sync |
 
 ---
 
-*When starting a Cursor chat: “Continue from `proposal-engine/docs/ai-roof-layout-2d-roadmap.md` — next P2 SKU dimensions or Track B slice 3.”*
+*When starting a Cursor chat: “Continue from `proposal-engine/docs/ai-roof-layout-2d-roadmap.md` — product backlog deferred; or start Phase 3b from `PHASE_3B_SAVE_PIPELINE.md`.”*

@@ -35,8 +35,8 @@ import { runGenerateRoofLayoutDraft } from '../lib/roofLayout/generateRoofLayout
 import { parseManualRoofLayoutHydrate } from '../lib/roofLayout/hydrateManualRoofLayout';
 import {
   exportSitePlanPdfFromLayout,
-  saveRoofLayoutForProposal,
 } from '../lib/roofLayout/roofLayoutSaveExport';
+import { saveRoofLayoutViaPipeline } from '../lib/projectSaveRoofLayout';
 import { fingerprintRoofLayoutEditorState } from '../lib/roofLayout/roofLayoutGeometryFingerprint';
 import type { RoofLayoutKeepout, RoofLayoutPoint } from '../lib/roofLayout/roofLayoutTypes';
 import {
@@ -688,7 +688,7 @@ export default function AIRoofLayout() {
   const switchTo2dForCapture = () => flushSync(() => setRoofViewTab('2d'));
 
   const handleSaveForProposal = async () => {
-    if (!activeProject?.master?.crmProjectId) {
+    if (!activeProject?.id || !activeProject?.master?.crmProjectId) {
       setError('This proposal is not linked to a Rayenna CRM project yet.');
       return;
     }
@@ -705,7 +705,7 @@ export default function AIRoofLayout() {
     setError(null);
 
     try {
-      const saved = await saveRoofLayoutForProposal({
+      const saved = await saveRoofLayoutViaPipeline(activeProject.id, {
         crmProjectId,
         layoutMode,
         captureRefs,
@@ -748,14 +748,6 @@ export default function AIRoofLayout() {
           ...(saved.layout_image_3d_url != null && { layout_image_3d_url: saved.layout_image_3d_url }),
           prefer_3d_for_proposal: saved.prefer_3d_for_proposal,
         };
-        persistRoofLayoutToActiveCustomer({
-          roof_area_m2: next.roof_area_m2,
-          usable_area_m2: next.usable_area_m2,
-          panel_count: next.panel_count,
-          layout_image_url: next.layout_image_url,
-          layout_image_3d_url: next.layout_image_3d_url,
-          prefer_3d_for_proposal: next.prefer_3d_for_proposal,
-        });
         return next;
       });
       setLastSavedProjectId(String(crmProjectId));

@@ -1,8 +1,8 @@
 # Proposal Engine — modernization progress
 
 **Purpose:** Resume structural improvement work without re-discovering context.  
-**Last updated:** 2026-05-20  
-**Status:** **Track B slice 3 complete** (~1,695 lines). **Next:** backlog (segmentation, worker) or Phase 3b save pipeline.
+**Last updated:** 2026-06-09  
+**Status:** **Phase 3b complete.** Next: product backlog or optional pipeline follow-ups.
 
 ---
 
@@ -34,7 +34,7 @@ Reference plan (original assessment): architecture review in team chat, May 2026
 | Item | Notes |
 |------|--------|
 | **Vitest** in `proposal-engine/frontend` | `npm test`, `npm run test:watch` |
-| Unit tests (23+) | `parseGoogleMapsLink`, `roofLayoutGeometry`, status helpers, `mapApiArtifactsToRecord`, `proposalAssembly`, `costing/format` |
+| Unit tests (127) | Geometry, facets, `customerHelpers`, pipeline save/load, `resolveModuleDimensions`, costing/format, proposal assembly, etc. |
 | `tsconfig` excludes `*.test.ts` from app build | Production `tsc` unchanged |
 
 ### Phase 2a — Split `apiClient.ts`
@@ -110,6 +110,20 @@ Route unchanged: lazy `Customers` in `App.tsx`. `NewCustomerModal` still re-expo
 
 | **3** (May 2026) | `useRoofLayoutEditorState`, `useRoofLayoutScrollViewport`, `useRoofLayout3DTab`, `useRoofLayoutViewport`, `RoofLayout3DPreviewShell`, `RoofLayoutMobileMapTools`, `roofLayout3dExport` | ~1,695 lines |
 
+### Phase 3b — Central save pipeline (in progress)
+
+| Slice | Module | Notes |
+|-------|--------|--------|
+| **3b-1** (Jun 2026) | `lib/projectSavePipeline.ts`, `lib/projectLoadPipeline.ts` | `saveProjectArtifacts`, `loadProjectFromServer`, injectable deps, 19 unit tests |
+| **3b-2** (Jun 2026) | `pages/CostingSheet.tsx` | Save sheet → `saveProjectArtifacts({ costing, bom })` |
+| **3b-3** (Jun 2026) | `pages/BOMSheet.tsx`, `pages/ROICalculator.tsx` | BOM/ROI save + AlertCard on sync failure |
+| **3b-4** (Jun 2026) | `pages/ProposalPreview.tsx` | Save → sync `proposal` only; Generate → sync all patched artifacts |
+| **3b-5** (Jun 2026) | `lib/projectSaveRoofLayout.ts`, `pages/AIRoofLayout.tsx` | `saveRoofLayoutViaPipeline` — server capture + customer merge |
+| **3b-6** (Jun 2026) | All save pages + `Dashboard.tsx`, `ServerSyncBanner.tsx` | `PIPELINE_MARK_SYNCED`; banner after save without reopen |
+| **3b-7** (Jun 2026) | `Dashboard.tsx`, `CustomerWorkspace.tsx`, `Customers.tsx` | Hydrate via `loadProjectFromServer` (+ `preloadedDetail` for deep link) |
+
+**Phase 3b complete** (Jun 2026).
+
 ---
 
 ## Not started (planned)
@@ -121,8 +135,8 @@ Route unchanged: lazy `Customers` in `App.tsx`. `NewCustomerModal` still re-expo
 | ~~**2d**~~ | ~~Split `Customers.tsx`~~ — done |
 | ~~**2e**~~ | ~~Bundle measurement~~ — done (`chunkSizeWarningLimit: 600`; dynamic import deferred — low payoff vs risk) |
 | ~~**3a**~~ | ~~WIP vs server sync banner~~ — done (`ServerSyncBanner` on Dashboard; `markServerSynced` in Dashboard + CustomerWorkspace) |
-| **3b** | Central save pipeline (deferred — higher effort, lower urgency than Phase 4) |
-| **4** | Product — AI Roof Layout **P1 complete** (Jun 2026); **P2 SKU dimensions** (May 2026): `resolveModuleDimensions`, status strip source label; **next** P2 yield / India copy or Track B slice 3 |
+| **3b** | Central save pipeline — **complete** (3b-1…3b-7) | [PHASE_3B_SAVE_PIPELINE.md](./PHASE_3B_SAVE_PIPELINE.md) |
+| ~~**4**~~ | ~~AI Roof Layout product (P0–P2 + Option A/C polish)~~ — **done** Jun 2026 (see roadmap session log) |
 | ~~**4 quick wins**~~ | ~~Centralise `METERS_PER_PIXEL`~~ — done Jun 2026 (`src/constants/roofLayoutScale.ts` + `roofLayoutConstants.ts` + parity tests) |
 
 ---
@@ -151,11 +165,21 @@ Vercel PE project: redeploy if used (same as Render PE).
 
 ---
 
+## Related plans
+
+| Doc | Use |
+|-----|-----|
+| [PHASE_3B_SAVE_PIPELINE.md](./PHASE_3B_SAVE_PIPELINE.md) | Central save/sync pipeline (next) |
+| [ai-roof-layout-2d-roadmap.md](./ai-roof-layout-2d-roadmap.md) | 2D roof layout product log (P0–P2 complete) |
+| [SMOKE_CHECKLIST.md](./SMOKE_CHECKLIST.md) | Manual regression |
+
+---
+
 ## Git
 
 PE-only commits under `proposal-engine/`. Do not mix with CRM paths in one commit.
 
-When resuming in Cursor: *“Continue PE modernization from `proposal-engine/docs/MODERNIZATION_PROGRESS.md` — next: roof segmentation backlog or Phase 3b.”*
+When resuming in Cursor: *“Phase 3b save pipeline is complete — see `PHASE_3B_SAVE_PIPELINE.md` for architecture; next work is product backlog or CRM tasks.”*
 
 ---
 
@@ -168,10 +192,14 @@ When resuming in Cursor: *“Continue PE modernization from `proposal-engine/doc
 | `5163656` | Edge setback (0–0.6 m), mobile scroll margin, **Center** map button |
 | `40c6e4e` | Preview toolbar redesign; export in xl sidebar; mobile UX/accessibility |
 | `a1bdec8` / `4174f6a` | `METERS_PER_PIXEL` + seed polygon constants (CRM authoritative, PE parity tests) |
-| *(local)* | **P2 SKU dimensions:** `resolveModuleDimensions` chain; panel pack + save geometry + status strip |
-| *(local)* | **P2 yield hints:** `estimateRoofLayoutYield` — effective kW + orientation loss badge |
+| *(May 2026)* | **P2 SKU dimensions:** `resolveModuleDimensions`; panel pack + save geometry + status strip |
+| *(May 2026)* | **P2 yield hints:** `estimateRoofLayoutYield` — effective kW + orientation loss badge |
+| `90fd4fe` | **Option A:** 3D SKU parity (`portraitModuleSizeM`), site plan PDF metrics table, single-facet azimuth |
+| `339bfa1` | HelpPage: SKU, yield, India hints, site plan PDF docs |
+| `3567529` | CRM API: `roofLayoutSummary` on projects list (panel count + placed kW) |
+| `3000ddb` | **Option C:** satellite contrast slider; stricter `copy-404.cjs`; Customers card layout line; Render no-cache headers |
 
-Prod smoke verified on Render after `40c6e4e` + scale deploy.
+Prod smoke verified on Render after Option A/C deploy (Jun 2026).
 
 ---
 

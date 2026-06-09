@@ -5,11 +5,11 @@ import {
   getActiveCustomer,
   upsertCustomer,
   getWipKeysForCurrentUser,
-  deriveProposalStatusFromArtifacts,
 } from '../lib/customerStore';
 import { setLocalStorageItem } from '../lib/safeLocalStorage';
 import type { RoiArtifact } from '../lib/customerStore';
-import { syncProjectRoi, canEditProposalArtifacts } from '../lib/apiClient';
+import { canEditProposalArtifacts } from '../lib/apiClient';
+import { saveProjectArtifacts, PIPELINE_MARK_SYNCED } from '../lib/projectSavePipeline';
 import { AlertCard } from '../components/AlertCard';
 
 // ─────────────────────────────────────────────
@@ -387,7 +387,8 @@ export default function ROICalculator() {
 
   const [formError,   setFormError]   = useState<string | null>(null);
   const [result,      setResult]      = useState<ROIResult | null>(null);
-  const [saveStatus,  setSaveStatus]  = useState<'idle' | 'saved'>('idle');
+  const [saveStatus,  setSaveStatus]  = useState<'idle' | 'saved' | 'error'>('idle');
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const canEdit = canEditProposalArtifacts();
@@ -502,24 +503,25 @@ export default function ROICalculator() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!result) return;
+    setSyncError(null);
     const now = new Date().toISOString();
     setLocalStorageItem(getWipKeysForCurrentUser().roiResult, JSON.stringify(result));
 
-    // Persist ROI artifact to active customer record
     const activeCustomer = getActiveCustomer();
     if (activeCustomer) {
       const artifact: RoiArtifact = { savedAt: now, result };
-      const nextRecord = { ...activeCustomer, roi: artifact, updatedAt: now };
-      upsertCustomer({
-        ...nextRecord,
-        status: deriveProposalStatusFromArtifacts(nextRecord),
-      });
-
-      // Best-effort sync to CRM backend for CRM-linked projects.
-      if (activeCustomer.master.crmProjectId) {
-        void syncProjectRoi(activeCustomer.master.crmProjectId, artifact);
+      const saveResult = await saveProjectArtifacts(
+        activeCustomer.id,
+        { roi: artifact },
+        PIPELINE_MARK_SYNCED,
+      );
+      if (!saveResult.ok) {
+        setSyncError(saveResult.errorMessage ?? 'Server sync failed');
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 4000);
+        return;
       }
     }
 
@@ -543,6 +545,7 @@ export default function ROICalculator() {
             {canEdit && result && (
               <div className="flex items-center gap-2 flex-shrink-0">
                 {saveStatus === 'saved' && <span className="text-xs text-emerald-300 font-medium">✓ Saved</span>}
+                {saveStatus === 'error' && <span className="text-xs text-red-200 font-medium">Sync failed</span>}
                 <button
                   onClick={handleSave}
                   className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all min-h-[36px]"
@@ -718,6 +721,15 @@ export default function ROICalculator() {
                     />
                   )}
 
+                  {syncError && (
+                    <AlertCard
+                      variant="warning"
+                      title="Saved on this device"
+                      message={syncError}
+                      className="mt-1"
+                    />
+                  )}
+
                   <button
                     type="button"
                     onClick={handleCalculate}
@@ -799,6 +811,7 @@ export default function ROICalculator() {
                   {canEdit && (
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
                     {saveStatus === 'saved' && <span className="text-xs text-emerald-600 font-medium text-center sm:text-right">✓ Result saved</span>}
+                    {saveStatus === 'error' && <span className="text-xs text-red-600 font-medium text-center sm:text-right">Sync failed — see message in inputs</span>}
                     <button
                       onClick={handleSave}
                       className="w-full sm:w-auto text-white text-sm font-semibold px-6 py-3 sm:py-2.5 rounded-xl transition-all shadow-lg hover:shadow-xl min-h-[44px] sm:min-h-0"

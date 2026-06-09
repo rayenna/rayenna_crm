@@ -7,13 +7,12 @@ import {
 import type { StoredBom, RoiAutofill } from '../lib/costingConstants';
 import {
   getActiveCustomer,
-  upsertCustomer,
   getWipKeysForCurrentUser,
-  deriveProposalStatusFromArtifacts,
 } from '../lib/customerStore';
 import { setLocalStorageItem } from '../lib/safeLocalStorage';
 import type { BomArtifact } from '../lib/customerStore';
-import { syncProjectBom, canEditProposalArtifacts } from '../lib/apiClient';
+import { canEditProposalArtifacts } from '../lib/apiClient';
+import { saveProjectArtifacts, PIPELINE_MARK_SYNCED } from '../lib/projectSavePipeline';
 import { AlertCard } from '../components/AlertCard';
 
 // ─────────────────────────────────────────────
@@ -552,6 +551,7 @@ export default function BOMSheet() {
   const [storedBom, setStoredBom]   = useState<StoredBom | null>(loadStoredBom);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [allCollapsed, setAllCollapsed] = useState(true);
 
   const canEdit = canEditProposalArtifacts();
@@ -602,8 +602,9 @@ export default function BOMSheet() {
 
   useEffect(() => { loadBom(); }, [loadBom]);
 
-  const onSubmit = useCallback((data: FormValues) => {
+  const onSubmit = useCallback(async (data: FormValues) => {
     setSaveStatus('saving');
+    setSyncError(null);
     try {
       const now     = new Date().toISOString();
       const sheetId = storedBom?.sheetId ?? 'manual';
@@ -627,25 +628,26 @@ export default function BOMSheet() {
         }
       } catch { /* ignore */ }
 
-      // Persist BOM artifact to active customer record
       const activeCustomer = getActiveCustomer();
       if (activeCustomer) {
         const artifact: BomArtifact = { savedAt: now, rows: data.rows };
-        const nextRecord = { ...activeCustomer, bom: artifact, updatedAt: now };
-        upsertCustomer({
-          ...nextRecord,
-          status: deriveProposalStatusFromArtifacts(nextRecord),
-        });
-
-        // Best-effort sync to CRM backend for CRM-linked projects.
-        if (activeCustomer.master.crmProjectId) {
-          void syncProjectBom(activeCustomer.master.crmProjectId, artifact);
+        const result = await saveProjectArtifacts(
+          activeCustomer.id,
+          { bom: artifact },
+          PIPELINE_MARK_SYNCED,
+        );
+        if (!result.ok) {
+          setSyncError(result.errorMessage ?? 'Server sync failed');
+          setSaveStatus('error');
+          setTimeout(() => setSaveStatus('idle'), 3000);
+          return;
         }
       }
 
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2500);
     } catch {
+      setSyncError('Could not save BOM. Please try again.');
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 3000);
     }
@@ -818,6 +820,15 @@ export default function BOMSheet() {
             />
           )}
 
+          {syncError && (
+            <AlertCard
+              variant="warning"
+              title="Saved on this device"
+              message={syncError}
+              className="mb-4"
+            />
+          )}
+
           {!loading && !fetchError && (
             <form onSubmit={handleSubmit(onSubmit)}>
               {/* ── Expand / Collapse All bar ── */}
@@ -893,7 +904,9 @@ export default function BOMSheet() {
                     <span className="text-xs text-emerald-600 font-medium">Saved ✓</span>
                   )}
                   {saveStatus === 'error' && (
-                    <span className="text-xs text-red-500">Save failed</span>
+                    <span className="text-xs text-red-500" title={syncError ?? undefined}>
+                      {syncError ? 'Sync failed — see message above' : 'Save failed'}
+                    </span>
                   )}
 
                   <button

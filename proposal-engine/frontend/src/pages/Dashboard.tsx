@@ -1,10 +1,9 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import {
   loadCustomers,
   getActiveCustomer,
   getCustomer,
-  upsertCustomer,
   switchActiveCustomer,
   STATUS_LABELS,
   STATUS_COLORS,
@@ -15,10 +14,9 @@ import {
 import type { CustomerRecord } from '../lib/customerStore';
 import {
   getCurrentUserRole,
-  fetchProjectWithArtifacts,
-  applyProposalEngineProjectDetail,
 } from '../lib/apiClient';
-import { markServerSynced, getServerSyncStatus } from '../lib/serverSyncStatus';
+import { loadProjectFromServer } from '../lib/projectLoadPipeline';
+import { getServerSyncStatus, clearServerSyncStatus } from '../lib/serverSyncStatus';
 import { ServerSyncBanner } from '../components/ServerSyncBanner';
 
 function fmtINR(n: number): string {
@@ -37,6 +35,7 @@ function fmtDate(iso: string): string {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeCustomerId, setActiveCustomerId] = useState<string | null>(() => getActiveCustomer()?.id ?? null);
   const [customers, setCustomers] = useState<CustomerRecord[]>(() => loadCustomers());
   const role = getCurrentUserRole();
@@ -59,30 +58,29 @@ export default function Dashboard() {
   const activeCustomer: CustomerRecord | null =
     allCustomers.find((c) => c.id === activeCustomerId) ?? null;
 
+  // Pick up markServerSynced from artifact saves (Costing/BOM/ROI/Proposal/Roof) when returning to Dashboard.
+  useEffect(() => {
+    const id = activeCustomerId;
+    if (!id) {
+      setServerSyncedAt(null);
+      return;
+    }
+    setServerSyncedAt(getServerSyncStatus(id)?.syncedAt ?? null);
+  }, [activeCustomerId, location.pathname]);
+
   // Re-fetch CRM project + artifacts so `projectStage` (and other CRM fields) match CRM after edits elsewhere.
   useEffect(() => {
     const id = activeCustomerId;
     if (!id) return;
     const rec = getCustomer(id);
-    const projectId = rec?.master?.crmProjectId;
-    if (!projectId) return;
+    if (!rec?.master?.crmProjectId) return;
     let cancelled = false;
     void (async () => {
-      try {
-        const res = await fetchProjectWithArtifacts(projectId);
-        if (cancelled) return;
-        const latest = getCustomer(id) ?? rec;
-        const merged = applyProposalEngineProjectDetail(latest, res);
-        switchActiveCustomer(merged.id);
-        upsertCustomer(merged);
-        if (!cancelled) {
-          const syncTime = new Date().toISOString();
-          markServerSynced(merged.id);
-          setServerSyncedAt(syncTime);
-          setCustomers(loadCustomers());
-        }
-      } catch {
-        // Offline / API error — keep local snapshot
+      const result = await loadProjectFromServer(id, { activate: true });
+      if (cancelled) return;
+      if (result.ok && result.record) {
+        setServerSyncedAt(getServerSyncStatus(id)?.syncedAt ?? null);
+        setCustomers(loadCustomers());
       }
     })();
     return () => {
@@ -200,7 +198,10 @@ export default function Dashboard() {
           {activeCustomer && serverSyncedAt && (
             <ServerSyncBanner
               syncedAt={serverSyncedAt}
-              onDismiss={() => setServerSyncedAt(null)}
+              onDismiss={() => {
+                clearServerSyncStatus();
+                setServerSyncedAt(null);
+              }}
             />
           )}
 

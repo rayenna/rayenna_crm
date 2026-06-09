@@ -1,4 +1,44 @@
+import type { CustomerRecord, RoofLayoutArtifact } from '../customerStore';
 import { getActiveCustomer, getCustomer, upsertCustomer } from '../customerStore';
+import { persistRoofLayoutPatch } from '../projectSaveRoofLayout';
+
+/** Merge roof layout onto record; mirrors into proposal when embed is active. */
+export function mergeRoofLayoutIntoCustomerRecord(
+  record: CustomerRecord,
+  roofLayout: RoofLayoutArtifact,
+): CustomerRecord {
+  return {
+    ...record,
+    updatedAt: new Date().toISOString(),
+    roofLayout,
+    proposal: record.proposal
+      ? {
+          ...record.proposal,
+          roofLayout:
+            record.proposal.roofLayout || record.proposal.includeRoofLayout
+              ? {
+                  ...(record.proposal.roofLayout ?? {
+                    roof_area_m2: roofLayout.roof_area_m2,
+                    usable_area_m2: roofLayout.usable_area_m2,
+                    panel_count: roofLayout.panel_count,
+                    layout_image_url: roofLayout.layout_image_url,
+                  }),
+                  roof_area_m2: roofLayout.roof_area_m2,
+                  usable_area_m2: roofLayout.usable_area_m2,
+                  panel_count: roofLayout.panel_count,
+                  layout_image_url: roofLayout.layout_image_url,
+                  ...(roofLayout.layout_image_3d_url != null
+                    ? { layout_image_3d_url: roofLayout.layout_image_3d_url }
+                    : {}),
+                  ...(typeof roofLayout.prefer_3d_for_proposal === 'boolean'
+                    ? { prefer_3d_for_proposal: roofLayout.prefer_3d_for_proposal }
+                    : {}),
+                }
+              : record.proposal.roofLayout,
+        }
+      : record.proposal,
+  };
+}
 
 export function persistRoofLayoutToActiveCustomer(params: {
   roof_area_m2: number;
@@ -11,42 +51,7 @@ export function persistRoofLayoutToActiveCustomer(params: {
 }) {
   const ac = getActiveCustomer();
   if (!ac?.id) return;
-  const fresh = getCustomer(ac.id);
-  if (!fresh) return;
-  const roofLayout = {
-    savedAt: params.savedAt ?? new Date().toISOString(),
-    roof_area_m2: Number(params.roof_area_m2),
-    usable_area_m2: Number(params.usable_area_m2),
-    panel_count: Number(params.panel_count),
-    layout_image_url: String(params.layout_image_url),
-    ...(params.layout_image_3d_url != null && String(params.layout_image_3d_url).trim()
-      ? { layout_image_3d_url: String(params.layout_image_3d_url) }
-      : {}),
-    ...(typeof params.prefer_3d_for_proposal === 'boolean'
-      ? { prefer_3d_for_proposal: params.prefer_3d_for_proposal }
-      : {}),
-  };
-  upsertCustomer({
-    ...fresh,
-    roofLayout,
-    proposal: fresh.proposal
-      ? {
-          ...fresh.proposal,
-          roofLayout:
-            fresh.proposal.roofLayout || fresh.proposal.includeRoofLayout
-              ? {
-                  ...(fresh.proposal.roofLayout ?? {
-                    roof_area_m2: roofLayout.roof_area_m2,
-                    usable_area_m2: roofLayout.usable_area_m2,
-                    panel_count: roofLayout.panel_count,
-                    layout_image_url: roofLayout.layout_image_url,
-                  }),
-                  ...roofLayout,
-                }
-              : fresh.proposal.roofLayout,
-        }
-      : fresh.proposal,
-  });
+  persistRoofLayoutPatch(ac.id, params);
 }
 
 export function clearRoofLayoutFromActiveCustomer() {
@@ -56,6 +61,7 @@ export function clearRoofLayoutFromActiveCustomer() {
   if (!fresh) return;
   upsertCustomer({
     ...fresh,
+    updatedAt: new Date().toISOString(),
     roofLayout: null,
     proposal: fresh.proposal ? { ...fresh.proposal, roofLayout: null } : fresh.proposal,
   });

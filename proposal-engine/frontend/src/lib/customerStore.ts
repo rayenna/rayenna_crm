@@ -7,7 +7,7 @@
  * ── Source of truth (cross-device) ─────────────────────────────────────────
  * After Save, artifacts live on the server (Neon) via apiClient sync helpers:
  *   syncProjectCosting / syncProjectBom / syncProjectRoi / syncProjectProposal
- * Opening a project: fetchProjectWithArtifacts → mapApiArtifactsToRecord.
+ * Opening a project: loadProjectFromServer → merge into customerStore (see projectLoadPipeline.ts).
  * See proposal-engine/docs/ARCHITECTURE.md.
  *
  * ── Browser-only (this module + localStorage) ───────────────────────────────

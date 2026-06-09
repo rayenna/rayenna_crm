@@ -16,14 +16,12 @@ import type {
 } from '../lib/customerStore';
 import {
   getCurrentUserRole,
-  syncProjectProposal,
-  syncProjectCosting,
-  syncProjectBom,
-  syncProjectRoi,
   createProposalShare,
   fetchManualRoofLayout,
   type AiRoofLayoutResponse,
 } from '../lib/apiClient';
+import { saveProjectArtifacts, PIPELINE_MARK_SYNCED } from '../lib/projectSavePipeline';
+import { AlertCard } from '../components/AlertCard';
 import { normalizeCustomSectionsBeforeBoq, stripPeManagedSectionsFromDocHtml } from '../lib/proposalCustomSections';
 import { CustomSectionsBeforeBoq } from '../components/CustomSectionsBeforeBoq';
 import { exportToPdf } from '../proposal/exportPdf';
@@ -85,7 +83,8 @@ export default function ProposalPreview() {
   const [bomCollapsed, setBomCollapsed]       = useState<Record<string, boolean>>({});
   const [bomAllCollapsed, setBomAllCollapsed] = useState(true);
   const [isEditing, setIsEditing]             = useState(false);
-  const [saveStatus, setSaveStatus]           = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [saveStatus, setSaveStatus]           = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [syncError, setSyncError]             = useState<string | null>(null);
   const [includeRoofLayout, setIncludeRoofLayout] = useState(false);
   const [roofLayout, setRoofLayout]               = useState<AiRoofLayoutResponse | null>(null);
   const [roofLayoutLoading, setRoofLayoutLoading] = useState(false);
@@ -301,10 +300,11 @@ export default function ProposalPreview() {
   };
 
   // ── Unified save: comments + inline edits + textOverrides + all 4 artifacts ──
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!canWrite) return;
     if (!proposal) return;
     setSaveStatus('saving');
+    setSyncError(null);
 
     // 1. Capture current edited HTML and extract per-section text overrides
     const editedHtml = (() => {
@@ -323,7 +323,7 @@ export default function ProposalPreview() {
     // 2. Persist BOM comments
     persistComments(bomComments);
 
-    // 3. Save all 4 artifacts + editedHtml + textOverrides to active customer record
+    // 3. Save all 4 artifacts locally; sync proposal only (costing/BOM/ROI sync on their pages).
     const activeCustomer = getActiveCustomer();
     if (activeCustomer) {
       const sheet = proposal.sheet;
@@ -358,18 +358,26 @@ export default function ProposalPreview() {
         roofLayout: includeRoofLayout ? (roofLayout ?? null) : null,
       };
 
-      saveAllArtifacts(activeCustomer.id, costingArtifact, bomArtifact, roiArtifact, proposalArtifact);
+      const result = await saveProjectArtifacts(
+        activeCustomer.id,
+        {
+          costing: costingArtifact,
+          bom: bomArtifact,
+          roi: roiArtifact,
+          proposal: proposalArtifact,
+        },
+        { syncKinds: ['proposal'], ...PIPELINE_MARK_SYNCED },
+      );
+
+      if (!result.ok) {
+        setSyncError(result.errorMessage ?? 'Server sync failed');
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 4000);
+        return;
+      }
+
       setCustomSectionsBeforeBoq(customSectionsSnapshot);
       setSavedToCustomer(activeCustomer.master.name);
-
-      // Sync all four artifacts to CRM backend so Admin/Ops/Finance/Management see the same data.
-      const projectId = activeCustomer.master.crmProjectId;
-      if (projectId) {
-        if (costingArtifact) void syncProjectCosting(projectId, costingArtifact);
-        if (bomArtifact) void syncProjectBom(projectId, bomArtifact);
-        if (roiArtifact) void syncProjectRoi(projectId, roiArtifact);
-        void syncProjectProposal(projectId, proposalArtifact);
-      }
     }
 
     // 4. Exit edit mode
@@ -379,16 +387,16 @@ export default function ProposalPreview() {
     setTimeout(() => setSaveStatus('idle'), 3000);
   };
 
-  const handleSaveAndClose = () => {
+  const handleSaveAndClose = async () => {
     if (!canWrite || !proposal) return;
-    handleSave();
+    await handleSave();
     // Give a small delay so the saved banner / state can update, then go back to Dashboard
     setTimeout(() => {
       navigate('/');
     }, 400);
   };
 
-  const persistRoofLayoutOnArtifact = (
+  const persistRoofLayoutOnArtifact = async (
     include: boolean,
     layout: AiRoofLayoutResponse | null,
   ) => {
@@ -399,9 +407,14 @@ export default function ProposalPreview() {
       includeRoofLayout: include,
       roofLayout: include ? layout : null,
     };
-    saveAllArtifacts(ac.id, null, null, null, nextArtifact);
-    const projectId = ac.master.crmProjectId;
-    if (projectId) void syncProjectProposal(projectId, nextArtifact);
+    const result = await saveProjectArtifacts(
+      ac.id,
+      { proposal: nextArtifact },
+      { syncKinds: ['proposal'], ...PIPELINE_MARK_SYNCED },
+    );
+    if (!result.ok) {
+      setSyncError(result.errorMessage ?? 'Server sync failed');
+    }
   };
 
   const handleIncludeRoofLayoutChange = async (checked: boolean) => {
@@ -410,7 +423,7 @@ export default function ProposalPreview() {
       setIncludeRoofLayout(false);
       setRoofLayout(null);
       setRoofLayoutError(null);
-      persistRoofLayoutOnArtifact(false, null);
+      await persistRoofLayoutOnArtifact(false, null);
       return;
     }
 
@@ -444,7 +457,7 @@ export default function ProposalPreview() {
     setRoofLayout(layout);
     setRoofLayoutError(null);
     setRoofLayoutAvailability('ready');
-    persistRoofLayoutOnArtifact(true, layout);
+    await persistRoofLayoutOnArtifact(true, layout);
   };
 
   const handleGenerate = async (
@@ -478,6 +491,7 @@ export default function ProposalPreview() {
 
     // ── Persist all 4 artifacts to active customer, preserving custom sections / edits when regenerating ──
     if (activeCustomer) {
+      setSyncError(null);
       const now = new Date().toISOString();
 
       const costingArtifact: CostingArtifact | null = sheet ? {
@@ -519,19 +533,24 @@ export default function ProposalPreview() {
         roofLayout: null,
       };
 
-      saveAllArtifacts(activeCustomer.id, costingArtifact, bomArtifact, roiArtifact, proposalArtifact);
+      const result = await saveProjectArtifacts(
+        activeCustomer.id,
+        {
+          costing: costingArtifact,
+          bom: bomArtifact,
+          roi: roiArtifact,
+          proposal: proposalArtifact,
+        },
+        PIPELINE_MARK_SYNCED,
+      );
+
+      if (!result.ok) {
+        setSyncError(result.errorMessage ?? 'Server sync failed');
+      }
+
       const sectionsForUi = proposalArtifact.customSectionsBeforeBoq ?? [];
       setCustomSectionsBeforeBoq(sectionsForUi);
       setSavedToCustomer(activeCustomer.master.name);
-
-      // Sync all four artifacts to CRM backend so Admin/Ops/Finance/Management see the same data.
-      const projectId = activeCustomer.master.crmProjectId;
-      if (projectId) {
-        if (costingArtifact) void syncProjectCosting(projectId, costingArtifact);
-        if (bomArtifact) void syncProjectBom(projectId, bomArtifact);
-        if (roiArtifact) void syncProjectRoi(projectId, roiArtifact);
-        void syncProjectProposal(projectId, proposalArtifact);
-      }
 
       if (options.includeRoofLayout) {
         setRoofLayoutLoading(true);
@@ -546,8 +565,14 @@ export default function ProposalPreview() {
         else if (status === 'not_saved_yet') setRoofLayoutAvailability('not_saved_yet');
         if (layout) {
           const withLayout: ProposalArtifact = { ...proposalArtifact, roofLayout: layout };
-          saveAllArtifacts(activeCustomer.id, null, null, null, withLayout);
-          if (projectId) void syncProjectProposal(projectId, withLayout);
+          const layoutResult = await saveProjectArtifacts(
+            activeCustomer.id,
+            { proposal: withLayout },
+            { syncKinds: ['proposal'], ...PIPELINE_MARK_SYNCED },
+          );
+          if (!layoutResult.ok) {
+            setSyncError(layoutResult.errorMessage ?? 'Server sync failed');
+          }
         }
       }
     }
@@ -706,6 +731,14 @@ export default function ProposalPreview() {
 
   return (
     <div>
+      {syncError && (
+        <AlertCard
+          variant="warning"
+          title="Saved on this device"
+          message={syncError}
+          className="mb-4"
+        />
+      )}
       <div className="print-hide bg-gradient-to-br from-white via-primary-50/40 to-white shadow-2xl rounded-2xl border-2 border-primary-200/50 overflow-hidden backdrop-blur-sm">
         {/* Header */}
         <div className="px-6 py-5 sm:px-8 sm:py-6" style={{ background: 'linear-gradient(to right, #0d1b3a, #1e2848, #eab308)' }}>
@@ -783,13 +816,15 @@ export default function ProposalPreview() {
                     className={`w-full sm:w-auto flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl transition-all min-h-[36px] disabled:opacity-60 ${
                       saveStatus === 'saved'
                         ? 'bg-emerald-500 border-2 border-emerald-300 text-white'
+                        : saveStatus === 'error'
+                          ? 'bg-red-500/90 border-2 border-red-300 text-white'
                         : 'bg-white/20 hover:bg-white/30 border-2 border-white/40 text-white'
                     }`}
                   >
                     {saveStatus === 'saving' && (
                       <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     )}
-                    {saveStatus === 'saved' ? '✓ Saved' : '💾 Save'}
+                    {saveStatus === 'saved' ? '✓ Saved' : saveStatus === 'error' ? 'Sync failed' : '💾 Save'}
                   </button>
                 )}
                 {canWrite && proposal && (
@@ -1170,13 +1205,15 @@ export default function ProposalPreview() {
                         className={`flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-xl shadow transition-all min-h-[44px] sm:min-h-0 ${
                           saveStatus === 'saved'
                             ? 'bg-emerald-500 text-white border border-emerald-400'
+                            : saveStatus === 'error'
+                              ? 'bg-red-500 text-white border border-red-400'
                             : 'bg-white text-primary-800 border border-primary-200 hover:bg-primary-50'
                         }`}
                       >
                         {saveStatus === 'saving' && (
                           <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         )}
-                        {saveStatus === 'saved' ? '✓ Saved' : '💾 Save'}
+                        {saveStatus === 'saved' ? '✓ Saved' : saveStatus === 'error' ? 'Sync failed' : '💾 Save'}
                       </button>
                     )}
 
