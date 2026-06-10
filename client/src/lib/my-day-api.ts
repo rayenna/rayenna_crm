@@ -1,6 +1,9 @@
 import axiosInstance from '../utils/axios'
 import type { Task, JournalEntry } from '../components/my-day/types'
 
+/** Shared React Query key — invalidate after any task create/update/delete outside the drawer. */
+export const MY_DAY_TASKS_QUERY_KEY = ['my-day', 'tasks'] as const
+
 // ── Tasks ─────────────────────────────────────────────────────────────────────
 
 export async function fetchTasks(): Promise<Task[]> {
@@ -19,8 +22,8 @@ export async function createTask(payload: {
   isReminder?: boolean
   projectId?: string | null
   projectLabel?: string | null
-}): Promise<Task> {
-  const { data } = await axiosInstance.post<Task>('/api/my-day/tasks', payload)
+}): Promise<Task & { alreadyExists?: boolean }> {
+  const { data } = await axiosInstance.post<Task & { alreadyExists?: boolean }>('/api/my-day/tasks', payload)
   return data
 }
 
@@ -85,8 +88,8 @@ export async function createReminder(payload: {
   dueDate: string
   projectId?: string | null
   projectLabel?: string | null
-}): Promise<Task> {
-  const { data } = await axiosInstance.post<Task>('/api/my-day/reminders', payload)
+}): Promise<Task & { alreadyExists?: boolean }> {
+  const { data } = await axiosInstance.post<Task & { alreadyExists?: boolean }>('/api/my-day/reminders', payload)
   return data
 }
 

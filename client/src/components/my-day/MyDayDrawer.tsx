@@ -57,13 +57,9 @@ export default function MyDayDrawer() {
     if (isOpen && !mounted) setMounted(true)
   }, [isOpen, mounted])
 
-  // Load data on first mount
+  // Pin selector — load once when drawer first mounts
   useEffect(() => {
     if (!mounted) return
-    md.loadTasks()
-    md.loadJournal()
-    md.loadReminders()
-    // Load projects for pin selector
     axiosInstance
       .get('/api/projects?limit=200&sortField=createdAt&sortOrder=desc')
       .then((res) => {
@@ -84,6 +80,15 @@ export default function MyDayDrawer() {
       .catch(() => { /* non-critical */ })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted])
+
+  // Refresh drawer lists on every open (e.g. + My Day from dashboard attention strip)
+  useEffect(() => {
+    if (!mounted || !isOpen) return
+    md.loadTasks()
+    md.loadJournal()
+    md.loadReminders()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, isOpen])
 
   // Sync incomplete count to context for nav badge
   useEffect(() => {

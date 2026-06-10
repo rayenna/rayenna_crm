@@ -11,10 +11,12 @@ import {
   upsertJournal,
   fetchReminders,
   createReminder,
+  MY_DAY_TASKS_QUERY_KEY,
 } from '../../../lib/my-day-api'
 import { MY_DAY_SNAPSHOT_QUERY_KEY } from '../../../lib/myDaySnapshot'
 import { MY_DAY_SUGGESTIONS_QUERY_KEY } from '../../../hooks/useMyDaySuggestionsQuery'
 import { recordMyDayUsage } from '../../../lib/myDayHabits'
+import { findOpenTaskDuplicate, findOpenReminderDuplicate } from '../../../lib/myDayTaskDedup'
 import { applyMyDayTaskCompletionSideEffects } from '../../../lib/myDayCompleteTask'
 import { myDayProjectTasksQueryKey } from '../../../lib/myDayProjectTasksQuery'
 import { useAuth } from '../../../contexts/AuthContext'
@@ -30,6 +32,7 @@ export function useMyDay() {
   const queryClient = useQueryClient()
 
   const bumpSnapshot = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: MY_DAY_TASKS_QUERY_KEY })
     queryClient.invalidateQueries({ queryKey: MY_DAY_SNAPSHOT_QUERY_KEY })
     queryClient.invalidateQueries({ queryKey: MY_DAY_SUGGESTIONS_QUERY_KEY })
   }, [queryClient])
@@ -92,9 +95,18 @@ export function useMyDay() {
     projectId?: string | null,
     projectLabel?: string | null,
   ) => {
+    const trimmed = content.trim()
+    if (!trimmed) return
+
+    const duplicate = findOpenTaskDuplicate(tasks, { projectId, content: trimmed })
+    if (duplicate) {
+      toast.success('Already in My Day')
+      return
+    }
+
     const optimistic: Task = {
       id: `opt-${Date.now()}`,
-      content,
+      content: trimmed,
       isDone: false,
       dueDate: null,
       isReminder: false,
@@ -105,18 +117,19 @@ export function useMyDay() {
     }
     setTasks((prev) => [optimistic, ...prev])
     try {
-      const created = await createTask({ content, projectId, projectLabel })
+      const created = await createTask({ content: trimmed, projectId, projectLabel })
       setTasks((prev) => prev.map((t) => (t.id === optimistic.id ? created : t)))
-      if (user?.id) recordMyDayUsage(user.id, 'task_added')
+      if (!created.alreadyExists && user?.id) recordMyDayUsage(user.id, 'task_added')
       bumpSnapshot()
       if (projectId) {
         queryClient.invalidateQueries({ queryKey: myDayProjectTasksQueryKey(projectId) })
       }
+      if (created.alreadyExists) toast.success('Already in My Day')
     } catch {
       setTasks((prev) => prev.filter((t) => t.id !== optimistic.id))
       toast.error('Failed to add task')
     }
-  }, [tasks.length, bumpSnapshot, queryClient])
+  }, [tasks, tasks.length, bumpSnapshot, queryClient, user?.id])
 
   const removeTask = useCallback(async (id: string) => {
     const removed = tasks.find((t) => t.id === id)
@@ -287,9 +300,22 @@ export function useMyDay() {
     projectId?: string | null,
     projectLabel?: string | null,
   ) => {
+    const trimmed = content.trim()
+    if (!trimmed) return
+
+    const duplicate = findOpenReminderDuplicate(reminders, {
+      projectId,
+      content: trimmed,
+      dueDate,
+    })
+    if (duplicate) {
+      toast.success('Reminder already set for this item')
+      return
+    }
+
     const optimistic: Task = {
       id: `opt-${Date.now()}`,
-      content,
+      content: trimmed,
       isDone: false,
       dueDate,
       isReminder: true,
@@ -302,14 +328,15 @@ export function useMyDay() {
       (a.dueDate ?? '').localeCompare(b.dueDate ?? ''),
     ))
     try {
-      const created = await createReminder({ content, dueDate, projectId, projectLabel })
+      const created = await createReminder({ content: trimmed, dueDate, projectId, projectLabel })
       setReminders((prev) => prev.map((r) => (r.id === optimistic.id ? created : r)))
       bumpSnapshot()
+      if (created.alreadyExists) toast.success('Reminder already set for this item')
     } catch {
       setReminders((prev) => prev.filter((r) => r.id !== optimistic.id))
       toast.error('Failed to add reminder')
     }
-  }, [bumpSnapshot])
+  }, [reminders, bumpSnapshot])
 
   const removeReminder = useCallback(async (id: string) => {
     const removed = reminders.find((r) => r.id === id)

@@ -82,6 +82,73 @@ function validErr(req: Request, res: Response): boolean {
   return false
 }
 
+/** One open task/reminder per CRM project; unpinned items dedupe by content (+ due date for reminders). */
+async function findOpenDuplicateTask(
+  userId: string,
+  opts: {
+    projectId?: string | null
+    content: string
+    isReminder: boolean
+    dueDate?: string | null
+  },
+): Promise<TaskRow | null> {
+  const trimmed = opts.content.trim()
+  const projectId = typeof opts.projectId === 'string' && opts.projectId.trim() !== ''
+    ? opts.projectId.trim()
+    : null
+
+  if (opts.isReminder) {
+    if (projectId) {
+      const rows = await prisma.$queryRaw<TaskRow[]>`
+        SELECT * FROM user_tasks
+        WHERE user_id = ${userId}
+          AND is_reminder = true
+          AND is_done = false
+          AND project_id = ${projectId}
+        LIMIT 1
+      `
+      return rows[0] ?? null
+    }
+    if (!trimmed || !opts.dueDate) return null
+    const dueDateStr = normDateStr(opts.dueDate)
+    const rows = await prisma.$queryRaw<TaskRow[]>`
+      SELECT * FROM user_tasks
+      WHERE user_id = ${userId}
+        AND is_reminder = true
+        AND is_done = false
+        AND project_id IS NULL
+        AND due_date = ${dueDateStr}::date
+        AND lower(trim(content)) = lower(${trimmed})
+      LIMIT 1
+    `
+    return rows[0] ?? null
+  }
+
+  if (projectId) {
+    const rows = await prisma.$queryRaw<TaskRow[]>`
+      SELECT * FROM user_tasks
+      WHERE user_id = ${userId}
+        AND is_reminder = false
+        AND is_done = false
+        AND project_id = ${projectId}
+      LIMIT 1
+    `
+    return rows[0] ?? null
+  }
+
+  if (!trimmed) return null
+  const rows = await prisma.$queryRaw<TaskRow[]>`
+    SELECT * FROM user_tasks
+    WHERE user_id = ${userId}
+      AND is_reminder = false
+      AND is_done = false
+      AND project_id IS NULL
+      AND lower(trim(content)) = lower(${trimmed})
+    LIMIT 1
+  `
+  return rows[0] ?? null
+}
+
 // ─── Tasks ────────────────────────────────────────────────────────────────────
 
 /** Open (incomplete) tasks pinned to a CRM project — for Project detail strip. */
@@ -150,8 +217,20 @@ router.post(
     try {
       const userId = req.user!.id
       const { content, dueDate, isReminder, projectId, projectLabel } = req.body
-      const id = randomUUID()
       const isRem = isReminder ?? false
+
+      const existing = await findOpenDuplicateTask(userId, {
+        projectId,
+        content: String(content),
+        isReminder: isRem,
+        dueDate: dueDate ?? null,
+      })
+      if (existing) {
+        res.status(200).json({ ...serTask(existing), alreadyExists: true })
+        return
+      }
+
+      const id = randomUUID()
 
       if (dueDate) {
         const dueDateStr = normDateStr(dueDate)
@@ -353,8 +432,20 @@ router.post(
     try {
       const userId = req.user!.id
       const { content, dueDate, projectId, projectLabel } = req.body
-      const id = randomUUID()
       const dueDateStr = normDateStr(dueDate)
+
+      const existing = await findOpenDuplicateTask(userId, {
+        projectId,
+        content: String(content),
+        isReminder: true,
+        dueDate: dueDateStr,
+      })
+      if (existing) {
+        res.status(200).json({ ...serTask(existing), alreadyExists: true })
+        return
+      }
+
+      const id = randomUUID()
 
       await prisma.$executeRaw`
         INSERT INTO user_tasks (id, user_id, content, is_done, due_date, is_reminder, project_id, project_label, sort_order)

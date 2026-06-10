@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import type { Task } from '../components/my-day/types'
 import { MY_DAY_SUGGESTIONS_QUERY_KEY } from '../hooks/useMyDaySuggestionsQuery'
+import { MY_DAY_TASKS_QUERY_KEY } from './my-day-api'
 import { MY_DAY_SNAPSHOT_QUERY_KEY } from './myDaySnapshot'
 import { getLogRemarkOnCompletePref } from './myDayHabits'
 import { postMyDayTaskCompletionRemark } from './myDayProjectRemark'
@@ -13,6 +14,7 @@ export async function applyMyDayTaskCompletionSideEffects(
   userId: string | undefined,
   logRemarkToProject?: boolean,
 ): Promise<void> {
+  queryClient.invalidateQueries({ queryKey: MY_DAY_TASKS_QUERY_KEY })
   queryClient.invalidateQueries({ queryKey: MY_DAY_SNAPSHOT_QUERY_KEY })
   queryClient.invalidateQueries({ queryKey: MY_DAY_SUGGESTIONS_QUERY_KEY })
 
