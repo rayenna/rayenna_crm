@@ -1,4 +1,3 @@
-import type { Task } from '../components/my-day/types'
 import { UserRole } from '../types'
 import {
   buildHitListFromProjects,
@@ -39,18 +38,6 @@ function projectLabel(
   const name = customerName.trim() || '—'
   if (projectSerialNumber != null) return `#${projectSerialNumber} ${name}`.trim()
   return name
-}
-
-function taskAlreadyCoversSuggestion(task: Task, suggestion: MyDaySuggestion): boolean {
-  if (task.isDone || task.isReminder) return false
-  if (suggestion.projectId && task.projectId === suggestion.projectId) return true
-  const label = (suggestion.projectLabel ?? '').trim().toLowerCase()
-  if (label && task.content.toLowerCase().includes(label)) return true
-  return false
-}
-
-function filterNewSuggestions(suggestions: MyDaySuggestion[], tasks: Task[]): MyDaySuggestion[] {
-  return suggestions.filter((s) => !tasks.some((t) => taskAlreadyCoversSuggestion(t, s)))
 }
 
 type ZenithFocusPayload = {
@@ -185,11 +172,10 @@ function suggestionsFromInstallDelayed(
  */
 export function buildMyDaySuggestions(args: {
   focusData: ZenithFocusPayload | null | undefined
-  tasks: Task[]
   role: UserRole
   userId: string
 }): MyDaySuggestion[] {
-  const { focusData, tasks, role, userId } = args
+  const { focusData, role, userId } = args
   if (!focusData) return []
 
   const raw: MyDaySuggestion[] = []
@@ -246,5 +232,5 @@ export function buildMyDaySuggestions(args: {
   const urgencyRank = { critical: 0, warning: 1, info: 2 }
   deduped.sort((a, b) => urgencyRank[a.urgency] - urgencyRank[b.urgency])
 
-  return filterNewSuggestions(deduped, tasks).slice(0, MAX_SUGGESTIONS)
+  return deduped.slice(0, MAX_SUGGESTIONS)
 }

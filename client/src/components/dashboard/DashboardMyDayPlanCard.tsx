@@ -32,8 +32,6 @@ export default function DashboardMyDayPlanCard({
 
   const showSuggestions = suggestions.length > 0
   const showEmptyCta = !loading && !hasPersonal && !showSuggestions && !snapQ.isError
-  const suggestionLimit = paired ? 2 : 3
-  const teaserLimit = paired ? 2 : 3
 
   return (
     <section
@@ -75,9 +73,11 @@ export default function DashboardMyDayPlanCard({
 
       <div
         className={[
-          'min-h-0 flex-1 overflow-y-auto px-3 py-2.5 sm:px-3.5 sm:py-3',
-          paired ? 'max-h-[220px] lg:max-h-[240px]' : 'max-h-[280px]',
+          'min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2.5 sm:px-3.5 sm:py-3',
+          paired ? 'max-h-[220px] lg:max-h-[280px]' : 'max-h-[320px]',
         ].join(' ')}
+        tabIndex={0}
+        aria-label="Today's plan — scroll for more"
       >
         {loading ? (
           <div className="space-y-1.5" aria-busy="true">
@@ -111,7 +111,7 @@ export default function DashboardMyDayPlanCard({
 
         {!loading && snap && snap.teaserLines.length > 0 ? (
           <ul className="mt-1.5 space-y-0.5">
-            {snap.teaserLines.slice(0, teaserLimit).map((line, i) => (
+            {snap.teaserLines.map((line, i) => (
               <li
                 key={`${i}-${line.slice(0, 20)}`}
                 className="border-l-2 border-[color:var(--accent-gold-muted)] pl-2 text-[11px] leading-snug text-[color:var(--text-primary)]"
@@ -127,14 +127,9 @@ export default function DashboardMyDayPlanCard({
             <p className="mb-0.5 text-[9px] font-bold uppercase tracking-widest text-[color:var(--text-muted)]">
               Suggested from CRM
             </p>
-            {suggestions.slice(0, suggestionLimit).map((s) => (
+            {suggestions.map((s) => (
               <SuggestedTaskRow key={s.id} suggestion={s} />
             ))}
-            {suggestions.length > suggestionLimit ? (
-              <p className="mt-1 text-[10px] text-[color:var(--text-muted)]">
-                +{suggestions.length - suggestionLimit} more in My Day
-              </p>
-            ) : null}
           </div>
         ) : null}
       </div>

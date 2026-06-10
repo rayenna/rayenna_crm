@@ -414,7 +414,7 @@ function SalesPipelineBlock({
             <thead>
               <tr className="border-b border-[color:var(--border-default)]">
                 <th
-                  className="py-2 pr-2 font-semibold text-right tabular-nums whitespace-nowrap w-[56px]"
+                  className="py-2 pr-2 font-semibold text-left tabular-nums whitespace-nowrap w-[56px]"
                   title="Project serial number (Sl No.)"
                 >
                   <span className="hidden sm:inline">Sl No.</span>
@@ -483,7 +483,7 @@ function SalesPipelineBlock({
                   const dealParts = formatZenithDealInrParts(r.dealValue)
                   return (
                     <tr key={r.projectId} className="group border-b border-[color:var(--border-default)] hover:bg-[color:var(--bg-table-hover)]">
-                      <td className="py-2.5 pr-2 text-right tabular-nums text-[color:var(--text-muted)] whitespace-nowrap">
+                      <td className="py-2.5 pr-2 text-left tabular-nums text-[color:var(--text-muted)] whitespace-nowrap">
                         {r.projectSerialNumber != null ? r.projectSerialNumber : '—'}
                       </td>
                       <td className="py-2.5 pr-3">
@@ -957,7 +957,7 @@ function FinanceRadarBlock({
                   <thead>
                     <tr className="border-b border-[color:var(--border-default)]">
                       <th
-                        className="py-2 px-2 sm:px-2.5 font-semibold text-right tabular-nums whitespace-nowrap w-[54px]"
+                        className="py-2 px-2 sm:px-2.5 font-semibold text-left tabular-nums whitespace-nowrap w-[54px]"
                         title="Project serial number (Sl No.)"
                       >
                         <span className="hidden sm:inline">Sl No.</span>
@@ -1006,7 +1006,7 @@ function FinanceRadarBlock({
                         const nameColor = paymentRadarProjectNameColor(r.paymentStatus)
                         return (
                         <tr key={r.projectId} className="border-b border-[color:var(--border-default)] last:border-b-0 hover:bg-[color:var(--bg-table-hover)]">
-                          <td className="py-2 px-2 sm:px-2.5 text-right tabular-nums text-[color:var(--text-muted)] whitespace-nowrap">
+                          <td className="py-2 px-2 sm:px-2.5 text-left tabular-nums text-[color:var(--text-muted)] whitespace-nowrap">
                             {r.projectSerialNumber != null ? r.projectSerialNumber : '—'}
                           </td>
                           <td className="py-2 px-2 sm:px-2.5 max-w-[7rem] sm:max-w-[9rem]">
@@ -1134,7 +1134,7 @@ function FinanceRadarBlock({
                   <thead>
                     <tr className="border-b border-[color:var(--border-default)]">
                       <th
-                        className="py-2 px-2 sm:px-2.5 font-semibold text-right tabular-nums whitespace-nowrap w-[54px]"
+                        className="py-2 px-2 sm:px-2.5 font-semibold text-left tabular-nums whitespace-nowrap w-[54px]"
                         title="Project serial number (Sl No.)"
                       >
                         <span className="hidden sm:inline">Sl No.</span>
@@ -1197,7 +1197,7 @@ function FinanceRadarBlock({
                             key={`${r.projectId}-${r.installmentType}-${r.receivedAt}`}
                             className="border-b border-[color:var(--border-default)] last:border-b-0 hover:bg-[color:var(--bg-table-hover)]"
                           >
-                            <td className="py-2 px-2 sm:px-2.5 text-right tabular-nums text-[color:var(--text-muted)] whitespace-nowrap">
+                            <td className="py-2 px-2 sm:px-2.5 text-left tabular-nums text-[color:var(--text-muted)] whitespace-nowrap">
                               {r.projectSerialNumber != null ? r.projectSerialNumber : '—'}
                             </td>
                             <td className="py-2 px-2 sm:px-2.5 max-w-[10rem]">
@@ -1654,7 +1654,7 @@ function InstallationPulseBlock({
             <thead>
               <tr className="border-b border-[color:var(--border-default)]">
                 <th
-                  className="py-2.5 pr-2 sm:pr-3 font-semibold text-right tabular-nums whitespace-nowrap w-[58px] align-bottom"
+                  className="py-2.5 pr-2 sm:pr-3 font-semibold text-left tabular-nums whitespace-nowrap w-[58px] align-bottom"
                   title="Project serial number (Sl No.)"
                 >
                   <span className="hidden sm:inline">Sl No.</span>
@@ -1726,7 +1726,7 @@ function InstallationPulseBlock({
                         installPulseRowOverdue(r) ? 'bg-red-500/5' : 'hover:bg-[color:var(--bg-table-hover)]'
                       }`}
                     >
-                      <td className="py-2.5 pr-2 sm:pr-3 text-right tabular-nums text-[color:var(--text-muted)] align-middle whitespace-nowrap">
+                      <td className="py-2.5 pr-2 sm:pr-3 text-left tabular-nums text-[color:var(--text-muted)] align-middle whitespace-nowrap">
                         {r.projectSerialNumber != null ? r.projectSerialNumber : '—'}
                       </td>
                       <td className="py-2.5 pr-3 sm:pr-4 align-middle">

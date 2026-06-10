@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../contexts/AuthContext'
 import axiosInstance from '../utils/axios'
-import { fetchTasks } from '../lib/my-day-api'
 import { buildMyDaySuggestions } from '../lib/myDaySuggestions'
 
 export const MY_DAY_SUGGESTIONS_QUERY_KEY = ['my-day-suggestions'] as const
@@ -13,13 +12,9 @@ export function useMyDaySuggestionsQuery(enabled: boolean) {
   return useQuery({
     queryKey: [...MY_DAY_SUGGESTIONS_QUERY_KEY, user?.id],
     queryFn: async () => {
-      const [focusRes, tasks] = await Promise.all([
-        axiosInstance.get('/api/dashboard/zenith-focus'),
-        fetchTasks(),
-      ])
+      const focusRes = await axiosInstance.get('/api/dashboard/zenith-focus')
       return buildMyDaySuggestions({
         focusData: focusRes.data,
-        tasks,
         role: user!.role,
         userId: user!.id,
       })

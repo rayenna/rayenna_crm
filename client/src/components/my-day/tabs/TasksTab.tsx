@@ -1,16 +1,12 @@
-import type { MyDaySuggestion } from '../../../lib/myDaySuggestions'
 import type { ToggleTaskOptions } from '../hooks/useMyDay'
 import type { Task, PinOption } from '../types'
 import TaskItem from '../components/TaskItem'
 import AddTaskInput from '../components/AddTaskInput'
-import SuggestedTaskRow from '../components/SuggestedTaskRow'
 
 interface Props {
   tasks: Task[]
   loading: boolean
   error: string | null
-  suggestions?: MyDaySuggestion[]
-  suggestionsLoading?: boolean
   onToggle: (id: string, opts?: ToggleTaskOptions) => void
   onEdit: (id: string, content: string) => void
   onDelete: (id: string) => void
@@ -22,8 +18,6 @@ export default function TasksTab({
   tasks,
   loading,
   error,
-  suggestions = [],
-  suggestionsLoading = false,
   onToggle,
   onEdit,
   onDelete,
@@ -58,21 +52,6 @@ export default function TasksTab({
 
         {!loading && !error && (
           <>
-            {(suggestionsLoading || suggestions.length > 0) && (
-              <>
-                <span className="myday-section-label">Suggested from CRM</span>
-                {suggestionsLoading ? (
-                  <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>
-                    Loading suggestions…
-                  </p>
-                ) : null}
-                {suggestions.map((s) => (
-                  <SuggestedTaskRow key={s.id} suggestion={s} />
-                ))}
-              </>
-            )}
-
-            {/* Carryovers */}
             {carryovers.length > 0 && (
               <>
                 <span className="myday-section-label">Carry-overs</span>
@@ -82,13 +61,14 @@ export default function TasksTab({
               </>
             )}
 
-            {/* Today */}
             <span className="myday-section-label">Today</span>
 
-            {todayPending.length === 0 && todayDone.length === 0 && suggestions.length === 0 && (
+            {todayPending.length === 0 && todayDone.length === 0 && (
               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.6 }}>
-                Nothing planned yet. In Zenith, tap <strong style={{ color: 'var(--text-secondary)' }}>+ My Day</strong> on
-                Hit List rows, or add a task below.
+                Nothing planned yet. Pin from the Dashboard <strong style={{ color: 'var(--text-secondary)' }}>Today&apos;s plan</strong>,{' '}
+                <strong style={{ color: 'var(--text-secondary)' }}>Things needing attention</strong>, or Zenith{' '}
+                <strong style={{ color: 'var(--text-secondary)' }}>Hit List</strong> with{' '}
+                <strong style={{ color: 'var(--text-secondary)' }}>+ My Day</strong>, or add a task below.
               </p>
             )}
 

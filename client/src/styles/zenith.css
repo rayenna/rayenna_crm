@@ -128,6 +128,13 @@
   color: var(--text-primary);
 }
 
+/* Hit List — single-row compact filters (override generic 44px mobile min-height) */
+.zenith-root .zenith-hit-list-filters .zenith-native-filter-input,
+.zenith-root .zenith-hit-list-filters .zenith-native-select {
+  min-height: 2rem;
+  font-size: 12px;
+}
+
 /* Faster taps on iOS; avoid accidental double-tap zoom on controls (links only on real controls — not all anchors, so wheel/touch scroll isn’t affected on large link areas) */
 .zenith-root button {
   touch-action: manipulation;
@@ -1000,6 +1007,12 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   .zenith-root .zenith-native-filter-input {
     min-height: 44px;
     font-size: 16px;
+  }
+
+  .zenith-root .zenith-hit-list-filters .zenith-native-filter-input,
+  .zenith-root .zenith-hit-list-filters .zenith-native-select {
+    min-height: 2.25rem;
+    font-size: 13px;
   }
 
   .zenith-scroll-x-wrap {

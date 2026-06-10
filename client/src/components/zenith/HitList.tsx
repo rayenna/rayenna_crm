@@ -14,6 +14,7 @@ import {
   zenithDealRowStagePillClassMobile,
   zenithLastActivityTone,
   ZENITH_DEAL_OPEN_BUTTON_CLASS,
+  ZENITH_DEAL_OPEN_BUTTON_DENSE_CLASS,
 } from './zenithDealCardUi'
 
 function labelBadgeClass(label: HitListLabel): { className: string; showPulse: boolean } {
@@ -260,21 +261,21 @@ export default function HitList({
       ) : (
         <div className="flex h-full min-h-[8rem] w-full max-h-[min(42vh,320px)] flex-col overflow-hidden overscroll-y-contain sm:max-h-[min(44vh,340px)] lg:min-h-0 lg:max-h-none lg:flex-1">
           <div
-            className="shrink-0 border-b border-[color:var(--border-default)] px-3 py-2 md:px-2"
+            className="shrink-0 border-b border-[color:var(--border-default)] px-3 py-1.5 md:px-2 md:py-1.5"
             style={{ fontFamily: 'var(--zenith-font-body)' }}
           >
-            <div className="flex flex-wrap items-center gap-2 min-w-0">
+            <div className="zenith-hit-list-filters flex min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto">
               <input
                 value={customerFilter}
                 onChange={(e) => setCustomerFilter(e.target.value)}
                 placeholder="Filter customer…"
-                className="zenith-native-filter-input h-9 min-w-[8rem] flex-1 rounded-lg px-3 text-xs focus:outline-none sm:min-w-[10rem] sm:flex-none sm:max-w-[14rem]"
+                className="zenith-native-filter-input h-8 min-w-[5.5rem] max-w-[11rem] flex-1 shrink rounded-lg px-2.5 text-xs focus:outline-none"
                 aria-label="Filter hit list by customer"
               />
               <select
                 value={stageFilter}
                 onChange={(e) => setStageFilter(e.target.value)}
-                className="zenith-native-select h-9 rounded-lg px-2.5 text-xs focus:outline-none"
+                className="zenith-native-select h-8 max-w-[6.75rem] shrink-0 truncate rounded-lg px-2 text-xs focus:outline-none sm:max-w-[7.5rem]"
                 aria-label="Filter by stage"
               >
                 <option value="ALL">All stages</option>
@@ -287,7 +288,7 @@ export default function HitList({
               <select
                 value={salesPersonFilter}
                 onChange={(e) => setSalesPersonFilter(e.target.value)}
-                className="zenith-native-select h-9 max-w-[200px] rounded-lg px-2.5 text-xs focus:outline-none"
+                className="zenith-native-select h-8 max-w-[7.5rem] shrink-0 truncate rounded-lg px-2 text-xs focus:outline-none sm:max-w-[8.5rem]"
                 aria-label="Filter by sales person"
               >
                 <option value="ALL">All salespeople</option>
@@ -298,8 +299,8 @@ export default function HitList({
                 ))}
               </select>
               {hasActiveFilters && displayRows.length !== n && (
-                <span className="whitespace-nowrap text-[11px] text-[color:var(--text-muted)]">
-                  {displayRows.length} of {n} shown
+                <span className="shrink-0 whitespace-nowrap text-[10px] text-[color:var(--text-muted)]">
+                  {displayRows.length} of {n}
                 </span>
               )}
             </div>
@@ -307,11 +308,11 @@ export default function HitList({
           <div className="zenith-hit-list-body min-h-0 flex-1 overflow-y-auto">
             <div className="zenith-scroll-x overflow-x-auto px-3 py-1 md:px-2 md:py-0">
             {/* Desktop / tablet — same columns as “Your pipeline today” + alert + confirmation */}
-            <table className="zenith-table--data hidden md:table w-full text-left text-[11px] sm:text-xs min-w-[880px]">
+            <table className="zenith-table--data hidden md:table w-full text-left text-[11px] sm:text-xs min-w-[920px]">
               <thead>
                 <tr className="border-b border-[color:var(--border-default)]">
                   <th
-                    className="py-2 pr-2 font-semibold text-right tabular-nums whitespace-nowrap w-[56px]"
+                    className="py-2 pr-2 font-semibold text-left tabular-nums whitespace-nowrap w-[56px]"
                     style={{ fontFamily: 'var(--zenith-font-body)' }}
                   >
                     <span className="hidden sm:inline">Sl No.</span>
@@ -378,7 +379,12 @@ export default function HitList({
                   >
                     Health {sortField === 'health' ? (sortDir === 'desc' ? ' ↓' : ' ↑') : ''}
                   </th>
-                  <th className="py-2 pl-1 w-[88px]" aria-hidden />
+                  <th
+                    className="py-2 pl-1 min-w-[10.75rem] w-[10.75rem] text-right font-semibold whitespace-nowrap"
+                    style={{ fontFamily: 'var(--zenith-font-body)' }}
+                  >
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -403,7 +409,7 @@ export default function HitList({
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.05, duration: 0.25 }}
                     >
-                      <td className="py-2.5 pr-2 text-right tabular-nums text-[color:var(--text-muted)] whitespace-nowrap">
+                      <td className="py-2.5 pr-2 text-left tabular-nums text-[color:var(--text-muted)] whitespace-nowrap">
                         {project.projectSerialNumber != null ? project.projectSerialNumber : '—'}
                       </td>
                       <td className="py-2.5 pr-2">
@@ -463,9 +469,9 @@ export default function HitList({
                       <td className="py-2.5 text-center align-middle">
                         <HealthBadge project={hitListHealthProject(project)} size="sm" showLabel={false} />
                       </td>
-                      <td className="py-2.5 pl-1">
-                        <div className="flex flex-wrap items-center justify-end gap-1.5">
-                          <AddToMyDayButton compact {...hitListItemToMyDayTask(project)} />
+                      <td className="py-2 pl-1 align-middle whitespace-nowrap">
+                        <div className="flex flex-nowrap items-center justify-end gap-1">
+                          <AddToMyDayButton compact dense {...hitListItemToMyDayTask(project)} />
                           <button
                             type="button"
                             onClick={(e) => {
@@ -478,7 +484,7 @@ export default function HitList({
                                 stageLabel: project.stage,
                               })
                             }}
-                            className={ZENITH_DEAL_OPEN_BUTTON_CLASS}
+                            className={ZENITH_DEAL_OPEN_BUTTON_DENSE_CLASS}
                             style={{ fontFamily: 'var(--zenith-font-body)' }}
                             aria-label={`Open quick actions for ${project.customerName}`}
                           >
