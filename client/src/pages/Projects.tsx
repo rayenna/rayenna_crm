@@ -89,6 +89,7 @@ function getInitialFiltersFromUrl(): {
   panelBrand: string
   inverterBrand: string
   lifecycleSpecsComplete: boolean
+  lifecycleSpecsIncomplete: boolean
 } | null {
   const p = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
   const status = p.getAll('status')
@@ -112,8 +113,10 @@ function getInitialFiltersFromUrl(): {
   const zenithFyProfit = p.get('zenithFyProfit') === 'true'
   const panelBrand = p.get('panelBrand')?.trim() ?? ''
   const inverterBrand = p.get('inverterBrand')?.trim() ?? ''
+  const lifecycleSpecsIncomplete = p.get('lifecycleSpecsIncomplete') === 'true'
   const lifecycleSpecsComplete =
-    p.get('lifecycleSpecsComplete') === 'true' || panelBrand !== '' || inverterBrand !== ''
+    !lifecycleSpecsIncomplete &&
+    (p.get('lifecycleSpecsComplete') === 'true' || panelBrand !== '' || inverterBrand !== '')
   const hasAny =
     status.length > 0 ||
     paymentStatus.length > 0 ||
@@ -134,7 +137,8 @@ function getInitialFiltersFromUrl(): {
     zenithFyProfit ||
     panelBrand !== '' ||
     inverterBrand !== '' ||
-    p.get('lifecycleSpecsComplete') === 'true'
+    p.get('lifecycleSpecsComplete') === 'true' ||
+    p.get('lifecycleSpecsIncomplete') === 'true'
   if (!hasAny) return null
   const validStatus = status.filter((s) => Object.values(ProjectStatus).includes(s as ProjectStatus))
   const validPayment = paymentStatus.filter((v) => (VALID_PAYMENT_STATUS_VALUES as readonly string[]).includes(v))
@@ -162,6 +166,7 @@ function getInitialFiltersFromUrl(): {
     panelBrand,
     inverterBrand,
     lifecycleSpecsComplete,
+    lifecycleSpecsIncomplete,
   }
 }
 
@@ -502,6 +507,7 @@ const Projects = () => {
     panelBrand: urlInit?.panelBrand ?? '',
     inverterBrand: urlInit?.inverterBrand ?? '',
     lifecycleSpecsComplete: urlInit?.lifecycleSpecsComplete ?? false,
+    lifecycleSpecsIncomplete: urlInit?.lifecycleSpecsIncomplete ?? false,
     search: '',
     sortBy: '',
     sortOrder: 'desc',
@@ -534,9 +540,11 @@ const Projects = () => {
     const zenithFyProfitFromUrl = searchParams.get('zenithFyProfit') === 'true'
     const panelBrandFromUrl = searchParams.get('panelBrand')?.trim() ?? ''
     const inverterBrandFromUrl = searchParams.get('inverterBrand')?.trim() ?? ''
+    const lifecycleSpecsIncompleteFromUrl = searchParams.get('lifecycleSpecsIncomplete') === 'true'
     const lifecycleSpecsFromUrl = searchParams.get('lifecycleSpecsComplete') === 'true'
     const lifecycleSpecsActiveFromUrl =
-      lifecycleSpecsFromUrl || panelBrandFromUrl !== '' || inverterBrandFromUrl !== ''
+      !lifecycleSpecsIncompleteFromUrl &&
+      (lifecycleSpecsFromUrl || panelBrandFromUrl !== '' || inverterBrandFromUrl !== '')
     const searchFromUrlTrimmed = searchParams.get('search')?.trim() ?? ''
     const hasSearchParam = searchFromUrlTrimmed.length > 0
     const hasStatusParams = statusFromUrl.length > 0
@@ -566,7 +574,8 @@ const Projects = () => {
       zenithFyProfitFromUrl ||
       panelBrandFromUrl !== '' ||
       inverterBrandFromUrl !== '' ||
-      lifecycleSpecsFromUrl
+      lifecycleSpecsFromUrl ||
+      lifecycleSpecsIncompleteFromUrl
     // Wait for statusOptions when we have status in URL (needed to validate status values)
     const canResolveStatus = !hasStatusParams || statusOptions.length > 0
     const validStatus = hasStatusParams && canResolveStatus
@@ -617,6 +626,7 @@ const Projects = () => {
         panelBrand: panelBrandFromUrl,
         inverterBrand: inverterBrandFromUrl,
         lifecycleSpecsComplete: lifecycleSpecsActiveFromUrl,
+        lifecycleSpecsIncomplete: lifecycleSpecsIncompleteFromUrl,
       }))
       if (fyFromUrl.length > 0) setSelectedFYs(fyFromUrl)
       if (quarterFromUrl.length > 0) setSelectedQuarters(quarterFromUrl)
@@ -732,6 +742,7 @@ const Projects = () => {
     filters.panelBrand,
     filters.inverterBrand,
     filters.lifecycleSpecsComplete,
+    filters.lifecycleSpecsIncomplete,
     filters.sortBy,
     selectedFYs,
     selectedQuarters,
@@ -776,6 +787,7 @@ const Projects = () => {
       panelBrand: '',
       inverterBrand: '',
       lifecycleSpecsComplete: false,
+      lifecycleSpecsIncomplete: false,
       search: '',
       sortBy: '',
       sortOrder: 'desc',
@@ -814,7 +826,7 @@ const Projects = () => {
       (filters.leadSourceIsNull ? 1 : 0) +
       (filters.zenithSlice ? 1 : 0) +
       (filters.zenithFyProfit ? 1 : 0) +
-      (filters.panelBrand || filters.inverterBrand || filters.lifecycleSpecsComplete ? 1 : 0) +
+      (filters.panelBrand || filters.inverterBrand || filters.lifecycleSpecsComplete || filters.lifecycleSpecsIncomplete ? 1 : 0) +
       (selectedFYs.length > 0 ? 1 : 0) +
       (selectedQuarters.length > 0 ? 1 : 0) +
       (selectedMonths.length > 0 ? 1 : 0) +
@@ -842,6 +854,7 @@ const Projects = () => {
     filters.panelBrand,
     filters.inverterBrand,
     filters.lifecycleSpecsComplete,
+    filters.lifecycleSpecsIncomplete,
     filters.sortBy,
     defaultStatusValues,
     user?.role,
@@ -884,7 +897,8 @@ const Projects = () => {
     searchParams.get('zenithFyProfit') === 'true' ||
     searchParams.has('panelBrand') ||
     searchParams.has('inverterBrand') ||
-    searchParams.get('lifecycleSpecsComplete') === 'true'
+    searchParams.get('lifecycleSpecsComplete') === 'true' ||
+    searchParams.get('lifecycleSpecsIncomplete') === 'true'
 
   const listQueryInput = {
     filters,

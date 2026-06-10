@@ -24,6 +24,7 @@ export type ProjectsListFiltersState = {
   panelBrand: string
   inverterBrand: string
   lifecycleSpecsComplete: boolean
+  lifecycleSpecsIncomplete: boolean
   search?: string
   sortBy?: string
   sortOrder?: string
@@ -65,6 +66,7 @@ export function buildProjectListQueryParams(input: ProjectsListQueryInput): URLS
   if (filters.leadSourceIsNull) params.append('leadSourceIsNull', 'true')
   if (filters.zenithSlice) params.append('zenithSlice', filters.zenithSlice)
   if (filters.zenithFyProfit) params.append('zenithFyProfit', 'true')
+  if (filters.lifecycleSpecsIncomplete) params.append('lifecycleSpecsIncomplete', 'true')
   if (filters.lifecycleSpecsComplete) params.append('lifecycleSpecsComplete', 'true')
   if (filters.panelBrand) params.append('panelBrand', filters.panelBrand)
   if (filters.inverterBrand) params.append('inverterBrand', filters.inverterBrand)

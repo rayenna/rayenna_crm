@@ -29,6 +29,8 @@ export function buildProjectsUrl(
     inverterBrand?: string
     /** Require both panel and inverter brand entered (non-empty), matching Zenith lifecycle chart cohort. */
     lifecycleSpecsComplete?: boolean
+    /** Late-stage projects missing panel and/or inverter brand (inverse of complete cohort). */
+    lifecycleSpecsIncomplete?: boolean
     /** Free-text search (Projects list search box); used e.g. dashboard profitability word cloud drill. */
     search?: string
   },
@@ -56,6 +58,7 @@ export function buildProjectsUrl(
   if (params.inverterBrand != null && String(params.inverterBrand).trim() !== '') {
     search.append('inverterBrand', String(params.inverterBrand).trim())
   }
+  if (params.lifecycleSpecsIncomplete) search.append('lifecycleSpecsIncomplete', 'true')
   if (params.lifecycleSpecsComplete) search.append('lifecycleSpecsComplete', 'true')
   const q = params.search != null ? String(params.search).trim() : ''
   if (q !== '') search.append('search', q)

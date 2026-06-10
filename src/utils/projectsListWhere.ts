@@ -10,6 +10,7 @@ import {
   SupportTicketStatus,
 } from '@prisma/client';
 import { buildProjectsListCustomerTypeWhere } from './customerTypeCharts';
+import { LIFECYCLE_BRAND_REMINDER_STATUSES } from './lifecycleBrandGaps';
 
 export type ProjectsListFilterInput = {
   statusArray: string[];
@@ -38,6 +39,7 @@ export type ProjectsListFilterInput = {
   panelBrand: string;
   inverterBrand: string;
   lifecycleSpecsCompleteActive: boolean;
+  lifecycleSpecsIncompleteActive: boolean;
 };
 
 export type ProjectsListUser = { id: string; role: UserRole } | undefined;
@@ -139,6 +141,7 @@ export function parseProjectsListFilters(query: ParsedQs): ProjectsListFilterInp
     panelBrand,
     inverterBrand,
     lifecycleSpecsComplete,
+    lifecycleSpecsIncomplete,
   } = query;
 
   const fyArray = toStringArray(fy);
@@ -178,8 +181,10 @@ export function parseProjectsListFilters(query: ParsedQs): ProjectsListFilterInp
     zenithFyProfit: String(zenithFyProfit) === 'true',
     panelBrand: panelBrandRaw,
     inverterBrand: inverterBrandRaw,
+    lifecycleSpecsIncompleteActive: String(lifecycleSpecsIncomplete) === 'true',
     lifecycleSpecsCompleteActive:
-      String(lifecycleSpecsComplete) === 'true' || panelBrandRaw !== '' || inverterBrandRaw !== '',
+      String(lifecycleSpecsIncomplete) !== 'true' &&
+      (String(lifecycleSpecsComplete) === 'true' || panelBrandRaw !== '' || inverterBrandRaw !== ''),
   };
 }
 
@@ -379,7 +384,17 @@ export function buildProjectsWhere(
     );
   }
 
-  if (filters.lifecycleSpecsCompleteActive) {
+  if (filters.lifecycleSpecsIncompleteActive) {
+    pushOntoWhereAnd(where, {
+      projectStatus: { in: LIFECYCLE_BRAND_REMINDER_STATUSES },
+      OR: [
+        { panelBrand: null },
+        { panelBrand: '' },
+        { inverterBrand: null },
+        { inverterBrand: '' },
+      ],
+    });
+  } else if (filters.lifecycleSpecsCompleteActive) {
     const lifecycleParts: object[] = [
       { panelBrand: { not: null } },
       { NOT: { panelBrand: '' } },
@@ -592,5 +607,6 @@ export const projectsListQueryValidators = [
   query('panelBrand').optional().isString(),
   query('inverterBrand').optional().isString(),
   query('lifecycleSpecsComplete').optional().isIn(['true']),
+  query('lifecycleSpecsIncomplete').optional().isIn(['true']),
   query('peBucket').optional().isIn(['proposal-ready', 'draft', 'not-started', 'rest']),
 ];

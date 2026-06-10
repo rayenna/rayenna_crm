@@ -5,11 +5,16 @@ import { useMyDaySuggestionsQuery } from '../../hooks/useMyDaySuggestionsQuery'
 import SuggestedTaskRow from '../my-day/components/SuggestedTaskRow'
 import MyDayButton from '../my-day/MyDayButton'
 
-/**
- * Classic Dashboard — compact "Today's plan" surfacing My Day + CRM suggestions.
- * Additive only; does not alter role dashboard queries.
- */
-export default function DashboardMyDayPlanCard() {
+interface Props {
+  /** Side-by-side with lifecycle attention card on lg+. */
+  paired?: boolean
+  className?: string
+}
+
+export default function DashboardMyDayPlanCard({
+  paired = false,
+  className = '',
+}: Props) {
   const { openTab } = useMyDayContext()
   const snapQ = useMyDaySnapshotQuery(true)
   const suggestionsQ = useMyDaySuggestionsQuery(true)
@@ -27,100 +32,111 @@ export default function DashboardMyDayPlanCard() {
 
   const showSuggestions = suggestions.length > 0
   const showEmptyCta = !loading && !hasPersonal && !showSuggestions && !snapQ.isError
+  const suggestionLimit = paired ? 2 : 3
+  const teaserLimit = paired ? 2 : 3
 
   return (
     <section
-      className="mb-5 min-w-0 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5"
+      className={[
+        'flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] border-l-4 border-l-[color:var(--accent-gold)]',
+        className,
+      ].join(' ')}
       aria-labelledby="dashboard-myday-plan-heading"
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 flex-1">
+      <div className="flex shrink-0 items-start justify-between gap-2 border-b border-[color:var(--border-default)] px-3 py-2.5 sm:px-3.5 sm:py-3">
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
             <Sun className="h-4 w-4 shrink-0 text-[color:var(--accent-gold)]" aria-hidden />
             <h2
               id="dashboard-myday-plan-heading"
-              className="text-base font-bold text-[color:var(--text-primary)]"
+              className="text-sm font-bold leading-tight text-[color:var(--text-primary)]"
               style={{ fontFamily: "'Syne', sans-serif" }}
             >
               Today&apos;s plan
             </h2>
           </div>
-          <p className="mt-1 text-[13px] text-[color:var(--text-secondary)]">
-            Personal tasks and CRM follow-ups — synced across devices.
-          </p>
-
-          {loading ? (
-            <div className="mt-3 space-y-2" aria-busy="true">
-              <div className="h-3 w-2/3 max-w-md animate-pulse rounded bg-[color:var(--bg-badge)]" />
-              <div className="h-3 w-1/2 max-w-sm animate-pulse rounded bg-[color:var(--bg-badge)]" />
-            </div>
-          ) : null}
-
-          {!loading && snapQ.isError ? (
-            <p className="mt-3 text-[13px] text-[color:var(--text-secondary)]">
-              Could not load My Day. Use the ☀ button in the top bar to open your drawer.
+          {!paired ? (
+            <p className="mt-0.5 text-[11px] leading-snug text-[color:var(--text-secondary)]">
+              My Day tasks & CRM follow-ups
             </p>
-          ) : null}
-
-          {!loading && snap && snap.summaryFragments.length > 0 ? (
-            <p className="mt-3 text-[13px] font-semibold text-[color:var(--text-primary)]">
-              {snap.summaryFragments.join(' · ')}
-            </p>
-          ) : null}
-
-          {showEmptyCta ? (
-            <p className="mt-3 text-[13px] text-[color:var(--text-secondary)]">
-              Pin follow-ups from Zenith <strong className="font-semibold text-[color:var(--text-primary)]">Hit List</strong>{' '}
-              with <strong className="font-semibold text-[color:var(--text-primary)]">+ My Day</strong>, or add tasks below.
-            </p>
-          ) : null}
-
-          {!loading && snap && snap.isQuietPersonal && snap.summaryFragments.length === 0 && !showEmptyCta ? (
-            <p className="mt-3 text-[13px] text-[color:var(--text-secondary)]">
-              You&apos;re caught up on tasks and reminders. Add follow-ups from Zenith Hit List or below.
-            </p>
-          ) : null}
-
-          {!loading && snap && snap.teaserLines.length > 0 ? (
-            <ul className="mt-2 space-y-1">
-              {snap.teaserLines.slice(0, 3).map((line, i) => (
-                <li
-                  key={`${i}-${line.slice(0, 20)}`}
-                  className="border-l-2 border-[color:var(--accent-gold-muted)] pl-3 text-[13px] leading-snug text-[color:var(--text-primary)]"
-                >
-                  {line}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-
-          {!loading && showSuggestions ? (
-            <div className="mt-4 border-t border-[color:var(--border-default)] pt-3">
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[color:var(--text-muted)]">
-                Suggested from CRM
-              </p>
-              {suggestions.slice(0, 3).map((s) => (
-                <SuggestedTaskRow key={s.id} suggestion={s} />
-              ))}
-              {suggestions.length > 3 ? (
-                <p className="mt-2 text-[12px] text-[color:var(--text-muted)]">
-                  +{suggestions.length - 3} more in My Day
-                </p>
-              ) : null}
-            </div>
           ) : null}
         </div>
-
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="button"
             onClick={() => openTab('tasks')}
-            className="min-h-[44px] rounded-xl border border-[color:var(--border-default)] px-4 py-2 text-sm font-bold text-[color:var(--text-secondary)] transition-colors hover:border-[color:var(--accent-gold-border)] hover:text-[color:var(--text-primary)]"
+            className="min-h-[32px] rounded-lg border border-[color:var(--border-default)] px-2.5 py-1 text-[11px] font-bold text-[color:var(--text-secondary)] transition-colors hover:border-[color:var(--accent-gold-border)] hover:text-[color:var(--text-primary)]"
           >
-            Open tasks
+            Tasks
           </button>
           <MyDayButton variant="briefing" />
         </div>
+      </div>
+
+      <div
+        className={[
+          'min-h-0 flex-1 overflow-y-auto px-3 py-2.5 sm:px-3.5 sm:py-3',
+          paired ? 'max-h-[220px] lg:max-h-[240px]' : 'max-h-[280px]',
+        ].join(' ')}
+      >
+        {loading ? (
+          <div className="space-y-1.5" aria-busy="true">
+            <div className="h-2.5 w-4/5 animate-pulse rounded bg-[color:var(--bg-badge)]" />
+            <div className="h-2.5 w-3/5 animate-pulse rounded bg-[color:var(--bg-badge)]" />
+          </div>
+        ) : null}
+
+        {!loading && snapQ.isError ? (
+          <p className="text-[11px] leading-snug text-[color:var(--text-secondary)]">
+            Could not load My Day. Tap ☀ in the top bar.
+          </p>
+        ) : null}
+
+        {!loading && snap && snap.summaryFragments.length > 0 ? (
+          <p className="text-[12px] font-semibold leading-snug text-[color:var(--text-primary)]">
+            {snap.summaryFragments.join(' · ')}
+          </p>
+        ) : null}
+
+        {showEmptyCta ? (
+          <p className="mt-1 text-[11px] leading-snug text-[color:var(--text-secondary)]">
+            Pin from Zenith <strong className="text-[color:var(--text-primary)]">Hit List</strong> with{' '}
+            <strong className="text-[color:var(--text-primary)]">+ My Day</strong>.
+          </p>
+        ) : null}
+
+        {!loading && snap && snap.isQuietPersonal && snap.summaryFragments.length === 0 && !showEmptyCta ? (
+          <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Caught up — add from Hit List.</p>
+        ) : null}
+
+        {!loading && snap && snap.teaserLines.length > 0 ? (
+          <ul className="mt-1.5 space-y-0.5">
+            {snap.teaserLines.slice(0, teaserLimit).map((line, i) => (
+              <li
+                key={`${i}-${line.slice(0, 20)}`}
+                className="border-l-2 border-[color:var(--accent-gold-muted)] pl-2 text-[11px] leading-snug text-[color:var(--text-primary)]"
+              >
+                {line}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        {!loading && showSuggestions ? (
+          <div className="mt-2 border-t border-[color:var(--border-default)] pt-2">
+            <p className="mb-0.5 text-[9px] font-bold uppercase tracking-widest text-[color:var(--text-muted)]">
+              Suggested from CRM
+            </p>
+            {suggestions.slice(0, suggestionLimit).map((s) => (
+              <SuggestedTaskRow key={s.id} suggestion={s} />
+            ))}
+            {suggestions.length > suggestionLimit ? (
+              <p className="mt-1 text-[10px] text-[color:var(--text-muted)]">
+                +{suggestions.length - suggestionLimit} more in My Day
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </section>
   )

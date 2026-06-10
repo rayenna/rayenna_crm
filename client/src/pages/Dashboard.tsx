@@ -9,7 +9,6 @@ import DashboardFilters from '../components/dashboard/DashboardFilters'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { LayoutDashboard } from 'lucide-react'
-import DashboardMyDayPlanCard from '../components/dashboard/DashboardMyDayPlanCard'
 
 const Dashboard = () => {
   const { user } = useAuth()
@@ -169,8 +168,6 @@ const Dashboard = () => {
         variant="zenith"
       />
       </div>
-
-      <DashboardMyDayPlanCard />
 
       {isFyError && (
         <div className="w-full min-w-0 max-w-xl rounded-2xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] p-4 text-sm break-words text-[color:var(--text-primary)] sm:p-5 sm:text-base md:p-6">

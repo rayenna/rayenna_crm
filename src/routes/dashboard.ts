@@ -16,6 +16,7 @@ import {
   formatCustomerTypeForExplorer,
   withChartPercentages,
 } from '../utils/customerTypeCharts';
+import { loadLifecycleBrandGaps } from '../utils/lifecycleBrandGaps';
 
 const router = express.Router();
 
@@ -309,6 +310,7 @@ async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
     where,
     select: {
       id: true,
+      slNo: true,
       projectCost: true,
       projectStatus: true,
       projectStage: true,
@@ -335,6 +337,7 @@ async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
   });
   return rows.map((p) => ({
     id: p.id,
+    project_serial_number: p.slNo,
     projectStatus: p.projectStatus,
     /** Raw enum for drill-down parity with `getRevenueWhere` / `getPipelineWhere`. */
     project_stage: p.projectStage ?? null,
@@ -2779,8 +2782,11 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
     };
 
     if (role === UserRole.SALES) {
-      const salesPipeline = await buildSalesPipeline('self');
-      return res.json({ focusKind: 'SALES', salesPipeline });
+      const [salesPipeline, lifecycleBrandGaps] = await Promise.all([
+        buildSalesPipeline('self'),
+        loadLifecycleBrandGaps(where as Prisma.ProjectWhereInput, { salespersonId: userId }),
+      ]);
+      return res.json({ focusKind: 'SALES', salesPipeline, lifecycleBrandGaps });
     }
 
     if (role === UserRole.FINANCE) {
@@ -2789,21 +2795,28 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
     }
 
     if (role === UserRole.OPERATIONS) {
-      const installPulse = await buildInstallPulse();
-      return res.json({ focusKind: 'OPERATIONS', installPulse });
+      const [installPulse, lifecycleBrandGaps] = await Promise.all([
+        buildInstallPulse(),
+        loadLifecycleBrandGaps(where as Prisma.ProjectWhereInput),
+      ]);
+      return res.json({ focusKind: 'OPERATIONS', installPulse, lifecycleBrandGaps });
     }
 
     if (role === UserRole.MANAGEMENT || role === UserRole.ADMIN) {
-      const [salesPipeline, financeRadar, installPulse] = await Promise.all([
+      const [salesPipeline, financeRadar, installPulse, lifecycleBrandGaps] = await Promise.all([
         buildSalesPipeline('all'),
         buildFinanceRadar(),
         buildInstallPulse(),
+        role === UserRole.ADMIN
+          ? loadLifecycleBrandGaps(where as Prisma.ProjectWhereInput)
+          : Promise.resolve([]),
       ]);
       return res.json({
         focusKind: 'MANAGEMENT',
         salesPipeline,
         financeRadar,
         installPulse,
+        ...(role === UserRole.ADMIN ? { lifecycleBrandGaps } : {}),
       });
     }
 

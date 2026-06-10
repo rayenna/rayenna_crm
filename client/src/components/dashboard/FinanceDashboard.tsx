@@ -14,6 +14,7 @@ import RevenueByLeadSourceChart from './RevenueByLeadSourceChart'
 import RevenueBySalesTeamChart from './RevenueBySalesTeamChart'
 import MetricCard from './MetricCard'
 import QuickAccessSection from './QuickAccessSection'
+import DashboardPlanAttentionRow from './DashboardPlanAttentionRow'
 import { ZENITH_DASHBOARD_ANALYTICS_CARD } from './zenithRechartsTooltipStyles'
 
 interface FinanceDashboardProps {
@@ -72,6 +73,7 @@ const FinanceDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: Fin
 
   return (
     <div className="space-y-6 min-w-0 max-w-full">
+      <DashboardPlanAttentionRow />
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
         <MetricCard
           title="Total Revenue"

@@ -1,6 +1,8 @@
 /** Rows from dashboard `zenithExplorerProjects` — same date scope as Zenith charts. */
 export type ZenithExplorerProject = {
   id: string
+  /** CRM project serial (Sl No / Prj #). */
+  project_serial_number?: number | null
   projectStatus: string
   /** Prisma `ProjectStage` or null — used to mirror `getRevenueWhere` (exclude SURVEY/PROPOSAL when set). */
   project_stage?: string | null

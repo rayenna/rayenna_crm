@@ -47,6 +47,15 @@ describe('parseProjectsListFilters', () => {
     const filters = parseProjectsListFilters({ peBucket: 'invalid' });
     expect(filters.peBucket).toBeNull();
   });
+
+  it('parses lifecycleSpecsIncomplete and defers complete filter', () => {
+    const filters = parseProjectsListFilters({
+      lifecycleSpecsIncomplete: 'true',
+      lifecycleSpecsComplete: 'true',
+    });
+    expect(filters.lifecycleSpecsIncompleteActive).toBe(true);
+    expect(filters.lifecycleSpecsCompleteActive).toBe(false);
+  });
 });
 
 describe('buildProjectsWhere', () => {
@@ -186,5 +195,16 @@ describe('buildProjectsWhere', () => {
     expect(built.ok).toBe(true);
     if (!built.ok) return;
     expect(built.where.salespersonId).toBe('sales-1');
+  });
+
+  it('filters late-stage projects with missing lifecycle brands', () => {
+    const filters = parseProjectsListFilters({ lifecycleSpecsIncomplete: 'true' });
+    const built = buildProjectsWhere(filters, adminUser);
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    const json = JSON.stringify(built.where);
+    expect(json).toContain('UNDER_INSTALLATION');
+    expect(json).toContain('panelBrand');
+    expect(json).toContain('inverterBrand');
   });
 });

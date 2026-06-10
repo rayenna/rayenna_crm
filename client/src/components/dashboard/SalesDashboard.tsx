@@ -18,7 +18,7 @@ import MetricCard from './MetricCard'
 import QuickAccessSection from './QuickAccessSection'
 import KeyMetricsTile from './KeyMetricsTile'
 import ProposalEngineStatusCard from './ProposalEngineStatusCard'
-import DashboardLifecycleBrandReminder from './DashboardLifecycleBrandReminder'
+import DashboardPlanAttentionRow from './DashboardPlanAttentionRow'
 import DashboardLifecycleBrandBarCharts from './DashboardLifecycleBrandBarCharts'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
 
@@ -93,8 +93,9 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths, initial
 
   return (
     <div className="space-y-6 min-w-0 max-w-full">
-      <DashboardLifecycleBrandReminder
-        projects={(data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]}
+      <DashboardPlanAttentionRow
+        showLifecycleReminder
+        explorerProjects={(data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]}
         tileParams={tileParams}
       />
       {/* Year on Year – full width row */}

@@ -115,6 +115,7 @@ export type BuildProjectFilterChipsInput = {
     panelBrand: string
     inverterBrand: string
     lifecycleSpecsComplete: boolean
+    lifecycleSpecsIncomplete: boolean
     search?: string
     sortBy?: string
     sortOrder?: string
@@ -376,6 +377,14 @@ export function buildProjectFilterChips(input: BuildProjectFilterChipsInput): Pr
       id: 'inverter-brand',
       label: `Inverter: ${filters.inverterBrand}`,
       onRemove: () => onPatchFilters({ inverterBrand: '' }),
+    })
+  }
+
+  if (filters.lifecycleSpecsIncomplete) {
+    chips.push({
+      id: 'lifecycle-incomplete',
+      label: 'Lifecycle: brands missing',
+      onRemove: () => onPatchFilters({ lifecycleSpecsIncomplete: false }),
     })
   }
 

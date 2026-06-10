@@ -5,11 +5,18 @@ import {
   hitListItemToMyDayTask,
   type HitListProjectRow,
 } from '../hooks/useHitList'
+import {
+  myDayTaskContentForLifecycleGap,
+  projectDisplayLabel,
+  lifecycleBrandMissingLabel,
+  lifecycleBrandMissingKind,
+} from '../utils/zenithBriefingMissingBrands'
 
 export type MyDaySuggestionSource =
   | 'hit_list'
   | 'payment_overdue'
   | 'install_delayed'
+  | 'lifecycle_brands'
 
 export interface MyDaySuggestion {
   /** Stable key for list rendering */
@@ -66,6 +73,14 @@ type ZenithFocusPayload = {
       overdue?: boolean
     }>
   }
+  lifecycleBrandGaps?: Array<{
+    projectId: string
+    projectSerialNumber?: number | null
+    customerName: string
+    stageLabel: string
+    missingPanel: boolean
+    missingInverter: boolean
+  }>
 }
 
 function suggestionsFromHitList(
@@ -110,6 +125,35 @@ function suggestionsFromFinanceOverdue(
         meta: `₹${amountLakh.toFixed(2)}L outstanding · ${row.daysOverdue}d`,
       }
     })
+}
+
+function suggestionsFromLifecycleBrandGaps(
+  gaps: ZenithFocusPayload['lifecycleBrandGaps'],
+): MyDaySuggestion[] {
+  if (!gaps?.length) return []
+  return gaps.slice(0, 4).map((gap) => {
+    const kind = lifecycleBrandMissingKind({
+      panel_brand: gap.missingPanel ? null : 'ok',
+      inverter_brand: gap.missingInverter ? null : 'ok',
+    })
+    const label = projectDisplayLabel({
+      customer_name: gap.customerName,
+      project_serial_number: gap.projectSerialNumber ?? null,
+    })
+    return {
+      id: `lifecycle:${gap.projectId}`,
+      source: 'lifecycle_brands' as const,
+      content: myDayTaskContentForLifecycleGap({
+        customer_name: gap.customerName,
+        panel_brand: gap.missingPanel ? null : 'ok',
+        inverter_brand: gap.missingInverter ? null : 'ok',
+      }),
+      projectId: gap.projectId,
+      projectLabel: label,
+      urgency: 'warning' as const,
+      meta: `${gap.stageLabel} · ${lifecycleBrandMissingLabel(kind)} missing`,
+    }
+  })
 }
 
 function suggestionsFromInstallDelayed(
@@ -178,6 +222,16 @@ export function buildMyDaySuggestions(args: {
       role === UserRole.MANAGEMENT)
   ) {
     raw.push(...suggestionsFromInstallDelayed(installRows))
+  }
+
+  const lifecycleGaps = focusData.lifecycleBrandGaps
+  if (
+    lifecycleGaps &&
+    (role === UserRole.SALES ||
+      role === UserRole.OPERATIONS ||
+      role === UserRole.ADMIN)
+  ) {
+    raw.push(...suggestionsFromLifecycleBrandGaps(lifecycleGaps))
   }
 
   const seen = new Set<string>()
