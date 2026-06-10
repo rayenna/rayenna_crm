@@ -22,10 +22,12 @@ Full **My Day** behaviour: [Zenith help → My Day](/help/zenith#my-day-personal
 Below the scrolling marquee, the classic Dashboard shows a **Today's plan** card (sun icon):
 
 - **Summary** — Short lines from your **My Day** snapshot (open tasks, reminders, whether you started today’s journal).
-- **Suggested from CRM** — Follow-ups from the same **Zenith focus** pipeline family as **Today’s Hit List** (one-tap **+ My Day** per suggestion).
-- **Open My Day** — Opens the ☀ drawer on the **Tasks** tab.
+- **Suggested from CRM** — Follow-ups from **Zenith focus** (Hit List–style pipeline, payment overdue, delayed installs, and **lifecycle brand gaps** where your role receives them). One-tap **+ My Day** per suggestion.
+- **Tasks** / **Open My Day** — Opens the ☀ drawer on the **Tasks** tab.
 
-Use this card when you want a morning read on the Dashboard without opening Zenith. Data is **server-backed** and matches what you see in the drawer on another device after login.
+**Layout with Things needing attention:** On **Sales**, **Operations**, and **Admin**, when late-stage projects are missing **panel and/or inverter brand**, **Today's plan** appears **beside** the **Things Needing Attention** card on **laptop / wide screens** (two equal columns). On **phone and narrow tablets** the cards **stack** — plan first, then attention. **Finance** always sees **Today's plan** only (full width). **Management** sees **Today's plan** only (no attention card).
+
+Data is **server-backed** and matches what you see in the drawer on another device after login.
 
 ---
 
@@ -41,9 +43,43 @@ If you select **multiple FYs**, Quarter and Month are disabled. Use **Clear Filt
 
 **Tip:** Open **Projects** from a Quick Access row or tile; the address bar keeps the same FY / quarter / month query parameters so the list matches what you saw on the Dashboard.
 
-### Things needing attention (Dashboard)
+---
 
-For **Sales**, **Operations**, and **Admin** only (**Management** does not see this strip), the classic **Dashboard** may show a compact **Things Needing Immediate Attention** notice **above** your main KPI / Quick Access block when at least one project in **Under Installation**, **Completed**, or **Completed – Subsidy Credited** is missing **panel brand and/or inverter brand** under **Project Lifecycle**. It respects your dashboard **FY / Quarter / Month** filters, shows a **count** and **customer names** (only the first several when the list is long), and offers **Open in Projects** — which opens **Projects** filtered to those three statuses plus the same dates. The grid can list every project in that status mix; use each row’s lifecycle fields to see what still needs filling in.
+## Things needing attention (Dashboard)
+
+**Who sees it:** **Sales**, **Operations**, and **Admin** on the classic Dashboard. **Management** and **Finance** do **not** see this card (**Management** may still see a matching **briefing line** in Zenith for lifecycle brands; **Finance** does not).
+
+**When it appears:** At least one project in **Under Installation**, **Completed**, or **Completed – Subsidy Credited** is missing **panel brand**, **inverter brand**, or **both** in **Project Lifecycle**, within your dashboard **FY / Quarter / Month** scope.
+
+**Where it sits:** Directly under the marquee, **next to Today's plan** on wide screens (see [Today's plan](#todays-plan-dashboard)). The card title is **Things Needing Attention**.
+
+### What each row shows
+
+- **#SL No. Customer name** — clickable link to **Project detail**.
+- **Missing badge** — **Panel brand**, **Inverter brand**, or **Panel & inverter** (gold badge).
+- **+ My Day** — Pins a follow-up to your personal task list for that project (prefilled text such as “Enter panel brand — …”). After pinning, the button shows **✓ My Day**; clicking again does **not** create a duplicate (one open task per project).
+- **Open →** — Same project in **Project detail**.
+
+Up to **three** rows show in the paired layout; if more projects qualify, a **+N more — view all** link appears at the bottom.
+
+### Header actions
+
+- **Projects →** (top right) — Opens **Projects** with:
+  - **Status** = Under Installation, Completed, and Completed – Subsidy Credited
+  - **Lifecycle specs incomplete** filter (only projects missing panel and/or inverter brand)
+  - The same **FY / Quarter / Month** as the Dashboard
+
+This replaces the older behaviour where **Projects** listed every late-stage job and you had to scan lifecycle fields manually.
+
+### My Day integration
+
+- Use **+ My Day** on a row to track the fix personally; open ☀ to see the task.
+- **Suggested from CRM** inside **Today's plan** may also list **lifecycle brand** follow-ups (same data family as Zenith focus).
+- Completing a project-pinned task can optionally log **`[My Day ✓] …`** to **Project remarks** (see [Zenith → My Day](/help/zenith#my-day-personal-productivity-drawer)).
+
+### Zenith parity
+
+**Sales**, **Admin**, and **Operations** may see a **briefing reminder line** at the top of the **Smart daily briefing** with the same cohort (count + names). **Management** does not see that lifecycle line in the briefing.
 
 ---
 

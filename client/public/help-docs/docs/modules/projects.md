@@ -821,7 +821,7 @@ Click **Show Filters** to expand the filter grid (FY, pipeline, segment, custome
 
 When any filter, search, FY/quarter/month, or non-default sort is applied, an **Active filters** strip appears under the search bar:
 
-- Each chip shows what is applied (e.g. `FY: 2024-25`, `Customer type: Commercial`, `Segment: Subsidy`).
+- Each chip shows what is applied (e.g. `FY: 2024-25`, `Customer type: Commercial`, `Segment: Subsidy`, `Lifecycle specs incomplete`).
 - Click **×** on a chip to remove **only that** slice and refresh the list.
 - **Clear All** still resets everything (search, dates, filters, sort).
 - **Admins** see **Excel/CSV export uses these filters** on the active-filter chips, and a note beside the export buttons that export matches filters, search, and sort on the list.
@@ -868,7 +868,7 @@ The result summary also shows how many filters are active (e.g. “3 active”).
 - **Availing Loan** — financing flag is Yes
 
 **Zenith / dashboard drill-down extras** (when opened from a chart or tile):
-- Revenue or pipeline slice, FY profit cohort, closed-date window, panel/inverter brand, lifecycle brands complete, PE bucket, financing bank
+- Revenue or pipeline slice, FY profit cohort, closed-date window, panel/inverter brand, lifecycle brands complete, **lifecycle specs incomplete** (Dashboard **Things Needing Attention → Projects →**), PE bucket, financing bank
 
 **Filter behaviour**:
 - Filters apply immediately; list and counts update

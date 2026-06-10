@@ -135,13 +135,16 @@ By the end of this session, participants should be able to:
 
 **Key points:**
 
-- **Classic Dashboard** — **Sales**, **Operations**, and **Admin** may see a small **Things Needing Immediate Attention** strip when projects in **Under Installation**, **Completed**, or **Completed – Subsidy Credited** are missing **panel and/or inverter brand**. It lists a **count** and **names**, and **Open in Projects** respects the same **FY / Quarter / Month** as the dashboard. **Management** does not see this strip.
+- **Classic Dashboard** — **Sales**, **Operations**, and **Admin** see **Things Needing Attention** **beside Today's plan** on laptop when projects in **Under Installation**, **Completed**, or **Completed – Subsidy Credited** miss **panel and/or inverter brand**.
+- **Rows:** **#SL** + customer, **missing** badge (panel / inverter / both), **+ My Day** (one open task per project — **✓ My Day** after pin), **Open →**.
+- **Projects →** uses **Lifecycle specs incomplete** + late statuses + dashboard **FY / Quarter / Month** — list shows **gaps only**.
+- **Management** does not see the dashboard card; **Finance** sees **Today's plan** only.
 - **Zenith briefing** — The **Smart daily briefing** can surface the **same reminder** for **Sales**, **Admin**, and **Operations** (not **Management** or **Finance**). **Don’t show again today** is **browser-only** for that day.
 - **Charts** — **Sales**, **Management**, and **Admin** see **Projects by panel brand** / **Projects by inverter brand** on the **classic Dashboard** and again under Zenith **Explore the landscape** (**Operations** see them on Dashboard + Zenith Ops). Tooltips include **System capacity (sum)** (kW) between order value and the cost estimate; bars only include projects that already have **both** brands filled. **Dashboard:** click a bar → **Projects**. **Zenith:** click a bar → **Quick Actions** → **Open in Projects →**.
 
-**Demo (2 min):** If your org has a matching gap, show the dashboard strip and the briefing line; hover a panel-brand bar and read the tooltip; optional **click** the same bar on Dashboard vs Zenith to show **direct Projects** vs **drawer**.
+**Demo (2 min):** Show **Today's plan** + **Things Needing Attention** side by side; pin **+ My Day** on one row (second click → **Already in My Day**); **Projects →** and confirm **Lifecycle specs incomplete** chip; optional briefing line in Zenith.
 
-**Check question:** *Which dashboard role sees the Management-style KPI layout but not the classic “Things needing attention” lifecycle strip?* → **Management** (**Admin** sees the strip; **Management** does not). *Does **Finance** get the lifecycle line in the Zenith briefing?* → **No**.
+**Check question:** *Which dashboard role sees the Management-style KPI layout but not the classic “Things needing attention” lifecycle card?* → **Management** (**Admin** sees the card; **Management** does not). *Does **Finance** get the lifecycle line in the Zenith briefing?* → **No**.
 
 ---
 

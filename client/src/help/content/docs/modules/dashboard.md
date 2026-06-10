@@ -36,9 +36,11 @@ The Dashboard is a comprehensive analytics and monitoring interface that display
 
 ## Things needing attention
 
-**Sales**, **Operations**, and **Admin** may see a compact notice **above** the main KPI / Quick Access area titled **Things Needing Immediate Attention** when at least one project in **Under Installation**, **Completed**, or **Completed – Subsidy Credited** is missing **panel brand and/or inverter brand** in **Project Lifecycle**. **Management** users (same executive-style layout as Admin for other tiles) **do not** see this strip.
+**Sales**, **Operations**, and **Admin** see a **Things Needing Attention** card on the classic Dashboard (beside **Today's plan** on laptop screens) when late-stage projects are missing **panel brand and/or inverter brand** in **Project Lifecycle**. **Management** users (same executive-style layout as Admin for other tiles) **do not** see this card.
 
-The notice respects your **Financial Year**, **Quarter**, and **Month** filters, shows how many projects qualify and **customer names** (truncated when there are many), and links to **Open in Projects** with those three statuses and the same dates. For the same data-quality signal inside **Zenith**, see **Help → Zenith → [Daily briefing (Zenith)](/help/zenith#daily-briefing-zenith)** and **[Panel and inverter brand charts](/help/zenith#panel-and-inverter-brand-charts-zenith)**.
+The card lists scannable **rows** (#SL + customer, missing-field badge, **+ My Day**, **Open →**), respects **Financial Year**, **Quarter**, and **Month**, and links **Projects →** with a **Lifecycle specs incomplete** filter so the grid shows **only** gaps—not every late-stage project. **+ My Day** pins one open follow-up per project (no duplicates).
+
+Full walkthrough: **Help → Dashboard → [Things needing attention](/help/dashboard#things-needing-attention-dashboard)**. For the same signal in **Zenith**, see **[Daily briefing (Zenith)](/help/zenith#daily-briefing-zenith)** and **[Panel and inverter brand charts](/help/zenith#panel-and-inverter-brand-charts-zenith)**.
 
 ## KPI Tiles
 
