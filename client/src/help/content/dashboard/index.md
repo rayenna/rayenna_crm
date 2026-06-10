@@ -22,12 +22,12 @@ Full **My Day** behaviour: [Zenith help → My Day](/help/zenith#my-day-personal
 Below the scrolling marquee, the classic Dashboard shows a **Today's plan** card (sun icon):
 
 - **Summary** — Short lines from your **My Day** snapshot (open tasks, reminders, whether you started today’s journal).
-- **Suggested from CRM** — Follow-ups from **Zenith focus** (Hit List–style pipeline, payment overdue, delayed installs, and **lifecycle brand gaps** where your role receives them). One-tap **+ My Day** per suggestion.
-- **Tasks** / **Open My Day** — Opens the ☀ drawer on the **Tasks** tab.
+- **Suggested from CRM** — Follow-ups from **Zenith focus** (Hit List–style pipeline, payment overdue, delayed installs, and **lifecycle brand gaps** where your role receives them). One-tap **+ My Day** per suggestion. After pinning, the row **stays visible** and the button shows **✓ My Day** (teal); clicking again does **not** create a duplicate (one open task per project). **Scroll** inside the card to see every suggestion.
+- **Tasks** / **Open My Day** — Opens the ☀ drawer on the **Tasks** tab (your pinned and manual tasks only — not a duplicate CRM suggestion list).
 
 **Layout with Things needing attention:** On **Sales**, **Operations**, and **Admin**, when late-stage projects are missing **panel and/or inverter brand**, **Today's plan** appears **beside** the **Things Needing Attention** card on **laptop / wide screens** (two equal columns). On **phone and narrow tablets** the cards **stack** — plan first, then attention. **Finance** always sees **Today's plan** only (full width). **Management** sees **Today's plan** only (no attention card).
 
-Data is **server-backed** and matches what you see in the drawer on another device after login.
+Pinned tasks and journal/reminder summaries are **server-backed** and sync across devices after login. CRM suggestions appear on this card (and on Zenith **Hit List** / **Things needing attention**) — **not** repeated inside the My Day drawer.
 
 ---
 
@@ -73,8 +73,8 @@ This replaces the older behaviour where **Projects** listed every late-stage job
 
 ### My Day integration
 
-- Use **+ My Day** on a row to track the fix personally; open ☀ to see the task.
-- **Suggested from CRM** inside **Today's plan** may also list **lifecycle brand** follow-ups (same data family as Zenith focus).
+- Use **+ My Day** on a suggestion row to track the follow-up personally; open ☀ to complete it under **Today**.
+- **Things Needing Attention** uses the same **+ My Day** / **✓ My Day** pattern (one open task per project).
 - Completing a project-pinned task can optionally log **`[My Day ✓] …`** to **Project remarks** (see [Zenith → My Day](/help/zenith#my-day-personal-productivity-drawer)).
 
 ### Zenith parity
@@ -238,7 +238,7 @@ Use **Ctrl+Shift+**_letter_ on Windows/Linux or **⌘⇧**_letter_ on Mac. They 
 | ⌘⇧P / Ctrl+Shift+P | **Projects** (same roles as Customers) |
 | ⌘⇧K / Ctrl+Shift+K | **Support Tickets** (Admin, Sales, Operations, Management — not Finance) |
 | ⌘⇧Z / Ctrl+Shift+Z | **Zenith** (roles that see Zenith under the Dashboard menu) |
-| ⌘⇧M / Ctrl+Shift+M | **My Day** — Tasks (incl. **Suggested from CRM**), Journal & Reminders (all roles). **+ My Day** on Zenith Hit List / suggestions. Project-pinned tasks: optional **Log to project remarks when done**. **Edit** / **Delete** via **⋯**. Journal: **Load more**. Reminders: **overdue** = any past due date. |
+| ⌘⇧M / Ctrl+Shift+M | **My Day** — personal **Tasks**, **Journal** & **Reminders** (all roles). Pin from **Today's plan**, **Things needing attention**, or Zenith **Hit List** with **+ My Day**. Project-pinned tasks: optional **Log to project remarks when done**. **Edit** / **Delete** via **⋯**. Journal: **Load more**. Reminders: **overdue** = any past due date. |
 | ⌘⇧N / Ctrl+Shift+N | **New customer** — opens the create form (Sales, Management, Admin) |
 | ⌘⇧E / Ctrl+Shift+E | **New project** — opens the new-project screen (Admin, Sales). Route: projects/new |
 

@@ -163,7 +163,7 @@ For **Sales**, expand **Your pipeline today** and **Proposal Engine** under **Yo
 In Zenith, some tables can be refined **without changing your dashboard filters**:
 
 - **Sort**: click a column heading (e.g. Deal value, Health, Last activity, Alert, Confirmation) **where the table offers it** — **Your pipeline today** under Your Focus, and **Today’s Hit List** beside the KPI band (same click-to-toggle pattern, with **↑ / ↓** indicators). **Sl No.** / **Prj #** is shown for context on pipeline and Hit List but is **not** a sort control on those tables; **Payment radar** tables sort other columns as labelled.
-- **Filter**: use **Filter customer…**, **All stages**, and **All salespeople** (where shown) — **Your pipeline today** and **Today’s Hit List** both use this pattern. On the Hit List, filters apply only to the **up to seven** urgent rows already chosen for the day; if some rows are hidden, a small **“X of N shown”** hint may appear.
+- **Filter**: use **Filter customer…**, **All stages**, and **All salespeople** (where shown) — **Your pipeline today** and **Today’s Hit List** both use this pattern on **one row**. On the Hit List, filters apply only to the **up to seven** urgent rows already chosen for the day; if some rows are hidden, a compact **“X of N”** hint may appear.
 
 **Today’s Hit List vs Your pipeline today** — The Hit List is still a **prioritised slice** (server-ranked, capped at **seven** deals) from the same zenith-focus pipeline data. **Your pipeline today** is the **full** pipeline table for your filters (with its own sort/filter). Use **Your Focus → Your pipeline today** when you need the complete list beyond the Hit List cap.
 
@@ -194,11 +194,11 @@ For the **full explanation** of weights, sort behaviour, and sales tips, open th
 
 **Today’s Hit List** — On wide screens, Sales / Management / Admin also see **Today’s Hit List** beside the KPI strip. It is built from the **same zenith-focus pipeline rows** as **Your pipeline today**, but **scored and capped** (up to **seven** deals) for what needs attention **today** — for example **expected commissioning** overdue or within a week (**Overdue** / **Closing soon**), **stalled** proposals, **nudge needed** on site survey, or **going cold** leads (exact rules are role- and data-dependent).
 
-**Layout (desktop / tablet)** — A **filter bar** above the table (**Filter customer…**, **All stages**, **All salespeople** — same controls as **Company pipeline today**), then a **scrollable table** with **sortable** column headers: **Sl No.** / **Prj #**, **Customer**, **Stage**, **Sales person**, **Deal value**, **Last activity** (*N*d ago, coloured pill), **Alert** (the hit-list reason), **Confirmation** (order **confirmation date**, or **—** if not set), **Deal Health** (badge + hover breakdown), and **Open →**. When there are deals on the list, a short note under the title may remind you to **scroll horizontally** and use **Open →** — shown on **tablet / laptop widths** (not on small phones, where stacked cards already surface **Open →** clearly).
+**Layout (desktop / tablet)** — A **compact single-line filter bar** (**Filter customer…**, **All stages**, **All salespeople** on one row), then a **scrollable table** with **sortable** column headers: **Sl No.** / **Prj #** (left-aligned), **Customer**, **Stage**, **Sales person**, **Deal value**, **Last activity** (*N*d ago, coloured pill), **Alert** (the hit-list reason), **Confirmation** (order **confirmation date**, or **—** if not set), **Deal Health** (badge + hover breakdown), and **Actions** (**+ My Day** and **Open →** side by side). When there are deals on the list, a short note under the title may remind you to **scroll horizontally** and use **Open →** — shown on **tablet / laptop widths** (not on small phones, where stacked cards already surface **Open →** clearly).
 
-**Narrow screens** — The same **filters** wrap in the Hit List header area; **stacked cards** show the same deal facts (no wide multi-column row).
+**Narrow screens** — The same **filters** stay on one row where possible (horizontal scroll if needed); **stacked cards** show the same deal facts (no wide multi-column row).
 
-**+ My Day** — On each Hit List row, adds a **personal follow-up task** to the **My Day** drawer (see [My Day](#my-day-personal-productivity-drawer)). The task can carry the **project pin** so you see **#SL No. Customer** context on the task. This does **not** change the CRM project record until you complete the task (optional remark logging — below).
+**+ My Day** — In **Actions**, beside **Open →**. Pins one open follow-up per project; after pinning the button shows **✓ My Day** and cannot duplicate. The task appears under **Today** in the ☀ drawer — CRM rows are **not** listed again inside the drawer.
 
 **Open →** — Opens **Quick Actions** for that project (stage, log activity, dates, etc., per your permissions — same entry point as **Open →** on **Your pipeline today**). Management remains **view-only** where that rule already applies.
 
@@ -470,7 +470,7 @@ The drawer has three tabs:
 
 | Tab | What it does |
 | :-- | :-- |
-| **Tasks** | Personal to-do items. At the top, **Suggested from CRM** lists follow-ups derived from your **Zenith focus** pipeline (same family of data as **Today’s Hit List**). Tap **+ My Day** on a suggestion to add it. Below that: **Carry-overs** (older open items), then **Today**. Add tasks at the bottom with an optional **project pin**. Tap a checkbox to complete; use the **⋯** menu to **Edit** or **Delete**. |
+| **Tasks** | **Your** personal to-do list: **Carry-overs** (older open items), **Today**, and **Done**. Add tasks at the bottom with an optional **project pin**. Pin CRM follow-ups from **Today's plan**, **Things needing attention**, or **Hit List** with **+ My Day** — they appear here as tasks (not as a separate **Suggested from CRM** feed). Tap a checkbox to complete; use the **⋯** menu to **Edit** or **Delete**. |
 | **Journal** | A private daily note. One entry per day — type freely and it auto-saves after a short pause (look for the **Saved** / **Saving…** / **Retry** status). **Recent entries** load below the editor (newest first); use **Load more** when you have older notes. Each past entry can expand from a short preview. |
 | **Reminders** | Tasks with a specific due date and the reminder flag set. **Overdue** reminders (any past due date) always appear under **Overdue**, not only from today onward. Grouped by urgency: **Overdue** (red), **Today** (amber), **This Week** (teal), and **Later** (grey). Add a new reminder with the date picker at the bottom. |
 
@@ -478,8 +478,9 @@ The drawer has three tabs:
 
 | Where | What |
 | :-- | :-- |
-| **Today’s Hit List** | **+ My Day** on each row — pins a follow-up, usually with that **project** attached. |
-| **Classic Dashboard** | **Today’s plan** card — summary + CRM suggestions + link to the drawer ([Dashboard → Today’s plan](/help/dashboard#todays-plan-dashboard)). |
+| **Today’s Hit List** | **+ My Day** in **Actions** beside **Open →** — pins a follow-up, usually with that **project** attached. |
+| **Today’s plan** (classic Dashboard) | **Suggested from CRM** rows with **+ My Day**; scroll for the full list ([Dashboard → Today’s plan](/help/dashboard#todays-plan-dashboard)). |
+| **Things needing attention** (Dashboard) | **+ My Day** on lifecycle brand gaps ([Dashboard → Things needing attention](/help/dashboard#things-needing-attention-dashboard)). |
 | **Daily briefing** | **Your My Day** summary when the briefing opens ([Daily briefing](#daily-briefing-zenith)). |
 | **Project detail** | **Your open My Day tasks** strip — complete or add follow-ups for that project ([Projects → Project detail](/help/modules#project-detail-page)). |
 
