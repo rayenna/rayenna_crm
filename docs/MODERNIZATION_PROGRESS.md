@@ -1,8 +1,8 @@
 # Rayenna CRM — modernization progress
 
 **Purpose:** Resume structural and product-clarity work without re-discovering context.  
-**Last updated:** 2026-05-22  
-**Status:** **Batch 1** shipped (`09e4838` on `main`) — Customer Master, Projects, Dashboard/Zenith terminology, Support Tickets, help, and list safety net. **Zenith stabilization & performance** shipped May 2026 (`55e4f22` → `400cd9a`). **Batch 2** not started (see [Not started](#not-started-planned)).
+**Last updated:** 2026-06-10  
+**Status:** **Batch 1** shipped (`09e4838`). **Zenith stabilization & performance** shipped May 2026 (`55e4f22` → `400cd9a`). **My Day Phases 1–3**, **dashboard attention strip**, and **lifecycle brand gaps** shipped Jun 2026 (`7c80549` → `2024964`). **Batch 2** (large page splits) not started — see [Not started](#not-started-planned).
 
 ---
 
@@ -102,7 +102,8 @@ User-facing **Help** in the CRM app reads from `public/help-docs/`.
 | Item | Notes |
 |------|--------|
 | **Vitest** at repo root | `npm test`, `vitest.config.ts` |
-| Unit tests (17) | `src/utils/projectsListWhere.test.ts` (14), `projectsListExport.test.ts` (3) |
+| Unit tests (29) | `src/utils/projectsListWhere.test.ts` (17), `projectsListExport.test.ts` (3), roof scale parity (9) |
+| **Vitest** in `client/` | `cd client && npx vitest run` — e.g. `myDayTaskDedup.test.ts` (4) |
 | `tsconfig.json` | Excludes `*.test.ts` from server build |
 | ESLint fix | `MyDayButton.tsx` — removed blocking `no-extra-semi` errors |
 
@@ -158,6 +159,90 @@ See [CRM_SMOKE_CHECKLIST.md](./CRM_SMOKE_CHECKLIST.md) §6 (Zenith): hard refres
 
 ---
 
+## Completed — My Day & dashboard attention (Jun 2026)
+
+Personal **My Day** (Tasks, Journal, Reminders) is now wired into Zenith and the classic Dashboard with CRM-backed suggestions. **Things Needing Attention** on the dashboard surfaces lifecycle brand gaps with precise Projects deep links and **+ My Day** pins.
+
+### Commits (newest first)
+
+| Commit | Message | Deploy |
+|--------|---------|--------|
+| `2024964` | `fix(crm): My Day dedup — one open pin per project, sync without relogin` | **API + frontend** |
+| `241cf73` | `feat(crm): dashboard attention strip — lifecycle gaps, My Day, side-by-side layout` | **API + frontend** |
+| `f201696` | `docs(crm): update My Day help for Phases 1–3` | **Frontend only** (help) |
+| `9357e10` | `feat(crm): My Day Phase 3 — project tasks strip and remark on complete` | **API + frontend** |
+| `dd09342` | `feat(crm): My Day Phase 2 — coach mark, journal nudge, usage tracking` | **Frontend only** |
+| `7c80549` | `feat(crm): My Day Phase 1 — CRM-backed suggestions and Hit List pin` | **Frontend only** (uses existing `/api/dashboard/zenith-focus`) |
+
+### My Day — Phase 1 (suggestions & Hit List)
+
+| Item | Path / notes |
+|------|----------------|
+| Suggestion engine (Hit List, payment overdue, install delayed) | `client/src/lib/myDaySuggestions.ts` |
+| React Query hook | `client/src/hooks/useMyDaySuggestionsQuery.ts` |
+| **+ My Day** on Zenith Hit List (desktop + mobile) | `client/src/components/zenith/HitList.tsx`, `AddToMyDayButton.tsx` |
+| **Suggested from CRM** in drawer Tasks tab | `client/src/components/my-day/tabs/TasksTab.tsx`, `SuggestedTaskRow.tsx` |
+| **Today's plan** card on classic Dashboard | `client/src/components/dashboard/DashboardMyDayPlanCard.tsx` |
+| Briefing reorder — **Your My Day** above pipeline CRM lines | `client/src/components/zenith/DailyBriefing.tsx` |
+| Shared Hit List builders | `client/src/hooks/useHitList.ts` (`buildHitListFromProjects`, `hitListItemToMyDayTask`) |
+
+### My Day — Phase 2 (habits & discoverability)
+
+| Item | Path / notes |
+|------|----------------|
+| One-time nav coach mark | `client/src/components/my-day/MyDayCoachMark.tsx`, `MyDayNavEntry.tsx` |
+| End-of-day journal nudge | `client/src/components/my-day/MyDayJournalNudge.tsx` |
+| Usage tracking (localStorage) | `client/src/lib/myDayHabits.ts` |
+
+### My Day — Phase 3 (project detail)
+
+| Item | Path / notes |
+|------|----------------|
+| Open tasks strip on Project detail | `client/src/components/projects/ProjectMyDayTasks.tsx` |
+| Optional **`[My Day ✓]`** remark on complete | `client/src/lib/myDayCompleteTask.ts`, `myDayProjectRemark.ts` |
+| API: tasks for project | `GET /api/my-day/tasks/for-project/:projectId` — `src/routes/myDay.ts` |
+
+### Dashboard attention strip + lifecycle brand gaps
+
+| Item | Path / notes |
+|------|----------------|
+| **Things Needing Attention** — scannable rows, **+ My Day**, **Open →**, **Projects →** | `DashboardLifecycleBrandReminder.tsx`, `LifecycleBrandAttentionRow.tsx` |
+| **Today's plan** + attention **side-by-side on laptop** (`lg:grid-cols-2`) | `DashboardPlanAttentionRow.tsx` |
+| Wired on Sales / Ops / **Admin** (Management layout without strip unless `showLifecycleBrandReminder`) | `SalesDashboard.tsx`, `OperationsDashboard.tsx`, `ManagementDashboard.tsx`, `Dashboard.tsx` |
+| Client gap detection (explorer projects) | `client/src/utils/zenithBriefingMissingBrands.ts` |
+| Server gap loader (dashboard date scope) | `src/utils/lifecycleBrandGaps.ts` |
+| **`lifecycleBrandGaps`** on `/api/dashboard/zenith-focus` (Sales, Ops, Admin) | `src/routes/dashboard.ts` |
+| My Day suggestions source **`lifecycle_brands`** | `client/src/lib/myDaySuggestions.ts` |
+| Projects filter **`lifecycleSpecsIncomplete=true`** (list + export parity) | `src/utils/projectsListWhere.ts`, `client/src/pages/Projects.tsx`, `projectFilterChips.ts`, `dashboardTileLinks.ts` |
+| Unit tests for incomplete filter | `src/utils/projectsListWhere.test.ts` |
+
+**Roles:** Sales, Operations, and **Admin** see the attention strip on the classic Dashboard. **Management** does not (same as prior briefing rule). **Finance** sees Today's plan only (no lifecycle strip).
+
+### My Day — dedup & sync (Jun 2026)
+
+| Item | Path / notes |
+|------|----------------|
+| Server: one open task per **projectId**; one open reminder per pinned project | `src/routes/myDay.ts` (`findOpenDuplicateTask`, `alreadyExists: true`) |
+| Shared tasks cache for badge + **+ My Day** disabled state | `MY_DAY_TASKS_QUERY_KEY` — `client/src/lib/my-day-api.ts` |
+| Client dedup helpers | `client/src/lib/myDayTaskDedup.ts` (+ 4 Vitest tests in `client/`) |
+| Drawer reloads tasks on every open | `client/src/components/my-day/MyDayDrawer.tsx` |
+| Nav badge sync without relogin | `client/src/contexts/MyDayContext.tsx` |
+
+### Help (My Day Phases 1–3)
+
+Updated in `f201696`: `client/src/help/content/` → mirror to `client/public/help-docs/` (Zenith, Dashboard, Getting Started, Modules, Training, Sales role, navigation).
+
+**Deferred:** Help sync for the **new attention strip row UI** (side-by-side layout, compact rows) — optional follow-up.
+
+### Verify after deploy
+
+1. **Admin / Sales / Ops** Dashboard at laptop width → **Today's plan** and **Things Needing Attention** side by side when gaps exist.  
+2. **+ My Day** on an attention row → toast, button **✓ My Day**, task in drawer; second click → **Already in My Day** (no duplicate row).  
+3. **Projects →** from strip → URL includes `lifecycleSpecsIncomplete=true`; list matches gap cohort.  
+4. My Day drawer **Suggested from CRM** includes lifecycle brand follow-ups (Admin/Sales/Ops via `zenith-focus`).
+
+---
+
 ## Key file map (quick navigation)
 
 ```
@@ -169,9 +254,11 @@ prisma/
 src/
   routes/customers.ts
   routes/projects.ts          # list/export uses projectsListWhere
-  routes/dashboard.ts
+  routes/dashboard.ts         # zenith-focus lifecycleBrandGaps, explorer projects
+  routes/myDay.ts               # tasks, journal, reminders, for-project
   routes/dashboard-enhanced.ts
-  utils/projectsListWhere.ts
+  utils/projectsListWhere.ts    # lifecycleSpecsIncomplete filter
+  utils/lifecycleBrandGaps.ts
   utils/projectsListExport.ts
   utils/projectSegment.ts
   utils/customerTypeCharts.ts
@@ -180,8 +267,17 @@ src/
 client/src/
   pages/CustomerMaster.tsx | CustomerDetail.tsx
   pages/Projects.tsx | ProjectDetail.tsx | ProjectForm.tsx
+  pages/Dashboard.tsx
   pages/SupportTicketsDashboard.tsx
+  components/dashboard/DashboardPlanAttentionRow.tsx
+  components/dashboard/DashboardLifecycleBrandReminder.tsx
+  components/dashboard/LifecycleBrandAttentionRow.tsx
+  components/dashboard/DashboardMyDayPlanCard.tsx
+  components/my-day/            # drawer, tabs, AddToMyDayButton
+  components/projects/ProjectMyDayTasks.tsx
   components/supportTickets/TicketDetailDrawer.tsx
+  components/zenith/HitList.tsx | DailyBriefing.tsx
+  lib/myDaySuggestions.ts | myDayTaskDedup.ts | my-day-api.ts
   components/zenith/Zenith*Body.tsx | SegmentDonut.tsx | ForecastKPI.tsx
   components/zenith/SolarNewsTicker.tsx | ZenithChartTouchReset.tsx
   constants/zenithQueryStale.ts | zenithChartGroups.ts
@@ -201,6 +297,8 @@ client/src/
 | **E2E / Playwright** | Critical flows: login, projects filter export, ticket drawer | Optional; unit tests cover `where` builder only today |
 | **Rename legacy filenames** | e.g. `PipelineByCustomerSegmentPieChart.tsx` → `*CustomerType*` | Cosmetic; avoid churn unless touching files anyway |
 | **Management role doc** | README still says Management is read-only | Update root `README.md` when doing a docs pass |
+| **Help sync — attention strip UI** | Compact rows, side-by-side plan/attention | Optional; My Day help done in `f201696` |
+| **My Day Phase 4** | Quick drawers, reminders remark | Deferred until field feedback |
 | **Cloudinary for PE images** | Not CRM | See `docs/pe-image-storage-migration-plan.md` |
 | **Zenith Tier C** | Slimmer explorer payload / API | After A+B; see [Completed — Zenith stability & performance](#completed--zenith-stability--performance-may-2026) |
 
@@ -256,7 +354,7 @@ git diff --cached --name-only
 
 Commit prefix: `feat(crm):`, `fix(crm):`, `docs(crm):`, etc.
 
-When resuming in Cursor: *“Continue CRM modernization from `docs/MODERNIZATION_PROGRESS.md`.”*
+When resuming in Cursor: *“My Day Phases 1–3 and dashboard attention strip are shipped — see [Completed — My Day & dashboard attention](#completed--my-day--dashboard-attention-jun-2026); next CRM work is Batch 2 splits or Zenith Tier C.”*
 
 ---
 
@@ -271,7 +369,7 @@ When resuming in Cursor: *“Continue CRM modernization from `docs/MODERNIZATION
 
 ---
 
-## User-facing documentation (May 2026)
+## User-facing documentation (May–Jun 2026)
 
 In-app **Help** documents:
 
@@ -279,5 +377,6 @@ In-app **Help** documents:
 - Projects list filters, export parity, project detail/form fields
 - Zenith **Customer Type** donuts and forecast **Customer type** tab
 - Support Tickets drawer, Management permissions, mobile project ticket list
+- **My Day** — Phases 1–3: Hit List **+ My Day**, Today's plan, Suggested from CRM, project detail strip, optional remark on complete (`f201696`)
 
 Edit `client/src/help/content/`, then copy to `client/public/help-docs/` before release.
