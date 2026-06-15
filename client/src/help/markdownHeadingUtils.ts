@@ -16,7 +16,9 @@ export function textFromChildren(node: ReactNode): string {
 /** URL fragment for in-page anchors (stable, ASCII, hyphenated). */
 export function slugifyHeadingLabel(text: string): string {
   const trimmed = text.trim()
-  const leadingStripped = trimmed.replace(/^[^\p{L}\p{N}]+/u, '').trim() || trimmed
+  // Apostrophes (ASCII and curly) are word-internal — avoid `today-s-plan` from "Today's plan".
+  const apostropheNormalized = trimmed.replace(/['\u2019]/g, '')
+  const leadingStripped = apostropheNormalized.replace(/^[^\p{L}\p{N}]+/u, '').trim() || apostropheNormalized
   const slug = leadingStripped
     .toLowerCase()
     .normalize('NFKD')

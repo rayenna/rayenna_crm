@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import ThemeToggle from './ThemeToggle'
 import TipOfTheDay from './TipOfTheDay'
-import { getHelpSectionForRoute, getHelpHashForRoute, helpSections } from '../help/sections'
+import { getHelpPathForRoute } from '../help/sections'
 import { setSessionStorageItem } from '../lib/safeLocalStorage'
 import '../styles/zenith.css'
 import VictoryToast from './zenith/VictoryToast'
@@ -112,17 +112,7 @@ const Layout = () => {
 
   /** Context-sensitive Help path: open the section that matches the current page */
   const getHelpPath = useCallback(() => {
-    const sectionId = getHelpSectionForRoute(location.pathname)
-    const section = helpSections.find((s) => s.id === sectionId)
-    if (!section) return '/help'
-    if (location.pathname.startsWith('/zenith')) {
-      return `/help/zenith#zenith-command-center`
-    }
-    const moduleHash = sectionId === 'modules' ? getHelpHashForRoute(location.pathname) : null
-    if (moduleHash) {
-      return `/help/${section.routeKey}#${moduleHash}`
-    }
-    return `/help/${section.routeKey}`
+    return getHelpPathForRoute(location.pathname)
   }, [location.pathname])
 
   const openHelp = () => {

@@ -1,57 +1,43 @@
 # Security & Privacy
 
-## Overview
+Rayenna CRM protects customer and business data with **HTTPS**, **role-based access**, and an **audit log** for Administrators. This section covers what **every user** should know and what **Admins** manage on **Users** and **Audit & Security**.
 
-Security and privacy are top priorities in the Rayenna CRM system.
+> **Tip:** Press **?** on **Users**, **Audit & Security**, or **Change Password** to open Help scrolled to that topic.
 
-## Authentication
+## Who should read what
 
-### Login
-- Email and password authentication
-- Secure session management
-- Automatic logout on inactivity
+| Audience | Start here |
+| :-- | :-- |
+| **Everyone** | [Privacy and account](#privacy-and-account) · [Change password](#change-password) |
+| **Administrators** | [Users](#users) · [Audit and Security](#audit-and-security) · [Administrator role guide](/help/roles#administrator-role-guide) |
 
-### Password Management
-- Change password functionality
-- Password strength requirements
-- Secure password storage
+## Choose a topic
 
-## Authorization
+| Topic | Guide |
+| :-- | :-- |
+| **Login, sessions, passwords, data handling** | [Privacy and account](#privacy-and-account) |
+| **Update your own password** | [Change password](#change-password) |
+| **Audit log, exports, failed logins** *(Admin)* | [Audit and Security](#audit-and-security) |
+| **Create users, reset links, delete accounts** *(Admin)* | [Users](#users) |
 
-### Role-Based Access Control
-- Users can only access features based on their role
-- Data filtering based on user permissions
-- Action restrictions based on role
+## How access control works
 
-## Data Security
+- Each account has one **role**: Sales, Operations, Finance, Management, or Admin.
+- Menus, project visibility, and edit rights follow that role — see the authoritative [Permission matrix](/help/roles#permission-matrix).
+- **Admin** is the only role with **Users** and **Audit & Security** in the menu.
 
-### Data Protection
-- Encrypted data transmission (HTTPS)
-- Secure database storage
-- Regular backups
+## Audit logging (summary)
 
-### Access Control
-- User-specific data access
-- Project-level permissions
-- Document access control
+Administrators can review **logins**, **password resets**, **user changes**, **project status changes**, **support ticket** events, and **proposal generation** in **Audit & Security**, and export CSV, PDF, or **signed PDF** for records. Details: [Audit and Security](#audit-and-security).
 
-## Privacy
+## Related help
 
-### Data Privacy
-- Customer data protection
-- Confidential information handling
-- Compliance with privacy regulations
+- [Roles](/help/roles) — permission matrix and per-role guides
+- [FAQ → Users and Security](/help/faq) — common questions
+- [Getting Started → First login](/help/getting-started#first-login-guide) — initial access
 
-### Best Practices
-- Use strong passwords
-- Log out when finished
-- Don't share credentials
-- Report security issues immediately
+## Getting help
 
-## Compliance
-
-The system follows industry best practices for:
-- Data security
-- Privacy protection
-- Access control
-- Audit logging
+- Press **?** when you are not typing in a field, or use **Help (?)** in the user menu.
+- For forgotten passwords (non-Admin): ask an Administrator for a **Reset password** link from [Users](#users).
+- For access policy questions, contact your system administrator.

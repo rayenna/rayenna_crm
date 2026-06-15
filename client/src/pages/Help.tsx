@@ -13,6 +13,7 @@ import {
 import { getHelpContent } from '../help/contentLoader'
 import { searchHelpContent } from '../help/searchHelp'
 import HelpSidebar from '../components/help/HelpSidebar'
+import HelpExportButton from '../components/help/HelpExportButton'
 import DealHealthScoreHelpIllustration from '../components/help/DealHealthScoreHelpIllustration'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { BookOpen } from 'lucide-react'
@@ -262,6 +263,12 @@ const Help = () => {
                     )}
                   </div>
                 )}
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--border-default)] pb-4">
+                  <p className="text-sm text-[color:var(--text-muted)]">
+                    Viewing <strong className="text-[color:var(--text-primary)]">{selectedSection.title}</strong>
+                  </p>
+                  <HelpExportButton section={selectedSection} disabled={!markdownContent.trim()} />
+                </div>
                 {markdownContent ? (
                   <ErrorBoundary
                     fallback={

@@ -11,25 +11,113 @@ export interface HelpSection {
 export type HelpSubNavItem = { label: string; hash: string }
 
 export const helpSectionSubNav: Partial<Record<string, HelpSubNavItem[]>> = {
+  'getting-started': [
+    { label: 'Welcome', hash: 'welcome' },
+    { label: 'First login', hash: 'first-login-guide' },
+    { label: 'Navigation', hash: 'navigation-guide' },
+    { label: 'Common actions', hash: 'common-actions-guide' },
+    { label: 'Shortcuts', hash: 'keyboard-shortcuts' },
+  ],
+  roles: [
+    { label: 'Overview', hash: 'user-roles-permissions' },
+    { label: 'Permission matrix', hash: 'permission-matrix' },
+    { label: 'Sales', hash: 'sales-role-guide' },
+    { label: 'Operations', hash: 'operations-role-guide' },
+    { label: 'Finance', hash: 'finance-role-guide' },
+    { label: 'Management', hash: 'management-role-guide' },
+    { label: 'Administrator', hash: 'administrator-role-guide' },
+  ],
   modules: [
+    { label: 'Overview', hash: 'modules' },
     { label: 'Customer Master', hash: 'customer-master-module' },
     { label: 'Projects', hash: 'projects-module' },
+    { label: 'Deal Health', hash: 'deal-health-score' },
+    { label: 'Key Artifacts', hash: 'key-artifacts-module' },
     { label: 'Support Tickets', hash: 'support-tickets-module' },
     { label: 'Tally Export', hash: 'tally-export-module' },
+  ],
+  dashboard: [
+    { label: 'Overview', hash: 'dashboard' },
+    { label: 'Filters & dates', hash: 'dashboard-filters' },
+    { label: "Today's plan", hash: 'todays-plan-dashboard' },
+    { label: 'Things needing attention', hash: 'things-needing-attention-dashboard' },
+    { label: 'Year-on-Year KPIs', hash: 'year-on-year-kpis' },
+    { label: 'Quick Access', hash: 'quick-access-tiles' },
+    { label: 'Layout by role', hash: 'layout-by-role' },
+    { label: 'Charts', hash: 'charts-and-visualizations' },
+  ],
+  zenith: [
+    { label: 'Overview', hash: 'zenith-command-center' },
+    { label: 'Command bar', hash: 'command-bar-and-filters' },
+    { label: 'Ribbons & KPIs', hash: 'ribbons-and-kpis' },
+    { label: 'Pipeline & Hit List', hash: 'pipeline-and-hit-list' },
+    { label: 'Your Focus', hash: 'your-focus' },
+    { label: 'Board & funnel', hash: 'board-and-funnel' },
+    { label: 'Explore charts', hash: 'explore-charts' },
+    { label: 'Quick Actions', hash: 'quick-actions-drawer' },
+    { label: 'Mobile & offline', hash: 'mobile-pwa-and-limits' },
+    { label: 'My Day', hash: 'my-day-personal-productivity-drawer' },
+    { label: 'Help & tips', hash: 'help-and-tips' },
+    { label: 'By role', hash: 'zenith-by-role' },
+    { label: 'Playbook: Sales', hash: 'sales-playbook-morning-in-zenith' },
+    { label: 'Playbook: Finance', hash: 'finance-playbook-payment-radar' },
+    { label: 'Playbook: Operations', hash: 'operations-playbook-installation-pulse' },
+    { label: 'Playbook: Management', hash: 'management-playbook-executive-review' },
+  ],
+  security: [
+    { label: 'Overview', hash: 'security-privacy' },
+    { label: 'Privacy & account', hash: 'privacy-and-account' },
+    { label: 'Change password', hash: 'change-password' },
+    { label: 'Audit & Security', hash: 'audit-and-security' },
+    { label: 'Users', hash: 'users' },
+  ],
+  faq: [
+    { label: 'Overview', hash: 'frequently-asked-questions' },
+    { label: 'General', hash: 'general' },
+    { label: 'Roles & access', hash: 'roles-and-access' },
+    { label: 'Dashboard & Zenith', hash: 'dashboard-and-zenith' },
+    { label: 'Customers & projects', hash: 'customers-projects-and-data' },
+    { label: 'Admin & security', hash: 'admin-and-security' },
+    { label: 'Troubleshooting', hash: 'troubleshooting' },
+    { label: 'Proposal Engine', hash: 'proposal-engine' },
+  ],
+  training: [
+    { label: 'Overview', hash: 'rayenna-crm-zenith-training-guide' },
+    { label: 'Modules 1-5', hash: 'zenith-modules-1-5' },
+    { label: 'Modules 6-10', hash: 'zenith-modules-6-10' },
+    { label: 'Workshop & lab', hash: 'workshop-script-and-lab' },
+    { label: 'Reference', hash: 'training-reference' },
   ],
 }
 
 /**
- * When opening Help from a module route, scroll target inside /help/modules.
- * Hashes must match H1 titles in `content/modules/index.md` (see `slugifyHeadingLabel` in Help.tsx).
+ * When opening Help from an app route, scroll target inside the matching help section.
+ * Hashes must match H1 titles (see `slugifyHeadingLabel` in Help.tsx).
  */
 export function getHelpHashForRoute(currentPath: string): string | null {
-  if (currentPath === '/customers' || currentPath.startsWith('/customers/')) return 'customer-master-module'
-  if (currentPath === '/projects' || currentPath.startsWith('/projects/')) return 'projects-module'
+  if (currentPath.startsWith('/zenith')) return 'zenith-command-center'
+  if (currentPath === '/dashboard' || currentPath.startsWith('/dashboard/')) return 'dashboard'
+  if (currentPath === '/customers' || currentPath.startsWith('/customers/')) {
+    return currentPath === '/customers' || currentPath === '/customers/'
+      ? 'customer-master-module'
+      : 'customer-detail-page'
+  }
+  if (currentPath === '/projects/new') return 'projects-module'
+  if (currentPath.startsWith('/projects/')) return 'project-detail-page'
+  if (currentPath === '/projects') return 'projects-module'
   if (currentPath === '/support-tickets' || currentPath.startsWith('/support-tickets/')) {
     return 'support-tickets-module'
   }
-  if (currentPath === '/tally-export' || currentPath.startsWith('/tally-export/')) return 'tally-export-module'
+  if (currentPath === '/tally-export' || currentPath.startsWith('/tally-export/')) {
+    return 'tally-export-module'
+  }
+  if (currentPath === '/users' || currentPath.startsWith('/users/')) return 'users'
+  if (currentPath === '/audit-security' || currentPath.startsWith('/audit-security/')) {
+    return 'audit-and-security'
+  }
+  if (currentPath === '/change-password' || currentPath.startsWith('/change-password/')) {
+    return 'change-password'
+  }
   return null
 }
 
@@ -38,8 +126,12 @@ export function getHelpHashForRoute(currentPath: string): string | null {
  * Used to redirect legacy `/help/analytics#…` links to Dashboard vs Zenith help.
  */
 export const dashboardHelpAnchors = new Set([
+  'dashboard',
+  'scrolling-announcements-dashboard',
+  'todays-plan-dashboard',
   'dashboard-filters',
   'things-needing-attention-dashboard',
+  'year-on-year-kpis',
   'quick-access-tiles',
   'payment-status-card',
   'proposal-engine-card',
@@ -67,7 +159,7 @@ export const helpSections: HelpSection[] = [
     title: 'Modules',
     routeKey: 'modules',
     markdownPath: '/help-docs/modules/index.md',
-    routePatterns: ['/customers', '/projects', '/users', '/tally-export']
+    routePatterns: ['/customers', '/projects', '/tally-export']
   },
   {
     id: 'dashboard',
@@ -84,12 +176,6 @@ export const helpSections: HelpSection[] = [
     routePatterns: ['/zenith'],
   },
   {
-    id: 'training',
-    title: 'Training',
-    routeKey: 'training',
-    markdownPath: '/help-docs/training/index.md',
-  },
-  {
     id: 'security',
     title: 'Security',
     routeKey: 'security',
@@ -101,7 +187,13 @@ export const helpSections: HelpSection[] = [
     title: 'FAQ',
     routeKey: 'faq',
     markdownPath: '/help-docs/faq/index.md'
-  }
+  },
+  {
+    id: 'training',
+    title: 'Training',
+    routeKey: 'training',
+    markdownPath: '/help-docs/training/index.md',
+  },
 ]
 
 // Route to help section mapping (context-sensitive Help)
@@ -160,6 +252,7 @@ const routeToContextLabel: Record<string, string> = {
   '/zenith': 'Zenith',
   '/customers': 'Customers',
   '/projects': 'Projects',
+  '/projects/new': 'New project',
   '/support-tickets': 'Support Tickets',
   '/tally-export': 'Tally Export',
   '/users': 'Users',
@@ -168,10 +261,28 @@ const routeToContextLabel: Record<string, string> = {
 }
 
 /**
+ * Build `/help/{section}` path with optional in-page hash for the current app route.
+ */
+export function getHelpPathForRoute(currentPath: string): string {
+  const sectionId = getHelpSectionForRoute(currentPath)
+  const section = helpSections.find((s) => s.id === sectionId)
+  if (!section) return '/help/getting-started'
+  const hash = getHelpHashForRoute(currentPath)
+  if (hash) return `/help/${section.routeKey}#${hash}`
+  return `/help/${section.routeKey}`
+}
+
+/**
  * Get a short label for the given path for use in the Help context banner
  */
 export function getHelpContextLabel(currentPath: string): string | null {
   if (routeToContextLabel[currentPath]) return routeToContextLabel[currentPath]
-  if (currentPath.startsWith('/projects/')) return 'Project details'
+  if (currentPath.startsWith('/projects/') && currentPath !== '/projects/new') {
+    return 'Project details'
+  }
+  if (currentPath.startsWith('/customers/') && currentPath !== '/customers') {
+    return 'Customer details'
+  }
+  if (currentPath.startsWith('/support-tickets/')) return 'Ticket details'
   return null
 }

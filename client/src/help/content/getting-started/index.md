@@ -1,50 +1,52 @@
 # Getting Started
 
-## Introduction
+## Welcome
 
-Welcome to the Rayenna CRM system! This guide will help you get started with using the platform.
+Rayenna CRM helps your team manage **solar EPC work** in one place: **customers**, **projects** (lead → installation → payments), **support tickets**, and **dashboards** for Sales, Operations, Finance, and Management.
 
-## Overview
+Use this section when you are **new to the system** or onboarding a colleague. Pick a path below, or follow the five-minute checklist.
 
-The Rayenna CRM is a comprehensive customer relationship management system designed for managing projects, customers, and business operations.
+> **Tip:** Press **?** on any screen (when you are not typing in a field) to open **context-sensitive Help** for that page.
 
-## Quick Start
+## Start here in five minutes
 
-1. **Login**: Use your credentials to access the system
-2. **Dashboard**: View your personalized dashboard based on your role
-3. **Navigation**: Use the top navigation menu to access different modules
-4. **Proposals**: From a project in Proposal or Confirmed stage, click **Proposals (New)** to open the Proposal Engine and work on Costing, BOM, ROI, and Proposal
-5. **Zenith**: Open **Zenith ✦** from the Dashboard menu for Rayenna’s full-screen **command center** — same FY / Quarter / Month rules as the dashboard, **AI Insights**, **The Board** (click totals or rows for deal lists), **Deal flow funnel** (click stages or payment pills), **collapsible Your Focus** (pipeline, payment radar, installation pulse, **Proposal Engine** buckets for eligible roles), **Revenue forecast** (stage-weighted pipeline), **Explore** charts with a **Quick Actions** drawer, **Open in Projects →** when you need the full **Projects** grid with the same filters, optional **Victory** toast, and animated KPIs. In **Quick Actions** and **Operations** single-project drawers, a **Payment** line after **Deal value** shows **status**, **total received**, and **balance** (or **N/A** when not applicable). Start at [Zenith → Zenith Command Center](/help/zenith#zenith-command-center); drill-down behaviour: [Explore charts & drill-down](/help/zenith#explore-charts-and-drill-down-zenith), [Deal flow funnel](/help/zenith#deal-flow-funnel-zenith), [The Board](/help/zenith#the-board-leaderboard), [Explorer batch limit](/help/zenith#explorer-batch-limit-zenith) if you have very large data volumes.
-6. **Help**: Press **?** (when not typing in a field) or use **Help (?)** in the **user menu** for context-sensitive documentation; use **Search help…** on the Help page to find topics across sections
-7. **Tip of the Day**: Optional daily tips (Dashboard, Zenith, Projects, and more) — reopen anytime from the user menu → **Tip of the Day**; full behaviour is under [Zenith → Help and tips](/help/zenith#help-and-tips)
-8. **Keyboard shortcuts**: Use **Ctrl+Shift+** a letter (Windows/Linux) or **⌘⇧** on Mac to jump around the app — see [Keyboard shortcuts](#keyboard-shortcuts) below and [Dashboard → Keyboard shortcuts](/help/dashboard#keyboard-shortcuts)
+1. **Log in** — use the email and temporary password from your administrator; you will be asked to **change your password** on first login. → [First login guide](#first-login-guide)
+2. **Open your Dashboard** — metrics and charts are tailored to your **role** (Sales, Operations, Finance, Management, or Admin).
+3. **Customers, then Projects** — most daily work is: find or create a **customer**, then create or update a **project** for that customer. → [Common actions](#common-actions-guide)
+4. **Use the top menu** — jump between Dashboard, Customers, Projects, and other modules you are allowed to see. → [Navigation guide](#navigation-guide)
+5. **Get help anytime** — **?** for this page’s area, **Search help…** at the top of Help, or **Tip of the Day** in the user menu.
 
-## Next Steps
+## Choose your path
 
-- Learn about [User Roles & Permissions](/help/roles)
-- Explore the [Modules](/help/modules)
-- Check out **[Dashboard](/help/dashboard)** help (classic filters, Quick Access, charts)
-- Try [Zenith — Command Center](/help/zenith#zenith-command-center) for immersive analytics; use [Revenue forecast](/help/zenith#revenue-forecast-wide-kpi-tile) and [FY revenue & profit chart](/help/zenith#revenue-and-profit-by-fy-chart-zenith) when you want the details
-- Run or join a session using the **[Zenith training guide](/help/training)** — presentation-style facilitator material (**Sales-first**; all roles)
-- Learn [keyboard shortcuts](#keyboard-shortcuts) for faster navigation
+| Guide | What it covers |
+| :-- | :-- |
+| **[First login](#first-login-guide)** | Login, password rules, first dashboard view, checklist, login troubleshooting |
+| **[Navigation](#navigation-guide)** | Top menu, mobile layout, dashboards by role, filters, search |
+| **[Common actions](#common-actions-guide)** | Create/edit customers and projects, tickets, documents, exports |
+| **[Keyboard shortcuts](#keyboard-shortcuts)** | **Ctrl+Shift+** letters (Mac: **⌘⇧**), **My Day**, **Esc** on Help |
 
-## Keyboard shortcuts
+## By role — where to go next
 
-When focus is **not** in a text field, **textarea**, **select**, or **contenteditable** area:
-
-- **?** — Open **Help** for the current area (from **Dashboard**, opens **Dashboard** help; from **Zenith**, opens **Zenith** help at **Zenith Command Center**).
-
-| Shortcut (Win/Linux) | Mac | Action |
+| Role | Start with | Then read |
 | :-- | :-- | :-- |
-| Ctrl+Shift+D | ⌘⇧D | **Dashboard** |
-| Ctrl+Shift+C | ⌘⇧C | **Customers** (Admin, Sales, Operations, Finance, Management) |
-| Ctrl+Shift+P | ⌘⇧P | **Projects** (same roles as Customers) |
-| Ctrl+Shift+K | ⌘⇧K | **Support Tickets** (Admin, Sales, Operations, Management — not Finance) |
-| Ctrl+Shift+Z | ⌘⇧Z | **Zenith** (roles that see Zenith under the Dashboard menu) |
-| Ctrl+Shift+M | ⌘⇧M | **My Day** — personal Tasks, Journal & Reminders; pin from **Today's plan**, **Things needing attention**, or Hit List **+ My Day** (all roles) |
-| Ctrl+Shift+N | ⌘⇧N | **New customer** — opens the create form (Sales, Management, Admin) |
-| Ctrl+Shift+E | ⌘⇧E | **New project** — opens the new-project screen (Admin, Sales). Route: projects/new |
+| **Sales** | [Common actions → projects](#common-actions-guide) | [Roles → Sales](/help/roles), [Modules → Projects](/help/modules#projects-module) |
+| **Operations** | [Navigation → dashboards](#navigation-guide) | [Roles → Operations](/help/roles), project **lifecycle** in [Modules](/help/modules#projects-module) |
+| **Finance** | [Dashboard help](/help/dashboard) | [Roles → Finance](/help/roles), payments on [Projects](/help/modules#projects-module) |
+| **Management / Admin** | [Dashboard](/help/dashboard) or [Zenith](/help/zenith#zenith-command-center) | [Roles](/help/roles), [Training guide](/help/training) |
 
-On a **Help** page, **Esc** returns you to the **Dashboard**. The same shortcuts are summarised under [Dashboard → Keyboard shortcuts](/help/dashboard#keyboard-shortcuts).
+> **Note:** **Zenith ✦** (full-screen command center) and **Proposal Engine** are powerful add-ons — open [Zenith help](/help/zenith#zenith-command-center) and [Modules](/help/modules) when you are comfortable with Customers and Projects.
 
-> **My Day** is your personal, **CRM-linked** productivity space. Press **Ctrl+Shift+M** (⌘⇧M) or tap **☀** in the top nav (badge = pending tasks). The **Tasks** tab lists **your** tasks only (**Carry-overs**, **Today**, **Done**). Pin CRM follow-ups from the Dashboard **Today’s plan**, **Things needing attention**, or Zenith **Today’s Hit List** with **+ My Day**. The classic **Dashboard** **Today’s plan** card shows CRM suggestions before you pin them. **Project detail** shows open tasks for that project. Completing a **project-pinned** task can optionally log **`[My Day ✓] …`** to **Remarks** (checkbox on the task row). **Edit** / **Delete** via **⋯**; journal **Load more**; **overdue** reminders under **Overdue**. Requires a **live** connection (not the Zenith offline queue). Details: [Zenith → My Day](/help/zenith#my-day-personal-productivity-drawer).
+## Power features (when you are ready)
+
+- **Zenith** — immersive analytics, Hit List, deal funnel, chart drill-downs. [Zenith command center](/help/zenith#zenith-command-center)
+- **My Day** — personal tasks pinned from the dashboard or Zenith (**Ctrl+Shift+M** / **⌘⇧M** or **☀** in the nav). [My Day drawer](/help/zenith#my-day-personal-productivity-drawer)
+- **Proposal Engine** — from a project in **Proposal** or **Confirmed** stage: **Proposals (New)** for costing, BOM, ROI, and customer proposal. [Modules](/help/modules)
+- **Help search** — use **Search help…** on the Help page to find topics across all sections.
+
+## What's next
+
+- [User roles & permissions](/help/roles)
+- [Modules](/help/modules) — Customers, Projects, Support Tickets, Tally Export
+- [Dashboard](/help/dashboard) — filters, Quick Access, charts
+- [Zenith](/help/zenith#zenith-command-center) — command center (optional depth)
+- [Training guide](/help/training) — facilitator-style session outline

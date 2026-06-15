@@ -297,7 +297,7 @@ client/src/
 | **E2E / Playwright** | Critical flows: login, projects filter export, ticket drawer | Optional; unit tests cover `where` builder only today |
 | **Rename legacy filenames** | e.g. `PipelineByCustomerSegmentPieChart.tsx` → `*CustomerType*` | Cosmetic; avoid churn unless touching files anyway |
 | **Management role doc** | README still says Management is read-only | Update root `README.md` when doing a docs pass |
-| **Help sync — attention strip UI** | Compact rows, side-by-side plan/attention | Optional; My Day help done in `f201696` |
+| **Help sync — attention strip UI** | Compact rows, side-by-side plan/attention | ~~Optional~~ **Done** Jun 2026 (`docs(crm)` help sync) |
 | **My Day Phase 4** | Quick drawers, reminders remark | Deferred until field feedback |
 | **Cloudinary for PE images** | Not CRM | See `docs/pe-image-storage-migration-plan.md` |
 | **Zenith Tier C** | Slimmer explorer payload / API | After A+B; see [Completed — Zenith stability & performance](#completed--zenith-stability--performance-may-2026) |
