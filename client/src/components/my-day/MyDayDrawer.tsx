@@ -76,7 +76,6 @@ export default function MyDayDrawer() {
         )
       })
       .catch(() => { /* non-critical */ })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted])
 
   // Refresh drawer lists on every open (e.g. + My Day from dashboard attention strip)

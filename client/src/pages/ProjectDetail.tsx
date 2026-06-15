@@ -25,37 +25,7 @@ import { formatCustomerTypeDisplay } from '../utils/customerRecord'
 import { getCustomerTypeBadgeClasses } from '../utils/customerTypeStyles'
 import { getProjectSegmentLabel, getProjectSegmentPillClasses } from '../utils/projectSegment'
 import ProjectMyDayTasks from '../components/projects/ProjectMyDayTasks'
-
-function formatLeadSourceDisplay(
-  leadSource?: string | null,
-  leadSourceDetails?: string | null,
-): ReactNode {
-  if (!leadSource) return null
-  const labels: Record<string, string> = {
-    WEBSITE: 'Website',
-    REFERRAL: 'Referral',
-    GOOGLE: 'Google',
-    CHANNEL_PARTNER: 'Channel Partner',
-    DIGITAL_MARKETING: 'Digital Marketing',
-    SALES: 'Sales',
-    MANAGEMENT_CONNECT: 'Management Connect',
-    OTHER: 'Other',
-  }
-  const label = labels[leadSource] || leadSource.replace(/_/g, ' ')
-  const detail =
-    leadSourceDetails &&
-    (leadSource === 'CHANNEL_PARTNER' || leadSource === 'REFERRAL' || leadSource === 'OTHER')
-      ? leadSourceDetails
-      : null
-  return (
-    <>
-      {label}
-      {detail ? (
-        <span className="mt-1 block text-[color:var(--text-muted)] sm:mt-0 sm:inline sm:pl-1">({detail})</span>
-      ) : null}
-    </>
-  )
-}
+import { formatLeadSourceDisplay } from '../utils/leadSourceDisplay'
 
 const PROJECT_SERVICE_TYPE_LABELS: Record<string, string> = {
   EPC_PROJECT: 'EPC Project',

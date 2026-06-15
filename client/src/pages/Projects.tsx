@@ -16,6 +16,7 @@ import { getSalesTeamColor } from '../components/dashboard/salesTeamColors'
 import DashboardFilters from '../components/dashboard/DashboardFilters'
 import HealthBadge from '../components/zenith/HealthBadge'
 import FinancingBankPopoverIcon from '../components/projects/FinancingBankPopoverIcon'
+import LeadSourcePill from '../components/projects/LeadSourcePill'
 import { getFinancingBankDisplayName } from '../utils/financingBankDisplay'
 import { FiPaperclip } from 'react-icons/fi'
 import { FaUniversity, FaTicketAlt, FaBriefcase } from 'react-icons/fa'
@@ -2007,51 +2008,10 @@ Do you want to continue?`}
                     <PaymentStatusBadge project={project} compact />
                   </td>
                   <td className="hidden min-w-0 px-2 py-2 pl-2 pr-2 text-center md:table-cell lg:py-1.5 lg:pl-2 lg:pr-2">
-                    {project.leadSource === 'WEBSITE' && (
-                      <span className="inline-flex max-w-full items-center truncate rounded border border-blue-400/35 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--accent-blue)] lg:text-[11px]">
-                        Website
-                      </span>
-                    )}
-                    {project.leadSource === 'REFERRAL' && (
-                      <span className="inline-flex max-w-full items-center truncate rounded border border-emerald-400/35 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--accent-teal)] lg:text-[11px]">
-                        Referral
-                      </span>
-                    )}
-                    {project.leadSource === 'GOOGLE' && (
-                      <span className="inline-flex max-w-full items-center truncate rounded border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--accent-gold)] lg:text-[11px]">
-                        Google
-                      </span>
-                    )}
-                    {project.leadSource === 'CHANNEL_PARTNER' && (
-                      <span className="inline-flex max-w-full items-center truncate rounded border border-red-400/35 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--accent-red)] lg:text-[11px]">
-                        <span className="lg:hidden">Channel Partner</span>
-                        <span className="hidden lg:inline">Channel</span>
-                      </span>
-                    )}
-                    {project.leadSource === 'DIGITAL_MARKETING' && (
-                      <span className="inline-flex max-w-full items-center truncate rounded border border-violet-400/35 bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--accent-purple)] lg:text-[11px]">
-                        Digital Mktg
-                      </span>
-                    )}
-                    {project.leadSource === 'SALES' && (
-                      <span className="inline-flex max-w-full items-center truncate rounded border border-pink-400/35 bg-pink-500/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--text-primary)] lg:text-[11px]">
-                        Sales
-                      </span>
-                    )}
-                    {project.leadSource === 'MANAGEMENT_CONNECT' && (
-                      <span className="inline-flex max-w-full items-center truncate rounded border border-cyan-400/35 bg-cyan-500/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--accent-teal)] lg:text-[11px]">
-                        <span className="lg:hidden">Mgmt Connect</span>
-                        <span className="hidden lg:inline">Mgmt</span>
-                      </span>
-                    )}
-                    {project.leadSource === 'OTHER' && (
-                      <span className="inline-flex max-w-full items-center truncate rounded border border-lime-400/35 bg-lime-500/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--text-primary)] lg:text-[11px]">
-                        Other
-                      </span>
-                    )}
-                    {!project.leadSource && (
-                      <span className="inline-block text-[11px] text-[color:var(--text-muted)]">—</span>
-                    )}
+                    <LeadSourcePill
+                      leadSource={project.leadSource}
+                      leadSourceDetails={project.leadSourceDetails}
+                    />
                   </td>
                   <td className="hidden min-w-0 whitespace-nowrap px-1 py-2 text-center tabular-nums sm:table-cell sm:px-1.5 lg:py-1.5 lg:pl-1 lg:pr-1.5">
                     <span className="inline-block text-[11px] font-medium text-[color:var(--text-secondary)] lg:text-xs">

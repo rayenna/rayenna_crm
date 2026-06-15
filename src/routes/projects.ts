@@ -8,6 +8,11 @@ import {
   projectsListQueryValidators,
 } from '../utils/projectsListWhere';
 import { mapProjectToExportRow, PROJECTS_EXPORT_INCLUDE } from '../utils/projectsListExport';
+import {
+  leadSourceRequiresDetails,
+  normalizeLeadSourceDetailsForStorage,
+  validateLeadSourceDetailsPair,
+} from '../utils/leadSourceValidation';
 
 // Valid values for lostToCompetitionReason (required when lostReason is LOST_TO_COMPETITION)
 const LOST_TO_COMPETITION_REASON_VALUES = ['LOST_DUE_TO_PRICE', 'LOST_DUE_TO_FEATURES', 'LOST_DUE_TO_RELATIONSHIP_OTHER'] as const;
@@ -299,6 +304,7 @@ router.get(
         paymentStatus: true,
         balanceAmount: true,
         leadSource: true,
+        leadSourceDetails: true,
         advanceReceived: true,
         availingLoan: true,
         financingBank: true,
@@ -675,6 +681,12 @@ router.post(
         return res.status(400).json({ error: 'Confirmation Date is required and must be a valid date' });
       }
 
+      const leadDetailsCheck = validateLeadSourceDetailsPair(leadSource, leadSourceDetails);
+      if (!leadDetailsCheck.ok) {
+        return res.status(400).json({ error: leadDetailsCheck.error });
+      }
+      const leadSourceDetailsValue = normalizeLeadSourceDetailsForStorage(leadSource, leadSourceDetails);
+
       // For LOST status: confirmation date must be current or past (order lost date)
       if (projectStatus === ProjectStatus.LOST) {
         const todayEnd = new Date();
@@ -830,7 +842,7 @@ router.post(
           financingBankOther: financingBankOtherValue,
           incentiveEligible: incentiveEligible || false,
           leadSource: leadSource || null,
-          leadSourceDetails: leadSourceDetails || null,
+          leadSourceDetails: leadSourceDetailsValue,
           expectedProfit,
           grossProfit,
           profitability,
@@ -1854,6 +1866,35 @@ router.put(
       });
 
       // Ensure we have at least one field to update
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: 'No valid fields to update' });
+      }
+
+      if (updateData.leadSource !== undefined || updateData.leadSourceDetails !== undefined) {
+        const effectiveLeadSource =
+          updateData.leadSource !== undefined ? updateData.leadSource : project.leadSource;
+        const effectiveLeadSourceDetails =
+          updateData.leadSourceDetails !== undefined
+            ? updateData.leadSourceDetails
+            : project.leadSourceDetails;
+        const leadDetailsCheck = validateLeadSourceDetailsPair(
+          effectiveLeadSource,
+          effectiveLeadSourceDetails,
+        );
+        if (!leadDetailsCheck.ok) {
+          return res.status(400).json({ error: leadDetailsCheck.error });
+        }
+        if (updateData.leadSource !== undefined && !leadSourceRequiresDetails(updateData.leadSource)) {
+          updateData.leadSourceDetails = null;
+        } else if (updateData.leadSourceDetails !== undefined) {
+          updateData.leadSourceDetails = normalizeLeadSourceDetailsForStorage(
+            effectiveLeadSource,
+            effectiveLeadSourceDetails,
+          );
+        }
+      }
+
+      // Ensure we have at least one field to update (after lead-source normalization)
       if (Object.keys(updateData).length === 0) {
         return res.status(400).json({ error: 'No valid fields to update' });
       }

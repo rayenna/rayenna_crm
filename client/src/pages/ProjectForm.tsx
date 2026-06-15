@@ -19,6 +19,11 @@ import { getCustomerTypeBadgeClasses } from '../utils/customerTypeStyles'
 import { getProjectFormAccessNotice } from '../utils/projectAccessMessages'
 import ProjectAccessNotice from '../components/projects/ProjectAccessNotice'
 import { defaultPanelTypeForProjectSegment, getProjectSegmentLabel } from '../utils/projectSegment'
+import {
+  getLeadSourceDetailFieldLabel,
+  leadSourceRequiresDetails,
+  validateLeadSourceDetailsInput,
+} from '../utils/leadSourceDisplay'
 
 function customerPickerLabel(customer: Customer): string {
   return `${customer.customerId} - ${getCustomerDisplayName(customer)}`
@@ -670,6 +675,17 @@ const ProjectForm = () => {
       return;
     }
 
+    const leadDetailValidation = validateLeadSourceDetailsInput(data.leadSource, data.leadSourceDetails);
+    if (leadDetailValidation !== true) {
+      toast.error(leadDetailValidation);
+      return;
+    }
+    if (leadSourceRequiresDetails(data.leadSource)) {
+      data.leadSourceDetails = (data.leadSourceDetails ?? '').trim();
+    } else {
+      data.leadSourceDetails = '';
+    }
+
     // Ensure projectServiceType has a default value if not provided
     if (!data.projectServiceType) {
       data.projectServiceType = ProjectServiceType.EPC_PROJECT;
@@ -1023,7 +1039,7 @@ const ProjectForm = () => {
           const e = error as { message?: string; type?: string }
           const message = e?.message || e?.type || 'Invalid value';
           if (import.meta.env.DEV) console.error(`[PROJECT FORM] Error for ${field}:`, message, error);
-          const friendlyName = field === 'customerId' ? 'Customer' : field === 'leadSource' ? 'Lead source' : field === 'confirmationDate' ? 'Confirmation date' : field === 'year' ? 'Financial year' : field === 'financingBank' ? 'Financing bank' : field === 'financingBankOther' ? 'Other bank name' : field;
+          const friendlyName = field === 'customerId' ? 'Customer' : field === 'leadSource' ? 'Lead source' : field === 'leadSourceDetails' ? 'Lead source details' : field === 'confirmationDate' ? 'Confirmation date' : field === 'year' ? 'Financial year' : field === 'financingBank' ? 'Financing bank' : field === 'financingBankOther' ? 'Other bank name' : field;
           return `${friendlyName}: ${message}`;
         });
         if (errorMessages.length > 0) {
@@ -1327,13 +1343,16 @@ const ProjectForm = () => {
                 watch('leadSource') === LeadSource.OTHER) && (
                 <div>
                   <label className={labelCls}>
-                    {watch('leadSource') === LeadSource.CHANNEL_PARTNER && 'Channel Partner Name'}
-                    {watch('leadSource') === LeadSource.REFERRAL && 'Referral Name'}
-                    {watch('leadSource') === LeadSource.OTHER && 'Other Details'}
+                    {getLeadSourceDetailFieldLabel(watch('leadSource') as LeadSource)} *
                   </label>
                   <input
                     type="text"
-                    {...register('leadSourceDetails')}
+                    {...register('leadSourceDetails', {
+                      validate: (value) => {
+                        const result = validateLeadSourceDetailsInput(leadSource, value)
+                        return result === true ? true : result
+                      },
+                    })}
                     disabled={!canEditSalesCommercial}
                     className={`${inputCls} ${!canEditSalesCommercial ? disabledControlCls : ''}`}
                     placeholder={
