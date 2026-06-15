@@ -89,21 +89,24 @@ A lead is a potential customer who has shown interest in solar energy solutions.
 
 ### Lead Source Tracking
 
-Always select the correct **Lead Source** when creating a project. This helps the company understand which marketing channels are most effective:
+Always select the correct **Lead Source** when creating or editing a project. This helps the company understand which marketing channels are most effective:
+
 - **Website**: Customer found us through our website
-- **Referral**: Existing customer or partner referred them
+- **Referral**: Existing customer or partner referred them — **Referral Name** is **required** (marked **\***)
 - **Google**: Found us through Google search or ads
-- **Channel Partner**: Came through a business partner
+- **Channel Partner**: Came through a business partner — **Channel Partner Name** is **required**
 - **Digital Marketing**: Social media or online campaigns
 - **Sales**: Direct sales effort
 - **Management Connect**: Management team connection
-- **Other**: Any other source
+- **Other**: Any other source — **Other Details** is **required**
+
+**On the Projects list** (tablet width and up), lead sources appear as **color-coded pills**. For Referral, Channel Partner, and Other, **hover** or **tap** the pill to see the saved name without opening the project.
 
 ### Best Practices for Lead Management
 
 - **Create leads immediately**: Don't wait - enter leads as soon as you get them
 - **Keep information accurate**: Update customer contact details regularly
-- **Track lead source**: Always select the correct lead source
+- **Track lead source**: Always select the correct lead source and fill **Referral Name**, **Channel Partner Name**, or **Other Details** when required — save is blocked if they are empty
 - **Update status promptly**: Move leads through stages as they progress
 - **Follow up regularly**: Use the system to track when you last contacted each lead
 
@@ -492,7 +495,7 @@ The complete rules, score bands, and exclusions are documented under the **Proje
 - Forget to update project status
 - Ignore support tickets
 - Enter incorrect financial information
-- Forget to select lead source
+- Forget to select lead source or leave **Referral / Channel Partner / Other** detail blank
 - Leave customer information incomplete
 
 **Do**:
@@ -501,7 +504,7 @@ The complete rules, score bands, and exclusions are documented under the **Proje
 - Update status regularly
 - Create tickets for all issues
 - Verify numbers before saving
-- Always select lead source
+- Always select lead source and required detail names when applicable
 - Keep customer data current
 
 ## Getting Help

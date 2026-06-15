@@ -48,13 +48,15 @@ The Projects module is the core of Rayenna CRM, managing the complete lifecycle 
 
 **Lead Source**:
 - Website
-- Referral (requires Referral Name)
+- Referral (requires **Referral Name** — mandatory)
 - Google
-- Channel Partner (requires Channel Partner Name)
+- Channel Partner (requires **Channel Partner Name** — mandatory)
 - Digital Marketing
 - Sales
 - Management Connect
-- Other (requires Other Details)
+- Other (requires **Other Details** — mandatory)
+
+When you select **Referral**, **Channel Partner**, or **Other**, the matching detail field appears with a **\*** and **must be filled** before **Create** or **Save**. The form and server both enforce this on create and update.
 
 **Project Information**:
 - **System Capacity (kW)**: DC system size in kilowatts — **whole numbers only** (integer kW, e.g. `5`, not `5.5`)
@@ -104,11 +106,11 @@ The Projects module is the core of Rayenna CRM, managing the complete lifecycle 
 - **Service type** (EPC, Maintenance, etc. — labeled **Service type** on the form)
 - Confirmation Date
 
-**Conditional Requirements**:
+**Conditional Requirements** (enforced on **create** and **update**):
 - Lost Date and Reason for Loss (if status is Lost)
-- Referral Name (if Lead Source is Referral)
-- Channel Partner Name (if Lead Source is Channel Partner)
-- Other Details (if Lead Source is Other)
+- **Referral Name** (if Lead Source is Referral) — required field, cannot be blank
+- **Channel Partner Name** (if Lead Source is Channel Partner) — required field, cannot be blank
+- **Other Details** (if Lead Source is Other) — required field, cannot be blank
 - Other Reason Details (if Lost Reason is Other)
 - Financing Bank (if Availing Loan/Financing is Yes)
 - Other Bank Name (if Financing Bank is Other)
@@ -887,6 +889,14 @@ Above the table, a short legend explains **row colour by customer type**:
 
 This is visual only; use the **Customer type** filter to narrow the list.
 
+### Lead source column (table)
+
+- **Where**: **Lead source** column on the Projects table (visible from **tablet width** and up).
+- **Color-coded pills**: Each source uses a **distinct color** for quick scanning:
+  - **Website** — blue · **Referral** — green · **Google** — gold/orange · **Channel Partner** — red · **Digital Marketing** — purple · **Sales** — pink · **Management Connect** — cyan · **Other** — lime
+- **Referral**, **Channel Partner**, and **Other** — When a referral name, partner name, or other detail is saved, **hover** the pill on **mouse/trackpad** or **tap** it on **touch** to see that text in a **popover** (**Referral Name**, **Channel Partner Name**, or **Other Details**). Uses the **same dark Deal Health card style** as payment balance and financing bank. On touch, tapping the pill does **not** open the project row (tap outside to dismiss).
+- **Project Detail** still shows lead source and detail inline; the list popover lets you scan names without opening each project.
+
 ### Exporting the project list (Admin)
 
 - **Who**: **Administrators** only (**Export to Excel** / **Export to CSV** on the Projects page).
@@ -894,9 +904,10 @@ This is visual only; use the **Customer type** filter to narrow the list.
 - **Columns** include: SL No, customer IDs/names, **Customer Type**, **Segment**, **Project Service Type**, capacity, cost, status, payment, salesperson, FY, dates.
 - **How**: Apply filters → export → read the authorization notice → confirm **YES** → file downloads.
 
-**Popovers on the Projects list (balance and financing bank)**:
+**Popovers on the Projects list (balance, financing bank, and lead source details)**:
 - **Pending / Partial payment** — When there is a **positive outstanding balance**, **hover** the payment status pill on a **mouse/trackpad**, or **tap** it on **touch** devices, to see **Balance** and the **₹** amount in a **dark popover** styled like the **Deal Health** card on the same page.
 - **Financing bank icon** — Under the salesperson, a **bank** icon appears when **Availing Loan** is **Yes** and a **financing bank** (including **Other** with a name) is saved. **Hover** or **tap** for the **bank name** in the **same popover style**.
+- **Lead source pills (Referral / Channel Partner / Other)** — When a detail name is saved, **hover** or **tap** the **color-coded pill** in the **Lead source** column for **Referral Name**, **Channel Partner Name**, or **Other Details** in the **same popover style**. Pills without a saved detail stay plain (no popover) — fill the detail on create/edit so reporting and the list stay accurate.
 
 ### Sorting Options
 
@@ -916,7 +927,7 @@ This is visual only; use the **Customer type** filter to narrow the list.
 
 **Deal Health Score** is a **0–100** number that estimates how strong an open deal looks **right now**, based on data already on the project. It is **not** a prediction of whether you will win the deal; it is a **prioritisation aid** so you can see which opportunities need attention (follow-up, stage movement, missing data) before others.
 
-The score is **computed in the app** from five factors: **Activity** (last update), **Momentum** (time in stage), **Deal value** (order value bands tuned for typical **3–5 kW** sweet-spot deals), **Close date** (in Rayenna this uses **confirmation date** plus **advance received** vs order value — see tables below), and **Lead source**. When you **hover** a **Deal Health** badge (or **tap** on touch), you see the **five building blocks** and how each one scored. On **Project Detail**, the **Deal Health Score** card shows the same breakdown plus a short **insight** that usually highlights the **weakest** area so you know what to fix first. On the **Projects** list, **payment balance** and **financing bank** popovers reuse the **same** dark-card look for consistency.
+The score is **computed in the app** from five factors: **Activity** (last update), **Momentum** (time in stage), **Deal value** (order value bands tuned for typical **3–5 kW** sweet-spot deals), **Close date** (in Rayenna this uses **confirmation date** plus **advance received** vs order value — see tables below), and **Lead source**. When you **hover** a **Deal Health** badge (or **tap** on touch), you see the **five building blocks** and how each one scored. On **Project Detail**, the **Deal Health Score** card shows the same breakdown plus a short **insight** that usually highlights the **weakest** area so you know what to fix first. On the **Projects** list, **payment balance**, **financing bank**, and **lead source detail** popovers reuse the **same** dark-card look for consistency.
 
 #### Illustration — how the score adds up
 
@@ -944,7 +955,7 @@ The total is the **sum** of five parts. Each part has a **maximum**; the overall
 
 | Location | What you get |
 | :-- | :-- |
-| **Projects** list | A compact **Deal Health** **badge** (0–100) — **hover** or **tap** for the breakdown **popover**. **Pending** / **Partial** pills (with balance) and the **financing bank** icon use **matching** dark-card **popovers**. **Sort** by **Deal Health Score** (ascending = weakest first; same server data). |
+| **Projects** list | A compact **Deal Health** **badge** (0–100) — **hover** or **tap** for the breakdown **popover**. **Pending** / **Partial** pills (with balance), the **financing bank** icon, and **Referral / Channel Partner / Other** lead-source pills (when detail is saved) use **matching** dark-card **popovers**. **Sort** by **Deal Health Score** (ascending = weakest first; same server data). |
 | **Project Detail** | A full **Deal Health Score** card with **all factors**, scores, and the insight line. |
 | **Zenith (Executive view)** | **Your pipeline today** (Sales / Management / Admin): each row can show a **Deal Health** badge; **hover** for the breakdown; **Open →** opens **Quick Actions**. **Today’s Hit List** matches that layout with **filters**, **sort**, and **Alert**, for up to seven prioritised deals; when deals list, a short hint may remind you to **scroll right** and use **Open →**; **Open →** opens **Quick Actions**, which includes **Recent remarks** (same data as this **Remarks** section, read-only in the drawer) above **Log activity**, and a **Payment** snapshot (**status**, **total received**, **balance pending**) after **Deal value** when payment applies (**N/A** otherwise — same rules as **Payment tracking** below). |
 | **Tip of the Day** | Occasionally reminds you about Deal Health, sorting, and where to read the full rules (this section). |

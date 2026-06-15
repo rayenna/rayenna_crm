@@ -47,7 +47,7 @@ This guide covers the most frequently performed actions in Rayenna Energy CRM. T
      - Project Service Type (EPC Project, Panel Cleaning, Maintenance, etc.)
      - System Capacity (kW) — **whole numbers only** (integer kW)
      - Project Value
-     - Lead Source
+     - Lead Source (if Referral, Channel Partner, or Other — enter the required detail name)
    - **Sales & Commercial**:
      - Project Status (Lead, Site Survey, Proposal, etc.)
      - Assign Salesperson (if you're Admin)
@@ -64,6 +64,7 @@ This guide covers the most frequently performed actions in Rayenna Energy CRM. T
 - You can upload multiple files during creation
 - Set initial status based on project stage
 - Link to customer is required
+- For **Referral**, **Channel Partner**, or **Other** lead sources, the matching detail field is **required** before save
 
 ### Creating a Support Ticket
 

@@ -282,7 +282,7 @@ At any stage, a project may be marked **Lost** if the customer does not proceed.
 - **Segment** and **Project Type**
 - **Confirmation Date**
 
-If **Lead Source** is Referral, Channel Partner, or Other, the corresponding detail field is required. If **Availing Loan/Financing** is Yes, **Financing Bank** is required; if the bank is **Other**, **Other Bank Name** is required. If status is **Lost**, **Lost Date** and **Reason for Loss** are required.
+If **Lead Source** is **Referral**, **Channel Partner**, or **Other**, the corresponding detail field (**Referral Name**, **Channel Partner Name**, or **Other Details**) is **required** — marked **\*** on the form and blocked on save if empty (create and update). If **Availing Loan/Financing** is Yes, **Financing Bank** is required; if the bank is **Other**, **Other Bank Name** is required. If status is **Lost**, **Lost Date** and **Reason for Loss** are required.
 
 ## Project Status Stages
 
@@ -343,11 +343,12 @@ The tile counts and filters match the dashboard filters (FY, Quarter, Month) you
 
 Filters are remembered when you navigate to a project and use **Back** to return.
 
-### Subtotals, payment balance, and financing bank (list)
+### Subtotals, payment balance, financing bank, and lead source (list)
 
 - **Subtotals**: Select multiple projects using the checkboxes. The bottom of the list shows subtotals for Order Value, Amount Received, and Outstanding.
 - **Payment status (Pending / Partial)** — When there is a **positive outstanding balance**, open a **popover** from the status pill: **hover** on **laptop / mouse**, or **tap** on **touch** (phone or tablet). The card uses the **same dark “Deal Health” look** (navy panel, teal accent for the **₹** balance, short footer note) so it matches the **Deal Health** badge popover on the same page.
 - **Financing bank icon** — A small **bank** icon under the salesperson appears only when **Availing Loan/Financing** is **Yes** **and** a **financing bank** is set (dropdown or **Other** name). **Hover** or **tap** the icon for the **full bank name** in the **same popover style** as Deal Health. On mobile, tapping the icon does **not** open the project row (tap outside to dismiss).
+- **Lead source column** — From **tablet width** up, each project shows a **color-coded pill** (Website blue, Referral green, Google gold, Channel Partner red, Digital Marketing purple, Sales pink, Management Connect cyan, Other lime). For **Referral**, **Channel Partner**, or **Other**, when a detail name is saved, **hover** or **tap** the pill to see **Referral Name**, **Channel Partner Name**, or **Other Details** in the **same popover style**. Tapping the pill does not open the project row.
 
 ### Project Detail Page
 
@@ -378,7 +379,7 @@ Full **My Day** behaviour (Hit List pin, CRM suggestions, journal nudges): [Zeni
 
 **Deal Health Score** is a **0–100** number that estimates how strong an open deal looks **right now**, based on data already on the project. It is **not** a prediction of whether you will win the deal; it is a **prioritisation aid** so you can see which opportunities need attention (follow-up, stage movement, missing data) before others.
 
-The score is **computed in the app** from five factors: **Activity** (last update), **Momentum** (time in stage), **Deal value** (order value bands tuned for typical **3–5 kW** sweet-spot deals), **Close date** (in Rayenna this uses **confirmation date** plus **advance received** vs order value — see tables below), and **Lead source**. When you **hover** a **Deal Health** badge (or **tap** it on touch devices), you see the **five building blocks** and how each one scored. On **Project Detail**, the **Deal Health Score** card shows the same breakdown plus a short **insight** that usually highlights the **weakest** area so you know what to fix first. On the **Projects** list, **payment balance** and **financing bank** hints use the **same popover shell** (dark card, teal accents) for a consistent experience.
+The score is **computed in the app** from five factors: **Activity** (last update), **Momentum** (time in stage), **Deal value** (order value bands tuned for typical **3–5 kW** sweet-spot deals), **Close date** (in Rayenna this uses **confirmation date** plus **advance received** vs order value — see tables below), and **Lead source**. When you **hover** a **Deal Health** badge (or **tap** it on touch devices), you see the **five building blocks** and how each one scored. On **Project Detail**, the **Deal Health Score** card shows the same breakdown plus a short **insight** that usually highlights the **weakest** area so you know what to fix first. On the **Projects** list, **payment balance**, **financing bank**, and **lead source detail** hints use the **same popover shell** (dark card, theme-aware accents) for a consistent experience.
 
 ### Illustration — how the score adds up
 
@@ -406,7 +407,7 @@ The total is the **sum** of five parts. Each part has a **maximum**; the overall
 
 | Location | What you get |
 | :-- | :-- |
-| **Projects** list | A compact **Deal Health** **badge** (0–100) next to the project/customer — **hover** or **tap** for the factor breakdown **popover**. **Pending** / **Partial** payment pills (with balance) and the **financing bank** icon (loan + bank set) open **matching** dark-card **popovers**. **Sort** by **Deal Health Score** (ascending shows weakest first — same data the server uses). |
+| **Projects** list | A compact **Deal Health** **badge** (0–100) next to the project/customer — **hover** or **tap** for the factor breakdown **popover**. **Pending** / **Partial** payment pills (with balance), the **financing bank** icon (loan + bank set), and **Referral / Channel Partner / Other** lead-source pills (when detail is saved) open **matching** dark-card **popovers**. **Sort** by **Deal Health Score** (ascending shows weakest first — same data the server uses). |
 | **Project Detail** | A full **Deal Health Score** card with **all factors**, scores, and the insight line. |
 | **Zenith (Executive view)** | **Your pipeline today** (Sales / Management / Admin): each row can show a **Deal Health** badge; **hover** for the breakdown; **Open →** opens **Quick Actions**. **Today’s Hit List** matches that table pattern (**filters**, **sort**, **last activity**, **confirmation date**, **Alert**), capped to up to **seven** urgent deals; when deals list, a short hint may remind you to **scroll right** and use **Open →**; **Open →** opens **Quick Actions** with **Recent remarks** (read-only) above **Log activity** where shown. |
 | **Tip of the Day** | Occasionally reminds you about Deal Health, sorting, and these rules. |

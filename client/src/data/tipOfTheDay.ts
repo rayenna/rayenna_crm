@@ -53,6 +53,8 @@ export const TIPS: string[] = [
   'Select multiple projects on the Projects page to see subtotals for Order Value, Amount Received, and Outstanding at the bottom.',
   'Projects list: Pending or Partial (with a balance) opens a balance popover that matches the Deal Health card — hover on laptop, tap on touch. Same dark panel and teal accent.',
   'When availing loan and a bank are set, the small bank icon under the salesperson shows the financing bank name on hover or tap — same Deal Health–style popover.',
+  'Projects list: Referral, Channel Partner, and Other show color-coded lead-source pills — hover or tap the pill to see who referred or which partner without opening the project.',
+  'Creating or editing a project: Referral Name, Channel Partner Name, or Other Details is required (marked *) when that lead source is selected — save is blocked until filled.',
   'Project page filters (Status, FY, Quarter, Month, Payment Status, Availing Loan) are remembered as you navigate.',
   'Projects: use Sort By → Deal Health Score to surface the most at-risk deals (0–100). Hover the health badge for a quick breakdown.',
   'Deal Health “Deal value” peaks for order values in the ₹1.75L–₹3L band (typical 3–5 kW sweet spot); very large orders score fewer points on that factor — see Help → Projects → Deal Health Score for the full table.',
