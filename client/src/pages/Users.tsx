@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
@@ -387,7 +388,13 @@ const Users = () => {
                   <span className="mt-3 inline-flex w-fit max-w-full items-center rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-badge)] px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-secondary)]">
                     {u.role}
                   </span>
-                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    <Link
+                      to={`/audit-security?userId=${encodeURIComponent(u.id)}`}
+                      className="inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2.5 text-sm font-semibold text-[color:var(--text-primary)] transition-colors hover:bg-[color:var(--bg-card-hover)]"
+                    >
+                      View audit
+                    </Link>
                     <button
                       type="button"
                       onClick={() => handleResetPassword(u)}
@@ -464,7 +471,13 @@ const Users = () => {
                           </span>
                         </td>
                         <td className="min-w-0 px-2 py-2.5 align-middle sm:px-3 sm:py-3">
-                          <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
+                          <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
+                            <Link
+                              to={`/audit-security?userId=${encodeURIComponent(u.id)}`}
+                              className="touch-manipulation text-sm font-semibold text-[color:var(--text-secondary)] transition-opacity hover:text-[color:var(--accent-teal)]"
+                            >
+                              View audit
+                            </Link>
                             <button
                               type="button"
                               onClick={() => handleResetPassword(u)}

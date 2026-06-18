@@ -22,6 +22,7 @@ import {
 } from '../utils/customerContacts';
 import { validateIdProofTypeForCustomer } from '../utils/customerIdProof';
 import { getKeralaMapGpsWarning } from '../utils/mapGpsValidation';
+import { logSecurityAudit } from '../utils/auditLogger';
 import { CustomerType, Prisma } from '@prisma/client';
 import * as XLSX from 'xlsx';
 
@@ -503,6 +504,16 @@ router.post(
         },
       });
 
+      logSecurityAudit({
+        userId: req.user.id,
+        role: req.user.role,
+        actionType: 'customer_created',
+        entityType: 'Customer',
+        entityId: customer.id,
+        summary: `Created customer ${customer.customerId} (${getCustomerDisplayNameForExport(customer)})`,
+        req,
+      });
+
       res.status(201).json(customerResponseWithMapGpsWarning(customer));
     } catch (error: any) {
       console.error('Error creating customer:', error);
@@ -847,6 +858,15 @@ router.put(
       }
 
       if (process.env.NODE_ENV === 'development') console.log('[CUSTOMER UPDATE] Customer updated successfully:', updatedCustomer.id);
+      logSecurityAudit({
+        userId: req.user.id,
+        role: req.user.role,
+        actionType: 'customer_updated',
+        entityType: 'Customer',
+        entityId: updatedCustomer.id,
+        summary: `Updated customer ${updatedCustomer.customerId} (${getCustomerDisplayNameForExport(updatedCustomer)})`,
+        req,
+      });
       res.json(customerResponseWithMapGpsWarning(updatedCustomer));
     } catch (error: any) {
       console.error('[CUSTOMER UPDATE] Error updating customer:', error);
@@ -882,6 +902,16 @@ router.delete('/:id', authenticate, authorize(UserRole.ADMIN), async (req: Reque
         error: 'Cannot delete customer with existing projects. Please delete or reassign projects first.' 
       });
     }
+
+    logSecurityAudit({
+      userId: req.user!.id,
+      role: req.user!.role,
+      actionType: 'customer_deleted',
+      entityType: 'Customer',
+      entityId: customer.id,
+      summary: `Deleted customer ${customer.customerId} (${getCustomerDisplayNameForExport(customer)})`,
+      req,
+    });
 
     await prisma.customer.delete({
       where: { id: req.params.id },

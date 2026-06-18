@@ -23,11 +23,24 @@ const ACTION_TYPES_FOR_DISTRIBUTION = [
   'password_reset_completed',
   'user_created',
   'user_role_changed',
+  'user_deleted',
   'project_created',
   'project_status_changed',
+  'payment_updated',
+  'customer_created',
+  'customer_updated',
+  'customer_deleted',
+  'document_uploaded',
+  'document_deleted',
   'support_ticket_created',
   'support_ticket_closed',
   'proposal_generated',
+  'costing_template_saved',
+  'costing_template_deleted',
+  'pe_limit_costing_too_large',
+  'pe_limit_bom_too_large',
+  'pe_limit_proposal_too_large',
+  'pe_limit_share_payload_too_large',
 ] as const;
 
 function parseDate(s: string | undefined): Date | null {
@@ -138,11 +151,17 @@ type ExportWhereInput = { where: any; dateFrom: Date | null; dateTo: Date | null
 function buildLogsWhereFromQuery(req: Request): ExportWhereInput {
   const actionType = typeof req.query.actionType === 'string' ? req.query.actionType.trim() || undefined : undefined;
   const entityType = typeof req.query.entityType === 'string' ? req.query.entityType.trim() || undefined : undefined;
+  const userId = typeof req.query.userId === 'string' ? req.query.userId.trim() || undefined : undefined;
+  const q = typeof req.query.q === 'string' ? req.query.q.trim() || undefined : undefined;
   const dateFrom = parseDate(req.query.dateFrom as string);
   const dateTo = parseDate(req.query.dateTo as string);
   const where: any = {};
   if (actionType) where.actionType = actionType;
   if (entityType) where.entityType = entityType;
+  if (userId) where.userId = userId;
+  if (q) {
+    where.summary = { contains: q, mode: 'insensitive' };
+  }
   if (dateFrom || dateTo) {
     where.createdAt = {};
     if (dateFrom) where.createdAt.gte = dateFrom;
@@ -217,6 +236,7 @@ router.get(
     query('actionType').optional().isString(),
     query('entityType').optional().isString(),
     query('userId').optional().isString(),
+    query('q').optional().isString(),
     query('dateFrom').optional().isISO8601(),
     query('dateTo').optional().isISO8601(),
     query('sortBy').optional().isIn([...AUDIT_LOG_SORT_BY]),
@@ -235,6 +255,7 @@ router.get(
       const actionType = typeof req.query.actionType === 'string' ? req.query.actionType.trim() || undefined : undefined;
       const entityType = typeof req.query.entityType === 'string' ? req.query.entityType.trim() || undefined : undefined;
       const userId = typeof req.query.userId === 'string' ? req.query.userId.trim() || undefined : undefined;
+      const q = typeof req.query.q === 'string' ? req.query.q.trim() || undefined : undefined;
       const dateFrom = parseDate(req.query.dateFrom as string);
       const dateTo = parseDate(req.query.dateTo as string);
 
@@ -242,6 +263,9 @@ router.get(
       if (actionType) where.actionType = actionType;
       if (entityType) where.entityType = entityType;
       if (userId) where.userId = userId;
+      if (q) {
+        where.summary = { contains: q, mode: 'insensitive' };
+      }
       if (dateFrom || dateTo) {
         where.createdAt = {};
         if (dateFrom) where.createdAt.gte = dateFrom;
@@ -525,6 +549,8 @@ router.get(
     query('dateTo').optional().isISO8601(),
     query('actionType').optional().isString(),
     query('entityType').optional().isString(),
+    query('userId').optional().isString(),
+    query('q').optional().isString(),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -583,6 +609,8 @@ router.get(
     query('dateTo').optional().isISO8601(),
     query('actionType').optional().isString(),
     query('entityType').optional().isString(),
+    query('userId').optional().isString(),
+    query('q').optional().isString(),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -634,6 +662,8 @@ router.get(
     query('dateTo').optional().isISO8601(),
     query('actionType').optional().isString(),
     query('entityType').optional().isString(),
+    query('userId').optional().isString(),
+    query('q').optional().isString(),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -739,6 +769,101 @@ function buildAuditPdfBuffer(
     }
   });
 }
+
+/**
+ * GET /api/admin/audit/project-field-logs
+ * Paginated project field change history from audit_logs (CRM project edits).
+ */
+router.get(
+  '/project-field-logs',
+  authenticate,
+  authorize(UserRole.ADMIN),
+  [
+    query('page').optional().isInt({ min: 1 }).toInt(),
+    query('limit').optional().isInt({ min: 1, max: MAX_LIMIT }).toInt(),
+    query('projectId').optional().isString(),
+    query('q').optional().isString(),
+    query('dateFrom').optional().isISO8601(),
+    query('dateTo').optional().isISO8601(),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const page = Math.min(Number(req.query.page) || DEFAULT_PAGE, 9999);
+      const limit = Math.min(Number(req.query.limit) || DEFAULT_LIMIT, MAX_LIMIT);
+      const skip = (page - 1) * limit;
+      const projectId = typeof req.query.projectId === 'string' ? req.query.projectId.trim() || undefined : undefined;
+      const q = typeof req.query.q === 'string' ? req.query.q.trim() || undefined : undefined;
+      const dateFrom = parseDate(req.query.dateFrom as string);
+      const dateTo = parseDate(req.query.dateTo as string);
+
+      const where: Prisma.AuditLogWhereInput = {};
+      if (projectId) where.projectId = projectId;
+      if (dateFrom || dateTo) {
+        where.createdAt = {};
+        if (dateFrom) where.createdAt.gte = dateFrom;
+        if (dateTo) {
+          const end = new Date(dateTo);
+          end.setHours(23, 59, 59, 999);
+          where.createdAt.lte = end;
+        }
+      }
+      if (dateFrom && dateTo) {
+        const days = (dateTo.getTime() - dateFrom.getTime()) / (24 * 60 * 60 * 1000);
+        if (days > MAX_DAYS_RANGE) {
+          return res.status(400).json({ error: `Date range must not exceed ${MAX_DAYS_RANGE} days` });
+        }
+      }
+      if (q) {
+        where.OR = [
+          { action: { contains: q, mode: 'insensitive' } },
+          { field: { contains: q, mode: 'insensitive' } },
+          { oldValue: { contains: q, mode: 'insensitive' } },
+          { newValue: { contains: q, mode: 'insensitive' } },
+          { remarks: { contains: q, mode: 'insensitive' } },
+        ];
+      }
+
+      const [logs, total] = await Promise.all([
+        prisma.auditLog.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+          include: {
+            project: { select: { id: true, slNo: true } },
+            user: { select: { id: true, email: true, name: true } },
+          },
+        }),
+        prisma.auditLog.count({ where }),
+      ]);
+
+      res.json({
+        logs: logs.map((l) => ({
+          id: l.id,
+          projectId: l.projectId,
+          projectSlNo: l.project?.slNo ?? null,
+          userId: l.userId,
+          userEmail: l.user?.email ?? null,
+          userName: l.user?.name ?? null,
+          action: l.action,
+          field: l.field,
+          oldValue: l.oldValue,
+          newValue: l.newValue,
+          remarks: l.remarks,
+          createdAt: l.createdAt,
+        })),
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      });
+    } catch {
+      res.status(500).json({ error: 'Failed to fetch project field logs' });
+    }
+  }
+);
 
 /**
  * GET /api/admin/audit/ip-locations?ips=1.1.1.1,8.8.8.8

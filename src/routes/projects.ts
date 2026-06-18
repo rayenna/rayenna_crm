@@ -14,6 +14,7 @@ import {
   validateLeadSourceDetailsPair,
 } from '../utils/leadSourceValidation';
 import { assertPaymentCollectionDatesNotFuture } from '../utils/paymentCollectionDate';
+import { updateTouchesPaymentTracking } from '../utils/paymentAudit';
 
 // Valid values for lostToCompetitionReason (required when lostReason is LOST_TO_COMPETITION)
 const LOST_TO_COMPETITION_REASON_VALUES = ['LOST_DUE_TO_PRICE', 'LOST_DUE_TO_FEATURES', 'LOST_DUE_TO_RELATIONSHIP_OTHER'] as const;
@@ -1944,6 +1945,18 @@ router.put(
 
       if (updateData.projectStatus !== undefined && req.user) {
         logSecurityAudit({ userId: req.user.id, role: req.user.role, actionType: 'project_status_changed', entityType: 'Project', entityId: req.params.id, summary: `Status ${project.projectStatus} -> ${updateData.projectStatus}`, req });
+      }
+      if (req.user && updateTouchesPaymentTracking(updateData)) {
+        const slNo = updatedProject.slNo ?? project.slNo;
+        logSecurityAudit({
+          userId: req.user.id,
+          role: req.user.role,
+          actionType: 'payment_updated',
+          entityType: 'Project',
+          entityId: req.params.id,
+          summary: `Payment tracking updated for project #${slNo}`,
+          req,
+        });
       }
       // Create audit log for significant changes
       const changedFields = Object.keys(updateData);

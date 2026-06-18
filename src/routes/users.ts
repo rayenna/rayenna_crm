@@ -223,8 +223,26 @@ router.delete('/:id', authenticate, authorize(UserRole.ADMIN), async (req: Reque
       return res.status(400).json({ error: 'Cannot delete your own account' });
     }
 
+    const targetUser = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, email: true, role: true },
+    });
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     await prisma.user.delete({
       where: { id: req.params.id },
+    });
+
+    logSecurityAudit({
+      userId: req.user!.id,
+      role: req.user!.role,
+      actionType: 'user_deleted',
+      entityType: 'User',
+      entityId: targetUser.id,
+      summary: `Deleted user ${targetUser.email} (${targetUser.role})`,
+      req,
     });
 
     res.json({ message: 'User deleted successfully' });

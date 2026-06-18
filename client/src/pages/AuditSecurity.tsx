@@ -1,10 +1,23 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, useEffect, Fragment, type ReactNode } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useChartColors } from '../hooks/useChartColors'
 import { useQuery } from '@tanstack/react-query'
-import axiosInstance from '../utils/axios'
+import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
-import { UserRole } from '../types'
+import { User, UserRole } from '../types'
 import { format } from 'date-fns'
+import toast from 'react-hot-toast'
+import {
+  AUDIT_ACTION_TYPE_OPTIONS,
+  AUDIT_ENTITY_TYPE_OPTIONS,
+  auditActionLabel,
+  auditDatePresetRange,
+  auditEntityLinkLabel,
+  auditEntityPath,
+  buildAuditFilterSummary,
+  type AuditDatePreset,
+} from '../utils/auditSecurityUi'
+import AuditProjectFieldHistory from '../components/audit/AuditProjectFieldHistory'
 import {
   ResponsiveContainer,
   LineChart,
@@ -32,36 +45,58 @@ import {
 const PAGE_SIZE = 20
 const SUMMARY_DAYS = 7
 const TREND_DAYS_OPTIONS = [7, 30, 90] as const
-
-const ACTION_TYPE_OPTIONS: { value: string; label: string }[] = [
-  { value: '', label: 'All actions' },
-  { value: 'login', label: 'Login' },
-  { value: 'password_reset_initiated', label: 'Password reset initiated' },
-  { value: 'password_reset_completed', label: 'Password reset completed' },
-  { value: 'user_created', label: 'User created' },
-  { value: 'user_role_changed', label: 'User role changed' },
-  { value: 'project_created', label: 'Project created' },
-  { value: 'project_status_changed', label: 'Project status changed' },
-  { value: 'support_ticket_created', label: 'Support ticket created' },
-  { value: 'support_ticket_closed', label: 'Support ticket closed' },
-  { value: 'proposal_generated', label: 'Proposal generated' },
+const DATE_PRESET_OPTIONS: { value: AuditDatePreset; label: string }[] = [
+  { value: 'today', label: 'Today' },
+  { value: '7d', label: '7 days' },
+  { value: '30d', label: '30 days' },
+  { value: '90d', label: '90 days' },
 ]
 
-const ENTITY_TYPE_OPTIONS: { value: string; label: string }[] = [
-  { value: '', label: 'All entities' },
-  { value: 'User', label: 'User' },
-  { value: 'Project', label: 'Project' },
-  { value: 'SupportTicket', label: 'Support ticket' },
-  { value: 'Proposal', label: 'Proposal' },
-]
+function AuditEntityLink({
+  entityType,
+  entityId,
+}: {
+  entityType?: string | null
+  entityId?: string | null
+}) {
+  const path = auditEntityPath(entityType, entityId)
+  const label = auditEntityLinkLabel(entityType, entityId)
+  if (!path || !entityType || !entityId) {
+    return <span>—</span>
+  }
+  return (
+    <Link
+      to={path}
+      className="font-medium text-[color:var(--accent-teal)] underline-offset-2 hover:underline"
+      title={entityId}
+    >
+      {label}
+    </Link>
+  )
+}
 
-function buildExportParams(dateFrom: string, dateTo: string, actionType: string, entityType: string): URLSearchParams {
+function buildExportParams(
+  dateFrom: string,
+  dateTo: string,
+  actionType: string,
+  entityType: string,
+  userId: string,
+  summarySearch: string,
+): URLSearchParams {
   const p = new URLSearchParams()
   if (dateFrom) p.set('dateFrom', dateFrom)
   if (dateTo) p.set('dateTo', dateTo)
   if (actionType) p.set('actionType', actionType)
   if (entityType) p.set('entityType', entityType)
+  if (userId) p.set('userId', userId)
+  if (summarySearch.trim()) p.set('q', summarySearch.trim())
   return p
+}
+
+type AuditRecordsTab = 'security' | 'fieldHistory'
+
+function failedLoginRowKey(log: { id?: string; createdAt: string; email?: string; ip?: string }, idx: number): string {
+  return log.id ?? `${log.createdAt}-${log.email ?? ''}-${log.ip ?? ''}-${idx}`
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -111,9 +146,6 @@ function AuditTableSortGlyph({ active }: { active: boolean }) {
 const sectionShell =
   'rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] overflow-hidden min-w-0'
 
-/** Export + failed-logins pair: equal height on lg (+0.5in vs prior band), capped so the row does not grow without limit */
-const exportFailedPairCardClass = `${sectionShell} flex flex-col min-w-0 overflow-hidden lg:min-h-[min(calc(22rem+0.5in),calc(46vh+0.5in))] lg:max-h-[min(calc(34rem+0.5in),calc(60vh+0.5in))]`
-
 /**
  * Recent failed logins (md+): single scroll container (both axes). Nested outer/inner + w-max + table w-full
  * caused circular width resolution in browsers → only the first column laid out. Do not reintroduce that pattern.
@@ -160,7 +192,7 @@ const FAILED_SORT_SELECT: { value: FailedLoginSortKey; label: string }[] = [
 const ACTIVITY_SORT_SELECT: { value: ActivityLogSortKey; label: string }[] = [
   { value: 'time', label: 'Time' },
   { value: 'userRole', label: 'User / role' },
-  { value: 'email', label: 'E-mail id' },
+  { value: 'email', label: 'Email' },
   { value: 'action', label: 'Action' },
   { value: 'ip', label: 'IP / location' },
   { value: 'entity', label: 'Entity' },
@@ -169,6 +201,7 @@ const ACTIVITY_SORT_SELECT: { value: ActivityLogSortKey; label: string }[] = [
 
 export default function AuditSecurity() {
   const { hasRole } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const chartColors = useChartColors()
   const chartAxisTick = useMemo(() => ({ fill: chartColors.axisText, fontSize: 11 }), [chartColors.axisText])
   const chartGridStroke = chartColors.grid
@@ -185,10 +218,14 @@ export default function AuditSecurity() {
     [chartColors.tooltipBg, chartColors.tooltipBorder, chartColors.tooltipFg, chartColors.tooltipShadow],
   )
   const [page, setPage] = useState(1)
+  const [recordsTab, setRecordsTab] = useState<AuditRecordsTab>('security')
   const [actionType, setActionType] = useState('')
   const [entityType, setEntityType] = useState('')
+  const [filterUserId, setFilterUserId] = useState(() => searchParams.get('userId') ?? '')
+  const [summarySearch, setSummarySearch] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [expandedFailedLogin, setExpandedFailedLogin] = useState<string | null>(null)
   const [trendDays, setTrendDays] = useState<(typeof TREND_DAYS_OPTIONS)[number]>(7)
   const [exporting, setExporting] = useState<'csv' | 'pdf' | 'signed' | null>(null)
   const [failedSort, setFailedSort] = useState<{ by: FailedLoginSortKey; order: 'asc' | 'desc' }>({
@@ -200,7 +237,72 @@ export default function AuditSecurity() {
     order: 'desc',
   })
 
-  const actionLabelByValue = new Map(ACTION_TYPE_OPTIONS.filter(o => o.value).map((o) => [o.value, o.label]))
+  const actionLabelByValue = new Map(AUDIT_ACTION_TYPE_OPTIONS.filter((o) => o.value).map((o) => [o.value, o.label]))
+
+  useEffect(() => {
+    const userId = searchParams.get('userId')
+    if (userId) {
+      setFilterUserId(userId)
+      setPage(1)
+    }
+  }, [searchParams])
+
+  const { data: usersList } = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const res = await axiosInstance.get('/api/users')
+      return res.data as User[]
+    },
+    enabled: hasRole([UserRole.ADMIN]),
+    staleTime: 60_000,
+  })
+
+  const filterUserLabel = useMemo(() => {
+    if (!filterUserId) return undefined
+    const match = usersList?.find((u) => u.id === filterUserId)
+    return match ? `${match.name} (${match.email})` : filterUserId
+  }, [filterUserId, usersList])
+
+  const activeFilterSummary = buildAuditFilterSummary({
+    actionType,
+    entityType,
+    dateFrom,
+    dateTo,
+    userId: filterUserId,
+    userLabel: filterUserLabel,
+    summarySearch,
+  })
+
+  const clearTimelineFilters = () => {
+    setActionType('')
+    setEntityType('')
+    setFilterUserId('')
+    setSummarySearch('')
+    setDateFrom('')
+    setDateTo('')
+    setPage(1)
+    if (searchParams.get('userId')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('userId')
+      setSearchParams(next, { replace: true })
+    }
+  }
+
+  const applyDatePreset = (preset: AuditDatePreset) => {
+    const { from, to } = auditDatePresetRange(preset)
+    setDateFrom(from)
+    setDateTo(to)
+    setPage(1)
+  }
+
+  const handleFilterUserChange = (userId: string) => {
+    setFilterUserId(userId)
+    setPage(1)
+    const next = new URLSearchParams(searchParams)
+    if (userId) next.set('userId', userId)
+    else next.delete('userId')
+    setSearchParams(next, { replace: true })
+  }
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['admin', 'audit', 'security-summary', SUMMARY_DAYS],
@@ -243,11 +345,13 @@ export default function AuditSecurity() {
   params.set('sortOrder', activitySort.order)
   if (actionType) params.set('actionType', actionType)
   if (entityType) params.set('entityType', entityType)
+  if (filterUserId) params.set('userId', filterUserId)
+  if (summarySearch.trim()) params.set('q', summarySearch.trim())
   if (dateFrom) params.set('dateFrom', dateFrom)
   if (dateTo) params.set('dateTo', dateTo)
 
   const { data: logsData, isLoading: logsLoading } = useQuery({
-    queryKey: ['admin', 'audit', 'logs', page, actionType, entityType, dateFrom, dateTo, activitySort.by, activitySort.order],
+    queryKey: ['admin', 'audit', 'logs', page, actionType, entityType, filterUserId, summarySearch, dateFrom, dateTo, activitySort.by, activitySort.order],
     queryFn: async () => {
       const res = await axiosInstance.get(`/api/admin/audit/logs?${params.toString()}`)
       return res.data as { logs: any[]; pagination: { page: number; limit: number; total: number; totalPages: number } }
@@ -285,10 +389,12 @@ export default function AuditSecurity() {
     label: p.date ? format(new Date(`${p.date}T00:00:00`), 'MMM d') : p.date,
   }))
 
-  const entityKeys = ['User', 'Project', 'SupportTicket', 'Proposal', 'Other'] as const
+  const entityKeys = ['User', 'Customer', 'Project', 'Document', 'SupportTicket', 'Proposal', 'Other'] as const
   const entityColors: Record<(typeof entityKeys)[number], string> = {
     User: 'var(--accent-blue)',
+    Customer: 'var(--accent-teal)',
     Project: 'var(--accent-teal)',
+    Document: 'var(--accent-purple)',
     SupportTicket: 'var(--accent-gold)',
     Proposal: 'var(--accent-purple)',
     Other: 'var(--text-muted)',
@@ -362,12 +468,12 @@ export default function AuditSecurity() {
   const handleExportCsv = async () => {
     setExporting('csv')
     try {
-      const params = buildExportParams(dateFrom, dateTo, actionType, entityType)
+      const params = buildExportParams(dateFrom, dateTo, actionType, entityType, filterUserId, summarySearch)
       const res = await axiosInstance.get(`/api/admin/audit/export/csv?${params.toString()}`, { responseType: 'blob' })
       const name = res.headers['content-disposition']?.match(/filename="?([^"]+)"?/)?.[1] ?? `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`
       downloadBlob(res.data, name)
-    } catch {
-      // Error handled by axios / toast if configured
+    } catch (e: unknown) {
+      toast.error(getFriendlyApiErrorMessage(e))
     } finally {
       setExporting(null)
     }
@@ -376,12 +482,12 @@ export default function AuditSecurity() {
   const handleExportPdf = async () => {
     setExporting('pdf')
     try {
-      const params = buildExportParams(dateFrom, dateTo, actionType, entityType)
+      const params = buildExportParams(dateFrom, dateTo, actionType, entityType, filterUserId, summarySearch)
       const res = await axiosInstance.get(`/api/admin/audit/export/pdf?${params.toString()}`, { responseType: 'blob' })
       const name = res.headers['content-disposition']?.match(/filename="?([^"]+)"?/)?.[1] ?? `audit-logs-${new Date().toISOString().slice(0, 10)}.pdf`
       downloadBlob(res.data, name)
-    } catch {
-      //
+    } catch (e: unknown) {
+      toast.error(getFriendlyApiErrorMessage(e))
     } finally {
       setExporting(null)
     }
@@ -390,12 +496,12 @@ export default function AuditSecurity() {
   const handleExportSignedPdf = async () => {
     setExporting('signed')
     try {
-      const params = buildExportParams(dateFrom, dateTo, actionType, entityType)
+      const params = buildExportParams(dateFrom, dateTo, actionType, entityType, filterUserId, summarySearch)
       const res = await axiosInstance.get(`/api/admin/audit/export/signed-pdf?${params.toString()}`, { responseType: 'blob' })
       const name = res.headers['content-disposition']?.match(/filename="?([^"]+)"?/)?.[1] ?? `signed-audit-export-${new Date().toISOString().slice(0, 10)}.pdf`
       downloadBlob(res.data, name)
-    } catch {
-      //
+    } catch (e: unknown) {
+      toast.error(getFriendlyApiErrorMessage(e))
     } finally {
       setExporting(null)
     }
@@ -587,75 +693,55 @@ export default function AuditSecurity() {
         </div>
       </section>
 
-      {/* Export + recent failed logins: stack on phone/tablet; equal-height columns on laptop+ */}
-      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch lg:gap-8">
-      {/* Export */}
-      <section className={exportFailedPairCardClass} aria-labelledby="audit-export-heading">
-        <div className={sectionHeaderBar}>
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md">
-              <FaDownload className="h-4 w-4" />
-            </div>
-            <div className="min-w-0">
-              <h2 id="audit-export-heading" className="zenith-display text-base font-bold tracking-tight text-[color:var(--text-primary)] sm:text-lg">
-                Export audit logs
-              </h2>
-              <p className="text-xs text-[color:var(--text-muted)] sm:text-sm">Uses the date range and filters from Activity timeline below.</p>
-            </div>
-          </div>
-        </div>
-        <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 sm:p-5">
-          <p className="text-sm leading-relaxed text-[color:var(--text-secondary)]">
-            Set filters and dates in the timeline section, then download CSV, PDF, or a signed PDF for records.
-          </p>
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center lg:mt-auto lg:flex-col lg:items-stretch">
-            <button
-              type="button"
-              disabled={!!exporting}
-              onClick={handleExportCsv}
-              className="inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl bg-[color:var(--accent-teal)] px-5 text-sm font-bold text-[color:var(--text-inverse)] shadow-[var(--shadow-card)] transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-45"
-            >
-              {exporting === 'csv' ? 'Exporting…' : 'Export CSV'}
-            </button>
-            <button
-              type="button"
-              disabled={!!exporting}
-              onClick={handleExportPdf}
-              className="inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl border border-[color:var(--border-strong)] bg-[color:var(--bg-input)] px-5 text-sm font-semibold text-[color:var(--text-primary)] shadow-[var(--shadow-card)] transition-colors hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-45"
-            >
-              {exporting === 'pdf' ? 'Exporting…' : 'Export PDF'}
-            </button>
-            <button
-              type="button"
-              disabled={!!exporting}
-              onClick={handleExportSignedPdf}
-              className="inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl border-2 border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-5 text-sm font-semibold text-[color:var(--accent-gold)] shadow-[var(--shadow-card)] transition-colors hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-45"
-            >
-              {exporting === 'signed' ? 'Exporting…' : 'Signed audit export'}
-            </button>
-          </div>
-          <p className="text-xs leading-relaxed text-[color:var(--text-muted)]">
-            Signed exports include generated date and exporter email in the footer.
-          </p>
-        </div>
-      </section>
+      <div className="flex flex-wrap gap-2 border-b border-[color:var(--border-default)] pb-1" role="tablist" aria-label="Audit records">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={recordsTab === 'security'}
+          onClick={() => setRecordsTab('security')}
+          className={`inline-flex min-h-[44px] touch-manipulation items-center rounded-t-xl border px-4 text-sm font-semibold transition-colors ${
+            recordsTab === 'security'
+              ? 'border-[color:var(--border-default)] border-b-transparent bg-[color:var(--bg-card)] text-[color:var(--accent-teal)]'
+              : 'border-transparent bg-transparent text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]'
+          }`}
+        >
+          Security events
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={recordsTab === 'fieldHistory'}
+          onClick={() => setRecordsTab('fieldHistory')}
+          className={`inline-flex min-h-[44px] touch-manipulation items-center rounded-t-xl border px-4 text-sm font-semibold transition-colors ${
+            recordsTab === 'fieldHistory'
+              ? 'border-[color:var(--border-default)] border-b-transparent bg-[color:var(--bg-card)] text-[color:var(--accent-teal)]'
+              : 'border-transparent bg-transparent text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]'
+          }`}
+        >
+          Project field history
+        </button>
+      </div>
 
+      {recordsTab === 'fieldHistory' ? (
+        <AuditProjectFieldHistory />
+      ) : (
+        <>
       {/* Recent failed logins */}
-      <section className={exportFailedPairCardClass} aria-labelledby="audit-failed-heading">
+      <section className={sectionShell} aria-labelledby="audit-failed-heading">
         <div className={sectionHeaderBar}>
           <div className="flex items-center gap-3 min-w-0">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-md">
               <FaExclamationTriangle className="h-4 w-4" />
             </div>
             <div className="min-w-0">
-              <h2 id="audit-failed-heading" className="zenith-display text-base font-bold tracking-tight text-white sm:text-lg">
+              <h2 id="audit-failed-heading" className="zenith-display text-base font-bold tracking-tight text-[color:var(--text-primary)] sm:text-lg">
                 Recent failed logins
               </h2>
               <p className="text-xs text-[color:var(--text-muted)] sm:text-sm">Latest attempts from access logs (up to 10).</p>
             </div>
           </div>
         </div>
-        <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-4">
+        <div className="flex min-h-0 flex-col p-3 sm:p-4">
         {failedLoginsData?.logs?.length ? (
           <>
             <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2 md:hidden">
@@ -697,11 +783,13 @@ export default function AuditSecurity() {
               </div>
             </div>
             <ul className="mb-4 space-y-3 md:hidden" aria-label="Recent failed logins">
-              {sortedFailedLogins.map((log: { email?: string; ip?: string; createdAt: string }, idx: number) => {
+              {sortedFailedLogins.map((log: { id?: string; email?: string; ip?: string; userAgent?: string; createdAt: string }, idx: number) => {
                 const timeStr = log.createdAt ? format(new Date(log.createdAt), 'PPp') : '—'
+                const rowKey = failedLoginRowKey(log, idx)
+                const isExpanded = expandedFailedLogin === rowKey
                 return (
                   <li
-                    key={`${log.createdAt}-${log.email}-${log.ip}-${idx}`}
+                    key={rowKey}
                     className="rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)]"
                   >
                     <p className="zenith-display text-xs font-semibold uppercase tracking-wide text-[color:var(--accent-gold)]">
@@ -709,6 +797,22 @@ export default function AuditSecurity() {
                     </p>
                     <p className="mt-2 break-all text-sm text-[color:var(--text-primary)] [overflow-wrap:anywhere]">{log.email ?? '—'}</p>
                     <p className="mt-1 font-mono text-xs text-[color:var(--accent-teal)]">{log.ip ?? '—'}</p>
+                    {log.userAgent ? (
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedFailedLogin(isExpanded ? null : rowKey)}
+                          className="text-xs font-semibold text-[color:var(--accent-teal)] underline-offset-2 hover:underline"
+                        >
+                          {isExpanded ? 'Hide user agent' : 'Show user agent'}
+                        </button>
+                        {isExpanded ? (
+                          <p className="mt-1 break-all text-xs leading-relaxed text-[color:var(--text-muted)] [overflow-wrap:anywhere]">
+                            {log.userAgent}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </li>
                 )
               })}
@@ -769,9 +873,11 @@ export default function AuditSecurity() {
               <tbody className="divide-y divide-[color:var(--border-default)]">
                 {sortedFailedLogins.map((log: any, idx: number) => {
                   const timeStr = log.createdAt ? format(new Date(log.createdAt), 'PPp') : '—'
+                  const rowKey = failedLoginRowKey(log, idx)
+                  const isExpanded = expandedFailedLogin === rowKey
                   return (
+                  <Fragment key={rowKey}>
                   <tr
-                    key={log.id ?? `${log.createdAt}-${log.email}-${log.ip}-${idx}`}
                     className="bg-[color:var(--bg-input)] transition-colors duration-150 ease-out hover:bg-[color:var(--accent-gold-muted)]/45"
                   >
                     <td className="min-w-0 px-2 py-2.5 align-middle text-sm text-[color:var(--text-secondary)] sm:px-3 sm:py-3">
@@ -781,9 +887,29 @@ export default function AuditSecurity() {
                       <span className="block truncate" title={log.email ?? ''}>{log.email ?? '—'}</span>
                     </td>
                     <td className="min-w-0 px-2 py-2.5 align-middle text-sm text-[color:var(--text-secondary)] sm:px-3 sm:py-3">
-                      <span className="block truncate font-mono text-[13px] text-[color:var(--accent-teal)]" title={log.ip ?? ''}>{log.ip ?? '—'}</span>
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <span className="block truncate font-mono text-[13px] text-[color:var(--accent-teal)]" title={log.ip ?? ''}>{log.ip ?? '—'}</span>
+                        {log.userAgent ? (
+                          <button
+                            type="button"
+                            onClick={() => setExpandedFailedLogin(isExpanded ? null : rowKey)}
+                            className="w-fit text-left text-[11px] font-semibold text-[color:var(--accent-teal)] underline-offset-2 hover:underline"
+                          >
+                            {isExpanded ? 'Hide user agent' : 'User agent'}
+                          </button>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
+                  {isExpanded && log.userAgent ? (
+                    <tr className="bg-[color:var(--bg-surface)]">
+                      <td colSpan={3} className="px-3 py-2 text-xs leading-relaxed text-[color:var(--text-muted)]">
+                        <span className="font-semibold text-[color:var(--text-secondary)]">User agent:</span>{' '}
+                        <span className="break-all [overflow-wrap:anywhere]">{log.userAgent}</span>
+                      </td>
+                    </tr>
+                  ) : null}
+                  </Fragment>
                   )
                 })}
               </tbody>
@@ -797,28 +923,91 @@ export default function AuditSecurity() {
         )}
         </div>
       </section>
-      </div>
 
       {/* Activity timeline */}
       <section className={sectionShell} aria-labelledby="audit-timeline-heading">
         <div className={sectionHeaderBar}>
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-700 text-white shadow-md">
-              <FaStream className="h-4 w-4" />
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-700 text-white shadow-md">
+                <FaStream className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <h2 id="audit-timeline-heading" className="zenith-display text-base font-bold tracking-tight text-[color:var(--text-primary)] sm:text-lg">
+                  Activity timeline
+                </h2>
+                <p className="text-xs text-[color:var(--text-muted)] sm:text-sm">
+                  Filter and export security audit entries. Sort applies across all pages (server-side).
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h2 id="audit-timeline-heading" className="zenith-display text-base font-bold tracking-tight text-[color:var(--text-primary)] sm:text-lg">
-                Activity timeline
-              </h2>
-              <p className="text-xs text-[color:var(--text-muted)] sm:text-sm">
-                Filter security audit entries. Column sort applies across all pages (server-side). E-mail column sorts by user id.
-              </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap lg:max-w-xl lg:justify-end">
+              <button
+                type="button"
+                disabled={!!exporting}
+                onClick={handleExportCsv}
+                className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl bg-[color:var(--accent-teal)] px-4 text-sm font-bold text-[color:var(--text-inverse)] shadow-[var(--shadow-card)] transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <FaDownload className="h-3.5 w-3.5" aria-hidden />
+                {exporting === 'csv' ? 'Exporting…' : 'CSV'}
+              </button>
+              <button
+                type="button"
+                disabled={!!exporting}
+                onClick={handleExportPdf}
+                className="inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl border border-[color:var(--border-strong)] bg-[color:var(--bg-input)] px-4 text-sm font-semibold text-[color:var(--text-primary)] shadow-[var(--shadow-card)] transition-colors hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                {exporting === 'pdf' ? 'Exporting…' : 'PDF'}
+              </button>
+              <button
+                type="button"
+                disabled={!!exporting}
+                onClick={handleExportSignedPdf}
+                className="inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl border-2 border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-4 text-sm font-semibold text-[color:var(--accent-gold)] shadow-[var(--shadow-card)] transition-colors hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                {exporting === 'signed' ? 'Exporting…' : 'Signed PDF'}
+              </button>
             </div>
           </div>
         </div>
 
         <div className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] px-4 py-4 sm:px-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mb-4 flex flex-wrap gap-2">
+            {DATE_PRESET_OPTIONS.map((preset) => (
+              <button
+                key={preset.value}
+                type="button"
+                onClick={() => applyDatePreset(preset.value)}
+                className="inline-flex min-h-[36px] touch-manipulation items-center rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 text-xs font-semibold text-[color:var(--text-secondary)] transition-colors hover:border-[color:var(--accent-teal-border)] hover:text-[color:var(--accent-teal)]"
+              >
+                {preset.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={clearTimelineFilters}
+              className="inline-flex min-h-[36px] touch-manipulation items-center rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 text-xs font-semibold text-[color:var(--text-muted)] transition-colors hover:text-[color:var(--text-primary)]"
+            >
+              Clear filters
+            </button>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <div className="min-w-0 xl:col-span-2">
+              <label htmlFor="audit-summary-search" className={fieldLabelClass}>
+                Summary search
+              </label>
+              <input
+                id="audit-summary-search"
+                type="search"
+                placeholder="Search summary text…"
+                className={fieldDateClass}
+                value={summarySearch}
+                onChange={(e) => {
+                  setSummarySearch(e.target.value)
+                  setPage(1)
+                }}
+              />
+            </div>
             <div className="min-w-0">
               <label htmlFor="audit-action-type" className={fieldLabelClass}>
                 Action type
@@ -832,7 +1021,7 @@ export default function AuditSecurity() {
                   setPage(1)
                 }}
               >
-                {ACTION_TYPE_OPTIONS.map((o) => (
+                {AUDIT_ACTION_TYPE_OPTIONS.map((o) => (
                   <option key={o.value || 'all'} value={o.value}>{o.label}</option>
                 ))}
               </select>
@@ -850,8 +1039,26 @@ export default function AuditSecurity() {
                   setPage(1)
                 }}
               >
-                {ENTITY_TYPE_OPTIONS.map((o) => (
+                {AUDIT_ENTITY_TYPE_OPTIONS.map((o) => (
                   <option key={o.value || 'all'} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="min-w-0">
+              <label htmlFor="audit-filter-user" className={fieldLabelClass}>
+                User (actor)
+              </label>
+              <select
+                id="audit-filter-user"
+                className={fieldControlClass}
+                value={filterUserId}
+                onChange={(e) => handleFilterUserChange(e.target.value)}
+              >
+                <option value="">All users</option>
+                {(usersList ?? []).map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} ({u.email})
+                  </option>
                 ))}
               </select>
             </div>
@@ -886,6 +1093,11 @@ export default function AuditSecurity() {
               />
             </div>
           </div>
+          {activeFilterSummary ? (
+            <p className="mt-4 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 text-xs text-[color:var(--text-secondary)]">
+              <span className="font-semibold text-[color:var(--accent-teal)]">Showing:</span> {activeFilterSummary}
+            </p>
+          ) : null}
         </div>
 
         <div className="p-3 sm:p-4">
@@ -950,7 +1162,9 @@ export default function AuditSecurity() {
                     <p className="zenith-display text-xs font-semibold uppercase tracking-wide text-[color:var(--accent-gold)]">
                       {timeStr}
                     </p>
-                    <p className="mt-2 text-sm font-semibold text-[color:var(--text-primary)]">{log.actionType}</p>
+                    <p className="mt-2 text-sm font-semibold text-[color:var(--text-primary)]">
+                      {auditActionLabel(log.actionType)}
+                    </p>
                     <p className="mt-1 break-words text-sm text-[color:var(--text-secondary)] [overflow-wrap:anywhere]">
                       {(log.userId ?? '—') + ' / ' + (log.role ?? '—')}
                     </p>
@@ -964,7 +1178,7 @@ export default function AuditSecurity() {
                       </p>
                     ) : null}
                     <p className="mt-2 font-mono text-xs text-[color:var(--text-muted)] [overflow-wrap:anywhere]">
-                      {log.entityType && log.entityId ? `${log.entityType}#${log.entityId}` : '—'}
+                      <AuditEntityLink entityType={log.entityType} entityId={log.entityId} />
                     </p>
                     <p className="mt-2 text-sm leading-snug text-[color:var(--text-secondary)]">{log.summary ?? '—'}</p>
                   </li>
@@ -1024,13 +1238,13 @@ export default function AuditSecurity() {
                       <button
                         type="button"
                         className={AUDIT_SORT_BTN_HEADER}
-                        title="Sort by user id (applies across pages; proxy for e-mail)"
+                        title="Sort by email (sorts by user account id across pages)"
                         onClick={(e) => {
                           e.stopPropagation()
                           handleActivityLogSort('email')
                         }}
                       >
-                        <span className={AUDIT_SORT_LABEL}>E-mail id</span>
+                        <span className={AUDIT_SORT_LABEL}>Email</span>
                         <AuditTableSortGlyph active={activitySort.by === 'email'} />
                       </button>
                     </th>
@@ -1121,7 +1335,9 @@ export default function AuditSecurity() {
                         <span className="block truncate text-[color:var(--accent-teal)]" title={log.email ?? ''}>{log.email ?? '—'}</span>
                       </td>
                       <td className="min-w-0 px-2 py-2.5 align-middle text-sm text-[color:var(--text-secondary)] sm:px-3 sm:py-3">
-                        <span className="block truncate" title={log.actionType ?? ''}>{log.actionType}</span>
+                        <span className="block truncate" title={auditActionLabel(log.actionType)}>
+                          {auditActionLabel(log.actionType)}
+                        </span>
                       </td>
                       <td className="min-w-0 px-2 py-2.5 align-middle text-sm text-[color:var(--text-secondary)] sm:px-3 sm:py-3">
                         {log.ip ? (
@@ -1136,11 +1352,8 @@ export default function AuditSecurity() {
                         )}
                       </td>
                       <td className="min-w-0 px-2 py-2.5 align-top text-sm text-[color:var(--text-secondary)] sm:px-3 sm:py-3">
-                        <span
-                          className="block break-words font-mono text-[13px] [overflow-wrap:anywhere]"
-                          title={log.entityType && log.entityId ? `${log.entityType}#${log.entityId}` : ''}
-                        >
-                          {log.entityType && log.entityId ? `${log.entityType}#${log.entityId}` : '—'}
+                        <span className="block break-words [overflow-wrap:anywhere]">
+                          <AuditEntityLink entityType={log.entityType} entityId={log.entityId} />
                         </span>
                       </td>
                       <td className="min-w-0 px-2 py-2.5 align-middle text-sm text-[color:var(--text-secondary)] sm:px-3 sm:py-3">
@@ -1187,12 +1400,14 @@ export default function AuditSecurity() {
           <div className="rounded-xl border border-dashed border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-10 sm:px-6">
             <p className="text-center text-sm font-medium text-[color:var(--text-secondary)]">No audit logs match the filters.</p>
             <p className="mx-auto mt-2 max-w-xl text-center text-xs leading-relaxed text-[color:var(--text-muted)]">
-              Activity includes logins, user and role changes, project events, support tickets, and proposal generation. Try clearing filters or widening the date range.
+              Activity includes logins, user changes, customers, documents, payment updates, project events, support tickets, proposal generation, and PE events. Try clearing filters or widening the date range.
             </p>
           </div>
         )}
         </div>
       </section>
+        </>
+      )}
       </div>
     </>
   )

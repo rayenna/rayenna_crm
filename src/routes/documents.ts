@@ -7,6 +7,7 @@ import { UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { createAuditLog } from '../utils/audit';
+import { logSecurityAudit } from '../utils/auditLogger';
 import { v2 as cloudinary } from 'cloudinary';
 
 const router = express.Router();
@@ -338,6 +339,16 @@ router.post(
         remarks: `Document uploaded: ${category || 'other'}`,
       });
 
+      logSecurityAudit({
+        userId: req.user!.id,
+        role: req.user!.role,
+        actionType: 'document_uploaded',
+        entityType: 'Document',
+        entityId: document.id,
+        summary: `Uploaded “${uploadFile.originalname}” to project #${project.slNo} (${category})`,
+        req,
+      });
+
       res.status(201).json(document);
     } catch (error: any) {
       // Cleanup on error - delete from Cloudinary if upload succeeded but DB insert failed
@@ -377,6 +388,9 @@ router.delete(
         include: {
           uploadedBy: {
             select: { id: true },
+          },
+          project: {
+            select: { id: true, slNo: true },
           },
         },
       });
@@ -440,6 +454,16 @@ router.delete(
         field: 'documents',
         oldValue: document.fileName,
         remarks: 'Document deleted',
+      });
+
+      logSecurityAudit({
+        userId: req.user!.id,
+        role: req.user!.role,
+        actionType: 'document_deleted',
+        entityType: 'Document',
+        entityId: document.id,
+        summary: `Deleted “${document.fileName}” from project #${document.project?.slNo ?? '—'}`,
+        req,
       });
 
       res.json({ message: 'Document deleted successfully' });
