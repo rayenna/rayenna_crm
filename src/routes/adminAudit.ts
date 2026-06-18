@@ -634,7 +634,7 @@ router.get(
         email: emailByUserId.get(l.userId) ?? '',
         actionType: l.actionType,
         entity: l.entityType && l.entityId ? `${l.entityType}#${(l.entityId as string).slice(0, 8)}` : '',
-        summary: (l.summary ?? '').slice(0, 80),
+        summary: l.summary ?? '',
         ip: l.ip ?? '',
       }));
       const buf = await buildAuditPdfBuffer(rows, false);
@@ -687,7 +687,7 @@ router.get(
         email: emailByUserId.get(l.userId) ?? '',
         actionType: l.actionType,
         entity: l.entityType && l.entityId ? `${l.entityType}#${(l.entityId as string).slice(0, 8)}` : '',
-        summary: (l.summary ?? '').slice(0, 80),
+        summary: l.summary ?? '',
         ip: l.ip ?? '',
       }));
       const signed = true;
@@ -710,57 +710,120 @@ function buildAuditPdfBuffer(
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ size: 'A4', margin: 40, info: { Title: 'Audit & Security Export', Author: 'Rayenna CRM' } });
+      const margin = 40;
+      const darkGray = '#374151';
+      const lightGray = '#6b7280';
+      const headerRule = '#d1d5db';
+      const fontSize = 7;
+      const lineGap = 1;
+      const rowPad = 5;
+      const headerRowHeight = 18;
+      const colGap = 8;
+
+      const doc = new PDFDocument({
+        size: 'A4',
+        layout: 'landscape',
+        margin,
+        info: { Title: 'Audit & Security Export', Author: 'Rayenna CRM' },
+      });
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
-      const darkGray = '#374151';
-      const lightGray = '#6b7280';
-      const colWidths = [70, 50, 42, 52, 50, 38, 90];
-      const headers = ['Time', 'User', 'Role', 'Email', 'Action', 'Entity', 'Summary'];
 
-      function drawHeader(atY: number) {
-        doc.font('Helvetica-Bold').fontSize(8).fillColor(darkGray);
-        doc.text(headers[0], 40, atY);
-        doc.text(headers[1], 40 + colWidths[0], atY);
-        doc.text(headers[2], 40 + colWidths[0] + colWidths[1], atY);
-        doc.text(headers[3], 40 + colWidths[0] + colWidths[1] + colWidths[2], atY);
-        doc.text(headers[4], 40 + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], atY);
-        doc.text(headers[5], 40 + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4], atY);
-        doc.text(headers[6], 40 + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + colWidths[5], atY);
+      const contentWidth = doc.page.width - margin * 2;
+      const bottomLimit = () => doc.page.height - (signed ? 56 : margin);
+
+      type PdfCol = { header: string; width: number; get: (r: (typeof rows)[number]) => string };
+      const columns: PdfCol[] = [
+        { header: 'Time', width: 98, get: (r) => r.time.slice(0, 19) },
+        { header: 'Role', width: 46, get: (r) => r.role ?? '' },
+        { header: 'Email', width: 128, get: (r) => r.email ?? '' },
+        { header: 'Action', width: 92, get: (r) => r.actionType ?? '' },
+        { header: 'Entity', width: 92, get: (r) => r.entity ?? '' },
+        {
+          header: 'Summary',
+          width: 0,
+          get: (r) => (r.summary ?? '').trim(),
+        },
+      ];
+      const fixedWidth = columns.slice(0, -1).reduce((sum, col) => sum + col.width + colGap, 0);
+      columns[columns.length - 1].width = Math.max(120, contentWidth - fixedWidth);
+
+      const colX: number[] = [];
+      let x = margin;
+      for (const col of columns) {
+        colX.push(x);
+        x += col.width + colGap;
       }
 
-      doc.fillColor(darkGray).fontSize(16).font('Helvetica-Bold').text('Audit & Security — Activity Export', 40, 40);
-      doc.fillColor(lightGray).fontSize(10).font('Helvetica').text(`Generated: ${new Date().toISOString()} | Total rows: ${rows.length}`, 40, 62);
-      let y = 90;
-      drawHeader(y);
-      y += 14;
-      doc.font('Helvetica').fillColor(lightGray);
-      for (const r of rows) {
-        if (y > 700) {
-          doc.addPage();
-          y = 40;
-          drawHeader(y);
-          y += 14;
+      function measureRow(r: (typeof rows)[number]): number {
+        doc.font('Helvetica').fontSize(fontSize);
+        let maxH = fontSize;
+        for (let i = 0; i < columns.length; i++) {
+          const text = columns[i].get(r) || '—';
+          const h = doc.heightOfString(text, { width: columns[i].width, lineGap });
+          if (h > maxH) maxH = h;
         }
-        doc.fontSize(7);
-        doc.text(r.time.slice(0, 19), 40, y, { width: colWidths[0] });
-        doc.text((r.userId ?? '').slice(0, 8), 40 + colWidths[0], y, { width: colWidths[1] });
-        doc.text((r.role ?? '').slice(0, 12), 40 + colWidths[0] + colWidths[1], y, { width: colWidths[2] });
-        doc.text((r.email ?? '').slice(0, 14), 40 + colWidths[0] + colWidths[1] + colWidths[2], y, { width: colWidths[3] });
-        doc.text((r.actionType ?? '').slice(0, 14), 40 + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], y, { width: colWidths[4] });
-        doc.text((r.entity ?? '').slice(0, 10), 40 + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4], y, { width: colWidths[5] });
-        doc.text((r.summary ?? '').slice(0, 28), 40 + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + colWidths[5], y, { width: colWidths[6] });
-        y += 12;
+        return maxH;
       }
+
+      function drawTableHeader(atY: number) {
+        doc.font('Helvetica-Bold').fontSize(8).fillColor(darkGray);
+        for (let i = 0; i < columns.length; i++) {
+          doc.text(columns[i].header, colX[i], atY, { width: columns[i].width, lineBreak: false });
+        }
+        const ruleY = atY + headerRowHeight - 6;
+        doc
+          .moveTo(margin, ruleY)
+          .lineTo(doc.page.width - margin, ruleY)
+          .strokeColor(headerRule)
+          .lineWidth(0.5)
+          .stroke();
+      }
+
+      function drawRow(r: (typeof rows)[number], atY: number) {
+        doc.font('Helvetica').fontSize(fontSize).fillColor(lightGray);
+        for (let i = 0; i < columns.length; i++) {
+          const text = columns[i].get(r) || '—';
+          doc.text(text, colX[i], atY, { width: columns[i].width, lineGap, lineBreak: true });
+        }
+      }
+
+      function startTablePage() {
+        doc.addPage({ size: 'A4', layout: 'landscape', margin });
+      }
+
+      doc.fillColor(darkGray).fontSize(16).font('Helvetica-Bold').text('Audit & Security — Activity Export', margin, margin);
+      doc
+        .fillColor(lightGray)
+        .fontSize(10)
+        .font('Helvetica')
+        .text(`Generated: ${new Date().toISOString()} | Total rows: ${rows.length}`, margin, margin + 22);
+
+      let y = margin + 48;
+      drawTableHeader(y);
+      y += headerRowHeight;
+
+      for (const r of rows) {
+        const rowHeight = measureRow(r) + rowPad;
+        if (y + rowHeight > bottomLimit()) {
+          startTablePage();
+          y = margin;
+          drawTableHeader(y);
+          y += headerRowHeight;
+        }
+        drawRow(r, y);
+        y += rowHeight;
+      }
+
       if (signed) {
-        const footerY = doc.page.height - 50;
+        const footerY = doc.page.height - 44;
         doc.fillColor(lightGray).fontSize(9).font('Helvetica').text(
           `Signed audit export — Generated on ${new Date().toISOString()} by ${signedByEmail ?? 'Admin'}. For official use.`,
-          40,
+          margin,
           footerY,
-          { align: 'center', width: doc.page.width - 80 }
+          { align: 'center', width: doc.page.width - margin * 2 }
         );
       }
       doc.end();
