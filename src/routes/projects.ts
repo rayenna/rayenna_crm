@@ -13,6 +13,7 @@ import {
   normalizeLeadSourceDetailsForStorage,
   validateLeadSourceDetailsPair,
 } from '../utils/leadSourceValidation';
+import { assertPaymentCollectionDatesNotFuture } from '../utils/paymentCollectionDate';
 
 // Valid values for lostToCompetitionReason (required when lostReason is LOST_TO_COMPETITION)
 const LOST_TO_COMPETITION_REASON_VALUES = ['LOST_DUE_TO_PRICE', 'LOST_DUE_TO_FEATURES', 'LOST_DUE_TO_RELATIONSHIP_OTHER'] as const;
@@ -795,6 +796,19 @@ router.post(
         lastPayment: lastPaymentNum,
         projectCost: effectiveProjectCostForPayments,
       });
+
+      const futurePaymentDateOnCreate = assertPaymentCollectionDatesNotFuture({
+        advanceReceivedDate,
+        payment1Date,
+        payment2Date,
+        payment3Date,
+        lastPaymentDate,
+      });
+      if (futurePaymentDateOnCreate) {
+        return res.status(400).json({
+          error: `${futurePaymentDateOnCreate.label} cannot be a future date.`,
+        });
+      }
 
       // Convert date strings to Date objects
       const convertDate = (dateStr: any): Date | null => {
@@ -1906,6 +1920,13 @@ router.put(
           delete updateData[field];
         }
       });
+
+      const futurePaymentDate = assertPaymentCollectionDatesNotFuture(updateData);
+      if (futurePaymentDate) {
+        return res.status(400).json({
+          error: `${futurePaymentDate.label} cannot be a future date.`,
+        });
+      }
 
       const updatedProject = await prisma.project.update({
         where: { id: req.params.id },

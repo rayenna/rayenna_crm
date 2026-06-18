@@ -22,6 +22,15 @@ import {
 } from './zenithDrawerMotion'
 import ZenithDrawerPortal from './ZenithDrawerPortal'
 import { clearZenithDrawerBodyLock } from '../../utils/zenithDrawerLifecycle'
+import { toast as showToast } from 'react-hot-toast'
+import { ErrorModal } from '../common/ErrorModal'
+import {
+  buildStalePaymentDateConfirmMessage,
+  isFuturePaymentCollectionDate,
+  isPaymentCollectionDateOlderThanOneMonth,
+  paymentCollectionDateInputMax,
+  formatPaymentCollectionDateLabel,
+} from '../../utils/paymentCollectionDate'
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {
   [ProjectStatus.LEAD]: 'Lead',
@@ -158,6 +167,7 @@ export default function FinanceQuickDrawer({
   const [noteText, setNoteText] = useState('')
   const [paymentAmountInput, setPaymentAmountInput] = useState('')
   const [paymentDateInput, setPaymentDateInput] = useState('')
+  const [stalePaymentDateConfirm, setStalePaymentDateConfirm] = useState<string | null>(null)
   const [narrowViewport, setNarrowViewport] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const openedAtRef = useRef(0)
@@ -247,6 +257,7 @@ export default function FinanceQuickDrawer({
   const enteredPayment = parseFloat(String(paymentAmountInput).replace(/,/g, ''))
   const hasPaymentAmount = Number.isFinite(enteredPayment) && enteredPayment > 0
   const paymentDateMissing = hasPaymentAmount && !paymentDateInput.trim()
+  const paymentDateMax = paymentCollectionDateInputMax()
 
   const patchProjectCache = useCallback(
     (id: string, patch: Partial<Project>) => {
@@ -282,6 +293,59 @@ export default function FinanceQuickDrawer({
   const runToast = (text: string) => setToast({ text, shownAt: Date.now() })
   const runQueuedToast = (text = '✓ Saved — will sync when back online') =>
     setQueuedToast({ text, shownAt: Date.now() })
+
+  const saveRecordedPayment = useCallback(async () => {
+    if (!project || !hasPaymentAmount || !paymentDateInput.trim()) return
+    if (isFuturePaymentCollectionDate(paymentDateInput)) {
+      showToast.error('Payment date cannot be in the future.')
+      return
+    }
+    const add = enteredPayment
+    const iso = new Date(paymentDateInput).toISOString()
+    const body = buildFinanceRadarPaymentBody(project, add, iso)
+    setSaving(true)
+    setError(null)
+    try {
+      const r = await putProjectWithOfflineQueue(project.id, body, 'UPDATE_PAYMENT')
+      if (r === 'queued') {
+        patchProjectCache(project.id, {
+          ...mergeFinanceRadarPaymentCache(project, body),
+        })
+        runQueuedToast()
+      } else {
+        runToast('✓ Payment updated')
+      }
+      setPaymentAmountInput('')
+      setPaymentDateInput('')
+    } catch (e: unknown) {
+      setError(getFriendlyApiErrorMessage(e))
+    } finally {
+      setSaving(false)
+    }
+  }, [
+    enteredPayment,
+    hasPaymentAmount,
+    patchProjectCache,
+    paymentDateInput,
+    project,
+  ])
+
+  const requestSaveRecordedPayment = useCallback(() => {
+    if (!project || !hasPaymentAmount || !paymentDateInput.trim()) return
+    if (isFuturePaymentCollectionDate(paymentDateInput)) {
+      showToast.error('Payment date cannot be in the future.')
+      return
+    }
+    if (isPaymentCollectionDateOlderThanOneMonth(paymentDateInput)) {
+      setStalePaymentDateConfirm(
+        buildStalePaymentDateConfirmMessage([
+          `Payment date: ${formatPaymentCollectionDateLabel(paymentDateInput)}`,
+        ]),
+      )
+      return
+    }
+    void saveRecordedPayment()
+  }, [hasPaymentAmount, paymentDateInput, project, saveRecordedPayment])
 
   return (
     <ZenithDrawerPortal>
@@ -485,6 +549,7 @@ export default function FinanceQuickDrawer({
                       </label>
                       <input
                         type="date"
+                        max={paymentDateMax}
                         value={paymentDateInput}
                         onChange={(e) => setPaymentDateInput(e.target.value)}
                         className="zenith-quick-drawer-date w-full rounded-xl bg-[color:var(--bg-input)] border border-[color:var(--border-input)] px-3 py-3 text-[14px] text-[color:var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-teal-muted)] focus:border-[color:var(--accent-teal)]"
@@ -503,31 +568,7 @@ export default function FinanceQuickDrawer({
                           paymentDateMissing ||
                           !paymentDateInput.trim()
                         }
-                        onClick={async () => {
-                          if (!project || !hasPaymentAmount || !paymentDateInput.trim()) return
-                          const add = enteredPayment
-                          const iso = new Date(paymentDateInput).toISOString()
-                          const body = buildFinanceRadarPaymentBody(project, add, iso)
-                          setSaving(true)
-                          setError(null)
-                          try {
-                            const r = await putProjectWithOfflineQueue(project.id, body, 'UPDATE_PAYMENT')
-                            if (r === 'queued') {
-                              patchProjectCache(project.id, {
-                                ...mergeFinanceRadarPaymentCache(project, body),
-                              })
-                              runQueuedToast()
-                            } else {
-                              runToast('✓ Payment updated')
-                            }
-                            setPaymentAmountInput('')
-                            setPaymentDateInput('')
-                          } catch (e: unknown) {
-                            setError(getFriendlyApiErrorMessage(e))
-                          } finally {
-                            setSaving(false)
-                          }
-                        }}
+                        onClick={requestSaveRecordedPayment}
                         className="mt-3 w-full rounded-xl bg-[color:var(--accent-teal)] text-[color:var(--text-inverse)] text-[14px] font-semibold py-3 transition-all disabled:opacity-60 hover:brightness-110"
                       >
                         {saving ? 'Saving…' : 'Update payment'}
@@ -619,6 +660,29 @@ export default function FinanceQuickDrawer({
           {queuedToast.text}
         </div>
       ) : null}
+
+      <ErrorModal
+        open={!!stalePaymentDateConfirm}
+        onClose={() => setStalePaymentDateConfirm(null)}
+        type="warning"
+        surface="zenith"
+        message={stalePaymentDateConfirm ?? ''}
+        actions={[
+          {
+            label: 'Go back',
+            variant: 'ghost',
+            onClick: () => setStalePaymentDateConfirm(null),
+          },
+          {
+            label: 'Yes, save date',
+            variant: 'primary',
+            onClick: () => {
+              setStalePaymentDateConfirm(null)
+              void saveRecordedPayment()
+            },
+          },
+        ]}
+      />
     </ZenithDrawerPortal>
   )
 }

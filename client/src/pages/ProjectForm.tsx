@@ -24,6 +24,11 @@ import {
   leadSourceRequiresDetails,
   validateLeadSourceDetailsInput,
 } from '../utils/leadSourceDisplay'
+import {
+  buildStalePaymentDateConfirmMessage,
+  paymentCollectionDateInputMax,
+  validatePaymentCollectionDates,
+} from '../utils/paymentCollectionDate'
 
 function customerPickerLabel(customer: Customer): string {
   return `${customer.customerId} - ${getCustomerDisplayName(customer)}`
@@ -293,6 +298,11 @@ const ProjectForm = () => {
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[] | null>(null)
   const [validationErrorSource, setValidationErrorSource] = useState<'file' | 'form' | null>(null)
+  const [paymentDateConfirm, setPaymentDateConfirm] = useState<{
+    message: string
+    pendingData: Record<string, unknown>
+  } | null>(null)
+  const paymentDateMax = paymentCollectionDateInputMax()
   const customerDropdownRef = useRef<HTMLDivElement>(null)
   /** When false, Inverter capacity (kW) tracks System Capacity; set true after user edits that field. */
   const inverterCapacityKwUserEditedRef = useRef(false)
@@ -959,7 +969,42 @@ const ProjectForm = () => {
         data.projectCost = null;
       }
     }
-    
+
+    const paymentDateCheck = validatePaymentCollectionDates(
+      Object.fromEntries(
+        [
+          'advanceReceivedDate',
+          'payment1Date',
+          'payment2Date',
+          'payment3Date',
+          'lastPaymentDate',
+        ].map((field) => [field, allValues[field] ?? data[field]]),
+      ),
+      isEdit && project
+        ? {
+            unchangedValues: {
+              advanceReceivedDate: project.advanceReceivedDate,
+              payment1Date: project.payment1Date,
+              payment2Date: project.payment2Date,
+              payment3Date: project.payment3Date,
+              lastPaymentDate: project.lastPaymentDate,
+            },
+          }
+        : undefined,
+    )
+    if (paymentDateCheck.errors.length > 0) {
+      setValidationErrors(paymentDateCheck.errors)
+      setValidationErrorSource('form')
+      return
+    }
+    if (paymentDateCheck.staleConfirmations.length > 0) {
+      setPaymentDateConfirm({
+        message: buildStalePaymentDateConfirmMessage(paymentDateCheck.staleConfirmations),
+        pendingData: data,
+      })
+      return
+    }
+
     mutation.mutate(data)
   }
 
@@ -1027,6 +1072,29 @@ const ProjectForm = () => {
       </header>
 
       {formAccessNotice ? <ProjectAccessNotice notice={formAccessNotice} /> : null}
+
+      <ErrorModal
+        open={!!paymentDateConfirm}
+        onClose={() => setPaymentDateConfirm(null)}
+        type="warning"
+        message={paymentDateConfirm?.message ?? ''}
+        actions={[
+          {
+            label: 'Go back',
+            variant: 'ghost',
+            onClick: () => setPaymentDateConfirm(null),
+          },
+          {
+            label: 'Yes, save dates',
+            variant: 'primary',
+            onClick: () => {
+              const pending = paymentDateConfirm?.pendingData
+              setPaymentDateConfirm(null)
+              if (pending) mutation.mutate(pending)
+            },
+          },
+        ]}
+      />
 
       <div className="px-0 pb-4 sm:pb-6">
       <form onSubmit={handleSubmit(onSubmit, (errors) => {
@@ -1741,6 +1809,7 @@ const ProjectForm = () => {
                   </label>
                   <input
                     type="date"
+                    max={paymentDateMax}
                     {...register('advanceReceivedDate')}
                     className={`mt-1.5 ${inputCls}`}
                   />
@@ -1758,6 +1827,7 @@ const ProjectForm = () => {
                   <label className={labelCls}>Payment 1 Date</label>
                   <input
                     type="date"
+                    max={paymentDateMax}
                     {...register('payment1Date')}
                     className={`mt-1.5 ${inputCls}`}
                   />
@@ -1775,6 +1845,7 @@ const ProjectForm = () => {
                   <label className={labelCls}>Payment 2 Date</label>
                   <input
                     type="date"
+                    max={paymentDateMax}
                     {...register('payment2Date')}
                     className={`mt-1.5 ${inputCls}`}
                   />
@@ -1792,6 +1863,7 @@ const ProjectForm = () => {
                   <label className={labelCls}>Payment 3 Date</label>
                   <input
                     type="date"
+                    max={paymentDateMax}
                     {...register('payment3Date')}
                     className={`mt-1.5 ${inputCls}`}
                   />
@@ -1809,6 +1881,7 @@ const ProjectForm = () => {
                   <label className={labelCls}>Last Payment Date</label>
                   <input
                     type="date"
+                    max={paymentDateMax}
                     {...register('lastPaymentDate')}
                     className={`mt-1.5 ${inputCls}`}
                   />
