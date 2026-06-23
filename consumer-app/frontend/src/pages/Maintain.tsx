@@ -14,6 +14,7 @@ import {
   useMaintenanceSchedule,
   useWarranty,
 } from '@/hooks/useConsumerMaintain'
+import SystemSpecCard from '@/components/SystemSpecCard'
 import type { MaintenanceRequestType } from '@/types/maintain'
 
 function healthBadgeClass(status: string) {
@@ -131,6 +132,7 @@ export default function Maintain() {
 
   const loading = warrantyQuery.isLoading || scheduleQuery.isLoading
   const health = warrantyQuery.data?.systemHealth
+  const systemSpec = warrantyQuery.data?.systemSpec
   const warrantyItems = warrantyQuery.data?.items ?? []
   const schedule = scheduleQuery.data ?? []
 
@@ -190,6 +192,13 @@ export default function Maintain() {
             </section>
           )}
 
+          {systemSpec ? (
+            <SystemSpecCard
+              spec={systemSpec}
+              installedLabel={health?.installedLabel}
+            />
+          ) : null}
+
           <section className="mb-4">
             <h2 className="mb-3 text-sm font-bold text-[color:var(--text-primary)]">Warranty Status</h2>
             <div className="space-y-3">
@@ -234,7 +243,12 @@ export default function Maintain() {
               Maintenance Schedule
             </h2>
             <div className="zenith-glass divide-y divide-[color:var(--border-default)] overflow-hidden rounded-2xl">
-              {schedule.map((task) => {
+              {schedule.length === 0 ? (
+                <p className="px-4 py-6 text-center text-sm text-[color:var(--text-muted)]">
+                  No maintenance schedule yet.
+                </p>
+              ) : (
+                schedule.map((task) => {
                 const isCompleted = task.status === 'COMPLETED'
                 const isOverdue = task.status === 'OVERDUE'
                 const Icon = isCompleted ? CheckCircle2 : isOverdue ? AlertTriangle : Clock
@@ -255,11 +269,17 @@ export default function Maintain() {
                         {task.title}
                       </p>
                       <p className={`text-xs ${statusColor}`}>{task.statusLabel}</p>
+                      {task.planNote ? (
+                        <p className="mt-1 text-[10px] leading-snug text-[color:var(--text-muted)]">
+                          {task.planNote}
+                        </p>
+                      ) : null}
                     </div>
                     <ChevronRight className="h-4 w-4 shrink-0 text-[color:var(--text-muted)]" />
                   </div>
                 )
-              })}
+              })
+              )}
             </div>
           </section>
 

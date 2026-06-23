@@ -152,6 +152,11 @@ export default function Home() {
                     {home.project.subline}
                   </p>
                 ) : null}
+                {home.project.equipmentSummary ? (
+                  <p className="mt-1.5 text-[11px] leading-snug text-[color:var(--text-tertiary)]">
+                    {home.project.equipmentSummary}
+                  </p>
+                ) : null}
                 {home.project.siteAddress ? (
                   <p className="mt-1 truncate text-[10px] text-[color:var(--text-tertiary)]">
                     {home.project.siteAddress}

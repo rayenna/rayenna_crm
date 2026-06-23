@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import NotificationsModal from '@/components/NotificationsModal'
+import SystemSpecCard from '@/components/SystemSpecCard'
 import { useThemeContext } from '@/hooks/useTheme'
 import {
   useChangePassword,
@@ -445,6 +446,11 @@ export default function Profile() {
               <p className="text-[10px] text-[color:var(--text-tertiary)]">tons CO₂ saved</p>
             </div>
           </section>
+
+          <SystemSpecCard
+            spec={profile.systemSpec}
+            installedLabel={profile.systemStats.installedLabel}
+          />
 
           <section
             className={`mb-4 overflow-hidden rounded-2xl border border-[color:var(--accent-gold-border)] bg-gradient-to-br ${tierAccentClass(profile.memberStatus.tier)} p-4`}

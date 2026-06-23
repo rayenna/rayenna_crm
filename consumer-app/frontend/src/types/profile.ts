@@ -20,6 +20,8 @@ export interface MemberStatus {
   progressPercent: number
 }
 
+import type { SystemSpec } from './maintain'
+
 export interface SystemStats {
   systemKw: number
   installedLabel: string
@@ -59,6 +61,7 @@ export interface ConsumerProfile {
   user: ConsumerUser
   crmProfile: CrmProfile
   systemStats: SystemStats
+  systemSpec: SystemSpec
   memberStatus: MemberStatus
   achievements: AchievementItem[]
 }

@@ -10,6 +10,19 @@ export interface SystemHealth {
   installedLabel: string | null
 }
 
+export interface SystemSpec {
+  systemKw: number
+  panelCount: number
+  panelBrand: string | null
+  panelType: string | null
+  panelCapacityW: number | null
+  panelLabel: string
+  inverterBrand: string | null
+  inverterCapacityKw: number | null
+  inverterLabel: string
+  equipmentSummary: string
+}
+
 export interface WarrantyItem {
   id: string
   componentKey: string
@@ -24,6 +37,7 @@ export interface WarrantyItem {
 export interface WarrantyResponse {
   systemHealth: SystemHealth
   items: WarrantyItem[]
+  systemSpec: SystemSpec
 }
 
 export type ScheduleStatus = 'DUE' | 'COMPLETED' | 'OVERDUE'
@@ -36,6 +50,7 @@ export interface MaintenanceScheduleItem {
   dueDate: string | null
   completedAt: string | null
   statusLabel: string
+  planNote: string | null
 }
 
 export type MaintenanceRequestType = 'SCHEDULE_SERVICE' | 'REPORT_ISSUE'

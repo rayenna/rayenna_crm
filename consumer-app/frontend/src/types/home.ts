@@ -25,6 +25,7 @@ export interface ConsumerHome {
     subline: string | null
     siteAddress: string | null
     systemKw: number
+    equipmentSummary: string
     progressPercent: number
     steps: ProjectStep[]
     isLive: boolean
