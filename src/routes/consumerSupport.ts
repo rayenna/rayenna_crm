@@ -10,8 +10,13 @@ import {
 
 const router = express.Router();
 
-router.get('/faq', authenticateConsumer, (_req: Request, res: Response) => {
-  return res.json(getConsumerFaqPayload());
+router.get('/faq', authenticateConsumer, async (_req: Request, res: Response) => {
+  try {
+    return res.json(await getConsumerFaqPayload());
+  } catch (err) {
+    console.error('Consumer FAQ GET error:', err);
+    return res.status(500).json({ error: 'Failed to load FAQ' });
+  }
 });
 
 router.get('/support-meta', authenticateConsumer, async (req: Request, res: Response) => {

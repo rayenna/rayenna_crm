@@ -996,3 +996,40 @@ model MaintenanceScheduleItem {
   @@unique([consumerUserId, taskKey])
   @@map("consumer_maintenance_schedule_items")
 }
+
+model ConsumerHelpArticle {
+  id          String   @id
+  title       String   @db.VarChar(500)
+  subtitle    String   @db.VarChar(500)
+  category    String   @db.VarChar(64)
+  readMinutes Int      @default(5)
+  markdown    String   @db.Text
+  isPublished Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  faqs ConsumerHelpFaq[]
+
+  @@index([category])
+  @@index([isPublished, sortOrder])
+  @@map("consumer_help_articles")
+}
+
+model ConsumerHelpFaq {
+  id          String               @id
+  category    String               @db.VarChar(64)
+  question    String               @db.VarChar(500)
+  answer      String               @db.Text
+  articleId   String?
+  article     ConsumerHelpArticle? @relation(fields: [articleId], references: [id], onDelete: SetNull)
+  isPublished Boolean              @default(true)
+  isFeatured  Boolean              @default(false)
+  sortOrder   Int                  @default(0)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([category])
+  @@index([isPublished, sortOrder])
+  @@map("consumer_help_faqs")
+}

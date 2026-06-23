@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
   Award,
@@ -347,6 +348,7 @@ type SettingsKey =
   | 'logout'
 
 export default function Profile() {
+  const navigate = useNavigate()
   const { logout } = useAuth()
   const profileQuery = useConsumerProfile()
   const notificationsQuery = useConsumerNotifications()
@@ -373,6 +375,10 @@ export default function Profile() {
     }
     if (key === 'app') {
       setAppSettingsOpen(true)
+      return
+    }
+    if (key === 'help') {
+      navigate('/help')
       return
     }
     if (key === 'logout') {

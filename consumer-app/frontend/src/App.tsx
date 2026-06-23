@@ -10,6 +10,8 @@ import Home from '@/pages/Home'
 import Track from '@/pages/Track'
 import Maintain from '@/pages/Maintain'
 import Support from '@/pages/Support'
+import Help from '@/pages/Help'
+import HelpArticle from '@/pages/HelpArticle'
 import Profile from '@/pages/Profile'
 
 const queryClient = new QueryClient({
@@ -41,6 +43,8 @@ export default function App() {
                 <Route path="track" element={<Track />} />
                 <Route path="maintain" element={<Maintain />} />
                 <Route path="support" element={<Support />} />
+                <Route path="help" element={<Help />} />
+                <Route path="help/:articleId" element={<HelpArticle />} />
                 <Route path="profile" element={<Profile />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />

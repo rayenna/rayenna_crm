@@ -14,6 +14,7 @@ import {
   Zap,
 } from 'lucide-react'
 import NotificationsModal from '@/components/NotificationsModal'
+import HelpContextSuggestions from '@/components/HelpContextSuggestions'
 import { useConsumerHome } from '@/hooks/useConsumerHome'
 import { formatKwh, formatRupee } from '@/utils/energyCharts'
 import type { ProjectStep } from '@/types/home'
@@ -249,6 +250,8 @@ export default function Home() {
               ) : null}
             </div>
           </section>
+
+          <HelpContextSuggestions screen="home" className="mb-4" />
 
           {/* Member strip */}
           <Link

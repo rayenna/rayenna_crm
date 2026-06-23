@@ -1,7 +1,7 @@
 import { SupportTicketSource, SupportTicketStatus } from '@prisma/client';
 import prisma from '../prisma';
+import { getConsumerHelpFeaturedFaqs } from '../services/consumerHelpService';
 import {
-  CONSUMER_FAQ_ITEMS,
   CONSUMER_LEARN_TIPS,
   CONSUMER_SUPPORT_EMAIL,
   CONSUMER_SUPPORT_PHONE,
@@ -126,9 +126,15 @@ export async function createConsumerSupportTicket(
   };
 }
 
-export function getConsumerFaqPayload() {
+export async function getConsumerFaqPayload() {
+  const featuredFaqs = await getConsumerHelpFeaturedFaqs();
   return {
-    faqs: CONSUMER_FAQ_ITEMS,
+    featuredFaqs: featuredFaqs.map((faq) => ({
+      id: faq.id,
+      question: faq.question,
+      category: faq.category,
+      answer: faq.answer,
+    })),
     tips: CONSUMER_LEARN_TIPS,
   };
 }

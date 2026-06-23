@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useLocation, Navigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/contexts/AuthContext'
@@ -22,8 +22,8 @@ export default function Login() {
   const [serverStatus, setServerStatus] = useState<ServerStatus>('unknown')
   const { login, token, isLoading: authLoading } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
-  const from = (location.state as { from?: string } | null)?.from ?? '/'
+  /** After sign-in, always open Home — not Profile or the page that triggered re-auth. */
+  const postLoginPath = '/'
   const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export default function Login() {
   }, [])
 
   if (!authLoading && token) {
-    return <Navigate to={from} replace />
+    return <Navigate to={postLoginPath} replace />
   }
 
   const startElapsedCounter = () => {
@@ -81,7 +81,7 @@ export default function Login() {
       await login(username.trim(), password)
       stopElapsedCounter()
       toast.success('Login successful')
-      navigate(from, { replace: true })
+      navigate(postLoginPath, { replace: true })
     } catch (error: unknown) {
       stopElapsedCounter()
       const err = error as { response?: { status?: number } }

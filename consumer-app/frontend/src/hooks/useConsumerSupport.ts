@@ -22,7 +22,7 @@ export function useSupportFaq() {
   return useQuery({
     queryKey: ['consumer-support-faq'],
     queryFn: async () => {
-      const { data } = await axios.get<{ faqs: SupportFaqItem[]; tips: LearnTipItem[] }>(
+      const { data } = await axios.get<{ featuredFaqs: SupportFaqItem[]; tips: LearnTipItem[] }>(
         '/api/consumer/faq',
       )
       return data

@@ -16,6 +16,7 @@ import {
   YAxis,
 } from 'recharts'
 import { Calendar, ChevronLeft, ChevronRight, Download, Info } from 'lucide-react'
+import HelpContextSuggestions from '@/components/HelpContextSuggestions'
 import { useAnnualEnergy, useMonthlyEnergy } from '@/hooks/useConsumerEnergy'
 import {
   buildAreaChartData,
@@ -260,6 +261,8 @@ export default function Track() {
               value={stats ? formatRupee(stats.totalSavings) : '—'}
             />
           </div>
+
+          <HelpContextSuggestions screen="track" className="mb-4" title="Help for your energy data" />
 
           {viewMode === 'month' && (
             <>

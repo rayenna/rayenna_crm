@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import toast from 'react-hot-toast'
+import { Link } from 'react-router-dom'
 import {
   AlertCircle,
-  ChevronDown,
+  BookOpen,
   ChevronRight,
   Copy,
   Gift,
@@ -13,7 +14,7 @@ import {
   Send,
   Share2,
 } from 'lucide-react'
-import { useSubmitSupportQuery, useSupportFaq, useSupportMeta } from '@/hooks/useConsumerSupport'
+import { useSubmitSupportQuery, useSupportMeta } from '@/hooks/useConsumerSupport'
 
 function telHref(phone: string) {
   return `tel:${phone.replace(/[^\d+]/g, '')}`
@@ -21,16 +22,12 @@ function telHref(phone: string) {
 
 export default function Support() {
   const metaQuery = useSupportMeta()
-  const faqQuery = useSupportFaq()
   const submitQuery = useSubmitSupportQuery()
   const [subject, setSubject] = useState('')
   const [description, setDescription] = useState('')
-  const [expandedFaq, setExpandedFaq] = useState<string | null>(null)
 
   const meta = metaQuery.data
-  const faqs = faqQuery.data?.faqs ?? []
-  const tips = faqQuery.data?.tips ?? []
-  const loading = metaQuery.isLoading || faqQuery.isLoading
+  const loading = metaQuery.isLoading
 
   const copyReferral = async () => {
     if (!meta?.referralCode) return
@@ -86,6 +83,24 @@ export default function Support() {
         </div>
       ) : (
         <div className="space-y-4">
+          <Link
+            to="/help"
+            className="zenith-glass flex items-center gap-3 rounded-2xl p-4 transition hover:opacity-95"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]">
+              <BookOpen className="h-5 w-5" aria-hidden />
+            </span>
+            <span className="flex-1">
+              <span className="block text-sm font-semibold text-[color:var(--text-primary)]">
+                Browse Help Center
+              </span>
+              <span className="text-xs text-[color:var(--text-muted)]">
+                DISCOM steps, warranty, FAQs & more
+              </span>
+            </span>
+            <ChevronRight className="h-4 w-4 text-[color:var(--text-tertiary)]" />
+          </Link>
+
           {/* Emergency */}
           <section className="overflow-hidden rounded-2xl border border-[color:var(--accent-green-border)] bg-[color:var(--accent-green-muted)] p-4">
             <div className="flex items-start gap-3">
@@ -206,71 +221,6 @@ export default function Support() {
               </button>
             </section>
           )}
-
-          {/* FAQ */}
-          <section>
-            <h2 className="mb-3 text-sm font-bold text-[color:var(--text-primary)]">
-              Frequently Asked
-            </h2>
-            <div className="zenith-glass divide-y divide-[color:var(--border-default)] overflow-hidden rounded-2xl">
-              {faqs.map((faq) => {
-                const open = expandedFaq === faq.id
-                return (
-                  <div key={faq.id}>
-                    <button
-                      type="button"
-                      onClick={() => setExpandedFaq(open ? null : faq.id)}
-                      className="flex w-full items-center gap-3 px-4 py-3.5 text-left"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-[color:var(--text-primary)]">
-                          {faq.question}
-                        </p>
-                        <p className="text-xs text-[color:var(--accent-gold)]">{faq.category}</p>
-                      </div>
-                      {open ? (
-                        <ChevronDown className="h-4 w-4 shrink-0 text-[color:var(--text-muted)]" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 shrink-0 text-[color:var(--text-muted)]" />
-                      )}
-                    </button>
-                    {open && (
-                      <p className="border-t border-[color:var(--border-default)] px-4 py-3 text-xs leading-relaxed text-[color:var(--text-secondary)]">
-                        {faq.answer}
-                      </p>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </section>
-
-          {/* Learn & Tips */}
-          <section>
-            <h2 className="mb-3 text-sm font-bold text-[color:var(--text-primary)]">
-              Learn & Tips
-            </h2>
-            <div className="space-y-2">
-              {tips.map((tip) => (
-                <button
-                  key={tip.id}
-                  type="button"
-                  onClick={() => toast('Full article — coming soon')}
-                  className="zenith-glass flex w-full items-center justify-between gap-3 rounded-2xl p-4 text-left"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-[color:var(--text-primary)]">
-                      {tip.title}
-                    </p>
-                    <p className="text-xs text-[color:var(--text-muted)]">{tip.subtitle}</p>
-                  </div>
-                  <span className="shrink-0 text-[10px] text-[color:var(--text-muted)]">
-                    {tip.readMinutes} min read
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
         </div>
       )}
     </div>

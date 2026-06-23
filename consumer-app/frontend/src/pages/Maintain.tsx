@@ -15,6 +15,7 @@ import {
   useWarranty,
 } from '@/hooks/useConsumerMaintain'
 import SystemSpecCard from '@/components/SystemSpecCard'
+import HelpContextSuggestions from '@/components/HelpContextSuggestions'
 import type { MaintenanceRequestType } from '@/types/maintain'
 
 function healthBadgeClass(status: string) {
@@ -200,7 +201,9 @@ export default function Maintain() {
           ) : null}
 
           <section className="mb-4">
-            <h2 className="mb-3 text-sm font-bold text-[color:var(--text-primary)]">Warranty Status</h2>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="text-sm font-bold text-[color:var(--text-primary)]">Warranty Status</h2>
+            </div>
             <div className="space-y-3">
               {warrantyItems.map((item) => (
                 <div key={item.id} className="zenith-glass rounded-2xl p-4">
@@ -283,7 +286,13 @@ export default function Maintain() {
             </div>
           </section>
 
-          <div className="grid grid-cols-2 gap-3">
+          <HelpContextSuggestions
+            screen="maintain"
+            className="mt-4"
+            title="Help for your system"
+          />
+
+          <div className="mt-4 grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => setModalType('SCHEDULE_SERVICE')}
