@@ -289,7 +289,7 @@ Rayenna CRM is built on a **modern, scalable, and secure** cloud architecture th
 - **Performance**: CDN delivery for frontend and media assets; dual frontend (Render + Vercel) for continuity
 - **Maintainability**: Single codebase; Git-based CI/CD; same build deploys to both frontend hosts
 
-For detailed steps and verification of the dual frontend setup, see **VERCEL_PARALLEL_DEPLOYMENT_PLAN.md**.
+For detailed steps and verification of the dual frontend setup, see **[vercel-parallel-deployment-plan.md](./vercel-parallel-deployment-plan.md)**.
 
 ---
 

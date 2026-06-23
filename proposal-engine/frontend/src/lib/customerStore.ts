@@ -8,7 +8,7 @@
  * After Save, artifacts live on the server (Neon) via apiClient sync helpers:
  *   syncProjectCosting / syncProjectBom / syncProjectRoi / syncProjectProposal
  * Opening a project: loadProjectFromServer → merge into customerStore (see projectLoadPipeline.ts).
- * See proposal-engine/docs/ARCHITECTURE.md.
+ * See docs/proposal-engine/architecture.md.
  *
  * ── Browser-only (this module + localStorage) ───────────────────────────────
  * - rayenna_customers_v1_{userId} — cached list / records for offline UX

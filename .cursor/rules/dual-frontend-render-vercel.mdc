@@ -8,7 +8,7 @@ alwaysApply: true
 This project runs **production frontends** on both Render and Vercel for business continuity:
 
 - **CRM:** Render `render.yaml` (rootDir: `client`); Vercel project with Root Directory = `client` uses `client/vercel.json`. Root `vercel.json` is for building from repo root (CRM).
-- **Proposal Engine:** Render `render.yaml` (rootDir: `proposal-engine/frontend`); Vercel project with Root Directory = `proposal-engine/frontend` uses `proposal-engine/frontend/vercel.json`. See `PROPOSAL_ENGINE_VERCEL_DEPLOYMENT.md`.
+- **Proposal Engine:** Render `render.yaml` (rootDir: `proposal-engine/frontend`); Vercel project with Root Directory = `proposal-engine/frontend` uses `proposal-engine/frontend/vercel.json`. See `docs/deployment/proposal-engine-vercel-deployment.md`.
 
 Any change to a frontend's build, config, or env must work on **both** Render and Vercel for that app.
 
@@ -33,7 +33,7 @@ Any change to a frontend's build, config, or env must work on **both** Render an
    In `src/server.ts`, keep allowed origins for **both** Render (e.g. `rayenna-crm-frontend.onrender.com`, `render.com`) and Vercel (`*.vercel.app`). Any new frontend URL must be added so both platforms remain allowed.
 
 6. **Docs**  
-   When adding env vars or deployment steps, update `VERCEL_PARALLEL_DEPLOYMENT_PLAN.md` (or equivalent) so both Render and Vercel are covered.
+   When adding env vars or deployment steps, update `docs/deployment/vercel-parallel-deployment-plan.md` (or equivalent) so both Render and Vercel are covered.
 
 ## Quick check before committing
 

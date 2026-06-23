@@ -299,7 +299,7 @@ client/src/
 | **Management role doc** | README still says Management is read-only | Update root `README.md` when doing a docs pass |
 | **Help sync — attention strip UI** | Compact rows, side-by-side plan/attention | ~~Optional~~ **Done** Jun 2026 (`docs(crm)` help sync) |
 | **My Day Phase 4** | Quick drawers, reminders remark | Deferred until field feedback |
-| **Cloudinary for PE images** | Not CRM | See `docs/pe-image-storage-migration-plan.md` |
+| **Cloudinary for PE images** | Not CRM | See [pe-image-storage-migration-plan.md](../operations/pe-image-storage-migration-plan.md) |
 | **Zenith Tier C** | Slimmer explorer payload / API | After A+B; see [Completed — Zenith stability & performance](#completed--zenith-stability--performance-may-2026) |
 
 ---
@@ -362,10 +362,10 @@ When resuming in Cursor: *“My Day Phases 1–3 and dashboard attention strip a
 
 | Doc | Purpose |
 |-----|---------|
-| [CRM_SMOKE_CHECKLIST.md](./CRM_SMOKE_CHECKLIST.md) | Post-deploy manual checks |
-| [../VERCEL_PARALLEL_DEPLOYMENT_PLAN.md](../VERCEL_PARALLEL_DEPLOYMENT_PLAN.md) | Render + Vercel env and CORS |
+| [crm-smoke-checklist.md](../operations/crm-smoke-checklist.md) | Post-deploy manual checks |
+| [vercel-parallel-deployment-plan.md](../deployment/vercel-parallel-deployment-plan.md) | Render + Vercel env and CORS |
 | [../.cursor/rules/rayenna-deploy-neon.mdc](../.cursor/rules/rayenna-deploy-neon.mdc) | Local ports, single API, Neon |
-| [../proposal-engine/docs/MODERNIZATION_PROGRESS.md](../proposal-engine/docs/MODERNIZATION_PROGRESS.md) | Proposal Engine (separate product) |
+| [../../Bin/proposal-engine/MODERNIZATION_PROGRESS.md](../../Bin/README.md) | Proposal Engine history (archived) |
 
 ---
 

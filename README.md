@@ -326,9 +326,12 @@ npm start
 
 ## Developer documentation
 
-- **[CRM modernization progress](./docs/MODERNIZATION_PROGRESS.md)** — terminology (customer type vs segment), Batch 1 scope, file map, deploy notes, resume pointer for Cursor.
-- **[CRM smoke checklist](./docs/CRM_SMOKE_CHECKLIST.md)** — manual regression after CRM changes or deploy.
-- **Proposal Engine** (separate app in `proposal-engine/`): [modernization progress](./proposal-engine/docs/MODERNIZATION_PROGRESS.md).
+See **[docs/README.md](./docs/README.md)** for the full index. Key entries:
+
+- **[Architecture briefing](./docs/architecture/rayenna-crm-briefing.md)** — onboarding for developers
+- **[CRM smoke checklist](./docs/operations/crm-smoke-checklist.md)** — manual regression after CRM changes or deploy
+- **[Vercel + Render deployment](./docs/deployment/vercel-parallel-deployment-plan.md)** — dual frontend setup
+- **Proposal Engine** (separate app in `proposal-engine/`): [docs/proposal-engine/](./docs/proposal-engine/)
 
 ## Future Enhancements
 

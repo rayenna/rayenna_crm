@@ -40,4 +40,4 @@ Existing base64 images in old proposals remain valid — no backfill required at
 - Nov 2026 — run again; schedule sprint if > 10 MB
 - Feb 2027 — treat as P1 if > 15 MB and not yet done
 
-Full plan: `docs/pe-image-storage-migration-plan.md`
+Full plan: `docs/operations/pe-image-storage-migration-plan.md`

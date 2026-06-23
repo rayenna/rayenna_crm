@@ -21,6 +21,17 @@ They are **not** a single combined frontend build.
 
 Do **not** assume a separate Render Web Service for `proposal-engine/backend` unless the user explicitly says they added one.
 
+## Production on Render (do not re-ask)
+
+This is a **live production** system. The Render **CRM API** Web Service already has required secrets configured, including at least:
+
+- **`GOOGLE_MAPS_API_KEY`** — satellite / AI roof layout (`/api/roof/*`)
+- **`CLOUDINARY_CLOUD_NAME`**, **`CLOUDINARY_API_KEY`**, **`CLOUDINARY_API_SECRET`** — CRM documents and roof layout image persistence
+
+**Do not** repeatedly ask the user to “add Cloudinary” or “set Google Maps API key on Render” after deploys unless they report a specific missing-env error or are standing up a **new** environment. For deploy checklists, say **redeploy the API** (and frontends if changed); only mention env vars when introducing a **new** variable name in code or debugging a logged config failure.
+
+Local dev still uses root `.env` (not committed); production truth is Render dashboard env on the API service.
+
 ## Database
 
 - **Development and production use the same Neon database** for this project. Treat every migration, seed, and destructive SQL as **production-impacting**. Prefer `prisma migrate deploy` discipline over casual `migrate dev` against that URL; never run risky seeds without explicit intent.

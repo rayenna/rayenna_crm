@@ -30,20 +30,18 @@ npm run dev
 
 Open **http://localhost:5174** and log in (or use CRM SSO with a `?ticket=` link).
 
-Do **not** run `proposal-engine/backend` for normal development—that stack is [deprecated](./backend/DEPRECATED.md).
+Do **not** run `proposal-engine/backend` for normal development—that stack is deprecated (see `Bin/proposal-engine/DEPRECATED.md` if needed).
 
 ## Structure
 
 ```text
 proposal-engine/
 ├── frontend/          # React + Vite + Tailwind (production UI)
-├── docs/
-│   ├── ARCHITECTURE.md      # System design (start here)
-│   ├── SMOKE_CHECKLIST.md   # Manual test checklist
-│   └── ai-roof-layout-2d-roadmap.md
 ├── backend/           # DEPRECATED legacy SQLite API
 └── shared/            # DEPRECATED unused types
 ```
+
+Engineering docs: **[docs/proposal-engine/](../docs/proposal-engine/)** (repo `docs/` folder).
 
 CRM backend routes: `src/routes/proposalEngine.ts`, `src/routes/roofLayout.ts`.
 
@@ -94,7 +92,7 @@ npm run build
 Deployed as static site **rayenna-proposal-engine** on Render (and optional Vercel).  
 Redeploy PE when `proposal-engine/frontend/` changes; redeploy CRM **API** when `src/` or `prisma/` changes.
 
-See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) and [PROPOSAL_ENGINE_VERCEL_DEPLOYMENT.md](../PROPOSAL_ENGINE_VERCEL_DEPLOYMENT.md).
+See [docs/proposal-engine/architecture.md](../docs/proposal-engine/architecture.md) and [proposal-engine Vercel deployment](../docs/deployment/proposal-engine-vercel-deployment.md).
 
 ## Git commits
 
@@ -103,8 +101,7 @@ Prefix: `feat(proposal-engine):`, `fix(proposal-engine):`, etc.
 
 ## See also
 
-- [Modernization progress](./docs/MODERNIZATION_PROGRESS.md) (Phase 0–2a log; resume pointer)
-- [Architecture](./docs/ARCHITECTURE.md)
-- [API contract](./docs/API_CONTRACT.md)
-- [Smoke checklist](./docs/SMOKE_CHECKLIST.md)
-- [AI roof layout 2D roadmap](./docs/ai-roof-layout-2d-roadmap.md)
+- [Architecture](../docs/proposal-engine/architecture.md)
+- [API contract](../docs/proposal-engine/api-contract.md)
+- [Smoke checklist](../docs/proposal-engine/smoke-checklist.md)
+- [CRM docs index](../docs/README.md)

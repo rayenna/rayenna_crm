@@ -250,7 +250,7 @@ Heavy routes are lazy-loaded in `App.tsx`.
 | CRM API | Separate Web Service (not in `render.yaml` static section) | `npm run build:server` includes `prisma migrate deploy` |
 | CRM frontend | `rayenna-crm-frontend` | Only when `client/` changes |
 
-See `PROPOSAL_ENGINE_VERCEL_DEPLOYMENT.md` and `VERCEL_PARALLEL_DEPLOYMENT_PLAN.md` for Vercel parity.
+See [proposal-engine-vercel-deployment.md](../deployment/proposal-engine-vercel-deployment.md) and [vercel-parallel-deployment-plan.md](../deployment/vercel-parallel-deployment-plan.md) for Vercel parity.
 
 **After API deploy:** migrations apply automatically on build. **After PE frontend deploy:** hard refresh; service worker may cache—see `client` PWA notes for analogous behaviour.
 
@@ -266,7 +266,7 @@ npm test
 ```
 
 Coverage today: `parseGoogleMapsLink`, `roofLayoutGeometry`, `deriveProposalStatusFromArtifacts` / `normalizeProposalStatus`, `mapApiArtifactsToRecord`.  
-Run before refactors to large pages (`ProposalPreview`, `CostingSheet`). Manual flows: [SMOKE_CHECKLIST.md](./SMOKE_CHECKLIST.md).
+Run before refactors to large pages (`ProposalPreview`, `CostingSheet`). Manual flows: [smoke-checklist.md](./smoke-checklist.md).
 
 ---
 
@@ -274,13 +274,11 @@ Run before refactors to large pages (`ProposalPreview`, `CostingSheet`). Manual 
 
 | Doc | Purpose |
 |-----|---------|
-| [MODERNIZATION_PROGRESS.md](./MODERNIZATION_PROGRESS.md) | **Resume here** — Phase 0–2a done; 2b+ planned |
-| [API_CONTRACT.md](./API_CONTRACT.md) | Request/response shapes PE frontend relies on |
-| [ai-roof-layout-2d-roadmap.md](./ai-roof-layout-2d-roadmap.md) | **Active** product/engineering roadmap for 2D roof layout |
-| [SMOKE_CHECKLIST.md](./SMOKE_CHECKLIST.md) | Manual regression checklist before/after releases |
-| [../README.md](../README.md) | Quick start |
-| [../backend/DEPRECATED.md](../backend/DEPRECATED.md) | Legacy standalone backend |
-| `docs/pe-image-storage-migration-plan.md` (repo root) | PE custom-section images / TOAST monitoring |
+| [api-contract.md](./api-contract.md) | Request/response shapes PE frontend relies on |
+| [smoke-checklist.md](./smoke-checklist.md) | Manual regression checklist before/after releases |
+| [../README.md](../README.md) | CRM docs index |
+| [../operations/pe-image-storage-migration-plan.md](../operations/pe-image-storage-migration-plan.md) | PE custom-section images / TOAST monitoring |
+| [../../Bin/proposal-engine/](../../Bin/README.md) | Archived PE roadmaps and phase logs (pending deletion) |
 
 ---
 
