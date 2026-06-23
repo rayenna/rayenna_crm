@@ -365,6 +365,7 @@ model Project {
   peProposals     PEProposal[]
   peSelection     PESelectedProject?
   roofLayout      ProjectRoofLayout?
+  consumerUser    ConsumerUser?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -528,6 +529,11 @@ enum SupportTicketStatus {
   CLOSED
 }
 
+enum SupportTicketSource {
+  CRM
+  CONSUMER_APP
+}
+
 model SupportTicket {
   id            String              @id @default(cuid())
   ticketNumber  String              @unique // Format: RE######## (8-digit random)
@@ -536,6 +542,8 @@ model SupportTicket {
   title         String              @db.VarChar(500)
   description   String?             @db.Text
   status        SupportTicketStatus @default(OPEN)
+  source        SupportTicketSource @default(CRM)
+  consumerUserId String?
   createdById   String
   createdBy     User                @relation("TicketCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   closedAt      DateTime?
@@ -547,6 +555,7 @@ model SupportTicket {
   @@index([projectId])
   @@index([ticketNumber])
   @@index([status])
+  @@index([source])
   @@map("support_tickets")
 }
 
@@ -826,4 +835,163 @@ model PESharedProposal {
   @@index([token])
   @@index([expiresAt])
   @@map("pe_shared_proposals")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Rayenna Solar Hub — consumer app (additive; isolated from CRM staff tables)
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum ConsumerMemberTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum ConsumerAchievementType {
+  EARLY_ADOPTER
+  ONE_YEAR_SOLAR
+  REFERRAL_CHAMPION
+}
+
+enum ConsumerMaintenanceRequestType {
+  SCHEDULE_SERVICE
+  REPORT_ISSUE
+}
+
+enum ConsumerMaintenanceRequestStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum MaintenanceScheduleStatus {
+  DUE
+  COMPLETED
+  OVERDUE
+}
+
+model ConsumerUser {
+  id              String             @id @default(cuid())
+  email           String             @unique
+  password        String
+  firstName       String?
+  lastName        String?
+  phone           String?
+  projectId       String             @unique
+  project         Project            @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  referralCode    String             @unique
+  points          Int                @default(0)
+  memberTier      ConsumerMemberTier @default(BRONZE)
+  isActive        Boolean            @default(true)
+  profileComplete Boolean            @default(false)
+  lastLoginAt     DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  energyReadings        EnergyReading[]
+  notifications         ConsumerNotification[]
+  maintenanceRequests   ConsumerMaintenanceRequest[]
+  achievements          ConsumerAchievement[]
+  warrantyItems         ConsumerWarrantyItem[]
+  maintenanceSchedule   MaintenanceScheduleItem[]
+
+  @@index([projectId])
+  @@map("consumer_users")
+}
+
+model EnergyReading {
+  id             String       @id @default(cuid())
+  consumerUserId String
+  consumerUser   ConsumerUser @relation(fields: [consumerUserId], references: [id], onDelete: Cascade)
+  year           Int
+  month          Int
+  totalGenerated Float        @default(0)
+  totalConsumed  Float        @default(0)
+  gridExport     Float        @default(0)
+  totalSavings   Float        @default(0)
+  dailyReadings  Json?
+  isEstimated    Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([consumerUserId, year, month])
+  @@index([consumerUserId, year])
+  @@map("consumer_energy_readings")
+}
+
+model ConsumerNotification {
+  id             String       @id @default(cuid())
+  consumerUserId String
+  consumerUser   ConsumerUser @relation(fields: [consumerUserId], references: [id], onDelete: Cascade)
+  title          String       @db.VarChar(500)
+  body           String       @db.Text
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  @@index([consumerUserId, isRead])
+  @@index([consumerUserId, createdAt(sort: Desc)])
+  @@map("consumer_notifications")
+}
+
+model ConsumerMaintenanceRequest {
+  id             String                           @id @default(cuid())
+  consumerUserId String
+  consumerUser   ConsumerUser                     @relation(fields: [consumerUserId], references: [id], onDelete: Cascade)
+  requestType    ConsumerMaintenanceRequestType
+  title          String                           @db.VarChar(500)
+  description    String?                          @db.Text
+  preferredDate  DateTime?                        @db.Date
+  status         ConsumerMaintenanceRequestStatus @default(OPEN)
+  createdAt      DateTime                         @default(now())
+  updatedAt      DateTime                         @updatedAt
+
+  @@index([consumerUserId])
+  @@index([status])
+  @@map("consumer_maintenance_requests")
+}
+
+model ConsumerAchievement {
+  id             String                  @id @default(cuid())
+  consumerUserId String
+  consumerUser   ConsumerUser            @relation(fields: [consumerUserId], references: [id], onDelete: Cascade)
+  type           ConsumerAchievementType
+  unlockedAt     DateTime                @default(now())
+
+  @@unique([consumerUserId, type])
+  @@map("consumer_achievements")
+}
+
+model ConsumerWarrantyItem {
+  id              String       @id @default(cuid())
+  consumerUserId  String
+  consumerUser    ConsumerUser @relation(fields: [consumerUserId], references: [id], onDelete: Cascade)
+  componentKey    String
+  name            String
+  specification   String?
+  totalYears      Float
+  yearsRemaining  Float
+  expiryDate      DateTime     @db.Date
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([consumerUserId, componentKey])
+  @@map("consumer_warranty_items")
+}
+
+model MaintenanceScheduleItem {
+  id             String                    @id @default(cuid())
+  consumerUserId String
+  consumerUser   ConsumerUser              @relation(fields: [consumerUserId], references: [id], onDelete: Cascade)
+  taskKey        String
+  title          String
+  status         MaintenanceScheduleStatus @default(DUE)
+  dueDate        DateTime?                 @db.Date
+  completedAt    DateTime?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  @@unique([consumerUserId, taskKey])
+  @@map("consumer_maintenance_schedule_items")
 }

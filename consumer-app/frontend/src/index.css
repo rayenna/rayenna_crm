@@ -1,0 +1,145 @@
+@import './styles/tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'DM Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  transition:
+    background-color 0.25s ease,
+    color 0.2s ease;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+
+.recharts-default-tooltip {
+  background: var(--chart-tooltip-bg) !important;
+  border: 1px solid var(--chart-tooltip-border) !important;
+  box-shadow: var(--chart-tooltip-shadow) !important;
+  color: var(--chart-tooltip-fg) !important;
+}
+
+/* Solar Hub — mobile-first shell; bottom nav always pinned (not gated at 1024px like CRM Zenith) */
+.hub-shell {
+  position: relative;
+  width: 100%;
+  max-width: 28rem;
+  margin-left: auto;
+  margin-right: auto;
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.hub-shell > main {
+  width: 100%;
+  min-width: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Clip chart cards horizontally without breaking Recharts sizing */
+.hub-shell.zenith-root .hub-chart-slot {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.hub-bottom-nav {
+  position: relative;
+  z-index: 45;
+  flex-shrink: 0;
+  width: 100%;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-top: 1px solid var(--border-default);
+  background: color-mix(in srgb, var(--bg-surface) 94%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+@media (max-width: 1023px) {
+  .hub-bottom-nav {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--bg-surface);
+  }
+}
+
+.hub-bottom-nav-inner {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 0;
+  width: 100%;
+  padding: 6px 4px 8px;
+}
+
+.hub-bottom-nav-btn {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 48px;
+  min-width: 0;
+  max-width: none;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hub-bottom-nav-btn.is-active {
+  color: var(--accent-gold);
+  background: var(--accent-gold-muted);
+}
+
+.hub-bottom-nav-label {
+  line-height: 1.1;
+  text-align: center;
+}

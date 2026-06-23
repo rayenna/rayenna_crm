@@ -54,3 +54,24 @@ services:
     envVars:
       - key: NODE_OPTIONS
         value: "--max-old-space-size=2048"
+
+  # ── Rayenna Solar Hub (consumer PWA) ───────────────────────────────────────
+  - type: web
+    name: rayenna-solar-hub
+    runtime: static
+    plan: free
+    rootDir: consumer-app/frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    headers:
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache, no-store, must-revalidate
+      - path: /manifest.json
+        name: Cache-Control
+        value: no-cache
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://rayenna-crm.onrender.com
+      - key: NODE_OPTIONS
+        value: "--max-old-space-size=2048"

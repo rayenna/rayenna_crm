@@ -51,12 +51,15 @@ app.use(
 const allowedOrigins = [
   'http://localhost:5173', // Local Vite dev server (CRM)
   'http://localhost:5174', // Proposal Engine dev
+  'http://localhost:5175', // Solar Hub consumer app dev
   'http://localhost:3000', // Local backend (if needed)
   'https://rayenna-crm-kappa.vercel.app', // Vercel (legacy)
   'https://rayennacrm.vercel.app', // Vercel production frontend
   'https://rayenna-crm-frontend.onrender.com', // Render static frontend
   'https://rayenna-proposal-engine.onrender.com', // Proposal Engine frontend
+  'https://rayenna-solar-hub.onrender.com', // Solar Hub consumer PWA
   process.env.FRONTEND_URL, // Production frontend from env (if different)
+  process.env.CONSUMER_HUB_FRONTEND_URL, // Solar Hub URL override (optional)
 ].filter(Boolean) as string[];
 
 const normalizeOrigin = (o: string) => o?.replace(/\/$/, '') ?? '';
@@ -241,6 +244,12 @@ const server = app.listen(PORT, async () => {
     const roofLayoutRoutes     = (await import('./routes/roofLayout')).default;
     const pdfRoutes            = (await import('./routes/pdf')).default;
     const myDayRoutes          = (await import('./routes/myDay')).default;
+    const consumerAuthRoutes   = (await import('./routes/consumerAuth')).default;
+    const consumerEnergyRoutes = (await import('./routes/consumerEnergy')).default;
+    const consumerMaintainRoutes = (await import('./routes/consumerMaintain')).default;
+    const consumerSupportRoutes  = (await import('./routes/consumerSupport')).default;
+    const consumerProfileRoutes  = (await import('./routes/consumerProfile')).default;
+    const consumerHomeRoutes     = (await import('./routes/consumerHome')).default;
 
     apiRouter.use('/auth', authRoutes);
     apiRouter.use('/projects', projectRoutes);
@@ -266,6 +275,12 @@ const server = app.listen(PORT, async () => {
     apiRouter.use('/solar-news', solarNewsRoutes);
     apiRouter.use('/roof', roofLayoutRoutes);
     apiRouter.use('/my-day', myDayRoutes);
+    apiRouter.use('/consumer/auth', consumerAuthRoutes);
+    apiRouter.use('/consumer/energy', consumerEnergyRoutes);
+    apiRouter.use('/consumer', consumerMaintainRoutes);
+    apiRouter.use('/consumer', consumerSupportRoutes);
+    apiRouter.use('/consumer', consumerProfileRoutes);
+    apiRouter.use('/consumer', consumerHomeRoutes);
     apiRouter.use('/', pdfRoutes);
 
     routesLoaded = true;

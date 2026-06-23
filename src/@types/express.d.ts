@@ -9,6 +9,11 @@ declare global {
         email: string;
         role: UserRole;
       };
+      consumer?: {
+        id: string;
+        email: string;
+        projectId: string;
+      };
     }
   }
 }

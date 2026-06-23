@@ -152,3 +152,44 @@ No UI refactors, no business-logic changes, no new dependencies. Render deployme
 - [ ] **Test:** On `https://<your-app>.vercel.app`: login, dashboard, project filters, tiles, file uploads, API calls; no CORS errors.
 - [ ] **Render:** Leave as-is; no DNS or domain change. Both Render and Vercel URLs remain valid.
 - [ ] **Rollback:** If anything fails, do nothing; Render stays production. Optionally disable or remove Vercel project.
+
+---
+
+## Rayenna Solar Hub (consumer PWA) — Render + Vercel
+
+Third static frontend at `consumer-app/frontend` (port **5175** local). Same dual-host pattern as CRM and Proposal Engine.
+
+### Render
+
+| Service | rootDir | URL (default) |
+|---------|---------|----------------|
+| `rayenna-solar-hub` | `consumer-app/frontend` | `https://rayenna-solar-hub.onrender.com` |
+
+**Static service env:** `VITE_API_BASE_URL` = `https://rayenna-crm.onrender.com`
+
+**API service env (required for login):** `CONSUMER_JWT_SECRET` — separate from `JWT_SECRET`; set only on the CRM Web Service, not the Hub static site.
+
+### Vercel
+
+- **Root Directory:** `consumer-app/frontend`
+- **Config:** `consumer-app/frontend/vercel.json`
+- **Env:** `VITE_API_BASE_URL` (same API host as CRM/PE)
+
+### CORS
+
+`src/server.ts` allows `https://rayenna-solar-hub.onrender.com`, `*.vercel.app`, and optional `CONSUMER_HUB_FRONTEND_URL`.
+
+### Build check
+
+```bash
+cd consumer-app/frontend && npm run build
+```
+
+Must produce `dist/` and `dist/404.html`.
+
+### Production smoke test
+
+- [ ] Login (consumer account linked to a project)
+- [ ] Home dashboard, Track charts, Profile theme toggle
+- [ ] PWA manifest loads (`/manifest.json`); install prompt on mobile HTTPS
+

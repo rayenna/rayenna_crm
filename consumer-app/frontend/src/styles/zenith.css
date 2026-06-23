@@ -1,0 +1,1307 @@
+/* Zenith — Dark Command Center (scoped via .zenith-root) */
+/* Plus Jakarta Sans: crisp SaaS headings & KPIs; DM Sans: UI body */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Plus+Jakarta+Sans:ital,wght@0,500;0,600;0,700;0,800;1,500&family=Syne:wght@700&display=swap');
+
+.zenith-root {
+  --zenith-bg: var(--bg-page);
+  --zenith-surface: var(--bg-card);
+  --zenith-border: var(--border-default);
+  --zenith-gold: var(--accent-gold);
+  --zenith-teal: var(--accent-teal);
+  --zenith-crimson: var(--accent-red);
+  --zenith-text: var(--text-primary);
+  --zenith-muted: var(--text-muted);
+  --zenith-font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --zenith-font-body: 'DM Sans', system-ui, sans-serif;
+
+  /* Native inputs: dark popups in dark theme; light in light theme (html color-scheme). */
+  color-scheme: dark;
+
+  /* 100% width: Layout uses full-width main for /zenith (avoids iOS 100vw + padding horizontal scroll) */
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  position: relative;
+  min-height: calc(100vh - 5rem);
+  min-height: calc(100dvh - 5rem);
+  /* Avoid overflow-x: hidden/clip on this root — CSS forces overflow-y: auto and Chrome/Android PWA clips
+     Recharts while scrolling. Layout keeps main without horizontal clip on /zenith. */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  -webkit-tap-highlight-color: transparent;
+  background-color: var(--zenith-bg);
+  /* Dark: single soft glow — no page grid (grid lines are light-mode–style only via [data-theme='light'] override). */
+  background-image: radial-gradient(
+    ellipse 70% 45% at 50% -18%,
+    color-mix(in srgb, var(--accent-gold) 12%, transparent),
+    transparent
+  );
+  background-size: 100% 100%;
+  background-position: center top;
+  color: var(--zenith-text);
+  font-family: var(--zenith-font-body);
+}
+
+[data-theme='light'] .zenith-root {
+  color-scheme: light;
+  /* Command-center depth: warm pools + teal + subtle purple + silk beam + fine grid */
+  background-image:
+    radial-gradient(ellipse 130% 90% at 50% 118%, color-mix(in srgb, var(--accent-gold) 16%, transparent) 0%, transparent 58%),
+    radial-gradient(ellipse 92% 58% at 100% -8%, color-mix(in srgb, var(--accent-gold) 22%, transparent) 0%, transparent 52%),
+    radial-gradient(ellipse 88% 62% at -8% 102%, color-mix(in srgb, var(--accent-teal) 18%, transparent) 0%, transparent 54%),
+    radial-gradient(ellipse 70% 48% at 50% -12%, color-mix(in srgb, var(--accent-purple) 10%, transparent) 0%, transparent 46%),
+    radial-gradient(ellipse 120% 80% at 50% 50%, transparent 35%, color-mix(in srgb, var(--text-primary) 3.5%, transparent) 100%),
+    linear-gradient(
+      122deg,
+      transparent 0%,
+      transparent 40%,
+      color-mix(in srgb, #ffffff 72%, transparent) 49.2%,
+      color-mix(in srgb, var(--accent-teal) 8%, transparent) 50%,
+      transparent 51%,
+      transparent 100%
+    ),
+    linear-gradient(color-mix(in srgb, var(--text-primary) 2.1%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--text-primary) 2.1%, transparent) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    40px 40px,
+    40px 40px;
+  background-position:
+    center,
+    center,
+    center,
+    center top,
+    center,
+    center,
+    center center,
+    center center;
+}
+
+[data-theme='dark'] .zenith-root {
+  color-scheme: dark;
+}
+
+/* Pipeline / Your focus filters: match page surface */
+.zenith-root .zenith-native-filter-input {
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-input);
+}
+
+.zenith-root .zenith-native-filter-input::placeholder {
+  color: var(--text-placeholder);
+}
+
+.zenith-root .zenith-native-filter-input:hover {
+  border-color: var(--border-strong);
+}
+
+.zenith-root .zenith-native-filter-input:focus {
+  outline: none;
+  border-color: var(--accent-teal);
+  box-shadow: 0 0 0 2px var(--accent-teal-muted);
+}
+
+.zenith-root .zenith-native-select {
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-input);
+}
+
+.zenith-root .zenith-native-select:hover {
+  background-color: var(--bg-card-hover);
+  border-color: var(--border-strong);
+}
+
+.zenith-root .zenith-native-select:focus {
+  outline: none;
+  border-color: var(--accent-teal);
+  box-shadow: 0 0 0 2px var(--accent-teal-muted);
+}
+
+.zenith-root .zenith-native-select option {
+  background-color: var(--bg-dropdown);
+  color: var(--text-primary);
+}
+
+/* Hit List — single-row compact filters (override generic 44px mobile min-height) */
+.zenith-root .zenith-hit-list-filters .zenith-native-filter-input,
+.zenith-root .zenith-hit-list-filters .zenith-native-select {
+  min-height: 2rem;
+  font-size: 12px;
+}
+
+/* Faster taps on iOS; avoid accidental double-tap zoom on controls (links only on real controls — not all anchors, so wheel/touch scroll isn’t affected on large link areas) */
+.zenith-root button {
+  touch-action: manipulation;
+}
+
+/* Horizontally scrollable regions inside Zenith (tables, chips) */
+.zenith-root .zenith-scroll-x {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+/* Data tables: header band + label colour (tokens — Hit List, pipeline, overdue, installation pulse) */
+.zenith-root table.zenith-table--data > thead > tr {
+  background-color: var(--zenith-table-header-bg);
+}
+.zenith-root table.zenith-table--data > thead > tr > th {
+  color: var(--zenith-table-header-fg);
+}
+
+/* Installation pulse: prefer horizontal pan so the table scrolls cleanly on phones/tablets */
+.zenith-root .zenith-install-pulse-scroll {
+  touch-action: pan-x pan-y;
+}
+
+.zenith-root h1,
+.zenith-root h2,
+.zenith-root h3,
+.zenith-root .zenith-display {
+  font-family: var(--zenith-font-display);
+  letter-spacing: -0.02em;
+}
+
+/* Large metric numbers: tighter, readable (avoids “overly wide” geometric look) */
+.zenith-root .zenith-kpi-value {
+  font-family: var(--zenith-font-display);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+}
+
+@keyframes zenith-grid-drift {
+  0% {
+    background-position: center top, 0 0, 0 0;
+  }
+  100% {
+    background-position: center top, 48px 48px, 48px 48px;
+  }
+}
+
+@keyframes zenith-grid-drift-light {
+  0% {
+    background-position:
+      center,
+      center,
+      center,
+      center top,
+      center,
+      center,
+      0 0,
+      0 0;
+  }
+  100% {
+    background-position:
+      center,
+      center,
+      center,
+      center top,
+      center,
+      center,
+      40px 40px,
+      40px 40px;
+  }
+}
+
+.zenith-root.zenith-animated-bg {
+  /* Dark: background has no tile grid to drift — avoid pointless repaint. */
+  animation: none;
+}
+
+[data-theme='light'] .zenith-root.zenith-animated-bg {
+  animation-name: zenith-grid-drift-light;
+  animation-duration: 140s;
+}
+
+/* Mobile light-mode: reduce compositing churn while scrolling (Android Chrome can intermittently blank
+   translucent/animated KPI tiles when the animated background is repainting). Keep the background
+   static on small screens; desktop retains the subtle drift. */
+@media (max-width: 768px) {
+  [data-theme='light'] .zenith-root.zenith-animated-bg {
+    animation: none !important;
+  }
+}
+
+.zenith-glass {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+[data-theme='light'] .zenith-root .zenith-glass {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Portaled Zenith quick drawers — follow `html[data-theme]` (not inside .zenith-root) */
+.zenith-quick-drawer-backdrop {
+  background-color: var(--zenith-drawer-backdrop);
+}
+
+@media (min-width: 1024px) {
+  .zenith-quick-drawer-backdrop {
+    background-color: var(--zenith-drawer-backdrop-lg);
+  }
+}
+
+.zenith-quick-drawer-panel {
+  background-color: var(--bg-drawer);
+  color: var(--text-primary);
+  border-left: 1px solid var(--border-default);
+  box-shadow: var(--zenith-drawer-panel-shadow);
+}
+
+.zenith-quick-drawer-header {
+  border-bottom: 1px solid var(--border-default);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bg-surface) 82%, var(--accent-gold) 12%) 0%,
+    var(--bg-drawer) 100%
+  );
+}
+
+[data-theme='dark'] .zenith-quick-drawer-header {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bg-drawer) 88%, var(--accent-gold) 6%) 0%,
+    var(--bg-drawer) 100%
+  );
+}
+
+.zenith-quick-drawer-footer {
+  border-top: 1px solid var(--border-default);
+  background: color-mix(in srgb, var(--bg-drawer) 75%, var(--bg-surface) 25%);
+}
+
+.zenith-quick-drawer-date {
+  color-scheme: dark;
+}
+
+[data-theme='light'] .zenith-quick-drawer-date {
+  color-scheme: light;
+}
+
+/* Executive Zenith: readable column width + section rhythm (used on main body wrapper) */
+.zenith-root .zenith-exec-main {
+  max-width: 1520px;
+}
+
+.zenith-root .zenith-exec-section {
+  border-top: 1px solid var(--border-default);
+  padding-top: 1.25rem;
+  margin-top: 0.125rem;
+}
+
+@media (min-width: 1024px) {
+  .zenith-root .zenith-exec-section {
+    padding-top: 1.5rem;
+    margin-top: 0.25rem;
+  }
+}
+
+.zenith-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: zenith-shimmer 1.5s ease-in-out infinite;
+}
+
+[data-theme='light'] .zenith-root .zenith-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(26, 26, 46, 0.04) 0%,
+    rgba(26, 26, 46, 0.09) 50%,
+    rgba(26, 26, 46, 0.04) 100%
+  );
+}
+
+/* Raised shells: pipeline / payment radar / installation blocks */
+.zenith-root .zenith-pipeline-block-shell,
+.zenith-root .zenith-finance-radar-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-card);
+}
+
+[data-theme='light'] .zenith-root .zenith-pipeline-block-shell,
+[data-theme='light'] .zenith-root .zenith-finance-radar-section {
+  box-shadow:
+    var(--shadow-card),
+    0 1px 0 color-mix(in srgb, #ffffff 70%, transparent) inset;
+}
+
+/* Your focus / Proposal Engine collapsible panels */
+.zenith-root .zenith-focus-panel {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bg-card) 100%, transparent) 0%,
+    color-mix(in srgb, var(--bg-card) 94%, var(--accent-gold) 3%) 100%
+  );
+  border: 1px solid var(--border-card);
+  border-radius: 0 12px 12px 0;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+[data-theme='light'] .zenith-root .zenith-focus-panel {
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    color-mix(in srgb, var(--bg-card) 88%, var(--accent-teal) 4%) 100%
+  );
+}
+
+.zenith-root .zenith-focus-panel__head {
+  background: color-mix(in srgb, var(--bg-card) 88%, var(--bg-surface) 12%);
+  border-bottom: 1px solid var(--border-default);
+}
+
+[data-theme='light'] .zenith-root .zenith-focus-panel__head {
+  background: color-mix(in srgb, var(--bg-surface) 65%, #ffffff 35%);
+}
+
+/* Stat wells inside payment radar (replaces flat black/25) */
+.zenith-root .zenith-stat-well {
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-default);
+  background: color-mix(in srgb, var(--bg-surface) 85%, var(--bg-card) 15%);
+  box-shadow: 0 1px 0 color-mix(in srgb, #ffffff 55%, transparent) inset;
+}
+
+[data-theme='dark'] .zenith-root .zenith-stat-well {
+  background: rgba(0, 0, 0, 0.28);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+@keyframes zenith-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Recharts text in Zenith — explicit fills for WebKit (Safari) SVG text inheritance */
+.zenith-root .recharts-wrapper,
+.zenith-root .recharts-responsive-container,
+.zenith-root .recharts-tooltip-wrapper {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.zenith-reminder-preview-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+.zenith-reminder-preview-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.zenith-reminder-preview-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+}
+
+/* Mobile / narrow viewports: Recharts SVG often clips during document scroll on Chrome/Android PWA when
+   zenith-glass uses backdrop-filter, the grid background animates, or chart layers are forced onto their
+   own GPU plane (translate3d). Keep wrappers permissive; matches Tailwind lg (1024px). */
+@media (max-width: 1023px) {
+  .zenith-root.zenith-animated-bg {
+    animation: none;
+  }
+
+  /* Same idea as index.css backdrop-blur-sm on mobile — backdrop + SVG compositing is fragile while scrolling */
+  .zenith-root .zenith-glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--bg-card);
+    border-color: var(--border-card);
+  }
+
+  /* Do not promote Recharts to its own layer here — Android often clips the surface against scroll; iOS is
+     covered by removing backdrop blur on .zenith-glass above. */
+  .zenith-root .recharts-wrapper {
+    overflow: visible !important;
+  }
+  .zenith-root .zenith-chart-slot {
+    overflow: visible;
+  }
+
+  /* Segment donuts: keep charts off isolated layers; glass blur already off mobile-wide */
+  .zenith-root .zenith-segment-donut-card .recharts-responsive-container {
+    transform: none !important;
+    -webkit-transform: none !important;
+    isolation: auto;
+  }
+
+  /* Pie sits in a fixed-height slot; clip only this slot so paint doesn’t overlap the card below. */
+  .zenith-root .zenith-segment-donut-card .zenith-chart-slot {
+    overflow: hidden;
+  }
+  .zenith-root .zenith-segment-donut-card .recharts-wrapper {
+    overflow: visible !important;
+  }
+  .zenith-root .zenith-segment-donut-card .recharts-surface {
+    overflow: visible;
+  }
+
+  /* Pipeline table card: avoid overflow:hidden + border-radius compositing glitches on vertical scroll (Android Chrome). */
+  .zenith-root .zenith-pipeline-block-shell {
+    overflow: visible;
+  }
+  @media (min-width: 1024px) {
+    .zenith-root .zenith-pipeline-block-shell {
+      overflow: hidden;
+    }
+  }
+
+  /* Payment radar pie only: clip wrapper so legend/tooltip don’t bleed into the bar section below.
+     Bar chart slot stays overflow visible so X-axis ticks and bars aren’t clipped (see ZenithYourFocus mobile flex). */
+  .zenith-root .zenith-payment-radar-pie-slot .recharts-wrapper {
+    overflow: hidden !important;
+  }
+
+  .zenith-root .zenith-payment-radar-pie-slot {
+    overflow: hidden;
+  }
+
+  .zenith-root .zenith-payment-radar-bar-slot .recharts-wrapper {
+    overflow: visible !important;
+  }
+
+  .zenith-root .zenith-payment-radar-bar-slot {
+    overflow: visible;
+  }
+}
+
+/* While quick action drawer is open, hide Recharts tooltips (sticky labels / z-order on touch). */
+body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.zenith-root .recharts-cartesian-axis-tick-value {
+  fill: var(--chart-axis-text) !important;
+  font-size: 11px;
+}
+
+.zenith-root .recharts-cartesian-axis-tick text {
+  fill: var(--chart-axis-text) !important;
+}
+
+.zenith-root .recharts-legend-item-text {
+  color: var(--text-secondary) !important;
+  font-size: 12px !important;
+}
+
+/* Word cloud (DOM spans) — hover glow matches Zenith gold/teal accents */
+.zenith-root .zenith-wordcloud-host {
+  position: relative;
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--accent-teal) 12%, rgba(0, 0, 0, 0.45)) 0%,
+    rgba(10, 10, 18, 0.72) 55%,
+    color-mix(in srgb, var(--accent-gold) 10%, rgba(0, 0, 0, 0.5)) 100%
+  );
+  border-color: var(--border-card) !important;
+}
+
+[data-theme='light'] .zenith-root .zenith-wordcloud-host {
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--accent-teal) 7%, var(--bg-card)) 0%,
+    var(--bg-card) 42%,
+    color-mix(in srgb, var(--accent-gold) 10%, var(--bg-card)) 100%
+  );
+  border-color: var(--border-card) !important;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #ffffff 65%, transparent);
+}
+
+.zenith-root .zenith-wordcloud-host .zenith-wc-word {
+  cursor: default;
+  letter-spacing: 0.02em;
+  transition:
+    filter 0.22s ease,
+    text-shadow 0.22s ease;
+}
+
+.zenith-root .zenith-wordcloud-host .zenith-wc-word.zenith-wc-glow {
+  filter: drop-shadow(0 0 6px rgba(245, 166, 35, 0.95)) drop-shadow(0 0 14px rgba(0, 212, 180, 0.55));
+  text-shadow:
+    0 0 12px rgba(245, 166, 35, 0.85),
+    0 0 24px rgba(0, 212, 180, 0.45);
+  z-index: 5;
+}
+
+/* AI Insights ticker — clip only; keyframes + animation live inline on the component (same as Dashboard). */
+.zenith-ai-insights-viewport {
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+@keyframes zenith-ai-insights-marquee-kf {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.zenith-ai-insights-marquee {
+  flex-shrink: 0;
+  animation: zenith-ai-insights-marquee-kf 32s linear infinite;
+}
+
+/* iOS/Safari light-mode scroll bug: blurred elements inside translucent cards can rasterize and flash blank during scroll.
+   Mitigation: in light mode on small viewports, force KPI cards onto their own compositing layer and remove heavy blur. */
+@media (max-width: 768px) {
+  [data-theme='light'] .zenith-root .zenith-kpi-card {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: transform;
+  }
+
+  [data-theme='light'] .zenith-root .zenith-kpi-card__blob {
+    filter: none !important;
+  }
+}
+
+/* Pause only for real mouse hover — avoids “stuck paused” after touch on some browsers */
+@media (hover: hover) and (pointer: fine) {
+  .zenith-ai-insights-viewport:hover .zenith-ai-insights-marquee {
+    animation-play-state: paused;
+  }
+}
+
+/* Recharts default tooltip — same tokens as index.css (Zenith charts stay consistent) */
+.zenith-root .recharts-default-tooltip {
+  background: var(--chart-tooltip-bg) !important;
+  border: 1px solid var(--chart-tooltip-border) !important;
+  box-shadow: var(--chart-tooltip-shadow) !important;
+  color: var(--chart-tooltip-fg) !important;
+}
+.zenith-root .recharts-tooltip-label {
+  color: var(--chart-tooltip-fg) !important;
+}
+.zenith-root .recharts-tooltip-item-name {
+  color: var(--chart-tooltip-fg-muted) !important;
+}
+.zenith-root .recharts-tooltip-item-value,
+.zenith-root .recharts-tooltip-item-separator,
+.zenith-root .recharts-tooltip-item-unit {
+  color: var(--chart-tooltip-fg) !important;
+}
+
+/* Performance + accessibility: stop continuous repaints / heavy blur when user prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .zenith-root.zenith-animated-bg {
+    animation: none;
+    background-position: center top;
+  }
+
+  [data-theme='light'] .zenith-root.zenith-animated-bg {
+    background-position:
+      center,
+      center,
+      center,
+      center top,
+      center,
+      center,
+      0 0,
+      0 0;
+  }
+
+  .zenith-skeleton {
+    animation: none;
+    background-position: 0 0;
+  }
+
+  .zenith-glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--bg-card);
+  }
+
+  /* Do not disable the AI insights marquee or command “Live” pulse here — product requires continuous ticker scroll. */
+}
+
+/* Today’s Hit List — pulse (keyframes appended; Syne loaded in @import at top) */
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes pulse-number {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.pulse-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-red);
+  margin-right: 5px;
+  vertical-align: middle;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.pulse-number {
+  animation: pulse-number 2s ease-in-out infinite;
+}
+
+/* Command bar “Live” indicator (teal; distinct from Hit List .pulse-dot) */
+.zenith-root .zenith-command-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-teal);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Zenith command bar: compact FY / Qtr / Mo dropdowns (mobile only in layout) */
+.zenith-root select.zenith-filter-mobile-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.45)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.35rem center;
+  background-size: 0.65rem;
+  padding-right: 1.35rem;
+}
+
+.zenith-root select.zenith-filter-mobile-select option {
+  background-color: var(--bg-dropdown);
+  color: var(--text-primary);
+}
+
+[data-theme='light'] .zenith-root select.zenith-filter-mobile-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(26,26,46,0.58)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+
+/* Hit List widget: scrollable body on laptop without heavy scrollbar */
+.zenith-root .zenith-hit-list-body {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+[data-theme='light'] .zenith-root .zenith-hit-list-body {
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.zenith-root .zenith-hit-list-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.zenith-root .zenith-hit-list-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.zenith-root .zenith-hit-list-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* FY revenue/profit chart: area fill is painted above bars and steals all pointer events — let clicks reach profit bars + top-layer revenue hit targets */
+.zenith-root .zenith-fy-revenue-profit-chart .recharts-area-area,
+.zenith-root .zenith-fy-revenue-profit-chart .recharts-area-curve {
+  pointer-events: none;
+}
+
+/* Victory toast (Zenith) — CSS-only confetti + countdown; no backdrop-filter */
+@keyframes zenith-confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(60px) rotate(420deg);
+    opacity: 0;
+  }
+}
+
+@keyframes zenith-victory-countdown {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+@keyframes zenith-victory-shimmer {
+  0% {
+    transform: translateX(-100%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(250%) skewX(-20deg);
+  }
+}
+
+.zenith-victory-confetti-dot {
+  animation: zenith-confetti-fall 0.8s ease-out forwards;
+}
+
+.zenith-victory-countdown-bar {
+  animation: zenith-victory-countdown 6s linear forwards;
+}
+
+.zenith-victory-shimmer {
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    color-mix(in srgb, var(--text-primary) 8%, transparent) 50%,
+    transparent 65%
+  );
+  animation: zenith-victory-shimmer 0.7s ease-out 0.2s forwards;
+}
+
+/* PWA offline banner */
+@keyframes zenith-sync-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sync-spin {
+  animation: zenith-sync-spin 1s linear infinite;
+}
+
+/* ─── My Day Button ──────────────────────────────────────────── */
+
+@keyframes myday-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-gold) 55%, transparent); }
+  50%       { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent-gold) 0%, transparent); }
+}
+
+@keyframes myday-ray-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes myday-bob {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-2px); }
+}
+
+.myday-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1.5px solid color-mix(in srgb, var(--accent-gold) 40%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent-gold) 22%, transparent) 0%,
+    color-mix(in srgb, var(--accent-gold) 8%, transparent) 100%
+  );
+  color: var(--accent-gold);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 160ms ease, border-color 160ms, background 160ms, box-shadow 160ms;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.myday-btn:hover,
+.myday-btn:focus-visible {
+  transform: scale(1.08);
+  border-color: color-mix(in srgb, var(--accent-gold) 70%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent-gold) 32%, transparent) 0%,
+    color-mix(in srgb, var(--accent-gold) 14%, transparent) 100%
+  );
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-gold) 20%, transparent);
+}
+
+.myday-btn:active {
+  transform: scale(0.95);
+}
+
+.myday-btn--open {
+  border-color: var(--accent-gold);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent-gold) 38%, transparent) 0%,
+    color-mix(in srgb, var(--accent-gold) 18%, transparent) 100%
+  );
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent-gold) 28%, transparent);
+}
+
+.myday-btn--pending {
+  animation: myday-pulse 2.4s ease-in-out infinite;
+}
+
+.myday-btn--pending .myday-icon {
+  animation: myday-bob 2s ease-in-out infinite;
+}
+
+.myday-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--accent-gold);
+  color: #1a1000;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  border: 2px solid var(--nav-bg, var(--bg-page));
+  pointer-events: none;
+  letter-spacing: -0.3px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+}
+
+/* Desktop label pill — shows "My Day" text on ≥ lg screens */
+.myday-btn-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+@media (min-width: 1024px) {
+  .myday-btn {
+    width: auto;
+    padding: 0 14px 0 10px;
+    gap: 7px;
+    border-radius: 12px;
+  }
+  .myday-label {
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+  }
+}
+
+/* My Day drawer — header summary chips */
+.myday-drawer-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.myday-drawer-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-gold) 18%, transparent);
+  color: var(--accent-gold);
+  border: 1px solid color-mix(in srgb, var(--accent-gold-border, var(--accent-gold)) 35%, transparent);
+}
+
+.myday-drawer-chip--muted {
+  background: var(--bg-badge);
+  color: var(--text-muted);
+  border-color: var(--border-default);
+  font-weight: 600;
+}
+
+.myday-drawer-chip--journal {
+  background: color-mix(in srgb, var(--accent-teal) 16%, transparent);
+  color: var(--accent-teal);
+  border-color: color-mix(in srgb, var(--accent-teal) 30%, transparent);
+}
+
+.myday-tab-badge--urgent {
+  background: color-mix(in srgb, var(--accent-red) 28%, transparent) !important;
+  color: var(--accent-red) !important;
+}
+
+/* My Day — native date picker calendar icon follows app theme (not hardcoded dark) */
+.myday-input-date {
+  color-scheme: dark;
+}
+
+[data-theme='light'] .myday-input-date {
+  color-scheme: light;
+}
+
+/* Command bar + offline banner stay visible while scrolling (mobile PWA). */
+.zenith-command-offline-stack {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.zenith-offline-snapshot-banner {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Zenith mobile polish (≤1023px, matches Tailwind lg) ───────────────────── */
+
+@media (max-width: 1023px) {
+  .zenith-root .zenith-filter-mobile-select {
+    min-height: 44px;
+    font-size: 16px;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .zenith-root .zenith-filter-mobile-reset {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .zenith-root .zenith-kpi-value {
+    font-size: 1.125rem;
+  }
+
+  .zenith-root .zenith-forecast-tab {
+    min-height: 44px;
+    min-width: 44px;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    font-size: 11px;
+  }
+
+  .zenith-root .zenith-focus-filter-select,
+  .zenith-root .zenith-native-filter-input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .zenith-root .zenith-hit-list-filters .zenith-native-filter-input,
+  .zenith-root .zenith-hit-list-filters .zenith-native-select {
+    min-height: 2.25rem;
+    font-size: 13px;
+  }
+
+  .zenith-scroll-x-wrap {
+    position: relative;
+  }
+
+  .zenith-mobile-bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    border-top: 1px solid var(--border-default);
+    background: color-mix(in srgb, var(--bg-surface) 94%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .zenith-mobile-bottom-nav-inner {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    gap: 2px;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 6px 8px 8px;
+  }
+
+  .zenith-mobile-bottom-nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 48px;
+    max-width: 5.5rem;
+    padding: 4px 6px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition:
+      color 0.15s ease,
+      background 0.15s ease;
+  }
+
+  .zenith-mobile-bottom-nav-btn.is-active {
+    color: var(--accent-gold);
+    background: var(--accent-gold-muted);
+  }
+
+  .zenith-mobile-bottom-nav-label {
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  .zenith-mobile-sticky-actions {
+    position: fixed;
+    right: 12px;
+    bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+    z-index: 44;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .zenith-mobile-sticky-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 9999px;
+    border: 1px solid var(--border-card);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    box-shadow: var(--shadow-card);
+    cursor: pointer;
+    transition:
+      transform 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .zenith-mobile-sticky-btn:active {
+    transform: scale(0.96);
+  }
+
+  .zenith-mobile-sticky-btn--briefing {
+    color: var(--accent-gold);
+    border-color: var(--accent-gold-border);
+    background: var(--accent-gold-muted);
+  }
+
+  .zenith-scroll-x-wrap::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 28px;
+    pointer-events: none;
+    background: linear-gradient(
+      to left,
+      color-mix(in srgb, var(--bg-card) 92%, transparent),
+      transparent
+    );
+  }
+
+}
+
+.zenith-drawer-close-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* My Day — section labels & touch targets (theme-aware) */
+.myday-section-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 12px 0 6px;
+  display: block;
+}
+
+.myday-section-label--overdue {
+  color: var(--accent-gold);
+}
+
+.myday-section-label--inline {
+  padding: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.myday-touch-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* My Day Phase 2 — coach mark */
+.myday-coach-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2099;
+  border: none;
+  background: transparent;
+  cursor: default;
+}
+
+.myday-coach-card {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--accent-gold-border);
+  background: var(--bg-modal);
+  box-shadow: var(--shadow-modal);
+}
+
+.myday-coach-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--accent-gold);
+  font-family: 'Syne', sans-serif;
+}
+
+.myday-coach-body {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.myday-coach-body strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.myday-coach-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.myday-coach-dismiss,
+.myday-coach-primary {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.myday-coach-dismiss {
+  border: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.myday-coach-primary {
+  border: none;
+  background: var(--accent-gold);
+  color: var(--text-inverse);
+}
+
+/* My Day Phase 2 — journal nudge (bottom banner) */
+.myday-journal-nudge {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5000;
+  padding: 12px 12px max(12px, env(safe-area-inset-bottom, 12px));
+  pointer-events: none;
+}
+
+.myday-journal-nudge-inner {
+  pointer-events: auto;
+  margin: 0 auto;
+  max-width: 36rem;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--accent-gold-border);
+  background: color-mix(in srgb, var(--bg-modal) 94%, transparent);
+  box-shadow: var(--shadow-modal);
+  backdrop-filter: blur(12px);
+}
+
+@media (min-width: 640px) {
+  .myday-journal-nudge-inner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+}
+
+.myday-journal-nudge-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.myday-journal-nudge-text strong {
+  color: var(--text-primary);
+}
+
+.myday-journal-nudge-actions {
+  display: flex;
+  shrink: 0;
+  gap: 8px;
+}
+
+.myday-journal-nudge-secondary,
+.myday-journal-nudge-primary {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.myday-journal-nudge-secondary {
+  border: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.myday-journal-nudge-primary {
+  border: none;
+  background: var(--accent-gold);
+  color: var(--text-inverse);
+}
+
