@@ -32,6 +32,9 @@ const SolarHub = lazy(() => import('./pages/SolarHub'))
 const SolarHubLayout = lazy(() => import('./components/solarHub/SolarHubLayout'))
 const SolarHubMaintenance = lazy(() => import('./pages/SolarHubMaintenance'))
 const SolarHubProvisioning = lazy(() => import('./pages/SolarHubProvisioning'))
+const SolarHubHelp = lazy(() => import('./pages/SolarHubHelp'))
+const SolarHubHelpArticleEdit = lazy(() => import('./pages/SolarHubHelpArticleEdit'))
+const SolarHubHelpFaqEdit = lazy(() => import('./pages/SolarHubHelpFaqEdit'))
 const SolarHubUserDetail = lazy(() => import('./pages/SolarHubUserDetail'))
 const Help = lazy(() => import('./pages/Help'))
 
@@ -259,6 +262,30 @@ function App() {
                 element={
                   <Suspense fallback={<PageLoader />}>
                     <SolarHubProvisioning />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="help"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <SolarHubHelp />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="help/articles/:id"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <SolarHubHelpArticleEdit />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="help/faqs/:id"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <SolarHubHelpFaqEdit />
                   </Suspense>
                 }
               />

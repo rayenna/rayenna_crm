@@ -5,6 +5,7 @@ const tabs = [
   { to: '/solar-hub/users', label: 'Users', end: false },
   { to: '/solar-hub/maintenance', label: 'Maintenance', end: false },
   { to: '/solar-hub/provisioning', label: 'Provisioning', end: false },
+  { to: '/solar-hub/help', label: 'Help Content', end: false },
 ] as const
 
 export default function SolarHubLayout() {
