@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useModalEscape } from '@/contexts/ModalEscapeContext'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
-import { SupportTicket, SupportTicketStatus } from '../../types'
+import { Link } from 'react-router-dom'
+import { SupportTicket, SupportTicketStatus, SupportTicketSource } from '../../types'
 import { useAuth } from '../../contexts/AuthContext'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
@@ -237,6 +238,29 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh, projectId }: T
                         <p className="mt-1.5 whitespace-pre-wrap text-sm text-[color:var(--text-secondary)]">{displayTicket.description}</p>
                       </div>
                     )}
+
+                    <div>
+                      <p className={stFieldMetaLabelCls}>Source</p>
+                      <p className="mt-1.5 text-sm text-[color:var(--text-secondary)]">
+                        {(displayTicket.source ?? SupportTicketSource.CRM) === SupportTicketSource.CONSUMER_APP
+                          ? 'Solar Hub'
+                          : 'CRM'}
+                      </p>
+                    </div>
+
+                    {displayTicket.hubUsername ? (
+                      <div>
+                        <p className={stFieldMetaLabelCls}>Solar Hub user</p>
+                        <p className="mt-1.5 text-sm">
+                          <Link
+                            to={`/solar-hub/users?search=${encodeURIComponent(displayTicket.hubUsername)}`}
+                            className="font-semibold text-[color:var(--accent-teal)] hover:underline"
+                          >
+                            @{displayTicket.hubUsername}
+                          </Link>
+                        </p>
+                      </div>
+                    ) : null}
 
                     <div>
                       <p className={stFieldMetaLabelCls}>Project</p>

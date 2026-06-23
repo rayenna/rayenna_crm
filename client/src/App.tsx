@@ -28,6 +28,11 @@ const About = lazy(() => import('./pages/About'))
 const ChangePassword = lazy(() => import('./pages/ChangePassword'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const SupportTicketsDashboard = lazy(() => import('./pages/SupportTicketsDashboard'))
+const SolarHub = lazy(() => import('./pages/SolarHub'))
+const SolarHubLayout = lazy(() => import('./components/solarHub/SolarHubLayout'))
+const SolarHubMaintenance = lazy(() => import('./pages/SolarHubMaintenance'))
+const SolarHubProvisioning = lazy(() => import('./pages/SolarHubProvisioning'))
+const SolarHubUserDetail = lazy(() => import('./pages/SolarHubUserDetail'))
 const Help = lazy(() => import('./pages/Help'))
 
 function App() {
@@ -219,6 +224,50 @@ function App() {
               element={
                 <ErrorBoundary>
                   <Suspense fallback={<PageLoader />}><SupportTicketsDashboard /></Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="solar-hub"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}>
+                    <SolarHubLayout />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            >
+              <Route index element={<Navigate to="users" replace />} />
+              <Route
+                path="users"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <SolarHub />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="maintenance"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <SolarHubMaintenance />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="provisioning"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <SolarHubProvisioning />
+                  </Suspense>
+                }
+              />
+            </Route>
+            <Route
+              path="solar-hub/users/:id"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><SolarHubUserDetail /></Suspense>
                 </ErrorBoundary>
               }
             />

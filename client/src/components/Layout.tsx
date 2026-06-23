@@ -62,6 +62,7 @@ const Layout = () => {
     { name: 'Customers', path: '/customers', roles: [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE, UserRole.MANAGEMENT] },
     { name: 'Projects', path: '/projects', roles: [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE, UserRole.MANAGEMENT] },
     { name: 'Support Tickets', path: '/support-tickets', roles: [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.MANAGEMENT] },
+    { name: 'Solar Hub', path: '/solar-hub', roles: [UserRole.ADMIN, UserRole.OPERATIONS, UserRole.MANAGEMENT] },
     { name: 'Tally Export', path: '/tally-export', roles: [UserRole.ADMIN, UserRole.FINANCE] },
     { name: 'Users', path: '/users', roles: [UserRole.ADMIN] },
     { name: 'Audit & Security', path: '/audit-security', roles: [UserRole.ADMIN] },
@@ -70,7 +71,7 @@ const Layout = () => {
   const filteredNav = navigation.filter((nav) => hasRole(nav.roles))
 
   // Keep the header clean: show the 3 most-used links inline; push admin/secondary to "More".
-  const PRIMARY_NAV_ORDER = ['/customers', '/projects', '/support-tickets'] as const
+  const PRIMARY_NAV_ORDER = ['/customers', '/projects', '/support-tickets', '/solar-hub'] as const
   const primaryNav = PRIMARY_NAV_ORDER
     .map((p) => filteredNav.find((n) => n.path === p))
     .filter(Boolean) as typeof filteredNav
@@ -722,6 +723,7 @@ const Layout = () => {
           location.pathname.startsWith('/help') ||
           location.pathname.startsWith('/tally-export') ||
           location.pathname.startsWith('/support-tickets') ||
+          location.pathname.startsWith('/solar-hub') ||
           location.pathname.startsWith('/change-password') ||
           location.pathname.startsWith('/customers') ||
           location.pathname.startsWith('/projects') ||

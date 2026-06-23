@@ -56,6 +56,11 @@ export enum SupportTicketStatus {
   CLOSED = 'CLOSED',
 }
 
+export enum SupportTicketSource {
+  CRM = 'CRM',
+  CONSUMER_APP = 'CONSUMER_APP',
+}
+
 export interface SupportTicket {
   id: string
   ticketNumber: string
@@ -63,6 +68,9 @@ export interface SupportTicket {
   title: string
   description?: string | null
   status: SupportTicketStatus
+  source?: SupportTicketSource
+  consumerUserId?: string | null
+  hubUsername?: string | null
   createdById: string
   createdBy: {
     id: string

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import toast from 'react-hot-toast'
-import { SupportTicket, SupportTicketStatus } from '../types'
+import { SupportTicket, SupportTicketStatus, SupportTicketSource } from '../types'
 import { format } from 'date-fns'
 import MetricCard from '../components/dashboard/MetricCard'
 import TicketStatusDonutChart from '../components/supportTickets/TicketStatusDonutChart'
@@ -47,6 +47,7 @@ const STATUS_SORT_RANK: Record<SupportTicketStatus, number> = {
 const SupportTicketsDashboard = () => {
   const queryClient = useQueryClient()
   const [selectedStatus, setSelectedStatus] = useState<SupportTicketStatus | null>(null)
+  const [selectedSource, setSelectedSource] = useState<SupportTicketSource | 'ALL'>('ALL')
   const [showOverdueOnly, setShowOverdueOnly] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
@@ -80,6 +81,9 @@ const SupportTicketsDashboard = () => {
 
   const filteredTickets = useMemo(() => {
     let list = [...allTickets]
+    if (selectedSource !== 'ALL') {
+      list = list.filter((t) => (t.source ?? SupportTicketSource.CRM) === selectedSource)
+    }
     if (selectedStatus) {
       list = list.filter((t) => t.status === selectedStatus)
     }
@@ -95,7 +99,7 @@ const SupportTicketsDashboard = () => {
       })
     }
     return list
-  }, [allTickets, selectedStatus, showOverdueOnly])
+  }, [allTickets, selectedStatus, selectedSource, showOverdueOnly])
 
   const handleSupportTicketsColumnSort = (sortKey: SupportTicketsTableSortKey) => {
     setTableSortBy((prevKey) => {
@@ -255,10 +259,16 @@ const SupportTicketsDashboard = () => {
 
   const handleClearFilters = () => {
     setSelectedStatus(null)
+    setSelectedSource('ALL')
     setShowOverdueOnly(false)
   }
 
-  const hasActiveFilters = selectedStatus !== null || showOverdueOnly
+  const hasActiveFilters = selectedStatus !== null || showOverdueOnly || selectedSource !== 'ALL'
+
+  const sourceLabel = (ticket: SupportTicket) =>
+    (ticket.source ?? SupportTicketSource.CRM) === SupportTicketSource.CONSUMER_APP
+      ? 'Solar Hub'
+      : 'CRM'
 
   const listErrorPanel = (
     <div
@@ -346,6 +356,23 @@ const SupportTicketsDashboard = () => {
           </button>
         </div>
 
+        <div className="flex flex-wrap gap-2">
+          {(['ALL', SupportTicketSource.CRM, SupportTicketSource.CONSUMER_APP] as const).map((src) => (
+            <button
+              key={src}
+              type="button"
+              onClick={() => setSelectedSource(src)}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                selectedSource === src
+                  ? 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)] ring-1 ring-[color:var(--accent-gold-border)]'
+                  : 'border border-[color:var(--border-default)] text-[color:var(--text-secondary)]'
+              }`}
+            >
+              {src === 'ALL' ? 'All sources' : src === SupportTicketSource.CONSUMER_APP ? 'Solar Hub' : 'CRM'}
+            </button>
+          ))}
+        </div>
+
         <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
           <div className="min-w-0 lg:self-start">
             {isLoading ? (
@@ -399,6 +426,10 @@ const SupportTicketsDashboard = () => {
                       <p className="mt-2 text-sm text-[color:var(--text-primary)]" title={projectDisplayLine(ticket)}>
                         {projectDisplayLine(ticket)}
                       </p>
+                      <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
+                        {sourceLabel(ticket)}
+                        {ticket.hubUsername ? ` · @${ticket.hubUsername}` : ''}
+                      </p>
                       <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[color:var(--text-secondary)]">
                         <div>
                           <span className="block text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Created</span>
@@ -451,6 +482,9 @@ const SupportTicketsDashboard = () => {
                             <span className={sortLabelLeft}>Project name</span>
                             <SupportTicketsSortGlyph sortKey="projectName" />
                           </button>
+                        </th>
+                        <th scope="col" className="px-2.5 py-2 align-middle sm:px-3 sm:py-2">
+                          <span className={sortLabelLeft}>Source</span>
                         </th>
                         <th scope="col" className="px-2.5 py-2 align-middle sm:px-3 sm:py-2" aria-sort={ariaSortFor('status')}>
                           <button
@@ -528,6 +562,12 @@ const SupportTicketsDashboard = () => {
                             <div className="truncate text-sm text-[color:var(--text-primary)]" title={projectDisplayLine(ticket)}>
                               {projectDisplayLine(ticket)}
                             </div>
+                          </td>
+                          <td className="min-w-0 px-2 py-2 text-xs text-[color:var(--text-secondary)] sm:px-2.5 lg:py-1.5">
+                            {sourceLabel(ticket)}
+                            {ticket.hubUsername ? (
+                              <span className="block truncate text-[10px] text-[color:var(--text-muted)]">@{ticket.hubUsername}</span>
+                            ) : null}
                           </td>
                           <td className="min-w-0 px-2 py-2 sm:px-2.5 lg:py-1.5">
                             <span className={`inline-flex min-w-0 max-w-full items-center truncate rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide sm:px-2.5 ${statusChipClass(ticket.status)}`}>

@@ -9,6 +9,7 @@ import { Project, UserRole, ProjectStatus } from '../types'
 import { projectStatusStagePillClass } from '../components/zenith/zenithDealCardUi'
 import RemarksSection from '../components/remarks/RemarksSection'
 import SupportTicketsSection from '../components/supportTickets/SupportTicketsSection'
+import ProjectSolarHubCard from '../components/solarHub/ProjectSolarHubCard'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import ProposalPreview from '../components/proposal/ProposalPreview'
@@ -509,6 +510,10 @@ const ProjectDetail = () => {
             <p className="py-2 text-sm text-[color:var(--text-muted)]">Customer information not available</p>
           )}
         </InfoSection>
+
+        <div className="mb-6">
+          <ProjectSolarHubCard projectId={project.id} projectStatus={project.projectStatus} />
+        </div>
 
         <InfoSection
           title="Project Details"
