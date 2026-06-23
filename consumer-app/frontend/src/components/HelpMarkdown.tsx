@@ -57,7 +57,7 @@ export default function HelpMarkdown({ markdown }: { markdown: string }) {
           <strong className="font-semibold text-[color:var(--text-primary)]" {...props} />
         ),
         table: ({ ...props }) => (
-          <div className="mb-4 overflow-x-auto rounded-xl border border-[color:var(--border-default)]">
+          <div className="zenith-table-scroll-shell mb-4 overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] rounded-xl border border-[color:var(--border-default)]">
             <table className="w-full min-w-[280px] text-left text-xs" {...props} />
           </div>
         ),
