@@ -26,8 +26,38 @@ export interface SystemStats {
   co2TonsSaved: number
 }
 
+export interface CrmContact {
+  prefix?: string | null
+  firstName?: string | null
+  middleName?: string | null
+  lastName?: string | null
+  phones?: string[]
+  emails?: string[]
+}
+
+export interface CrmProfile {
+  customerId: string
+  customerType: 'RESIDENTIAL' | 'APARTMENT' | 'COMMERCIAL' | null
+  prefix: string | null
+  firstName: string | null
+  middleName: string | null
+  lastName: string | null
+  companyName: string | null
+  contactPerson: string | null
+  phones: string[]
+  emails: string[]
+  addressLine1: string | null
+  addressLine2: string | null
+  city: string | null
+  state: string | null
+  country: string | null
+  pinCode: string | null
+  contacts: CrmContact[]
+}
+
 export interface ConsumerProfile {
   user: ConsumerUser
+  crmProfile: CrmProfile
   systemStats: SystemStats
   memberStatus: MemberStatus
   achievements: AchievementItem[]
@@ -41,8 +71,7 @@ export interface ConsumerNotification {
   createdAt: string
 }
 
-export interface UpdateProfileInput {
-  firstName?: string
-  lastName?: string
-  phone?: string
+export interface ChangePasswordInput {
+  currentPassword: string
+  newPassword: string
 }

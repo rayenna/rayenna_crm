@@ -1,6 +1,7 @@
 export interface ConsumerUser {
   id: string
-  email: string
+  username: string
+  email?: string | null
   firstName?: string | null
   lastName?: string | null
   phone?: string | null

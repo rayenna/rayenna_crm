@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from '@/utils/axios'
 import type {
+  ChangePasswordInput,
   ConsumerNotification,
   ConsumerProfile,
-  UpdateProfileInput,
 } from '@/types/profile'
 
 export function useConsumerProfile() {
@@ -16,15 +16,10 @@ export function useConsumerProfile() {
   })
 }
 
-export function useUpdateProfile() {
-  const queryClient = useQueryClient()
+export function useChangePassword() {
   return useMutation({
-    mutationFn: async (input: UpdateProfileInput) => {
-      const { data } = await axios.put<ConsumerProfile>('/api/consumer/profile', input)
-      return data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['consumer-profile'] })
+    mutationFn: async (input: ChangePasswordInput) => {
+      await axios.post('/api/consumer/auth/change-password', input)
     },
   })
 }

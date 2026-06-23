@@ -26,7 +26,13 @@ Optional demo user:
 
 ```bash
 ALLOW_CONSUMER_AUTO_SEED=1 npm run prisma:seed:consumer
-# hub.demo@rayenna.local / hubdemo123
+# username: hub.demo / password: hubdemo123
+```
+
+Auto-provisioned production accounts use **username + password** (`rayenna123` default) when a project reaches **Completed** or **Completed–Subsidy Credited**. Backfill existing completed projects:
+
+```bash
+npm run prisma:backfill:consumer-hub
 ```
 
 Do **not** set `VITE_API_BASE_URL` locally — Vite proxies `/api` to port 3000.

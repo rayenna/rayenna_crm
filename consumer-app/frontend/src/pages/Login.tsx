@@ -15,7 +15,7 @@ const apiNotConfigured = isProd && !apiBaseUrl
 type ServerStatus = 'checking' | 'ready' | 'slow' | 'unknown'
 
 export default function Login() {
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [elapsed, setElapsed] = useState(0)
@@ -29,8 +29,10 @@ export default function Login() {
   useEffect(() => {
     if (!apiBaseUrl || !isProd) return
     let mounted = true
-    setServerStatus('checking')
     const controller = new AbortController()
+    queueMicrotask(() => {
+      if (mounted) setServerStatus('checking')
+    })
     axios
       .get(`${apiBaseUrl}/api/health`, { signal: controller.signal, timeout: 90_000 })
       .then(() => {
@@ -76,7 +78,7 @@ export default function Login() {
     startElapsedCounter()
 
     try {
-      await login(email.trim(), password)
+      await login(username.trim(), password)
       stopElapsedCounter()
       toast.success('Login successful')
       navigate(from, { replace: true })
@@ -189,19 +191,19 @@ export default function Login() {
         <form className="mt-6 space-y-4 sm:mt-8" onSubmit={handleSubmit}>
           <div className="space-y-3">
             <div>
-              <label htmlFor="email" className="sr-only">
-                Email address
+              <label htmlFor="username" className="sr-only">
+                Username
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
+                id="username"
+                name="username"
+                type="text"
+                autoComplete="username"
                 required
                 className={fieldCls}
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
             </div>
             <div>

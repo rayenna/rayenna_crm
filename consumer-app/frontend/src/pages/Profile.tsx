@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   Award,
@@ -20,21 +20,31 @@ import { useAuth } from '@/contexts/AuthContext'
 import NotificationsModal from '@/components/NotificationsModal'
 import { useThemeContext } from '@/hooks/useTheme'
 import {
+  useChangePassword,
   useConsumerNotifications,
   useConsumerProfile,
-  useUpdateProfile,
 } from '@/hooks/useConsumerProfile'
-import type { AchievementItem } from '@/types/profile'
+import type { AchievementItem, CrmProfile } from '@/types/profile'
 
-function displayName(firstName?: string | null, lastName?: string | null, email?: string) {
-  const full = [firstName, lastName].filter(Boolean).join(' ').trim()
-  return full || email?.split('@')[0] || 'Member'
+function customerTypeLabel(type: CrmProfile['customerType']) {
+  if (type === 'APARTMENT') return 'Apartment'
+  if (type === 'COMMERCIAL') return 'Commercial'
+  if (type === 'RESIDENTIAL') return 'Residential'
+  return '—'
 }
 
-function initials(firstName?: string | null, lastName?: string | null, email?: string) {
-  if (firstName && lastName) return `${firstName[0]}${lastName[0]}`.toUpperCase()
-  if (firstName) return firstName.slice(0, 2).toUpperCase()
-  return (email?.[0] ?? 'R').toUpperCase()
+function displayNameFromCrm(crm: CrmProfile, username: string) {
+  const person = [crm.firstName, crm.lastName].filter(Boolean).join(' ').trim()
+  if (person) return person
+  if (crm.companyName) return crm.companyName
+  return username
+}
+
+function initialsFromCrm(crm: CrmProfile, username: string) {
+  if (crm.firstName && crm.lastName) return `${crm.firstName[0]}${crm.lastName[0]}`.toUpperCase()
+  if (crm.firstName) return crm.firstName.slice(0, 2).toUpperCase()
+  if (crm.companyName) return crm.companyName.slice(0, 2).toUpperCase()
+  return username.slice(0, 2).toUpperCase()
 }
 
 function tierAccentClass(tier: string) {
@@ -72,96 +82,175 @@ function AchievementCard({ item }: { item: AchievementItem }) {
   )
 }
 
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-tertiary)]">
+        {label}
+      </p>
+      <p className="mt-0.5 text-sm text-[color:var(--text-primary)]">{value}</p>
+    </div>
+  )
+}
+
 function PersonalInfoModal({
   open,
   onClose,
-  initial,
+  crm,
+  username,
 }: {
   open: boolean
   onClose: () => void
-  initial: { firstName: string; lastName: string; phone: string; email: string }
+  crm: CrmProfile
+  username: string
 }) {
-  const [firstName, setFirstName] = useState(initial.firstName)
-  const [lastName, setLastName] = useState(initial.lastName)
-  const [phone, setPhone] = useState(initial.phone)
-  const mutation = useUpdateProfile()
-
-  useEffect(() => {
-    if (open) {
-      setFirstName(initial.firstName)
-      setLastName(initial.lastName)
-      setPhone(initial.phone)
-    }
-  }, [open, initial])
-
   if (!open) return null
+
+  const addressParts = [crm.addressLine1, crm.addressLine2, crm.city, crm.state, crm.pinCode, crm.country]
+    .filter(Boolean)
+    .join(', ')
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[color:var(--bg-overlay)] p-4 sm:items-center">
+      <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-modal)] p-5 shadow-[var(--shadow-modal)]">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="zenith-display text-lg font-bold text-[color:var(--text-primary)]">
+              Personal information
+            </h2>
+            <p className="mt-1 text-xs text-[color:var(--text-secondary)]">
+              Managed in Rayenna CRM — contact your coordinator to update.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-sm font-semibold text-[color:var(--accent-gold)]"
+          >
+            Done
+          </button>
+        </div>
+
+        <div className="mt-4 space-y-4">
+          <ReadOnlyField label="Username" value={username} />
+          <ReadOnlyField label="Customer type" value={customerTypeLabel(crm.customerType)} />
+          <ReadOnlyField label="Customer ID" value={crm.customerId} />
+          {crm.companyName ? <ReadOnlyField label="Society / company" value={crm.companyName} /> : null}
+          {crm.firstName ? <ReadOnlyField label="First name" value={crm.firstName} /> : null}
+          {crm.middleName ? <ReadOnlyField label="Middle name" value={crm.middleName} /> : null}
+          {crm.lastName ? <ReadOnlyField label="Last name" value={crm.lastName} /> : null}
+          {crm.phones.length > 0 ? (
+            <ReadOnlyField label="Phone" value={crm.phones.join(' · ')} />
+          ) : null}
+          {crm.emails.length > 0 ? (
+            <ReadOnlyField label="Email" value={crm.emails.join(' · ')} />
+          ) : null}
+          {addressParts ? <ReadOnlyField label="Address" value={addressParts} /> : null}
+
+          {crm.contacts.length > 1 ? (
+            <div className="space-y-3 border-t border-[color:var(--border-default)] pt-3">
+              <p className="text-xs font-bold text-[color:var(--text-secondary)]">Additional contacts</p>
+              {crm.contacts.slice(1).map((contact, idx) => {
+                const name = [contact.firstName, contact.lastName].filter(Boolean).join(' ').trim()
+                return (
+                  <div key={idx} className="rounded-xl bg-[color:var(--bg-surface)] p-3 text-sm">
+                    {name ? <p className="font-medium text-[color:var(--text-primary)]">{name}</p> : null}
+                    {contact.phones?.length ? (
+                      <p className="text-[color:var(--text-secondary)]">{contact.phones.join(' · ')}</p>
+                    ) : null}
+                    {contact.emails?.length ? (
+                      <p className="text-[color:var(--text-tertiary)]">{contact.emails.join(' · ')}</p>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ChangePasswordModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  if (!open) return null
+  return <ChangePasswordForm onClose={onClose} />
+}
+
+function ChangePasswordForm({ onClose }: { onClose: () => void }) {
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const mutation = useChangePassword()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match')
+      return
+    }
     try {
-      await mutation.mutateAsync({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        phone: phone.trim(),
-      })
-      toast.success('Profile updated')
+      await mutation.mutateAsync({ currentPassword, newPassword })
+      toast.success('Password updated')
       onClose()
     } catch {
-      toast.error('Could not save profile')
+      toast.error('Could not change password — check your current password')
     }
   }
+
+  const inputCls =
+    'w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-sm text-[color:var(--text-primary)] outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)]'
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-[color:var(--bg-overlay)] p-4 sm:items-center">
       <div className="w-full max-w-md rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-modal)] p-5 shadow-[var(--shadow-modal)]">
         <h2 className="zenith-display text-lg font-bold text-[color:var(--text-primary)]">
-          Personal information
+          Change password
         </h2>
         <form onSubmit={handleSubmit} className="mt-4 space-y-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-[color:var(--text-secondary)]">
-              Email
+              Current password
             </label>
             <input
-              disabled
-              value={initial.email}
-              className="w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-muted)] px-3 py-2.5 text-sm text-[color:var(--text-tertiary)]"
+              type="password"
+              required
+              autoComplete="current-password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className={inputCls}
             />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-[color:var(--text-secondary)]">
-                First name
-              </label>
-              <input
-                required
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                className="w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-sm text-[color:var(--text-primary)] outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)]"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-[color:var(--text-secondary)]">
-                Last name
-              </label>
-              <input
-                required
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                className="w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-sm text-[color:var(--text-primary)] outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)]"
-              />
-            </div>
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-[color:var(--text-secondary)]">
-              Phone
+              New password
             </label>
             <input
+              type="password"
               required
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+91 ..."
-              className="w-full rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-sm text-[color:var(--text-primary)] outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-border)]"
+              minLength={8}
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[color:var(--text-secondary)]">
+              Confirm new password
+            </label>
+            <input
+              type="password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className={inputCls}
             />
           </div>
           <div className="flex gap-2 pt-1">
@@ -177,7 +266,7 @@ function PersonalInfoModal({
               disabled={mutation.isPending}
               className="flex-1 rounded-xl bg-[color:var(--accent-gold)] py-2.5 text-sm font-bold text-[color:var(--text-inverse)] disabled:opacity-60"
             >
-              {mutation.isPending ? 'Saving…' : 'Save'}
+              {mutation.isPending ? 'Saving…' : 'Update password'}
             </button>
           </div>
         </form>
@@ -248,6 +337,7 @@ function AppSettingsModal({ open, onClose }: { open: boolean; onClose: () => voi
 
 type SettingsKey =
   | 'personal'
+  | 'password'
   | 'notifications'
   | 'documents'
   | 'privacy'
@@ -260,6 +350,7 @@ export default function Profile() {
   const profileQuery = useConsumerProfile()
   const notificationsQuery = useConsumerNotifications()
   const [personalOpen, setPersonalOpen] = useState(false)
+  const [passwordOpen, setPasswordOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [appSettingsOpen, setAppSettingsOpen] = useState(false)
 
@@ -269,6 +360,10 @@ export default function Profile() {
   const handleSettings = (key: SettingsKey) => {
     if (key === 'personal') {
       setPersonalOpen(true)
+      return
+    }
+    if (key === 'password') {
+      setPasswordOpen(true)
       return
     }
     if (key === 'notifications') {
@@ -293,6 +388,7 @@ export default function Profile() {
     badge?: number
   }[] = [
     { key: 'personal', label: 'Personal Information', icon: User },
+    { key: 'password', label: 'Change Password', icon: Shield },
     {
       key: 'notifications',
       label: 'Notifications',
@@ -300,7 +396,6 @@ export default function Profile() {
       badge: notificationsQuery.data?.unreadCount,
     },
     { key: 'documents', label: 'Documents & Reports', icon: FileText },
-    { key: 'privacy', label: 'Privacy & Security', icon: Shield },
     { key: 'app', label: 'App Settings', icon: Settings },
     { key: 'help', label: 'Help Center', icon: HelpCircle },
     { key: 'logout', label: 'Log Out', icon: LogOut },
@@ -314,21 +409,19 @@ export default function Profile() {
         </div>
       ) : (
         <>
-          {/* Header */}
           <header className="mb-5 flex flex-col items-center text-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[color:var(--accent-gold)] to-[color:var(--accent-teal)] text-2xl font-bold text-white shadow-lg">
-              {initials(profile.user.firstName, profile.user.lastName, profile.user.email)}
+              {initialsFromCrm(profile.crmProfile, profile.user.username)}
             </div>
             <h1 className="zenith-display mt-3 text-xl font-bold text-[color:var(--text-primary)]">
-              {displayName(profile.user.firstName, profile.user.lastName, profile.user.email)}
+              {displayNameFromCrm(profile.crmProfile, profile.user.username)}
             </h1>
-            <p className="text-sm text-[color:var(--text-secondary)]">{profile.user.email}</p>
-            {profile.user.phone ? (
-              <p className="text-xs text-[color:var(--text-tertiary)]">{profile.user.phone}</p>
+            <p className="text-sm text-[color:var(--text-secondary)]">@{profile.user.username}</p>
+            {profile.crmProfile.phones[0] ? (
+              <p className="text-xs text-[color:var(--text-tertiary)]">{profile.crmProfile.phones[0]}</p>
             ) : null}
           </header>
 
-          {/* System stats */}
           <section className="mb-4 grid grid-cols-3 gap-2">
             <div className="zenith-glass rounded-2xl p-3 text-center">
               <Zap className="mx-auto h-4 w-4 text-[color:var(--accent-gold)]" />
@@ -353,7 +446,6 @@ export default function Profile() {
             </div>
           </section>
 
-          {/* Member status */}
           <section
             className={`mb-4 overflow-hidden rounded-2xl border border-[color:var(--accent-gold-border)] bg-gradient-to-br ${tierAccentClass(profile.memberStatus.tier)} p-4`}
           >
@@ -392,11 +484,8 @@ export default function Profile() {
             )}
           </section>
 
-          {/* Achievements */}
           <section className="mb-4">
-            <h2 className="mb-2 text-sm font-bold text-[color:var(--text-primary)]">
-              Achievements
-            </h2>
+            <h2 className="mb-2 text-sm font-bold text-[color:var(--text-primary)]">Achievements</h2>
             <div className="grid grid-cols-3 gap-2">
               {profile.achievements.map((a) => (
                 <AchievementCard key={a.type} item={a} />
@@ -404,7 +493,6 @@ export default function Profile() {
             </div>
           </section>
 
-          {/* Settings */}
           <section className="zenith-glass overflow-hidden rounded-2xl">
             <ul>
               {settingsItems.map((item, idx) => {
@@ -466,13 +554,10 @@ export default function Profile() {
           <PersonalInfoModal
             open={personalOpen}
             onClose={() => setPersonalOpen(false)}
-            initial={{
-              firstName: profile.user.firstName ?? '',
-              lastName: profile.user.lastName ?? '',
-              phone: profile.user.phone ?? '',
-              email: profile.user.email,
-            }}
+            crm={profile.crmProfile}
+            username={profile.user.username}
           />
+          <ChangePasswordModal open={passwordOpen} onClose={() => setPasswordOpen(false)} />
           <NotificationsModal open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
           <AppSettingsModal open={appSettingsOpen} onClose={() => setAppSettingsOpen(false)} />
         </>

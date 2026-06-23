@@ -20,7 +20,7 @@ const WARNING_BEFORE_MS = 60 * 1000
 interface AuthContextType {
   user: ConsumerUser | null
   token: string | null
-  login: (email: string, password: string) => Promise<void>
+  login: (username: string, password: string) => Promise<void>
   logout: () => void
   isLoading: boolean
 }
@@ -36,8 +36,12 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [user, setUser] = useState<ConsumerUser | null>(null)
-  const [token, setToken] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [token, setToken] = useState<string | null>(() => {
+    const stored = sessionStorage.getItem(CONSUMER_TOKEN_KEY)
+    if (stored) setConsumerAuthToken(stored)
+    return stored
+  })
+  const [isLoading, setIsLoading] = useState(() => Boolean(sessionStorage.getItem(CONSUMER_TOKEN_KEY)))
   const [showIdleWarning, setShowIdleWarning] = useState(false)
   const [idleCountdown, setIdleCountdown] = useState(60)
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -83,14 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [logout])
 
   useEffect(() => {
-    const stored = sessionStorage.getItem(CONSUMER_TOKEN_KEY)
-    if (!stored) {
-      setIsLoading(false)
-      return
-    }
-
-    setConsumerAuthToken(stored)
-    setToken(stored)
+    if (!token) return
 
     axiosInstance
       .get<ConsumerUser>('/api/consumer/auth/me')
@@ -102,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearAuth()
       })
       .finally(() => setIsLoading(false))
-  }, [clearAuth, resetIdleTimer])
+  }, [clearAuth, resetIdleTimer, token])
 
   useEffect(() => {
     if (!token) return
@@ -110,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const events = ['mousedown', 'keydown', 'touchstart', 'scroll'] as const
     const onActivity = () => resetIdleTimer()
     events.forEach((e) => window.addEventListener(e, onActivity, { passive: true }))
-    resetIdleTimer()
+    queueMicrotask(() => resetIdleTimer())
 
     return () => {
       events.forEach((e) => window.removeEventListener(e, onActivity))
@@ -120,9 +117,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [token, resetIdleTimer])
 
-  const login = async (email: string, password: string) => {
+  const login = async (username: string, password: string) => {
     const { data } = await axiosInstance.post<ConsumerAuthResponse>('/api/consumer/auth/login', {
-      email,
+      username,
       password,
     })
     sessionStorage.setItem(CONSUMER_TOKEN_KEY, data.token)
