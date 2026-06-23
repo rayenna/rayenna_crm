@@ -4,6 +4,8 @@ import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
 import type { ZenithDateFilter } from './zenithTypes'
 
+export type ZenithFunnelStageKind = 'stage' | 'aggregate'
+
 export interface ZenithFunnelStage {
   id: string
   label: string
@@ -13,6 +15,43 @@ export interface ZenithFunnelStage {
   gradient: string
   /** Mean days in current status (from API); null for composite stages (e.g. Open Deals). */
   avgDaysInStage?: number | null
+  /** `aggregate` = summary metric (e.g. Open Deals), not a sequential pipeline step. */
+  kind?: ZenithFunnelStageKind
+  /** Stage ids summed by an aggregate row (`lead`, `survey`, `proposal`). */
+  compositeOf?: readonly string[]
+}
+
+/** Pre-confirmation stages that roll up into Open Deals. */
+export const OPEN_PIPELINE_STAGE_IDS = ['lead', 'survey', 'proposal'] as const
+
+export type OpenPipelineStageId = (typeof OPEN_PIPELINE_STAGE_IDS)[number]
+
+export function isAggregateFunnelStage(stage: ZenithFunnelStage): boolean {
+  return stage.kind === 'aggregate' || stage.id === 'open'
+}
+
+export function partitionDealFlowStages(stages: ZenithFunnelStage[]) {
+  const openAggregate = stages.find(isAggregateFunnelStage) ?? null
+  const pipelineStages = stages.filter((s) => !isAggregateFunnelStage(s))
+  const openPipelineStages = pipelineStages.filter((s) =>
+    (OPEN_PIPELINE_STAGE_IDS as readonly string[]).includes(s.id),
+  )
+  const executionStages = pipelineStages.filter(
+    (s) => !(OPEN_PIPELINE_STAGE_IDS as readonly string[]).includes(s.id),
+  )
+  const hasOpenZone = openAggregate != null && openPipelineStages.length > 0
+  return { openAggregate, openPipelineStages, executionStages, pipelineStages, hasOpenZone }
+}
+
+export function formatOpenDealsBreakdown(
+  openPipelineStages: ZenithFunnelStage[],
+  style: 'short' | 'long' = 'short',
+): string {
+  if (openPipelineStages.length === 0) return ''
+  if (style === 'short') {
+    return openPipelineStages.map((s) => s.count).join(' + ')
+  }
+  return openPipelineStages.map((s) => `${s.label} ${s.count}`).join(' · ')
 }
 
 type StatusRow = { status: string; avgDaysInStage?: number | null }
@@ -110,6 +149,8 @@ export function buildZenithFunnelStages(
         ),
         gradient: 'from-rose-600 to-red-500',
         avgDaysInStage: null,
+        kind: 'aggregate',
+        compositeOf: [...OPEN_PIPELINE_STAGE_IDS],
       },
       {
         id: 'confirmed',
@@ -192,6 +233,8 @@ export function buildZenithFunnelStages(
       ),
       gradient: 'from-rose-600 to-red-500',
       avgDaysInStage: null,
+      kind: 'aggregate',
+      compositeOf: [...OPEN_PIPELINE_STAGE_IDS],
     },
     {
       id: 'confirmed',
@@ -282,6 +325,8 @@ export function buildZenithFunnelFromStatuses(
       ),
       gradient: 'from-rose-600 to-red-500',
       avgDaysInStage: null,
+      kind: 'aggregate',
+      compositeOf: [...OPEN_PIPELINE_STAGE_IDS],
     },
     {
       id: 'confirmed',

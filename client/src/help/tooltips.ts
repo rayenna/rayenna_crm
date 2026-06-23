@@ -209,7 +209,7 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.deal-flow-funnel',
     title: 'Deal flow funnel (Zenith)',
     content:
-      'Click a stage row or payment status pill to open Quick Actions in list mode with the same cohort as the funnel tile for your FY / Quarter / Month. Open in Projects → opens Projects with matching stage or payment filters.',
+      'Leads, Site Survey, and Proposal are open-pipeline stages. Open Deals (Σ ribbon) is their total — not a separate step. Click any stage, the Open Deals summary, or a payment pill to open Quick Actions with the same cohort as the tile for your FY / Quarter / Month.',
   },
   'zenith.kpi-availing-loan': {
     key: 'zenith.kpi-availing-loan',
