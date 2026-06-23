@@ -4,10 +4,18 @@ import {
   MaintenanceScheduleStatus,
 } from '@prisma/client';
 import prisma from '../prisma';
+import {
+  computePanelCleaningSchedule,
+  PANEL_CLEANING_TASK_KEY,
+} from '../utils/consumerPanelCleaningSchedule';
+import {
+  buildConsumerSystemSpec,
+  resolvePanelCount,
+  type ConsumerSystemSpecDto,
+} from '../utils/consumerProjectSystemSpec';
 
 const PANEL_WARRANTY_YEARS = 25;
 const INVERTER_WARRANTY_YEARS = 5;
-const DEFAULT_PANEL_W = 275;
 
 export type SystemHealthStatus = 'OPTIMAL' | 'WARNING' | 'CRITICAL';
 
@@ -40,6 +48,7 @@ export type MaintenanceScheduleItemDto = {
   dueDate: string | null;
   completedAt: string | null;
   statusLabel: string;
+  planNote: string | null;
 };
 
 export type MaintenanceRequestDto = {
@@ -117,6 +126,7 @@ async function loadConsumerProject(consumerUserId: string) {
           inverterCapacityKw: true,
           installationCompletionDate: true,
           confirmationDate: true,
+          subsidyRequestDate: true,
           createdAt: true,
         },
       },
@@ -138,21 +148,77 @@ function resolveInstallDate(project: {
   );
 }
 
-function resolvePanelCount(
-  systemKw: number,
-  panelCapacityW: number | null,
-): number {
-  const w = panelCapacityW && panelCapacityW > 0 ? panelCapacityW : DEFAULT_PANEL_W;
-  return Math.max(1, Math.round((systemKw * 1000) / w));
+function resolveNetMeterDate(project: {
+  subsidyRequestDate: Date | null;
+}): Date | null {
+  return project.subsidyRequestDate ? new Date(project.subsidyRequestDate) : null;
+}
+
+function mapDbStatus(status: 'DUE' | 'OVERDUE' | 'COMPLETED'): MaintenanceScheduleStatus {
+  if (status === 'OVERDUE') return MaintenanceScheduleStatus.OVERDUE;
+  if (status === 'COMPLETED') return MaintenanceScheduleStatus.COMPLETED;
+  return MaintenanceScheduleStatus.DUE;
+}
+
+const LEGACY_PLACEHOLDER_TASK_KEYS = ['system_inspection', 'inverter_check'] as const;
+
+async function syncPanelCleaningSchedule(consumerUserId: string): Promise<void> {
+  const consumer = await loadConsumerProject(consumerUserId);
+  const netMeterDate = resolveNetMeterDate(consumer.project);
+  const computed = computePanelCleaningSchedule({ netMeterInstalledAt: netMeterDate });
+
+  await prisma.maintenanceScheduleItem.deleteMany({
+    where: {
+      consumerUserId,
+      taskKey: { in: [...LEGACY_PLACEHOLDER_TASK_KEYS] },
+    },
+  });
+
+  const existing = await prisma.maintenanceScheduleItem.findUnique({
+    where: {
+      consumerUserId_taskKey: {
+        consumerUserId,
+        taskKey: PANEL_CLEANING_TASK_KEY,
+      },
+    },
+  });
+
+  const completedAt =
+    computed.serviceEnded ? existing?.completedAt ?? new Date() : null;
+
+  await prisma.maintenanceScheduleItem.upsert({
+    where: {
+      consumerUserId_taskKey: {
+        consumerUserId,
+        taskKey: PANEL_CLEANING_TASK_KEY,
+      },
+    },
+    create: {
+      consumerUserId,
+      taskKey: PANEL_CLEANING_TASK_KEY,
+      title: 'Panel Cleaning',
+      status: mapDbStatus(computed.dbStatus),
+      dueDate: computed.dueDate,
+      completedAt: computed.serviceEnded ? completedAt : null,
+    },
+    update: {
+      title: 'Panel Cleaning',
+      status: mapDbStatus(computed.dbStatus),
+      dueDate: computed.dueDate,
+      completedAt: computed.serviceEnded ? completedAt : null,
+    },
+  });
 }
 
 export async function ensureWarrantyAndSchedule(consumerUserId: string): Promise<void> {
   const consumer = await loadConsumerProject(consumerUserId);
   const project = consumer.project;
   const systemKw = project.systemCapacity && project.systemCapacity > 0 ? project.systemCapacity : 5.5;
-  const installDate = resolveInstallDate(project);
-  const panelCount = resolvePanelCount(systemKw, project.panelCapacityW);
-  const panelW = project.panelCapacityW ?? DEFAULT_PANEL_W;
+  const netMeterDate = resolveNetMeterDate(project);
+  const installDate = netMeterDate ?? resolveInstallDate(project);
+  const spec = buildConsumerSystemSpec(project);
+  const panelCount = spec.panelCount;
+  const panelW = project.panelCapacityW ?? 275;
   const panelType = project.panelType ?? 'Monocrystalline';
 
   const existingWarranty = await prisma.consumerWarrantyItem.count({
@@ -192,39 +258,7 @@ export async function ensureWarrantyAndSchedule(consumerUserId: string): Promise
     });
   }
 
-  const existingSchedule = await prisma.maintenanceScheduleItem.count({
-    where: { consumerUserId },
-  });
-
-  if (existingSchedule === 0) {
-    const today = new Date();
-    await prisma.maintenanceScheduleItem.createMany({
-      data: [
-        {
-          consumerUserId,
-          taskKey: 'panel_cleaning',
-          title: 'Panel Cleaning',
-          status: MaintenanceScheduleStatus.DUE,
-          dueDate: addDays(today, 12),
-        },
-        {
-          consumerUserId,
-          taskKey: 'system_inspection',
-          title: 'System Inspection',
-          status: MaintenanceScheduleStatus.COMPLETED,
-          dueDate: addDays(today, -30),
-          completedAt: addDays(today, -14),
-        },
-        {
-          consumerUserId,
-          taskKey: 'inverter_check',
-          title: 'Inverter Check',
-          status: MaintenanceScheduleStatus.DUE,
-          dueDate: addDays(today, 45),
-        },
-      ],
-    });
-  }
+  await syncPanelCleaningSchedule(consumerUserId);
 }
 
 export async function getSystemHealth(consumerUserId: string): Promise<SystemHealthDto> {
@@ -232,7 +266,8 @@ export async function getSystemHealth(consumerUserId: string): Promise<SystemHea
   const consumer = await loadConsumerProject(consumerUserId);
   const project = consumer.project;
   const systemKw = project.systemCapacity && project.systemCapacity > 0 ? project.systemCapacity : 5.5;
-  const installDate = resolveInstallDate(project);
+  const netMeterDate = resolveNetMeterDate(project);
+  const installDate = netMeterDate ?? resolveInstallDate(project);
   const panelCount = resolvePanelCount(systemKw, project.panelCapacityW);
 
   const [overdueSchedule, openCritical] = await Promise.all([
@@ -310,38 +345,40 @@ export async function getMaintenanceSchedule(
 ): Promise<MaintenanceScheduleItemDto[]> {
   await ensureWarrantyAndSchedule(consumerUserId);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const consumer = await loadConsumerProject(consumerUserId);
+  const netMeterDate = resolveNetMeterDate(consumer.project);
+  const computed = computePanelCleaningSchedule({ netMeterInstalledAt: netMeterDate });
 
   const rows = await prisma.maintenanceScheduleItem.findMany({
     where: { consumerUserId },
     orderBy: { dueDate: 'asc' },
   });
 
-  // Mark past-due items as OVERDUE when still DUE
-  for (const row of rows) {
-    if (
-      row.status === MaintenanceScheduleStatus.DUE &&
-      row.dueDate &&
-      row.dueDate < today
-    ) {
-      await prisma.maintenanceScheduleItem.update({
-        where: { id: row.id },
-        data: { status: MaintenanceScheduleStatus.OVERDUE },
-      });
-      row.status = MaintenanceScheduleStatus.OVERDUE;
+  return rows.map((row) => {
+    if (row.taskKey === PANEL_CLEANING_TASK_KEY) {
+      return {
+        id: row.id,
+        taskKey: row.taskKey,
+        title: row.title,
+        status: mapDbStatus(computed.dbStatus),
+        dueDate: computed.dueDate ? toDateOnly(computed.dueDate) : null,
+        completedAt: row.completedAt ? toDateOnly(row.completedAt) : null,
+        statusLabel: computed.statusLabel,
+        planNote: computed.planNote,
+      };
     }
-  }
 
-  return rows.map((row) => ({
-    id: row.id,
-    taskKey: row.taskKey,
-    title: row.title,
-    status: row.status,
-    dueDate: row.dueDate ? toDateOnly(row.dueDate) : null,
-    completedAt: row.completedAt ? toDateOnly(row.completedAt) : null,
-    statusLabel: scheduleStatusLabel(row.status, row.dueDate, row.completedAt),
-  }));
+    return {
+      id: row.id,
+      taskKey: row.taskKey,
+      title: row.title,
+      status: row.status,
+      dueDate: row.dueDate ? toDateOnly(row.dueDate) : null,
+      completedAt: row.completedAt ? toDateOnly(row.completedAt) : null,
+      statusLabel: scheduleStatusLabel(row.status, row.dueDate, row.completedAt),
+      planNote: null,
+    };
+  });
 }
 
 export async function listMaintenanceRequests(
@@ -401,12 +438,18 @@ export async function createMaintenanceRequest(
 export type WarrantyResponse = {
   systemHealth: SystemHealthDto;
   items: WarrantyItemDto[];
+  systemSpec: ConsumerSystemSpecDto;
 };
 
 export async function getWarrantyPayload(consumerUserId: string): Promise<WarrantyResponse> {
-  const [systemHealth, items] = await Promise.all([
+  const [systemHealth, items, consumer] = await Promise.all([
     getSystemHealth(consumerUserId),
     getWarrantyItems(consumerUserId),
+    loadConsumerProject(consumerUserId),
   ]);
-  return { systemHealth, items };
+  return {
+    systemHealth,
+    items,
+    systemSpec: buildConsumerSystemSpec(consumer.project),
+  };
 }

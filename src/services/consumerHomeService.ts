@@ -1,6 +1,7 @@
 import { TIER_LABELS } from '../utils/consumerGamification';
 import { buildConsumerProjectStatus, greetingForHour } from '../utils/consumerProjectStatus';
 import { displayNameFromCrmProfile, buildConsumerCrmProfile } from '../utils/consumerCustomerProfile';
+import { buildConsumerSystemSpec } from '../utils/consumerProjectSystemSpec';
 import { getOrCreateMonthlyReading } from './consumerEnergyService';
 import { getSystemHealth, getMaintenanceSchedule } from './consumerMaintainService';
 import { listConsumerNotifications } from './consumerProfileService';
@@ -25,6 +26,7 @@ export type ConsumerHomeDto = {
     subline: string | null;
     siteAddress: string | null;
     systemKw: number;
+    equipmentSummary: string;
     progressPercent: number;
     steps: { key: string; label: string; state: 'complete' | 'current' | 'upcoming' }[];
     isLive: boolean;
@@ -77,6 +79,11 @@ export async function getConsumerHome(consumerUserId: string): Promise<ConsumerH
           projectStatus: true,
           siteAddress: true,
           systemCapacity: true,
+          panelBrand: true,
+          panelType: true,
+          panelCapacityW: true,
+          inverterBrand: true,
+          inverterCapacityKw: true,
           customer: true,
         },
       },
@@ -108,6 +115,8 @@ export async function getConsumerHome(consumerUserId: string): Promise<ConsumerH
       ? consumer.project.systemCapacity
       : energy.systemKw;
 
+  const systemSpec = buildConsumerSystemSpec(consumer.project);
+
   const nextDue = schedule.find(
     (item) => item.status === 'DUE' || item.status === 'OVERDUE',
   );
@@ -126,6 +135,7 @@ export async function getConsumerHome(consumerUserId: string): Promise<ConsumerH
       subline: projectStatus.subline,
       siteAddress: consumer.project.siteAddress,
       systemKw,
+      equipmentSummary: systemSpec.equipmentSummary,
       progressPercent: projectStatus.progressPercent,
       steps: projectStatus.steps,
       isLive: projectStatus.isLive,

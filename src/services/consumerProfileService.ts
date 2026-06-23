@@ -17,6 +17,10 @@ import {
   type MemberStatusDto,
 } from '../utils/consumerGamification';
 import { estimateMonthlyEnergy } from '../utils/consumerEnergyEstimate';
+import {
+  buildConsumerSystemSpec,
+  type ConsumerSystemSpecDto,
+} from '../utils/consumerProjectSystemSpec';
 
 const DEFAULT_SYSTEM_KW = 5.5;
 
@@ -38,6 +42,7 @@ export type ConsumerProfileDto = {
   user: ReturnType<typeof toConsumerPublicUser>;
   crmProfile: ConsumerCrmProfileDto;
   systemStats: SystemStatsDto;
+  systemSpec: ConsumerSystemSpecDto;
   memberStatus: MemberStatusDto;
   achievements: AchievementDto[];
 };
@@ -188,6 +193,11 @@ export async function getConsumerProfile(consumerUserId: string): Promise<Consum
       project: {
         select: {
           systemCapacity: true,
+          panelBrand: true,
+          panelType: true,
+          panelCapacityW: true,
+          inverterBrand: true,
+          inverterCapacityKw: true,
           installationCompletionDate: true,
           expectedCommissioningDate: true,
           confirmationDate: true,
@@ -211,6 +221,11 @@ export async function getConsumerProfile(consumerUserId: string): Promise<Consum
       project: {
         select: {
           systemCapacity: true,
+          panelBrand: true,
+          panelType: true,
+          panelCapacityW: true,
+          inverterBrand: true,
+          inverterCapacityKw: true,
           installationCompletionDate: true,
           expectedCommissioningDate: true,
           confirmationDate: true,
@@ -243,6 +258,7 @@ export async function getConsumerProfile(consumerUserId: string): Promise<Consum
       installedLabel: formatInstalledLabel(installDate),
       co2TonsSaved,
     },
+    systemSpec: buildConsumerSystemSpec(refreshed.project),
     memberStatus: memberStatusFromPoints(refreshed.points),
     achievements: buildAchievementList(unlockedMap),
   };
