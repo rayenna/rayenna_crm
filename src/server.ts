@@ -239,6 +239,7 @@ const server = app.listen(PORT, async () => {
     const salesTeamPerformanceRoutes = (await import('./routes/salesTeamPerformance')).default;
     const remarksRoutes = (await import('./routes/remarks')).default;
     const adminAuditRoutes = (await import('./routes/adminAudit')).default;
+    const solarHubAdminRoutes = (await import('./routes/solarHubAdmin')).default;
     const proposalEngineRoutes = (await import('./routes/proposalEngine')).default;
     const solarNewsRoutes       = (await import('./routes/solarNews')).default;
     const roofLayoutRoutes     = (await import('./routes/roofLayout')).default;
@@ -271,6 +272,7 @@ const server = app.listen(PORT, async () => {
     apiRouter.use('/sales-team-performance', salesTeamPerformanceRoutes);
     apiRouter.use('/remarks', remarksRoutes);
     apiRouter.use('/admin/audit', adminAuditRoutes);
+    apiRouter.use('/admin/solar-hub', solarHubAdminRoutes);
     apiRouter.use('/proposal-engine', proposalEngineRoutes);
     apiRouter.use('/solar-news', solarNewsRoutes);
     apiRouter.use('/roof', roofLayoutRoutes);

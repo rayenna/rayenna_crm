@@ -30,6 +30,7 @@ import { generateProposalPDF } from '../utils/pdfGenerator';
 import { rateLimit } from '../middleware/rateLimit';
 import path from 'path';
 import fs from 'fs';
+import { scheduleConsumerHubSync } from '../services/consumerHubProvision';
 import * as XLSX from 'xlsx';
 
 const router = express.Router();
@@ -952,6 +953,8 @@ router.post(
         remarks: 'Project created',
       });
       logSecurityAudit({ userId: req.user!.id, role: req.user!.role, actionType: 'project_created', entityType: 'Project', entityId: project.id, summary: `Project #${project.slNo} created`, req });
+
+      scheduleConsumerHubSync(project.id, project.projectStatus);
 
       res.status(201).json(project);
     } catch (error: any) {
@@ -1945,6 +1948,7 @@ router.put(
 
       if (updateData.projectStatus !== undefined && req.user) {
         logSecurityAudit({ userId: req.user.id, role: req.user.role, actionType: 'project_status_changed', entityType: 'Project', entityId: req.params.id, summary: `Status ${project.projectStatus} -> ${updateData.projectStatus}`, req });
+        scheduleConsumerHubSync(updatedProject.id, updatedProject.projectStatus);
       }
       if (req.user && updateTouchesPaymentTracking(updateData)) {
         const slNo = updatedProject.slNo ?? project.slNo;

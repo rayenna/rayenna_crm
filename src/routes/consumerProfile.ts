@@ -1,11 +1,9 @@
 import express, { Request, Response } from 'express';
-import { body, validationResult } from 'express-validator';
 import { authenticateConsumer } from '../middleware/consumerAuth';
 import {
   getConsumerProfile,
   listConsumerNotifications,
   markConsumerNotificationRead,
-  updateConsumerProfile,
 } from '../services/consumerProfileService';
 
 const router = express.Router();
@@ -19,40 +17,6 @@ router.get('/profile', authenticateConsumer, async (req: Request, res: Response)
     return res.status(500).json({ error: 'Failed to load profile' });
   }
 });
-
-router.put(
-  '/profile',
-  authenticateConsumer,
-  [
-    body('firstName').optional().trim().isLength({ max: 100 }),
-    body('lastName').optional().trim().isLength({ max: 100 }),
-    body('phone').optional().trim().isLength({ max: 30 }),
-  ],
-  async (req: Request, res: Response) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-
-      const { firstName, lastName, phone } = req.body as {
-        firstName?: string;
-        lastName?: string;
-        phone?: string;
-      };
-
-      const profile = await updateConsumerProfile(req.consumer!.id, {
-        firstName,
-        lastName,
-        phone,
-      });
-      return res.json(profile);
-    } catch (err) {
-      console.error('Consumer profile PUT error:', err);
-      return res.status(500).json({ error: 'Failed to update profile' });
-    }
-  },
-);
 
 router.get('/notifications', authenticateConsumer, async (req: Request, res: Response) => {
   try {

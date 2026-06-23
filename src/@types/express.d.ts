@@ -11,7 +11,7 @@ declare global {
       };
       consumer?: {
         id: string;
-        email: string;
+        username: string;
         projectId: string;
       };
     }

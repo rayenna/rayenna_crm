@@ -10,9 +10,12 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { generateReferralCode, tierFromPoints } from '../src/utils/consumerAuth';
+import { consumerMasterContactFields } from '../src/utils/consumerCustomerProfile';
+import { DEMO_HUB_USERNAME, normalizeUsername } from '../src/utils/consumerUsername';
 
 const prisma = new PrismaClient();
 
+const TEST_USERNAME = DEMO_HUB_USERNAME;
 const TEST_EMAIL = 'hub.demo@rayenna.local';
 const TEST_PASSWORD = 'hubdemo123';
 
@@ -46,8 +49,24 @@ async function main() {
     where: { projectId: project.id },
   });
   if (existing) {
-    console.log('Consumer user already exists for project:', project.id);
-    console.log('Email:', existing.email);
+    const password = await bcrypt.hash(TEST_PASSWORD, 10);
+    const contactFields = consumerMasterContactFields(project.customer);
+    const updated = await prisma.consumerUser.update({
+      where: { id: existing.id },
+      data: {
+        username: normalizeUsername(TEST_USERNAME),
+        isActive: true,
+        password,
+        email: contactFields.email ?? TEST_EMAIL,
+        phone: contactFields.phone,
+        firstName: project.customer.firstName,
+        lastName: project.customer.lastName,
+      },
+    });
+    console.log('Refreshed Solar Hub demo consumer:');
+    console.log('  projectId:', project.id);
+    console.log('  username:', updated.username);
+    console.log('  password:', TEST_PASSWORD);
     return;
   }
 
@@ -56,14 +75,16 @@ async function main() {
   const referralCode = generateReferralCode(nameSeed);
   const password = await bcrypt.hash(TEST_PASSWORD, 10);
 
+  const contactFields = consumerMasterContactFields(project.customer);
   const consumer = await prisma.consumerUser.create({
     data: {
-      email: TEST_EMAIL,
+      username: normalizeUsername(TEST_USERNAME),
+      email: contactFields.email ?? TEST_EMAIL,
       password,
       projectId: project.id,
       firstName: project.customer.firstName,
       lastName: project.customer.lastName,
-      phone: project.customer.phone,
+      phone: contactFields.phone,
       referralCode,
       points: 0,
       memberTier: tierFromPoints(0),
@@ -72,7 +93,7 @@ async function main() {
 
   console.log('Created Solar Hub demo consumer:');
   console.log('  projectId:', project.id);
-  console.log('  email:   ', TEST_EMAIL);
+  console.log('  username:', TEST_USERNAME);
   console.log('  password:', TEST_PASSWORD);
   console.log('  id:      ', consumer.id);
 }

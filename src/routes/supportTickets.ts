@@ -1,9 +1,10 @@
 import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
-import { SupportTicketStatus, UserRole } from '@prisma/client';
+import { SupportTicketStatus, SupportTicketSource, UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
 import { logSecurityAudit } from '../utils/auditLogger';
+import { attachHubUsernames } from '../utils/supportTicketEnrich';
 
 const router = express.Router();
 
@@ -163,7 +164,7 @@ router.get('/project/:projectId', authenticate, async (req: Request, res: Respon
       orderBy: { createdAt: 'desc' },
     });
 
-    res.json(tickets);
+    res.json(await attachHubUsernames(tickets));
   } catch (error: any) {
     console.error('Error fetching support tickets:', error);
     res.status(500).json({ error: error.message || 'Failed to fetch support tickets' });
@@ -212,7 +213,8 @@ router.get('/:ticketId', authenticate, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Support ticket not found' });
     }
 
-    res.json(ticket);
+    const [enriched] = await attachHubUsernames([ticket]);
+    res.json(enriched);
   } catch (error: any) {
     console.error('Error fetching support ticket:', error);
     res.status(500).json({ error: error.message || 'Failed to fetch support ticket' });
@@ -427,10 +429,10 @@ router.get(
   authenticate,
   async (req: Request, res: Response) => {
     try {
-      const { status, projectId } = req.query;
+      const { status, projectId, source } = req.query;
 
       // Build where clause
-      const where: any = {};
+      const where: Record<string, unknown> = {};
 
       // Role-based filtering - Sales users only see tickets for their projects
       if (req.user?.role === UserRole.SALES) {
@@ -448,6 +450,10 @@ router.get(
       // Apply project filter if provided
       if (projectId) {
         where.projectId = projectId as string;
+      }
+
+      if (source === 'CRM' || source === 'CONSUMER_APP') {
+        where.source = source as SupportTicketSource;
       }
 
       // Get tickets
@@ -534,8 +540,10 @@ router.get(
 
       const overdueCount = overdueTickets.length;
 
+      const enriched = await attachHubUsernames(tickets);
+
       res.json({
-        tickets,
+        tickets: enriched,
         statistics: {
           open: openCount,
           inProgress: inProgressCount,

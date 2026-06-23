@@ -2,6 +2,11 @@ import { ConsumerAchievementType } from '@prisma/client';
 import prisma from '../prisma';
 import { tierFromPoints, toConsumerPublicUser } from '../utils/consumerAuth';
 import {
+  buildConsumerCrmProfile,
+  displayNameFromCrmProfile,
+  type ConsumerCrmProfileDto,
+} from '../utils/consumerCustomerProfile';
+import {
   ACHIEVEMENT_META,
   ACHIEVEMENT_POINTS,
   CO2_KG_PER_KWH,
@@ -9,7 +14,6 @@ import {
   isOneYearSolarEligible,
   isReferralChampionEligible,
   memberStatusFromPoints,
-  PROFILE_COMPLETE_POINTS,
   type MemberStatusDto,
 } from '../utils/consumerGamification';
 import { estimateMonthlyEnergy } from '../utils/consumerEnergyEstimate';
@@ -32,6 +36,7 @@ export type SystemStatsDto = {
 
 export type ConsumerProfileDto = {
   user: ReturnType<typeof toConsumerPublicUser>;
+  crmProfile: ConsumerCrmProfileDto;
   systemStats: SystemStatsDto;
   memberStatus: MemberStatusDto;
   achievements: AchievementDto[];
@@ -187,6 +192,7 @@ export async function getConsumerProfile(consumerUserId: string): Promise<Consum
           expectedCommissioningDate: true,
           confirmationDate: true,
           createdAt: true,
+          customer: true,
         },
       },
       achievements: { select: { type: true, unlockedAt: true } },
@@ -209,6 +215,7 @@ export async function getConsumerProfile(consumerUserId: string): Promise<Consum
           expectedCommissioningDate: true,
           confirmationDate: true,
           createdAt: true,
+          customer: true,
         },
       },
       achievements: { select: { type: true, unlockedAt: true } },
@@ -226,8 +233,11 @@ export async function getConsumerProfile(consumerUserId: string): Promise<Consum
     refreshed.achievements.map((a) => [a.type, a.unlockedAt] as const),
   );
 
+  const crmProfile = buildConsumerCrmProfile(refreshed.project.customer);
+
   return {
     user: toConsumerPublicUser(refreshed),
+    crmProfile,
     systemStats: {
       systemKw,
       installedLabel: formatInstalledLabel(installDate),
@@ -238,59 +248,7 @@ export async function getConsumerProfile(consumerUserId: string): Promise<Consum
   };
 }
 
-export type UpdateConsumerProfileInput = {
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-};
-
-function isProfileComplete(fields: {
-  firstName: string | null;
-  lastName: string | null;
-  phone: string | null;
-}): boolean {
-  return Boolean(
-    fields.firstName?.trim() && fields.lastName?.trim() && fields.phone?.trim(),
-  );
-}
-
-export async function updateConsumerProfile(
-  consumerUserId: string,
-  input: UpdateConsumerProfileInput,
-): Promise<ConsumerProfileDto> {
-  const current = await prisma.consumerUser.findUnique({ where: { id: consumerUserId } });
-  if (!current) throw new Error('Consumer not found');
-
-  const firstName = input.firstName !== undefined ? input.firstName.trim() || null : current.firstName;
-  const lastName = input.lastName !== undefined ? input.lastName.trim() || null : current.lastName;
-  const phone = input.phone !== undefined ? input.phone.trim() || null : current.phone;
-
-  const complete = isProfileComplete({ firstName, lastName, phone });
-  const awardProfileBonus = complete && !current.profileComplete;
-
-  await prisma.consumerUser.update({
-    where: { id: consumerUserId },
-    data: {
-      firstName,
-      lastName,
-      phone,
-      profileComplete: complete,
-    },
-  });
-
-  if (awardProfileBonus) {
-    await awardPoints(consumerUserId, PROFILE_COMPLETE_POINTS);
-    await prisma.consumerNotification.create({
-      data: {
-        consumerUserId,
-        title: 'Profile complete — +100 points',
-        body: 'Thanks for completing your profile. You earned 100 member points.',
-      },
-    });
-  }
-
-  return getConsumerProfile(consumerUserId);
-}
+export { displayNameFromCrmProfile, buildConsumerCrmProfile };
 
 export async function listConsumerNotifications(
   consumerUserId: string,

@@ -1,5 +1,6 @@
 import { TIER_LABELS } from '../utils/consumerGamification';
 import { buildConsumerProjectStatus, greetingForHour } from '../utils/consumerProjectStatus';
+import { displayNameFromCrmProfile, buildConsumerCrmProfile } from '../utils/consumerCustomerProfile';
 import { getOrCreateMonthlyReading } from './consumerEnergyService';
 import { getSystemHealth, getMaintenanceSchedule } from './consumerMaintainService';
 import { listConsumerNotifications } from './consumerProfileService';
@@ -57,9 +58,13 @@ function monthLabel(month: number, year: number): string {
   });
 }
 
-function displayName(firstName: string | null, lastName: string | null, email: string): string {
+function displayName(
+  firstName: string | null,
+  lastName: string | null,
+  username: string,
+): string {
   const full = [firstName, lastName].filter(Boolean).join(' ').trim();
-  return full || email.split('@')[0] || 'Member';
+  return full || username || 'Member';
 }
 
 export async function getConsumerHome(consumerUserId: string): Promise<ConsumerHomeDto> {
@@ -72,6 +77,7 @@ export async function getConsumerHome(consumerUserId: string): Promise<ConsumerH
           projectStatus: true,
           siteAddress: true,
           systemCapacity: true,
+          customer: true,
         },
       },
     },
@@ -106,9 +112,15 @@ export async function getConsumerHome(consumerUserId: string): Promise<ConsumerH
     (item) => item.status === 'DUE' || item.status === 'OVERDUE',
   );
 
+  const crmProfile = buildConsumerCrmProfile(consumer.project.customer);
+
   return {
     greeting: greetingForHour(now.getHours()),
-    displayName: displayName(consumer.firstName, consumer.lastName, consumer.email),
+    displayName: displayNameFromCrmProfile(crmProfile) || displayName(
+      consumer.firstName,
+      consumer.lastName,
+      consumer.username,
+    ),
     project: {
       headline: projectStatus.headline,
       subline: projectStatus.subline,

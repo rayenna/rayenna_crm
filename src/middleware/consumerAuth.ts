@@ -37,13 +37,13 @@ export async function authenticateConsumer(
       return res.status(401).json({ error: 'Account not found or deactivated' });
     }
 
-    if (consumer.email !== decoded.email) {
+    if (consumer.username !== decoded.username) {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
     req.consumer = {
       id: consumer.id,
-      email: consumer.email,
+      username: consumer.username,
       projectId: consumer.projectId,
     };
 

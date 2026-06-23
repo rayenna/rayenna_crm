@@ -23,6 +23,7 @@ import {
 import { validateIdProofTypeForCustomer } from '../utils/customerIdProof';
 import { getKeralaMapGpsWarning } from '../utils/mapGpsValidation';
 import { logSecurityAudit } from '../utils/auditLogger';
+import { scheduleConsumerContactSyncForCustomer } from '../services/consumerHubProvision';
 import { CustomerType, Prisma } from '@prisma/client';
 import * as XLSX from 'xlsx';
 
@@ -858,6 +859,7 @@ router.put(
       }
 
       if (process.env.NODE_ENV === 'development') console.log('[CUSTOMER UPDATE] Customer updated successfully:', updatedCustomer.id);
+      scheduleConsumerContactSyncForCustomer(updatedCustomer.id);
       logSecurityAudit({
         userId: req.user.id,
         role: req.user.role,

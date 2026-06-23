@@ -874,7 +874,8 @@ enum MaintenanceScheduleStatus {
 
 model ConsumerUser {
   id              String             @id @default(cuid())
-  email           String             @unique
+  username        String             @unique
+  email           String?
   password        String
   firstName       String?
   lastName        String?

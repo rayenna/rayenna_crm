@@ -19,6 +19,7 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts",
     "prisma:seed:consumer": "ts-node prisma/seed-consumer.ts",
+    "prisma:backfill:consumer-hub": "ts-node prisma/backfill-consumer-hub.ts",
     "test": "vitest run",
     "test:watch": "vitest --watch"
   },

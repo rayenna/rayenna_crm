@@ -4,13 +4,14 @@ export const CONSUMER_JWT_ROLE = 'CONSUMER' as const;
 
 export type ConsumerJwtPayload = {
   consumerId: string;
-  email: string;
+  username: string;
   role: typeof CONSUMER_JWT_ROLE;
 };
 
 export type ConsumerPublicUser = {
   id: string;
-  email: string;
+  username: string;
+  email: string | null;
   firstName: string | null;
   lastName: string | null;
   phone: string | null;
@@ -48,6 +49,7 @@ export function generateReferralCode(nameSeed: string): string {
 export function toConsumerPublicUser(user: ConsumerUser): ConsumerPublicUser {
   return {
     id: user.id,
+    username: user.username,
     email: user.email,
     firstName: user.firstName,
     lastName: user.lastName,
