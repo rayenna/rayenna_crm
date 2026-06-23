@@ -10,9 +10,7 @@ import type {
   HubMaintenanceRequestStatus,
   HubMaintenanceListResponse,
 } from '../types/solarHub'
-
-const tableShell =
-  'zenith-scroll-x w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-card)] [-webkit-overflow-scrolling:touch]'
+import { solarHubTableScrollShell } from '../components/solarHub/tableScrollShell'
 
 const STATUS_OPTIONS: { value: '' | HubMaintenanceRequestStatus; label: string }[] = [
   { value: '', label: 'All statuses' },
@@ -116,7 +114,7 @@ export default function SolarHubMaintenance() {
             {data?.total ?? 0} request{(data?.total ?? 0) === 1 ? '' : 's'}
             {isFetching ? ' · Updating…' : ''}
           </p>
-          <div className={tableShell}>
+          <div className={solarHubTableScrollShell}>
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] text-left text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">

@@ -146,6 +146,11 @@
   overscroll-behavior-x: contain;
 }
 
+/* Admin tables (Solar Hub, Users): allow vertical page scroll when touch starts on the table */
+.zenith-root .zenith-table-scroll-shell {
+  touch-action: pan-x pan-y;
+}
+
 /* Data tables: header band + label colour (tokens — Hit List, pipeline, overdue, installation pulse) */
 .zenith-root table.zenith-table--data > thead > tr {
   background-color: var(--zenith-table-header-bg);

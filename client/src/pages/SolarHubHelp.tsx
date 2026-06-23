@@ -10,9 +10,7 @@ import type {
   HubHelpArticleListResponse,
   HubHelpFaqListResponse,
 } from '../types/solarHubHelp'
-
-const tableShell =
-  'zenith-scroll-x w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-card)] [-webkit-overflow-scrolling:touch]'
+import { solarHubTableScrollShell } from '../components/solarHub/tableScrollShell'
 
 export default function SolarHubHelp() {
   const queryClient = useQueryClient()
@@ -95,7 +93,7 @@ export default function SolarHubHelp() {
                 Guides ({publishedArticleCount}/{articles.length} published)
               </h2>
             </div>
-            <div className={tableShell}>
+            <div className={solarHubTableScrollShell}>
               <table className="w-full min-w-[640px] text-left text-sm">
                 <thead className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-badge)] text-xs uppercase tracking-wide text-[color:var(--text-muted)]">
                   <tr>
@@ -161,7 +159,7 @@ export default function SolarHubHelp() {
                 FAQs ({faqs.length})
               </h2>
             </div>
-            <div className={tableShell}>
+            <div className={solarHubTableScrollShell}>
               <table className="w-full min-w-[720px] text-left text-sm">
                 <thead className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-badge)] text-xs uppercase tracking-wide text-[color:var(--text-muted)]">
                   <tr>

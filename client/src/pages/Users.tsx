@@ -9,7 +9,7 @@ import { Users as UsersGroupIcon } from 'lucide-react'
 import { ErrorModal } from '@/components/common/ErrorModal'
 
 const usersTableScrollShell =
-  'zenith-scroll-x w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-card)] [-webkit-overflow-scrolling:touch]'
+  'zenith-table-scroll-shell zenith-scroll-x w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x touch-pan-y rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-card)] [-webkit-overflow-scrolling:touch]'
 
 const usersHeaderLabel =
   'text-left text-[11px] font-bold uppercase leading-snug tracking-wide text-[color:var(--zenith-table-header-fg)] sm:text-xs sm:leading-tight sm:tracking-wider'

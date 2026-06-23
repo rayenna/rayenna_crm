@@ -7,9 +7,7 @@ import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import type { BulkProvisionSummary, ProvisioningGapListResponse } from '../types/solarHub'
-
-const tableShell =
-  'zenith-scroll-x w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-card)] [-webkit-overflow-scrolling:touch]'
+import { solarHubTableScrollShell } from '../components/solarHub/tableScrollShell'
 
 function formatSummary(summary: BulkProvisionSummary): string {
   const parts: string[] = []
@@ -174,7 +172,7 @@ export default function SolarHubProvisioning() {
             {data?.total ?? 0} project{(data?.total ?? 0) === 1 ? '' : 's'} missing Hub account
             {isFetching ? ' · Updating…' : ''}
           </p>
-          <div className={tableShell}>
+          <div className={solarHubTableScrollShell}>
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] text-left text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">

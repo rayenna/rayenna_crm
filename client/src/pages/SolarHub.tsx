@@ -3,9 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState, useEffect } from 'react'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import type { SolarHubUserListResponse } from '../types/solarHub'
-
-const tableShell =
-  'zenith-scroll-x w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain touch-pan-x rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-card)] [-webkit-overflow-scrolling:touch]'
+import { solarHubTableScrollShell } from '../components/solarHub/tableScrollShell'
 
 export default function SolarHub() {
   const [searchParams] = useSearchParams()
@@ -86,7 +84,7 @@ export default function SolarHub() {
               {data?.total ?? 0} account{(data?.total ?? 0) === 1 ? '' : 's'}
               {isFetching ? ' · Updating…' : ''}
             </p>
-            <div className={tableShell}>
+            <div className={solarHubTableScrollShell}>
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] text-left text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
