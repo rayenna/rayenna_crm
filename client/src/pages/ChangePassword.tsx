@@ -5,6 +5,7 @@ import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
+import { CRM_DEFAULT_HOME } from '../constants/defaultHomeRoute'
 import { useModalEscape } from '../contexts/ModalEscapeContext'
 import { Lock, Eye, EyeOff } from 'lucide-react'
 
@@ -34,7 +35,7 @@ const ChangePassword = () => {
   const newPassword = watch('newPassword')
 
   const handleCancel = useCallback(() => {
-    navigate('/dashboard')
+    navigate(CRM_DEFAULT_HOME)
   }, [navigate])
 
   useModalEscape(true, handleCancel)
@@ -47,7 +48,7 @@ const ChangePassword = () => {
       toast.success('Password changed successfully')
       reset()
       // Optionally navigate back or logout
-      navigate('/dashboard')
+      navigate(CRM_DEFAULT_HOME)
     },
     onError: (error: unknown) => {
       toast.error(getFriendlyApiErrorMessage(error))

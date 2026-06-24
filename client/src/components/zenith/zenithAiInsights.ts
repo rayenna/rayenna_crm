@@ -1,3 +1,4 @@
+import { PRODUCT_ANNOUNCEMENTS } from '../../data/productAnnouncements'
 import { UserRole } from '../../types'
 import { ProjectStatus } from '../../types'
 import type { ZenithDateFilter } from './zenithTypes'
@@ -29,6 +30,29 @@ export interface ZenithInsight {
   id: string
   text: string
   scrollTarget: ZenithInsightScrollTarget
+}
+
+export interface ZenithProductAnnouncement {
+  kind: 'announcement'
+  id: string
+  text: string
+  showNewBadge?: boolean
+}
+
+export type ZenithTickerItem = ZenithInsight | ZenithProductAnnouncement
+
+export function isZenithProductAnnouncement(item: ZenithTickerItem): item is ZenithProductAnnouncement {
+  return (item as ZenithProductAnnouncement).kind === 'announcement'
+}
+
+export function buildZenithTickerItems(insights: ZenithInsight[]): ZenithTickerItem[] {
+  const announcements: ZenithProductAnnouncement[] = PRODUCT_ANNOUNCEMENTS.map((a) => ({
+    kind: 'announcement',
+    id: a.id,
+    text: a.text,
+    showNewBadge: a.showNewBadge,
+  }))
+  return [...announcements, ...insights]
 }
 
 function formatInrShort(n: number): string {

@@ -13,6 +13,7 @@ import { MyDayProvider } from '../contexts/MyDayContext'
 import MyDayDrawer from './my-day/MyDayDrawer'
 import MyDayNavEntry from './my-day/MyDayNavEntry'
 import MyDayJournalNudge from './my-day/MyDayJournalNudge'
+import { CRM_DEFAULT_HOME, resolveHelpExitPath } from '../constants/defaultHomeRoute'
 
 /** For `/help/dashboard#foo`, `pathname` is `/help/dashboard` and `hash` is `#foo`. */
 function isHelpMenuPathActive(itemPath: string, pathname: string, locHash: string): boolean {
@@ -41,6 +42,19 @@ const SHORTCUT_ROLES_SUPPORT: UserRole[] = [
 const SHORTCUT_ROLES_NEW_CUSTOMER: UserRole[] = [UserRole.SALES, UserRole.MANAGEMENT, UserRole.ADMIN]
 const SHORTCUT_ROLES_NEW_PROJECT: UserRole[] = [UserRole.ADMIN, UserRole.SALES]
 
+function zenithNavLinkClass(active: boolean, layout: 'inline' | 'block' = 'inline'): string {
+  const layoutClass =
+    layout === 'inline'
+      ? 'inline-flex shrink-0 items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-bold whitespace-nowrap'
+      : 'flex w-full items-center gap-2 px-4 py-3 rounded-xl text-sm font-bold'
+  const shell =
+    'border border-[color:var(--accent-gold-border)] bg-gradient-to-br from-[color:var(--accent-gold-muted)] via-[color:color-mix(in_srgb,var(--accent-gold-muted)_65%,var(--accent-teal-muted))] to-[color:color-mix(in_srgb,var(--accent-teal-muted)_70%,transparent)] shadow-[0_0_14px_color-mix(in_srgb,var(--accent-gold)_22%,transparent),inset_0_1px_0_color-mix(in_srgb,#ffffff_10%,transparent)] hover:shadow-[0_0_20px_color-mix(in_srgb,var(--accent-gold)_32%,transparent),0_0_10px_color-mix(in_srgb,var(--accent-teal)_16%,transparent)] transition-all duration-200 zenith-display'
+  const state = active
+    ? 'text-[color:var(--accent-gold)] ring-2 ring-[color:var(--accent-gold-border)] ring-offset-1 ring-offset-[color:var(--nav-bg)]'
+    : 'text-[color:var(--nav-text-active)] hover:text-[color:var(--accent-gold)]'
+  return `${layoutClass} ${shell} ${state}`
+}
+
 const Layout = () => {
   const { user, logout, hasRole } = useAuth()
   const { toast: victoryToast, dismiss: dismissVictoryToast } = useVictoryToast()
@@ -48,11 +62,9 @@ const Layout = () => {
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [helpDropdownOpen, setHelpDropdownOpen] = useState(false)
-  const [dashboardDropdownOpen, setDashboardDropdownOpen] = useState(false)
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false)
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false)
   const helpDropdownRef = useRef<HTMLDivElement>(null)
-  const dashboardDropdownRef = useRef<HTMLDivElement>(null)
   const moreDropdownRef = useRef<HTMLDivElement>(null)
   const profileDropdownRef = useRef<HTMLDivElement>(null)
 
@@ -62,6 +74,7 @@ const Layout = () => {
     { name: 'Customers', path: '/customers', roles: [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE, UserRole.MANAGEMENT] },
     { name: 'Projects', path: '/projects', roles: [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE, UserRole.MANAGEMENT] },
     { name: 'Support Tickets', path: '/support-tickets', roles: [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.MANAGEMENT] },
+    { name: 'Dashboard (Old)', path: '/dashboard', roles: dashboardNavRoles },
     { name: 'Solar Hub', path: '/solar-hub', roles: [UserRole.ADMIN, UserRole.OPERATIONS, UserRole.MANAGEMENT] },
     { name: 'Tally Export', path: '/tally-export', roles: [UserRole.ADMIN, UserRole.FINANCE] },
     { name: 'Users', path: '/users', roles: [UserRole.ADMIN] },
@@ -71,7 +84,7 @@ const Layout = () => {
   const filteredNav = navigation.filter((nav) => hasRole(nav.roles))
 
   // Keep the header clean: show the 3 most-used links inline; push admin/secondary to "More".
-  const PRIMARY_NAV_ORDER = ['/customers', '/projects', '/support-tickets', '/solar-hub'] as const
+  const PRIMARY_NAV_ORDER = ['/customers', '/projects', '/support-tickets'] as const
   const primaryNav = PRIMARY_NAV_ORDER
     .map((p) => filteredNav.find((n) => n.path === p))
     .filter(Boolean) as typeof filteredNav
@@ -106,8 +119,7 @@ const Layout = () => {
   }
   
   const isHelpActive = location.pathname.startsWith('/help') || location.pathname.startsWith('/about')
-  const isDashboardMenuActive =
-    location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/zenith')
+  const isZenithActive = location.pathname.startsWith('/zenith')
   const canAccessDashboardMenu = hasRole(dashboardNavRoles)
   const isMoreActive = secondaryNav.some((n) => location.pathname.startsWith(n.path))
 
@@ -151,7 +163,6 @@ const Layout = () => {
         const key = event.key.toLowerCase()
         const closeMenus = () => {
           setMobileMenuOpen(false)
-          setDashboardDropdownOpen(false)
         }
         const go = (to: string) => {
           event.preventDefault()
@@ -191,7 +202,12 @@ const Layout = () => {
 
       if (event.key === 'Escape' && location.pathname.startsWith('/help')) {
         event.preventDefault()
-        navigate('/dashboard')
+        try {
+          const referrer = sessionStorage.getItem('helpReferrer')
+          navigate(resolveHelpExitPath(referrer))
+        } catch {
+          navigate(CRM_DEFAULT_HOME)
+        }
       }
     }
 
@@ -204,7 +220,6 @@ const Layout = () => {
   // Below lg: hamburger only (all orientations) — avoids landscape cramming with inline nav + menus.
   useEffect(() => {
     setHelpDropdownOpen(false)
-    setDashboardDropdownOpen(false)
   }, [location.pathname])
 
   useEffect(() => {
@@ -244,9 +259,6 @@ const Layout = () => {
       if (helpDropdownRef.current && !helpDropdownRef.current.contains(event.target as Node)) {
         setHelpDropdownOpen(false)
       }
-      if (dashboardDropdownRef.current && !dashboardDropdownRef.current.contains(event.target as Node)) {
-        setDashboardDropdownOpen(false)
-      }
       if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target as Node)) {
         setMoreDropdownOpen(false)
       }
@@ -255,14 +267,14 @@ const Layout = () => {
       }
     }
 
-    if (helpDropdownOpen || dashboardDropdownOpen || moreDropdownOpen || profileDropdownOpen) {
+    if (helpDropdownOpen || moreDropdownOpen || profileDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside)
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [helpDropdownOpen, dashboardDropdownOpen, moreDropdownOpen, profileDropdownOpen])
+  }, [helpDropdownOpen, moreDropdownOpen, profileDropdownOpen])
 
   return (
     <MyDayProvider>
@@ -271,7 +283,7 @@ const Layout = () => {
         <div className="mx-auto w-full max-w-[1600px] px-3 sm:px-4 lg:px-6 xl:px-8">
           <div className="flex min-h-[3.5rem] items-center justify-between gap-2 py-2 sm:min-h-[3.75rem] lg:h-20 lg:min-h-0 lg:gap-4 lg:py-0">
             <div className="flex min-w-0 flex-1 items-center">
-              <Link to="/dashboard" className="mr-2 flex shrink-0 items-center lg:mr-3 xl:mr-4 hover:opacity-80 transition-opacity">
+              <Link to={CRM_DEFAULT_HOME} className="mr-2 flex shrink-0 items-center lg:mr-3 xl:mr-4 hover:opacity-80 transition-opacity">
                 <img 
                   src="/CRM_Logo.jpg" 
                   alt="Rayenna CRM" 
@@ -280,67 +292,16 @@ const Layout = () => {
               </Link>
               {/* Desktop Navigation — lg+ (Windows scaling friendly); below lg use hamburger */}
               <div className="hidden min-w-0 flex-1 flex-nowrap items-center gap-2 lg:ml-4 lg:flex 2xl:gap-3">
-                {canAccessDashboardMenu && (
-                  <div
-                    ref={dashboardDropdownRef}
-                    className="relative shrink-0"
-                    onMouseEnter={() => setDashboardDropdownOpen(true)}
-                    onMouseLeave={() => setDashboardDropdownOpen(false)}
+                {canAccessDashboardMenu ? (
+                  <Link
+                    to="/zenith"
+                    title="Zenith — Ctrl+Shift+Z or ⌘⇧Z"
+                    className={zenithNavLinkClass(isZenithActive, 'inline')}
                   >
-                    <button
-                      type="button"
-                      onClick={() => setDashboardDropdownOpen(!dashboardDropdownOpen)}
-                      className={`inline-flex items-center px-3 py-2 rounded-xl text-sm font-semibold transition-colors duration-200 whitespace-nowrap ${
-                        isDashboardMenuActive
-                          ? 'bg-[color:var(--nav-active-bg)] text-[color:var(--nav-text-active)] shadow-md font-bold border-2 border-[color:var(--nav-border)]'
-                          : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
-                      }`}
-                    >
-                      Dashboard
-                      <svg
-                        className={`ml-1 h-3 w-3 xl:h-4 xl:w-4 transition-transform ${dashboardDropdownOpen ? 'rotate-180' : ''}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    {dashboardDropdownOpen && (
-                      <div
-                        className="absolute left-0 top-full z-[250] mt-1 flex w-52 min-w-[12rem] flex-col overflow-hidden rounded-xl border border-[color:var(--nav-border)] bg-[color:color-mix(in_srgb,var(--nav-bg)_92%,#ffffff_8%)] py-1 shadow-2xl shadow-black/60 ring-1 ring-black/40"
-                        role="menu"
-                        aria-label="Dashboard menu"
-                      >
-                        <Link
-                          to="/dashboard"
-                          role="menuitem"
-                          className={`block px-4 py-2.5 text-sm font-medium ${
-                            location.pathname.startsWith('/dashboard')
-                              ? 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
-                              : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
-                          }`}
-                          onClick={() => setDashboardDropdownOpen(false)}
-                        >
-                          Dashboard
-                        </Link>
-                        <Link
-                          to="/zenith"
-                          role="menuitem"
-                          title="Zenith — Ctrl+Shift+Z or ⌘⇧Z"
-                          className={`block px-4 py-2.5 text-sm font-medium ${
-                            location.pathname.startsWith('/zenith')
-                              ? 'bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
-                              : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
-                          }`}
-                          onClick={() => setDashboardDropdownOpen(false)}
-                        >
-                          Zenith ✦
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-                )}
+                    <span aria-hidden className="text-[color:var(--accent-gold)]">✦</span>
+                    Zenith
+                  </Link>
+                ) : null}
                 {primaryNav.map((item) => (
                   <Link
                     key={item.path}
@@ -585,33 +546,17 @@ const Layout = () => {
               className="mobile-menu-scroll max-h-[min(88dvh,calc(100dvh-3.5rem))] overflow-y-auto overflow-x-hidden overscroll-y-contain border-t border-[color:var(--nav-border)] bg-[color:color-mix(in_srgb,var(--nav-bg)_82%,#000000_18%)] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-3 lg:hidden"
             >
               <div className="space-y-1.5 px-1 sm:px-0">
-                {canAccessDashboardMenu && (
-                  <>
-                    <Link
-                      to="/dashboard"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 ${
-                        location.pathname.startsWith('/dashboard')
-                          ? 'bg-[color:var(--nav-active-bg)] text-[color:var(--nav-text-active)] shadow-md font-bold border-2 border-[color:var(--nav-border)]'
-                          : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
-                      }`}
-                    >
-                      Dashboard
-                    </Link>
-                    <Link
-                      to="/zenith"
-                      title="Zenith — Ctrl+Shift+Z or ⌘⇧Z"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`block px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200 ${
-                        location.pathname.startsWith('/zenith')
-                          ? 'bg-[color:var(--nav-active-bg)] text-[color:var(--nav-text-active)] shadow-md font-bold border-2 border-[color:var(--nav-border)]'
-                          : 'text-[color:var(--nav-text)] hover:bg-[color:var(--nav-active-bg)] hover:text-[color:var(--nav-text-hover)]'
-                      }`}
-                    >
-                      Zenith ✦
-                    </Link>
-                  </>
-                )}
+                {canAccessDashboardMenu ? (
+                  <Link
+                    to="/zenith"
+                    title="Zenith — Ctrl+Shift+Z or ⌘⇧Z"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={zenithNavLinkClass(isZenithActive, 'block')}
+                  >
+                    <span aria-hidden className="text-[color:var(--accent-gold)]">✦</span>
+                    Zenith
+                  </Link>
+                ) : null}
                 {filteredNav.map((item) => (
                   <Link
                     key={item.path}

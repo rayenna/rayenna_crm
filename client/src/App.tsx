@@ -12,6 +12,7 @@ import PrivateRoute from './components/PrivateRoute'
 import ErrorBoundary from './components/ErrorBoundary'
 import PageLoader from './components/PageLoader'
 import Layout from './components/Layout'
+import { CRM_DEFAULT_HOME } from './constants/defaultHomeRoute'
 
 const Login = lazy(() => import('./pages/Login'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -133,7 +134,7 @@ function App() {
               </PrivateRoute>
             }
           >
-            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route index element={<Navigate to={CRM_DEFAULT_HOME} replace />} />
             <Route
               path="dashboard"
               element={

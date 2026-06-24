@@ -89,39 +89,9 @@ const Dashboard = () => {
     }
   }
 
-  const announcementMyDay =
-    'New: My Day — your personal Tasks, Journal & Reminders drawer; press Ctrl+Shift+M (⌘⇧M) or tap the ☀ icon in the top bar from any page.'
-  const announcementZenith =
-    'Zenith is LIVE = Your Solar CRM, now reimagined as a Command Centre. Go to Dashboard Menu and Click on Zenith to Open and Try it.'
-
-  const renderMarqueeUnit = () => (
-    <>
-      <span className="inline-flex items-center gap-2">
-        <span className="shrink-0 rounded-full bg-[color:var(--accent-gold-muted)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent-gold)] shadow-sm ring-1 ring-[color:var(--accent-gold-border)]">
-          New
-        </span>
-        <span className="text-[color:var(--text-primary)]">{announcementMyDay}</span>
-      </span>
-      <span className="mx-6 text-[color:var(--text-muted)] sm:mx-8" aria-hidden>
-        •
-      </span>
-      <span className="text-[color:var(--text-primary)]">{announcementZenith}</span>
-      <span className="mx-6 text-[color:var(--text-muted)] sm:mx-8" aria-hidden>
-        •
-      </span>
-    </>
-  )
-
   return (
     shell(
     <div className="max-w-full min-w-0 overflow-x-hidden dashboard-mobile-no-clip">
-      {/* Dashboard announcement marquee */}
-      <style>
-        {`@keyframes ray-proposal-marquee {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-          }`}
-      </style>
       <header className="sticky top-0 z-30 mb-4 border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 94%, transparent)] pb-3 pt-1 backdrop-blur-xl sm:mb-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
           <div className="flex min-w-0 items-start gap-3">
@@ -135,26 +105,6 @@ const Dashboard = () => {
           </div>
         </div>
       </header>
-
-      <div className="mb-4">
-        <div className="relative overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[color:var(--accent-gold-muted)] via-transparent to-[color:var(--accent-teal-muted)]" />
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[color:var(--accent-gold-muted)] to-transparent" />
-          <div className="relative flex items-center px-4 py-2.5">
-            <div className="flex-1 overflow-hidden">
-              <div
-                className="inline-block whitespace-nowrap text-[11px] font-semibold text-[color:var(--text-primary)] sm:text-sm"
-                style={{
-                  animation: 'ray-proposal-marquee 32s linear infinite',
-                }}
-              >
-                {renderMarqueeUnit()}
-                {renderMarqueeUnit()}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div className="mb-5 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5">
       <DashboardFilters

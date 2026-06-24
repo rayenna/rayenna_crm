@@ -17,6 +17,7 @@ import HelpExportButton from '../components/help/HelpExportButton'
 import DealHealthScoreHelpIllustration from '../components/help/DealHealthScoreHelpIllustration'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { BookOpen } from 'lucide-react'
+import { resolveHelpExitPath } from '../constants/defaultHomeRoute'
 import { slugifyHeadingLabel, textFromChildren } from '../help/markdownHeadingUtils'
 
 /** Normalize markdown string for safe rendering; avoids formatting/crash on hard refresh. */
@@ -103,7 +104,7 @@ const Help = () => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault()
-        navigate('/dashboard')
+        navigate(resolveHelpExitPath(helpContextPathRef.current))
       }
     }
 

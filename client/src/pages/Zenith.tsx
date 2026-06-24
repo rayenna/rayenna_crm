@@ -12,7 +12,7 @@ import ZenithOperationsBody from '../components/zenith/ZenithOperationsBody'
 import ZenithFinanceBody from '../components/zenith/ZenithFinanceBody'
 import ZenithAiInsightsTicker from '../components/zenith/ZenithAiInsightsTicker'
 import SolarNewsTicker from '../components/zenith/SolarNewsTicker'
-import { buildZenithAiInsights } from '../components/zenith/zenithAiInsights'
+import { buildZenithAiInsights, buildZenithTickerItems } from '../components/zenith/zenithAiInsights'
 import { AnimatePresence } from 'framer-motion'
 import { useDailyBriefing } from '../hooks/useDailyBriefing'
 import {
@@ -271,6 +271,8 @@ const Zenith = () => {
     })
   }, [user?.role, zenithDataClean, dateFilter, salesPerfInsights?.salesTeamData])
 
+  const tickerItems = useMemo(() => buildZenithTickerItems(insights), [insights])
+
   const handleResetFilters = useCallback(() => {
     setSelectedFYs([])
     setSelectedQuarters([])
@@ -414,7 +416,7 @@ const Zenith = () => {
       {user?.role ? <SolarNewsTicker deferLoadMs={2000} /> : null}
 
       {!isFyError && user?.role && (hasZenithBodyData || !isError) ? (
-        <ZenithAiInsightsTicker insights={insights} isLoading={isLoading && !hasZenithBodyData} />
+        <ZenithAiInsightsTicker items={tickerItems} isLoading={isLoading && !hasZenithBodyData} />
       ) : null}
 
       {showQuickActionDrawer && quickAction.listMode && quickAction.isOpen ? (

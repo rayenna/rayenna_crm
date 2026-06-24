@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react'
 import * as Sentry from '@sentry/react'
+import { CRM_DEFAULT_HOME } from '../constants/defaultHomeRoute'
 
 interface Props {
   children: ReactNode
@@ -60,11 +61,11 @@ class ErrorBoundary extends Component<Props, State> {
               <button
                 onClick={() => {
                   this.setState({ hasError: false, error: null })
-                  window.location.href = '/dashboard'
+                  window.location.href = CRM_DEFAULT_HOME
                 }}
                 className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm font-medium"
               >
-                Go to Dashboard
+                Go to Zenith
               </button>
             </div>
           </div>

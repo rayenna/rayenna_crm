@@ -1,4 +1,9 @@
-import type { ZenithInsight, ZenithInsightScrollTarget } from './zenithAiInsights'
+import {
+  isZenithProductAnnouncement,
+  type ZenithTickerItem,
+  type ZenithInsight,
+  type ZenithInsightScrollTarget,
+} from './zenithAiInsights'
 import { scrollToZenithInsightTarget } from './zenithScrollToSection'
 import { useEffect, useRef, useState } from 'react'
 
@@ -10,28 +15,44 @@ function scrollToZenithSection(target: ZenithInsightScrollTarget) {
   scrollToZenithInsightTarget(target)
 }
 
-function renderInsightButtons(
-  insights: ZenithInsight[],
-  keySuffix: 'a' | 'b',
-) {
-  return insights.map((ins) => (
-    <button
-      key={`${ins.id}-${keySuffix}`}
-      type="button"
-      onClick={() => scrollToZenithSection(ins.scrollTarget)}
-      className="shrink-0 text-left text-[12px] sm:text-[13px] font-medium text-[color:var(--accent-gold)] active:opacity-90 sm:hover:opacity-90 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] rounded-full px-2 py-2 min-h-[44px] sm:min-h-0 sm:py-1 sm:rounded-sm sm:px-1 touch-manipulation"
-    >
-      {ins.text}
-    </button>
-  ))
+function renderTickerItems(items: ZenithTickerItem[], keySuffix: 'a' | 'b') {
+  return items.map((item) => {
+    if (isZenithProductAnnouncement(item)) {
+      return (
+        <span
+          key={`${item.id}-${keySuffix}`}
+          className="inline-flex shrink-0 items-center gap-2 text-[12px] sm:text-[13px] font-medium text-[color:var(--text-primary)]"
+        >
+          {item.showNewBadge ? (
+            <span className="shrink-0 rounded-full bg-[color:var(--accent-gold-muted)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[color:var(--accent-gold)] shadow-sm ring-1 ring-[color:var(--accent-gold-border)]">
+              New
+            </span>
+          ) : null}
+          <span>{item.text}</span>
+        </span>
+      )
+    }
+
+    const ins = item as ZenithInsight
+    return (
+      <button
+        key={`${ins.id}-${keySuffix}`}
+        type="button"
+        onClick={() => scrollToZenithSection(ins.scrollTarget)}
+        className="shrink-0 text-left text-[12px] sm:text-[13px] font-medium text-[color:var(--accent-gold)] active:opacity-90 sm:hover:opacity-90 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] rounded-full px-2 py-2 min-h-[44px] sm:min-h-0 sm:py-1 sm:rounded-sm sm:px-1 touch-manipulation"
+      >
+        {ins.text}
+      </button>
+    )
+  })
 }
 
 /** Same marquee technique as Dashboard.tsx: duplicated row + translateX(-50%) keyframes (no JS scrollWidth). */
 export default function ZenithAiInsightsTicker({
-  insights,
+  items,
   isLoading,
 }: {
-  insights: ZenithInsight[]
+  items: ZenithTickerItem[]
   isLoading: boolean
 }) {
   const marqueeRef = useRef<HTMLDivElement | null>(null)
@@ -57,9 +78,9 @@ export default function ZenithAiInsightsTicker({
     const ro = new ResizeObserver(() => compute())
     ro.observe(el)
     return () => ro.disconnect()
-  }, [insights.length])
+  }, [items.length])
 
-  if (isLoading && insights.length === 0) {
+  if (isLoading && items.length === 0) {
     return (
       <div className="zenith-ai-insights-root border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 96%, transparent)]">
         <div className="zenith-exec-main mx-auto px-3 sm:px-5 py-2 flex flex-col sm:block">
@@ -69,7 +90,7 @@ export default function ZenithAiInsightsTicker({
     )
   }
 
-  if (insights.length === 0) return null
+  if (items.length === 0) return null
 
   return (
     <div className="zenith-ai-insights-root border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 96%, transparent)]">
@@ -92,15 +113,15 @@ export default function ZenithAiInsightsTicker({
         <div
           className="zenith-ai-insights-viewport flex-1 min-w-0 min-h-[44px] sm:min-h-0 rounded-full bg-transparent py-2 sm:py-1.5 flex items-center"
           role="region"
-          aria-label="AI insights, auto-scrolling"
+          aria-label="AI insights and product updates, auto-scrolling"
         >
           <div
             ref={marqueeRef}
             className="zenith-ai-insights-marquee inline-flex shrink-0 items-center gap-8 sm:gap-12 whitespace-nowrap px-4 sm:px-6"
             style={{ animation: `zenith-ai-insights-marquee-kf ${durationS}s linear infinite` }}
           >
-            {renderInsightButtons(insights, 'a')}
-            {renderInsightButtons(insights, 'b')}
+            {renderTickerItems(items, 'a')}
+            {renderTickerItems(items, 'b')}
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { apiBaseUrl, getFriendlyApiErrorMessage, isTimeoutOrNetworkError } from 
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import '../styles/zenith.css'
+import { CRM_DEFAULT_HOME } from '../constants/defaultHomeRoute'
 
 const isProd = typeof window !== 'undefined' && !window.location.hostname.includes('localhost')
 const apiNotConfigured = isProd && !apiBaseUrl
@@ -69,7 +70,7 @@ const Login = () => {
       await login(email, password)
       stopElapsedCounter()
       toast.success('Login successful')
-      navigate('/dashboard')
+      navigate(CRM_DEFAULT_HOME)
     } catch (error: unknown) {
       stopElapsedCounter()
       const err = error as { response?: { status?: number } }
