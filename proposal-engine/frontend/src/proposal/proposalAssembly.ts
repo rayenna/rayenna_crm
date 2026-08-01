@@ -93,6 +93,10 @@ export function collectProposalAssembly(activeCustomer: CustomerRecord | null): 
   const meta: ProposalMeta | undefined = {
     customerNumber: activeCustomer.master.customerNumber ?? undefined,
     projectNumber:  activeCustomer.master.projectNumber ?? undefined,
+    crmSystemSizeKw:
+      typeof activeCustomer.master.systemSizeKw === 'number' && activeCustomer.master.systemSizeKw > 0
+        ? activeCustomer.master.systemSizeKw
+        : null,
   };
 
   const customer: CustomerDetails = {
@@ -117,8 +121,20 @@ export function buildProposal(
   roi: ROIResult | null,
   roiAutofill: RoiAutofill | null,
   meta?: ProposalMeta,
+  options?: { systemSizeKwOverride?: number | null },
 ): ProposalData {
-  const sizeKw = roiAutofill?.systemSizeKw ?? sheet?.systemSizeKw ?? 0;
+  const override =
+    options?.systemSizeKwOverride != null &&
+    Number.isFinite(options.systemSizeKwOverride) &&
+    options.systemSizeKwOverride > 0
+      ? Number(options.systemSizeKwOverride)
+      : null;
+  const sizeKw =
+    override ??
+    (meta?.crmSystemSizeKw != null && meta.crmSystemSizeKw > 0 ? meta.crmSystemSizeKw : null) ??
+    roiAutofill?.systemSizeKw ??
+    sheet?.systemSizeKw ??
+    0;
   return {
     refNumber:   genRef(meta),
     generatedAt: new Date().toISOString(),
@@ -143,7 +159,11 @@ export function rehydrateProposalData(
   roiAutofill: RoiAutofill | null,
   meta?: ProposalMeta,
 ): ProposalData {
-  const sizeKw = roiAutofill?.systemSizeKw ?? sheet?.systemSizeKw ?? 0;
+  const sizeKw =
+    (meta?.crmSystemSizeKw != null && meta.crmSystemSizeKw > 0 ? meta.crmSystemSizeKw : null) ??
+    roiAutofill?.systemSizeKw ??
+    sheet?.systemSizeKw ??
+    0;
   return {
     refNumber:      saved.refNumber,
     generatedAt:    saved.generatedAt,

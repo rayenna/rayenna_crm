@@ -63,6 +63,8 @@ export interface ProposalData {
 export interface ProposalMeta {
   customerNumber?: string | null;
   projectNumber?: number | null;
+  /** CRM project system capacity (kW) — preferred for proposal headline when no override. */
+  crmSystemSizeKw?: number | null;
 }
 
 /** Text overrides extracted from the live DOM before DOCX export. */

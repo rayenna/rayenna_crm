@@ -59,6 +59,18 @@ import {
   exportToDocx,
 } from '../proposal/ProposalDocumentBlocks';
 import { ProposalShareModal } from '../proposal/ProposalShareModal';
+import { PreFlightModal } from '../components/preflight/PreFlightModal';
+import { buildPreflightContext } from '../lib/preflight/buildPreflightContext';
+import { runProposalPreflight } from '../lib/preflight/runProposalPreflight';
+import { applyPreflightFixes } from '../lib/preflight/applyPreflightFixes';
+import type { PreflightAutoFixId, PreflightFinding, SystemSizeSource } from '../lib/preflight/types';
+import {
+  deriveSystemSizeKw,
+  sheetGrandTotal,
+  sheetTotalGst,
+  type Category,
+  type LineItem,
+} from '../lib/costingConstants';
 import {
   fetchRoofLayoutForCrmProject,
   probeRoofLayoutAvailability,
@@ -66,6 +78,13 @@ import {
   type RoofLayoutAvailability,
 } from '../proposal/roofLayoutForProposal';
 
+type PreflightPendingAction =
+  | {
+      kind: 'generate';
+      customer: CustomerDetails;
+      options: { includeRoofLayout: boolean; systemSizeKwOverride?: number | null };
+    }
+  | { kind: 'share'; systemSizeKwOverride?: number | null };
 /** Snapshot when user clicks Regenerate — proposal artifact is cleared but UI content is kept. */
 type RegeneratePreserve = {
   customSections: ProposalCustomSectionBeforeBoq[];
@@ -110,6 +129,17 @@ export default function ProposalPreview() {
   const [roofLayoutToggleBusy, setRoofLayoutToggleBusy] = useState(false);
   const [roofLayoutAvailability, setRoofLayoutAvailability] =
     useState<RoofLayoutAvailability>('idle');
+
+  const [preflightOpen, setPreflightOpen] = useState(false);
+  const [preflightFindings, setPreflightFindings] = useState<PreflightFinding[]>([]);
+  const [preflightSelectedIds, setPreflightSelectedIds] = useState<Set<string>>(new Set());
+  const [preflightActionLabel, setPreflightActionLabel] = useState<'Generate' | 'Share'>('Generate');
+  const [preflightApplying, setPreflightApplying] = useState(false);
+  const [preflightSystemSizeSource, setPreflightSystemSizeSource] =
+    useState<SystemSizeSource>('crm');
+  const preflightPendingRef = useRef<PreflightPendingAction | null>(null);
+  /** Capacity chosen in pre-flight for this generate/share run. */
+  const preflightSizeOverrideRef = useRef<number | null>(null);
 
   const role = getCurrentUserRole();
   const canWrite = role != null && ['ADMIN', 'SALES'].includes(String(role).toUpperCase());
@@ -460,16 +490,117 @@ export default function ProposalPreview() {
     await persistRoofLayoutOnArtifact(true, layout);
   };
 
+  const resolveSizeOverrideFromChoice = (): number | null => {
+    const choiceFinding = preflightFindings.find(
+      (f) => f.id === 'system_size_mismatch' && f.sizeChoice,
+    );
+    if (!choiceFinding?.sizeChoice) return preflightSizeOverrideRef.current;
+    return preflightSystemSizeSource === 'crm'
+      ? choiceFinding.sizeChoice.crmKw
+      : choiceFinding.sizeChoice.costingKw;
+  };
+
+  const runPendingPreflightAction = async (pending: PreflightPendingAction) => {
+    const override =
+      pending.kind === 'generate'
+        ? pending.options.systemSizeKwOverride ?? preflightSizeOverrideRef.current
+        : pending.systemSizeKwOverride ?? preflightSizeOverrideRef.current;
+    preflightPendingRef.current = null;
+    setPreflightOpen(false);
+    setPreflightFindings([]);
+    setPreflightSystemSizeSource('crm');
+    if (pending.kind === 'generate') {
+      await executeGenerate(pending.customer, {
+        ...pending.options,
+        systemSizeKwOverride: override,
+      });
+      preflightSizeOverrideRef.current = null;
+      return;
+    }
+    await executeCreateShare();
+    preflightSizeOverrideRef.current = null;
+  };
+
+  const requestPreflightThenRun = async (pending: PreflightPendingAction) => {
+    const includeRoof =
+      pending.kind === 'generate'
+        ? pending.options.includeRoofLayout
+        : includeRoofLayout || !!getActiveCustomer()?.proposal?.includeRoofLayout;
+    const ctx = buildPreflightContext(getActiveCustomer(), { includeRoofLayout: includeRoof });
+    if (!ctx) {
+      if (pending.kind === 'generate') await executeGenerate(pending.customer, pending.options);
+      else await executeCreateShare();
+      return;
+    }
+    const result = runProposalPreflight({
+      ...ctx,
+      suppressSizeMismatch: preflightSizeOverrideRef.current != null,
+    });
+    if (result.findings.length === 0) {
+      await runPendingPreflightAction(pending);
+      return;
+    }
+    preflightPendingRef.current = pending;
+    setPreflightFindings(result.findings);
+    setPreflightSelectedIds(new Set(result.findings.map((f) => f.id)));
+    setPreflightSystemSizeSource('crm');
+    setPreflightActionLabel(pending.kind === 'generate' ? 'Generate' : 'Share');
+    setPreflightOpen(true);
+  };
+
   const handleGenerate = async (
     _customer: CustomerDetails,
     options: { includeRoofLayout: boolean },
+  ) => {
+    preflightSizeOverrideRef.current = null;
+    await requestPreflightThenRun({
+      kind: 'generate',
+      customer: _customer,
+      options,
+    });
+  };
+
+  const executeGenerate = async (
+    _customer: CustomerDetails,
+    options: { includeRoofLayout: boolean; systemSizeKwOverride?: number | null },
   ) => {
     const activeCustomer = getActiveCustomer();
     const asm = collectProposalAssembly(activeCustomer);
     if (!asm) return;
 
     const { customer, sheet, bom, roi, roiAutofill, meta } = asm;
-    const p = buildProposal(customer, sheet, bom, roi, roiAutofill, meta);
+    const sizeOverride =
+      options.systemSizeKwOverride != null && options.systemSizeKwOverride > 0
+        ? options.systemSizeKwOverride
+        : null;
+
+    // Align ROI document capacity with CRM / explicit override (CRM wins over stale costing decimals)
+    let roiForProposal = roi;
+    const crmWhole =
+      meta?.crmSystemSizeKw != null &&
+      Number.isFinite(meta.crmSystemSizeKw) &&
+      meta.crmSystemSizeKw > 0
+        ? Math.round(meta.crmSystemSizeKw)
+        : null;
+    const alignedKw =
+      sizeOverride != null && sizeOverride > 0
+        ? sizeOverride
+        : crmWhole != null && crmWhole > 0
+          ? crmWhole
+          : null;
+    if (alignedKw != null && roi) {
+      const current = Number(roi.inputs?.systemSizeKw);
+      if (!Number.isFinite(current) || Math.abs(current - alignedKw) > 0.001) {
+        roiForProposal = {
+          ...roi,
+          inputs: { ...roi.inputs, systemSizeKw: alignedKw },
+        };
+      }
+    }
+
+    const p = buildProposal(customer, sheet, bom, roiForProposal, roiAutofill, meta, {
+      systemSizeKwOverride: sizeOverride ?? (crmWhole != null && crmWhole > 0 ? crmWhole : null),
+    });
     setProposal(p);
     setDisplayTextOverrides({});
     setIncludeRoofLayout(options.includeRoofLayout);
@@ -512,7 +643,9 @@ export default function ProposalPreview() {
 
       // roi from localStorage includes yearlyBreakdown at runtime even though
       // the local ProposalPreview type omits it; cast to satisfy customerStore type
-      const roiArtifact: RoiArtifact | null = roi ? { savedAt: now, result: roi as any } : null;
+      const roiArtifact: RoiArtifact | null = roiForProposal
+        ? { savedAt: now, result: roiForProposal as any }
+        : null;
 
       const proposalArtifact: ProposalArtifact = {
         refNumber:   p.refNumber,
@@ -672,6 +805,18 @@ export default function ProposalPreview() {
       setShareError('Link this proposal to a CRM project first (open from Customers).');
       return;
     }
+    preflightSizeOverrideRef.current = null;
+    await requestPreflightThenRun({ kind: 'share' });
+  };
+
+  const executeCreateShare = async () => {
+    if (!canWrite) return;
+    const activeCustomer = getActiveCustomer();
+    const projectId = activeCustomer?.master?.crmProjectId;
+    if (!projectId) {
+      setShareError('Link this proposal to a CRM project first (open from Customers).');
+      return;
+    }
     // Clone the proposal DOM so we can strip collapsed BOM sections before saving HTML
     let proposalHtml = '';
     const cache = shareHtmlCacheRef.current;
@@ -727,6 +872,222 @@ export default function ProposalPreview() {
       setShareLinkCopied(true);
       setTimeout(() => setShareLinkCopied(false), 2000);
     }).catch(() => {});
+  };
+
+  const handlePreflightCancel = () => {
+    if (preflightApplying) return;
+    preflightPendingRef.current = null;
+    preflightSizeOverrideRef.current = null;
+    setPreflightOpen(false);
+    setPreflightFindings([]);
+    setPreflightSystemSizeSource('crm');
+  };
+
+  const handlePreflightIgnore = async () => {
+    const pending = preflightPendingRef.current;
+    if (!pending) {
+      handlePreflightCancel();
+      return;
+    }
+    const chosen = resolveSizeOverrideFromChoice();
+    if (chosen != null) preflightSizeOverrideRef.current = chosen;
+    const withOverride: PreflightPendingAction =
+      pending.kind === 'generate'
+        ? {
+            ...pending,
+            options: { ...pending.options, systemSizeKwOverride: chosen },
+          }
+        : { ...pending, systemSizeKwOverride: chosen };
+    await runPendingPreflightAction(withOverride);
+  };
+
+  const handlePreflightToggle = (id: string) => {
+    setPreflightSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handlePreflightSelectAll = () => {
+    setPreflightSelectedIds(new Set(preflightFindings.map((f) => f.id)));
+  };
+
+  const handlePreflightSelectNone = () => {
+    setPreflightSelectedIds(new Set());
+  };
+
+  const handlePreflightApplySelected = async () => {
+    const pending = preflightPendingRef.current;
+    const activeCustomer = getActiveCustomer();
+    if (!pending || !activeCustomer) return;
+
+    const sizeChoiceFinding = preflightFindings.find(
+      (f) => f.id === 'system_size_mismatch' && f.sizeChoice,
+    );
+    const selectedFixIds = preflightFindings
+      .filter((f) => {
+        if (f.id === 'system_size_mismatch' && f.sizeChoice) return true;
+        return f.autoFixable && f.autoFixId && preflightSelectedIds.has(f.id);
+      })
+      .map((f) => f.autoFixId!)
+      .filter(Boolean) as PreflightAutoFixId[];
+
+    if (selectedFixIds.length === 0 && !sizeChoiceFinding) return;
+
+    setPreflightApplying(true);
+    setSyncError(null);
+    try {
+      const asm = collectProposalAssembly(activeCustomer);
+      const sheetItems = (asm?.sheet?.items ?? activeCustomer.costing?.items ?? []).map((r) => ({
+        category: r.category,
+        itemName: r.itemName,
+        quantity: r.quantity,
+        gstPercent: r.gstPercent ?? '',
+        specification: 'specification' in r ? String((r as LineItem).specification ?? '') : '',
+        unitCost: 'unitCost' in r ? String((r as LineItem).unitCost ?? '0') : '0',
+      }));
+      const roiInputs = asm?.roi?.inputs ?? activeCustomer.roi?.result?.inputs ?? null;
+      const chosenKw = resolveSizeOverrideFromChoice();
+
+      const applied = applyPreflightFixes({
+        selectedFixIds,
+        sheetItems,
+        sheetSystemSizeKw: asm?.sheet?.systemSizeKw ?? activeCustomer.costing?.systemSizeKw ?? null,
+        fallbackPanelWattage: activeCustomer.master?.panelWattage ?? null,
+        systemSizeSource: preflightSystemSizeSource,
+        crmSystemSizeKw: sizeChoiceFinding?.sizeChoice?.crmKw ?? activeCustomer.master?.systemSizeKw,
+        costingDerivedKw: sizeChoiceFinding?.sizeChoice?.costingKw ?? null,
+        roi: roiInputs
+          ? {
+              systemSizeKw: Number(roiInputs.systemSizeKw),
+              tariff: Number(roiInputs.tariff),
+              generationFactor: Number(roiInputs.generationFactor),
+              escalationPercent: Number(roiInputs.escalationPercent ?? 5),
+              projectCost: Number(roiInputs.projectCost ?? 0),
+              subsidyEligible: !!roiInputs.subsidyEligible,
+              subsidyAmount: roiInputs.subsidyAmount,
+            }
+          : null,
+      });
+
+      if (applied.proposalSystemSizeKw != null) {
+        preflightSizeOverrideRef.current = applied.proposalSystemSizeKw;
+      } else if (chosenKw != null) {
+        preflightSizeOverrideRef.current = chosenKw;
+      }
+
+      const now = new Date().toISOString();
+      const patch: {
+        costing?: CostingArtifact | null;
+        roi?: RoiArtifact | null;
+      } = {};
+
+      if (applied.costingChanged) {
+        const lineItems: LineItem[] = applied.sheetItems.map((r) => ({
+          category: (r.category as Category) || 'others',
+          itemName: r.itemName,
+          specification: r.specification ?? '',
+          quantity: r.quantity,
+          unitCost: r.unitCost ?? '0',
+          gstPercent: r.gstPercent,
+        }));
+        const margin =
+          asm?.sheet?.marginPercent ?? activeCustomer.costing?.marginPercent ?? 15;
+        const showGst = asm?.sheet?.showGst ?? activeCustomer.costing?.showGst ?? true;
+        const sizeKw =
+          applied.sheetSystemSizeKw != null && applied.sheetSystemSizeKw > 0
+            ? applied.sheetSystemSizeKw
+            : deriveSystemSizeKw(lineItems, {
+                fallbackPanelWattage: activeCustomer.master?.panelWattage ?? null,
+              });
+        patch.costing = {
+          sheetName:
+            asm?.sheet?.name ??
+            activeCustomer.costing?.sheetName ??
+            `${activeCustomer.master.name} — Costing`,
+          savedAt: now,
+          items: lineItems,
+          showGst,
+          marginPercent: margin,
+          grandTotal: sheetGrandTotal(lineItems, showGst, margin),
+          totalGst: sheetTotalGst(lineItems, margin),
+          systemSizeKw: sizeKw,
+        };
+      }
+
+      if (applied.roiChanged && applied.roi && (asm?.roi || activeCustomer.roi?.result)) {
+        const base = (asm?.roi ?? activeCustomer.roi!.result) as ROIResult;
+        patch.roi = {
+          savedAt: now,
+          result: {
+            ...base,
+            inputs: {
+              ...base.inputs,
+              systemSizeKw: applied.roi.systemSizeKw,
+              tariff: applied.roi.tariff,
+              generationFactor: applied.roi.generationFactor,
+              subsidyEligible: applied.roi.subsidyEligible,
+              subsidyAmount: applied.roi.subsidyAmount,
+            },
+          } as any,
+        };
+      }
+
+      if (patch.costing || patch.roi) {
+        const result = await saveProjectArtifacts(
+          activeCustomer.id,
+          patch,
+          PIPELINE_MARK_SYNCED,
+        );
+        if (!result.ok) {
+          setSyncError(result.errorMessage ?? 'Server sync failed while applying pre-flight fixes');
+        }
+      }
+
+      const includeRoof =
+        pending.kind === 'generate'
+          ? pending.options.includeRoofLayout
+          : includeRoofLayout || !!getActiveCustomer()?.proposal?.includeRoofLayout;
+      const ctx = buildPreflightContext(getActiveCustomer(), { includeRoofLayout: includeRoof });
+      if (!ctx) {
+        await runPendingPreflightAction({
+          ...(pending.kind === 'generate'
+            ? {
+                ...pending,
+                options: {
+                  ...pending.options,
+                  systemSizeKwOverride: preflightSizeOverrideRef.current,
+                },
+              }
+            : { ...pending, systemSizeKwOverride: preflightSizeOverrideRef.current }),
+        });
+        return;
+      }
+      const next = runProposalPreflight({
+        ...ctx,
+        suppressSizeMismatch: preflightSizeOverrideRef.current != null,
+      });
+      if (next.findings.length === 0) {
+        await runPendingPreflightAction({
+          ...(pending.kind === 'generate'
+            ? {
+                ...pending,
+                options: {
+                  ...pending.options,
+                  systemSizeKwOverride: preflightSizeOverrideRef.current,
+                },
+              }
+            : { ...pending, systemSizeKwOverride: preflightSizeOverrideRef.current }),
+        });
+        return;
+      }
+      setPreflightFindings(next.findings);
+      setPreflightSelectedIds(new Set(next.findings.map((f) => f.id)));
+    } finally {
+      setPreflightApplying(false);
+    }
   };
 
   return (
@@ -1296,6 +1657,21 @@ export default function ProposalPreview() {
         onExpiryDateChange={setShareExpiryDate}
         onCreateShare={handleCreateShare}
         onCopyLink={handleCopyShareLink}
+      />
+      <PreFlightModal
+        open={preflightOpen}
+        actionLabel={preflightActionLabel}
+        findings={preflightFindings}
+        selectedIds={preflightSelectedIds}
+        systemSizeSource={preflightSystemSizeSource}
+        applying={preflightApplying}
+        onToggle={handlePreflightToggle}
+        onSelectAll={handlePreflightSelectAll}
+        onSelectNone={handlePreflightSelectNone}
+        onSystemSizeSourceChange={setPreflightSystemSizeSource}
+        onApplySelected={handlePreflightApplySelected}
+        onIgnoreAndProceed={handlePreflightIgnore}
+        onCancel={handlePreflightCancel}
       />
     </div>
   );

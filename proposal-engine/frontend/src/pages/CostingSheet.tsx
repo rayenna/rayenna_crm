@@ -216,7 +216,10 @@ export default function CostingSheet() {
       .map((r) => ({ ...r, gstPercent: normalizeLineItemGst(r) }));
     const grand       = sheetGrandTotal(validItems, showGst, marginPercent);
     const totalGst    = showGst ? sheetTotalGst(validItems, marginPercent) : 0;
-    const sizeKw      = deriveSystemSizeKw(validItems);
+    const acForSize   = getActiveCustomer();
+    const sizeKw      = deriveSystemSizeKw(validItems, {
+      fallbackPanelWattage: acForSize?.master?.panelWattage ?? null,
+    });
     const now         = new Date().toISOString();
 
     // Overwrite existing sheet with same name, or create new entry

@@ -223,15 +223,92 @@ export function snapCategory(raw: string, itemName = ''): Category {
   return 'others';
 }
 
-/** Derive system size (kW) from module-category items */
-export function deriveSystemSizeKw(items: LineItem[]): number {
+/** Explicit wattage token: 590W, 620 Wp, 550wP */
+const MODULE_WATTAGE_TOKEN_RE = /(\d+(?:\.\d+)?)\s*[Ww][Pp]?\b/;
+
+/**
+ * Wattage band in product text (common in Indian BOMs), e.g. "600-620" or "600–620".
+ * Uses the **maximum** of the range (e.g. 620) as the module class ceiling.
+ */
+const MODULE_WATTAGE_RANGE_RE = /(\d{3,4})\s*[-–—]\s*(\d{3,4})(?!\s*[Kk][Ww])/;
+
+/**
+ * Resolve module wattage (W) for one PV line.
+ * Order: item name token → specification token → name/spec range (max) → CRM panel wattage fallback.
+ */
+export function parseModuleWattageWatts(
+  itemName: string,
+  specification?: string,
+  fallbackPanelWattage?: number | null,
+): number | null {
+  const name = itemName ?? '';
+  const spec = specification ?? '';
+
+  const nameToken = name.match(MODULE_WATTAGE_TOKEN_RE);
+  if (nameToken) {
+    const w = parseFloat(nameToken[1]);
+    if (Number.isFinite(w) && w > 0) return w;
+  }
+
+  const specToken = spec.match(MODULE_WATTAGE_TOKEN_RE);
+  if (specToken) {
+    const w = parseFloat(specToken[1]);
+    if (Number.isFinite(w) && w > 0) return w;
+  }
+
+  const nameRange = name.match(MODULE_WATTAGE_RANGE_RE);
+  if (nameRange) {
+    const lo = parseFloat(nameRange[1]);
+    const hi = parseFloat(nameRange[2]);
+    if (Number.isFinite(lo) && Number.isFinite(hi) && Math.max(lo, hi) > 0) {
+      return Math.max(lo, hi);
+    }
+  }
+
+  const specRange = spec.match(MODULE_WATTAGE_RANGE_RE);
+  if (specRange) {
+    const lo = parseFloat(specRange[1]);
+    const hi = parseFloat(specRange[2]);
+    if (Number.isFinite(lo) && Number.isFinite(hi) && Math.max(lo, hi) > 0) {
+      return Math.max(lo, hi);
+    }
+  }
+
+  if (
+    fallbackPanelWattage != null &&
+    Number.isFinite(fallbackPanelWattage) &&
+    fallbackPanelWattage > 0
+  ) {
+    return Number(fallbackPanelWattage);
+  }
+
+  return null;
+}
+
+export type DeriveSystemSizeOptions = {
+  /** CRM Project Lifecycle panel wattage (W) when a line has no name/spec wattage. */
+  fallbackPanelWattage?: number | null;
+};
+
+/**
+ * Derive system size (kW) from module-category items.
+ * Wattage per line: item name → specification → CRM panel wattage fallback.
+ */
+export function deriveSystemSizeKw(
+  items: LineItem[],
+  options?: DeriveSystemSizeOptions,
+): number {
   const modules = items.filter((r) => r.category === 'pv-modules');
   let totalWatts = 0;
   for (const m of modules) {
     const qty = parseFloat(m.quantity) || 0;
-    const match = m.itemName.match(/(\d+(?:\.\d+)?)\s*[Ww][Pp]?/);
-    if (match) {
-      totalWatts += qty * parseFloat(match[1]);
+    const watts = parseModuleWattageWatts(
+      m.itemName,
+      m.specification,
+      options?.fallbackPanelWattage,
+    );
+    if (watts != null) {
+      totalWatts += qty * watts;
     }
   }
   return totalWatts > 0 ? Math.round((totalWatts / 1000) * 100) / 100 : 0;

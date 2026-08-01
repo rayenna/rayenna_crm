@@ -11,6 +11,7 @@ import type { RoiArtifact } from '../lib/customerStore';
 import { canEditProposalArtifacts } from '../lib/apiClient';
 import { saveProjectArtifacts, PIPELINE_MARK_SYNCED } from '../lib/projectSavePipeline';
 import { AlertCard } from '../components/AlertCard';
+import { getSubsidyByCapacityKw } from '../lib/roiAssumptions';
 
 // ─────────────────────────────────────────────
 // Types
@@ -56,18 +57,6 @@ const CO2_FACTOR        = 0.82;
 
 function r2(n: number) { return Math.round(n * 100) / 100; }
 function r4(n: number) { return Math.round(n * 10000) / 10000; }
-
-/**
- * Subsidy support as per PM-Surya Ghar / MNRE rooftop solar scheme
- * (myscheme.gov.in — Suitable Rooftop Solar Plant Capacity for households).
- * 0–150 units/mo → 1–2 kW → ₹30,000–₹60,000; 150–300 → 2–3 kW → ₹60,000–₹78,000; >300 → above 3 kW → ₹78,000.
- */
-function getSubsidyByCapacityKw(kw: number): number {
-  if (kw <= 0) return 0;
-  if (kw <= 2) return Math.round(kw * 30000);
-  if (kw <= 3) return Math.round(60000 + (kw - 2) * 18000);
-  return 78000;
-}
 
 function calculateROI(inputs: ROIResult['inputs']): ROIResult {
   const { systemSizeKw, tariff, generationFactor, escalationPercent, projectCost, subsidyEligible, subsidyAmount } = inputs;
@@ -365,6 +354,7 @@ function YearlyTable({ rows }: { rows: YearlyRow[] }) {
 
 export default function ROICalculator() {
   // Read ROI autofill snapshot synchronously before any state init (per-user key)
+  // Project cost may come from costing; system capacity always prefers CRM (whole kW).
   const initialAutoFill: RoiAutofill | null = (() => {
     try {
       const key = getWipKeysForCurrentUser().roiAutofill;
@@ -373,10 +363,17 @@ export default function ROICalculator() {
     } catch { return null; }
   })();
 
-  // ── Controlled input state — initialised directly from autofill / defaults ──
-  const [systemSizeKw,      setSystemSizeKw]      = useState(
-    initialAutoFill && initialAutoFill.systemSizeKw > 0 ? String(initialAutoFill.systemSizeKw) : '',
-  );
+  const initialCrmCapacityKw = (() => {
+    const ac = getActiveCustomer();
+    const kw = ac?.master?.systemSizeKw;
+    if (typeof kw === 'number' && kw > 0 && Number.isFinite(kw)) {
+      return String(Math.round(kw));
+    }
+    return '';
+  })();
+
+  // ── Controlled input state — capacity from CRM; cost from costing autofill ──
+  const [systemSizeKw,      setSystemSizeKw]      = useState(initialCrmCapacityKw);
   const [tariff,            setTariff]            = useState('8.20');
   const [generationFactor,  setGenerationFactor]  = useState('1500');
   const [escalationPercent, setEscalationPercent] = useState('5');
@@ -396,31 +393,46 @@ export default function ROICalculator() {
   // Stable reference used for the auto-fill banner and hints
   const autoFill = initialAutoFill;
 
-  // On mount, prefer CRM Project System Capacity from active customer master
+  const crmCapacityLabel = (() => {
+    const ac = getActiveCustomer();
+    const kw = ac?.master?.systemSizeKw;
+    if (typeof kw === 'number' && kw > 0 && Number.isFinite(kw)) return Math.round(kw);
+    return null;
+  })();
+
+  // Keep System Capacity locked to CRM Project System Capacity (whole kW)
   useEffect(() => {
     const ac = getActiveCustomer();
     const sizeFromCustomer = ac?.master?.systemSizeKw;
-    if (sizeFromCustomer && sizeFromCustomer > 0) {
-      setSystemSizeKw((current) => current && parseFloat(current) > 0 ? current : String(sizeFromCustomer));
+    if (typeof sizeFromCustomer === 'number' && sizeFromCustomer > 0 && Number.isFinite(sizeFromCustomer)) {
+      setSystemSizeKw(String(Math.round(sizeFromCustomer)));
     }
   }, []);
 
   // Restore last saved result on mount — prefer active customer's ROI artifact
   useEffect(() => {
     const ac = getActiveCustomer();
+    const crmKw =
+      typeof ac?.master?.systemSizeKw === 'number' && ac.master.systemSizeKw > 0
+        ? Math.round(ac.master.systemSizeKw)
+        : null;
+
     if (ac?.roi?.result) {
       const saved = ac.roi.result as ROIResult;
       setResult(saved);
       const inp = saved.inputs;
       if (inp) {
-        if (inp.systemSizeKw > 0) setSystemSizeKw(String(inp.systemSizeKw));
+        // Capacity: CRM wins over any saved decimal from costing autofill
+        if (crmKw != null) setSystemSizeKw(String(crmKw));
+        else if (inp.systemSizeKw > 0) setSystemSizeKw(String(Math.round(inp.systemSizeKw)));
         if (inp.tariff > 0)       setTariff(String(inp.tariff));
         if (inp.generationFactor > 0) setGenerationFactor(String(inp.generationFactor));
         if (inp.escalationPercent >= 0) setEscalationPercent(String(inp.escalationPercent));
         if (inp.projectCost > 0)  setProjectCost(String(Math.round(inp.projectCost)));
         if (inp.subsidyEligible) {
           setSubsidyEligible(true);
-          const schemeAmt = getSubsidyByCapacityKw(inp.systemSizeKw);
+          const sizeForSubsidy = crmKw ?? Math.round(inp.systemSizeKw);
+          const schemeAmt = getSubsidyByCapacityKw(sizeForSubsidy);
           if ((inp.subsidyAmount ?? 0) > 0 && inp.subsidyAmount !== schemeAmt) {
             setSubsidyOverride(String(Math.round(inp.subsidyAmount!)));
           }
@@ -436,9 +448,14 @@ export default function ROICalculator() {
         const saved = JSON.parse(raw) as ROIResult;
         setResult(saved);
         const inp = saved.inputs;
+        if (crmKw != null) setSystemSizeKw(String(crmKw));
+        else if (inp?.systemSizeKw && inp.systemSizeKw > 0) {
+          setSystemSizeKw(String(Math.round(inp.systemSizeKw)));
+        }
         if (inp?.subsidyEligible) {
           setSubsidyEligible(true);
-          const schemeAmt = getSubsidyByCapacityKw(inp.systemSizeKw ?? 0);
+          const sizeForSubsidy = crmKw ?? Math.round(inp.systemSizeKw ?? 0);
+          const schemeAmt = getSubsidyByCapacityKw(sizeForSubsidy);
           if ((inp.subsidyAmount ?? 0) > 0 && inp.subsidyAmount !== schemeAmt) {
             setSubsidyOverride(String(Math.round(inp.subsidyAmount!)));
           }
@@ -447,15 +464,15 @@ export default function ROICalculator() {
     } catch { /* ignore */ }
   }, []);
 
-  // Re-populate fields if autofill key updates while page is open
+  // Re-populate project cost if autofill key updates while page is open.
+  // Do NOT overwrite System Capacity from costing (that can be a decimal like 4.96 kW).
   useEffect(() => {
     try {
       const key = getWipKeysForCurrentUser().roiAutofill;
       const raw = localStorage.getItem(key);
       if (!raw) return;
       const autoFill = JSON.parse(raw) as RoiAutofill;
-      if (autoFill.systemSizeKw > 0) setSystemSizeKw(String(autoFill.systemSizeKw));
-      if (autoFill.grandTotal > 0)   setProjectCost(String(Math.round(autoFill.grandTotal)));
+      if (autoFill.grandTotal > 0) setProjectCost(String(Math.round(autoFill.grandTotal)));
     } catch {
       // ignore parse errors
     }
@@ -582,19 +599,23 @@ export default function ROICalculator() {
             );
           })()}
 
-          {/* Auto-fill banner */}
+          {/* Auto-fill banner — project cost from costing; capacity from CRM */}
           {autoFill && !bannerDismissed && (
             <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="flex items-start gap-2 flex-1">
                 <span className="text-lg flex-shrink-0">⚡</span>
                 <div>
                   <p className="text-sm font-semibold text-emerald-800">
-                    Inputs auto-filled from {autoFill.source === 'bom' ? 'BOM' : 'Costing Sheet'}
+                    Project cost auto-filled from {autoFill.source === 'bom' ? 'BOM' : 'Costing Sheet'}
                   </p>
                   <p className="text-xs text-emerald-700 mt-0.5">
-                    Source: <strong>{autoFill.sourceName}</strong> ·{' '}
-                    System Capacity: <strong>{autoFill.systemSizeKw} kW</strong> ·{' '}
-                    Project Cost (incl. GST):{' '}
+                    Source: <strong>{autoFill.sourceName}</strong>
+                    {crmCapacityLabel != null && (
+                      <>
+                        {' '}· System Capacity (CRM): <strong>{crmCapacityLabel} kW</strong>
+                      </>
+                    )}
+                    {' '}· Project Cost (incl. GST):{' '}
                     <strong>₹{autoFill.grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</strong>
                   </p>
                 </div>
@@ -618,7 +639,11 @@ export default function ROICalculator() {
                   <Field
                     label="System Capacity"
                     unit="kW"
-                    hint={autoFill && autoFill.systemSizeKw > 0 ? `⚡ Auto-filled from "${autoFill.sourceName}"` : 'Installed capacity (whole kW only)'}
+                    hint={
+                      crmCapacityLabel != null
+                        ? `From CRM Project System Capacity (${crmCapacityLabel} kW, whole number)`
+                        : 'Installed capacity (whole kW only) — set System Capacity on the CRM project'
+                    }
                     value={systemSizeKw}
                     onChange={setSystemSizeKw}
                     step="1"
