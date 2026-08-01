@@ -243,7 +243,6 @@ const server = app.listen(PORT, async () => {
     const proposalEngineRoutes = (await import('./routes/proposalEngine')).default;
     const solarNewsRoutes       = (await import('./routes/solarNews')).default;
     const roofLayoutRoutes     = (await import('./routes/roofLayout')).default;
-    const pdfRoutes            = (await import('./routes/pdf')).default;
     const myDayRoutes          = (await import('./routes/myDay')).default;
     const consumerAuthRoutes   = (await import('./routes/consumerAuth')).default;
     const consumerEnergyRoutes = (await import('./routes/consumerEnergy')).default;
@@ -285,7 +284,6 @@ const server = app.listen(PORT, async () => {
     apiRouter.use('/consumer', consumerHelpRoutes);
     apiRouter.use('/consumer', consumerProfileRoutes);
     apiRouter.use('/consumer', consumerHomeRoutes);
-    apiRouter.use('/', pdfRoutes);
 
     routesLoaded = true;
     console.log('API routes ready');

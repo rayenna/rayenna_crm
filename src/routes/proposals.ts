@@ -1,14 +1,13 @@
-import express, { Request, Response } from 'express';
+import express, { Request } from 'express';
 import { body, validationResult } from 'express-validator';
 import { ProposalStatus } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
-import { generateProposalContent } from '../utils/ai';
 import { logSecurityAudit } from '../utils/auditLogger';
 
 const router = express.Router();
 
-// Get proposals for a project
+// Get proposals for a project (legacy CRM Proposal records — read-only archive)
 router.get('/project/:projectId', authenticate, async (req: Request, res: express.Response) => {
   try {
     const proposals = await prisma.proposal.findMany({
@@ -57,7 +56,11 @@ router.get('/:id', authenticate, async (req: Request, res: express.Response) => 
   }
 });
 
-// Create proposal (with AI generation option)
+/**
+ * Create a legacy Proposal row (archive/metadata only).
+ * Proposal Engine is the sole create/maintain/send path for customer proposals.
+ * AI content generation has been removed.
+ */
 router.post(
   '/',
   authenticate,
@@ -67,7 +70,6 @@ router.post(
     body('energyOutputKwh').optional().isFloat({ min: 0 }),
     body('annualSavings').optional().isFloat({ min: 0 }),
     body('paybackYears').optional().isFloat({ min: 0 }),
-    body('aiGenerated').optional().isBoolean(),
   ],
   async (req: Request, res: express.Response) => {
     try {
@@ -76,59 +78,22 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { projectId, aiGenerated, ...proposalData } = req.body;
+      const { projectId, aiGenerated: _ignoredAi, ...proposalData } = req.body;
 
-      // Get project with survey data
       const project = await prisma.project.findUnique({
         where: { id: projectId },
-        include: {
-          customer: true,
-          siteSurveys: {
-            orderBy: { createdAt: 'desc' },
-            take: 1,
-          },
-        },
+        include: { customer: true },
       });
 
       if (!project) {
         return res.status(404).json({ error: 'Project not found' });
       }
 
-      // Generate AI proposal if requested
-      let proposalContent = '';
-      if (aiGenerated && project.siteSurveys.length > 0) {
-        try {
-          const survey = project.siteSurveys[0];
-          proposalContent = await generateProposalContent(
-            {
-              roofArea: survey.roofArea || undefined,
-              shading: survey.shading || undefined,
-              discom: survey.discom || undefined,
-              meterType: survey.meterType || undefined,
-              remarks: survey.remarks || undefined,
-            },
-            {
-              systemCapacity: project.systemCapacity || undefined,
-              systemType: project.systemType || undefined,
-              panelBrand: project.panelBrand || undefined,
-              inverterBrand: project.inverterBrand || undefined,
-              projectCost: project.projectCost || undefined,
-              customerName: project.customer.customerName,
-              city: project.customer.city || undefined,
-              state: project.customer.state || undefined,
-            }
-          );
-        } catch (error) {
-          console.error('AI generation failed:', error);
-          // Continue without AI content
-        }
-      }
-
       const proposal = await prisma.proposal.create({
         data: {
           ...proposalData,
           projectId,
-          aiGenerated: aiGenerated || false,
+          aiGenerated: false,
           status: 'DRAFT',
         },
         include: {
@@ -141,14 +106,18 @@ router.post(
       });
 
       if (req.user) {
-        logSecurityAudit({ userId: req.user.id, role: req.user.role, actionType: 'proposal_generated', entityType: 'Proposal', entityId: proposal.id, summary: `Proposal for project ${projectId}`, req });
+        logSecurityAudit({
+          userId: req.user.id,
+          role: req.user.role,
+          actionType: 'proposal_created',
+          entityType: 'Proposal',
+          entityId: proposal.id,
+          summary: `Legacy Proposal row for project ${projectId} (PE is SSOT for customer proposals)`,
+          req,
+        });
       }
-      // If AI generated, you might want to save the content as a document
-      // For now, we'll just return it in the response
-      res.status(201).json({
-        ...proposal,
-        aiContent: proposalContent || undefined,
-      });
+
+      res.status(201).json(proposal);
     } catch (error: any) {
       console.error('Error creating proposal:', error);
       res.status(500).json({ error: error.message || 'Failed to create proposal' });

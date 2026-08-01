@@ -12,7 +12,6 @@ import SupportTicketsSection from '../components/supportTickets/SupportTicketsSe
 import ProjectSolarHubCard from '../components/solarHub/ProjectSolarHubCard'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
-import ProposalPreview from '../components/proposal/ProposalPreview'
 import HealthDetail from '../components/zenith/HealthDetail'
 import { getFinancingBankDisplayName } from '../utils/financingBankDisplay'
 import { FaProjectDiagram } from 'react-icons/fa'
@@ -22,11 +21,17 @@ import { ProjectDetailSkeleton } from '../components/projects/ProjectDetailSkele
 import { canDeleteProject, canEditProject } from '../utils/projectPermissions'
 import { getProjectDetailAccessNotice } from '../utils/projectAccessMessages'
 import ProjectAccessNotice from '../components/projects/ProjectAccessNotice'
+import LifecycleDataQualityBanner from '../components/projects/LifecycleDataQualityBanner'
 import { formatCustomerTypeDisplay } from '../utils/customerRecord'
 import { getCustomerTypeBadgeClasses } from '../utils/customerTypeStyles'
 import { getProjectSegmentLabel, getProjectSegmentPillClasses } from '../utils/projectSegment'
 import ProjectMyDayTasks from '../components/projects/ProjectMyDayTasks'
 import { formatLeadSourceDisplay } from '../utils/leadSourceDisplay'
+import {
+  evaluateLifecycleDataQuality,
+  peSoftGateFindings,
+  presentLifecycleDataQualityForViewer,
+} from '../utils/lifecycleDataQuality'
 
 const PROJECT_SERVICE_TYPE_LABELS: Record<string, string> = {
   EPC_PROJECT: 'EPC Project',
@@ -83,22 +88,22 @@ const ProjectDetail = () => {
   const { user, hasRole } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [showProposal, setShowProposal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showPeQualityConfirm, setShowPeQualityConfirm] = useState(false)
 
   useModalEscape(showDeleteConfirm, () => setShowDeleteConfirm(false))
 
-  // Escape on read-only detail → Projects list. Overlays (proposal preview, delete confirm, ErrorModal children) register Esc first via capture-phase modal stack.
+  // Escape on read-only detail → Projects list. Overlays (delete confirm, ErrorModal children) register Esc first via capture-phase modal stack.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
-      if (showDeleteConfirm || showProposal) return
+      if (showDeleteConfirm || showPeQualityConfirm) return
       e.preventDefault()
       navigate('/projects')
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [navigate, showDeleteConfirm, showProposal])
+  }, [navigate, showDeleteConfirm, showPeQualityConfirm])
 
   const { data: project, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['project', id],
@@ -110,7 +115,10 @@ const ProjectDetail = () => {
   })
 
   // Lightweight Proposal Engine summary for this project (status + last updated)
-  const { data: peSummary } = useQuery({
+  const {
+    data: peSummary,
+    isFetched: peSummaryFetched,
+  } = useQuery({
     queryKey: ['proposal-engine-summary', id],
     enabled: !!id && !!project && (project.projectStatus === ProjectStatus.PROPOSAL || project.projectStatus === ProjectStatus.CONFIRMED),
     queryFn: async () => {
@@ -166,9 +174,67 @@ const ProjectDetail = () => {
     staleTime: 60_000,
   })
 
+  const peSummaryNeeded =
+    !!project &&
+    (project.projectStatus === ProjectStatus.PROPOSAL ||
+      project.projectStatus === ProjectStatus.CONFIRMED)
+  /** Avoid soft-gate race: wait until PE summary has settled before enabling Proposals. */
+  const peSummaryPending = peSummaryNeeded && !peSummaryFetched
+
   const canEdit = canEditProject(project, user)
   const canDelete = canDeleteProject(project, user)
   const detailAccessNotice = getProjectDetailAccessNotice(project, user)
+
+  const rawDataQualityFindings = project
+    ? evaluateLifecycleDataQuality(
+        project,
+        peSummaryPending ? undefined : peSummary,
+      )
+    : []
+  /** Soft-gate uses raw findings (awareness before PE) for all roles that can open PE. */
+  const peGateFindings = peSoftGateFindings(rawDataQualityFindings)
+  /** Banner is role-aware: Fix links and copy match what this user can edit. */
+  const dataQualityFindings = project
+    ? presentLifecycleDataQualityForViewer(rawDataQualityFindings, {
+        project,
+        user,
+      })
+    : []
+
+  const openProposalEngine = async () => {
+    if (!id) return
+    const base = import.meta.env.VITE_PROPOSAL_ENGINE_URL
+    if (!base) {
+      toast.error('Proposal Engine URL is not configured.')
+      return
+    }
+    const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base
+    try {
+      const { data } = await axiosInstance.post<{ ticket: string }>('/api/auth/sso-ticket')
+      const ticket = data?.ticket
+      const url = ticket
+        ? `${normalizedBase}/customers?ticket=${encodeURIComponent(ticket)}&openProjectId=${encodeURIComponent(id)}`
+        : `${normalizedBase}/customers?openProjectId=${encodeURIComponent(id)}`
+      window.open(url, '_blank', 'noopener,noreferrer')
+      void axiosInstance.post('/api/proposal-engine/audit/proposal-click', { projectId: id }).catch(() => {})
+    } catch (err: unknown) {
+      toast.error(getFriendlyApiErrorMessage(err) || 'Could not open Proposal Engine.')
+      window.open(
+        `${normalizedBase}/customers?openProjectId=${encodeURIComponent(id)}`,
+        '_blank',
+        'noopener,noreferrer',
+      )
+      void axiosInstance.post('/api/proposal-engine/audit/proposal-click', { projectId: id }).catch(() => {})
+    }
+  }
+
+  const handleProposalsClick = () => {
+    if (peGateFindings.length > 0) {
+      setShowPeQualityConfirm(true)
+      return
+    }
+    void openProposalEngine()
+  }
 
   // Fetch support tickets count for delete confirmation
   const { data: supportTickets } = useQuery({
@@ -266,9 +332,28 @@ const ProjectDetail = () => {
           },
         ]}
       />
-      {showProposal && id && (
-        <ProposalPreview projectId={id} onClose={() => setShowProposal(false)} />
-      )}
+      <ErrorModal
+        open={showPeQualityConfirm}
+        onClose={() => setShowPeQualityConfirm(false)}
+        type="warning"
+        surface="zenith"
+        message={
+          `Some project data is incomplete before opening Proposal Engine:\n\n` +
+          peGateFindings.map((f) => `• ${f.title}`).join('\n') +
+          `\n\nYou can continue anyway, or cancel and fix the items listed on this page.`
+        }
+        actions={[
+          { label: 'Cancel', variant: 'ghost', onClick: () => setShowPeQualityConfirm(false) },
+          {
+            label: 'Continue to Proposal Engine',
+            variant: 'primary',
+            onClick: () => {
+              setShowPeQualityConfirm(false)
+              void openProposalEngine()
+            },
+          },
+        ]}
+      />
       {shell(
         <>
           {/* ── Sticky Zenith header ── */}
@@ -302,25 +387,10 @@ const ProjectDetail = () => {
                   (project.projectStatus === ProjectStatus.PROPOSAL || project.projectStatus === ProjectStatus.CONFIRMED) && (
                     <button
                       type="button"
-                      onClick={async () => {
-                        const base = import.meta.env.VITE_PROPOSAL_ENGINE_URL
-                        if (!base) { toast.error('Proposal Engine URL is not configured.'); return }
-                        const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base
-                        try {
-                          const { data } = await axiosInstance.post<{ ticket: string }>('/api/auth/sso-ticket')
-                          const ticket = data?.ticket
-                          const url = ticket
-                            ? `${normalizedBase}/customers?ticket=${encodeURIComponent(ticket)}&openProjectId=${encodeURIComponent(id ?? '')}`
-                            : `${normalizedBase}/customers?openProjectId=${encodeURIComponent(id ?? '')}`
-                          window.open(url, '_blank', 'noopener,noreferrer')
-                          if (id) void axiosInstance.post('/api/proposal-engine/audit/proposal-click', { projectId: id }).catch(() => {})
-                        } catch (err: any) {
-                          toast.error(getFriendlyApiErrorMessage(err) || 'Could not open Proposal Engine.')
-                          window.open(`${normalizedBase}/customers?openProjectId=${encodeURIComponent(id ?? '')}`, '_blank', 'noopener,noreferrer')
-                          if (id) void axiosInstance.post('/api/proposal-engine/audit/proposal-click', { projectId: id }).catch(() => {})
-                        }
-                      }}
-                      className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] shadow-[var(--shadow-card)] transition-colors hover:opacity-95"
+                      onClick={handleProposalsClick}
+                      disabled={peSummaryPending}
+                      title={peSummaryPending ? 'Checking Proposal Engine status…' : undefined}
+                      className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] shadow-[var(--shadow-card)] transition-colors hover:opacity-95 disabled:cursor-wait disabled:opacity-60"
                     >
                       <span className="truncate">Proposals</span>
                       <span className="shrink-0 rounded bg-amber-300 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">New</span>
@@ -358,6 +428,7 @@ const ProjectDetail = () => {
           </header>
 
           {detailAccessNotice ? <ProjectAccessNotice notice={detailAccessNotice} /> : null}
+          <LifecycleDataQualityBanner findings={dataQualityFindings} />
 
           {/* ── Summary card: created date, status pills, financials, PE badge ── */}
           <div className="mb-5 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5">

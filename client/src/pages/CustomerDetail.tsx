@@ -1,5 +1,5 @@
 import { useState, useEffect, type ReactNode } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
@@ -17,9 +17,10 @@ import { canEditCustomer } from '../utils/customerPermissions'
 export default function CustomerDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user, hasRole } = useAuth()
   const queryClient = useQueryClient()
-  const [isEditing, setIsEditing] = useState(false)
+  const [isEditing, setIsEditing] = useState(() => searchParams.get('edit') === '1')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const canDelete = hasRole([UserRole.ADMIN])
@@ -52,6 +53,12 @@ export default function CustomerDetail() {
   })
 
   const canEdit = canEditCustomer(customer, user)
+
+  useEffect(() => {
+    if (searchParams.get('edit') === '1' && canEdit) {
+      setIsEditing(true)
+    }
+  }, [searchParams, canEdit])
 
   useEffect(() => {
     if (!canEdit && isEditing) setIsEditing(false)
