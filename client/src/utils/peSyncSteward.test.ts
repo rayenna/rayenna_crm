@@ -3,6 +3,7 @@ import { ProjectStatus, type Project } from '../types'
 import {
   capacitiesDiffer,
   evaluatePeCapacityDrift,
+  isCostingCapacityOutOfBand,
   peCapacityToCrmPatchValue,
   pickPeSystemSizeKw,
 } from './peSyncSteward'
@@ -39,26 +40,52 @@ describe('pickPeSystemSizeKw', () => {
   })
 })
 
+describe('isCostingCapacityOutOfBand', () => {
+  it('allows redundancy bumps within CRM to CRM+1 kW', () => {
+    expect(isCostingCapacityOutOfBand(3, 3)).toBe(false)
+    expect(isCostingCapacityOutOfBand(3, 3.2)).toBe(false)
+    expect(isCostingCapacityOutOfBand(3, 3.3)).toBe(false)
+    expect(isCostingCapacityOutOfBand(3, 4)).toBe(false)
+    expect(isCostingCapacityOutOfBand(6, 6.2)).toBe(false)
+  })
+
+  it('flags below CRM or above CRM+1', () => {
+    expect(isCostingCapacityOutOfBand(3, 2.9)).toBe(true)
+    expect(isCostingCapacityOutOfBand(3, 4.01)).toBe(true)
+    expect(isCostingCapacityOutOfBand(5, 6)).toBe(false) // at CRM+1 ceiling — OK
+    expect(isCostingCapacityOutOfBand(5, 6.1)).toBe(true)
+    expect(isCostingCapacityOutOfBand(null, 3)).toBe(true)
+  })
+})
+
 describe('evaluatePeCapacityDrift', () => {
-  it('returns empty when aligned', () => {
+  it('returns empty when costing is within redundancy band', () => {
     expect(
-      evaluatePeCapacityDrift(project({ systemCapacity: 5 }), { costingSystemSizeKw: 5 }),
+      evaluatePeCapacityDrift(project({ systemCapacity: 6 }), { costingSystemSizeKw: 6.2 }),
+    ).toEqual([])
+    expect(
+      evaluatePeCapacityDrift(project({ systemCapacity: 3 }), { costingSystemSizeKw: 3.3 }),
     ).toEqual([])
   })
 
-  it('flags mismatch and missing CRM', () => {
+  it('flags only costing sheet out-of-band; ignores ROI-only', () => {
     const drift = evaluatePeCapacityDrift(project({ systemCapacity: 5 }), {
-      costingSystemSizeKw: 6,
+      costingSystemSizeKw: 6.5,
     })
     expect(drift).toHaveLength(1)
-    expect(drift[0].peValue).toBe(6)
+    expect(drift[0].peValue).toBe(6.5)
     expect(drift[0].crmValue).toBe(5)
+    expect(drift[0].peSource).toBe('costing')
+
+    expect(
+      evaluatePeCapacityDrift(project({ systemCapacity: 5 }), { roiSystemSizeKw: 9 }),
+    ).toEqual([])
 
     const missing = evaluatePeCapacityDrift(project({ systemCapacity: undefined }), {
-      roiSystemSizeKw: 3,
+      costingSystemSizeKw: 3,
     })
+    expect(missing).toHaveLength(1)
     expect(missing[0].crmValue).toBeNull()
-    expect(missing[0].peSource).toBe('roi')
   })
 })
 

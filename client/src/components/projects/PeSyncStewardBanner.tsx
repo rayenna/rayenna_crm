@@ -50,8 +50,8 @@ export default function PeSyncStewardBanner({ project, findings, user }: Props) 
       >
         <p className="font-extrabold text-[color:var(--text-primary)]">CRM ↔ Proposal Engine</p>
         <p className="mt-1 text-[color:var(--text-secondary)]">
-          Capacity differs between CRM and PE. PE stays the proposal document source of truth —
-          update CRM only when you want Ops/Zenith to match.
+          Costing sheet capacity is outside the CRM band (CRM size up to +1 kW for redundancy).
+          ROI and Zenith use CRM capacity — update CRM only if the commercial size should change.
         </p>
         <ul className="mt-3 space-y-2">
           <li>
@@ -84,7 +84,7 @@ export default function PeSyncStewardBanner({ project, findings, user }: Props) 
         }}
         type="warning"
         surface="zenith"
-        message={`Apply PE capacity to CRM?\n\nThis will set CRM system capacity to ${peCapacityToCrmPatchValue(finding.peValue)} kW (from ${finding.peSource === 'costing' ? 'PE costing' : 'PE ROI'}). It does not change Proposal Engine artifacts.`}
+        message={`Apply PE costing capacity to CRM?\n\nThis will set CRM system capacity to ${peCapacityToCrmPatchValue(finding.peValue)} kW (from PE costing). It does not change Proposal Engine artifacts. ROI and Zenith will then follow this CRM value.`}
         actions={[
           {
             label: 'Cancel',

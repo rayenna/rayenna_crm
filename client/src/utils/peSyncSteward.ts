@@ -1,7 +1,7 @@
 import type { Project, User } from '../types'
 import { canFixSystemCapacity } from './lifecycleDataQuality'
 
-/** Prefer costing size; fall back to ROI inputs. */
+/** Prefer costing size; fall back to ROI. */
 export type PeCapacitySource = 'costing' | 'roi'
 
 export type PeSyncCapacitySnapshot = {
@@ -19,8 +19,14 @@ export type PeCapacityDriftFinding = {
   detail: string
 }
 
-/** Same spirit as PE pre-flight mismatch tolerance. */
+/** Float / rounding noise only — not commercial tolerance. */
 export const CAPACITY_DRIFT_TOLERANCE_KW = 0.1
+
+/**
+ * Costing may exceed CRM commercial capacity by up to this much for redundancy
+ * (e.g. CRM 3 kW → costing 3.2–4.0 is OK; &lt;3 or &gt;4 is flagged).
+ */
+export const CAPACITY_REDUNDANCY_MAX_EXTRA_KW = 1
 
 function asPositiveKw(raw: unknown): number | null {
   if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) return raw
@@ -43,37 +49,56 @@ export function pickPeSystemSizeKw(
   return null
 }
 
+/** Exact/near-equal compare (legacy helper; steward band uses {@link isCostingCapacityOutOfBand}). */
 export function capacitiesDiffer(crmKw: number | null, peKw: number): boolean {
   if (crmKw == null || !Number.isFinite(crmKw) || crmKw <= 0) return true
   return Math.abs(crmKw - peKw) > CAPACITY_DRIFT_TOLERANCE_KW
 }
 
 /**
- * Detect CRM systemCapacity drift vs PE costing/ROI system size.
- * Brands / panel W are CRM→PE mirrors today — not compared in v1.
+ * True when PE costing capacity is outside the expected band vs CRM commercial size:
+ * below CRM, or more than {@link CAPACITY_REDUNDANCY_MAX_EXTRA_KW} above CRM.
+ * Small redundancy bumps (e.g. 3 → 3.2 / 3.3) are not flagged.
+ */
+export function isCostingCapacityOutOfBand(crmKw: number | null, costingKw: number): boolean {
+  if (crmKw == null || !Number.isFinite(crmKw) || crmKw <= 0) return true
+  if (costingKw < crmKw) return true
+  if (costingKw > crmKw + CAPACITY_REDUNDANCY_MAX_EXTRA_KW) return true
+  return false
+}
+
+/**
+ * Detect CRM systemCapacity vs PE costing sheet size only.
+ * ROI / Zenith use CRM capacity — do not compare ROI here.
+ * Brands / panel W are CRM→PE mirrors — not compared in v1.
  */
 export function evaluatePeCapacityDrift(
   project: Project,
   snap: PeSyncCapacitySnapshot | null | undefined,
 ): PeCapacityDriftFinding[] {
-  const pe = pickPeSystemSizeKw(snap)
-  if (!pe) return []
+  const costingKw = asPositiveKw(snap?.costingSystemSizeKw)
+  if (costingKw == null) return []
 
   const crmRaw = asPositiveKw(project.systemCapacity)
-  if (!capacitiesDiffer(crmRaw, pe.kw)) return []
+  if (!isCostingCapacityOutOfBand(crmRaw, costingKw)) return []
 
   const crmLabel = crmRaw != null ? `${crmRaw} kW` : 'not set'
-  const sourceLabel = pe.source === 'costing' ? 'PE costing' : 'PE ROI'
+  const bandHi =
+    crmRaw != null && Number.isFinite(crmRaw) ? crmRaw + CAPACITY_REDUNDANCY_MAX_EXTRA_KW : null
+  const bandHint =
+    crmRaw != null && bandHi != null
+      ? ` Expected costing in [${crmRaw}–${bandHi}] kW (CRM size to +${CAPACITY_REDUNDANCY_MAX_EXTRA_KW} kW redundancy).`
+      : ''
 
   return [
     {
       id: 'systemCapacity',
       field: 'systemCapacity',
-      label: 'System capacity mismatch',
+      label: 'Costing capacity outside expected band',
       crmValue: crmRaw,
-      peValue: pe.kw,
-      peSource: pe.source,
-      detail: `CRM has ${crmLabel}; ${sourceLabel} has ${pe.kw} kW. Proposal Engine remains the proposal SSOT — apply only if CRM should match PE for Ops/Zenith.`,
+      peValue: costingKw,
+      peSource: 'costing',
+      detail: `CRM commercial capacity is ${crmLabel}; PE costing sheet has ${costingKw} kW.${bandHint} ROI and Zenith use CRM — apply only if CRM itself should change.`,
     },
   ]
 }
