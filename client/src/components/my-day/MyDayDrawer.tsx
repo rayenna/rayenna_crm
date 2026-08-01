@@ -59,7 +59,7 @@ export default function MyDayDrawer() {
   useEffect(() => {
     if (!mounted) return
     axiosInstance
-      .get('/api/projects?limit=200&sortField=createdAt&sortOrder=desc')
+      .get('/api/projects?limit=100&sortBy=creationDate&sortOrder=desc')
       .then((res) => {
         const projects = (res.data?.projects ?? []) as Array<{
           id: string
