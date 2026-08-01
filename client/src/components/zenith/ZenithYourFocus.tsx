@@ -225,6 +225,7 @@ function barWidthPercent(_row: InstallRow, progressPct: number, overdue: boolean
 
 function overdueRowToReminderProject(row: FinanceOverdueRow): ReminderTemplateProject {
   return {
+    projectId: row.projectId,
     customerName: row.customerName,
     customerPhone: row.customerPhone ?? undefined,
     customerEmail: row.customerEmail ?? undefined,

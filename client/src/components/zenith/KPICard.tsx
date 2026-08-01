@@ -87,7 +87,7 @@ export default function KPICard({
       <p className="zenith-kpi-value relative text-lg tabular-nums leading-tight text-[color:var(--text-primary)] sm:text-xl">
         {formatDisplay(item, animated)}
       </p>
-      <p className="mt-1 line-clamp-2 text-[10px] font-medium uppercase leading-tight tracking-wider text-[color:var(--text-muted)]">
+      <p className="mt-1 line-clamp-2 text-[10px] font-semibold uppercase leading-tight tracking-wider text-[color:var(--text-secondary)]">
         {item.label}
       </p>
 

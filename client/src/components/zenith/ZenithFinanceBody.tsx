@@ -52,6 +52,7 @@ import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProject
 import { ZENITH_CHART_HEIGHT_FLOOR, zenithStandardChartHeight } from './zenithChartHeight'
 import { isZenithMobileTabActive } from './zenithMobileTabVisibility'
 import type { ZenithMobileTab } from './zenithMobileNav'
+import DashboardPlanAttentionRow from '../dashboard/DashboardPlanAttentionRow'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
 
@@ -167,6 +168,10 @@ export default function ZenithFinanceBody({
 
   const explorerProjects = (data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]
   const availingLoanProjectsUrl = buildProjectsUrl({ availingLoan: true }, dateFilter)
+  const outstandingProjectsUrl = buildProjectsUrl(
+    { paymentStatus: ['PENDING', 'PARTIAL'] },
+    dateFilter,
+  )
 
   const drill = useCallback(
     (dimension: ZenithChartDrilldownDimension, value: string, opts?: DrilldownOpts) => {
@@ -245,6 +250,24 @@ export default function ZenithFinanceBody({
     })
   }, [explorerProjects, onOpenDrawerListMode, availingLoanProjectsUrl])
 
+  const onOutstandingKpiClick = useCallback(() => {
+    const pending = filterProjectsByChartSlice(explorerProjects, 'payment_status', 'PENDING')
+    const partial = filterProjectsByChartSlice(explorerProjects, 'payment_status', 'PARTIAL')
+    const seen = new Set<string>()
+    const filtered = [...pending, ...partial].filter((p) => {
+      if (seen.has(p.id)) return false
+      seen.add(p.id)
+      return true
+    })
+    onOpenDrawerListMode({
+      filterLabel: 'Outstanding — Pending & Partial',
+      filteredProjects: filtered,
+      listAmountMode: 'deal_value',
+      projectsPageHref: outstandingProjectsUrl,
+      chartResetGroup: exploreChartResetGroup('fin'),
+    })
+  }, [explorerProjects, onOpenDrawerListMode, outstandingProjectsUrl])
+
   if (isLoading) {
     return (
       <div className="px-3 sm:px-5 py-6 space-y-6 max-w-[1600px] mx-auto">
@@ -301,21 +324,38 @@ export default function ZenithFinanceBody({
   return (
     <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-6 space-y-8 pb-24 max-lg:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
       {showOverview ? (
-      <div
-        id="zenith-kpis"
-        className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pb-2 scroll-mt-28"
-      >
-        {kpis.map((k, i) => (
-          <div key={k.key} className="min-w-0">
-            <KPICard
-              item={k}
-              index={i}
-              icon={icons[i] ?? Zap}
-              onClick={k.key === 'loan' ? onAvailingLoanKpiClick : undefined}
+        <>
+          <div
+            id="zenith-kpis"
+            className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pb-2 scroll-mt-28"
+          >
+            {kpis.map((k, i) => (
+              <div key={k.key} className="min-w-0">
+                <KPICard
+                  item={k}
+                  index={i}
+                  icon={icons[i] ?? Zap}
+                  onClick={
+                    k.key === 'loan'
+                      ? onAvailingLoanKpiClick
+                      : k.key === 'out'
+                        ? onOutstandingKpiClick
+                        : undefined
+                  }
+                />
+              </div>
+            ))}
+          </div>
+          <div id="zenith-todays-plan" className="scroll-mt-28">
+            <DashboardPlanAttentionRow
+              tileParams={{
+                selectedFYs: dateFilter.selectedFYs,
+                selectedQuarters: dateFilter.selectedQuarters,
+                selectedMonths: dateFilter.selectedMonths,
+              }}
             />
           </div>
-        ))}
-      </div>
+        </>
       ) : null}
       {showPipeline ? (
       <>

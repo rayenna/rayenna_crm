@@ -53,30 +53,18 @@ export function getZenithMobileNavItems(
 /** First scroll anchor when landing on a mobile tab (desktop ignores tabs). */
 export function zenithMobileTabScrollId(
   tab: ZenithMobileTab,
-  role: UserRole,
-  opts?: { showHitList?: boolean },
+  _role: UserRole,
+  _opts?: { showHitList?: boolean },
 ): string {
-  const showHit =
-    opts?.showHitList ??
-    (role === UserRole.SALES || role === UserRole.MANAGEMENT || role === UserRole.ADMIN)
-
   switch (tab) {
     case 'overview':
-      if (
-        showHit &&
-        (role === UserRole.SALES ||
-          role === UserRole.MANAGEMENT ||
-          role === UserRole.ADMIN)
-      ) {
-        return 'zenith-hit-list'
-      }
       return 'zenith-kpis'
     case 'pipeline':
-      return role === UserRole.FINANCE ? 'zenith-focus' : 'zenith-funnel'
+      return _role === UserRole.FINANCE ? 'zenith-focus' : 'zenith-funnel'
     case 'charts':
       return 'zenith-charts'
     case 'more':
-      if (role === UserRole.FINANCE || role === UserRole.OPERATIONS) {
+      if (_role === UserRole.FINANCE || _role === UserRole.OPERATIONS) {
         return 'zenith-segments'
       }
       return 'zenith-segments'

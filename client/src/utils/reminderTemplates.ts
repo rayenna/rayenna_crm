@@ -1,4 +1,32 @@
 import { format, parseISO } from 'date-fns'
+import type { Customer, Project } from '../types'
+import { parseCustomerStringList } from './customerContactFields'
+import { getCustomerDisplayName } from './customerRecord'
+import { loadBusinessContactsFromCustomer } from './customContacts'
+
+function primaryPhoneFromCustomer(customer: Customer | null | undefined): string {
+  if (!customer) return ''
+  const fromNumbers = parseCustomerStringList(customer.contactNumbers)
+  if (fromNumbers[0]) return fromNumbers[0]
+  const contacts = loadBusinessContactsFromCustomer(customer)
+  for (const c of contacts) {
+    const phone = c.phones.find((p) => p.trim())
+    if (phone) return phone.trim()
+  }
+  return ''
+}
+
+function primaryEmailFromCustomer(customer: Customer | null | undefined): string {
+  if (!customer) return ''
+  const fromEmail = parseCustomerStringList(customer.email)
+  if (fromEmail[0]) return fromEmail[0]
+  const contacts = loadBusinessContactsFromCustomer(customer)
+  for (const c of contacts) {
+    const email = c.emails.find((e) => e.trim())
+    if (email) return email.trim()
+  }
+  return ''
+}
 
 /** Loose shape from Zenith Payment Radar row → reminder copy + wa.me/mailto */
 export type ReminderTemplateProject = Record<string, unknown>
@@ -119,4 +147,70 @@ For any queries, please feel free to reach out to us.
 
 Warm regards,
 ${companyName} Team`
+}
+
+/** Map a CRM Project into reminder template fields (Project Detail / shared drafter). */
+export function projectToReminderTemplate(project: Project): ReminderTemplateProject {
+  const totalReceived =
+    (Number(project.advanceReceived) || 0) +
+    (Number(project.payment1) || 0) +
+    (Number(project.payment2) || 0) +
+    (Number(project.payment3) || 0) +
+    (Number(project.lastPayment) || 0)
+  const order = Number(project.projectCost) || 0
+  const balance =
+    typeof project.balanceAmount === 'number' && Number.isFinite(project.balanceAmount)
+      ? Math.max(0, project.balanceAmount)
+      : Math.max(0, order - totalReceived)
+
+  const displayName = project.customer
+    ? getCustomerDisplayName(project.customer)
+    : ''
+  const phone = primaryPhoneFromCustomer(project.customer)
+  const email = primaryEmailFromCustomer(project.customer)
+
+  return {
+    projectId: project.id,
+    customerName: displayName,
+    customer_name: displayName,
+    customerPhone: phone,
+    customer_phone: phone,
+    customerEmail: email,
+    customer_email: email,
+    amount: balance,
+    balanceAmount: balance,
+    amount_outstanding: balance,
+    projectCost: order,
+    orderValue: order,
+    totalAmountReceived: totalReceived,
+    amountPaid: totalReceived,
+    confirmationDate: project.confirmationDate ?? '',
+    confirmed_date: project.confirmationDate ?? '',
+  }
+}
+
+export function buildPaymentReminderRemark(
+  channel: 'whatsapp' | 'email',
+  project: ReminderTemplateProject,
+): string {
+  const amount = formatINR(getOutstanding(project))
+  const via = channel === 'whatsapp' ? 'WhatsApp' : 'Email'
+  return `Payment reminder drafted/opened via ${via} — outstanding ${amount}. (Client app send; not logged as delivered.)`
+}
+
+/** Whether Project Detail should offer the payment reminder drafter. */
+export function projectAllowsPaymentReminder(project: Project): boolean {
+  const status = project.projectStatus
+  if (
+    status === 'LEAD' ||
+    status === 'SITE_SURVEY' ||
+    status === 'PROPOSAL' ||
+    status === 'LOST'
+  ) {
+    return false
+  }
+  const order = Number(project.projectCost) || 0
+  if (order <= 0) return false
+  const outstanding = getOutstanding(projectToReminderTemplate(project))
+  return outstanding > 0
 }

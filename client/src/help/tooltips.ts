@@ -155,7 +155,13 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.hit-list',
     title: 'Today’s Hit List',
     content:
-      'Up to seven prioritised deals from the same pipeline data as Your pipeline today. Filter customer, stage, and salesperson; click column headers to sort (including Alert, Confirmation, Health). Columns: Sl No. / Prj # (project serial), customer, stage, sales person, deal value, last activity, Alert, confirmation date, Deal Health, Open →. Open → opens Quick Actions (Sales + name in header; Recent remarks above Log activity). On tablet/desktop, a hint may remind you to scroll the table and use Open →; hidden on small phones. Stacked cards on narrow screens.',
+      'Up to seven prioritised deals from the same pipeline data as Your pipeline today. Filter customer, stage, and salesperson; click column headers to sort (including Alert, Confirmation, Health). Columns: Sl No. / Prj # (project serial), customer, stage, sales person, deal value, last activity, Alert, confirmation date, Deal Health, Open →. Open → opens Quick Actions (Sales + name in header; Recent remarks above Log activity). On tablet/desktop, a hint may remind you to scroll the table and use Open →; hidden on small phones. Stacked cards on narrow screens. Today’s plan (above this band) also offers CRM suggestions with + My Day.',
+  },
+  'zenith.todays-plan': {
+    key: 'zenith.todays-plan',
+    title: "Today's plan",
+    content:
+      'Under the KPI band on Zenith Today / KPIs: your My Day snapshot plus Suggested from CRM. On Sales / Admin / Management desktop it sits beside the Hit List. Use Tasks or Open My Day for the full drawer. Sales, Ops, and Admin may see Things needing attention when late-stage panel/inverter brands are missing; Finance sees the plan only.',
   },
   'zenith.quick-drawer-remarks': {
     key: 'zenith.quick-drawer-remarks',
@@ -221,7 +227,7 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.payment-radar-top-overdue',
     title: 'Top overdue (Payment radar)',
     content:
-      'Sl No. / Prj # matches Projects. Click the project name to open the Finance quick drawer on Finance and Management/Admin Zenith (payment context); otherwise opens Project detail. Use Remind for WhatsApp or Email helpers. Filter by salesperson and customer text; payment ageing buckets above filter this table. Latest payments received (beside this table on wide layouts) lists recent receipts with the same name colours; see the shared legend below for Pending / Partial / Fully paid.',
+      'Sl No. / Prj # matches Projects. Click the project name to open the Finance quick drawer on Finance and Management/Admin Zenith (payment context); otherwise opens Project detail. Use Remind for an editable WhatsApp or Email draft (optional project remark when you open it) — your device app sends the message, not Rayenna. Filter by salesperson and customer text; payment ageing buckets above filter this table. Latest payments received (beside this table on wide layouts) lists recent receipts with the same name colours; see the shared legend below for Pending / Partial / Fully paid.',
   },
   'zenith.solar-news': {
     key: 'zenith.solar-news',

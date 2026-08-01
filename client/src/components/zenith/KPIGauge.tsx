@@ -76,7 +76,7 @@ export default function KPIGauge({ totalKW, pipelineKW, targetKW }: Props) {
           fontSize: 10,
           fontWeight: 500,
           letterSpacing: '0.08em',
-          color: 'var(--text-muted)',
+          color: 'var(--text-secondary)',
           textTransform: 'uppercase',
           marginBottom: 4,
         }}

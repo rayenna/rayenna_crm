@@ -65,8 +65,8 @@ export default function TasksTab({
 
             {todayPending.length === 0 && todayDone.length === 0 && (
               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.6 }}>
-                Nothing planned yet. Pin from the Dashboard <strong style={{ color: 'var(--text-secondary)' }}>Today&apos;s plan</strong>,{' '}
-                <strong style={{ color: 'var(--text-secondary)' }}>Things needing attention</strong>, or Zenith{' '}
+                Nothing planned yet. Pin from Zenith <strong style={{ color: 'var(--text-secondary)' }}>Today&apos;s plan</strong>,{' '}
+                <strong style={{ color: 'var(--text-secondary)' }}>Things needing attention</strong>, or{' '}
                 <strong style={{ color: 'var(--text-secondary)' }}>Hit List</strong> with{' '}
                 <strong style={{ color: 'var(--text-secondary)' }}>+ My Day</strong>, or add a task below.
               </p>

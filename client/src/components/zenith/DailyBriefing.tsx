@@ -347,23 +347,17 @@ export default function DailyBriefing({
 
                 {myDaySnapshot.isQuietPersonal && myDaySnapshot.summaryFragments.length === 0 ? (
                   <p className="text-[13px] text-[color:var(--text-primary)] leading-relaxed">
-                    You&apos;re caught up on tasks and reminders. Use Zenith Hit List{' '}
-                    <strong className="font-semibold">+ My Day</strong> to pin follow-ups.
+                    You&apos;re caught up. Use{' '}
+                    <strong className="font-semibold">Today&apos;s plan</strong> on Zenith (or Hit List{' '}
+                    <strong className="font-semibold">+ My Day</strong>) to pin follow-ups.
                   </p>
-                ) : null}
-
-                {!myDaySnapshot.isQuietPersonal && myDaySnapshot.teaserLines.length > 0 ? (
-                  <ul className="mt-1 mb-1 space-y-1.5 pr-1">
-                    {myDaySnapshot.teaserLines.map((line, i) => (
-                      <li
-                        key={`${i}-${line.slice(0, 24)}`}
-                        className="text-[13px] text-[color:var(--text-primary)] leading-snug pl-3 border-l-2 border-[color:var(--accent-gold-muted)]"
-                      >
-                        {line}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
+                ) : (
+                  <p className="text-[13px] text-[color:var(--text-secondary)] leading-relaxed">
+                    Full task list and CRM suggestions live in{' '}
+                    <strong className="text-[color:var(--text-primary)]">Today&apos;s plan</strong> on
+                    Zenith — or open My Day below.
+                  </p>
+                )}
               </>
             ) : null}
           </div>

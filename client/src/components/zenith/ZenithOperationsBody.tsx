@@ -57,6 +57,7 @@ import ZenithLifecycleBrandBarCharts from './ZenithLifecycleBrandBarCharts'
 import { ZENITH_CHART_HEIGHT_FLOOR, zenithStandardChartHeight } from './zenithChartHeight'
 import { isZenithMobileTabActive } from './zenithMobileTabVisibility'
 import type { ZenithMobileTab } from './zenithMobileNav'
+import DashboardPlanAttentionRow from '../dashboard/DashboardPlanAttentionRow'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
 
@@ -356,29 +357,42 @@ export default function ZenithOperationsBody({
   return (
     <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-6 space-y-8 pb-24 max-lg:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
       {showOverview ? (
-      <div
-        id="zenith-kpis"
-        className="grid w-full grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 pb-2 scroll-mt-28"
-      >
-        {kpis.map((k, i) => (
-          <div key={k.key} className="min-w-0">
-            <KPICard
-              item={k}
-              index={i}
-              icon={icons[i] ?? Zap}
-              onClick={
-                k.key === 'pend'
-                  ? onPendingInstallationKpiClick
-                  : k.key === 'done'
-                    ? onCompletedInstallationKpiClick
-                    : k.key === 'cred'
-                      ? onSubsidyCreditedKpiClick
-                      : undefined
-              }
+        <>
+          <div
+            id="zenith-kpis"
+            className="grid w-full grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 pb-2 scroll-mt-28"
+          >
+            {kpis.map((k, i) => (
+              <div key={k.key} className="min-w-0">
+                <KPICard
+                  item={k}
+                  index={i}
+                  icon={icons[i] ?? Zap}
+                  onClick={
+                    k.key === 'pend'
+                      ? onPendingInstallationKpiClick
+                      : k.key === 'done'
+                        ? onCompletedInstallationKpiClick
+                        : k.key === 'cred'
+                          ? onSubsidyCreditedKpiClick
+                          : undefined
+                  }
+                />
+              </div>
+            ))}
+          </div>
+          <div id="zenith-todays-plan" className="scroll-mt-28">
+            <DashboardPlanAttentionRow
+              showLifecycleReminder
+              explorerProjects={explorerProjects}
+              tileParams={{
+                selectedFYs: dateFilter.selectedFYs,
+                selectedQuarters: dateFilter.selectedQuarters,
+                selectedMonths: dateFilter.selectedMonths,
+              }}
             />
           </div>
-        ))}
-      </div>
+        </>
       ) : null}
       {showPipeline ? (
       <>

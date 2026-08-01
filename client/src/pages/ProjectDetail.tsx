@@ -22,6 +22,9 @@ import { canDeleteProject, canEditProject } from '../utils/projectPermissions'
 import { getProjectDetailAccessNotice } from '../utils/projectAccessMessages'
 import ProjectAccessNotice from '../components/projects/ProjectAccessNotice'
 import LifecycleDataQualityBanner from '../components/projects/LifecycleDataQualityBanner'
+import PeSyncStewardBanner from '../components/projects/PeSyncStewardBanner'
+import ReminderModal from '../components/zenith/ReminderModal'
+import HandoffBriefModal from '../components/projects/HandoffBriefModal'
 import { formatCustomerTypeDisplay } from '../utils/customerRecord'
 import { getCustomerTypeBadgeClasses } from '../utils/customerTypeStyles'
 import { getProjectSegmentLabel, getProjectSegmentPillClasses } from '../utils/projectSegment'
@@ -32,6 +35,11 @@ import {
   peSoftGateFindings,
   presentLifecycleDataQualityForViewer,
 } from '../utils/lifecycleDataQuality'
+import {
+  projectAllowsPaymentReminder,
+  projectToReminderTemplate,
+} from '../utils/reminderTemplates'
+import { evaluatePeCapacityDrift } from '../utils/peSyncSteward'
 
 const PROJECT_SERVICE_TYPE_LABELS: Record<string, string> = {
   EPC_PROJECT: 'EPC Project',
@@ -90,20 +98,23 @@ const ProjectDetail = () => {
   const queryClient = useQueryClient()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showPeQualityConfirm, setShowPeQualityConfirm] = useState(false)
+  const [showPaymentReminder, setShowPaymentReminder] = useState(false)
+  const [showHandoffBrief, setShowHandoffBrief] = useState(false)
 
   useModalEscape(showDeleteConfirm, () => setShowDeleteConfirm(false))
+  useModalEscape(showHandoffBrief, () => setShowHandoffBrief(false))
 
   // Escape on read-only detail → Projects list. Overlays (delete confirm, ErrorModal children) register Esc first via capture-phase modal stack.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
-      if (showDeleteConfirm || showPeQualityConfirm) return
+      if (showDeleteConfirm || showPeQualityConfirm || showPaymentReminder || showHandoffBrief) return
       e.preventDefault()
       navigate('/projects')
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [navigate, showDeleteConfirm, showPeQualityConfirm])
+  }, [navigate, showDeleteConfirm, showPeQualityConfirm, showPaymentReminder, showHandoffBrief])
 
   const { data: project, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['project', id],
@@ -162,13 +173,31 @@ const ProjectDetail = () => {
             ? 'draft'
             : 'none'
 
-        return { peStatus, lastUpdated }
+        const costingSystemSizeKw =
+          typeof artifacts.costing?.systemSizeKw === 'number'
+            ? artifacts.costing.systemSizeKw
+            : null
+        const roiSystemSizeKwRaw = artifacts.roi?.result?.inputs?.systemSizeKw
+        const roiSystemSizeKw =
+          typeof roiSystemSizeKwRaw === 'number' ? roiSystemSizeKwRaw : null
+
+        return {
+          peStatus,
+          lastUpdated,
+          costingSystemSizeKw,
+          roiSystemSizeKw,
+        }
       } catch (err: any) {
         // If user has no access or project isn't in Proposal Engine yet, treat as "none"
         if (import.meta.env.DEV) {
           console.warn('Unable to load Proposal Engine summary for project', id, err)
         }
-        return { peStatus: 'none' as const, lastUpdated: undefined as string | undefined }
+        return {
+          peStatus: 'none' as const,
+          lastUpdated: undefined as string | undefined,
+          costingSystemSizeKw: null as number | null,
+          roiSystemSizeKw: null as number | null,
+        }
       }
     },
     staleTime: 60_000,
@@ -200,6 +229,11 @@ const ProjectDetail = () => {
         user,
       })
     : []
+
+  const peCapacityDriftFindings =
+    project && !peSummaryPending
+      ? evaluatePeCapacityDrift(project, peSummary)
+      : []
 
   const openProposalEngine = async () => {
     if (!id) return
@@ -354,6 +388,24 @@ const ProjectDetail = () => {
           },
         ]}
       />
+      {showPaymentReminder && project ? (
+        <ReminderModal
+          project={projectToReminderTemplate(project)}
+          onClose={() => {
+            setShowPaymentReminder(false)
+            void queryClient.invalidateQueries({ queryKey: ['remarks', project.id] })
+          }}
+        />
+      ) : null}
+      {showHandoffBrief && project ? (
+        <HandoffBriefModal
+          project={project}
+          peSummary={peSummaryPending ? undefined : peSummary}
+          openGaps={rawDataQualityFindings.map((f) => f.title)}
+          viewer={user}
+          onClose={() => setShowHandoffBrief(false)}
+        />
+      ) : null}
       {shell(
         <>
           {/* ── Sticky Zenith header ── */}
@@ -383,6 +435,15 @@ const ProjectDetail = () => {
 
               {/* Action buttons */}
               <div className="flex flex-wrap gap-2 sm:items-center">
+                {(hasRole([UserRole.SALES]) || hasRole([UserRole.OPERATIONS]) || hasRole([UserRole.MANAGEMENT]) || hasRole([UserRole.FINANCE]) || hasRole([UserRole.ADMIN])) && (
+                  <button
+                    type="button"
+                    onClick={() => setShowHandoffBrief(true)}
+                    className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-4 py-2.5 text-sm font-semibold text-[color:var(--accent-teal)] shadow-[var(--shadow-card)] transition-colors hover:opacity-95"
+                  >
+                    Handoff brief
+                  </button>
+                )}
                 {(hasRole([UserRole.SALES]) || hasRole([UserRole.OPERATIONS]) || hasRole([UserRole.MANAGEMENT]) || hasRole([UserRole.FINANCE]) || hasRole([UserRole.ADMIN])) &&
                   (project.projectStatus === ProjectStatus.PROPOSAL || project.projectStatus === ProjectStatus.CONFIRMED) && (
                     <button
@@ -429,6 +490,11 @@ const ProjectDetail = () => {
 
           {detailAccessNotice ? <ProjectAccessNotice notice={detailAccessNotice} /> : null}
           <LifecycleDataQualityBanner findings={dataQualityFindings} />
+          <PeSyncStewardBanner
+            project={project}
+            findings={peCapacityDriftFindings}
+            user={user}
+          />
 
           {/* ── Summary card: created date, status pills, financials, PE badge ── */}
           <div className="mb-5 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5">
@@ -968,6 +1034,24 @@ const ProjectDetail = () => {
               )
             })()}
           </dl>
+          {projectAllowsPaymentReminder(project) &&
+            (hasRole([UserRole.FINANCE]) ||
+              hasRole([UserRole.ADMIN]) ||
+              hasRole([UserRole.MANAGEMENT]) ||
+              hasRole([UserRole.SALES])) && (
+              <div className="mt-4 border-t border-[color:var(--border-default)] pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentReminder(true)}
+                  className="inline-flex min-h-[40px] w-full touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-3 py-2 text-sm font-semibold text-[color:var(--accent-teal)] transition-colors hover:opacity-95 sm:w-auto"
+                >
+                  Draft payment reminder
+                </button>
+                <p className="mt-1.5 text-[11px] text-[color:var(--text-muted)]">
+                  Opens WhatsApp or email with an editable draft. Does not send from Rayenna.
+                </p>
+              </div>
+            )}
         </InfoSection>
 
         <div className="min-h-0 min-w-0 md:col-span-2 xl:col-span-1">

@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mail, X } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { useModalEscape } from '../../contexts/ModalEscapeContext'
+import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import {
+  buildPaymentReminderRemark,
   getWhatsAppMessage,
   getEmailSubject,
   getEmailBody,
@@ -28,11 +32,40 @@ export default function ReminderModal({
 }) {
   const [visible, setVisible] = useState(true)
   const [channel, setChannel] = useState<Channel>(null)
+  const [draftBody, setDraftBody] = useState('')
+  const [draftSubject, setDraftSubject] = useState('')
+  const [logRemark, setLogRemark] = useState(true)
+  const [sending, setSending] = useState(false)
 
+  const projectId =
+    typeof project.projectId === 'string' && project.projectId.trim()
+      ? project.projectId.trim()
+      : typeof project.id === 'string' && project.id.trim()
+        ? project.id.trim()
+        : ''
+
+  useModalEscape(visible, () => setVisible(false))
+
+  // Reset only when the project identity changes — parents often pass a fresh mapped object each render.
   useEffect(() => {
     setVisible(true)
     setChannel(null)
-  }, [project])
+    setDraftBody('')
+    setDraftSubject('')
+    setLogRemark(Boolean(projectId))
+    setSending(false)
+  }, [projectId])
+
+  useEffect(() => {
+    if (channel === 'whatsapp') {
+      setDraftBody(getWhatsAppMessage(project))
+    } else if (channel === 'email') {
+      setDraftSubject(getEmailSubject(project))
+      setDraftBody(getEmailBody(project))
+    }
+    // Rebuild templates when channel or project id changes, not on every new project object reference.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: project fields read at channel/id change
+  }, [channel, projectId])
 
   const name =
     (typeof project.customerName === 'string' && project.customerName) ||
@@ -58,28 +91,46 @@ export default function ReminderModal({
 
   const requestClose = () => setVisible(false)
 
-  const handleSend = () => {
-    if (channel === 'whatsapp') {
-      const withCode = waMeDigits(phoneRaw)
-      const message = encodeURIComponent(getWhatsAppMessage(project))
-      if (withCode) {
-        window.open(`https://wa.me/${withCode}?text=${message}`, '_blank', 'noopener,noreferrer')
+  const handleSend = async () => {
+    if (!channel || sending) return
+    setSending(true)
+    try {
+      if (channel === 'whatsapp') {
+        const withCode = waMeDigits(phoneRaw)
+        const message = encodeURIComponent(draftBody || getWhatsAppMessage(project))
+        if (withCode) {
+          window.open(`https://wa.me/${withCode}?text=${message}`, '_blank', 'noopener,noreferrer')
+        } else {
+          window.open(`https://wa.me/?text=${message}`, '_blank', 'noopener,noreferrer')
+        }
       } else {
-        window.open(`https://wa.me/?text=${message}`, '_blank', 'noopener,noreferrer')
+        const subject = encodeURIComponent(draftSubject || getEmailSubject(project))
+        const body = encodeURIComponent(draftBody || getEmailBody(project))
+        const to = emailRaw ? encodeURIComponent(emailRaw) : ''
+        window.open(
+          to ? `mailto:${to}?subject=${subject}&body=${body}` : `mailto:?subject=${subject}&body=${body}`,
+          '_blank',
+          'noopener,noreferrer',
+        )
       }
+
+      if (logRemark && projectId) {
+        try {
+          await axiosInstance.post(`/api/remarks/project/${projectId}`, {
+            remark: buildPaymentReminderRemark(channel, project),
+          })
+          toast.success('Reminder opened and logged on the project')
+        } catch (err: unknown) {
+          toast.error(
+            getFriendlyApiErrorMessage(err) ||
+              'Reminder opened, but could not log a project remark',
+          )
+        }
+      }
+
       requestClose()
-      return
-    }
-    if (channel === 'email') {
-      const subject = encodeURIComponent(getEmailSubject(project))
-      const body = encodeURIComponent(getEmailBody(project))
-      const to = emailRaw ? encodeURIComponent(emailRaw) : ''
-      window.open(
-        to ? `mailto:${to}?subject=${subject}&body=${body}` : `mailto:?subject=${subject}&body=${body}`,
-        '_blank',
-        'noopener,noreferrer',
-      )
-      requestClose()
+    } finally {
+      setSending(false)
     }
   }
 
@@ -126,7 +177,7 @@ export default function ReminderModal({
               className="text-[17px] font-bold text-[color:var(--text-primary)] pr-10"
               style={{ fontFamily: "'Syne', sans-serif" }}
             >
-              Send Payment Reminder
+              Draft payment reminder
             </h2>
             <p className="mt-1 text-[13px] text-[color:var(--text-secondary)]">
               {name}
@@ -154,23 +205,15 @@ export default function ReminderModal({
                       background: 'rgba(37,211,102,0.1)',
                       border: '1px solid rgba(37,211,102,0.3)',
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(37,211,102,0.18)'
-                      e.currentTarget.style.borderColor = 'rgba(37,211,102,0.5)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(37,211,102,0.1)'
-                      e.currentTarget.style.borderColor = 'rgba(37,211,102,0.3)'
-                    }}
                   >
                     <span className="text-2xl leading-none block mb-1" aria-hidden>
-                      💬
+                      WA
                     </span>
                     <span className="text-[14px] font-semibold block" style={{ color: '#25D366' }}>
                       WhatsApp
                     </span>
                     <span className="text-[11px] block mt-1 text-[color:var(--text-muted)]">
-                      Opens WhatsApp with pre-filled message
+                      Edit draft, then open WhatsApp
                     </span>
                   </button>
                   <button
@@ -181,21 +224,13 @@ export default function ReminderModal({
                       background: 'rgba(59,139,255,0.1)',
                       border: '1px solid rgba(59,139,255,0.3)',
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(59,139,255,0.18)'
-                      e.currentTarget.style.borderColor = 'rgba(59,139,255,0.5)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(59,139,255,0.1)'
-                      e.currentTarget.style.borderColor = 'rgba(59,139,255,0.3)'
-                    }}
                   >
                     <Mail className="w-6 h-6 mx-auto mb-1" style={{ color: '#3B8BFF' }} strokeWidth={2} />
                     <span className="text-[14px] font-semibold block" style={{ color: '#3B8BFF' }}>
                       Email
                     </span>
                     <span className="text-[11px] block mt-1 text-[color:var(--text-muted)]">
-                      Opens email client with pre-filled message
+                      Edit draft, then open mail client
                     </span>
                   </button>
                 </div>
@@ -209,26 +244,63 @@ export default function ReminderModal({
                 >
                   ← Change channel
                 </button>
-                <p
-                  className="text-[11px] uppercase tracking-widest mb-2"
+                {channel === 'email' ? (
+                  <>
+                    <label
+                      className="text-[11px] uppercase tracking-widest mb-1.5 block"
+                      style={{ color: 'var(--text-muted)' }}
+                      htmlFor="reminder-subject"
+                    >
+                      Subject
+                    </label>
+                    <input
+                      id="reminder-subject"
+                      value={draftSubject}
+                      onChange={(e) => setDraftSubject(e.target.value)}
+                      className="mb-3 w-full rounded-[10px] px-3 py-2 text-[13px]"
+                      style={{
+                        background: 'var(--bg-input)',
+                        border: '1px solid var(--border-default)',
+                        color: 'var(--text-primary)',
+                      }}
+                    />
+                  </>
+                ) : null}
+                <label
+                  className="text-[11px] uppercase tracking-widest mb-1.5 block"
                   style={{ color: 'var(--text-muted)' }}
+                  htmlFor="reminder-body"
                 >
-                  Message Preview
-                </p>
-                <div
-                  className="rounded-[10px] p-3.5 text-[13px] leading-relaxed whitespace-pre-wrap overflow-y-auto zenith-reminder-preview-scroll"
+                  Message draft
+                </label>
+                <textarea
+                  id="reminder-body"
+                  value={draftBody}
+                  onChange={(e) => setDraftBody(e.target.value)}
+                  rows={10}
+                  className="w-full rounded-[10px] p-3.5 text-[13px] leading-relaxed zenith-reminder-preview-scroll"
                   style={{
                     background: 'var(--bg-input)',
                     border: '1px solid var(--border-default)',
                     color: 'var(--text-secondary)',
                     maxHeight: 240,
+                    resize: 'vertical',
                   }}
-                >
-                  {channel === 'whatsapp' ? getWhatsAppMessage(project) : getEmailBody(project)}
-                </div>
+                />
                 <p className="mt-1.5 text-[11px] italic text-[color:var(--text-muted)]">
-                  You can edit the message after it opens
+                  Opens in your device app — Rayenna does not send the message for you.
                 </p>
+                {projectId ? (
+                  <label className="mt-3 flex items-start gap-2 text-[12px] text-[color:var(--text-secondary)] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      checked={logRemark}
+                      onChange={(e) => setLogRemark(e.target.checked)}
+                    />
+                    <span>Log a project remark that this reminder was drafted/opened</span>
+                  </label>
+                ) : null}
               </>
             )}
 
@@ -250,8 +322,9 @@ export default function ReminderModal({
               {channel ? (
                 <button
                   type="button"
-                  onClick={handleSend}
-                  className="rounded-lg px-5 py-2 text-[14px] font-semibold text-[color:var(--text-inverse)] cursor-pointer transition-opacity border-0"
+                  onClick={() => void handleSend()}
+                  disabled={sending || !draftBody.trim()}
+                  className="rounded-lg px-5 py-2 text-[14px] font-semibold text-[color:var(--text-inverse)] cursor-pointer transition-opacity border-0 disabled:opacity-50"
                   style={{
                     background: channel === 'whatsapp' ? '#25D366' : '#3B8BFF',
                   }}

@@ -24,6 +24,11 @@ import ZenithDrawerPortal from './ZenithDrawerPortal'
 import { clearZenithDrawerBodyLock } from '../../utils/zenithDrawerLifecycle'
 import { toast as showToast } from 'react-hot-toast'
 import { ErrorModal } from '../common/ErrorModal'
+import ReminderModal from './ReminderModal'
+import {
+  projectAllowsPaymentReminder,
+  projectToReminderTemplate,
+} from '../../utils/reminderTemplates'
 import {
   buildStalePaymentDateConfirmMessage,
   isFuturePaymentCollectionDate,
@@ -168,6 +173,7 @@ export default function FinanceQuickDrawer({
   const [paymentAmountInput, setPaymentAmountInput] = useState('')
   const [paymentDateInput, setPaymentDateInput] = useState('')
   const [stalePaymentDateConfirm, setStalePaymentDateConfirm] = useState<string | null>(null)
+  const [showPaymentReminder, setShowPaymentReminder] = useState(false)
   const [narrowViewport, setNarrowViewport] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const openedAtRef = useRef(0)
@@ -194,6 +200,7 @@ export default function FinanceQuickDrawer({
     setNoteText('')
     setPaymentAmountInput('')
     setPaymentDateInput('')
+    setShowPaymentReminder(false)
   }, [isOpen, projectId])
 
   useEffect(() => {
@@ -472,6 +479,21 @@ export default function FinanceQuickDrawer({
                   </div>
                 </div>
 
+                {project && projectAllowsPaymentReminder(project) ? (
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowPaymentReminder(true)}
+                      className="inline-flex min-h-[40px] w-full touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-3 py-2 text-sm font-semibold text-[color:var(--accent-teal)] transition-colors hover:opacity-95"
+                    >
+                      Draft payment reminder
+                    </button>
+                    <p className="mt-1.5 text-[11px] text-[color:var(--text-muted)]">
+                      Editable WhatsApp/email draft. Rayenna does not send it for you.
+                    </p>
+                  </div>
+                ) : null}
+
                 {projectId ? (
                   <div className="mt-5">
                     <ZenithDrawerRemarksPanel projectId={projectId} enabled={isOpen && !!projectId} />
@@ -683,6 +705,17 @@ export default function FinanceQuickDrawer({
           },
         ]}
       />
+
+      {showPaymentReminder && project ? (
+        <ReminderModal
+          project={projectToReminderTemplate(project)}
+          onClose={() => {
+            setShowPaymentReminder(false)
+            void queryClient.invalidateQueries({ queryKey: ['remarks', project.id] })
+            void queryClient.invalidateQueries({ queryKey: [QK, project.id] })
+          }}
+        />
+      ) : null}
     </ZenithDrawerPortal>
   )
 }

@@ -55,9 +55,20 @@ interface PrevPeriod {
 /** Optional; Finance dashboard only — used for loan YoY when present */
 interface ExecutiveOptionalFinancePrev {
   availingLoanCount?: number
+  totalOutstanding?: number
 }
 
-/** Build 6 KPIs for Sales / Management / Admin Zenith strip (includes Availing Loan, same as Finance tile). */
+function sumOutstandingFromPaymentBuckets(data: Record<string, unknown>): number {
+  const rows = (data?.projectsByPaymentStatus ?? []) as Array<{
+    status?: string
+    outstanding?: number
+  }>
+  return rows
+    .filter((r) => r.status === 'PENDING' || r.status === 'PARTIAL')
+    .reduce((s, r) => s + (Number(r.outstanding) || 0), 0)
+}
+
+/** Build KPIs for Sales / Management / Admin Zenith strip (incl. Availing Loan + Outstanding). */
 export function buildExecutiveZenithKpis(
   role: UserRole,
   data: Record<string, unknown>,
@@ -131,6 +142,17 @@ export function buildExecutiveZenithKpis(
   const showLostKpi = role === UserRole.ADMIN || role === UserRole.MANAGEMENT
   const lost = showLostKpi ? Number(data?.lostProjectsCount ?? 0) : 0
 
+  const outstandingFromBuckets = sumOutstandingFromPaymentBuckets(data)
+  const outstandingApi = data?.totalOutstanding
+  const outstanding =
+    outstandingApi != null && outstandingApi !== ''
+      ? Number(outstandingApi)
+      : outstandingFromBuckets
+  const prevOutstanding = (data?.previousYearFinanceKpis as ExecutiveOptionalFinancePrev | null | undefined)
+    ?.totalOutstanding
+  const outstandingChangePct =
+    singleFYSelected && prevOutstanding != null ? pctChange(outstanding, prevOutstanding) : null
+
   const base: ZenithKpiItem[] = [
     {
       key: 'capacity',
@@ -197,6 +219,15 @@ export function buildExecutiveZenithKpis(
       sparkline: fySparkline(rows, () => lost),
     })
   }
+
+  base.push({
+    key: 'outstanding',
+    label: 'Outstanding',
+    value: outstanding,
+    format: 'currency',
+    changePct: outstandingChangePct,
+    sparkline: fySparkline(rows, () => outstanding),
+  })
 
   return base
 }

@@ -63,7 +63,7 @@ export default function DashboardMyDayPlanCard({
           <button
             type="button"
             onClick={() => openTab('tasks')}
-            className="min-h-[32px] rounded-lg border border-[color:var(--border-default)] px-2.5 py-1 text-[11px] font-bold text-[color:var(--text-secondary)] transition-colors hover:border-[color:var(--accent-gold-border)] hover:text-[color:var(--text-primary)]"
+            className="min-h-[40px] touch-manipulation rounded-lg border border-[color:var(--border-default)] px-2.5 py-1.5 text-[11px] font-bold text-[color:var(--text-secondary)] transition-colors hover:border-[color:var(--accent-gold-border)] hover:text-[color:var(--text-primary)]"
           >
             Tasks
           </button>
@@ -100,13 +100,16 @@ export default function DashboardMyDayPlanCard({
 
         {showEmptyCta ? (
           <p className="mt-1 text-[11px] leading-snug text-[color:var(--text-secondary)]">
-            Pin from Zenith <strong className="text-[color:var(--text-primary)]">Hit List</strong> with{' '}
+            Pin from <strong className="text-[color:var(--text-primary)]">Suggested from CRM</strong> below
+            or Zenith <strong className="text-[color:var(--text-primary)]">Hit List</strong> with{' '}
             <strong className="text-[color:var(--text-primary)]">+ My Day</strong>.
           </p>
         ) : null}
 
         {!loading && snap && snap.isQuietPersonal && snap.summaryFragments.length === 0 && !showEmptyCta ? (
-          <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">Caught up — add from Hit List.</p>
+          <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">
+            Caught up — add from suggestions or Hit List.
+          </p>
         ) : null}
 
         {!loading && snap && snap.teaserLines.length > 0 ? (

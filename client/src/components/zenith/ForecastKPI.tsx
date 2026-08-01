@@ -17,9 +17,12 @@ type TabKey = 'source' | 'sales' | 'segment' | 'stage'
 export default function ForecastKPI({
   projects,
   onOpenForecastList,
+  compactSidebar = false,
 }: {
   projects: ZenithExplorerProject[] | null | undefined
   onOpenForecastList: (args: { filterLabel: string; filteredProjects: ZenithExplorerProject[] }) => void
+  /** Narrower card when placed beside the executive KPI grid on lg+. */
+  compactSidebar?: boolean
 }) {
   const forecast = useMemo(() => computeForecast(projects), [projects])
   const [activeTab, setActiveTab] = useState<TabKey>('source')
@@ -76,10 +79,15 @@ export default function ForecastKPI({
 
   return (
     <div
-      className="w-full box-border rounded-[14px] p-3.5 sm:p-4 flex flex-col shrink-0 h-[300px] sm:h-[306px] border border-[color:var(--accent-teal-border)] bg-[color:var(--bg-card)] shadow-[0_1px_0_color-mix(in_srgb,#ffffff_55%,transparent)]"
+      className={[
+        'box-border flex w-full shrink-0 flex-col rounded-[14px] border border-[color:var(--accent-teal-border)] bg-[color:var(--bg-card)] p-3.5 shadow-[0_1px_0_color-mix(in_srgb,#ffffff_55%,transparent)] sm:p-4',
+        compactSidebar
+          ? 'h-auto min-h-[280px] lg:h-full lg:min-h-[300px]'
+          : 'h-[300px] sm:h-[306px]',
+      ].join(' ')}
       style={{ fontFamily: 'DM Sans, sans-serif' }}
     >
-      <div className="text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-muted)] shrink-0">
+      <div className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[color:var(--text-secondary)]">
         Revenue forecast
       </div>
       <div

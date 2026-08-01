@@ -11,7 +11,7 @@ import {
   Cell,
   Legend,
 } from 'recharts'
-import { XCircle, Zap, TrendingUp, IndianRupee, Target, Percent, Landmark } from 'lucide-react'
+import { XCircle, Zap, TrendingUp, IndianRupee, Target, Percent, Landmark, Wallet } from 'lucide-react'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
 import { ProjectStatus, UserRole } from '../../types'
@@ -67,8 +67,19 @@ import ZenithLifecycleBrandBarCharts from './ZenithLifecycleBrandBarCharts'
 import { ZENITH_CHART_HEIGHT_FLOOR, zenithStandardChartHeight } from './zenithChartHeight'
 import { isZenithMobileTabActive } from './zenithMobileTabVisibility'
 import type { ZenithMobileTab } from './zenithMobileNav'
+import DashboardPlanAttentionRow from '../dashboard/DashboardPlanAttentionRow'
 
-const icons = [Zap, TrendingUp, IndianRupee, Target, Percent, Landmark, XCircle]
+const icons = [Zap, TrendingUp, IndianRupee, Target, Percent, Landmark, XCircle, Wallet]
+
+const KPI_ICON_BY_KEY: Record<string, (typeof icons)[number]> = {
+  pipeline: TrendingUp,
+  revenue: IndianRupee,
+  profit: Target,
+  conversion: Percent,
+  loan: Landmark,
+  lost: XCircle,
+  outstanding: Wallet,
+}
 const DEFAULT_MONTHLY_TARGET_KW = 50
 const SALES_MONTHLY_TARGET_KW = 25
 
@@ -234,7 +245,10 @@ export default function ZenithExecutiveBody({
   const explorerProjects = (data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]
   const availingLoanProjectsUrl = buildProjectsUrl({ availingLoan: true }, dateFilter)
   const lostProjectsUrl = buildProjectsUrl({ status: [ProjectStatus.LOST] }, dateFilter)
-  const showLostKpi = role === UserRole.ADMIN || role === UserRole.MANAGEMENT
+  const outstandingProjectsUrl = buildProjectsUrl(
+    { paymentStatus: ['PENDING', 'PARTIAL'] },
+    dateFilter,
+  )
 
   const drill = useCallback(
     (dimension: ZenithChartDrilldownDimension, value: string, opts?: DrilldownOpts) => {
@@ -340,24 +354,42 @@ export default function ZenithExecutiveBody({
     })
   }, [explorerProjects, onOpenDrawerListMode, lostProjectsUrl])
 
-  /** Match Hit List height to KPI grid on lg+. Row must use items-start (not stretch) so the grid keeps its natural height; if the row stretches the grid to the Hit List, offsetHeight equals the list and the widget never shrinks. */
-  const kpiBandRef = useRef<HTMLDivElement>(null)
-  const [kpiBandHeightPx, setKpiBandHeightPx] = useState(0)
+  const onOutstandingKpiClick = useCallback(() => {
+    const pending = filterProjectsByChartSlice(explorerProjects, 'payment_status', 'PENDING')
+    const partial = filterProjectsByChartSlice(explorerProjects, 'payment_status', 'PARTIAL')
+    const seen = new Set<string>()
+    const filtered = [...pending, ...partial].filter((p) => {
+      if (seen.has(p.id)) return false
+      seen.add(p.id)
+      return true
+    })
+    onOpenDrawerListMode({
+      filterLabel: 'Outstanding — Pending & Partial',
+      filteredProjects: filtered,
+      listAmountMode: 'deal_value',
+      projectsPageHref: outstandingProjectsUrl,
+      chartResetGroup: exploreChartResetGroup('exec'),
+    })
+  }, [explorerProjects, onOpenDrawerListMode, outstandingProjectsUrl])
+
+  /** Match Hit List height to Today's plan column on lg+ (side-by-side action row). */
+  const planBandRef = useRef<HTMLDivElement>(null)
+  const [planBandHeightPx, setPlanBandHeightPx] = useState(0)
 
   useLayoutEffect(() => {
     if (!showHitList) {
-      setKpiBandHeightPx(0)
+      setPlanBandHeightPx(0)
       return
     }
-    const el = kpiBandRef.current
+    const el = planBandRef.current
     if (!el) return
     const mq = window.matchMedia('(min-width: 1024px)')
     const sync = () => {
       if (!mq.matches) {
-        setKpiBandHeightPx(0)
+        setPlanBandHeightPx(0)
         return
       }
-      setKpiBandHeightPx(el.offsetHeight)
+      setPlanBandHeightPx(el.offsetHeight)
     }
     sync()
     const ro = new ResizeObserver(sync)
@@ -511,67 +543,43 @@ export default function ZenithExecutiveBody({
   return (
     <div className="zenith-exec-main mx-auto px-3 sm:px-5 py-5 lg:py-6 pb-24 max-lg:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] space-y-5 lg:space-y-6">
       {showOverview ? (
-        showHitList ? (
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-4 xl:gap-5 scroll-mt-28">
-          {focusLoading ? (
-            <div
-              id="zenith-hit-list"
-              className="zenith-skeleton h-36 w-full shrink-0 rounded-xl lg:min-h-[11rem] lg:w-[27rem] lg:max-w-[min(27rem,calc(100vw-3rem))] lg:shrink-0"
-              style={kpiBandHeightPx > 0 ? { height: kpiBandHeightPx } : undefined}
-              aria-hidden
-            />
-          ) : (
-            <div
-              id="zenith-hit-list"
-              className="scroll-mt-28 flex w-full shrink-0 flex-col lg:min-h-0 lg:overflow-hidden lg:w-[27rem] lg:max-w-[min(27rem,calc(100vw-3rem))] lg:shrink-0"
-              style={kpiBandHeightPx > 0 ? { height: kpiBandHeightPx } : undefined}
-            >
-              <HitList
-                hitList={hitListResult.hitList}
-                totalAtRisk={hitListResult.totalAtRisk}
-                allClear={hitListResult.allClear}
-                role={role}
-                onOpenDrawer={(p) => onOpenProjectQuickDrawer(p)}
-              />
-            </div>
-          )}
+        <>
+          {/* A. KPIs beside Revenue Forecast on lg+; stacked on mobile (KPIs first) */}
           <div
             id="zenith-kpis"
-            ref={kpiBandRef}
-            className={`grid min-w-0 flex-1 grid-cols-2 ${
-              showLostKpi
-                ? 'sm:grid-cols-4 lg:grid-cols-4'
-                : 'sm:grid-cols-3 lg:grid-cols-3'
-            } gap-2.5 sm:gap-3 scroll-mt-28 content-start lg:pb-0`}
+            className="flex flex-col gap-3 scroll-mt-28 lg:flex-row lg:items-stretch lg:gap-3"
           >
-            {kpis.map((k, i) => (
-              <div key={k.key} className="min-w-0 h-full">
-                {k.key === 'capacity' ? (
-                  <KPIGauge
-                    totalKW={totalCapacityKW}
-                    pipelineKW={gaugePipelineKW}
-                    targetKW={targetKW}
-                  />
-                ) : (
-                  <KPICard
-                    item={k}
-                    index={i}
-                    icon={icons[i] ?? Zap}
-                    onClick={
-                      k.key === 'loan'
-                        ? onAvailingLoanKpiClick
-                        : k.key === 'lost'
-                          ? onLostProjectsKpiClick
-                          : undefined
-                    }
-                  />
-                )}
-              </div>
-            ))}
-            <div
-              className={`col-span-2 ${showLostKpi ? 'sm:col-span-4' : 'sm:col-span-3'} min-w-0 shrink-0`}
-            >
+            <div className="grid min-w-0 flex-1 content-start grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 xl:grid-cols-4">
+              {kpis.map((k, i) => (
+                <div key={k.key} className="min-w-0 h-full">
+                  {k.key === 'capacity' ? (
+                    <KPIGauge
+                      totalKW={totalCapacityKW}
+                      pipelineKW={gaugePipelineKW}
+                      targetKW={targetKW}
+                    />
+                  ) : (
+                    <KPICard
+                      item={k}
+                      index={i}
+                      icon={KPI_ICON_BY_KEY[k.key] ?? icons[i] ?? Zap}
+                      onClick={
+                        k.key === 'loan'
+                          ? onAvailingLoanKpiClick
+                          : k.key === 'lost'
+                            ? onLostProjectsKpiClick
+                            : k.key === 'outstanding'
+                              ? onOutstandingKpiClick
+                              : undefined
+                      }
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="min-w-0 w-full shrink-0 lg:w-[min(22rem,36%)] lg:max-w-[24rem]">
               <ForecastKPI
+                compactSidebar
                 projects={explorerProjects}
                 onOpenForecastList={(args) =>
                   onOpenDrawerListMode({
@@ -582,49 +590,49 @@ export default function ZenithExecutiveBody({
               />
             </div>
           </div>
-        </div>
-      ) : (
-        <div
-          id="zenith-kpis"
-          className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-2.5 sm:gap-3 scroll-mt-28"
-        >
-          {kpis.map((k, i) => (
-            <div key={k.key} className="min-w-0 h-full">
-              {k.key === 'capacity' ? (
-                <KPIGauge
-                  totalKW={totalCapacityKW}
-                  pipelineKW={gaugePipelineKW}
-                  targetKW={targetKW}
-                />
-              ) : (
-                <KPICard
-                  item={k}
-                  index={i}
-                  icon={icons[i] ?? Zap}
-                  onClick={
-                    k.key === 'loan'
-                      ? onAvailingLoanKpiClick
-                      : k.key === 'lost'
-                        ? onLostProjectsKpiClick
-                        : undefined
-                  }
-                />
-              )}
+
+          {/* B. Today's plan + Hit List — equal width on lg+ */}
+          <div className="grid grid-cols-1 gap-4 scroll-mt-28 lg:grid-cols-2 lg:items-start lg:gap-4">
+            <div
+              id="zenith-todays-plan"
+              ref={planBandRef}
+              className="min-w-0 w-full scroll-mt-28"
+            >
+              <DashboardPlanAttentionRow
+                stackAttention
+                showLifecycleReminder={role === UserRole.SALES || role === UserRole.ADMIN}
+                explorerProjects={explorerProjects}
+                tileParams={{
+                  selectedFYs: dateFilter.selectedFYs,
+                  selectedQuarters: dateFilter.selectedQuarters,
+                  selectedMonths: dateFilter.selectedMonths,
+                }}
+              />
             </div>
-          ))}
-          <div className="col-span-2 sm:col-span-3 min-w-0 shrink-0">
-            <ForecastKPI
-              projects={explorerProjects}
-              onOpenForecastList={(args) =>
-                onOpenDrawerListMode({
-                  ...args,
-                  projectsPageHref: buildForecastOpenDealsProjectsHref(dateFilter),
-                })
-              }
-            />
+            {focusLoading ? (
+              <div
+                id="zenith-hit-list"
+                className="zenith-skeleton h-36 w-full min-w-0 rounded-xl"
+                style={planBandHeightPx > 0 ? { height: planBandHeightPx } : undefined}
+                aria-hidden
+              />
+            ) : (
+              <div
+                id="zenith-hit-list"
+                className="scroll-mt-28 flex min-w-0 w-full flex-col lg:min-h-0 lg:overflow-hidden"
+                style={planBandHeightPx > 0 ? { height: planBandHeightPx } : undefined}
+              >
+                <HitList
+                  hitList={hitListResult.hitList}
+                  totalAtRisk={hitListResult.totalAtRisk}
+                  allClear={hitListResult.allClear}
+                  role={role}
+                  onOpenDrawer={(p) => onOpenProjectQuickDrawer(p)}
+                />
+              </div>
+            )}
           </div>
-        </div>
-      )
+        </>
       ) : null}
 
       {showOverview &&
