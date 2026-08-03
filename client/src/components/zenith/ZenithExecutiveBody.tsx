@@ -1,4 +1,5 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   BarChart,
@@ -56,7 +57,7 @@ import {
   exploreChartResetGroup,
   funnelChartResetGroup,
 } from '../../utils/zenithChartResetGroup'
-import { buildProjectsUrl, type PeDashboardBucket } from '../../utils/dashboardTileLinks'
+import { buildProjectsUrl, buildLostDealsUrl, type PeDashboardBucket } from '../../utils/dashboardTileLinks'
 import {
   buildForecastOpenDealsProjectsHref,
   buildZenithDrawerListProjectsHref,
@@ -197,6 +198,7 @@ export default function ZenithExecutiveBody({
   mobileTab?: ZenithMobileTab | null
 }) {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const chartColors = useChartColors()
   const fyRows = (data?.projectValueProfitByFY ?? []) as {
     fy: string
@@ -244,7 +246,7 @@ export default function ZenithExecutiveBody({
 
   const explorerProjects = (data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]
   const availingLoanProjectsUrl = buildProjectsUrl({ availingLoan: true }, dateFilter)
-  const lostProjectsUrl = buildProjectsUrl({ status: [ProjectStatus.LOST] }, dateFilter)
+  const lostDealsPageUrl = buildLostDealsUrl(dateFilter)
   const outstandingProjectsUrl = buildProjectsUrl(
     { paymentStatus: ['PENDING', 'PARTIAL'] },
     dateFilter,
@@ -344,15 +346,8 @@ export default function ZenithExecutiveBody({
   }, [explorerProjects, onOpenDrawerListMode, availingLoanProjectsUrl])
 
   const onLostProjectsKpiClick = useCallback(() => {
-    const filtered = explorerProjects.filter((p) => p.projectStatus === ProjectStatus.LOST)
-    onOpenDrawerListMode({
-      filterLabel: 'Lost projects',
-      filteredProjects: filtered,
-      listAmountMode: 'deal_value',
-      projectsPageHref: lostProjectsUrl,
-      chartResetGroup: exploreChartResetGroup('exec'),
-    })
-  }, [explorerProjects, onOpenDrawerListMode, lostProjectsUrl])
+    navigate(lostDealsPageUrl)
+  }, [navigate, lostDealsPageUrl])
 
   const onOutstandingKpiClick = useCallback(() => {
     const pending = filterProjectsByChartSlice(explorerProjects, 'payment_status', 'PENDING')

@@ -2047,6 +2047,161 @@ router.get('/management', authenticate, async (req: Request, res) => {
   }
 });
 
+/**
+ * Lost Deals analytics — Admin & Management only.
+ * Money uses projectCost on LOST rows; never merges into pipeline/revenue helpers.
+ * Win-rate denominator = won (Confirmed / Installation / Completed / Subsidy Credited) + lost in the same FY/date scope.
+ */
+router.get('/lost-deals', authenticate, async (req: Request, res: Response) => {
+  try {
+    const role = req.user?.role;
+    if (role !== UserRole.ADMIN && role !== UserRole.MANAGEMENT) {
+      return res.status(403).json({
+        error: 'Access denied. Lost Deals analytics is available only to Admin and Management.',
+      });
+    }
+
+    const fyFilters = req.query.fy
+      ? ((Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[])
+      : [];
+    const monthFilters = req.query.month
+      ? ((Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[])
+      : [];
+    const quarterFilters = req.query.quarter
+      ? ((Array.isArray(req.query.quarter) ? req.query.quarter : [req.query.quarter]) as string[])
+      : [];
+
+    const where = applyDateFilters({}, fyFilters, monthFilters, quarterFilters);
+
+    const wonStatuses: ProjectStatus[] = [
+      ProjectStatus.CONFIRMED,
+      ProjectStatus.UNDER_INSTALLATION,
+      ProjectStatus.COMPLETED,
+      ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
+    ];
+
+    const [lostProjects, wonAgg] = await Promise.all([
+      prisma.project.findMany({
+        where: { ...where, projectStatus: ProjectStatus.LOST },
+        select: {
+          id: true,
+          slNo: true,
+          year: true,
+          projectCost: true,
+          lostReason: true,
+          lostToCompetitionReason: true,
+          lostOtherReason: true,
+          lostDate: true,
+          confirmationDate: true,
+          salespersonId: true,
+          salesperson: { select: { id: true, name: true } },
+          customer: { select: { customerName: true } },
+        },
+        orderBy: [{ updatedAt: 'desc' }],
+      }),
+      prisma.project.aggregate({
+        where: { ...where, projectStatus: { in: wonStatuses } },
+        _count: { _all: true },
+        _sum: { projectCost: true },
+      }),
+    ]);
+
+    const lostCount = lostProjects.length;
+    const lostValue = lostProjects.reduce((s, p) => s + (Number(p.projectCost) || 0), 0);
+    const wonCount = wonAgg._count._all;
+    const wonValue = Number(wonAgg._sum.projectCost) || 0;
+    const denomCount = wonCount + lostCount;
+    const denomValue = wonValue + lostValue;
+    const winRateCount = denomCount > 0 ? (wonCount / denomCount) * 100 : null;
+    const winRateValue = denomValue > 0 ? (wonValue / denomValue) * 100 : null;
+    const uncategorizedCount = lostProjects.filter((p) => !p.lostReason).length;
+
+    const reasonMap = new Map<string, { count: number; value: number }>();
+    const competitionMap = new Map<string, { count: number; value: number }>();
+    const salesMap = new Map<
+      string,
+      { id: string | null; name: string; count: number; value: number }
+    >();
+    const fyMap = new Map<string, { count: number; value: number }>();
+
+    for (const p of lostProjects) {
+      const value = Number(p.projectCost) || 0;
+      const reasonKey = p.lostReason ?? 'UNCATEGORIZED';
+      const r = reasonMap.get(reasonKey) ?? { count: 0, value: 0 };
+      r.count += 1;
+      r.value += value;
+      reasonMap.set(reasonKey, r);
+
+      if (p.lostReason === 'LOST_TO_COMPETITION') {
+        const sub = p.lostToCompetitionReason ?? 'UNCATEGORIZED';
+        const c = competitionMap.get(sub) ?? { count: 0, value: 0 };
+        c.count += 1;
+        c.value += value;
+        competitionMap.set(sub, c);
+      }
+
+      const spId = p.salespersonId ?? '';
+      const spName = p.salesperson?.name?.trim() || 'Unassigned';
+      const spKey = spId || '__unassigned__';
+      const s = salesMap.get(spKey) ?? { id: p.salespersonId, name: spName, count: 0, value: 0 };
+      s.count += 1;
+      s.value += value;
+      salesMap.set(spKey, s);
+
+      const fy = (p.year && String(p.year).trim()) || 'Unknown';
+      const f = fyMap.get(fy) ?? { count: 0, value: 0 };
+      f.count += 1;
+      f.value += value;
+      fyMap.set(fy, f);
+    }
+
+    const byReason = Array.from(reasonMap.entries())
+      .map(([reason, v]) => ({ reason, count: v.count, value: v.value }))
+      .sort((a, b) => b.value - a.value);
+
+    const byCompetitionSubtype = Array.from(competitionMap.entries())
+      .map(([subtype, v]) => ({ subtype, count: v.count, value: v.value }))
+      .sort((a, b) => b.value - a.value);
+
+    const bySalesperson = Array.from(salesMap.values()).sort((a, b) => b.value - a.value);
+
+    const byFy = Array.from(fyMap.entries())
+      .map(([fy, v]) => ({ fy, count: v.count, value: v.value }))
+      .sort((a, b) => String(a.fy).localeCompare(String(b.fy)));
+
+    res.json({
+      summary: {
+        lostCount,
+        lostValue,
+        wonCount,
+        wonValue,
+        winRateCount,
+        winRateValue,
+        uncategorizedCount,
+      },
+      byReason,
+      byCompetitionSubtype,
+      bySalesperson,
+      byFy,
+      projects: lostProjects.map((p) => ({
+        id: p.id,
+        slNo: p.slNo,
+        customerName: p.customer?.customerName ?? null,
+        salespersonName: p.salesperson?.name ?? null,
+        year: p.year,
+        projectCost: p.projectCost,
+        lostReason: p.lostReason,
+        lostToCompetitionReason: p.lostToCompetitionReason,
+        lostOtherReason: p.lostOtherReason,
+        lostDate: p.lostDate?.toISOString() ?? null,
+        confirmationDate: p.confirmationDate?.toISOString() ?? null,
+      })),
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Proposal Engine status dashboard summary
 // Accessible only to Sales (own projects), Management, and Admin.
 router.get('/proposal-engine-status', authenticate, async (req: Request, res: Response) => {

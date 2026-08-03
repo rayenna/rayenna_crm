@@ -25,6 +25,7 @@ const ProjectForm = lazy(() => import('./pages/ProjectForm'))
 const Users = lazy(() => import('./pages/Users'))
 const AuditSecurity = lazy(() => import('./pages/AuditSecurity'))
 const TallyExport = lazy(() => import('./pages/TallyExport'))
+const LostDeals = lazy(() => import('./pages/LostDeals'))
 const About = lazy(() => import('./pages/About'))
 const ChangePassword = lazy(() => import('./pages/ChangePassword'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
@@ -220,6 +221,14 @@ function App() {
               element={
                 <ErrorBoundary>
                   <Suspense fallback={<PageLoader />}><TallyExport /></Suspense>
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="lost-deals"
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}><LostDeals /></Suspense>
                 </ErrorBoundary>
               }
             />

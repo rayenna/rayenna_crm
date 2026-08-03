@@ -68,3 +68,17 @@ export function buildProjectsUrl(
   const qs = search.toString()
   return qs ? `/projects?${qs}` : '/projects'
 }
+
+/** Build /lost-deals URL preserving Zenith/dashboard FY · Quarter · Month filters. */
+export function buildLostDealsUrl(dashboardFilters: {
+  selectedFYs: string[]
+  selectedQuarters: string[]
+  selectedMonths: string[]
+}): string {
+  const search = new URLSearchParams()
+  dashboardFilters.selectedFYs.forEach((fy) => search.append('fy', fy))
+  dashboardFilters.selectedQuarters.forEach((q) => search.append('quarter', q))
+  dashboardFilters.selectedMonths.forEach((m) => search.append('month', m))
+  const qs = search.toString()
+  return qs ? `/lost-deals?${qs}` : '/lost-deals'
+}

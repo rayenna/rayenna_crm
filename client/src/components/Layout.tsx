@@ -77,6 +77,7 @@ const Layout = () => {
     { name: 'Dashboard (Old)', path: '/dashboard', roles: dashboardNavRoles },
     { name: 'Solar Hub', path: '/solar-hub', roles: [UserRole.ADMIN, UserRole.OPERATIONS, UserRole.MANAGEMENT] },
     { name: 'Tally Export', path: '/tally-export', roles: [UserRole.ADMIN, UserRole.FINANCE] },
+    { name: 'Lost Deals', path: '/lost-deals', roles: [UserRole.ADMIN, UserRole.MANAGEMENT] },
     { name: 'Users', path: '/users', roles: [UserRole.ADMIN] },
     { name: 'Audit & Security', path: '/audit-security', roles: [UserRole.ADMIN] },
   ]
@@ -667,6 +668,7 @@ const Layout = () => {
           location.pathname.startsWith('/about') ||
           location.pathname.startsWith('/help') ||
           location.pathname.startsWith('/tally-export') ||
+          location.pathname.startsWith('/lost-deals') ||
           location.pathname.startsWith('/support-tickets') ||
           location.pathname.startsWith('/solar-hub') ||
           location.pathname.startsWith('/change-password') ||
