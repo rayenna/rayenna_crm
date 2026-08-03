@@ -89,6 +89,19 @@ function competitionDisplayLabel(subtype: string): string {
   return lostToCompetitionLabel(subtype) || subtype
 }
 
+/** Compact Y-axis labels — full wording stays in legend + tooltip. */
+function competitionChartShortLabel(subtype: string): string {
+  const short: Record<string, string> = {
+    LOST_DUE_TO_PRICE: 'Price',
+    LOST_DUE_TO_FEATURES: 'Features',
+    LOST_DUE_TO_TIMELINE: 'Timeline',
+    LOST_DUE_TO_BRAND_OR_WARRANTY: 'Brand',
+    LOST_DUE_TO_RELATIONSHIP_OTHER: 'Relationship',
+    UNCATEGORIZED: 'Uncategorized',
+  }
+  return short[subtype] || competitionDisplayLabel(subtype)
+}
+
 function formatShortDate(iso: string | null): string {
   if (!iso) return '—'
   const d = new Date(iso)
@@ -236,6 +249,28 @@ function PieInrTooltip({
   )
 }
 
+function CompetitionTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean
+  payload?: Array<{ value?: unknown; payload?: { fullName?: string; count?: number } }>
+}) {
+  if (!active || !payload?.length) return null
+  const item = payload[0]
+  const v = Number(item?.value)
+  const fullName = item?.payload?.fullName
+  const count = item?.payload?.count
+  return (
+    <div style={ZENITH_CHART_CUSTOM_TOOLTIP_SHELL}>
+      <div style={{ color: 'var(--chart-tooltip-fg)', fontSize: 13, fontWeight: 500 }}>
+        {fullName || 'Competition'}: {Number.isFinite(v) ? formatInr(v) : '—'}
+        {count != null ? ` · ${count} deal${count === 1 ? '' : 's'}` : ''}
+      </div>
+    </div>
+  )
+}
+
 const LostDeals = () => {
   const { hasRole } = useAuth()
   const chartColors = useChartColors()
@@ -348,12 +383,27 @@ const LostDeals = () => {
   const competitionChartData = useMemo(
     () =>
       (data?.byCompetitionSubtype ?? []).map((r) => ({
-        name: competitionDisplayLabel(r.subtype),
+        name: competitionChartShortLabel(r.subtype),
+        fullName: competitionDisplayLabel(r.subtype),
+        subtype: r.subtype,
         value: r.value,
         count: r.count,
       })),
     [data?.byCompetitionSubtype],
   )
+
+  const competitionDealCount = useMemo(
+    () => competitionChartData.reduce((s, r) => s + r.count, 0),
+    [competitionChartData],
+  )
+
+  const competitionLostValue = useMemo(
+    () => competitionChartData.reduce((s, r) => s + r.value, 0),
+    [competitionChartData],
+  )
+
+  const competitionReasonCount =
+    data?.byReason?.find((r) => r.reason === 'LOST_TO_COMPETITION')?.count ?? 0
 
   const salesChartData = useMemo(
     () =>
@@ -594,31 +644,66 @@ const LostDeals = () => {
 
             <ChartPanel
               title="Competition subtypes"
-              subtitle="Only deals tagged Lost to Competition"
+              subtitle={
+                competitionDealCount > 0
+                  ? `${competitionDealCount} deal${competitionDealCount === 1 ? '' : 's'} · ${formatInr(competitionLostValue)} — breakdown of Lost to Competition`
+                  : competitionReasonCount > 0
+                    ? 'Lost to Competition deals are missing subtype tags'
+                    : 'Only deals tagged Lost to Competition'
+              }
             >
               {competitionChartData.length === 0 ? (
-                <div className="flex h-[220px] items-center justify-center text-sm text-[color:var(--text-muted)]">
-                  No competition-tagged losses yet
+                <div className="flex h-[220px] items-center justify-center px-4 text-center text-sm text-[color:var(--text-muted)]">
+                  {competitionReasonCount > 0
+                    ? 'Competition deals found, but no competition subtype was set on edit.'
+                    : 'No competition-tagged losses yet'}
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart
-                    data={competitionChartData}
-                    layout="vertical"
-                    margin={{ top: 4, right: 12, left: 4, bottom: 4 }}
+                <>
+                  <ResponsiveContainer
+                    width="100%"
+                    height={Math.max(200, competitionChartData.length * 48 + 24)}
                   >
-                    <CartesianGrid stroke={chartColors.grid} strokeDasharray="3 3" horizontal={false} />
-                    <XAxis type="number" tick={{ fill: chartColors.axisText, fontSize: 11 }} />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      width={120}
-                      tick={{ fill: chartColors.axisText, fontSize: 10 }}
-                    />
-                    <Tooltip content={<InrTooltip />} />
-                    <Bar dataKey="value" fill={chartColors.red} radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                    <BarChart
+                      data={competitionChartData}
+                      layout="vertical"
+                      margin={{ top: 4, right: 16, left: 4, bottom: 4 }}
+                    >
+                      <CartesianGrid
+                        stroke={chartColors.grid}
+                        strokeDasharray="3 3"
+                        horizontal={false}
+                      />
+                      <XAxis
+                        type="number"
+                        tick={{ fill: chartColors.axisText, fontSize: 11 }}
+                        tickFormatter={(v) =>
+                          Number(v) >= 1e5
+                            ? `₹${(Number(v) / 1e5).toFixed(1)}L`
+                            : `₹${Math.round(Number(v) / 1e3)}k`
+                        }
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        width={88}
+                        tick={{ fill: chartColors.axisText, fontSize: 12, fontWeight: 600 }}
+                      />
+                      <Tooltip content={<CompetitionTooltip />} />
+                      <Bar dataKey="value" fill={chartColors.red} radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <ul className="mt-1 max-h-36 space-y-1 overflow-y-auto text-xs text-[color:var(--text-secondary)]">
+                    {competitionChartData.map((r) => (
+                      <li key={r.subtype} className="flex items-center justify-between gap-2">
+                        <span className="min-w-0 truncate">{r.fullName}</span>
+                        <span className="shrink-0 tabular-nums">
+                          {r.count} · {formatInr(r.value)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
               )}
             </ChartPanel>
 

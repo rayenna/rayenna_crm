@@ -8,6 +8,7 @@ import {
   PaymentStatus,
   Prisma,
   InstallationStatus,
+  LostReason,
 } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
@@ -2133,7 +2134,7 @@ router.get('/lost-deals', authenticate, async (req: Request, res: Response) => {
       r.value += value;
       reasonMap.set(reasonKey, r);
 
-      if (p.lostReason === 'LOST_TO_COMPETITION') {
+      if (p.lostReason === LostReason.LOST_TO_COMPETITION) {
         const sub = p.lostToCompetitionReason ?? 'UNCATEGORIZED';
         const c = competitionMap.get(sub) ?? { count: 0, value: 0 };
         c.count += 1;
