@@ -546,7 +546,9 @@ const ProjectDetail = () => {
                       <p className="text-sm font-semibold text-[color:var(--text-primary)]">₹{project.totalProjectCost.toLocaleString('en-IN')}</p>
                     </div>
                   )}
-                  {project.grossProfit != null && project.grossProfit !== undefined && (
+                  {project.projectStatus !== ProjectStatus.LOST &&
+                    project.grossProfit != null &&
+                    project.grossProfit !== undefined && (
                     <div className="sm:text-right">
                       <p className="text-[11px] uppercase tracking-wide text-[color:var(--text-muted)]">Gross Profit</p>
                       <p className={`text-sm font-semibold ${project.grossProfit >= 0 ? 'text-[color:var(--accent-teal)]' : 'text-[color:var(--accent-red)]'}`}>
@@ -725,16 +727,20 @@ const ProjectDetail = () => {
             <DetailRow label="Gross Profit" valueClassName="font-semibold">
               <span
                 className={
-                  project.grossProfit !== null && project.grossProfit !== undefined
+                  project.projectStatus === ProjectStatus.LOST
+                    ? 'font-medium text-[color:var(--text-muted)]'
+                    : project.grossProfit !== null && project.grossProfit !== undefined
                     ? project.grossProfit >= 0
                       ? 'text-[color:var(--accent-teal)]'
                       : 'text-[color:var(--accent-red)]'
                     : 'font-medium text-[color:var(--text-muted)]'
                 }
               >
-                {project.grossProfit !== null && project.grossProfit !== undefined
-                  ? `₹${project.grossProfit.toLocaleString('en-IN')}`
-                  : 'Not calculated'}
+                {project.projectStatus === ProjectStatus.LOST
+                  ? 'Not applicable'
+                  : project.grossProfit !== null && project.grossProfit !== undefined
+                    ? `₹${project.grossProfit.toLocaleString('en-IN')}`
+                    : 'Not calculated'}
               </span>
             </DetailRow>
             <DetailRow label="Availing Loan / Financing?" valueClassName="font-medium">
@@ -748,7 +754,9 @@ const ProjectDetail = () => {
             <DetailRow label="Profitability" valueClassName="font-semibold">
               <span
                 className={
-                  project.profitability !== null && project.profitability !== undefined
+                  project.projectStatus === ProjectStatus.LOST
+                    ? 'font-medium text-[color:var(--text-muted)]'
+                    : project.profitability !== null && project.profitability !== undefined
                     ? project.profitability > 10
                       ? 'text-[color:var(--accent-teal)]'
                       : project.profitability > 0
@@ -757,9 +765,11 @@ const ProjectDetail = () => {
                     : 'font-medium text-[color:var(--text-muted)]'
                 }
               >
-                {project.profitability !== null && project.profitability !== undefined
-                  ? `${project.profitability.toFixed(2)}%`
-                  : 'Not calculated'}
+                {project.projectStatus === ProjectStatus.LOST
+                  ? 'Not applicable'
+                  : project.profitability !== null && project.profitability !== undefined
+                    ? `${project.profitability.toFixed(2)}%`
+                    : 'Not calculated'}
               </span>
             </DetailRow>
             {project.finalProfit != null && project.finalProfit !== undefined && !!project.finalProfit && (

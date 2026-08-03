@@ -341,9 +341,6 @@ const ProjectForm = () => {
       const today = new Date().toISOString().split('T')[0];
       setValue('lostDate', today);
     }
-    if (projectStatus === ProjectStatus.LOST) {
-      setValue('totalProjectCost', 0);
-    }
   }, [projectStatus, setValue, watch])
 
   // Clear leadSourceDetails when leadSource changes to a value that doesn't need details
@@ -766,7 +763,6 @@ const ProjectForm = () => {
         toast.error('Order Value is required and must be greater than 0 for Lost projects');
         return;
       }
-      data.totalProjectCost = 0;
     }
     
     // Validate Order Value is required for PROPOSAL stage and onwards (LOST handled separately above)

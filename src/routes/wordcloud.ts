@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { UserRole } from '@prisma/client';
+import { ProjectStatus, UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
 
@@ -36,6 +36,7 @@ router.get('/wordcloud', authenticate, async (req: Request, res: Response) => {
 
     const where: any = {
       profitability: { not: null },
+      projectStatus: { not: ProjectStatus.LOST },
       // customerId is a required field (String, not String?), so it can never be null
       // We don't need to filter for it - all projects have a customerId
     };

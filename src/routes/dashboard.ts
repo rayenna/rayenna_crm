@@ -922,6 +922,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
     const profitabilityData = await prisma.project.findMany({
       where: {
         ...where,
+        projectStatus: { not: ProjectStatus.LOST },
         profitability: { not: null },
         // customerId is a required field, so it can never be null - no need to filter
       },
@@ -1532,7 +1533,7 @@ router.get('/finance', authenticate, async (req: Request, res) => {
         _count: { id: true },
       }),
       prisma.project.findMany({
-        where: { ...where, profitability: { not: null } },
+        where: { ...where, projectStatus: { not: ProjectStatus.LOST }, profitability: { not: null } },
         select: {
           id: true,
           profitability: true,
@@ -1843,7 +1844,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
         where: { ...where, projectStatus: { not: ProjectStatus.LOST }, availingLoan: true },
       }),
       prisma.project.findMany({
-        where: { ...where, profitability: { not: null } },
+        where: { ...where, projectStatus: { not: ProjectStatus.LOST }, profitability: { not: null } },
         include: {
           customer: {
             select: { firstName: true, customerName: true },

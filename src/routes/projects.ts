@@ -484,12 +484,28 @@ router.get('/:id', authenticate, async (req: Request, res) => {
       }
     }
 
-    // Always verify and recalculate grossProfit and profitability if we have the required values
+    // Always verify and recalculate grossProfit and profitability if we have the required values.
+    // Lost deals keep order value on projectCost for analysis, but must never carry win-book profit metrics.
     let needsUpdate = false;
     const updateData: any = {};
 
-    // Recalculate grossProfit if we have projectCost and totalProjectCost
-    if (project.projectCost !== null && project.totalProjectCost !== null) {
+    if (project.projectStatus === ProjectStatus.LOST) {
+      if (project.grossProfit !== null) {
+        updateData.grossProfit = null;
+        project.grossProfit = null;
+        needsUpdate = true;
+      }
+      if (project.profitability !== null) {
+        updateData.profitability = null;
+        project.profitability = null;
+        needsUpdate = true;
+      }
+      if (project.expectedProfit !== null) {
+        updateData.expectedProfit = null;
+        project.expectedProfit = null;
+        needsUpdate = true;
+      }
+    } else if (project.projectCost !== null && project.totalProjectCost !== null) {
       const expectedGrossProfit = calculateGrossProfit(project.projectCost, project.totalProjectCost);
       
       // If grossProfit is null or doesn't match expected value, recalculate
