@@ -2098,7 +2098,7 @@ router.get('/lost-deals', authenticate, async (req: Request, res: Response) => {
           salesperson: { select: { id: true, name: true } },
           customer: { select: { customerName: true } },
         },
-        orderBy: [{ updatedAt: 'desc' }],
+        orderBy: [{ slNo: 'asc' }],
       }),
       prisma.project.aggregate({
         where: { ...where, projectStatus: { in: wonStatuses } },

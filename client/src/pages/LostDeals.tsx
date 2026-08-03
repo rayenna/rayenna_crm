@@ -96,6 +96,100 @@ function formatShortDate(iso: string | null): string {
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+type LostProjectRow = LostDealsResponse['projects'][number]
+
+type LostTableSortKey =
+  | 'slNo'
+  | 'customerName'
+  | 'salespersonName'
+  | 'year'
+  | 'projectCost'
+  | 'lostReason'
+  | 'lostDate'
+
+const SORT_BTN =
+  'group flex min-h-[2rem] w-full min-w-0 flex-nowrap items-center gap-1.5 overflow-visible rounded-md px-0.5 py-1 text-left transition-colors hover:bg-[color:var(--bg-table-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] focus-visible:ring-offset-1 focus-visible:ring-offset-[color:var(--bg-page)]'
+const SORT_LABEL =
+  'min-w-0 flex-1 basis-0 whitespace-nowrap text-left text-[11px] font-bold uppercase leading-snug tracking-wide text-[color:var(--text-secondary)]'
+
+function LostSortGlyph({ active }: { active: boolean }) {
+  const box = active
+    ? 'border-[color:var(--accent-gold-border)] bg-[color:color-mix(in srgb,var(--accent-gold) 18%, transparent)] text-[color:var(--accent-gold)]'
+    : 'border-[color:var(--border-default)] bg-[color:var(--bg-surface)] text-[color:var(--text-muted)] group-hover:border-[color:var(--accent-gold-border)] group-hover:text-[color:var(--accent-gold)]'
+  return (
+    <span
+      className={`inline-flex size-5 shrink-0 select-none items-center justify-center rounded border transition-colors sm:size-6 ${box}`}
+      aria-hidden
+    >
+      <svg
+        className="block size-[12px] shrink-0 text-current opacity-95 sm:size-[14px]"
+        viewBox="0 0 24 24"
+        width={14}
+        height={14}
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        stroke="currentColor"
+        strokeWidth={2.25}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M8 10l4-4 4 4M8 14l4 4 4-4" />
+      </svg>
+    </span>
+  )
+}
+
+function compareLostRows(
+  a: LostProjectRow,
+  b: LostProjectRow,
+  sortKey: LostTableSortKey,
+  sortOrder: 'asc' | 'desc',
+): number {
+  const dir = sortOrder === 'asc' ? 1 : -1
+  const emptyLast = (empty: boolean) => (empty ? 1 : -1)
+
+  switch (sortKey) {
+    case 'slNo': {
+      const av = a.slNo
+      const bv = b.slNo
+      if (av == null && bv == null) return 0
+      if (av == null) return emptyLast(true) * dir
+      if (bv == null) return emptyLast(false) * dir
+      return (av - bv) * dir
+    }
+    case 'projectCost': {
+      return ((Number(a.projectCost) || 0) - (Number(b.projectCost) || 0)) * dir
+    }
+    case 'lostDate': {
+      const at = a.lostDate ? Date.parse(a.lostDate) : NaN
+      const bt = b.lostDate ? Date.parse(b.lostDate) : NaN
+      const aOk = Number.isFinite(at)
+      const bOk = Number.isFinite(bt)
+      if (!aOk && !bOk) return 0
+      if (!aOk) return emptyLast(true) * dir
+      if (!bOk) return emptyLast(false) * dir
+      return (at - bt) * dir
+    }
+    case 'lostReason': {
+      const as = a.lostReason ? reasonDisplayLabel(a.lostReason) : 'Uncategorized'
+      const bs = b.lostReason ? reasonDisplayLabel(b.lostReason) : 'Uncategorized'
+      return as.localeCompare(bs, undefined, { sensitivity: 'base' }) * dir
+    }
+    case 'customerName':
+    case 'salespersonName':
+    case 'year': {
+      const as = String(a[sortKey] ?? '').trim()
+      const bs = String(b[sortKey] ?? '').trim()
+      if (!as && !bs) return 0
+      if (!as) return emptyLast(true) * dir
+      if (!bs) return emptyLast(false) * dir
+      return as.localeCompare(bs, undefined, { sensitivity: 'base', numeric: true }) * dir
+    }
+    default:
+      return 0
+  }
+}
+
 function readListParam(params: URLSearchParams, key: string): string[] {
   return params.getAll(key).filter(Boolean)
 }
@@ -147,6 +241,8 @@ const LostDeals = () => {
   const chartColors = useChartColors()
   const [searchParams, setSearchParams] = useSearchParams()
   const [uncategorizedOnly, setUncategorizedOnly] = useState(false)
+  const [sortKey, setSortKey] = useState<LostTableSortKey>('slNo')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
 
   const selectedFYs = useMemo(() => readListParam(searchParams, 'fy'), [searchParams])
   const selectedQuarters = useMemo(() => readListParam(searchParams, 'quarter'), [searchParams])
@@ -280,10 +376,26 @@ const LostDeals = () => {
   )
 
   const tableProjects = useMemo(() => {
-    const rows = data?.projects ?? []
-    if (!uncategorizedOnly) return rows
-    return rows.filter((p) => !p.lostReason)
-  }, [data?.projects, uncategorizedOnly])
+    const rows = [...(data?.projects ?? [])]
+    const filtered = uncategorizedOnly ? rows.filter((p) => !p.lostReason) : rows
+    filtered.sort((a, b) => compareLostRows(a, b, sortKey, sortOrder))
+    return filtered
+  }, [data?.projects, uncategorizedOnly, sortKey, sortOrder])
+
+  const handleColumnSort = (key: LostTableSortKey) => {
+    if (sortKey === key) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+    setSortKey(key)
+    // Serial # and dates feel natural ascending first; value descending first.
+    setSortOrder(key === 'projectCost' ? 'desc' : 'asc')
+  }
+
+  const headerAriaSort = (key: LostTableSortKey): 'ascending' | 'descending' | 'none' => {
+    if (sortKey !== key) return 'none'
+    return sortOrder === 'asc' ? 'ascending' : 'descending'
+  }
 
   if (!canAccess) {
     return shell(
@@ -588,14 +700,35 @@ const LostDeals = () => {
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[color:var(--border-default)] text-[11px] uppercase tracking-wide text-[color:var(--text-muted)]">
-                    <th className="px-2 py-2 font-medium">#</th>
-                    <th className="px-2 py-2 font-medium">Customer</th>
-                    <th className="px-2 py-2 font-medium">Sales</th>
-                    <th className="px-2 py-2 font-medium">FY</th>
-                    <th className="px-2 py-2 font-medium text-right">Value</th>
-                    <th className="px-2 py-2 font-medium">Reason</th>
-                    <th className="px-2 py-2 font-medium">Lost date</th>
+                  <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] text-[11px] uppercase tracking-wide text-[color:var(--text-muted)]">
+                    {(
+                      [
+                        { key: 'slNo', label: '#', align: 'left' },
+                        { key: 'customerName', label: 'Customer', align: 'left' },
+                        { key: 'salespersonName', label: 'Sales', align: 'left' },
+                        { key: 'year', label: 'FY', align: 'left' },
+                        { key: 'projectCost', label: 'Value', align: 'right' },
+                        { key: 'lostReason', label: 'Reason', align: 'left' },
+                        { key: 'lostDate', label: 'Lost date', align: 'left' },
+                      ] as const
+                    ).map((col) => (
+                      <th
+                        key={col.key}
+                        scope="col"
+                        className={`px-2 py-2 font-medium ${col.align === 'right' ? 'text-right' : ''}`}
+                        aria-sort={headerAriaSort(col.key)}
+                      >
+                        <button
+                          type="button"
+                          className={`${SORT_BTN} ${col.align === 'right' ? 'justify-end' : ''}`}
+                          onClick={() => handleColumnSort(col.key)}
+                          title={`Sort by ${col.label}`}
+                        >
+                          <span className={SORT_LABEL}>{col.label}</span>
+                          <LostSortGlyph active={sortKey === col.key} />
+                        </button>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
