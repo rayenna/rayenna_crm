@@ -52,6 +52,15 @@ const PROJECT_SERVICE_TYPE_LABELS: Record<string, string> = {
   OTHER_SERVICES: 'Other Services',
 }
 
+/** Lost deals aren't in the default Projects list — Admin/Mgmt return to Lost Deals analytics. */
+function projectDetailBackPath(
+  status: ProjectStatus | string | null | undefined,
+  canOpenLostDeals: boolean,
+): string {
+  if (status === ProjectStatus.LOST && canOpenLostDeals) return '/lost-deals'
+  return '/projects'
+}
+
 /** Responsive label/value row: stacked on phones, two columns from sm (tablet+). */
 function DetailRow({ label, children, valueClassName = '' }: { label: string; children: ReactNode; valueClassName?: string }) {
   return (
@@ -97,6 +106,7 @@ const ProjectDetail = () => {
   const { user, hasRole } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const canOpenLostDeals = hasRole([UserRole.ADMIN, UserRole.MANAGEMENT])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showPeQualityConfirm, setShowPeQualityConfirm] = useState(false)
   const [showPaymentReminder, setShowPaymentReminder] = useState(false)
@@ -104,18 +114,6 @@ const ProjectDetail = () => {
 
   useModalEscape(showDeleteConfirm, () => setShowDeleteConfirm(false))
   useModalEscape(showHandoffBrief, () => setShowHandoffBrief(false))
-
-  // Escape on read-only detail → Projects list. Overlays (delete confirm, ErrorModal children) register Esc first via capture-phase modal stack.
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      if (showDeleteConfirm || showPeQualityConfirm || showPaymentReminder || showHandoffBrief) return
-      e.preventDefault()
-      navigate('/projects')
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [navigate, showDeleteConfirm, showPeQualityConfirm, showPaymentReminder, showHandoffBrief])
 
   const { data: project, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['project', id],
@@ -125,6 +123,20 @@ const ProjectDetail = () => {
     },
     retry: 1,
   })
+
+  const backPath = projectDetailBackPath(project?.projectStatus, canOpenLostDeals)
+
+  // Escape on read-only detail → list (Lost → Lost Deals for Admin/Mgmt; otherwise Projects).
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (showDeleteConfirm || showPeQualityConfirm || showPaymentReminder || showHandoffBrief) return
+      e.preventDefault()
+      navigate(backPath)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [navigate, backPath, showDeleteConfirm, showPeQualityConfirm, showPaymentReminder, showHandoffBrief])
 
   // Lightweight Proposal Engine summary for this project (status + last updated)
   const {
@@ -304,7 +316,7 @@ const ProjectDetail = () => {
       // Invalidate projects list and dashboard so tiles/charts stay in sync
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      navigate('/projects')
+      navigate(backPath)
     },
     onError: (error: unknown) => {
       toast.error(getFriendlyApiErrorMessage(error))
@@ -487,7 +499,7 @@ const ProjectDetail = () => {
                 )}
                 <button
                   type="button"
-                  onClick={() => navigate('/projects')}
+                  onClick={() => navigate(backPath)}
                   className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2.5 text-sm font-semibold text-[color:var(--text-primary)] shadow-[var(--shadow-card)] transition-colors hover:bg-[color:var(--bg-card-hover)]"
                 >
                   <ArrowLeft className="h-4 w-4" aria-hidden />
