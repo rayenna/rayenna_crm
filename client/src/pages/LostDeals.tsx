@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -124,6 +124,9 @@ const SORT_BTN =
   'group flex min-h-[2rem] w-full min-w-0 flex-nowrap items-center gap-1.5 overflow-visible rounded-md px-0.5 py-1 text-left transition-colors hover:bg-[color:var(--bg-table-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] focus-visible:ring-offset-1 focus-visible:ring-offset-[color:var(--bg-page)]'
 const SORT_LABEL =
   'min-w-0 flex-1 basis-0 whitespace-nowrap text-left text-[12px] font-extrabold uppercase leading-snug tracking-wide text-[color:var(--text-primary)] sm:text-[13px] sm:tracking-wider'
+
+/** Match Projects list page size. */
+const LOST_TABLE_PAGE_SIZE = 25
 
 function LostSortGlyph({ active }: { active: boolean }) {
   const box = active
@@ -278,6 +281,7 @@ const LostDeals = () => {
   const [uncategorizedOnly, setUncategorizedOnly] = useState(false)
   const [sortKey, setSortKey] = useState<LostTableSortKey>('slNo')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [page, setPage] = useState(1)
 
   const selectedFYs = useMemo(() => readListParam(searchParams, 'fy'), [searchParams])
   const selectedQuarters = useMemo(() => readListParam(searchParams, 'quarter'), [searchParams])
@@ -432,14 +436,38 @@ const LostDeals = () => {
     return filtered
   }, [data?.projects, uncategorizedOnly, sortKey, sortOrder])
 
+  const totalPages = Math.max(1, Math.ceil(tableProjects.length / LOST_TABLE_PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+
+  const pagedProjects = useMemo(() => {
+    const start = (safePage - 1) * LOST_TABLE_PAGE_SIZE
+    return tableProjects.slice(start, start + LOST_TABLE_PAGE_SIZE)
+  }, [tableProjects, safePage])
+
+  // Keep page in range when filters/sort shrink the list.
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages)
+  }, [page, totalPages])
+
+  // Reset to first page when FY filters, uncategorized chip, or sort identity changes.
+  const filterResetKey = `${selectedFYs.join('|')}|${selectedQuarters.join('|')}|${selectedMonths.join('|')}|${uncategorizedOnly}|${sortKey}|${sortOrder}`
+  const prevFilterResetKey = useRef(filterResetKey)
+  useEffect(() => {
+    if (prevFilterResetKey.current === filterResetKey) return
+    prevFilterResetKey.current = filterResetKey
+    setPage(1)
+  }, [filterResetKey])
+
   const handleColumnSort = (key: LostTableSortKey) => {
     if (sortKey === key) {
       setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+      setPage(1)
       return
     }
     setSortKey(key)
     // Serial # and dates feel natural ascending first; value descending first.
     setSortOrder(key === 'projectCost' ? 'desc' : 'asc')
+    setPage(1)
   }
 
   const headerAriaSort = (key: LostTableSortKey): 'ascending' | 'descending' | 'none' => {
@@ -762,7 +790,10 @@ const LostDeals = () => {
                 {uncategorizedOnly ? (
                   <button
                     type="button"
-                    onClick={() => setUncategorizedOnly(false)}
+                    onClick={() => {
+                      setUncategorizedOnly(false)
+                      setPage(1)
+                    }}
                     className="rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-elevated,var(--bg-card))] px-2.5 py-1 text-xs font-semibold text-[color:var(--text-primary)]"
                   >
                     Uncategorized ×
@@ -770,14 +801,17 @@ const LostDeals = () => {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setUncategorizedOnly(true)}
+                    onClick={() => {
+                      setUncategorizedOnly(true)
+                      setPage(1)
+                    }}
                     className="rounded-lg border border-dashed border-[color:var(--border-default)] px-2.5 py-1 text-xs font-medium text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]"
                   >
                     Filter: uncategorized
                   </button>
                 )}
                 <span className="text-xs text-[color:var(--text-muted)]">
-                  {tableProjects.length} shown
+                  Showing {pagedProjects.length} of {tableProjects.length}
                 </span>
               </div>
             </div>
@@ -827,7 +861,7 @@ const LostDeals = () => {
                       </td>
                     </tr>
                   ) : (
-                    tableProjects.map((p) => (
+                    pagedProjects.map((p) => (
                       <tr
                         key={p.id}
                         className="border-b border-[color:var(--border-default)]/60 hover:bg-[color:var(--bg-hover,transparent)]"
@@ -870,6 +904,34 @@ const LostDeals = () => {
                 </tbody>
               </table>
             </div>
+
+            {tableProjects.length > 0 ? (
+              <div className="mt-5 flex flex-col items-center justify-between gap-4 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] px-4 py-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:flex-row sm:px-5">
+                <div className="text-sm text-[color:var(--text-secondary)]">
+                  Showing page {safePage} of {totalPages} ({tableProjects.length} total)
+                </div>
+                {totalPages > 1 ? (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={safePage === 1}
+                      className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-extrabold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={safePage >= totalPages}
+                      className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-extrabold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      Next
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </>
       )}
