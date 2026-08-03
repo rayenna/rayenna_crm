@@ -110,12 +110,12 @@ type LostTableSortKey =
 const SORT_BTN =
   'group flex min-h-[2rem] w-full min-w-0 flex-nowrap items-center gap-1.5 overflow-visible rounded-md px-0.5 py-1 text-left transition-colors hover:bg-[color:var(--bg-table-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] focus-visible:ring-offset-1 focus-visible:ring-offset-[color:var(--bg-page)]'
 const SORT_LABEL =
-  'min-w-0 flex-1 basis-0 whitespace-nowrap text-left text-[11px] font-bold uppercase leading-snug tracking-wide text-[color:var(--text-secondary)]'
+  'min-w-0 flex-1 basis-0 whitespace-nowrap text-left text-[12px] font-extrabold uppercase leading-snug tracking-wide text-[color:var(--text-primary)] sm:text-[13px] sm:tracking-wider'
 
 function LostSortGlyph({ active }: { active: boolean }) {
   const box = active
     ? 'border-[color:var(--accent-gold-border)] bg-[color:color-mix(in srgb,var(--accent-gold) 18%, transparent)] text-[color:var(--accent-gold)]'
-    : 'border-[color:var(--border-default)] bg-[color:var(--bg-surface)] text-[color:var(--text-muted)] group-hover:border-[color:var(--accent-gold-border)] group-hover:text-[color:var(--accent-gold)]'
+    : 'border-[color:var(--border-default)] bg-[color:var(--bg-surface)] text-[color:var(--text-secondary)] group-hover:border-[color:var(--accent-gold-border)] group-hover:text-[color:var(--accent-gold)]'
   return (
     <span
       className={`inline-flex size-5 shrink-0 select-none items-center justify-center rounded border transition-colors sm:size-6 ${box}`}
@@ -700,7 +700,7 @@ const LostDeals = () => {
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] text-[11px] uppercase tracking-wide text-[color:var(--text-muted)]">
+                  <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] shadow-sm">
                     {(
                       [
                         { key: 'slNo', label: '#', align: 'left' },
