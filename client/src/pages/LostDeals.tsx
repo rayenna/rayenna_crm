@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -152,16 +152,43 @@ const LostDeals = () => {
   const selectedQuarters = useMemo(() => readListParam(searchParams, 'quarter'), [searchParams])
   const selectedMonths = useMemo(() => readListParam(searchParams, 'month'), [searchParams])
 
-  const setFilterParam = (key: 'fy' | 'quarter' | 'month', values: string[]) => {
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev)
-        next.delete(key)
-        values.forEach((v) => next.append(key, v))
-        return next
-      },
-      { replace: true },
-    )
+  // React Router's setSearchParams(fn) uses the render-closed searchParams, not chained
+  // pending updates — so Clear FY (which calls onFY/Quarter/MonthChange in one click) must
+  // apply sequential mutations against a ref or only the last call wins.
+  const searchParamsRef = useRef(searchParams)
+  searchParamsRef.current = searchParams
+
+  const updateSearchParams = (mutate: (params: URLSearchParams) => void) => {
+    const next = new URLSearchParams(searchParamsRef.current)
+    mutate(next)
+    searchParamsRef.current = next
+    setSearchParams(next, { replace: true })
+  }
+
+  const onFYChange = (fys: string[]) => {
+    updateSearchParams((params) => {
+      params.delete('fy')
+      fys.forEach((v) => params.append('fy', v))
+      // Quarter/month only apply with exactly one FY (same rule as DashboardFilters).
+      if (fys.length !== 1) {
+        params.delete('quarter')
+        params.delete('month')
+      }
+    })
+  }
+
+  const onQuarterChange = (quarters: string[]) => {
+    updateSearchParams((params) => {
+      params.delete('quarter')
+      quarters.forEach((v) => params.append('quarter', v))
+    })
+  }
+
+  const onMonthChange = (months: string[]) => {
+    updateSearchParams((params) => {
+      params.delete('month')
+      months.forEach((v) => params.append('month', v))
+    })
   }
 
   const canAccess = hasRole([UserRole.ADMIN, UserRole.MANAGEMENT])
@@ -327,9 +354,9 @@ const LostDeals = () => {
           selectedFYs={selectedFYs}
           selectedQuarters={selectedQuarters}
           selectedMonths={selectedMonths}
-          onFYChange={(fys) => setFilterParam('fy', fys)}
-          onQuarterChange={(quarters) => setFilterParam('quarter', quarters)}
-          onMonthChange={(months) => setFilterParam('month', months)}
+          onFYChange={onFYChange}
+          onQuarterChange={onQuarterChange}
+          onMonthChange={onMonthChange}
         />
       </div>
 

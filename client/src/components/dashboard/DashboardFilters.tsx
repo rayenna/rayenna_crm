@@ -245,6 +245,7 @@ const DashboardFilters = ({
                   ))}
                   {selectedFYs.length > 0 && (
                     <button
+                      type="button"
                       onClick={clearFYFilter}
                       className={
                         variant === 'zenith'
@@ -337,6 +338,7 @@ const DashboardFilters = ({
               ))}
               {selectedQuarters.length > 0 && (
                 <button
+                  type="button"
                   onClick={clearQuarterFilter}
                   className={
                     variant === 'zenith'
@@ -438,6 +440,7 @@ const DashboardFilters = ({
               ))}
               {selectedMonths.length > 0 && (
                 <button
+                  type="button"
                   onClick={clearMonthFilter}
                   className={
                     variant === 'zenith'
