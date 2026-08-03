@@ -30,6 +30,7 @@ import { getCustomerTypeBadgeClasses } from '../utils/customerTypeStyles'
 import { getProjectSegmentLabel, getProjectSegmentPillClasses } from '../utils/projectSegment'
 import ProjectMyDayTasks from '../components/projects/ProjectMyDayTasks'
 import { formatLeadSourceDisplay } from '../utils/leadSourceDisplay'
+import { lostReasonLabel, lostToCompetitionLabel } from '../utils/lostReasonLabels'
 import {
   evaluateLifecycleDataQuality,
   peSoftGateFindings,
@@ -213,6 +214,14 @@ const ProjectDetail = () => {
   const canEdit = canEditProject(project, user)
   const canDelete = canDeleteProject(project, user)
   const detailAccessNotice = getProjectDetailAccessNotice(project, user)
+  /** Prefer projectCost; fall back to legacy lostRevenue for pre-backfill Lost rows. */
+  const displayOrderValue = (() => {
+    if (!project) return null
+    const cost = project.projectCost != null ? Number(project.projectCost) : 0
+    if (cost > 0) return cost
+    const legacy = project.lostRevenue != null ? Number(project.lostRevenue) : 0
+    return legacy > 0 ? legacy : null
+  })()
 
   const rawDataQualityFindings = project
     ? evaluateLifecycleDataQuality(
@@ -525,10 +534,10 @@ const ProjectDetail = () => {
 
               <div className="flex flex-col items-start gap-3 sm:items-end sm:gap-4">
                 <div className="flex flex-wrap gap-5 sm:gap-8 sm:justify-end">
-                  {project.projectCost != null && project.projectCost > 0 && (
+                  {displayOrderValue != null && (
                     <div className="sm:text-right">
                       <p className="text-[11px] uppercase tracking-wide text-[color:var(--text-muted)]">Order Value</p>
-                      <p className="text-sm font-bold text-[color:var(--accent-teal)]">₹{project.projectCost.toLocaleString('en-IN')}</p>
+                      <p className="text-sm font-bold text-[color:var(--accent-teal)]">₹{displayOrderValue.toLocaleString('en-IN')}</p>
                     </div>
                   )}
                   {project.totalProjectCost != null && project.totalProjectCost > 0 && (
@@ -703,9 +712,9 @@ const ProjectDetail = () => {
                 {project.roofType}
               </DetailRow>
             )}
-            {!!project.projectCost && (
+            {displayOrderValue != null && (
               <DetailRow label="Order Value" valueClassName="font-bold text-[color:var(--accent-teal)]">
-                ₹{project.projectCost.toLocaleString('en-IN')}
+                ₹{displayOrderValue.toLocaleString('en-IN')}
               </DetailRow>
             )}
             {project.confirmationDate && (
@@ -862,27 +871,12 @@ const ProjectDetail = () => {
                 )}
                 {project.lostReason && (
                   <DetailRow label="Reason for Loss" valueClassName="font-medium">
-                    {(() => {
-                      const reasonMap: Record<string, string> = {
-                        LOST_TO_COMPETITION: 'Lost to Competition',
-                        NO_BUDGET: 'No Budget',
-                        INDEFINITELY_DELAYED: 'Indefinitely Delayed',
-                        OTHER: 'Other',
-                      }
-                      return reasonMap[project.lostReason!] || project.lostReason
-                    })()}
+                    {lostReasonLabel(project.lostReason)}
                   </DetailRow>
                 )}
                 {project.lostReason === 'LOST_TO_COMPETITION' && project.lostToCompetitionReason && (
                   <DetailRow label="Why lost to competition" valueClassName="font-medium">
-                    {(() => {
-                      const compReasonMap: Record<string, string> = {
-                        LOST_DUE_TO_PRICE: 'Lost due to Price',
-                        LOST_DUE_TO_FEATURES: 'Lost due to Features',
-                        LOST_DUE_TO_RELATIONSHIP_OTHER: 'Lost due to Relationship/Other factors',
-                      }
-                      return compReasonMap[project.lostToCompetitionReason!] || project.lostToCompetitionReason
-                    })()}
+                    {lostToCompetitionLabel(project.lostToCompetitionReason)}
                   </DetailRow>
                 )}
                 {project.lostOtherReason && (
@@ -896,7 +890,7 @@ const ProjectDetail = () => {
           {project.projectStatus === ProjectStatus.LOST && (
             <div className="mt-4 rounded-lg border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] p-3">
               <p className="text-sm text-[color:var(--accent-red)]">
-                <strong>Note:</strong> This project is in Lost stage and cannot be edited. Only Admin can delete it.
+                <strong>Note:</strong> This project is Lost. Non-admins see it as read-only. Admin can edit to correct lost reason, date, or order value, or delete the project.
               </p>
             </div>
           )}

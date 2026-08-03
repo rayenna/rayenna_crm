@@ -107,13 +107,24 @@ enum ProjectStage {
 enum LostReason {
   LOST_TO_COMPETITION
   NO_BUDGET
+  FINANCING_FAILED
   INDEFINITELY_DELAYED
+  NO_FEASIBILITY
+  SOCIETY_OR_LANDLORD_BLOCK
+  REGULATORY_DISCOM
+  CUSTOMER_NO_RESPONSE
+  WRONG_LEAD
+  DIY_OR_LOCAL_INSTALLER
+  PROPERTY_SOLD_OR_MOVED
+  CUSTOMER_INTERNAL_DISAGREEMENT
   OTHER
 }
 
 enum LostToCompetitionReason {
   LOST_DUE_TO_PRICE
   LOST_DUE_TO_FEATURES
+  LOST_DUE_TO_TIMELINE
+  LOST_DUE_TO_BRAND_OR_WARRANTY
   LOST_DUE_TO_RELATIONSHIP_OTHER
 }
 
@@ -286,7 +297,7 @@ model Project {
   lostReason                LostReason? // Reason for losing the project
   lostToCompetitionReason   LostToCompetitionReason? // Required when lostReason is LOST_TO_COMPETITION
   lostOtherReason           String? // Free text if lostReason is OTHER
-  lostRevenue               Float? // Order value at time of loss (for lost deal analysis); projectCost is stored as 0
+  lostRevenue               Float? // Legacy/mirror of Lost order value; SSOT is projectCost (Lost excluded from pipeline/revenue by status)
   slaDays                   Int? // SLA days for current stage
   statusIndicator           String? // GREEN, AMBER, RED (based on SLA)
   siteAddress               String?       @db.Text // Site address for installation

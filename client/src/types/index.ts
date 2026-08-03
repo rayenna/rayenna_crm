@@ -101,13 +101,24 @@ export interface SupportTicketActivity {
 export enum LostReason {
   LOST_TO_COMPETITION = 'LOST_TO_COMPETITION',
   NO_BUDGET = 'NO_BUDGET',
+  FINANCING_FAILED = 'FINANCING_FAILED',
   INDEFINITELY_DELAYED = 'INDEFINITELY_DELAYED',
+  NO_FEASIBILITY = 'NO_FEASIBILITY',
+  SOCIETY_OR_LANDLORD_BLOCK = 'SOCIETY_OR_LANDLORD_BLOCK',
+  REGULATORY_DISCOM = 'REGULATORY_DISCOM',
+  CUSTOMER_NO_RESPONSE = 'CUSTOMER_NO_RESPONSE',
+  WRONG_LEAD = 'WRONG_LEAD',
+  DIY_OR_LOCAL_INSTALLER = 'DIY_OR_LOCAL_INSTALLER',
+  PROPERTY_SOLD_OR_MOVED = 'PROPERTY_SOLD_OR_MOVED',
+  CUSTOMER_INTERNAL_DISAGREEMENT = 'CUSTOMER_INTERNAL_DISAGREEMENT',
   OTHER = 'OTHER',
 }
 
 export enum LostToCompetitionReason {
   LOST_DUE_TO_PRICE = 'LOST_DUE_TO_PRICE',
   LOST_DUE_TO_FEATURES = 'LOST_DUE_TO_FEATURES',
+  LOST_DUE_TO_TIMELINE = 'LOST_DUE_TO_TIMELINE',
+  LOST_DUE_TO_BRAND_OR_WARRANTY = 'LOST_DUE_TO_BRAND_OR_WARRANTY',
   LOST_DUE_TO_RELATIONSHIP_OTHER = 'LOST_DUE_TO_RELATIONSHIP_OTHER',
 }
 
@@ -178,7 +189,7 @@ export interface Project {
   lostReason?: LostReason
   lostToCompetitionReason?: LostToCompetitionReason // Required when lostReason is LOST_TO_COMPETITION
   lostOtherReason?: string
-  lostRevenue?: number // Order value at time of loss (for lost deal analysis)
+  lostRevenue?: number // Legacy/mirror of Lost order value; prefer projectCost
   statusIndicator?: 'GREEN' | 'AMBER' | 'RED'
   systemType?: SystemType
   panelBrand?: string

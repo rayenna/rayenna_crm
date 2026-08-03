@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Customer, Project, ProjectType, ProjectServiceType, UserRole, ProjectStatus, LostReason, LostToCompetitionReason, LeadSource } from '../types'
+import { Customer, Project, ProjectType, ProjectServiceType, UserRole, ProjectStatus, LostReason, LeadSource } from '../types'
 import toast from 'react-hot-toast'
 import { fireVictoryToast } from '../hooks/useVictoryToast'
 import RemarksSection from '../components/remarks/RemarksSection'
@@ -17,6 +17,7 @@ import { formatCustomerStringList, parseCustomerStringList } from '../utils/cust
 import { formatCustomerTypeDisplay, getCustomerDisplayName } from '../utils/customerRecord'
 import { getCustomerTypeBadgeClasses } from '../utils/customerTypeStyles'
 import { getProjectFormAccessNotice } from '../utils/projectAccessMessages'
+import { LOST_REASON_OPTIONS, LOST_TO_COMPETITION_OPTIONS } from '../utils/lostReasonLabels'
 import ProjectAccessNotice from '../components/projects/ProjectAccessNotice'
 import { defaultPanelTypeForProjectSegment, getProjectSegmentLabel } from '../utils/projectSegment'
 import {
@@ -312,10 +313,14 @@ const ProjectForm = () => {
     setValidationErrorSource(null)
   }
   
-  // Check if project is already in Lost status (prevents editing)
-  // For new projects, project will be undefined, so isLost will be false
-  const isLost = isEdit && project?.projectStatus === ProjectStatus.LOST
-  const isProjectLost = isLost || projectStatus === ProjectStatus.LOST
+  // Already-Lost: locked for everyone except Admin (who may correct taxonomy / commercial fields)
+  const isLost =
+    isEdit &&
+    project?.projectStatus === ProjectStatus.LOST &&
+    user?.role !== UserRole.ADMIN
+  const isProjectLost =
+    (isEdit && project?.projectStatus === ProjectStatus.LOST) ||
+    projectStatus === ProjectStatus.LOST
 
   // Auto-calculate FY when confirmationDate changes
   useEffect(() => {
@@ -330,7 +335,7 @@ const ProjectForm = () => {
     }
   }, [confirmationDate, setValue])
 
-  // For Lost: set lostDate to today if not set; do not zero projectCost (order value is required and stored as lost revenue)
+  // For Lost: set lostDate to today if not set; keep order value on projectCost (excluded from pipeline/revenue by status)
   useEffect(() => {
     if (projectStatus === ProjectStatus.LOST && !watch('lostDate')) {
       const today = new Date().toISOString().split('T')[0];
@@ -434,16 +439,18 @@ const ProjectForm = () => {
   useEffect(() => {
     if (project && isEdit) {
       const immutableFields = ['id', 'slNo', 'count', 'createdById', 'createdAt', 'updatedAt', 'totalAmountReceived', 'balanceAmount', 'paymentStatus', 'expectedProfit', 'customer'];
-      // When editing a Lost project, show order value from lostRevenue (projectCost is stored as 0)
-      if (project.projectStatus === ProjectStatus.LOST && (project.lostRevenue != null || project.projectCost != null)) {
-        setValue('projectCost', project.lostRevenue ?? project.projectCost ?? 0);
+      // Legacy Lost rows may still have projectCost=0 with value only in lostRevenue — prefer non-zero SSOT
+      if (project.projectStatus === ProjectStatus.LOST) {
+        const cost = project.projectCost != null ? Number(project.projectCost) : 0
+        const legacy = project.lostRevenue != null ? Number(project.lostRevenue) : 0
+        const orderValue = cost > 0 ? cost : legacy
+        if (orderValue > 0) setValue('projectCost', orderValue)
       }
       Object.keys(project).forEach((key) => {
         // Skip immutable/system fields
         if (immutableFields.includes(key)) {
           return;
         }
-        // For Lost projects, projectCost was already set from lostRevenue above; skip overwriting with 0
         if (key === 'projectCost' && project.projectStatus === ProjectStatus.LOST) {
           return;
         }
@@ -753,14 +760,13 @@ const ProjectForm = () => {
         toast.error('Confirmation Date (order lost date) cannot be a future date');
         return;
       }
-      // Order value is required for Lost (stored as lost revenue); project cost will be saved as 0 by backend
+      // Order value is required for Lost (kept on projectCost for analysis; excluded from pipeline/revenue by status)
       const orderValue = allValues.projectCost !== undefined ? allValues.projectCost : data.projectCost;
       if (orderValue === undefined || orderValue === '' || orderValue === null || parseFloat(String(orderValue)) <= 0) {
-        toast.error('Order Value is required and must be greater than 0 for Lost projects (stored as lost revenue for analysis)');
+        toast.error('Order Value is required and must be greater than 0 for Lost projects');
         return;
       }
       data.totalProjectCost = 0;
-      // Keep data.projectCost as the order value; backend will set lostRevenue = projectCost, projectCost = 0
     }
     
     // Validate Order Value is required for PROPOSAL stage and onwards (LOST handled separately above)
@@ -963,7 +969,7 @@ const ProjectForm = () => {
     if (data.systemCapacity === '' || data.systemCapacity === undefined) {
       data.systemCapacity = null;
     }
-    // Only convert projectCost to null if not in PROPOSAL or later stages (LOST sends order value; backend zeros it)
+    // Only convert projectCost to null if not in PROPOSAL or later stages (LOST keeps order value on projectCost)
     if (!proposalAndLaterStages.includes(data.projectStatus) && data.projectStatus !== ProjectStatus.LOST) {
       if (data.projectCost === '' || data.projectCost === undefined) {
         data.projectCost = null;
@@ -1502,7 +1508,7 @@ const ProjectForm = () => {
                       projectStatus === ProjectStatus.COMPLETED ||
                       projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED ||
                       projectStatus === ProjectStatus.LOST)
-                      ? (projectStatus === ProjectStatus.LOST ? 'Order Value is required for Lost projects (stored as lost revenue)' : 'Order Value is required from Proposal stage onwards')
+                      ? (projectStatus === ProjectStatus.LOST ? 'Order Value is required for Lost projects' : 'Order Value is required from Proposal stage onwards')
                       : false,
                     validate: (value) => {
                       if (projectStatus === ProjectStatus.PROPOSAL ||
@@ -1514,7 +1520,7 @@ const ProjectForm = () => {
                           projectStatus === ProjectStatus.LOST) {
                         if (!value || value === '' || parseFloat(value) <= 0) {
                           return projectStatus === ProjectStatus.LOST
-                            ? 'Order Value must be greater than 0 for Lost projects (stored as lost revenue)'
+                            ? 'Order Value must be greater than 0 for Lost projects'
                             : 'Order Value must be greater than 0 from Proposal stage onwards';
                         }
                       }
@@ -1526,7 +1532,9 @@ const ProjectForm = () => {
                   disabled={!canEditSalesCommercial}
                 />
                 {projectStatus === ProjectStatus.LOST && (
-                  <p className={ZENITH_FIELD_HINT_CLS}>Order value (stored as lost revenue for analysis). Project cost will be saved as 0.</p>
+                  <p className={ZENITH_FIELD_HINT_CLS}>
+                    Order value is kept for Lost analysis. Lost deals are excluded from Pipeline and Revenue by status.
+                  </p>
                 )}
               </div>
               <div>
@@ -1608,10 +1616,11 @@ const ProjectForm = () => {
                       className={`zenith-native-select mt-1.5 ${selectCls}`}
                     >
                       <option value="">Select reason</option>
-                      <option value={LostReason.LOST_TO_COMPETITION}>Lost to Competition</option>
-                      <option value={LostReason.NO_BUDGET}>No Budget</option>
-                      <option value={LostReason.INDEFINITELY_DELAYED}>Indefinitely Delayed</option>
-                      <option value={LostReason.OTHER}>Other</option>
+                      {LOST_REASON_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   {watch('lostReason') === LostReason.LOST_TO_COMPETITION && (
@@ -1626,9 +1635,11 @@ const ProjectForm = () => {
                         className={`zenith-native-select mt-1.5 ${selectCls}`}
                       >
                         <option value="">Select option</option>
-                        <option value={LostToCompetitionReason.LOST_DUE_TO_PRICE}>Lost due to Price</option>
-                        <option value={LostToCompetitionReason.LOST_DUE_TO_FEATURES}>Lost due to Features</option>
-                        <option value={LostToCompetitionReason.LOST_DUE_TO_RELATIONSHIP_OTHER}>Lost due to Relationship/Other factors</option>
+                        {LOST_TO_COMPETITION_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   )}

@@ -17,7 +17,13 @@ import { assertPaymentCollectionDatesNotFuture } from '../utils/paymentCollectio
 import { updateTouchesPaymentTracking } from '../utils/paymentAudit';
 
 // Valid values for lostToCompetitionReason (required when lostReason is LOST_TO_COMPETITION)
-const LOST_TO_COMPETITION_REASON_VALUES = ['LOST_DUE_TO_PRICE', 'LOST_DUE_TO_FEATURES', 'LOST_DUE_TO_RELATIONSHIP_OTHER'] as const;
+const LOST_TO_COMPETITION_REASON_VALUES = [
+  'LOST_DUE_TO_PRICE',
+  'LOST_DUE_TO_FEATURES',
+  'LOST_DUE_TO_TIMELINE',
+  'LOST_DUE_TO_BRAND_OR_WARRANTY',
+  'LOST_DUE_TO_RELATIONSHIP_OTHER',
+] as const;
 import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { createAuditLog } from '../utils/audit';
@@ -704,18 +710,34 @@ router.post(
       const systemCapacityNum = parseSystemCapacityKw(systemCapacity);
       let projectCostNum = projectCost ? (isNaN(parseFloat(projectCost)) ? null : parseFloat(projectCost)) : null;
 
-      // For LOST status: order value is required (stored as lost revenue); project cost is forced to 0
+      // For LOST status: order value + loss taxonomy required (order value stays on projectCost; excluded from pipeline/revenue by status)
       if (projectStatus === ProjectStatus.LOST) {
         if (projectCostNum == null || projectCostNum <= 0) {
-          return res.status(400).json({ error: 'Order Value is required and must be greater than 0 for Lost projects (stored as lost revenue for analysis)' });
+          return res.status(400).json({ error: 'Order Value is required and must be greater than 0 for Lost projects (kept for analysis; excluded from pipeline/revenue by status)' });
         }
-        // When Reason for Loss is Lost to Competition, lostToCompetitionReason is required
+        if (!lostDate) {
+          return res.status(400).json({ error: 'Lost date is required when project status is Lost' });
+        }
+        const createLostDate = new Date(lostDate as string);
+        if (isNaN(createLostDate.getTime())) {
+          return res.status(400).json({ error: 'Lost date must be a valid date' });
+        }
+        const createTodayEnd = new Date();
+        createTodayEnd.setHours(23, 59, 59, 999);
+        if (createLostDate > createTodayEnd) {
+          return res.status(400).json({ error: 'Lost date cannot be a future date' });
+        }
+        if (!lostReason || !Object.values(LostReason).includes(lostReason as LostReason)) {
+          return res.status(400).json({ error: 'Reason for loss is required when project status is Lost' });
+        }
+        if (lostReason === LostReason.OTHER && (!lostOtherReason || !String(lostOtherReason).trim())) {
+          return res.status(400).json({ error: 'Please describe the reason for loss when Reason is Other' });
+        }
         if (lostReason === LostReason.LOST_TO_COMPETITION) {
           if (!lostToCompetitionReason || !LOST_TO_COMPETITION_REASON_VALUES.includes(lostToCompetitionReason as typeof LOST_TO_COMPETITION_REASON_VALUES[number])) {
             return res.status(400).json({ error: 'Please select why the deal was lost to competition (Lost due to Price, Features, or Relationship/Other factors)' });
           }
         }
-        // Store order value as lostRevenue; projectCost will be set to 0 in create data
       }
 
       // Prepare financing / loan fields (Sales & Admin only)
@@ -765,10 +787,10 @@ router.post(
         finalPanelType = defaultPanelTypeForProjectSegment(type);
       }
 
-      // Auto-calculate expected profit (null for LOST)
+      // Auto-calculate expected profit (null for LOST — not in win book)
       const expectedProfit = projectStatus === ProjectStatus.LOST ? null : calculateExpectedProfit(projectCostNum, systemCapacityNum);
       
-      // Auto-calculate gross profit (Order Value - Total Project Cost). For LOST, project cost is 0 so null.
+      // Auto-calculate gross profit (Order Value - Total Project Cost). Null for LOST.
       const grossProfit = projectStatus === ProjectStatus.LOST ? null : calculateGrossProfit(projectCostNum, null);
       
       // Auto-calculate profitability. For LOST, null.
@@ -781,17 +803,14 @@ router.post(
       const payment3Num = payment3 ? (isNaN(parseFloat(payment3)) ? 0 : parseFloat(payment3)) : 0;
       const lastPaymentNum = lastPayment ? (isNaN(parseFloat(lastPayment)) ? 0 : parseFloat(lastPayment)) : 0;
 
-      // For LOST: use 0 as project cost for payment calculations; order value stored in lostRevenue
-      const effectiveProjectCostForPayments = projectStatus === ProjectStatus.LOST ? 0 : projectCostNum;
-
-      // Calculate payments
+      // Calculate payments against real order value (Lost UI still treats payment status as N/A)
       const paymentCalculations = calculatePayments({
         advanceReceived: advanceReceivedNum,
         payment1: payment1Num,
         payment2: payment2Num,
         payment3: payment3Num,
         lastPayment: lastPaymentNum,
-        projectCost: effectiveProjectCostForPayments,
+        projectCost: projectCostNum,
       });
 
       const futurePaymentDateOnCreate = assertPaymentCollectionDatesNotFuture({
@@ -844,7 +863,8 @@ router.post(
           salespersonId: req.user?.role === UserRole.ADMIN && salespersonId ? salespersonId : (customer.salespersonId || (req.user?.role === UserRole.SALES ? req.user.id : null)),
           year: calculatedYear, // Use auto-calculated year
           systemCapacity: systemCapacityNum,
-          projectCost: projectStatus === ProjectStatus.LOST ? 0 : projectCostNum,
+          projectCost: projectCostNum,
+          // Mirror snapshot for Lost analysis / legacy readers (SSOT remains projectCost)
           ...(projectStatus === ProjectStatus.LOST && projectCostNum != null ? { lostRevenue: projectCostNum } : {}),
           confirmationDate: confirmationDate ? new Date(confirmationDate) : null,
           loanDetails: loanDetails ? (typeof loanDetails === 'object' ? JSON.stringify(loanDetails) : loanDetails) : null,
@@ -1000,7 +1020,7 @@ router.put(
         return res.status(403).json({ error: 'Projects in Lost status cannot be edited. Only Admin can delete them.' });
       }
 
-      // For LOST status: require confirmation date (current or past) and order value (stored as lost revenue)
+      // For LOST status: require confirmation date (current or past), order value, and loss taxonomy
       const effectiveStatus = (req.body.projectStatus as ProjectStatus) ?? project.projectStatus;
       if (effectiveStatus === ProjectStatus.LOST) {
         const confDate = req.body.confirmationDate ?? project.confirmationDate;
@@ -1016,11 +1036,35 @@ router.put(
         if (confDateObj > todayEnd) {
           return res.status(400).json({ error: 'Confirmation Date (order lost date) cannot be a future date for Lost projects' });
         }
-        const orderValue = req.body.projectCost != null ? parseFloat(String(req.body.projectCost)) : ((project as { lostRevenue?: number | null }).lostRevenue ?? project.projectCost);
+        const orderValue = req.body.projectCost != null
+          ? parseFloat(String(req.body.projectCost))
+          : (project.projectCost != null && Number(project.projectCost) > 0
+              ? Number(project.projectCost)
+              : ((project as { lostRevenue?: number | null }).lostRevenue ?? project.projectCost));
         if (orderValue == null || orderValue <= 0) {
-          return res.status(400).json({ error: 'Order Value is required and must be greater than 0 for Lost projects (stored as lost revenue for analysis)' });
+          return res.status(400).json({ error: 'Order Value is required and must be greater than 0 for Lost projects (kept for analysis; excluded from pipeline/revenue by status)' });
+        }
+        const lostDateVal = req.body.lostDate ?? project.lostDate;
+        if (!lostDateVal) {
+          return res.status(400).json({ error: 'Lost date is required when project status is Lost' });
+        }
+        const lostDateObj = new Date(lostDateVal as string | Date);
+        if (isNaN(lostDateObj.getTime())) {
+          return res.status(400).json({ error: 'Lost date must be a valid date' });
+        }
+        if (lostDateObj > todayEnd) {
+          return res.status(400).json({ error: 'Lost date cannot be a future date' });
         }
         const lostReasonVal = req.body.lostReason ?? project.lostReason;
+        if (!lostReasonVal || !Object.values(LostReason).includes(lostReasonVal as LostReason)) {
+          return res.status(400).json({ error: 'Reason for loss is required when project status is Lost' });
+        }
+        if (lostReasonVal === LostReason.OTHER) {
+          const otherText = req.body.lostOtherReason ?? (project as { lostOtherReason?: string | null }).lostOtherReason;
+          if (!otherText || !String(otherText).trim()) {
+            return res.status(400).json({ error: 'Please describe the reason for loss when Reason is Other' });
+          }
+        }
         if (lostReasonVal === LostReason.LOST_TO_COMPETITION) {
           const compReason = req.body.lostToCompetitionReason ?? (project as { lostToCompetitionReason?: string | null }).lostToCompetitionReason;
           if (!compReason || !LOST_TO_COMPETITION_REASON_VALUES.includes(compReason as typeof LOST_TO_COMPETITION_REASON_VALUES[number])) {
@@ -1226,6 +1270,11 @@ router.put(
           'availingLoan',
           'financingBank',
           'financingBankOther',
+          // Lost taxonomy (when Ops marks Confirmed+ as Lost)
+          'lostDate',
+          'lostReason',
+          'lostToCompetitionReason',
+          'lostOtherReason',
         ];
         for (const field of allowedFields) {
           if (req.body[field] !== undefined) {
@@ -1353,13 +1402,38 @@ router.put(
               field === 'financingBank' ||
               field === 'financingBankOther' ||
               field === 'roofType' ||
-              field === 'leadSourceDetails'
+              field === 'leadSourceDetails' ||
+              field === 'lostOtherReason'
             ) {
               const value = req.body[field];
               updateData[field] =
                 value !== null && value !== undefined && value !== '' && value !== 'null'
                   ? String(value)
                   : null;
+            } else if (field === 'lostReason') {
+              const value = req.body[field];
+              if (value && value !== '' && Object.values(LostReason).includes(value as LostReason)) {
+                updateData[field] = value as LostReason;
+              } else if (value === null || value === '' || value === 'null') {
+                updateData[field] = null;
+              } else {
+                continue;
+              }
+            } else if (field === 'lostToCompetitionReason') {
+              const value = req.body[field];
+              if (
+                value &&
+                value !== '' &&
+                LOST_TO_COMPETITION_REASON_VALUES.includes(
+                  value as (typeof LOST_TO_COMPETITION_REASON_VALUES)[number],
+                )
+              ) {
+                updateData[field] = value;
+              } else if (value === null || value === '' || value === 'null') {
+                updateData[field] = null;
+              } else {
+                continue;
+              }
             } else {
               continue;
             }
@@ -1427,6 +1501,11 @@ router.put(
           'leadSourceDetails', // Sales can update lead source details
           'roofType', // Sales can update roof type
           'systemType', // Sales can update system type
+          // Lost taxonomy — required when marking Lost (was previously dropped by allowlist)
+          'lostDate',
+          'lostReason',
+          'lostToCompetitionReason',
+          'lostOtherReason',
         ];
         
         // Only process allowed fields
@@ -1478,14 +1557,7 @@ router.put(
                 updateData[key] = null;
               }
               // Skip invalid leadSource values (don't update)
-            } else if (key === 'leadSourceDetails') {
-              // Handle string field - convert to string or null
-              const value = req.body[key];
-              updateData[key] = value !== null && value !== undefined && value !== '' && value !== 'null'
-                ? String(value)
-                : null;
-            } else if (key === 'roofType') {
-              // Handle string field - convert to string or null
+            } else if (key === 'leadSourceDetails' || key === 'roofType' || key === 'lostOtherReason') {
               const value = req.body[key];
               updateData[key] = value !== null && value !== undefined && value !== '' && value !== 'null'
                 ? String(value)
@@ -1499,6 +1571,26 @@ router.put(
                 updateData[key] = null;
               }
               // Skip invalid systemType values (don't update)
+            } else if (key === 'lostReason') {
+              const value = req.body[key];
+              if (value && value !== '' && Object.values(LostReason).includes(value as LostReason)) {
+                updateData[key] = value as LostReason;
+              } else if (value === null || value === '' || value === 'null') {
+                updateData[key] = null;
+              }
+            } else if (key === 'lostToCompetitionReason') {
+              const value = req.body[key];
+              if (
+                value &&
+                value !== '' &&
+                LOST_TO_COMPETITION_REASON_VALUES.includes(
+                  value as (typeof LOST_TO_COMPETITION_REASON_VALUES)[number],
+                )
+              ) {
+                updateData[key] = value;
+              } else if (value === null || value === '' || value === 'null') {
+                updateData[key] = null;
+              }
             } else {
               updateData[key] = req.body[key];
             }
@@ -1832,32 +1924,46 @@ router.put(
         return res.status(403).json({ error: 'Insufficient permissions' });
       }
 
-      // Normalize LOST: order value stored as lostRevenue, projectCost forced to 0
+      // Normalize LOST: keep order value on projectCost (excluded from pipeline/revenue by status filters).
+      // Mirror to lostRevenue for legacy/analysis readers. Do not zero projectCost or rewrite payments.
       const finalStatus = updateData.projectStatus ?? project.projectStatus;
       if (finalStatus === ProjectStatus.LOST) {
         const projLostRevenue = (project as { lostRevenue?: number | null }).lostRevenue;
-        const orderValue = req.body.projectCost != null ? parseFloat(String(req.body.projectCost)) : (projLostRevenue ?? project.projectCost ?? 0);
-        updateData.lostRevenue = orderValue > 0 ? orderValue : (projLostRevenue ?? null);
-        updateData.projectCost = 0;
+        const fromBody =
+          updateData.projectCost != null
+            ? Number(updateData.projectCost)
+            : req.body.projectCost != null
+              ? parseFloat(String(req.body.projectCost))
+              : NaN;
+        const fromProject =
+          project.projectCost != null && Number(project.projectCost) > 0
+            ? Number(project.projectCost)
+            : projLostRevenue != null && Number(projLostRevenue) > 0
+              ? Number(projLostRevenue)
+              : 0;
+        const orderValue = Number.isFinite(fromBody) && fromBody > 0 ? fromBody : fromProject;
+        if (orderValue > 0) {
+          updateData.projectCost = orderValue;
+          updateData.lostRevenue = orderValue;
+        }
         updateData.grossProfit = null;
         updateData.profitability = null;
         updateData.expectedProfit = null;
-        // Recalculate payments with project cost 0
-        const paymentCalculations = calculatePayments({
-          advanceReceived: updateData.advanceReceived ?? project.advanceReceived ?? 0,
-          payment1: updateData.payment1 ?? project.payment1 ?? 0,
-          payment2: updateData.payment2 ?? project.payment2 ?? 0,
-          payment3: updateData.payment3 ?? project.payment3 ?? 0,
-          lastPayment: updateData.lastPayment ?? project.lastPayment ?? 0,
-          projectCost: 0,
-        });
-        Object.assign(updateData, paymentCalculations);
+        const effectiveLostReason =
+          updateData.lostReason !== undefined ? updateData.lostReason : project.lostReason;
+        if (effectiveLostReason !== LostReason.LOST_TO_COMPETITION) {
+          updateData.lostToCompetitionReason = null;
+        }
       }
 
       // Final safety check: Remove immutable/system fields that shouldn't be manually updated
       // BUT preserve auto-calculated fields (totalAmountReceived, balanceAmount, paymentStatus)
       // that were just calculated by Finance role
-      const alwaysRestricted = ['id', 'slNo', 'count', 'createdById', 'createdAt', 'updatedAt', 'expectedProfit', 'grossProfit', 'profitability', 'finalProfit'];
+      // For LOST, keep profit nulling applied above (do not strip expectedProfit/grossProfit/profitability).
+      const alwaysRestricted = ['id', 'slNo', 'count', 'createdById', 'createdAt', 'updatedAt', 'finalProfit'];
+      if (finalStatus !== ProjectStatus.LOST) {
+        alwaysRestricted.push('expectedProfit', 'grossProfit', 'profitability');
+      }
       
       // Only delete these fields if they weren't just calculated by Finance role
       // Finance role explicitly sets these, so we should keep them

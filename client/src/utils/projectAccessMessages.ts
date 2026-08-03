@@ -15,11 +15,19 @@ export function getProjectDetailAccessNotice(
   if (!project || !user) return null
 
   if (project.projectStatus === ProjectStatus.LOST) {
+    if (user.role === UserRole.ADMIN) {
+      return {
+        variant: 'warning',
+        title: 'Lost project',
+        message:
+          'This project is closed as Lost. As Admin you can edit to correct lost reason, date, or order value. Others see it as read-only.',
+      }
+    }
     return {
       variant: 'warning',
       title: 'Lost project',
       message:
-        'This project is closed as Lost. Details are read-only. Only an Admin can delete it.',
+        'This project is closed as Lost. Details are read-only. Ask Admin to correct lost fields, or delete if needed.',
     }
   }
 
@@ -80,7 +88,7 @@ export function getProjectFormAccessNotice(
       variant: 'warning',
       title: 'Lost project locked',
       message:
-        'This project is already Lost and cannot be changed here. Only an Admin can delete it.',
+        'This project is already Lost and cannot be changed here. Ask an Admin to correct lost fields or delete it.',
     }
   }
 

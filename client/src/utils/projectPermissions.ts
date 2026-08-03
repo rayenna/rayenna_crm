@@ -17,7 +17,10 @@ export function canEditProject(
   user: Pick<User, 'id' | 'role'> | null | undefined,
 ): boolean {
   if (!user || !project) return false
-  if (project.projectStatus === ProjectStatus.LOST) return false
+  // Admin may correct Lost taxonomy / commercial fields; others cannot edit once Lost
+  if (project.projectStatus === ProjectStatus.LOST) {
+    return user.role === UserRole.ADMIN
+  }
 
   if (user.role === UserRole.ADMIN) return true
   if (user.role === UserRole.SALES) {
