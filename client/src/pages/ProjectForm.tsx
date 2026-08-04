@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 import { fireVictoryToast } from '../hooks/useVictoryToast'
 import RemarksSection from '../components/remarks/RemarksSection'
 import { FaEdit } from 'react-icons/fa'
+import { ArrowLeft } from 'lucide-react'
 import { ErrorModal } from '@/components/common/ErrorModal'
 import { INVERTER_BRAND_OPTIONS } from '../constants/inverterBrands'
 import { PANEL_BRAND_OPTIONS } from '../constants/panelBrands'
@@ -188,6 +189,42 @@ const FileUploadSection = ({
           {uploading ? 'Uploading...' : 'Upload File'}
         </button>
       </div>
+    </div>
+  )
+}
+
+const projectFormActionBtnBase =
+  'inline-flex min-h-[44px] w-full touch-manipulation items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold shadow-[var(--shadow-card)] transition-colors sm:w-auto'
+
+function ProjectFormActionBar({
+  isEdit,
+  isLost,
+  saving,
+  onBack,
+}: {
+  isEdit: boolean
+  isLost: boolean
+  saving: boolean
+  onBack: () => void
+}) {
+  return (
+    <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end [&>*:last-child:nth-child(odd)]:max-sm:col-span-2">
+      <button
+        type="submit"
+        form="project-page-form"
+        disabled={saving || isLost}
+        className={`${projectFormActionBtnBase} bg-[color:var(--accent-gold)] text-[color:var(--text-inverse)] hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50`}
+      >
+        {saving ? 'Saving...' : isEdit ? (isLost ? 'Cannot Edit Lost Project' : 'Update') : 'Create'}
+      </button>
+      <button
+        type="button"
+        onClick={onBack}
+        className={`${projectFormActionBtnBase} border border-[color:var(--border-default)] bg-[color:var(--bg-input)] font-semibold text-[color:var(--text-primary)] hover:bg-[color:var(--bg-card-hover)]`}
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden />
+        Back
+      </button>
     </div>
   )
 }
@@ -1062,14 +1099,12 @@ const ProjectForm = () => {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-            <Link
-              to={exitPath}
-              className="inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2.5 text-sm font-bold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)]"
-            >
-              Close
-            </Link>
-          </div>
+          <ProjectFormActionBar
+            isEdit={isEdit}
+            isLost={!!isLost}
+            saving={mutation.isPending}
+            onBack={() => navigate(exitPath)}
+          />
         </div>
       </header>
 
@@ -1099,7 +1134,9 @@ const ProjectForm = () => {
       />
 
       <div className="px-0 pb-4 sm:pb-6">
-      <form onSubmit={handleSubmit(onSubmit, (errors) => {
+      <form
+        id="project-page-form"
+        onSubmit={handleSubmit(onSubmit, (errors) => {
         if (import.meta.env.DEV) {
           console.error('[PROJECT FORM] Form validation errors:', errors)
           console.error('[PROJECT FORM] Current form values:', getValues())
@@ -2213,23 +2250,16 @@ const ProjectForm = () => {
           </div>
         )}
 
-        <div className="flex justify-end gap-3 border-t border-[color:var(--border-default)] pt-6">
-          <button
-            type="button"
-            onClick={() => navigate(exitPath)}
-            className="rounded-xl border border-[color:var(--border-strong)] bg-[color:var(--bg-input)] px-4 py-2.5 text-sm font-semibold text-[color:var(--text-primary)] transition-colors hover:border-[color:var(--accent-gold-border)] hover:bg-[color:var(--bg-card-hover)]"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={mutation.isPending || isLost}
-            className="rounded-xl bg-[color:var(--accent-gold)] px-5 py-2.5 text-sm font-extrabold text-[color:var(--text-inverse)] shadow-md transition-all hover:opacity-95 disabled:opacity-50"
-          >
-            {mutation.isPending ? 'Saving...' : isEdit ? (isLost ? 'Cannot Edit Lost Project' : 'Update') : 'Create'}
-          </button>
-        </div>
       </form>
+
+      <div className="mt-4 border-t border-[color:var(--border-default)] pt-4 sm:mt-6 sm:pt-5">
+        <ProjectFormActionBar
+          isEdit={isEdit}
+          isLost={!!isLost}
+          saving={mutation.isPending}
+          onBack={() => navigate(exitPath)}
+        />
+      </div>
       </div>
     </>
   )

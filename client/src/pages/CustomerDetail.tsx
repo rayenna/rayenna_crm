@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
@@ -14,6 +14,70 @@ import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import { canEditCustomer } from '../utils/customerPermissions'
 
+const actionBtnBase =
+  'inline-flex min-h-[44px] w-full touch-manipulation items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold shadow-[var(--shadow-card)] transition-colors sm:w-auto'
+
+function CustomerDetailActionBar({
+  canEdit,
+  canDelete,
+  isEditing,
+  saving,
+  onEdit,
+  onDelete,
+  onBack,
+}: {
+  canEdit: boolean
+  canDelete: boolean
+  isEditing: boolean
+  saving: boolean
+  onEdit: () => void
+  onDelete: () => void
+  onBack: () => void
+}) {
+  return (
+    <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end [&>*:last-child:nth-child(odd)]:max-sm:col-span-2">
+      {canEdit && !isEditing ? (
+        <button
+          type="button"
+          onClick={onEdit}
+          className={`${actionBtnBase} bg-[color:var(--accent-gold)] text-[color:var(--text-inverse)] hover:opacity-95`}
+        >
+          <Edit3 className="h-4 w-4" aria-hidden />
+          Edit
+        </button>
+      ) : null}
+      {canEdit && isEditing ? (
+        <button
+          type="submit"
+          form="customer-page-form"
+          disabled={saving}
+          className={`${actionBtnBase} bg-[color:var(--accent-gold)] text-[color:var(--text-inverse)] hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50`}
+        >
+          {saving ? 'Saving...' : 'Update'}
+        </button>
+      ) : null}
+      {canDelete ? (
+        <button
+          type="button"
+          onClick={onDelete}
+          className={`${actionBtnBase} border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] text-[color:var(--accent-red)] hover:opacity-95`}
+        >
+          <Trash2 className="h-4 w-4" aria-hidden />
+          Delete
+        </button>
+      ) : null}
+      <button
+        type="button"
+        onClick={onBack}
+        className={`${actionBtnBase} border border-[color:var(--border-default)] bg-[color:var(--bg-input)] font-semibold text-[color:var(--text-primary)] hover:bg-[color:var(--bg-card-hover)]`}
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden />
+        Back
+      </button>
+    </div>
+  )
+}
+
 export default function CustomerDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -22,6 +86,7 @@ export default function CustomerDetail() {
   const queryClient = useQueryClient()
   const [isEditing, setIsEditing] = useState(() => searchParams.get('edit') === '1')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const canDelete = hasRole([UserRole.ADMIN])
 
@@ -64,6 +129,10 @@ export default function CustomerDetail() {
     if (!canEdit && isEditing) setIsEditing(false)
   }, [canEdit, isEditing])
 
+  const handlePendingChange = useCallback((pending: boolean) => {
+    setSaving(pending)
+  }, [])
+
   const deleteMutation = useMutation({
     mutationFn: async () => axiosInstance.delete(`/api/customers/${id}`),
     onSuccess: () => {
@@ -97,6 +166,16 @@ export default function CustomerDetail() {
         </div>
       </div>,
     )
+  }
+
+  const actionBarProps = {
+    canEdit,
+    canDelete,
+    isEditing,
+    saving,
+    onEdit: () => setIsEditing(true),
+    onDelete: () => setShowDeleteConfirm(true),
+    onBack: () => navigate('/customers'),
   }
 
   return (
@@ -139,36 +218,7 @@ Are you sure you want to proceed?`}
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-                {canEdit && !isEditing ? (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] shadow-[var(--shadow-card)] transition-colors hover:opacity-95"
-                  >
-                    <Edit3 className="h-4 w-4" aria-hidden />
-                    Edit
-                  </button>
-                ) : null}
-                {canDelete ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] px-4 py-2.5 text-sm font-bold text-[color:var(--accent-red)] transition-colors hover:opacity-95"
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden />
-                    Delete
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => navigate('/customers')}
-                  className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2.5 text-sm font-semibold text-[color:var(--text-primary)] shadow-[var(--shadow-card)] transition-colors hover:bg-[color:var(--bg-card-hover)]"
-                >
-                  <ArrowLeft className="h-4 w-4" aria-hidden />
-                  Back
-                </button>
-              </div>
+              <CustomerDetailActionBar {...actionBarProps} />
             </div>
           </header>
 
@@ -186,6 +236,7 @@ Are you sure you want to proceed?`}
               customer={customer}
               layout="page"
               readOnly={!isEditing}
+              onPendingChange={handlePendingChange}
               onClose={() => navigate('/customers')}
               onSuccess={() => {
                 setIsEditing(false)
@@ -194,6 +245,10 @@ Are you sure you want to proceed?`}
                 queryClient.invalidateQueries({ queryKey: ['projects'] })
               }}
             />
+          </div>
+
+          <div className="mt-4 border-t border-[color:var(--border-default)] pt-4 sm:mt-6 sm:pt-5">
+            <CustomerDetailActionBar {...actionBarProps} />
           </div>
         </>,
       )}

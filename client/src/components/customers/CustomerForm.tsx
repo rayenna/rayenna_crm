@@ -106,6 +106,7 @@ export function CustomerForm({
   onSuccess,
   layout = 'modal',
   readOnly = false,
+  onPendingChange,
 }: {
   customer: Customer | null
   onClose: () => void
@@ -114,6 +115,8 @@ export function CustomerForm({
   layout?: 'modal' | 'page'
   /** When true, all fields are view-only (fieldset disabled). */
   readOnly?: boolean
+  /** Page layout: notify parent so top/bottom Update buttons can show saving state. */
+  onPendingChange?: (pending: boolean) => void
 }) {
   const { hasRole } = useAuth()
   useModalEscape(layout === 'modal', onClose)
@@ -291,6 +294,10 @@ export function CustomerForm({
     },
   })
 
+  useEffect(() => {
+    onPendingChange?.(mutation.isPending)
+  }, [mutation.isPending, onPendingChange])
+
   const fieldLabel: Record<string, string> = {
     customerType: 'Customer type',
     firstName: 'First name',
@@ -431,6 +438,7 @@ export function CustomerForm({
 
   const formEl = (
         <form
+          id={layout === 'page' ? 'customer-page-form' : undefined}
           ref={formContainerRef}
           onSubmit={handleSubmit(onSubmit, onFormInvalid)}
           className={layout === 'modal' ? 'space-y-5 p-4 sm:space-y-6 sm:p-6 md:space-y-7' : 'space-y-5 sm:space-y-6 md:space-y-7'}
@@ -808,10 +816,10 @@ export function CustomerForm({
           )}
           </fieldset>
 
-          {(layout === 'modal' || (layout === 'page' && !readOnly)) && (
+          {/* Page layout actions live in CustomerDetail (top + bottom). Modal keeps local footer. */}
+          {layout === 'modal' && (
           <div className="relative">
             <div className="flex flex-wrap justify-end gap-3 border-t border-[color:var(--border-default)] pt-4">
-              {layout === 'modal' && (
               <button
                 type="button"
                 onClick={onClose}
@@ -819,16 +827,6 @@ export function CustomerForm({
               >
                 Cancel
               </button>
-              )}
-              {layout === 'page' && !readOnly && (
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="min-h-[44px] touch-manipulation rounded-xl border border-[color:var(--border-strong)] bg-[color:var(--bg-input)] px-4 py-3 text-sm font-semibold text-[color:var(--text-primary)] shadow-sm transition-colors hover:bg-[color:var(--bg-card-hover)]"
-                >
-                  Cancel
-                </button>
-              )}
               <button
                 type="submit"
                 disabled={mutation.isPending}

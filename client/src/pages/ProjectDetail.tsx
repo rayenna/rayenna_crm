@@ -61,6 +61,88 @@ function projectDetailBackPath(
   return '/projects'
 }
 
+const actionBtnBase =
+  'inline-flex min-h-[44px] w-full touch-manipulation items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold shadow-[var(--shadow-card)] transition-colors sm:w-auto'
+
+function ProjectDetailActionBar({
+  showHandoff,
+  showProposals,
+  peSummaryPending,
+  canEdit,
+  canDelete,
+  editHref,
+  onHandoff,
+  onProposals,
+  onDelete,
+  onBack,
+}: {
+  showHandoff: boolean
+  showProposals: boolean
+  peSummaryPending: boolean
+  canEdit: boolean
+  canDelete: boolean
+  editHref: string
+  onHandoff: () => void
+  onProposals: () => void
+  onDelete: () => void
+  onBack: () => void
+}) {
+  return (
+    <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end [&>*:last-child:nth-child(odd)]:max-sm:col-span-2">
+      {showHandoff ? (
+        <button
+          type="button"
+          onClick={onHandoff}
+          className={`${actionBtnBase} border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] font-semibold text-[color:var(--accent-teal)] hover:opacity-95`}
+        >
+          Handoff brief
+        </button>
+      ) : null}
+      {showProposals ? (
+        <button
+          type="button"
+          onClick={onProposals}
+          disabled={peSummaryPending}
+          title={peSummaryPending ? 'Checking Proposal Engine status…' : undefined}
+          className={`${actionBtnBase} bg-[color:var(--accent-gold)] text-[color:var(--text-inverse)] hover:opacity-95 disabled:cursor-wait disabled:opacity-60`}
+        >
+          <span className="truncate">Proposals</span>
+          <span className="shrink-0 rounded bg-amber-300 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">
+            New
+          </span>
+        </button>
+      ) : null}
+      {canEdit ? (
+        <Link
+          to={editHref}
+          className={`${actionBtnBase} border border-[color:var(--border-default)] bg-[color:var(--bg-input)] font-semibold text-[color:var(--text-primary)] hover:bg-[color:var(--bg-card-hover)]`}
+        >
+          <Edit3 className="h-4 w-4" aria-hidden />
+          Edit
+        </Link>
+      ) : null}
+      {canDelete ? (
+        <button
+          type="button"
+          onClick={onDelete}
+          className={`${actionBtnBase} border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] text-[color:var(--accent-red)] hover:opacity-95`}
+        >
+          <Trash2 className="h-4 w-4" aria-hidden />
+          Delete
+        </button>
+      ) : null}
+      <button
+        type="button"
+        onClick={onBack}
+        className={`${actionBtnBase} border border-[color:var(--border-default)] bg-[color:var(--bg-input)] font-semibold text-[color:var(--text-primary)] hover:bg-[color:var(--bg-card-hover)]`}
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden />
+        Back
+      </button>
+    </div>
+  )
+}
+
 /** Responsive label/value row: stacked on phones, two columns from sm (tablet+). */
 function DetailRow({ label, children, valueClassName = '' }: { label: string; children: ReactNode; valueClassName?: string }) {
   return (
@@ -363,6 +445,29 @@ const ProjectDetail = () => {
     )
   }
 
+  const canOpenRoleActions =
+    hasRole([UserRole.SALES]) ||
+    hasRole([UserRole.OPERATIONS]) ||
+    hasRole([UserRole.MANAGEMENT]) ||
+    hasRole([UserRole.FINANCE]) ||
+    hasRole([UserRole.ADMIN])
+
+  const actionBarProps = {
+    showHandoff: canOpenRoleActions,
+    showProposals:
+      canOpenRoleActions &&
+      (project.projectStatus === ProjectStatus.PROPOSAL ||
+        project.projectStatus === ProjectStatus.CONFIRMED),
+    peSummaryPending,
+    canEdit,
+    canDelete,
+    editHref: `/projects/${id}/edit`,
+    onHandoff: () => setShowHandoffBrief(true),
+    onProposals: handleProposalsClick,
+    onDelete: () => setShowDeleteConfirm(true),
+    onBack: () => navigate(backPath),
+  }
+
   return (
     <>
       <ErrorModal
@@ -454,58 +559,7 @@ const ProjectDetail = () => {
                 </div>
               </div>
 
-              {/* Action buttons */}
-              <div className="flex flex-wrap gap-2 sm:items-center">
-                {(hasRole([UserRole.SALES]) || hasRole([UserRole.OPERATIONS]) || hasRole([UserRole.MANAGEMENT]) || hasRole([UserRole.FINANCE]) || hasRole([UserRole.ADMIN])) && (
-                  <button
-                    type="button"
-                    onClick={() => setShowHandoffBrief(true)}
-                    className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-4 py-2.5 text-sm font-semibold text-[color:var(--accent-teal)] shadow-[var(--shadow-card)] transition-colors hover:opacity-95"
-                  >
-                    Handoff brief
-                  </button>
-                )}
-                {(hasRole([UserRole.SALES]) || hasRole([UserRole.OPERATIONS]) || hasRole([UserRole.MANAGEMENT]) || hasRole([UserRole.FINANCE]) || hasRole([UserRole.ADMIN])) &&
-                  (project.projectStatus === ProjectStatus.PROPOSAL || project.projectStatus === ProjectStatus.CONFIRMED) && (
-                    <button
-                      type="button"
-                      onClick={handleProposalsClick}
-                      disabled={peSummaryPending}
-                      title={peSummaryPending ? 'Checking Proposal Engine status…' : undefined}
-                      className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] shadow-[var(--shadow-card)] transition-colors hover:opacity-95 disabled:cursor-wait disabled:opacity-60"
-                    >
-                      <span className="truncate">Proposals</span>
-                      <span className="shrink-0 rounded bg-amber-300 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">New</span>
-                    </button>
-                  )}
-                {canEdit && (
-                  <Link
-                    to={`/projects/${id}/edit`}
-                    className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2.5 text-sm font-semibold text-[color:var(--text-primary)] shadow-[var(--shadow-card)] transition-colors hover:bg-[color:var(--bg-card-hover)]"
-                  >
-                    <Edit3 className="h-4 w-4" aria-hidden />
-                    Edit
-                  </Link>
-                )}
-                {canDelete && (
-                  <button
-                    type="button"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] px-4 py-2.5 text-sm font-bold text-[color:var(--accent-red)] transition-colors hover:opacity-95"
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden />
-                    Delete
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => navigate(backPath)}
-                  className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2.5 text-sm font-semibold text-[color:var(--text-primary)] shadow-[var(--shadow-card)] transition-colors hover:bg-[color:var(--bg-card-hover)]"
-                >
-                  <ArrowLeft className="h-4 w-4" aria-hidden />
-                  Back
-                </button>
-              </div>
+              <ProjectDetailActionBar {...actionBarProps} />
             </div>
           </header>
 
@@ -1169,6 +1223,10 @@ const ProjectDetail = () => {
           <p className="text-sm text-[color:var(--text-muted)]">No artifacts uploaded yet. Click <strong className="text-[color:var(--accent-gold)]">Edit</strong> to upload documents.</p>
         )}
       </InfoSection>
+
+          <div className="mt-4 border-t border-[color:var(--border-default)] pt-4 sm:mt-6 sm:pt-5">
+            <ProjectDetailActionBar {...actionBarProps} />
+          </div>
       </div>
         </>,
       )}
