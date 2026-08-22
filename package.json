@@ -22,7 +22,9 @@
     "prisma:backfill:consumer-hub": "ts-node prisma/backfill-consumer-hub.ts",
     "prisma:seed:consumer-help": "ts-node prisma/seed-consumer-help.ts",
     "test": "vitest run",
-    "test:watch": "vitest --watch"
+    "test:watch": "vitest --watch",
+    "prepare": "node scripts/install-git-hooks.js",
+    "prepush": "bash scripts/pre-push-checks.sh"
   },
   "keywords": [
     "crm",

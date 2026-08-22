@@ -16,6 +16,7 @@ import { getSalesTeamColor } from '../components/dashboard/salesTeamColors'
 import DashboardFilters from '../components/dashboard/DashboardFilters'
 import HealthBadge from '../components/zenith/HealthBadge'
 import FinancingBankPopoverIcon from '../components/projects/FinancingBankPopoverIcon'
+import CapacitySpecsPopover from '../components/projects/CapacitySpecsPopover'
 import LeadSourcePill from '../components/projects/LeadSourcePill'
 import { getFinancingBankDisplayName } from '../utils/financingBankDisplay'
 import { FiPaperclip } from 'react-icons/fi'
@@ -1995,9 +1996,14 @@ Do you want to continue?`}
                     </div>
                   </td>
                   <td className="min-w-0 py-2 pl-1.5 pr-2 text-right tabular-nums sm:px-2 lg:py-1.5">
-                    <span className="text-xs font-bold text-[color:var(--accent-gold)] transition-colors group-hover:opacity-90 lg:text-[13px]">
-                      {project.systemCapacity ? `${project.systemCapacity} kW` : '—'}
-                    </span>
+                    <CapacitySpecsPopover
+                      systemCapacity={project.systemCapacity}
+                      panelBrand={project.panelBrand}
+                      inverterBrand={project.inverterBrand}
+                      inverterCapacityKw={project.inverterCapacityKw}
+                      panelType={project.panelType}
+                      panelCapacityW={project.panelCapacityW}
+                    />
                   </td>
                   <td className="min-w-0 px-2 py-2 text-right tabular-nums sm:px-2.5 lg:py-1.5 lg:pl-2 lg:pr-2">
                     <span className="text-xs font-bold text-[color:var(--accent-teal)] transition-colors group-hover:opacity-90 lg:text-[13px]">
