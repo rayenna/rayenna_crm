@@ -1514,7 +1514,12 @@ export default function ProposalPreview() {
                   </>
                 )}
                 <Divider />
-                <CommercialsBlock sheet={proposal.sheet} roi={proposal.roi} roiAutofill={proposal.roiAutofill} />
+                <CommercialsBlock
+                  sheet={proposal.sheet}
+                  roi={proposal.roi}
+                  roiAutofill={proposal.roiAutofill}
+                  systemSizeKw={proposal.systemSizeKw}
+                />
                 <div className="print-hide">
                   <Divider />
                 </div>

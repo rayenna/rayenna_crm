@@ -512,7 +512,9 @@ export function buildDocx(
     const subsidyAmt   = p.roi?.inputs?.subsidyAmount ?? 0;
     const showSubsidy  = !!p.roi?.inputs?.subsidyEligible && subsidyAmt > 0;
     const hasSheet     = !!p.sheet;
-    const sizeKw       = p.roiAutofill?.systemSizeKw ?? p.sheet?.systemSizeKw ?? 0;
+    const sizeKw       = p.systemSizeKw > 0
+      ? p.systemSizeKw
+      : (p.roiAutofill?.systemSizeKw ?? p.sheet?.systemSizeKw ?? 0);
 
     let gstAmount: number;
     let preGst: number;

@@ -1191,15 +1191,23 @@ export function CommercialsBlock({
   sheet,
   roi,
   roiAutofill,
+  systemSizeKw: headingSystemSizeKw,
 }: {
   sheet: SavedSheet | null;
   roi: ROIResult | null;
   roiAutofill: RoiAutofill | null;
+  /** Same kW as the proposal header (“Proposal For … kW On-Grid …”). */
+  systemSizeKw?: number;
 }) {
   // Prefer the saved costing sheet grand total + GST (must exactly match Excel).
   // Fall back to ROI inputs only when no costing sheet exists.
   const grandTotal = sheet?.grandTotal ?? roiAutofill?.grandTotal ?? roi?.inputs.projectCost ?? 0;
   if (!grandTotal) return null;
+
+  const capacityKw =
+    (headingSystemSizeKw != null && headingSystemSizeKw > 0
+      ? headingSystemSizeKw
+      : (roiAutofill?.systemSizeKw ?? sheet?.systemSizeKw ?? 0)) || 0;
 
   const subsidyAmount = roi?.inputs?.subsidyAmount ?? 0;
   const showSubsidy = !!roi?.inputs?.subsidyEligible && subsidyAmount > 0;
@@ -1229,12 +1237,9 @@ export function CommercialsBlock({
             <tr className="border-b border-primary-100">
               <td className="px-5 py-3 text-secondary-600">
                 Design, Supply, Installation &amp; Commissioning of{' '}
-                {(() => {
-                  const sizeKw = (roiAutofill?.systemSizeKw ?? sheet?.systemSizeKw ?? 0) || 0;
-                  return sizeKw > 0
-                    ? <span className="font-semibold text-secondary-800">{sizeKw} kW</span>
-                    : 'the';
-                })()}{' '}
+                {capacityKw > 0
+                  ? <span className="font-semibold text-secondary-800">{capacityKw} kW</span>
+                  : 'the'}{' '}
                 On-Grid Solar Power Plant including all electrical and structural work
               </td>
               <td className="px-5 py-3 text-right text-secondary-800 font-semibold tabular-nums w-44">
@@ -1292,8 +1297,11 @@ export function CommercialsBlock({
           <tbody>
             <tr className="border-b border-primary-100">
               <td className="px-5 py-3 text-secondary-600">
-                Design, Supply, Installation &amp; Commissioning of the On-Grid Solar Power Plant
-                including all electrical and structural work
+                Design, Supply, Installation &amp; Commissioning of{' '}
+                {capacityKw > 0
+                  ? <span className="font-semibold text-secondary-800">{capacityKw} kW</span>
+                  : 'the'}{' '}
+                On-Grid Solar Power Plant including all electrical and structural work
               </td>
               <td className="px-5 py-3 text-right text-secondary-800 font-semibold tabular-nums w-44">
                 {fmtINRFull(preGst)}
