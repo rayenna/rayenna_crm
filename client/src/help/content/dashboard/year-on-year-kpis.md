@@ -9,10 +9,10 @@ On **Sales**, **Management**, and **Admin** dashboards, a full-width **Year-on-Y
 | Metric | Meaning |
 | :-- | :-- |
 | **Total Capacity** | Sum of system capacity (kW) in scope |
-| **Total Pipeline** | Combined value of pipeline-stage projects |
+| **Total Pipeline** | Combined value of pipeline-stage projects (**excludes Lost**) |
 | **Total Revenue** | Revenue from confirmed-path deals in scope |
 | **Total Profit** | Gross profit total (shows **—** when not available) |
-| **Pipeline Conversion** | **Total Revenue ÷ Total Pipeline × 100%** |
+| **Pipeline Conversion** | **Total Revenue ÷ (Total Pipeline + Lost order value) × 100%**. Lost rupees are in the denominator only; they are **not** added to the Total Pipeline tile. |
 
 Each tile shows a **YoY badge** in the top-right when a comparison is possible.
 

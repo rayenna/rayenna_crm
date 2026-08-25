@@ -1,4 +1,5 @@
 import { FaBolt, FaChartLine, FaPercent, FaRupeeSign } from 'react-icons/fa'
+import { pipelineConversionPercent } from '../zenith/zenithKpi'
 
 export interface FYRow {
   fy: string
@@ -6,6 +7,7 @@ export interface FYRow {
   totalProfit: number
   totalCapacity?: number
   totalPipeline?: number
+  lostOrderValue?: number
 }
 
 export interface PreviousYearSamePeriod {
@@ -13,6 +15,8 @@ export interface PreviousYearSamePeriod {
   totalPipeline: number
   totalRevenue: number
   totalProfit: number
+  conversionPipeline?: number
+  lostOrderValue?: number
 }
 
 interface KeyMetricsTileProps {
@@ -26,6 +30,8 @@ interface KeyMetricsTileProps {
   /** When one FY + quarter/month selected, API returns same period in previous year for YoY */
   previousYearSamePeriod?: PreviousYearSamePeriod | null
   variant?: 'default' | 'zenith'
+  /** Lost order value in the current filter (not included in Total Pipeline tile). */
+  lostOrderValue?: number
 }
 
 /** e.g. "2024-25" -> "2023-24", "2024-2025" -> "2023-2024" */
@@ -110,6 +116,7 @@ const KeyMetricsTile = ({
   selectedFYs,
   previousYearSamePeriod,
   variant = 'default',
+  lostOrderValue = 0,
 }: KeyMetricsTileProps) => {
   const isZenith = variant === 'zenith'
   // YoY is only relevant when exactly one FY is selected (optionally with quarter/month).
@@ -128,12 +135,17 @@ const KeyMetricsTile = ({
   let pipelinePrevious: number | undefined
   let revenuePrevious: number | undefined
   let profitPrevious: number | undefined
+  let conversionPipelinePrevious: number | undefined
+  let lostOrderValuePrevious: number | undefined
 
   if (usePeriodYoY) {
     capacityPrevious = previousYearSamePeriod.totalCapacity
     pipelinePrevious = previousYearSamePeriod.totalPipeline
     revenuePrevious = previousYearSamePeriod.totalRevenue
     profitPrevious = previousYearSamePeriod.totalProfit
+    conversionPipelinePrevious =
+      previousYearSamePeriod.conversionPipeline ?? previousYearSamePeriod.totalPipeline
+    lostOrderValuePrevious = previousYearSamePeriod.lostOrderValue ?? 0
   } else if (singleFYSelected && selectedFY) {
     const previousRow = previousFYLabel
       ? projectValueProfitByFY.find((r) => r.fy === previousFYLabel)
@@ -142,6 +154,8 @@ const KeyMetricsTile = ({
     profitPrevious = previousRow?.totalProfit
     capacityPrevious = previousRow?.totalCapacity
     pipelinePrevious = previousRow?.totalPipeline
+    conversionPipelinePrevious = previousRow?.totalPipeline
+    lostOrderValuePrevious = previousRow?.lostOrderValue ?? 0
   }
 
   const capacityYoY = singleFYSelected
@@ -158,12 +172,15 @@ const KeyMetricsTile = ({
       ? computeYoY(profit, profitPrevious)
       : naYoY
 
-  // Pipeline Conversion = (Total Revenue / Total Pipeline) x 100 %. YoY = current vs previous year same period.
-  const pipelineConversion =
-    pipeline > 0 ? (revenue / pipeline) * 100 : null
+  // Pipeline Conversion = Revenue ÷ (Total Pipeline + Lost order value). Total Pipeline tile still excludes Lost.
+  const pipelineConversion = pipelineConversionPercent(revenue, pipeline, lostOrderValue)
   const pipelineConversionPrevious =
-    pipelinePrevious != null && pipelinePrevious > 0 && revenuePrevious != null
-      ? (revenuePrevious / pipelinePrevious) * 100
+    revenuePrevious != null && conversionPipelinePrevious != null
+      ? pipelineConversionPercent(
+          revenuePrevious,
+          conversionPipelinePrevious,
+          lostOrderValuePrevious ?? 0,
+        )
       : null
   const pipelineConversionYoY = singleFYSelected
     ? computeYoY(pipelineConversion ?? 0, pipelineConversionPrevious)

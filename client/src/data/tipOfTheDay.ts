@@ -36,7 +36,7 @@ export const TIPS: string[] = [
   // Revenue & Pipeline
   'Revenue = Order Value of Confirmed, Installation, Completed, and Subsidy Credited projects.',
   'Pipeline = Order Value of all project stages except Lost.',
-  'Pipeline Conversion % = (Total Revenue / Total Pipeline) × 100.',
+  'Pipeline Conversion % = Total Revenue ÷ (Total Pipeline + Lost order value) × 100. Total Pipeline still excludes Lost.',
   'Lost projects are excluded from Pipeline – mark lost deals promptly to keep metrics accurate.',
   // Projects by Stage & charts
   'Projects by Stage chart shows project counts by execution status; Lost is excluded so the chart focuses on active pipeline.',

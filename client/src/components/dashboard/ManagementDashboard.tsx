@@ -112,6 +112,7 @@ const ManagementDashboard = ({
           projectValueProfitByFY={projectValueProfitByFY}
           selectedFYs={selectedFYs}
           previousYearSamePeriod={data?.previousYearSamePeriod ?? undefined}
+          lostOrderValue={data?.lostOrderValue ?? 0}
           variant="zenith"
         />
       </div>

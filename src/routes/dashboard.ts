@@ -175,12 +175,53 @@ const DASHBOARD_PIPELINE_WHERE_BASE = {
   projectStatus: { not: ProjectStatus.LOST },
 } as const;
 
+/** Lost ₹ for conversion: prefer projectCost; fall back to legacy lostRevenue. */
+function lostOrderValueOf(p: { projectCost: number | null; lostRevenue: number | null }): number {
+  const cost = p.projectCost != null ? Number(p.projectCost) : 0;
+  const legacy = p.lostRevenue != null ? Number(p.lostRevenue) : 0;
+  if (Number.isFinite(cost) && cost > 0) return cost;
+  if (Number.isFinite(legacy) && legacy > 0) return legacy;
+  return 0;
+}
+
+async function loadLostOrderValueRows(where: Prisma.ProjectWhereInput) {
+  return prisma.project.findMany({
+    where: { ...where, projectStatus: ProjectStatus.LOST },
+    select: { year: true, projectCost: true, lostRevenue: true },
+  });
+}
+
+function sumLostOrderValue(rows: { projectCost: number | null; lostRevenue: number | null }[]): number {
+  return rows.reduce((s, p) => s + lostOrderValueOf(p), 0);
+}
+
+function lostOrderValueByYear(
+  rows: { year: string; projectCost: number | null; lostRevenue: number | null }[],
+): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const p of rows) {
+    m.set(p.year, (m.get(p.year) ?? 0) + lostOrderValueOf(p));
+  }
+  return m;
+}
+
 type ProjectValueProfitFYRow = {
   fy: string;
   totalProjectValue: number;
   totalProfit: number;
   totalCapacity?: number;
   totalPipeline?: number;
+  lostOrderValue?: number;
+};
+
+type PreviousYearSamePeriodPayload = {
+  totalCapacity: number;
+  totalPipeline: number;
+  totalRevenue: number;
+  totalProfit: number;
+  /** Non-lost pipeline (all stages except Lost) — conversion YoY, not the narrower survey/proposal YoY pipeline. */
+  conversionPipeline: number;
+  lostOrderValue: number;
 };
 
 /**
@@ -202,7 +243,7 @@ async function appendPreviousFYToProjectValueProfitByFY(
   const pipelineWherePrev = { ...wherePrev, ...DASHBOARD_PIPELINE_WHERE_BASE };
 
   if (mode === 'full') {
-    const [prevRev, prevProfit, prevCap, prevPipe] = await Promise.all([
+    const [prevRev, prevProfit, prevCap, prevPipe, prevLostRows] = await Promise.all([
       prisma.project.aggregate({ where: revenueWherePrev, _sum: { projectCost: true } }),
       prisma.project.aggregate({
         where: { ...revenueWherePrev, grossProfit: { not: null } },
@@ -213,6 +254,7 @@ async function appendPreviousFYToProjectValueProfitByFY(
         _sum: { systemCapacity: true },
       }),
       prisma.project.aggregate({ where: pipelineWherePrev, _sum: { projectCost: true } }),
+      loadLostOrderValueRows(wherePrev),
     ]);
     return [
       ...rows,
@@ -222,6 +264,7 @@ async function appendPreviousFYToProjectValueProfitByFY(
         totalProfit: prevProfit._sum.grossProfit || 0,
         totalCapacity: prevCap._sum.systemCapacity || 0,
         totalPipeline: prevPipe._sum.projectCost || 0,
+        lostOrderValue: sumLostOrderValue(prevLostRows),
       },
     ].sort((a, b) => String(a.fy).localeCompare(String(b.fy)));
   }
@@ -815,11 +858,16 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       _sum: { systemCapacity: true },
     });
 
-    const pipelineByFY = await prisma.project.groupBy({
-      by: ['year'],
-      where: pipelineWhereFY,
-      _sum: { projectCost: true },
-    });
+    const [pipelineByFY, lostRowsSales] = await Promise.all([
+      prisma.project.groupBy({
+        by: ['year'],
+        where: pipelineWhereFY,
+        _sum: { projectCost: true },
+      }),
+      loadLostOrderValueRows(where as Prisma.ProjectWhereInput),
+    ]);
+    const lostByYearSales = lostOrderValueByYear(lostRowsSales);
+    const lostOrderValue = sumLostOrderValue(lostRowsSales);
 
     // Combine the data by financial year
     const allFYs = new Set([
@@ -827,6 +875,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       ...profitByFY.map((item) => item.year),
       ...capacityByFY.map((item) => item.year),
       ...pipelineByFY.map((item) => item.year),
+      ...lostRowsSales.map((item) => item.year),
     ]);
 
     let projectValueProfitByFY: ProjectValueProfitFYRow[] = Array.from(allFYs)
@@ -837,6 +886,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
         totalProfit: profitByFY.find((item) => item.year === fy)?._sum.grossProfit || 0,
         totalCapacity: capacityByFY.find((item) => item.year === fy)?._sum.systemCapacity || 0,
         totalPipeline: pipelineByFY.find((item) => item.year === fy)?._sum.projectCost || 0,
+        lostOrderValue: lostByYearSales.get(fy) || 0,
       }));
 
     const baseWherePrevSales: Record<string, unknown> = {};
@@ -972,7 +1022,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
     const availingLoanByBank = buildAvailingLoanByBank(availingLoanByBankRaw);
 
     // When one FY and quarter/month selected: same period in previous year for YoY
-    let previousYearSamePeriod: { totalCapacity: number; totalPipeline: number; totalRevenue: number; totalProfit: number } | null = null;
+    let previousYearSamePeriod: PreviousYearSamePeriodPayload | null = null;
     if (fyFilters.length === 1 && (quarterFilters.length > 0 || monthFilters.length > 0)) {
       const previousFY = getPreviousFY(fyFilters[0]);
       if (previousFY) {
@@ -988,7 +1038,8 @@ router.get('/sales', authenticate, async (req: Request, res) => {
             { projectStage: ProjectStage.PROPOSAL },
           ],
         };
-        const [prevCapacity, prevRevenue, prevProfit, prevPipeline] = await Promise.all([
+        const [prevCapacity, prevRevenue, prevProfit, prevPipeline, prevConversionPipe, prevLostRows] =
+          await Promise.all([
           prisma.project.aggregate({
             where: { ...revenueWherePrev, systemCapacity: { not: null } },
             _sum: { systemCapacity: true },
@@ -1005,12 +1056,19 @@ router.get('/sales', authenticate, async (req: Request, res) => {
             where: pipelineWherePrev,
             _sum: { projectCost: true },
           }),
+          prisma.project.aggregate({
+            where: { ...wherePrev, ...DASHBOARD_PIPELINE_WHERE_BASE },
+            _sum: { projectCost: true },
+          }),
+          loadLostOrderValueRows(wherePrev),
         ]);
         previousYearSamePeriod = {
           totalCapacity: prevCapacity._sum.systemCapacity ?? 0,
           totalRevenue: prevRevenue._sum.projectCost ?? 0,
           totalProfit: prevProfit._sum.grossProfit ?? 0,
           totalPipeline: prevPipeline._sum.projectCost ?? 0,
+          conversionPipeline: prevConversionPipe._sum.projectCost ?? 0,
+          lostOrderValue: sumLostOrderValue(prevLostRows),
         };
       }
     }
@@ -1041,6 +1099,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
         atRisk: pipelineAtRisk,
       },
       totalPipeline: totalPipeline._sum.projectCost || 0,
+      lostOrderValue,
       totalProfit: totalProfit._sum.grossProfit ?? 0,
       previousYearSamePeriod,
       revenueBySalesperson: revenueBreakdown,
@@ -1787,6 +1846,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
       profitByFY,
       capacityByFY,
       pipelineByFY,
+      lostRowsMgmt,
       totalPipelineResult,
       pipelineCapacityResult,
       projectsByStatusRawMgmt,
@@ -1828,6 +1888,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
         where: pipelineWhereFYMgmt,
         _sum: { projectCost: true },
       }),
+      loadLostOrderValueRows(where as Prisma.ProjectWhereInput),
       prisma.project.aggregate({
         where: pipelineWhereForTilesMgmt,
         _sum: { projectCost: true },
@@ -1862,6 +1923,8 @@ router.get('/management', authenticate, async (req: Request, res) => {
     ]);
 
     const totalPipeline = totalPipelineResult;
+    const lostByYearMgmt = lostOrderValueByYear(lostRowsMgmt);
+    const lostOrderValue = sumLostOrderValue(lostRowsMgmt);
 
     const valueByTypeWithPercentage = withChartPercentages(projectValueByType);
 
@@ -1914,6 +1977,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
       ...profitByFY.map((item) => item.year),
       ...capacityByFY.map((item) => item.year),
       ...pipelineByFY.map((item) => item.year),
+      ...lostRowsMgmt.map((item) => item.year),
     ]);
 
     let projectValueProfitByFY: ProjectValueProfitFYRow[] = Array.from(allFYs)
@@ -1924,6 +1988,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
         totalProfit: profitByFY.find((item) => item.year === fy)?._sum.grossProfit || 0,
         totalCapacity: capacityByFY.find((item) => item.year === fy)?._sum.systemCapacity || 0,
         totalPipeline: pipelineByFY.find((item) => item.year === fy)?._sum.projectCost || 0,
+        lostOrderValue: lostByYearMgmt.get(fy) || 0,
       }));
 
     projectValueProfitByFY = await appendPreviousFYToProjectValueProfitByFY(
@@ -1977,7 +2042,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
     const availingLoanByBank = buildAvailingLoanByBank(availingLoanByBankRawMgmt);
 
     // When one FY and quarter/month selected: same period in previous year for YoY
-    let previousYearSamePeriod: { totalCapacity: number; totalPipeline: number; totalRevenue: number; totalProfit: number } | null = null;
+    let previousYearSamePeriod: PreviousYearSamePeriodPayload | null = null;
     if (fyFilters.length === 1 && (quarterFilters.length > 0 || monthFilters.length > 0)) {
       const previousFY = getPreviousFY(fyFilters[0]);
       if (previousFY) {
@@ -1994,7 +2059,8 @@ router.get('/management', authenticate, async (req: Request, res) => {
             { projectStage: ProjectStage.PROPOSAL },
           ],
         };
-        const [prevCapacity, prevRevenue, prevProfit, prevPipeline] = await Promise.all([
+        const [prevCapacity, prevRevenue, prevProfit, prevPipeline, prevConversionPipe, prevLostRows] =
+          await Promise.all([
           prisma.project.aggregate({
             where: { ...revenueWherePrev, systemCapacity: { not: null } },
             _sum: { systemCapacity: true },
@@ -2011,12 +2077,19 @@ router.get('/management', authenticate, async (req: Request, res) => {
             where: pipelineWherePrev,
             _sum: { projectCost: true },
           }),
+          prisma.project.aggregate({
+            where: { ...wherePrev, ...DASHBOARD_PIPELINE_WHERE_BASE },
+            _sum: { projectCost: true },
+          }),
+          loadLostOrderValueRows(wherePrev),
         ]);
         previousYearSamePeriod = {
           totalCapacity: prevCapacity._sum.systemCapacity ?? 0,
           totalRevenue: prevRevenue._sum.projectCost ?? 0,
           totalProfit: prevProfit._sum.grossProfit ?? 0,
           totalPipeline: prevPipeline._sum.projectCost ?? 0,
+          conversionPipeline: prevConversionPipe._sum.projectCost ?? 0,
+          lostOrderValue: sumLostOrderValue(prevLostRows),
         };
       }
     }
@@ -2028,6 +2101,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
       operations,
       finance,
       totalPipeline: totalPipeline._sum.projectCost || 0,
+      lostOrderValue,
       pipelineCapacityKW: pipelineCapacityResult._sum.systemCapacity || 0,
       previousYearSamePeriod,
       projectValueByType: valueByTypeWithPercentage,

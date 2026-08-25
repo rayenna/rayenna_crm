@@ -10,4 +10,5 @@ export interface ZenithFYRow {
   totalProfit?: number | null
   totalCapacity?: number
   totalPipeline?: number
+  lostOrderValue?: number
 }

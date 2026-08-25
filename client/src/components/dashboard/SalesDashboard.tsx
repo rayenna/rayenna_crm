@@ -108,6 +108,7 @@ const SalesDashboard = ({ selectedFYs, selectedQuarters, selectedMonths, initial
           projectValueProfitByFY={projectValueProfitByFY}
           selectedFYs={selectedFYs}
           previousYearSamePeriod={data?.previousYearSamePeriod ?? undefined}
+          lostOrderValue={data?.lostOrderValue ?? 0}
           variant="zenith"
         />
       </div>

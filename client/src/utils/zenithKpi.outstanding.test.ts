@@ -65,4 +65,23 @@ describe('buildExecutiveZenithKpis outstanding', () => {
     )
     expect(kpis.find((k) => k.key === 'outstanding')?.value).toBe(999)
   })
+
+  it('uses pipeline plus lost order value for conversion (not 100% when lost ₹ exists)', () => {
+    const kpis = buildExecutiveZenithKpis(
+      UserRole.ADMIN,
+      {
+        sales: { totalCapacity: 10 },
+        finance: { totalValue: 100, totalProfit: 50 },
+        totalPipeline: 100,
+        lostOrderValue: 100,
+        lostProjectsCount: 12,
+        projectsByPaymentStatus: paymentBuckets,
+        availingLoanCount: 0,
+        projectValueProfitByFY: [],
+      },
+      ['2025-26'],
+    )
+    expect(kpis.find((k) => k.key === 'conversion')?.value).toBe(50)
+    expect(kpis.find((k) => k.key === 'pipeline')?.value).toBe(100)
+  })
 })

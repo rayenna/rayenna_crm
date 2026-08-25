@@ -50,6 +50,21 @@ interface PrevPeriod {
   totalPipeline: number
   totalRevenue: number
   totalProfit: number
+  conversionPipeline?: number
+  lostOrderValue?: number
+}
+
+/** Revenue ÷ (non-lost pipeline + lost order value). Total Pipeline tile stays excluding Lost. */
+export function pipelineConversionPercent(
+  revenue: number,
+  pipeline: number,
+  lostOrderValue = 0,
+): number | null {
+  const den = Number(pipeline) + Number(lostOrderValue || 0)
+  if (!(Number.isFinite(den) && den > 0)) return null
+  const rev = Number(revenue)
+  if (!Number.isFinite(rev)) return null
+  return (rev / den) * 100
 }
 
 /** Optional; Finance dashboard only — used for loan YoY when present */
@@ -103,12 +118,16 @@ export function buildExecutiveZenithKpis(
   let pipePrev: number | undefined
   let revPrev: number | undefined
   let profPrev: number | undefined
+  let convPipePrev: number | undefined
+  let lostPrev: number | undefined
 
   if (usePeriodYoY && prevPeriod) {
     capPrev = prevPeriod.totalCapacity
     pipePrev = prevPeriod.totalPipeline
     revPrev = prevPeriod.totalRevenue
     profPrev = prevPeriod.totalProfit
+    convPipePrev = prevPeriod.conversionPipeline ?? prevPeriod.totalPipeline
+    lostPrev = prevPeriod.lostOrderValue ?? 0
   } else if (singleFY) {
     const prevLabel = getPreviousFY(singleFY)
     const prevRow = prevLabel ? rows.find((r) => r.fy === prevLabel) : undefined
@@ -116,11 +135,16 @@ export function buildExecutiveZenithKpis(
     profPrev = prevRow?.totalProfit ?? undefined
     capPrev = prevRow?.totalCapacity
     pipePrev = prevRow?.totalPipeline
+    convPipePrev = prevRow?.totalPipeline
+    lostPrev = prevRow?.lostOrderValue ?? 0
   }
 
-  const conversion = pipeline > 0 ? (revenue / pipeline) * 100 : null
+  const lostOrderValue = Number(data?.lostOrderValue ?? 0)
+  const conversion = pipelineConversionPercent(revenue, pipeline, lostOrderValue)
   const convPrev =
-    pipePrev != null && pipePrev > 0 && revPrev != null ? (revPrev / pipePrev) * 100 : null
+    revPrev != null && convPipePrev != null
+      ? pipelineConversionPercent(revPrev, convPipePrev, lostPrev ?? 0)
+      : null
 
   const singleFYSelected = selectedFYs.length === 1
   const convChange =
@@ -195,8 +219,10 @@ export function buildExecutiveZenithKpis(
       changePct: convChange,
       sparkline: fySparkline(rows, (r) => {
         const p = r.totalPipeline ?? 0
+        const lost = r.lostOrderValue ?? 0
         const rev = r.totalProjectValue ?? 0
-        return p > 0 ? (rev / p) * 100 : 0
+        const pct = pipelineConversionPercent(rev, p, lost)
+        return pct ?? 0
       }),
     },
     {

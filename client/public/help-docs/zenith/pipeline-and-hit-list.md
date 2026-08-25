@@ -33,7 +33,7 @@ For the **full explanation** of weights, sort behaviour, and sales tips, open th
 
 ## Executive (Sales, Management & Admin)
 
-**KPI strip** — Typically includes **Total Capacity**, **Total Pipeline**, **Total Revenue**, **Total Profit**, **Pipeline Conversion**, and **Availing Loan** (definitions match the classic dashboard and the sections above). **Availing Loan** is **clickable** → **Quick Actions** list + **Open in Projects →**, like charts and the funnel ([KPI strip](#kpi-strip-and-year-on-year)).
+**KPI strip** — Typically includes **Total Capacity**, **Total Pipeline**, **Total Revenue**, **Total Profit**, **Pipeline Conversion**, and **Availing Loan** (definitions match the classic dashboard and the sections above). **Pipeline Conversion** is revenue divided by **open pipeline plus lost order value** (the **Total Pipeline** tile still excludes Lost). **Availing Loan** is **clickable** → **Quick Actions** list + **Open in Projects →**, like charts and the funnel ([KPI strip](#kpi-strip-and-year-on-year)).
 
 **Your Focus** — See [Your Focus](#your-focus-role-specific); **Sales** sees own pipeline, **Management/Admin** see the combined focus layout.
 
