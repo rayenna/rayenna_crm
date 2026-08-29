@@ -1,6 +1,6 @@
 # Year-on-Year KPIs
 
-On **Sales**, **Management**, and **Admin** dashboards, a full-width **Year-on-Year** band appears below **Today's plan** (and **Things needing attention** when shown). It summarizes five metrics for your current filter period.
+On **Sales**, **Management**, and **Admin** classic dashboards, a full-width **Year-on-Year** band appears near the top (after the marquee). It summarizes five metrics for your current filter period.
 
 **Finance** and **Operations** do not show this band on the classic Dashboard (they use other KPI rows instead).
 

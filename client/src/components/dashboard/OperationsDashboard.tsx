@@ -11,7 +11,6 @@ import ProjectValueProfitByFYChart from './ProjectValueProfitByFYChart'
 import ProjectsByStageChart from './ProjectsByStageChart'
 import RevenueBySalesTeamChart from './RevenueBySalesTeamChart'
 import MetricCard from './MetricCard'
-import DashboardPlanAttentionRow from './DashboardPlanAttentionRow'
 import DashboardLifecycleBrandBarCharts from './DashboardLifecycleBrandBarCharts'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
 
@@ -71,11 +70,6 @@ const OperationsDashboard = ({ selectedFYs, selectedQuarters, selectedMonths }: 
 
   return (
     <div className="space-y-6 min-w-0 max-w-full">
-      <DashboardPlanAttentionRow
-        showLifecycleReminder
-        explorerProjects={(data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]}
-        tileParams={tileParams}
-      />
       {/* Quick Access – tiles linking to filtered Projects */}
       <QuickAccessSection variant="zenith">
       <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-4 min-w-0">

@@ -22,8 +22,8 @@ Deep dive: [Zenith command center](/help/zenith#zenith-command-center)
 | Topic | Guide |
 | :-- | :-- |
 | **FY / Quarter / Month** | [Dashboard filters](#dashboard-filters) |
-| **Today's plan** & **My Day** suggestions | [Today's plan](#todays-plan-dashboard) |
-| **Lifecycle brand gaps** | [Things needing attention](#things-needing-attention-dashboard) |
+| **Today's plan** & **My Day** suggestions | [Today's plan](#todays-plan-dashboard) (on **Zenith**, not classic Dashboard) |
+| **Lifecycle brand gaps** | [Things needing attention](#things-needing-attention-dashboard) (on **Zenith**) |
 | **Capacity, pipeline, revenue, YoY** | [Year-on-Year KPIs](#year-on-year-kpis) |
 | **Metric tiles, Payment, Proposal Engine** | [Quick Access](#quick-access-tiles) |
 | **Tile layout by role** | [Layout by role](#layout-by-role) |
@@ -33,8 +33,8 @@ Deep dive: [Zenith command center](/help/zenith#zenith-command-center)
 
 Below the **Dashboard** title, a **marquee** scrolls product updates. It currently alternates:
 
-1. **My Day** — CRM-linked **Tasks**, **Journal**, and **Reminders**. Open with **Ctrl+Shift+M** (**⌘⇧M**) or the **☀** icon (badge = incomplete tasks). Pin from **Today's plan**, **Things needing attention**, or Zenith **Hit List** with **+ My Day**.
-2. **Zenith** — Full-screen command center under **Dashboard** menu → **Zenith ✦**.
+1. **My Day** — CRM-linked **Tasks**, **Journal**, and **Reminders**. Open with **Ctrl+Shift+M** (**⌘⇧M**) or the **☀** icon (badge = incomplete tasks). Pin from Zenith **Today's plan**, **Things needing attention**, or **Hit List** with **+ My Day**.
+2. **Zenith** — Full-screen command center under **Dashboard** menu → **Zenith ✦** (includes **Today's plan**).
 
 Full **My Day** behaviour: [Zenith → My Day](/help/zenith#my-day-personal-productivity-drawer).
 
@@ -45,8 +45,8 @@ Full **My Day** behaviour: [Zenith → My Day](/help/zenith#my-day-personal-prod
 | **Sales** | YoY band, Quick Access (own pipeline), lead-source charts, PE card — data **scoped to you** |
 | **Operations** | Quick Access band, optional **Pending Subsidy** list, execution charts, panel/inverter bars |
 | **Finance** | Top revenue / received / outstanding KPIs, Quick Access, loan-by-bank chart |
-| **Management** | YoY band, executive Quick Access, treemap, PE card — **no** Things needing attention card |
-| **Admin** | Management-style layout **plus** Things needing attention (like Sales/Ops) |
+| **Management** | YoY band, executive Quick Access, treemap, PE card |
+| **Admin** | Management-style layout |
 
 Permissions: [Roles → Permission matrix](/help/roles#permission-matrix). Data modules: [Modules](/help/modules).
 

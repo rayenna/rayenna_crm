@@ -39,8 +39,8 @@ export const helpSectionSubNav: Partial<Record<string, HelpSubNavItem[]>> = {
   dashboard: [
     { label: 'Overview', hash: 'dashboard' },
     { label: 'Filters & dates', hash: 'dashboard-filters' },
-    { label: "Today's plan", hash: 'todays-plan-dashboard' },
-    { label: 'Things needing attention', hash: 'things-needing-attention-dashboard' },
+    { label: "Today's plan (Zenith)", hash: 'todays-plan-dashboard' },
+    { label: 'Things needing attention (Zenith)', hash: 'things-needing-attention-dashboard' },
     { label: 'Year-on-Year KPIs', hash: 'year-on-year-kpis' },
     { label: 'Quick Access', hash: 'quick-access-tiles' },
     { label: 'Layout by role', hash: 'layout-by-role' },

@@ -36,7 +36,7 @@ Open **Projects** from a Quick Access tile or chart drill-down — the URL keeps
 | Payment Status & Proposal Engine cards | ✓ |
 | Year-on-Year KPI band | ✓ |
 | Most charts | ✓ |
-| Today's plan CRM suggestions | ✓ (within explorer slice) |
-| Things needing attention rows | ✓ |
+| Zenith Today's plan CRM suggestions | ✓ (within explorer slice) |
+| Zenith Things needing attention rows | ✓ |
 
 See [Year-on-Year KPIs](#year-on-year-kpis) for when comparison badges show **N/A**.

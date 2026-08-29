@@ -39,7 +39,7 @@ Zenith is available to **Sales**, **Operations**, **Finance**, **Management**, a
 
 - Company-wide view (not limited to one salesperson).
 - Executive **Hit List**, **Revenue forecast**, YoY KPI band, **Customer projects profitability**, treemap-style explore charts.
-- **Does not** see the dashboard **Things needing attention** card or the matching **briefing lifecycle** line (Sales/Admin/Ops only).
+- **Does not** see the Zenith **Things needing attention** card or the matching **briefing lifecycle** line (Sales/Admin/Ops only).
 - Step-by-step: [Management playbook](#management-playbook-executive-review) · [Management role guide](/help/roles#management-role-guide)
 
 ## Admin

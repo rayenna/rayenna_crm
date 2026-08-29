@@ -48,4 +48,4 @@ A practical **15–20 minute** flow for Sales users. Adjust filters to your curr
 - [ ] PE / proposal stages reviewed
 - [ ] Filters left sensible for next visit (or **Reset** for company-wide view)
 
-**Next:** [Projects module](/help/modules#projects-module) for edits · [Dashboard Today’s plan](/help/dashboard#todays-plan-dashboard) for CRM-suggested follow-ups
+**Next:** [Projects module](/help/modules#projects-module) for edits · [Today’s plan on Zenith](/help/dashboard#todays-plan-dashboard) for CRM-suggested follow-ups

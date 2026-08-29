@@ -37,7 +37,7 @@ A **weekly or monthly** executive pass through Zenith for **Management** (and **
 
 ## 6. Compare with classic Dashboard
 
-For **Today's plan** and **Things needing attention** (Sales/Ops/Admin only on dashboard), open [Dashboard](/help/dashboard) in a second tab — Management uses Zenith for command-center drill-downs, not the attention strip.
+**Today's plan** appears on Zenith for Management; **Things needing attention** is for Sales/Ops/Admin only. Management uses Zenith for command-center drill-downs.
 
 ## Executive checklist
 

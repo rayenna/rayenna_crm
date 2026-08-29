@@ -30,7 +30,7 @@ Quick Access **tile order** and surrounding KPIs depend on your role. **Payment 
 
 Wide bottom row: Payment Status and Proposal Engine **same height**; Availing Loan stays compact in the middle.
 
-**Admin** uses this layout and also gets **Things needing attention** when lifecycle brands are missing (Management does not).
+**Admin** uses this same classic Dashboard layout as Management. **Things needing attention** appears on **Zenith**, not here.
 
 ---
 

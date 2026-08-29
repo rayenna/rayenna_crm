@@ -6,7 +6,7 @@ How **Operations** users use Zenith for execution visibility, lifecycle quality,
 
 1. **Dashboard** menu → **Zenith ✦**.
 2. Set **FY** / **Quarter** / **Month** to match your installation reporting window.
-3. Read the **daily briefing** if shown — **Sales**, **Admin**, and **Operations** may see a **panel/inverter brand** reminder for late-stage jobs missing specs ([Daily briefing](#daily-briefing-zenith)). Cross-check [Dashboard → Things needing attention](/help/dashboard#things-needing-attention-dashboard).
+3. Read the **daily briefing** if shown — **Sales**, **Admin**, and **Operations** may see a **panel/inverter brand** reminder for late-stage jobs missing specs ([Daily briefing](#daily-briefing-zenith)). Cross-check [Things needing attention on Zenith](/help/dashboard#things-needing-attention-dashboard).
 
 ## 2. KPIs and Ops tab (~4 min)
 

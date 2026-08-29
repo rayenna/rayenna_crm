@@ -1,18 +1,16 @@
 # Today's plan and Things needing attention
 
-Two cards appear below the scrolling marquee on the classic Dashboard (layout varies by role and screen width).
+These cards live on **Zenith ✦** (Today / KPIs), not on the classic Dashboard. Open them from **Dashboard** menu → **Zenith ✦**, or **Ctrl+Shift+Z** / **⌘⇧Z**.
 
-## Today's plan (Dashboard)
+## Today's plan (Zenith)
 
 The **Today's plan** card (sun icon) shows:
 
 - **Summary** — Short lines from your **My Day** snapshot (open tasks, reminders, whether you started today’s journal).
-- **Suggested from CRM** — Follow-ups from pipeline logic (Hit List–style deals, payment overdue, delayed installs, **lifecycle brand gaps** where your role receives them). One-tap **+ My Day** per suggestion. After pinning, the row stays visible and the button shows **✓ My Day** (teal); clicking again does **not** create a duplicate (**one open task per project**). **Scroll** inside the card for more suggestions.
+- **Suggested from CRM** — Follow-ups from pipeline logic (Hit List–style deals, payment overdue, delayed installs, support tickets, **lifecycle brand gaps** where your role receives them). One-tap **+ My Day** per suggestion. After pinning, the row stays visible and the button shows **✓ My Day** (teal); clicking again does **not** create a duplicate (**one open task per project**). **Scroll** inside the card for more suggestions.
 - **Tasks** / **Open My Day** — Opens the ☀ drawer on the **Tasks** tab (pinned and manual tasks only — not a duplicate CRM list).
 
-**Who sees it:** **All roles** (full width when alone).
-
-**Layout with Things needing attention:** On **Sales**, **Operations**, and **Admin**, when late-stage projects are missing panel/inverter brands, **Today's plan** sits **beside** **Things Needing Attention** on **laptop / wide screens** (two equal columns). On **phone and narrow tablets** the cards **stack** — plan first, then attention. **Finance** and **Management** see **Today's plan** only (no attention card).
+**Who sees it:** Roles that use Zenith (layout varies). On Sales / Admin / Management desktop it often sits beside **Today’s Hit List**.
 
 Pinned tasks and journal/reminder summaries are **server-backed** and sync across devices after login.
 
@@ -20,13 +18,11 @@ Full **My Day** behaviour: [Zenith → My Day](/help/zenith#my-day-personal-prod
 
 ---
 
-## Things needing attention (Dashboard)
+## Things needing attention (Zenith)
 
-**Who sees it:** **Sales**, **Operations**, and **Admin** on the classic Dashboard. **Management** and **Finance** do **not** see this card.
+**Who sees it:** **Sales**, **Operations**, and **Admin** when the card is shown next to or under **Today's plan**. **Management** and **Finance** do **not** see this card.
 
-**When it appears:** At least one project in **Under Installation**, **Completed**, or **Completed – Subsidy Credited** is missing **panel brand**, **inverter brand**, or **both** in **Project Lifecycle**, within your dashboard **FY / Quarter / Month** scope.
-
-**Where it sits:** Next to **Today's plan** on wide screens. Card title: **Things Needing Attention**.
+**When it appears:** At least one project in **Under Installation**, **Completed**, or **Completed – Subsidy Credited** is missing **panel brand**, **inverter brand**, or **both** in **Project Lifecycle**, within your **FY / Quarter / Month** scope.
 
 ### What each row shows
 
@@ -43,12 +39,12 @@ Up to **three** rows show; if more qualify, **+N more — view all** at the bott
 
 - **Status** = Under Installation, Completed, Completed – Subsidy Credited  
 - **Lifecycle specs incomplete** (missing panel and/or inverter brand)  
-- Same **FY / Quarter / Month** as the Dashboard  
+- Same **FY / Quarter / Month** as Zenith  
 
 ### My Day integration
 
 Completing a project-pinned task can optionally log **`[My Day ✓] …`** to **Project remarks** ([Zenith → My Day](/help/zenith#my-day-personal-productivity-drawer)).
 
-### Zenith parity
+### Briefing parity
 
-**Sales**, **Admin**, and **Operations** may see a matching **briefing reminder line** in Zenith’s **Smart daily briefing** (count + names). **Management** and **Finance** do **not** see that lifecycle line in the briefing. See [Zenith → Daily briefing](/help/zenith#daily-briefing-zenith).
+**Sales**, **Admin**, and **Operations** may also see a matching **briefing reminder line** in Zenith’s **Smart daily briefing** (count + names). **Management** and **Finance** do **not** see that lifecycle line. See [Zenith → Daily briefing](/help/zenith#daily-briefing-zenith).
