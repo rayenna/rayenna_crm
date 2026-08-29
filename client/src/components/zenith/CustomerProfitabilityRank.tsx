@@ -286,18 +286,18 @@ export default function CustomerProfitabilityRank({
               style={{ WebkitOverflowScrolling: 'touch' }}
             >
               <table className="w-full text-sm border-collapse">
-                <thead className="sticky top-0 z-10 border-b border-[color:var(--border-default)] bg-[color:var(--bg-card)] backdrop-blur-sm">
-                  <tr>
-                    <th className="w-12 px-2 py-2.5 text-center text-sm font-bold uppercase tracking-wide text-[color:var(--accent-gold)]">
+                <thead className="sticky top-0 z-10 isolate border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] shadow-[0_1px_0_0_var(--border-default)]">
+                  <tr className="bg-[color:var(--bg-surface)]">
+                    <th className="w-12 bg-[color:var(--bg-surface)] px-2 py-2.5 text-center text-sm font-bold uppercase tracking-wide text-[color:var(--accent-gold)]">
                       #
                     </th>
-                    <th className="px-2 py-2.5 text-left text-sm font-bold uppercase tracking-wide text-[color:var(--accent-gold)]">
+                    <th className="bg-[color:var(--bg-surface)] px-2 py-2.5 text-left text-sm font-bold uppercase tracking-wide text-[color:var(--accent-gold)]">
                       Project
                     </th>
-                    <th className="w-[4.5rem] px-2 py-2.5 text-right text-sm font-bold uppercase tracking-wide text-[color:var(--accent-gold)]">
+                    <th className="w-[4.5rem] bg-[color:var(--bg-surface)] px-2 py-2.5 text-right text-sm font-bold uppercase tracking-wide text-[color:var(--accent-gold)]">
                       Margin
                     </th>
-                    <th className="py-2.5 pl-1 pr-2 w-24" />
+                    <th className="w-24 bg-[color:var(--bg-surface)] py-2.5 pl-1 pr-2" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[color:var(--border-default)]">
