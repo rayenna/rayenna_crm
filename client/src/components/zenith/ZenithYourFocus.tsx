@@ -30,6 +30,7 @@ import SupportTicketQueueStrip from './SupportTicketQueueStrip'
 import ZenithFocusCollapsible from './ZenithFocusCollapsible'
 import ZenithProposalEngineCard from './ZenithProposalEngineCard'
 import ZenithScrollHint from './ZenithScrollHint'
+import { useChartColors } from '../../hooks/useChartColors'
 import type { ReminderTemplateProject } from '../../utils/reminderTemplates'
 import {
   formatZenithDealInrParts,
@@ -631,6 +632,7 @@ function FinanceRadarBlock({
   /** Finance / Admin / Management: open payment quick drawer instead of navigating away. */
   onOpenFinanceDrawer?: (projectId: string) => void
 }) {
+  const chartColors = useChartColors()
   const [sortField, setSortField] = useState<'amount' | 'days' | 'customer' | 'salesperson' | null>('amount')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [customerFilter, setCustomerFilter] = useState<string>('')
@@ -1409,6 +1411,7 @@ function FinanceRadarBlock({
                             />
                             <YAxis hide />
                             <Tooltip
+                              cursor={{ fill: chartColors.cursorBand }}
                               content={({ active, payload, label }) => {
                                 if (!active || !payload?.length) return null
                                 const col = payload.find((p) => p.dataKey === 'collected')
