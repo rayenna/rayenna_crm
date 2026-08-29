@@ -15,6 +15,7 @@ import {
 } from '../utils/leadSourceValidation';
 import { assertPaymentCollectionDatesNotFuture } from '../utils/paymentCollectionDate';
 import { updateTouchesPaymentTracking } from '../utils/paymentAudit';
+import { computeDealHealthScoreForProjectList } from '../utils/dealHealthScore';
 
 // Valid values for lostToCompetitionReason (required when lostReason is LOST_TO_COMPETITION)
 const LOST_TO_COMPETITION_REASON_VALUES = [
@@ -117,92 +118,6 @@ function buildProjectsTableOrderBy(
       orderBy = [{ confirmationDate: 'desc' }, { createdAt: 'desc' }];
   }
   return { orderBy, dealHealthSort: false };
-}
-
-/** Same rules as client `dealHealthScore.ts` — used for list/export sort by dealHealthScore. */
-function computeDealHealthScoreForProjectList(p: {
-  projectStatus: ProjectStatus;
-  updatedAt: Date;
-  stageEnteredAt: Date | null;
-  projectCost: number | null;
-  confirmationDate: Date | null;
-  advanceReceived: number | null;
-  leadSource: LeadSource | null;
-}): number | null {
-  if (
-    p.projectStatus === ProjectStatus.COMPLETED ||
-    p.projectStatus === ProjectStatus.COMPLETED_SUBSIDY_CREDITED ||
-    p.projectStatus === ProjectStatus.LOST
-  ) {
-    return null;
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const daysSince = (d: Date | null | undefined) => {
-    if (!d) return 999;
-    const dd = new Date(d);
-    dd.setHours(0, 0, 0, 0);
-    return Math.max(0, Math.floor((today.getTime() - dd.getTime()) / 86400000));
-  };
-
-  const daysSinceActivity = daysSince(p.updatedAt);
-  let factor1 = 0;
-  if (daysSinceActivity <= 3) factor1 = 30;
-  else if (daysSinceActivity <= 7) factor1 = 22;
-  else if (daysSinceActivity <= 14) factor1 = 12;
-  else if (daysSinceActivity <= 30) factor1 = 5;
-  else factor1 = 0;
-
-  const EXPECTED_DAYS_PER_STATUS: Partial<Record<ProjectStatus, number>> = {
-    [ProjectStatus.LEAD]: 7,
-    [ProjectStatus.SITE_SURVEY]: 14,
-    [ProjectStatus.PROPOSAL]: 21,
-    [ProjectStatus.CONFIRMED]: 30,
-    [ProjectStatus.UNDER_INSTALLATION]: 45,
-    [ProjectStatus.SUBMITTED_FOR_SUBSIDY]: 21,
-  };
-  const expectedDays = EXPECTED_DAYS_PER_STATUS[p.projectStatus] ?? 14;
-  const daysInStage = daysSince(p.stageEnteredAt ?? p.updatedAt);
-  let factor2 = 0;
-  if (daysInStage <= expectedDays) factor2 = 25;
-  else if (daysInStage <= expectedDays * 1.5) factor2 = 15;
-  else if (daysInStage <= expectedDays * 2) factor2 = 8;
-  else factor2 = 0;
-
-  const value = Number(p.projectCost ?? 0);
-  let factor3 = 0;
-  if (!Number.isFinite(value) || value <= 0) factor3 = 0;
-  else if (value >= 500000) factor3 = 5;
-  else if (value >= 300000) factor3 = 10;
-  else if (value >= 175000) factor3 = 20;
-  else if (value >= 150000) factor3 = 10;
-  else factor3 = 5;
-
-  const hasConfirmation =
-    p.confirmationDate != null && !Number.isNaN(new Date(p.confirmationDate).getTime());
-  const advance = Number(p.advanceReceived ?? 0);
-  const orderVal = Number(p.projectCost ?? 0);
-  let factor4 = 0;
-  if (hasConfirmation) factor4 += 5;
-  if (hasConfirmation && advance > 0 && orderVal > 0) {
-    if (advance < orderVal * 0.5) factor4 += 5;
-    else factor4 += 10;
-  }
-  factor4 = Math.min(15, factor4);
-
-  const SOURCE_SCORES: Partial<Record<LeadSource, number>> = {
-    [LeadSource.REFERRAL]: 10,
-    [LeadSource.MANAGEMENT_CONNECT]: 8,
-    [LeadSource.CHANNEL_PARTNER]: 8,
-    [LeadSource.DIGITAL_MARKETING]: 6,
-    [LeadSource.SALES]: 5,
-  };
-  const factor5 = p.leadSource && SOURCE_SCORES[p.leadSource] ? (SOURCE_SCORES[p.leadSource] as number) : 3;
-
-  const raw = factor1 + factor2 + factor3 + factor4 + factor5;
-  return Math.min(100, Math.max(0, raw));
 }
 
 // Get all projects with filters
@@ -342,6 +257,14 @@ router.get(
           where: { status: { in: [SupportTicketStatus.OPEN, SupportTicketStatus.IN_PROGRESS] as SupportTicketStatus[] } },
           select: { id: true },
         },
+        /** Latest remark for Deal Health Activity (meaningful touch). */
+        projectRemarks: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { createdAt: true },
+        },
+        lastPaymentDate: true,
+        advanceReceivedDate: true,
       };
 
       const [allOrPage, total, totals, balanceTotals] = await Promise.all([
@@ -381,6 +304,12 @@ router.get(
                 confirmationDate: p.confirmationDate,
                 advanceReceived: p.advanceReceived,
                 leadSource: p.leadSource,
+                expectedCommissioningDate: p.expectedCommissioningDate,
+                paymentStatus: p.paymentStatus,
+                balanceAmount: p.balanceAmount,
+                lastRemarkAt: p.projectRemarks?.[0]?.createdAt ?? null,
+                lastPaymentDate: p.lastPaymentDate,
+                advanceReceivedDate: p.advanceReceivedDate,
               }),
             }));
 
@@ -596,7 +525,24 @@ router.get('/:id', authenticate, async (req: Request, res) => {
       });
     }
 
-    res.json(project);
+    const [latestRemark, latestTask] = await Promise.all([
+      prisma.projectRemark.findFirst({
+        where: { projectId: project.id },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      }),
+      prisma.userTask.findFirst({
+        where: { projectId: project.id },
+        orderBy: { updatedAt: 'desc' },
+        select: { updatedAt: true },
+      }),
+    ]);
+
+    res.json({
+      ...project,
+      lastRemarkAt: latestRemark?.createdAt?.toISOString() ?? null,
+      lastTaskActivityAt: latestTask?.updatedAt?.toISOString() ?? null,
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -2282,6 +2228,12 @@ async function fetchProjectsForExport(
         confirmationDate: p.confirmationDate,
         advanceReceived: p.advanceReceived,
         leadSource: p.leadSource,
+        expectedCommissioningDate: p.expectedCommissioningDate,
+        paymentStatus: p.paymentStatus,
+        balanceAmount: p.balanceAmount,
+        lastRemarkAt: (p as { projectRemarks?: { createdAt: Date }[] }).projectRemarks?.[0]?.createdAt ?? null,
+        lastPaymentDate: p.lastPaymentDate,
+        advanceReceivedDate: p.advanceReceivedDate,
       }),
     }));
     scored.sort((a, b) => {

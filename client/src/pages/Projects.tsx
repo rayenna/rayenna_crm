@@ -15,6 +15,7 @@ import { setSessionStorageItem } from '../lib/safeLocalStorage'
 import { getSalesTeamColor } from '../components/dashboard/salesTeamColors'
 import DashboardFilters from '../components/dashboard/DashboardFilters'
 import HealthBadge from '../components/zenith/HealthBadge'
+import { projectDetailToHealthProject } from '../utils/dealHealthScore'
 import FinancingBankPopoverIcon from '../components/projects/FinancingBankPopoverIcon'
 import CapacitySpecsPopover from '../components/projects/CapacitySpecsPopover'
 import LeadSourcePill from '../components/projects/LeadSourcePill'
@@ -1949,7 +1950,7 @@ Do you want to continue?`}
                   <td className="px-1 py-2 text-center align-middle sm:px-1.5 lg:py-1.5">
                     <div className="flex justify-center">
                       <HealthBadge
-                        project={project as unknown as Record<string, unknown>}
+                        project={projectDetailToHealthProject(project)}
                         size="sm"
                         showLabel={false}
                       />

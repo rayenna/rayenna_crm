@@ -50,10 +50,16 @@ type SalesPipelineRow = {
   advanceReceived?: number
   createdAt?: string
   updatedAt?: string
+  /** When current stage was entered — Deal Health momentum. */
+  stageEnteredAt?: string | null
   salespersonId?: string
   /** Display name from zenith-focus (assigned project salesperson). */
   salespersonName?: string | null
   leadSource?: string | null
+  paymentStatus?: string | null
+  balanceAmount?: number | null
+  lastRemarkAt?: string | null
+  lastPaymentDate?: string | null
 }
 
 type FinanceOverdueRow = {

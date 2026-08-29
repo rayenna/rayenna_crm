@@ -47,11 +47,16 @@ function hitListHealthProject(project: HitListItem) {
   return pipelineRowToHealthProject({
     stage: project.stage,
     updatedAt: project.updatedAt,
+    stageEnteredAt: project.stageEnteredAt,
     dealValue: project.dealValue,
     expectedCloseDate: project.expectedCloseDate,
     confirmationDate: project.confirmationDate,
     advanceReceived: project.advanceReceived,
     leadSource: project.leadSource,
+    paymentStatus: project.paymentStatus,
+    balanceAmount: project.balanceAmount,
+    lastRemarkAt: project.lastRemarkAt,
+    lastPaymentDate: project.lastPaymentDate,
   })
 }
 

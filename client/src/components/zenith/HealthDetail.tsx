@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
-import { Clock, TrendingUp, IndianRupee, Calendar, Users } from 'lucide-react'
-import { computeDealHealth } from '../../utils/dealHealthScore'
+import { Clock, TrendingUp, IndianRupee, Calendar, Users, Shield } from 'lucide-react'
+import { computeDealHealth, projectDetailToHealthProject } from '../../utils/dealHealthScore'
 import type { Project } from '../../types'
 
 const FACTOR_ICONS: Record<string, typeof Clock> = {
   Activity: Clock,
   Momentum: TrendingUp,
   'Deal Value': IndianRupee,
-  'Close Date': Calendar,
+  Commitment: Calendar,
   'Lead Source': Users,
+  'Install confidence': Shield,
 }
 
 type HealthDetailProps = {
@@ -16,7 +17,7 @@ type HealthDetailProps = {
 }
 
 const HealthDetail = ({ project }: HealthDetailProps) => {
-  const health = computeDealHealth(project as unknown as Record<string, unknown>)
+  const health = computeDealHealth(projectDetailToHealthProject(project))
   const [animated, setAnimated] = useState(false)
 
   useEffect(() => {

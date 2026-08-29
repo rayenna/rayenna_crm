@@ -4,7 +4,7 @@ const PARTS = [
   { label: 'Activity', maxLabel: '30' },
   { label: 'Momentum', maxLabel: '25' },
   { label: 'Deal value', maxLabel: '20' },
-  { label: 'Close date', maxLabel: '15' },
+  { label: 'Commitment', maxLabel: '15' },
   { label: 'Source', maxLabel: '10' },
 ] as const
 
@@ -16,7 +16,7 @@ export default function DealHealthScoreHelpIllustration() {
     <div
       className="mb-4 rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-input)] px-3 py-4 shadow-inner ring-1 ring-[color:var(--border-default)] sm:px-5 sm:py-5"
       role="img"
-      aria-label="Deal Health equals Activity plus Momentum plus Deal value plus Close date plus Source. Maximum points are thirty, twenty-five, twenty, fifteen, and ten. Total capped at zero to one hundred."
+      aria-label="Deal Health equals Activity plus Momentum plus Deal value plus Commitment plus Source. Maximum points are thirty, twenty-five, twenty, fifteen, and ten. Total capped at zero to one hundred."
     >
       <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-3 text-center sm:gap-x-2">
         <span className="text-sm font-bold tracking-tight text-[color:var(--accent-teal)] sm:text-base">DEAL HEALTH</span>

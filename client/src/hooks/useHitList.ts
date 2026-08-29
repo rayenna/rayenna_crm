@@ -14,10 +14,16 @@ export type HitListProjectRow = {
   confirmationDate?: string | null
   createdAt?: string
   updatedAt?: string
+  /** When current stage was entered — Deal Health momentum (not last edit). */
+  stageEnteredAt?: string | null
   salespersonId?: string
   salespersonName?: string | null
   advanceReceived?: number | null
   leadSource?: string | null
+  paymentStatus?: string | null
+  balanceAmount?: number | null
+  lastRemarkAt?: string | null
+  lastPaymentDate?: string | null
 }
 
 export type HitListLabel = 'OVERDUE' | 'CLOSING SOON' | 'STALLED' | 'NUDGE NEEDED' | 'GOING COLD'
@@ -39,9 +45,14 @@ export type HitListItem = {
   confirmationDate: string | null
   daysSinceActivity: number
   updatedAt?: string
+  stageEnteredAt?: string | null
   advanceReceived: number
   leadSource: string | null
   expectedCloseDate: string | null
+  paymentStatus: string | null
+  balanceAmount: number | null
+  lastRemarkAt: string | null
+  lastPaymentDate: string | null
 }
 
 const LABEL_ORDER: Record<HitListLabel, number> = {
@@ -60,9 +71,14 @@ function pipelineFieldsFromRow(p: HitListProjectRow) {
     confirmationDate: p.confirmationDate ?? null,
     daysSinceActivity: p.daysSinceActivity ?? 0,
     updatedAt: p.updatedAt,
+    stageEnteredAt: p.stageEnteredAt ?? null,
     advanceReceived: p.advanceReceived ?? 0,
     leadSource: p.leadSource ?? null,
     expectedCloseDate: p.expectedCloseDate ?? null,
+    paymentStatus: p.paymentStatus ?? null,
+    balanceAmount: p.balanceAmount ?? null,
+    lastRemarkAt: p.lastRemarkAt ?? null,
+    lastPaymentDate: p.lastPaymentDate ?? null,
     projectSerialNumber: p.projectSerialNumber,
   }
 }

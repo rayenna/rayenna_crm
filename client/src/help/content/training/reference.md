@@ -47,14 +47,14 @@ A: **Space** — one thin filter row so charts and tables stay usable on small s
 | :-- | --: | :-- |
 | Activity | 30 | How recently the project was updated |
 | Momentum | 25 | Time in current stage vs typical for that stage |
-| Deal value | 20 | Order value **bands** — top band **₹1.75L–₹3L** (typical **3–5 kW** sweet spot); very large orders score lower on this factor by design |
-| Close date | 15 | **Confirmation date** (Sales & Commercial) + **Advance received** vs **order value** (Payment tracking); the UI still labels this row “Close date” |
+| Deal value | 20 | Order value **bands** — top band **₹2L–₹8L** sweet spot; mild discount above ₹8L |
+| Commitment | 15 | **Booked:** confirmation + advance vs order. **Pre-order:** order value + expected commissioning |
 | Lead source | 10 | Referral / partner sources score higher than unknown |
 
 **Illustration:**
 
 ```text
-Deal Health = Activity(≤30) + Momentum(≤25) + Deal value(≤20) + Close date(≤15) + Source(≤10)  →  0–100
+Deal Health = Activity(≤30) + Momentum(≤25) + Deal value(≤20) + Commitment(≤15) + Source(≤10)  →  0–100
 ```
 
 For **exact point tables** (activity days, momentum multiples, every rupee band, advance rules, lead source points), see [Modules → Deal Health](/help/modules#deal-health-score).
@@ -68,7 +68,7 @@ For **exact point tables** (activity days, momentum multiples, every rupee band,
 | **FY** | Financial year April–March (e.g. `2024-25`). |
 | **Command bar** | Sticky top area: branding, date filters, Briefing, Live clock. |
 | **Weighted forecast** | Σ (order value × stage win probability) for open deals. |
-| **Deal Health** | 0–100: five factors (activity, momentum, deal value bands, confirmation + advance vs order, lead source). Full tables in Help → Projects. |
+| **Deal Health** | 0–100: five factors (activity, momentum, deal value ₹2L–₹8L sweet spot, commitment, lead source). Full tables in Help → Projects. |
 | **Drill-down** | Chart / Board / funnel / PE row / **Availing Loan** KPI → **Quick Actions** list. |
 | **Quick Actions** | Side drawer: list mode or single-project quick edits; **Recent remarks** (read-only) above **Log activity** where applicable; **Payment** snapshot after **Deal value** on **Quick Actions** and **Operations** (not duplicated on **Payment radar → Finance** drawer). |
 | **Open in Projects →** | Footer link → **Projects** with matching URL filters. |

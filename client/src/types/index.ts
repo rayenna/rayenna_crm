@@ -234,6 +234,12 @@ export interface Project {
   supportTickets?: { id: string }[]
   createdAt: string
   updatedAt: string
+  /** Deal Health Activity — latest project remark (detail/list when API provides). */
+  lastRemarkAt?: string | null
+  /** Deal Health Activity — latest My Day task touch for this project (detail). */
+  lastTaskActivityAt?: string | null
+  /** Present on list when API includes latest remark for Deal Health. */
+  projectRemarks?: { createdAt?: string }[]
 }
 
 export interface Document {

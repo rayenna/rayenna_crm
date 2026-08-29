@@ -22,6 +22,9 @@ export type ZenithExplorerProject = {
   confirmation_date?: string | null
   /** Payment tracking — same field as project detail for Deal Health factor 4. */
   advance_received?: number | null
+  balance_amount?: number | null
+  expected_close_date?: string | null
+  last_remark_at?: string | null
   customer_name: string
   gross_profit?: number | null
   /** Raw `financingBank` when set; used for Projects deep link. */
