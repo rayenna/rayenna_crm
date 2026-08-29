@@ -11,6 +11,12 @@ import {
 } from '@prisma/client';
 import { buildProjectsListCustomerTypeWhere } from './customerTypeCharts';
 import { LIFECYCLE_BRAND_REMINDER_STATUSES } from './lifecycleBrandGaps';
+import {
+  DATA_SENSE_RULE_IDS,
+  dataSensePrismaClause,
+  parseDataSenseRule,
+  type DataSenseRuleId,
+} from './dataSense';
 
 export type ProjectsListFilterInput = {
   statusArray: string[];
@@ -40,6 +46,8 @@ export type ProjectsListFilterInput = {
   inverterBrand: string;
   lifecycleSpecsCompleteActive: boolean;
   lifecycleSpecsIncompleteActive: boolean;
+  dataSenseNeedsReviewActive: boolean;
+  dataSenseRule: DataSenseRuleId | null;
 };
 
 export type ProjectsListUser = { id: string; role: UserRole } | undefined;
@@ -142,6 +150,8 @@ export function parseProjectsListFilters(query: ParsedQs): ProjectsListFilterInp
     inverterBrand,
     lifecycleSpecsComplete,
     lifecycleSpecsIncomplete,
+    dataSenseNeedsReview,
+    dataSenseRule,
   } = query;
 
   const fyArray = toStringArray(fy);
@@ -185,6 +195,8 @@ export function parseProjectsListFilters(query: ParsedQs): ProjectsListFilterInp
     lifecycleSpecsCompleteActive:
       String(lifecycleSpecsIncomplete) !== 'true' &&
       (String(lifecycleSpecsComplete) === 'true' || panelBrandRaw !== '' || inverterBrandRaw !== ''),
+    dataSenseNeedsReviewActive: String(dataSenseNeedsReview) === 'true' || parseDataSenseRule(dataSenseRule) != null,
+    dataSenseRule: parseDataSenseRule(dataSenseRule),
   };
 }
 
@@ -382,6 +394,10 @@ export function buildProjectsWhere(
       filters.zenithSlice,
       filters.zenithSlice === 'revenue' && filters.zenithFyProfit,
     );
+  }
+
+  if (filters.dataSenseNeedsReviewActive) {
+    pushOntoWhereAnd(where, dataSensePrismaClause(new Date(), filters.dataSenseRule));
   }
 
   if (filters.lifecycleSpecsIncompleteActive) {
@@ -611,5 +627,7 @@ export const projectsListQueryValidators = [
   query('inverterBrand').optional().isString(),
   query('lifecycleSpecsComplete').optional().isIn(['true']),
   query('lifecycleSpecsIncomplete').optional().isIn(['true']),
+  query('dataSenseNeedsReview').optional().isIn(['true']),
+  query('dataSenseRule').optional().isIn([...DATA_SENSE_RULE_IDS]),
   query('peBucket').optional().isIn(['proposal-ready', 'draft', 'not-started', 'rest']),
 ];

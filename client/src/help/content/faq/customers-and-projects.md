@@ -22,6 +22,12 @@ Yes. **Project detail** → **Key Artifacts** — upload photos, PDFs, and sheet
 ### Why don't dashboard and project filters match?
 Dashboard **FY / Quarter / Month** apply to tiles and charts. Opening **Projects** from a Quick Access tile **passes** those dates; filters you set manually on Projects stay until you **Clear All** or click a dashboard tile again. [Dashboard → Filters](/help/dashboard#dashboard-filters).
 
+### What is Needs review?
+**Needs review** flags project dates, payments, or system size that do not match the current stage (for example a past expected commissioning date while the deal is still open). Use the **Projects** filter, the amber **Review** pill, and the banner on **Project detail**. On **Zenith**, **Sales**, **Admin**, and **Management** see the same flags in **Things needing attention**; Management and Admin also see counts **by salesperson**. Full table of flags: [Modules → Needs review](/help/modules#needs-review-data-sense).
+
+### Does Needs review stop me from saving a project?
+Only two cases ask you to confirm: **expected commissioning before confirmation**, or **advance greater than order value**. Choose **Go back** to fix, or **Save anyway**. Other Needs review flags do **not** block save. [Needs review](/help/modules#needs-review-data-sense).
+
 ## Support Tickets
 
 ### How do I create a support ticket?

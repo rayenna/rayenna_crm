@@ -19,6 +19,9 @@ A: Use **Project detail** / Finance areas.
 **Q: Management cannot edit in drawer — bug?**  
 A: **Intentional view-only.**
 
+**Q: Needs review vs Hit List OVERDUE?**  
+A: Hit List **OVERDUE** is a daily urgency slice (expected commissioning already past, still open). **Projects → Needs review** is a list filter plus a project-detail banner for date, payment, and capacity mismatches. Saving with **reversed commissioning vs confirmation** or **advance over order value** asks you to confirm first (Save anyway). Other Needs review flags do not block saves.
+
 **Q: Stale data?**  
 A: Refresh; Zenith is **server-backed** after login.
 
@@ -74,6 +77,7 @@ For **exact point tables** (activity days, momentum multiples, every rupee band,
 | **Open in Projects →** | Footer link → **Projects** with matching URL filters. |
 | **PE bucket** | PE Ready, PE Draft, PE Not Yet Created, Rest. |
 | **Explorer batch** | Large cap of project rows loaded for Zenith drill-downs (see **Zenith** help). |
+| **Needs review** | Projects filter + detail banner for dates, payments, or capacity that do not match stage. **Save anyway** only for reversed commissioning vs confirmation, or advance over order value. [Modules](/help/modules#needs-review-data-sense). |
 | **Today’s Hit List** | Up to **seven** urgent pipeline deals; **filters + sort** like **Your pipeline today**; **Alert** column; **Open →** = **Quick Actions** (with **Recent remarks** above log activity). |
 | **Won-path** (The Board) | Confirmed → Subsidy Credited stages counted for leaderboard credit rules. |
 

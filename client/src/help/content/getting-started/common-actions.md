@@ -63,6 +63,7 @@ This guide covers the most frequently performed actions in Rayenna Energy CRM. T
 - Set initial status based on project stage
 - Link to customer is required
 - For **Referral**, **Channel Partner**, or **Other** lead sources, the matching detail field is **required** before save
+- If expected commissioning is **before** confirmation, or **advance** is greater than **order value**, you must confirm **Save anyway** (or fix the values). [Needs review](/help/modules#needs-review-data-sense)
 
 ### Creating a Support Ticket
 

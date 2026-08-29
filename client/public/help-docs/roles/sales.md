@@ -54,6 +54,8 @@ Details: [Modules → Customer Master](/help/modules#customer-master-module)
 
 You only see projects where **you** are the salesperson. If a colleague’s project does not appear, that is expected.
 
+Turn on **Needs review** to list deals whose dates, payments, or system size do not match stage. On **Zenith**, the same flags appear in **Things needing attention**. Saving with commissioning before confirmation, or advance above order value, asks you to confirm. Guide: [Needs review](/help/modules#needs-review-data-sense).
+
 ### Proposals
 
 For projects in **Proposal** or **Confirmed**, use **Proposals (New)** / Proposal Engine from the project or dashboard card. [Modules](/help/modules)
@@ -75,8 +77,8 @@ You can **view** payment status and balances on your projects. **Entering paymen
 
 ## Daily rhythm
 
-1. Check **Dashboard** or **Zenith** for pipeline and at-risk deals.
-2. Update **lead / survey / proposal** stages on active projects.
+1. Check **Dashboard** or **Zenith** for pipeline, **Things needing attention**, and at-risk deals.
+2. Update **lead / survey / proposal** stages on active projects; clear **Needs review** flags when the record is wrong.
 3. Create customers and projects for new opportunities.
 4. Log **support tickets** when customers need follow-up.
 5. Use **My Day** (**Ctrl+Shift+M** / **⌘⇧M**) to pin follow-ups from the dashboard or Hit List.

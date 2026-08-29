@@ -37,12 +37,12 @@ A **weekly or monthly** executive pass through Zenith for **Management** (and **
 
 ## 6. Compare with classic Dashboard
 
-**Today's plan** appears on Zenith for Management; **Things needing attention** is for Sales/Ops/Admin only. Management uses Zenith for command-center drill-downs.
+**Today's plan** and **Things needing attention** appear on Zenith for Management (Needs review plus, for Admin, lifecycle brand gaps). Use **by salesperson** on the attention card, then **Open in Projects →** to coach without editing.
 
 ## Executive checklist
 
 - [ ] Period filters documented for the review meeting
-- [ ] Hit List and funnel outliers identified
+- [ ] **Needs review** rollup checked (salesperson counts) and outliers assigned
 - [ ] Board ranking discussed with sales lead
 - [ ] Profitability and FY chart surprises investigated via drawer → Projects
 - [ ] Actions assigned in Projects / remarks, not only in Zenith

@@ -9,7 +9,7 @@ The **data modules** in Rayenna CRM are where you create and maintain business r
 | Module | What it does | Guide |
 | :-- | :-- | :-- |
 | **Customer Master** | Contacts, addresses, salesperson, customer type | [Customer Master](#customer-master-module) |
-| **Projects** | Lead → completion, payments, lifecycle, PE entry | [Projects](#projects-module) |
+| **Projects** | Lead → completion, payments, lifecycle, PE entry, **Needs review** | [Projects](#projects-module) · [Needs review](#needs-review-data-sense) |
 | **Deal Health** | 0–100 pipeline score on open deals | [Deal Health](#deal-health-score) |
 | **Key Artifacts** | Photos, PDFs, sheets on a project | [Key Artifacts](#key-artifacts-module) |
 | **Support Tickets** | Service requests linked to projects | [Support Tickets](#support-tickets-module) |

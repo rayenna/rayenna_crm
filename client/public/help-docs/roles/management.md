@@ -31,7 +31,7 @@ You get a **company-wide lens**: every dashboard, **Zenith**, and read-only visi
 - Open any project for detail, documents, remarks, and payment **view**.  
 - **Edit** is not available for project fields — escalate changes to **Sales** (own projects), **Operations** (execution), or **Finance** (payments).
 
-Use filters (salesperson, status, PE buckets) to review team performance without changing data.
+Use filters (salesperson, status, PE buckets, **Needs review**) to review team data quality without changing records. On **Zenith**, **Things needing attention** includes a **by salesperson** rollup. Guide: [Needs review](/help/modules#needs-review-data-sense).
 
 ## Customers (limited write)
 

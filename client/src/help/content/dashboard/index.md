@@ -23,7 +23,7 @@ Deep dive: [Zenith command center](/help/zenith#zenith-command-center)
 | :-- | :-- |
 | **FY / Quarter / Month** | [Dashboard filters](#dashboard-filters) |
 | **Today's plan** & **My Day** suggestions | [Today's plan](#todays-plan-dashboard) (on **Zenith**, not classic Dashboard) |
-| **Lifecycle brand gaps** | [Things needing attention](#things-needing-attention-dashboard) (on **Zenith**) |
+| **Needs review** & lifecycle brand gaps | [Things needing attention](#things-needing-attention-dashboard) (on **Zenith**) · [Needs review](/help/modules#needs-review-data-sense) |
 | **Capacity, pipeline, revenue, YoY** | [Year-on-Year KPIs](#year-on-year-kpis) |
 | **Metric tiles, Payment, Proposal Engine** | [Quick Access](#quick-access-tiles) |
 | **Tile layout by role** | [Layout by role](#layout-by-role) |

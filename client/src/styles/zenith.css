@@ -804,6 +804,70 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   animation: zenith-sync-spin 1s linear infinite;
 }
 
+/* ─── Things needing attention (Zenith) ───────────────────────── */
+
+@keyframes zenith-attention-ring {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 color-mix(in srgb, var(--attention-pulse, var(--accent-gold)) 42%, transparent),
+      var(--shadow-card);
+  }
+  50% {
+    box-shadow:
+      0 0 0 10px color-mix(in srgb, var(--attention-pulse, var(--accent-gold)) 0%, transparent),
+      var(--shadow-card);
+  }
+}
+
+.zenith-attention-card {
+  --attention-pulse: var(--accent-gold);
+  border-color: color-mix(in srgb, var(--accent-gold) 50%, var(--border-card));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent-gold) 14%, var(--bg-card)) 0%,
+    var(--bg-card) 58%
+  );
+  box-shadow:
+    var(--shadow-card),
+    0 0 0 1px color-mix(in srgb, var(--accent-gold) 28%, transparent);
+}
+
+.zenith-attention-card--critical {
+  --attention-pulse: var(--accent-red);
+  border-color: color-mix(in srgb, var(--accent-red) 48%, var(--border-card));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent-red) 12%, var(--bg-card)) 0%,
+    var(--bg-card) 58%
+  );
+  box-shadow:
+    var(--shadow-card),
+    0 0 0 1px color-mix(in srgb, var(--accent-red) 24%, transparent);
+}
+
+.zenith-attention-card--intro {
+  animation: zenith-attention-ring 1.6s ease-in-out 5;
+}
+
+.zenith-attention-card__rail {
+  border-left-width: 6px;
+}
+
+.zenith-attention-card__rail--critical {
+  border-left-color: var(--accent-red);
+}
+
+.zenith-attention-card__rail--warn {
+  border-left-color: var(--accent-gold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zenith-attention-card--intro {
+    animation: none;
+  }
+}
+
 /* ─── My Day Button ──────────────────────────────────────────── */
 
 @keyframes myday-pulse {

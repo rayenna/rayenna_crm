@@ -43,6 +43,7 @@ Only **Admin** has this menu item. Use it for compliance questions and troublesh
 ### Projects
 
 - Open and **edit any** project regardless of salesperson or status.  
+- Use **Needs review** (Projects filter and Zenith **by salesperson**) to audit illogical dates and payments. [Needs review](/help/modules#needs-review-data-sense).  
 - **Delete** projects when policy allows (irreversible — confirm first).  
 - **Export** Projects to Excel/CSV from the Projects page filters.
 

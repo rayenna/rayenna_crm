@@ -10,6 +10,11 @@ import {
   lifecycleBrandMissingLabel,
   lifecycleBrandMissingKind,
 } from '../utils/zenithBriefingMissingBrands'
+import {
+  dataSenseMyDayTaskContent,
+  DATA_SENSE_RULE_SHORT_LABEL,
+  type DataSenseRuleId,
+} from '../utils/dataSense'
 
 export type MyDaySuggestionSource =
   | 'hit_list'
@@ -17,6 +22,7 @@ export type MyDaySuggestionSource =
   | 'install_delayed'
   | 'lifecycle_brands'
   | 'support_ticket'
+  | 'data_sense'
 
 export interface MyDaySuggestion {
   /** Stable key for list rendering */
@@ -83,6 +89,15 @@ type ZenithFocusPayload = {
       source: string
     }>
   }
+  dataSenseGaps?: Array<{
+    projectId: string
+    projectSerialNumber?: number | null
+    customerName: string
+    stageLabel: string
+    primaryRuleId: DataSenseRuleId
+    primaryTitle: string
+    severity: 'critical' | 'warning'
+  }>
 }
 
 function suggestionsFromHitList(
@@ -181,6 +196,25 @@ function suggestionsFromInstallDelayed(
     })
 }
 
+function suggestionsFromDataSenseGaps(
+  gaps: ZenithFocusPayload['dataSenseGaps'],
+): MyDaySuggestion[] {
+  if (!gaps?.length) return []
+  return gaps.slice(0, 5).map((gap) => {
+    const label = projectLabel(gap.customerName, gap.projectSerialNumber)
+    const rule = gap.primaryRuleId
+    return {
+      id: `data-sense:${gap.projectId}`,
+      source: 'data_sense' as const,
+      content: dataSenseMyDayTaskContent(rule, gap.customerName),
+      projectId: gap.projectId,
+      projectLabel: label,
+      urgency: gap.severity === 'critical' ? ('critical' as const) : ('warning' as const),
+      meta: `${DATA_SENSE_RULE_SHORT_LABEL[rule]} · ${gap.stageLabel}`,
+    }
+  })
+}
+
 function suggestionsFromOverdueTickets(
   overdueTickets: NonNullable<ZenithFocusPayload['supportQueue']>['overdueTickets'],
 ): MyDaySuggestion[] {
@@ -218,6 +252,16 @@ export function buildMyDaySuggestions(args: {
       role === UserRole.MANAGEMENT)
   ) {
     raw.push(...suggestionsFromHitList(pipelineRows, role, userId))
+  }
+
+  const dataSenseGaps = focusData.dataSenseGaps
+  if (
+    dataSenseGaps &&
+    (role === UserRole.SALES ||
+      role === UserRole.ADMIN ||
+      role === UserRole.MANAGEMENT)
+  ) {
+    raw.push(...suggestionsFromDataSenseGaps(dataSenseGaps))
   }
 
   const overdue = focusData.financeRadar?.overdueTop5

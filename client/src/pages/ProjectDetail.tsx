@@ -22,6 +22,7 @@ import { canDeleteProject, canEditProject } from '../utils/projectPermissions'
 import { getProjectDetailAccessNotice } from '../utils/projectAccessMessages'
 import ProjectAccessNotice from '../components/projects/ProjectAccessNotice'
 import LifecycleDataQualityBanner from '../components/projects/LifecycleDataQualityBanner'
+import DataSenseBanner from '../components/projects/DataSenseBanner'
 import PeSyncStewardBanner from '../components/projects/PeSyncStewardBanner'
 import ReminderModal from '../components/zenith/ReminderModal'
 import HandoffBriefModal from '../components/projects/HandoffBriefModal'
@@ -36,6 +37,7 @@ import {
   peSoftGateFindings,
   presentLifecycleDataQualityForViewer,
 } from '../utils/lifecycleDataQuality'
+import { evaluateDataSense } from '../utils/dataSense'
 import {
   projectAllowsPaymentReminder,
   projectToReminderTemplate,
@@ -333,6 +335,13 @@ const ProjectDetail = () => {
       })
     : []
 
+  const dataSenseFindings = project
+    ? evaluateDataSense(project).map((f) => ({
+        ...f,
+        href: canEdit ? `/projects/${project.id}/edit` : undefined,
+      }))
+    : []
+
   const peCapacityDriftFindings =
     project && !peSummaryPending
       ? evaluatePeCapacityDrift(project, peSummary)
@@ -564,6 +573,7 @@ const ProjectDetail = () => {
           </header>
 
           {detailAccessNotice ? <ProjectAccessNotice notice={detailAccessNotice} /> : null}
+          <DataSenseBanner findings={dataSenseFindings} />
           <LifecycleDataQualityBanner findings={dataQualityFindings} />
           <PeSyncStewardBanner
             project={project}

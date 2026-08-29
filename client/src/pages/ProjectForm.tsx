@@ -31,6 +31,13 @@ import {
   paymentCollectionDateInputMax,
   validatePaymentCollectionDates,
 } from '../utils/paymentCollectionDate'
+import {
+  dataSenseAckFromBody,
+  dataSenseConfirmMessage,
+  dataSenseImpossibleFindings,
+  isDataSenseImpossibleResponse,
+  type DataSenseFinding,
+} from '../utils/dataSense'
 
 function customerPickerLabel(customer: Customer): string {
   return `${customer.customerId} - ${getCustomerDisplayName(customer)}`
@@ -340,6 +347,10 @@ const ProjectForm = () => {
     message: string
     pendingData: Record<string, unknown>
   } | null>(null)
+  const [dataSenseConfirm, setDataSenseConfirm] = useState<{
+    findings: DataSenseFinding[]
+    pendingData: Record<string, unknown>
+  } | null>(null)
   const paymentDateMax = paymentCollectionDateInputMax()
   const customerDropdownRef = useRef<HTMLDivElement>(null)
   /** When false, Inverter capacity (kW) tracks System Capacity; set true after user edits that field. */
@@ -616,11 +627,21 @@ const ProjectForm = () => {
       }
       navigate(exitPath)
     },
-    onError: (error: unknown) => {
-      const err = error as { response?: { data?: { errors?: Array<{ param?: string; msg?: string; message?: string }>; error?: string }; status?: number }; message?: string }
+    onError: (error: unknown, variables: Record<string, unknown>) => {
+      const err = error as { response?: { data?: { errors?: Array<{ param?: string; msg?: string; message?: string }>; error?: string; code?: string; findings?: DataSenseFinding[] }; status?: number }; message?: string }
       if (import.meta.env.DEV) {
         console.error('Project mutation error:', error)
         console.error('Error response:', err?.response?.data)
+      }
+
+      if (err.response?.status === 409 && isDataSenseImpossibleResponse(err.response.data)) {
+        if (!dataSenseAckFromBody(variables)) {
+          setDataSenseConfirm({
+            findings: err.response.data.findings,
+            pendingData: variables,
+          })
+          return
+        }
       }
       
       // Handle validation errors (express-validator returns errors array)
@@ -636,6 +657,21 @@ const ProjectForm = () => {
       }
     },
   })
+
+  const saveProjectPayload = (data: Record<string, unknown>) => {
+    const findings = dataSenseImpossibleFindings({
+      projectStatus: String(data.projectStatus ?? ''),
+      expectedCommissioningDate: (data.expectedCommissioningDate as string | Date | null) || null,
+      confirmationDate: (data.confirmationDate as string | Date | null) || null,
+      projectCost: (data.projectCost as number | null) ?? null,
+      advanceReceived: (data.advanceReceived as number | null) ?? null,
+    })
+    if (findings.length > 0 && !dataSenseAckFromBody(data)) {
+      setDataSenseConfirm({ findings, pendingData: data })
+      return
+    }
+    mutation.mutate(data)
+  }
 
   const onSubmit = (data: any) => {
     if (import.meta.env.DEV) console.log('[PROJECT FORM] onSubmit called');
@@ -1044,7 +1080,7 @@ const ProjectForm = () => {
       return
     }
 
-    mutation.mutate(data)
+    saveProjectPayload(data)
   }
 
   const canEditPayments = hasRole([UserRole.ADMIN, UserRole.FINANCE])
@@ -1127,7 +1163,35 @@ const ProjectForm = () => {
             onClick: () => {
               const pending = paymentDateConfirm?.pendingData
               setPaymentDateConfirm(null)
-              if (pending) mutation.mutate(pending)
+              if (pending) saveProjectPayload(pending)
+            },
+          },
+        ]}
+      />
+
+      <ErrorModal
+        open={!!dataSenseConfirm}
+        onClose={() => setDataSenseConfirm(null)}
+        type="warning"
+        message={dataSenseConfirm ? dataSenseConfirmMessage(dataSenseConfirm.findings) : ''}
+        actions={[
+          {
+            label: 'Go back',
+            variant: 'ghost',
+            onClick: () => setDataSenseConfirm(null),
+          },
+          {
+            label: 'Save anyway',
+            variant: 'primary',
+            onClick: () => {
+              const pending = dataSenseConfirm?.pendingData
+              setDataSenseConfirm(null)
+              if (pending) {
+                saveProjectPayload({
+                  ...pending,
+                  acknowledgeDataSenseImpossibilities: true,
+                })
+              }
             },
           },
         ]}

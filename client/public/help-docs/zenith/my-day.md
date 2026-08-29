@@ -18,7 +18,7 @@ The drawer has three tabs:
 | :-- | :-- |
 | **Today’s Hit List** | **+ My Day** in **Actions** beside **Open →** — pins a follow-up, usually with that **project** attached. |
 | **Today’s plan** (Zenith Today / KPIs) | **Suggested from CRM** rows with **+ My Day**; scroll for the full list ([Today’s plan](/help/dashboard#todays-plan-dashboard)). |
-| **Things needing attention** (Zenith) | **+ My Day** on lifecycle brand gaps ([Things needing attention](/help/dashboard#things-needing-attention-dashboard)). |
+| **Things needing attention** (Zenith) | **+ My Day** on **Needs review** rows and lifecycle brand gaps ([Things needing attention](/help/dashboard#things-needing-attention-dashboard)). |
 | **Daily briefing** | **Your My Day** summary when the briefing opens ([Daily briefing](#daily-briefing-zenith)). |
 | **Project detail** | **Your open My Day tasks** strip — complete or add follow-ups for that project ([Projects → Project detail](/help/modules#project-detail-page)). |
 

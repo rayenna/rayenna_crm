@@ -27,6 +27,7 @@ From **Zenith**, press **?** (when not typing in a field) to open **Help** here.
 | **Command bar, FY, briefing** | [Command bar and filters](#command-bar-and-filters) |
 | **Solar News, AI Insights, KPIs** | [Ribbons and KPIs](#ribbons-and-kpis) |
 | **Hit List, pipeline table, Deal Health** | [Pipeline and Hit List](#pipeline-and-hit-list) |
+| **Needs review (dates / payments)** | [Things needing attention](/help/dashboard#things-needing-attention-dashboard) · [Needs review](/help/modules#needs-review-data-sense) |
 | **Collapsible role panels** | [Your Focus](#your-focus) |
 | **Board, funnel, victory toast** | [Board and funnel](#board-and-funnel) |
 | **Explore charts & drill-down** | [Explore charts](#explore-charts) |

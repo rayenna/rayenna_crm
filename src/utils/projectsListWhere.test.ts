@@ -197,6 +197,17 @@ describe('buildProjectsWhere', () => {
     expect(built.where.salespersonId).toBe('sales-1');
   });
 
+  it('parses dataSenseRule and implies needs-review', () => {
+    const filters = parseProjectsListFilters({ dataSenseRule: 'A1' });
+    expect(filters.dataSenseRule).toBe('A1');
+    expect(filters.dataSenseNeedsReviewActive).toBe(true);
+  });
+
+  it('parses dataSenseNeedsReview', () => {
+    const filters = parseProjectsListFilters({ dataSenseNeedsReview: 'true' });
+    expect(filters.dataSenseNeedsReviewActive).toBe(true);
+  });
+
   it('filters late-stage projects with missing lifecycle brands', () => {
     const filters = parseProjectsListFilters({ lifecycleSpecsIncomplete: 'true' });
     const built = buildProjectsWhere(filters, adminUser);
@@ -206,5 +217,27 @@ describe('buildProjectsWhere', () => {
     expect(json).toContain('UNDER_INSTALLATION');
     expect(json).toContain('panelBrand');
     expect(json).toContain('inverterBrand');
+  });
+
+  it('filters Data Sense needs-review OR (past commissioning / missing confirm / lost gaps / no advance)', () => {
+    const filters = parseProjectsListFilters({ dataSenseNeedsReview: 'true' });
+    const built = buildProjectsWhere(filters, adminUser);
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    const json = JSON.stringify(built.where);
+    expect(json).toContain('expectedCommissioningDate');
+    expect(json).toContain('confirmationDate');
+    expect(json).toContain('lostReason');
+    expect(json).toContain('advanceReceived');
+  });
+
+  it('filters Data Sense A1 only when dataSenseRule=A1', () => {
+    const filters = parseProjectsListFilters({ dataSenseRule: 'A1' });
+    const built = buildProjectsWhere(filters, adminUser);
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    const json = JSON.stringify(built.where);
+    expect(json).toContain('expectedCommissioningDate');
+    expect(json).not.toContain('lostReason');
   });
 });

@@ -16,6 +16,10 @@ import {
 import { assertPaymentCollectionDatesNotFuture } from '../utils/paymentCollectionDate';
 import { updateTouchesPaymentTracking } from '../utils/paymentAudit';
 import { computeDealHealthScoreForProjectList } from '../utils/dealHealthScore';
+import {
+  dataSenseImpossibleConflict,
+  dataSenseImpossibleHttpBody,
+} from '../utils/dataSense';
 
 // Valid values for lostToCompetitionReason (required when lostReason is LOST_TO_COMPETITION)
 const LOST_TO_COMPETITION_REASON_VALUES = [
@@ -225,6 +229,8 @@ router.get(
         updatedAt: true,
         stageEnteredAt: true,
         expectedCommissioningDate: true,
+        lostDate: true,
+        lostReason: true,
         paymentStatus: true,
         balanceAmount: true,
         leadSource: true,
@@ -793,6 +799,11 @@ router.post(
         });
       }
 
+      const createSenseFindings = dataSenseImpossibleConflict(req.body, null);
+      if (createSenseFindings.length > 0) {
+        return res.status(409).json(dataSenseImpossibleHttpBody(createSenseFindings));
+      }
+
       // Convert date strings to Date objects
       const convertDate = (dateStr: any): Date | null => {
         if (!dateStr) return null;
@@ -985,6 +996,17 @@ router.put(
       // Prevent editing projects in Lost status (only Admin can delete)
       if (project.projectStatus === ProjectStatus.LOST && req.user?.role !== UserRole.ADMIN) {
         return res.status(403).json({ error: 'Projects in Lost status cannot be edited. Only Admin can delete them.' });
+      }
+
+      const updateSenseFindings = dataSenseImpossibleConflict(req.body, {
+        projectStatus: project.projectStatus,
+        expectedCommissioningDate: project.expectedCommissioningDate,
+        confirmationDate: project.confirmationDate,
+        projectCost: project.projectCost,
+        advanceReceived: project.advanceReceived,
+      });
+      if (updateSenseFindings.length > 0) {
+        return res.status(409).json(dataSenseImpossibleHttpBody(updateSenseFindings));
       }
 
       // For LOST status: require confirmation date (current or past), order value, and loss taxonomy

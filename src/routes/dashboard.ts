@@ -20,6 +20,7 @@ import {
   withChartPercentages,
 } from '../utils/customerTypeCharts';
 import { loadLifecycleBrandGaps } from '../utils/lifecycleBrandGaps';
+import { loadDataSenseGaps } from '../utils/dataSense';
 import { isSupportTicketOverdue } from '../utils/supportTicketQueue';
 
 const router = express.Router();
@@ -3101,12 +3102,13 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
     };
 
     if (role === UserRole.SALES) {
-      const [salesPipeline, lifecycleBrandGaps, supportQueue] = await Promise.all([
+      const [salesPipeline, lifecycleBrandGaps, supportQueue, dataSenseGaps] = await Promise.all([
         buildSalesPipeline('self'),
         loadLifecycleBrandGaps(where as Prisma.ProjectWhereInput, { salespersonId: userId }),
         buildSupportQueue('self'),
+        loadDataSenseGaps(where as Prisma.ProjectWhereInput, { salespersonId: userId }),
       ]);
-      return res.json({ focusKind: 'SALES', salesPipeline, lifecycleBrandGaps, supportQueue });
+      return res.json({ focusKind: 'SALES', salesPipeline, lifecycleBrandGaps, supportQueue, dataSenseGaps });
     }
 
     if (role === UserRole.FINANCE) {
@@ -3124,7 +3126,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
     }
 
     if (role === UserRole.MANAGEMENT || role === UserRole.ADMIN) {
-      const [salesPipeline, financeRadar, installPulse, lifecycleBrandGaps, supportQueue] = await Promise.all([
+      const [salesPipeline, financeRadar, installPulse, lifecycleBrandGaps, supportQueue, dataSenseGaps] = await Promise.all([
         buildSalesPipeline('all'),
         buildFinanceRadar(),
         buildInstallPulse(),
@@ -3132,6 +3134,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
           ? loadLifecycleBrandGaps(where as Prisma.ProjectWhereInput)
           : Promise.resolve([]),
         buildSupportQueue('all'),
+        loadDataSenseGaps(where as Prisma.ProjectWhereInput),
       ]);
       return res.json({
         focusKind: 'MANAGEMENT',
@@ -3139,6 +3142,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
         financeRadar,
         installPulse,
         supportQueue,
+        dataSenseGaps,
         ...(role === UserRole.ADMIN ? { lifecycleBrandGaps } : {}),
       });
     }

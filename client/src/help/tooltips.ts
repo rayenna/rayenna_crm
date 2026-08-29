@@ -162,7 +162,7 @@ export const helpTooltips: Record<string, HelpTooltip> = {
     key: 'zenith.todays-plan',
     title: "Today's plan",
     content:
-      'On Zenith Today / KPIs (not the classic Dashboard): your My Day snapshot plus Suggested from CRM. On Sales / Admin / Management desktop it sits beside the Hit List. Use Tasks or Open My Day for the full drawer. Sales, Ops, and Admin may see Things needing attention when late-stage panel/inverter brands are missing; Finance sees the plan only.',
+      'On Zenith Today / KPIs (not the classic Dashboard): your My Day snapshot plus Suggested from CRM. On Sales / Admin / Management desktop it sits beside the Hit List. Use Tasks or Open My Day for the full drawer. Sales, Ops, and Admin may see Things needing attention for missing late-stage brands; Sales, Admin, and Management also see Needs review (dates, payments, capacity, stuck stages). Finance sees the plan only.',
   },
   'zenith.quick-drawer-remarks': {
     key: 'zenith.quick-drawer-remarks',

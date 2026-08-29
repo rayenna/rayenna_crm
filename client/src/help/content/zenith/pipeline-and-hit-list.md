@@ -12,6 +12,8 @@ In Zenith, some tables can be refined **without changing your dashboard filters*
 
 **Today’s Hit List vs Your pipeline today** — The Hit List is still a **prioritised slice** (server-ranked, capped at **seven** deals) from the same zenith-focus pipeline data. **Your pipeline today** is the **full** pipeline table for your filters (with its own sort/filter). Use **Your Focus → Your pipeline today** when you need the complete list beyond the Hit List cap.
 
+**Needs review (Projects)** — Separate from Hit List urgency. Filter, list pill, and detail banner for dates, payments, or capacity that do not match stage. **Save anyway** only for reversed commissioning vs confirmation, or advance over order value. Full rules: [Needs review (Data Sense)](/help/modules#needs-review-data-sense). Hit List **OVERDUE** still uses past commissioning for *today’s* work; both can apply.
+
 These controls work on the rows already loaded for your current FY / Quarter / Month filters (no extra API calls for the Hit List slice beyond the focus payload you already have).
 
 ## Deal Health Score (Zenith)

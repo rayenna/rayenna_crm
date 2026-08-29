@@ -596,6 +596,9 @@ export default function ZenithExecutiveBody({
               <DashboardPlanAttentionRow
                 stackAttention
                 showLifecycleReminder={role === UserRole.SALES || role === UserRole.ADMIN}
+                showDataSenseReminder={
+                  role === UserRole.SALES || role === UserRole.ADMIN || role === UserRole.MANAGEMENT
+                }
                 explorerProjects={explorerProjects}
                 tileParams={{
                   selectedFYs: dateFilter.selectedFYs,

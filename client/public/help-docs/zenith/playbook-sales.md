@@ -7,7 +7,7 @@ A practical **15–20 minute** flow for Sales users. Adjust filters to your curr
 1. Top menu → **Dashboard** menu → **Zenith ✦** (or **Ctrl+Shift+Z** / **⌘⇧Z** from anywhere when not typing).
 2. In the **command bar**, set **Financial Year** (and **Quarter** / **Month** if you are reviewing a specific period). Use **Reset** if numbers look unexpectedly narrow.
 3. Glance at **Live** vs **Offline** — My Day and fresh CRM writes need **Live**; cached KPIs may still show offline on PWA.
-4. If the **Smart daily briefing** appears, scan **Your My Day** and any **lifecycle brand** reminder ([Daily briefing](#daily-briefing-zenith)). Dismiss or **Don’t show again today** as you prefer.
+4. If the **Smart daily briefing** appears, scan **Your My Day**, any **Needs review** line, and any **lifecycle brand** reminder ([Daily briefing](#daily-briefing-zenith) · [Needs review](/help/modules#needs-review-data-sense)). Dismiss or **Don’t show again today** as you prefer.
 
 ## 2. Scan ribbons and KPIs (~3 min)
 
@@ -44,8 +44,9 @@ A practical **15–20 minute** flow for Sales users. Adjust filters to your curr
 ## 6. Before you leave Zenith
 
 - [ ] Hit List top items touched or scheduled in **My Day**
+- [ ] **Things needing attention** scanned if the card is showing ([Needs review](/help/modules#needs-review-data-sense))
 - [ ] Logged activity on deals you contacted
 - [ ] PE / proposal stages reviewed
 - [ ] Filters left sensible for next visit (or **Reset** for company-wide view)
 
-**Next:** [Projects module](/help/modules#projects-module) for edits · [Today’s plan on Zenith](/help/dashboard#todays-plan-dashboard) for CRM-suggested follow-ups
+**Next:** [Projects module](/help/modules#projects-module) · [Needs review](/help/modules#needs-review-data-sense) · [Today’s plan on Zenith](/help/dashboard#todays-plan-dashboard)

@@ -28,6 +28,7 @@ You track **money in**: payments received, outstanding balances, and handoff to 
 
 1. **Projects** → open a project.  
 2. **Payment tracking** section shows status badge, received total, balance, and milestone lines.
+3. If **Needs review** appears (for example advance greater than order value), fix the amounts or confirm **Save anyway**. Guide: [Needs review](/help/modules#needs-review-data-sense).
 
 Payment status on the list uses the same **Pending / Partial / Fully paid** logic (and **N/A** when not applicable).
 

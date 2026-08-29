@@ -1,3 +1,5 @@
+import type { DataSenseRuleId } from './dataSense'
+
 /** Build query params for GET /api/projects and export endpoints (same filters; optional pagination). */
 
 export type PeBucketParam = 'proposal-ready' | 'draft' | 'not-started' | 'rest'
@@ -25,6 +27,8 @@ export type ProjectsListFiltersState = {
   inverterBrand: string
   lifecycleSpecsComplete: boolean
   lifecycleSpecsIncomplete: boolean
+  dataSenseNeedsReview: boolean
+  dataSenseRule: DataSenseRuleId | null
   search?: string
   sortBy?: string
   sortOrder?: string
@@ -68,6 +72,8 @@ export function buildProjectListQueryParams(input: ProjectsListQueryInput): URLS
   if (filters.zenithFyProfit) params.append('zenithFyProfit', 'true')
   if (filters.lifecycleSpecsIncomplete) params.append('lifecycleSpecsIncomplete', 'true')
   if (filters.lifecycleSpecsComplete) params.append('lifecycleSpecsComplete', 'true')
+  if (filters.dataSenseNeedsReview) params.append('dataSenseNeedsReview', 'true')
+  if (filters.dataSenseRule) params.append('dataSenseRule', filters.dataSenseRule)
   if (filters.panelBrand) params.append('panelBrand', filters.panelBrand)
   if (filters.inverterBrand) params.append('inverterBrand', filters.inverterBrand)
   if (filters.sortBy) {

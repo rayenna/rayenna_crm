@@ -12,6 +12,7 @@ import {
   formatBriefingCustomerNameList,
   zenithExplorerProjectsMissingLifecycleBrands,
 } from '../../utils/zenithBriefingMissingBrands'
+import { dataSenseHitsOnExplorerProjects } from '../../utils/dataSense'
 
 type BriefingLine = { icon: string; text: string; color: string }
 
@@ -184,6 +185,32 @@ function generateBriefing(args: {
         text: `${missing.length} project${missing.length === 1 ? '' : 's'} in Under Installation, Completed, or Completed – Subsidy Credited ${
           missing.length === 1 ? 'is' : 'are'
         } missing panel and/or inverter brand${nameList ? `: ${nameList}` : ''}.`,
+        color: 'var(--accent-gold)',
+      })
+    }
+  }
+
+  if (role === UserRole.ADMIN || role === UserRole.SALES || role === UserRole.MANAGEMENT) {
+    const explorerForSense = (data as { zenithExplorerProjects?: ZenithExplorerProject[] }).zenithExplorerProjects
+    const senseHits = dataSenseHitsOnExplorerProjects(Array.isArray(explorerForSense) ? explorerForSense : [])
+    if (senseHits.length > 0) {
+      const a1 = senseHits.filter((h) => h.findings.some((f) => f.id === 'A1')).length
+      const names = senseHits
+        .slice(0, 3)
+        .map((h) => h.customerName)
+        .filter(Boolean)
+      const extra = senseHits.length - names.length
+      const nameList =
+        names.length === 0
+          ? ''
+          : extra > 0
+            ? `${names.join(', ')} and ${extra} more`
+            : names.join(', ')
+      lines.unshift({
+        icon: '📋',
+        text: `${senseHits.length} project${senseHits.length === 1 ? '' : 's'} need date or payment review${
+          a1 > 0 ? ` (${a1} overdue commissioning)` : ''
+        }${nameList ? `: ${nameList}` : ''}.`,
         color: 'var(--accent-gold)',
       })
     }

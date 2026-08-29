@@ -17,7 +17,8 @@ Zenith is available to **Sales**, **Operations**, **Finance**, **Management**, a
 - Data is **scoped to your assigned projects** (same as Sales dashboard).
 - **Today’s Hit List** surfaces up to seven urgent deals with filters, sort, **Alert**, and **+ My Day**.
 - **Your pipeline today** and **Proposal Engine** rows under **Your Focus** open **Quick Actions** with **Recent remarks** before **Log activity**.
-- **Smart daily briefing** may include a **lifecycle panel/inverter** reminder when late-stage jobs lack brands.
+- **Smart daily briefing** may include a **Needs review** line and a **lifecycle panel/inverter** reminder when late-stage jobs lack brands.
+- **Things needing attention** (beside Today's plan) lists Needs review flags plus brand gaps. [Needs review](/help/modules#needs-review-data-sense).
 - Step-by-step: [Sales playbook](#sales-playbook-morning-in-zenith) · [Sales role guide](/help/roles#sales-role-guide)
 
 ## Finance
@@ -25,7 +26,7 @@ Zenith is available to **Sales**, **Operations**, **Finance**, **Management**, a
 - **Payment radar** in **Your Focus**: **Top overdue**, **Latest payments received**, shared payment-status legend; rows open finance-aware **Quick Actions**.
 - **Availing Loan** on the KPI strip opens a filtered drawer list.
 - **Deal flow funnel** payment pills drill to payment-related project sets.
-- No **Things needing attention**-style lifecycle line in the daily briefing.
+- No **Things needing attention** card and no **Needs review** briefing line (use **Projects** if you open a deal with a banner).
 - Step-by-step: [Finance playbook](#finance-playbook-payment-radar) · [Finance role guide](/help/roles#finance-role-guide)
 
 ## Operations
@@ -39,12 +40,12 @@ Zenith is available to **Sales**, **Operations**, **Finance**, **Management**, a
 
 - Company-wide view (not limited to one salesperson).
 - Executive **Hit List**, **Revenue forecast**, YoY KPI band, **Customer projects profitability**, treemap-style explore charts.
-- **Does not** see the Zenith **Things needing attention** card or the matching **briefing lifecycle** line (Sales/Admin/Ops only).
+- Sees **Things needing attention** for **Needs review** (company-wide) including **by salesperson**; does **not** see the Sales/Ops **lifecycle brand** briefing line.
 - Step-by-step: [Management playbook](#management-playbook-executive-review) · [Management role guide](/help/roles#management-role-guide)
 
 ## Admin
 
-- **Management-style** Zenith layout plus **lifecycle** briefing and attention signals (aligned with Sales/Ops on brand gaps).
+- **Management-style** Zenith layout plus **Needs review** (with salesperson rollup) and **lifecycle brand** briefing/attention signals.
 - Full module access elsewhere in the CRM; Zenith behaviour matches executive layout for analytics.
 - [Administrator role guide](/help/roles#administrator-role-guide)
 

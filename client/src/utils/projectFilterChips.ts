@@ -1,5 +1,6 @@
 import { LeadSource, UserRole } from '../types'
 import type { PeBucketParam } from './projectListQuery'
+import { DATA_SENSE_RULE_SHORT_LABEL, type DataSenseRuleId } from './dataSense'
 import { getProjectSegmentLabel } from './projectSegment'
 import { getCustomerTypeLegendLabel } from './customerTypeStyles'
 import type { CustomerType } from './customerRecord'
@@ -116,6 +117,8 @@ export type BuildProjectFilterChipsInput = {
     inverterBrand: string
     lifecycleSpecsComplete: boolean
     lifecycleSpecsIncomplete: boolean
+    dataSenseNeedsReview: boolean
+    dataSenseRule: DataSenseRuleId | null
     search?: string
     sortBy?: string
     sortOrder?: string
@@ -385,6 +388,15 @@ export function buildProjectFilterChips(input: BuildProjectFilterChipsInput): Pr
       id: 'lifecycle-incomplete',
       label: 'Lifecycle: brands missing',
       onRemove: () => onPatchFilters({ lifecycleSpecsIncomplete: false }),
+    })
+  }
+
+  if (filters.dataSenseNeedsReview || filters.dataSenseRule) {
+    const rule = filters.dataSenseRule
+    chips.push({
+      id: 'data-sense-review',
+      label: rule ? `Needs review: ${DATA_SENSE_RULE_SHORT_LABEL[rule]}` : 'Needs review',
+      onRemove: () => onPatchFilters({ dataSenseNeedsReview: false, dataSenseRule: null }),
     })
   }
 

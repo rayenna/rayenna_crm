@@ -16,6 +16,7 @@ import { getSalesTeamColor } from '../components/dashboard/salesTeamColors'
 import DashboardFilters from '../components/dashboard/DashboardFilters'
 import HealthBadge from '../components/zenith/HealthBadge'
 import { projectDetailToHealthProject } from '../utils/dealHealthScore'
+import { evaluateDataSense, parseDataSenseRule, type DataSenseRuleId } from '../utils/dataSense'
 import FinancingBankPopoverIcon from '../components/projects/FinancingBankPopoverIcon'
 import CapacitySpecsPopover from '../components/projects/CapacitySpecsPopover'
 import LeadSourcePill from '../components/projects/LeadSourcePill'
@@ -93,6 +94,8 @@ function getInitialFiltersFromUrl(): {
   inverterBrand: string
   lifecycleSpecsComplete: boolean
   lifecycleSpecsIncomplete: boolean
+  dataSenseNeedsReview: boolean
+    dataSenseRule: DataSenseRuleId | null
 } | null {
   const p = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
   const status = p.getAll('status')
@@ -120,6 +123,8 @@ function getInitialFiltersFromUrl(): {
   const lifecycleSpecsComplete =
     !lifecycleSpecsIncomplete &&
     (p.get('lifecycleSpecsComplete') === 'true' || panelBrand !== '' || inverterBrand !== '')
+  const dataSenseNeedsReview = p.get('dataSenseNeedsReview') === 'true'
+  const dataSenseRule = parseDataSenseRule(p.get('dataSenseRule'))
   const hasAny =
     status.length > 0 ||
     paymentStatus.length > 0 ||
@@ -141,7 +146,9 @@ function getInitialFiltersFromUrl(): {
     panelBrand !== '' ||
     inverterBrand !== '' ||
     p.get('lifecycleSpecsComplete') === 'true' ||
-    p.get('lifecycleSpecsIncomplete') === 'true'
+    p.get('lifecycleSpecsIncomplete') === 'true' ||
+    dataSenseNeedsReview ||
+    dataSenseRule != null
   if (!hasAny) return null
   const validStatus = status.filter((s) => Object.values(ProjectStatus).includes(s as ProjectStatus))
   const validPayment = paymentStatus.filter((v) => (VALID_PAYMENT_STATUS_VALUES as readonly string[]).includes(v))
@@ -170,6 +177,8 @@ function getInitialFiltersFromUrl(): {
     inverterBrand,
     lifecycleSpecsComplete,
     lifecycleSpecsIncomplete,
+    dataSenseNeedsReview: dataSenseNeedsReview || dataSenseRule != null,
+    dataSenseRule,
   }
 }
 
@@ -511,6 +520,8 @@ const Projects = () => {
     inverterBrand: urlInit?.inverterBrand ?? '',
     lifecycleSpecsComplete: urlInit?.lifecycleSpecsComplete ?? false,
     lifecycleSpecsIncomplete: urlInit?.lifecycleSpecsIncomplete ?? false,
+    dataSenseNeedsReview: urlInit?.dataSenseNeedsReview ?? false,
+    dataSenseRule: urlInit?.dataSenseRule ?? null,
     search: '',
     sortBy: '',
     sortOrder: 'desc',
@@ -545,6 +556,8 @@ const Projects = () => {
     const inverterBrandFromUrl = searchParams.get('inverterBrand')?.trim() ?? ''
     const lifecycleSpecsIncompleteFromUrl = searchParams.get('lifecycleSpecsIncomplete') === 'true'
     const lifecycleSpecsFromUrl = searchParams.get('lifecycleSpecsComplete') === 'true'
+    const dataSenseNeedsReviewFromUrl = searchParams.get('dataSenseNeedsReview') === 'true'
+    const dataSenseRuleFromUrl = parseDataSenseRule(searchParams.get('dataSenseRule'))
     const lifecycleSpecsActiveFromUrl =
       !lifecycleSpecsIncompleteFromUrl &&
       (lifecycleSpecsFromUrl || panelBrandFromUrl !== '' || inverterBrandFromUrl !== '')
@@ -578,7 +591,9 @@ const Projects = () => {
       panelBrandFromUrl !== '' ||
       inverterBrandFromUrl !== '' ||
       lifecycleSpecsFromUrl ||
-      lifecycleSpecsIncompleteFromUrl
+      lifecycleSpecsIncompleteFromUrl ||
+      dataSenseNeedsReviewFromUrl ||
+      dataSenseRuleFromUrl != null
     // Wait for statusOptions when we have status in URL (needed to validate status values)
     const canResolveStatus = !hasStatusParams || statusOptions.length > 0
     const validStatus = hasStatusParams && canResolveStatus
@@ -630,6 +645,8 @@ const Projects = () => {
         inverterBrand: inverterBrandFromUrl,
         lifecycleSpecsComplete: lifecycleSpecsActiveFromUrl,
         lifecycleSpecsIncomplete: lifecycleSpecsIncompleteFromUrl,
+        dataSenseNeedsReview: dataSenseNeedsReviewFromUrl || dataSenseRuleFromUrl != null,
+        dataSenseRule: dataSenseRuleFromUrl,
       }))
       if (fyFromUrl.length > 0) setSelectedFYs(fyFromUrl)
       if (quarterFromUrl.length > 0) setSelectedQuarters(quarterFromUrl)
@@ -746,6 +763,8 @@ const Projects = () => {
     filters.inverterBrand,
     filters.lifecycleSpecsComplete,
     filters.lifecycleSpecsIncomplete,
+    filters.dataSenseNeedsReview,
+    filters.dataSenseRule,
     filters.sortBy,
     selectedFYs,
     selectedQuarters,
@@ -791,6 +810,8 @@ const Projects = () => {
       inverterBrand: '',
       lifecycleSpecsComplete: false,
       lifecycleSpecsIncomplete: false,
+      dataSenseNeedsReview: false,
+      dataSenseRule: null,
       search: '',
       sortBy: '',
       sortOrder: 'desc',
@@ -830,6 +851,7 @@ const Projects = () => {
       (filters.zenithSlice ? 1 : 0) +
       (filters.zenithFyProfit ? 1 : 0) +
       (filters.panelBrand || filters.inverterBrand || filters.lifecycleSpecsComplete || filters.lifecycleSpecsIncomplete ? 1 : 0) +
+      (filters.dataSenseNeedsReview || filters.dataSenseRule ? 1 : 0) +
       (selectedFYs.length > 0 ? 1 : 0) +
       (selectedQuarters.length > 0 ? 1 : 0) +
       (selectedMonths.length > 0 ? 1 : 0) +
@@ -858,6 +880,8 @@ const Projects = () => {
     filters.inverterBrand,
     filters.lifecycleSpecsComplete,
     filters.lifecycleSpecsIncomplete,
+    filters.dataSenseNeedsReview,
+    filters.dataSenseRule,
     filters.sortBy,
     defaultStatusValues,
     user?.role,
@@ -901,7 +925,9 @@ const Projects = () => {
     searchParams.has('panelBrand') ||
     searchParams.has('inverterBrand') ||
     searchParams.get('lifecycleSpecsComplete') === 'true' ||
-    searchParams.get('lifecycleSpecsIncomplete') === 'true'
+    searchParams.get('lifecycleSpecsIncomplete') === 'true' ||
+    searchParams.get('dataSenseNeedsReview') === 'true' ||
+    Boolean(parseDataSenseRule(searchParams.get('dataSenseRule')))
 
   const listQueryInput = {
     filters,
@@ -1429,6 +1455,26 @@ const Projects = () => {
                   <span className="text-xs text-[color:var(--text-secondary)]">
                     (only projects where Availing Loan/Financing is Yes)
                   </span>
+                </div>
+                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                  <label className="inline-flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={filters.dataSenseNeedsReview}
+                      onChange={(e) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          dataSenseNeedsReview: e.target.checked,
+                          dataSenseRule: e.target.checked ? prev.dataSenseRule : null,
+                        }))
+                      }
+                      className="h-4 w-4 rounded border-[color:var(--border-input)] bg-[color:var(--bg-input)] accent-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
+                    />
+                    <span className="text-sm text-[color:var(--text-primary)]">Needs review</span>
+                  </label>
+                    <span className="text-xs text-[color:var(--text-secondary)]">
+                      (dates, payments, or capacity that do not match stage)
+                    </span>
                 </div>
               </div>
 
@@ -1978,6 +2024,23 @@ Do you want to continue?`}
                       >
                         {project.projectStatus.replace(/_/g, ' ')}
                       </span>
+                      {(() => {
+                        const sense = evaluateDataSense(project)
+                        if (!sense.length) return null
+                        const critical = sense.some((f) => f.severity === 'critical')
+                        return (
+                          <span
+                            title={sense.map((f) => f.title).join(' · ')}
+                            className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-semibold lg:text-[10px] ${
+                              critical
+                                ? 'border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] text-[color:var(--accent-red)]'
+                                : 'border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
+                            }`}
+                          >
+                            Review
+                          </span>
+                        )
+                      })()}
                       {peStatusByProjectId.get(project.id) === 'not-started' && (
                         <span className="inline-flex items-center rounded border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-1.5 py-0.5 text-[9px] font-semibold text-[color:var(--text-secondary)] lg:text-[10px]">
                           <span className="lg:hidden">Not Yet Created</span>

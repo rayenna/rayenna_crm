@@ -11,7 +11,7 @@ Short answers to common questions. For step-by-step guides, use the full help se
 | **Login, password, help, tips** | [General](#general) |
 | **Roles, menus, edit rights** | [Roles and access](#roles-and-access) |
 | **Dashboard, Zenith, shortcuts** | [Dashboard and Zenith](#dashboard-and-zenith) |
-| **Customers, projects, tickets, exports** | [Customers, projects, and data](#customers-projects-and-data) |
+| **Customers, projects, tickets, exports** | [Customers, projects, and data](#customers-projects-and-data) — includes **Needs review** |
 | **Users, audit log** *(Admin)* | [Admin and security](#admin-and-security) |
 | **Errors, offline, numbers** | [Troubleshooting](#troubleshooting) |
 | **Proposal Engine** | [Proposal Engine](#proposal-engine) |

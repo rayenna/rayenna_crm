@@ -1,5 +1,6 @@
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
 import { zenithExplorerProjectsMissingLifecycleBrands } from '../../utils/zenithBriefingMissingBrands'
+import { dataSenseHitsOnExplorerProjects } from '../../utils/dataSense'
 import DashboardLifecycleBrandReminder from './DashboardLifecycleBrandReminder'
 import DashboardMyDayPlanCard from './DashboardMyDayPlanCard'
 
@@ -9,6 +10,8 @@ interface Props {
   tileParams?: TileParams
   explorerProjects?: ZenithExplorerProject[] | null
   showLifecycleReminder?: boolean
+  /** Data Sense Needs review (Sales / Management / Admin). */
+  showDataSenseReminder?: boolean
   /** Keep attention under plan (for Zenith Plan | Hit List desktop row). */
   stackAttention?: boolean
 }
@@ -22,13 +25,15 @@ export default function DashboardPlanAttentionRow({
   tileParams,
   explorerProjects,
   showLifecycleReminder = false,
+  showDataSenseReminder = false,
   stackAttention = false,
 }: Props) {
+  const list = explorerProjects ?? []
   const missing =
-    showLifecycleReminder && tileParams
-      ? zenithExplorerProjectsMissingLifecycleBrands(explorerProjects ?? [])
-      : []
-  const showAttention = missing.length > 0 && tileParams != null
+    showLifecycleReminder && tileParams ? zenithExplorerProjectsMissingLifecycleBrands(list) : []
+  const dataSenseHits =
+    showDataSenseReminder && tileParams ? dataSenseHitsOnExplorerProjects(list) : []
+  const showAttention = (missing.length > 0 || dataSenseHits.length > 0) && tileParams != null
   const paired = showAttention
 
   return (
@@ -47,6 +52,8 @@ export default function DashboardPlanAttentionRow({
           projects={explorerProjects}
           tileParams={tileParams}
           className="min-h-0 h-full"
+          showBrandGaps={showLifecycleReminder}
+          dataSenseHits={dataSenseHits}
         />
       ) : null}
     </div>

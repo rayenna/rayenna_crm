@@ -117,7 +117,7 @@ The tile counts and filters match the dashboard filters (FY, Quarter, Month) you
    - **Customer type**: Residential, Apartment, Commercial (from **Customer Master** — not the same as **Segment**)
    - **Segment**: Subsidy or Non-Subsidy (on the project)
    - **Project Types** (service): EPC, Panel Cleaning, Maintenance, etc.
-   - **Payment Status**, **Lead source**, **Ticket status**, **Sales users** (non-Sales), **Has Artifacts**, **Availing Loan**
+   - **Payment Status**, **Lead source**, **Ticket status**, **Sales users** (non-Sales), **Has Artifacts**, **Availing Loan**, **Needs review**
 4. **Active filters** chips appear under the search bar when anything is applied; click **×** on a chip to remove that slice only.
 5. Use **Clear All** to reset search, filters, sort, and dates. Works even when arriving from a dashboard or Zenith chart link.
 6. **Admins**: **Export to Excel/CSV** downloads the **same filtered list** (see full Projects help for columns).
@@ -125,6 +125,8 @@ The tile counts and filters match the dashboard filters (FY, Quarter, Month) you
 8. Click a **project row** or **project number** to open the **Project Detail** page.
 
 Filters are remembered when you navigate to a project and use **Back** to return.
+
+**Needs review** (filter checkbox, list **Review** pill, and detail banner) flags dates, payments, or capacity that do not match the current stage. Full rules, Zenith, My Day, and **Save anyway**: [Needs review (Data Sense)](#needs-review-data-sense).
 
 ### Subtotals, payment balance, financing bank, and lead source (list)
 
@@ -146,6 +148,7 @@ The read-only **Individual Project** view groups information into **cards** with
 
 The detail page also shows:
 
+- **Needs review** banner when dates, payments, or capacity do not match stage — same rules as the list filter; **Fix →** opens Edit when you can edit. See [Needs review (Data Sense)](#needs-review-data-sense).
 - **Customer** information, **Project** and **Sales & Commercial** details (including **System Capacity** in whole kW where set)
 - **Project Lifecycle** (execution dates, costs, equipment — including **Panel / Inverter** brands, **Panel Capacity (W)**, and **Inverter Capacity (kW)** when captured)
 - **Deal Health Score** (0–100) — full **illustration and calculation tables** are in [Deal Health Score](#deal-health-score) (this help section) (hidden for completed / subsidy-credited / lost projects).
@@ -170,12 +173,59 @@ Each project displays:
 - **System Capacity**, **Roof Type**, **System Type**
 - **Support tickets** (count and status) and **documents** (in Key Artifacts)
 
+## Needs review (Data Sense)
+
+**Needs review** is the in-app name for **Data Sense**: a small set of rules that flag project records whose **dates, payments, or system size** do not match the current stage. It is **not** a new module and it does **not** replace Hit List urgency or Deal Health.
+
+**Who it is for:** **Sales** (own projects), **Management** and **Admin** (team-wide). **Finance** does not see the Zenith card; they still see the **Projects** filter and detail banner when they open a project.
+
+### Where it appears
+
+| Surface | What you see |
+| :-- | :-- |
+| **Projects** list | **Needs review** filter; active-filter chip; amber **Review** pill on matching rows |
+| **Project detail** | Banner with each reason and **Fix →** (Edit) when you can edit |
+| **New / Edit Project** | Most flags are reminders only. **Commissioning before confirmation** or **advance greater than order value** opens a warning: **Go back** or **Save anyway** (the save is not rejected) |
+| **Zenith → Things needing attention** | Card beside **Today's plan** (Today / KPIs). Count chips filter the card **in place**. **Projects →** opens the list with the same slice. Incomplete **Lost** rows are **not** listed here |
+| **Zenith → by salesperson** | **Management** and **Admin** only — counts that open Projects for that person (or unassigned) |
+| **Today's plan / My Day** | Suggested follow-ups for the more urgent flags (overdue commissioning, missing confirmation, reversed dates, no/late advance, advance over order, fully paid with a balance) |
+| **Smart daily briefing** | A **Needs review** line for Sales, Admin, and Management when the explorer slice has hits |
+
+### What the flags mean
+
+| Flag | Meaning |
+| :-- | :-- |
+| **Overdue commissioning** | Expected commissioning date is already past and the project is still open (not Completed, Subsidy Credited, or Lost) |
+| **Missing confirmation** | Status is Confirmed or later, but confirmation date is empty |
+| **Incomplete Lost** | Status is Lost, but lost date and/or reason is missing — on **detail** and when the Projects list includes **Lost**; not on the Zenith attention card |
+| **Dates reversed** | Expected commissioning is **before** confirmation — **Save anyway** on save |
+| **Confirm date too early** | A confirmation date is set while status is still Lead, Site Survey, or Proposal |
+| **Stuck in stage** | Time in the current stage is past Deal Health expected days (Lead 7, Site Survey 14, Proposal 21, Confirmed 30, Under Installation 60, Subsidy submitted 21) |
+| **No advance** | Confirmed or later, order value above ₹0, payment still Pending, advance ₹0 |
+| **Advance overdue** | Same as no advance, and more than **14 days** after confirmation |
+| **Advance over order** | Advance received is greater than order value — **Save anyway** on save |
+| **Done, still pending** | Completed or Subsidy Credited, payment still Pending, balance greater than ₹0 |
+| **Paid but balance** | Payment status is Fully Paid but outstanding balance is greater than ₹0 |
+| **No system size** | Confirmed or later with missing or invalid system capacity (kW) |
+
+Late-stage **panel / inverter brand** gaps stay on the **same** Zenith attention card for Sales, Operations, and Admin — they are lifecycle specs, not Data Sense flags.
+
+**Hit List OVERDUE** still uses past expected commissioning for *what to work today*. **Needs review** is *the record does not add up*. Both can apply to the same deal.
+
+### How to act
+
+1. Open the project (**Open →** or the list row).
+2. Read the banner; use **Fix →** if you can edit.
+3. Update the date, stage, payment, or capacity — or, only for reversed dates / advance over order, confirm **Save anyway** if the values are intentional.
+
+Related: [Things needing attention](/help/dashboard#things-needing-attention-dashboard) · [Pipeline and Hit List](/help/zenith#pipeline-and-hit-list) · [FAQ](/help/faq#what-is-needs-review)
+
 ## Best Practices
 
 1. **Create projects promptly** when a lead converts or an order is confirmed.
 2. **Keep status up to date** so pipeline, dashboards, and reports stay accurate.
 3. **Enter complete commercial and technical details** at creation and update as needed.
-4. **Update payments** as soon as they are received.
+4. **Keep status, dates, and payments consistent** — **Needs review** highlights mismatches; reversed commissioning vs confirmation, or advance above order value, asks you to confirm on save ([Needs review](#needs-review-data-sense)).
 5. **Use remarks** for important decisions, handoffs, and context.
 6. **Create support tickets** for customer issues and **add follow-ups** regularly.
 7. **Upload and categorize documents** clearly so the team can find them easily.
@@ -187,6 +237,5 @@ See [Roles → Permission matrix](/help/roles#permission-matrix). Summary: **Sal
 
 ## Related help
 
-- [Deal Health](#deal-health-score) · [Key Artifacts](#key-artifacts-module) · [Support Tickets](#support-tickets-module) · [Dashboard](/help/dashboard) · [Zenith](/help/zenith#zenith-command-center)
-
----
+- [Needs review (Data Sense)](#needs-review-data-sense) · [Deal Health](#deal-health-score) · [Key Artifacts](#key-artifacts-module) · [Support Tickets](#support-tickets-module) · [Dashboard](/help/dashboard) · [Zenith](/help/zenith#zenith-command-center)
+- Zenith **Things needing attention**: [Today's plan](/help/dashboard#todays-plan-dashboard)

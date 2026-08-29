@@ -1,3 +1,5 @@
+import type { DataSenseRuleId } from './dataSense'
+
 export type PeDashboardBucket = 'proposal-ready' | 'draft' | 'not-started' | 'rest'
 
 /**
@@ -31,6 +33,10 @@ export function buildProjectsUrl(
     lifecycleSpecsComplete?: boolean
     /** Late-stage projects missing panel and/or inverter brand (inverse of complete cohort). */
     lifecycleSpecsIncomplete?: boolean
+    /** Data Sense: dates, payments, or capacity that do not match stage. */
+    dataSenseNeedsReview?: boolean
+    /** Optional single Data Sense rule when `dataSenseNeedsReview` is set. */
+    dataSenseRule?: DataSenseRuleId
     /** Free-text search (Projects list search box); used e.g. dashboard profitability word cloud drill. */
     search?: string
   },
@@ -60,6 +66,8 @@ export function buildProjectsUrl(
   }
   if (params.lifecycleSpecsIncomplete) search.append('lifecycleSpecsIncomplete', 'true')
   if (params.lifecycleSpecsComplete) search.append('lifecycleSpecsComplete', 'true')
+  if (params.dataSenseNeedsReview) search.append('dataSenseNeedsReview', 'true')
+  if (params.dataSenseRule) search.append('dataSenseRule', params.dataSenseRule)
   const q = params.search != null ? String(params.search).trim() : ''
   if (q !== '') search.append('search', q)
   dashboardFilters.selectedFYs.forEach((fy) => search.append('fy', fy))
