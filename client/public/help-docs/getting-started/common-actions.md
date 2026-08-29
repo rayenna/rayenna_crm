@@ -170,7 +170,7 @@ This guide covers the most frequently performed actions in Rayenna Energy CRM. T
 1. Open the ticket (from project detail page or Support Tickets Dashboard)
 2. Scroll to **Activities** section
 3. Enter a note in the "Add Follow-up" form
-4. Optionally set a follow-up date
+4. Set the next follow-up date (defaults to 3 days)
 5. Click **Add Follow-up** to save
 
 **Updating Ticket Status**:

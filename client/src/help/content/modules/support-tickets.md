@@ -29,6 +29,14 @@ Each support ticket is assigned a unique ticket number for easy identification a
 
 ## Creating Support Tickets
 
+### From Support Tickets
+
+1. Open **Support Tickets** from the main menu (**Ctrl+Shift+K** / **⌘⇧K**)
+2. Click **Create ticket**
+3. Search for the project by **customer name** or **project number**, then select it
+4. Enter a **title**, optional description, and a **next follow-up date** (defaults to 3 days from today)
+5. Click **Create Ticket**
+
 ### From a Project
 
 1. Navigate to the **Projects** page
@@ -38,6 +46,7 @@ Each support ticket is assigned a unique ticket number for easy identification a
 5. Fill in the required information:
    - **Title**: A brief, descriptive title for the ticket (required)
    - **Description**: Detailed information about the issue or request (optional)
+   - **Next follow-up date**: when you will next act (required; defaults to +3 days)
 6. Click **Create** to save the ticket
 
 The system will automatically:
@@ -66,8 +75,9 @@ Follow-ups allow you to document progress, communications, and next steps for ea
 3. In the drawer, scroll to the **Follow-up Timeline** section
 4. Click **Add Follow-up** (if the form is not visible)
 5. Enter your notes in the **Note** field (required)
-6. Optionally set a **Follow-up Date** if you need to schedule a future action
+6. Set a **next follow-up date** (required; defaults to 3 days from today). **Overdue** uses only this latest date — older dates do not keep the ticket overdue
 7. Click **Add Follow-up** to save
+8. Use **Add to My Day** on the ticket to pin a follow-up on your personal list
 
 ### Follow-up Best Practices
 
@@ -79,9 +89,11 @@ Follow-ups allow you to document progress, communications, and next steps for ea
 
 ### Follow-up Date Reminders
 
-- Tickets with follow-up dates that have passed are marked as **Overdue**
-- The Support Tickets Dashboard highlights overdue tickets
-- Use follow-up dates to ensure timely responses to customers
+- A ticket is **Overdue** when its **latest** next follow-up date has passed, or when it has had **no next date for 7 days**
+- Older follow-up dates do not keep a ticket overdue after you log a newer one
+- The Support Tickets page defaults to your **open queue** (overdue and Solar Hub first)
+- **Zenith → Your Focus** shows open / overdue / Solar Hub counts that open this page filtered
+- Use follow-up dates so customers do not wait in silence
 
 ## Ticket Status
 
@@ -126,24 +138,25 @@ When a support issue has been resolved:
 
 ### Support Tickets Dashboard
 
-The Support Tickets Dashboard provides a comprehensive view of all tickets:
+The Support Tickets page is a **daily queue** for open work:
 
 1. Navigate to **Support Tickets** from the main menu
 2. View key metrics at the top:
    - **Open**: Number of new tickets
    - **In Progress**: Tickets being actively worked on
    - **Closed**: Resolved tickets
-   - **Overdue**: Tickets with past follow-up dates
+   - **Overdue**: Latest next follow-up passed, or no next date for 7 days
 3. Use the metric cards or chart slices to filter the table
-4. View the **Ticket Status Breakdown** donut chart for visual insights
-5. Review the **All Support Tickets** table (desktop) or the stacked **card list** on small screens; both respect the same filters
+4. Search by ticket number, customer, title, or project number; click a project name to open **Project detail**
+5. Review the **Open queue** list (desktop table or stacked cards); overdue tickets sort first, then Solar Hub
 
 ### Filtering Tickets
 
 - Click any **KPI card** (Open, In Progress, Closed, Overdue) to filter the table; click again to toggle that filter off
 - Click a **chart slice** in the Ticket Status Breakdown to filter by that status; click again to toggle off
-- **Overdue** shows tickets with past follow-up dates
-- **Clear Filters** appears when filters are active; use it to reset to the default view
+- **Overdue** uses the latest next follow-up date (or 7 days with no next date)
+- Search, **Create ticket**, and project name links are on the same page
+- **Clear Filters** appears when filters are active; use it to reset to the default open queue
 
 ### From Project Details
 

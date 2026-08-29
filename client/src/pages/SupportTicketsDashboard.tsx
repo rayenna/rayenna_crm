@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link, useSearchParams } from 'react-router-dom'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import toast from 'react-hot-toast'
 import { SupportTicket, SupportTicketStatus, SupportTicketSource } from '../types'
@@ -7,8 +8,17 @@ import { format } from 'date-fns'
 import MetricCard from '../components/dashboard/MetricCard'
 import TicketStatusDonutChart from '../components/supportTickets/TicketStatusDonutChart'
 import TicketDetailDrawer from '../components/supportTickets/TicketDetailDrawer'
+import CreateTicketModal from '../components/supportTickets/CreateTicketModal'
 import { Ticket, Sparkles } from 'lucide-react'
 import { FaTicketAlt, FaSpinner, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa'
+import { useAuth } from '../contexts/AuthContext'
+import { canManageSupportTickets } from '../utils/supportTicketPermissions'
+import {
+  compareSupportTicketQueue,
+  isSupportTicketOverdue,
+  supportTicketMatchesSearch,
+  ticketNextFollowUpDate,
+} from '../utils/supportTicketQueue'
 
 type SupportTicketsTableSortKey =
   | 'ticketNumber'
@@ -28,7 +38,24 @@ function projectDisplayLine(ticket: SupportTicket): string {
   return `#${ticket.project.slNo} - ${ticket.project.customer?.customerName || 'Unknown Customer'}`
 }
 
+function ProjectTicketLink({ ticket }: { ticket: SupportTicket }) {
+  const label = projectDisplayLine(ticket)
+  if (!ticket.projectId) return <span>{label}</span>
+  return (
+    <Link
+      to={`/projects/${ticket.projectId}`}
+      onClick={(e) => e.stopPropagation()}
+      className="truncate font-medium text-[color:var(--accent-teal)] hover:underline"
+      title={label}
+    >
+      {label}
+    </Link>
+  )
+}
+
 function lastFollowUpActivityTime(ticket: SupportTicket): number {
+  const next = ticketNextFollowUpDate(ticket)
+  if (next) return next.getTime()
   if (!ticket.activities?.length) return Number.NEGATIVE_INFINITY
   let latest = 0
   for (const a of ticket.activities) {
@@ -46,13 +73,40 @@ const STATUS_SORT_RANK: Record<SupportTicketStatus, number> = {
 
 const SupportTicketsDashboard = () => {
   const queryClient = useQueryClient()
+  const { hasRole } = useAuth()
+  const canCreate = canManageSupportTickets(hasRole)
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedStatus, setSelectedStatus] = useState<SupportTicketStatus | null>(null)
   const [selectedSource, setSelectedSource] = useState<SupportTicketSource | 'ALL'>('ALL')
   const [showOverdueOnly, setShowOverdueOnly] = useState(false)
+  const [listSearch, setListSearch] = useState('')
+  const [useAttentionSort, setUseAttentionSort] = useState(true)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [tableSortBy, setTableSortBy] = useState<SupportTicketsTableSortKey>('createdAt')
   const [tableSortOrder, setTableSortOrder] = useState<'asc' | 'desc'>('desc')
+
+  useEffect(() => {
+    const filter = searchParams.get('filter')
+    if (!filter) return
+    if (filter === 'overdue') {
+      setShowOverdueOnly(true)
+      setSelectedStatus(null)
+    } else if (filter === 'open') {
+      setSelectedStatus(SupportTicketStatus.OPEN)
+      setShowOverdueOnly(false)
+    } else if (filter === 'in-progress') {
+      setSelectedStatus(SupportTicketStatus.IN_PROGRESS)
+      setShowOverdueOnly(false)
+    } else if (filter === 'closed') {
+      setSelectedStatus(SupportTicketStatus.CLOSED)
+      setShowOverdueOnly(false)
+    } else if (filter === 'hub') {
+      setSelectedSource(SupportTicketSource.CONSUMER_APP)
+      setShowOverdueOnly(false)
+    }
+  }, [searchParams])
 
   // Build query params - fetch all tickets for stats, filter in frontend for table
   const params = new URLSearchParams()
@@ -86,22 +140,20 @@ const SupportTicketsDashboard = () => {
     }
     if (selectedStatus) {
       list = list.filter((t) => t.status === selectedStatus)
+    } else if (!showOverdueOnly) {
+      list = list.filter((t) => t.status !== SupportTicketStatus.CLOSED)
     }
     if (showOverdueOnly) {
-      const now = new Date()
-      list = list.filter((ticket) => {
-        if (ticket.status === SupportTicketStatus.CLOSED) return false
-        if (!ticket.activities || ticket.activities.length === 0) return false
-        return ticket.activities.some((activity) => {
-          if (!activity.followUpDate) return false
-          return new Date(activity.followUpDate) < now
-        })
-      })
+      list = list.filter((ticket) => isSupportTicketOverdue(ticket))
+    }
+    if (listSearch.trim()) {
+      list = list.filter((ticket) => supportTicketMatchesSearch(ticket, listSearch))
     }
     return list
-  }, [allTickets, selectedStatus, selectedSource, showOverdueOnly])
+  }, [allTickets, selectedStatus, selectedSource, showOverdueOnly, listSearch])
 
   const handleSupportTicketsColumnSort = (sortKey: SupportTicketsTableSortKey) => {
+    setUseAttentionSort(false)
     setTableSortBy((prevKey) => {
       if (prevKey === sortKey) {
         setTableSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))
@@ -114,6 +166,10 @@ const SupportTicketsDashboard = () => {
 
   const tableTickets = useMemo(() => {
     const list = [...filteredTickets]
+    if (useAttentionSort) {
+      list.sort(compareSupportTicketQueue)
+      return list
+    }
     const mul = tableSortOrder === 'asc' ? 1 : -1
     list.sort((a, b) => {
       let cmp = 0
@@ -142,7 +198,7 @@ const SupportTicketsDashboard = () => {
       return cmp * mul
     })
     return list
-  }, [filteredTickets, tableSortBy, tableSortOrder])
+  }, [filteredTickets, tableSortBy, tableSortOrder, useAttentionSort])
 
   /** Same ⇕ icon as Projects table; reserved box size so labels never clip. */
   function SupportTicketsSortGlyph({ sortKey }: { sortKey: SupportTicketsTableSortKey }) {
@@ -251,19 +307,26 @@ const SupportTicketsDashboard = () => {
     }
   }
 
-  const getLastFollowUpDate = (ticket: SupportTicket) => {
-    if (!ticket.activities || ticket.activities.length === 0) return '-'
-    const latestActivity = ticket.activities[0]
-    return format(new Date(latestActivity.createdAt), 'MMM dd, yyyy')
+  const getNextFollowUpLabel = (ticket: SupportTicket) => {
+    const next = ticketNextFollowUpDate(ticket)
+    if (!next) return 'No next date'
+    return format(next, 'MMM dd, yyyy')
   }
 
   const handleClearFilters = () => {
     setSelectedStatus(null)
     setSelectedSource('ALL')
     setShowOverdueOnly(false)
+    setListSearch('')
+    setUseAttentionSort(true)
+    if (searchParams.get('filter')) {
+      searchParams.delete('filter')
+      setSearchParams(searchParams, { replace: true })
+    }
   }
 
-  const hasActiveFilters = selectedStatus !== null || showOverdueOnly || selectedSource !== 'ALL'
+  const hasActiveFilters =
+    selectedStatus !== null || showOverdueOnly || selectedSource !== 'ALL' || listSearch.trim().length > 0
 
   const sourceLabel = (ticket: SupportTicket) =>
     (ticket.source ?? SupportTicketSource.CRM) === SupportTicketSource.CONSUMER_APP
@@ -314,10 +377,22 @@ const SupportTicketsDashboard = () => {
             </div>
             <div className="min-w-0">
               <h1 className="zenith-display text-xl font-bold tracking-tight text-[color:var(--text-primary)] sm:text-2xl">Support Tickets</h1>
-              <p className="mt-0.5 text-sm text-[color:var(--text-muted)]">Monitor and manage support tickets across projects</p>
+              <p className="mt-0.5 text-sm text-[color:var(--text-muted)]">
+                Your open queue first — overdue and Solar Hub tickets at the top
+              </p>
             </div>
           </div>
-          {hasActiveFilters ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {canCreate ? (
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(true)}
+                className="inline-flex min-h-[44px] touch-manipulation items-center justify-center gap-2 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] shadow-lg hover:opacity-95"
+              >
+                Create ticket
+              </button>
+            ) : null}
+            {hasActiveFilters ? (
             <button
               type="button"
               onClick={handleClearFilters}
@@ -326,7 +401,8 @@ const SupportTicketsDashboard = () => {
               <span className="text-[color:var(--text-muted)]" aria-hidden>×</span>
               Clear filters
             </button>
-          ) : null}
+            ) : null}
+          </div>
         </div>
       </header>
 
@@ -356,7 +432,7 @@ const SupportTicketsDashboard = () => {
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {(['ALL', SupportTicketSource.CRM, SupportTicketSource.CONSUMER_APP] as const).map((src) => (
             <button
               key={src}
@@ -371,6 +447,17 @@ const SupportTicketsDashboard = () => {
               {src === 'ALL' ? 'All sources' : src === SupportTicketSource.CONSUMER_APP ? 'Solar Hub' : 'CRM'}
             </button>
           ))}
+          <label className="sr-only" htmlFor="st-dashboard-search">
+            Search tickets
+          </label>
+          <input
+            id="st-dashboard-search"
+            type="search"
+            value={listSearch}
+            onChange={(e) => setListSearch(e.target.value)}
+            placeholder="Search ticket #, customer, title, project #"
+            className="zenith-native-filter-input min-h-[40px] min-w-[12rem] flex-1 rounded-xl px-3 py-2 text-sm sm:max-w-sm"
+          />
         </div>
 
         <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
@@ -387,12 +474,12 @@ const SupportTicketsDashboard = () => {
           <div className="flex min-h-[22rem] min-w-0 flex-col lg:h-full lg:min-h-0">
             {isLoading ? (
               <div className="flex min-h-[22rem] flex-1 flex-col overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-6 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] lg:h-full lg:min-h-0">
-                <h3 className="zenith-display mb-4 shrink-0 text-lg font-semibold text-[color:var(--text-primary)]">All Support Tickets</h3>
+                <h3 className="zenith-display mb-4 shrink-0 text-lg font-semibold text-[color:var(--text-primary)]">Open queue</h3>
                 <div className="flex flex-1 items-center justify-center text-[color:var(--text-muted)]">Loading tickets…</div>
               </div>
             ) : tableTickets.length === 0 ? (
               <div className="flex min-h-[22rem] flex-1 flex-col overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-6 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] lg:h-full lg:min-h-0">
-                <h3 className="zenith-display mb-4 shrink-0 text-lg font-semibold text-[color:var(--text-primary)]">All Support Tickets</h3>
+                <h3 className="zenith-display mb-4 shrink-0 text-lg font-semibold text-[color:var(--text-primary)]">Open queue</h3>
                 <div className="flex flex-1 flex-col items-center justify-center text-center text-[color:var(--text-muted)]">
                   <p>No support tickets found</p>
                 </div>
@@ -400,7 +487,9 @@ const SupportTicketsDashboard = () => {
             ) : (
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-6 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] lg:h-full">
                 <div className="mb-4 flex items-center justify-between gap-3">
-                  <h3 className="zenith-display shrink-0 text-lg font-semibold text-[color:var(--text-primary)]">All Support Tickets</h3>
+                  <h3 className="zenith-display shrink-0 text-lg font-semibold text-[color:var(--text-primary)]">
+                    {selectedStatus === SupportTicketStatus.CLOSED ? 'Closed tickets' : 'Open queue'}
+                  </h3>
                   <div className="hidden items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[color:var(--text-muted)] lg:flex">
                     <Sparkles className="h-4 w-4 text-[color:var(--accent-gold)]" aria-hidden />
                     Live list
@@ -423,9 +512,12 @@ const SupportTicketsDashboard = () => {
                           {getStatusLabel(ticket.status)}
                         </span>
                       </div>
-                      <p className="mt-2 text-sm text-[color:var(--text-primary)]" title={projectDisplayLine(ticket)}>
-                        {projectDisplayLine(ticket)}
+                      <p className="mt-2 text-sm text-[color:var(--text-primary)]">
+                        <ProjectTicketLink ticket={ticket} />
                       </p>
+                      {isSupportTicketOverdue(ticket) ? (
+                        <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-[color:var(--accent-red)]">Overdue</p>
+                      ) : null}
                       <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
                         {sourceLabel(ticket)}
                         {ticket.hubUsername ? ` · @${ticket.hubUsername}` : ''}
@@ -436,8 +528,8 @@ const SupportTicketsDashboard = () => {
                           <span className="tabular-nums">{format(new Date(ticket.createdAt), 'MMM dd, yyyy')}</span>
                         </div>
                         <div>
-                          <span className="block text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Last follow-up</span>
-                          <span className="tabular-nums">{getLastFollowUpDate(ticket)}</span>
+                          <span className="block text-[10px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Next follow-up</span>
+                          <span className="tabular-nums">{getNextFollowUpLabel(ticket)}</span>
                         </div>
                       </div>
                       <button
@@ -518,13 +610,13 @@ const SupportTicketsDashboard = () => {
                           <button
                             type="button"
                             className={sortBtnHeader}
-                            title="Sort by last follow-up activity date"
+                            title="Sort by next follow-up date"
                             onClick={(e) => {
                               e.stopPropagation()
                               handleSupportTicketsColumnSort('lastFollowUp')
                             }}
                           >
-                            <span className={sortLabelLeft}>Last follow-up</span>
+                            <span className={sortLabelLeft}>Next follow-up</span>
                             <SupportTicketsSortGlyph sortKey="lastFollowUp" />
                           </button>
                         </th>
@@ -559,8 +651,13 @@ const SupportTicketsDashboard = () => {
                             </button>
                           </td>
                           <td className="min-w-0 px-2 py-2 sm:px-2.5 lg:py-1.5">
-                            <div className="truncate text-sm text-[color:var(--text-primary)]" title={projectDisplayLine(ticket)}>
-                              {projectDisplayLine(ticket)}
+                            <div className="flex min-w-0 items-center gap-2">
+                              <ProjectTicketLink ticket={ticket} />
+                              {isSupportTicketOverdue(ticket) ? (
+                                <span className="shrink-0 rounded-full bg-[color:var(--accent-red-muted)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[color:var(--accent-red)]">
+                                  Overdue
+                                </span>
+                              ) : null}
                             </div>
                           </td>
                           <td className="min-w-0 px-2 py-2 text-xs text-[color:var(--text-secondary)] sm:px-2.5 lg:py-1.5">
@@ -577,8 +674,8 @@ const SupportTicketsDashboard = () => {
                           <td className="min-w-0 truncate px-2 py-2 text-sm tabular-nums text-[color:var(--text-secondary)] sm:px-2.5 lg:py-1.5" title={format(new Date(ticket.createdAt), 'MMM dd, yyyy')}>
                             {format(new Date(ticket.createdAt), 'MMM dd, yyyy')}
                           </td>
-                          <td className="min-w-0 truncate px-2 py-2 text-sm tabular-nums text-[color:var(--text-secondary)] sm:px-2.5 lg:py-1.5" title={getLastFollowUpDate(ticket)}>
-                            {getLastFollowUpDate(ticket)}
+                          <td className="min-w-0 truncate px-2 py-2 text-sm tabular-nums text-[color:var(--text-secondary)] sm:px-2.5 lg:py-1.5" title={getNextFollowUpLabel(ticket)}>
+                            {getNextFollowUpLabel(ticket)}
                           </td>
                           <td className="min-w-0 px-2 py-2 text-sm font-medium sm:px-2.5 lg:py-1.5">
                             <button type="button" onClick={() => handleTicketClick(ticket)} className="whitespace-nowrap font-semibold text-[color:var(--accent-gold)] hover:opacity-90">
@@ -607,6 +704,17 @@ const SupportTicketsDashboard = () => {
         }}
         onRefresh={handleRefresh}
       />
+
+      {showCreateModal ? (
+        <CreateTicketModal
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={() => {
+            setShowCreateModal(false)
+            queryClient.invalidateQueries({ queryKey: ['support-tickets-dashboard'] })
+            queryClient.invalidateQueries({ queryKey: ['zenith-focus'] })
+          }}
+        />
+      ) : null}
     </>,
   )
 }

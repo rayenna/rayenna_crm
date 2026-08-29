@@ -1,10 +1,11 @@
 import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
-import { SupportTicketStatus, SupportTicketSource, UserRole } from '@prisma/client';
+import { SupportTicketStatus, SupportTicketSource, UserRole, ProjectStatus } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
 import { logSecurityAudit } from '../utils/auditLogger';
 import { attachHubUsernames } from '../utils/supportTicketEnrich';
+import { isSupportTicketOverdue, ticketNextFollowUpDate } from '../utils/supportTicketQueue';
 
 const router = express.Router();
 
@@ -50,6 +51,7 @@ router.post(
     body('projectId').isString().notEmpty().withMessage('Project ID is required'),
     body('title').isString().notEmpty().trim().isLength({ max: 500 }).withMessage('Title is required (max 500 characters)'),
     body('description').optional().isString().trim(),
+    body('followUpDate').optional().isISO8601().toDate().withMessage('Follow-up date must be a valid date'),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -65,22 +67,31 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { projectId, title, description } = req.body;
+      const { projectId, title, description, followUpDate } = req.body;
       const createdById = req.user!.id;
 
       // Verify project exists
       const project = await prisma.project.findUnique({
         where: { id: projectId },
+        select: { id: true, salespersonId: true, projectStatus: true },
       });
 
       if (!project) {
         return res.status(404).json({ error: 'Project not found' });
       }
 
+      if (project.projectStatus === ProjectStatus.LOST) {
+        return res.status(400).json({ error: 'Cannot create tickets for projects in Lost stage' });
+      }
+
+      if (userRole === UserRole.SALES && project.salespersonId !== createdById) {
+        return res.status(403).json({ error: 'Sales users can only create tickets for their own projects' });
+      }
+
       // Generate unique ticket number
       const ticketNumber = await generateTicketNumber();
 
-      // Create ticket
+      // Create ticket (opening follow-up date is stored as the first activity; status stays OPEN)
       const ticket = await prisma.supportTicket.create({
         data: {
           ticketNumber,
@@ -89,6 +100,17 @@ router.post(
           description: description?.trim() || null,
           status: SupportTicketStatus.OPEN,
           createdById,
+          ...(followUpDate
+            ? {
+                activities: {
+                  create: {
+                    note: 'Ticket opened. Next follow-up scheduled.',
+                    followUpDate: new Date(followUpDate),
+                    createdById,
+                  },
+                },
+              }
+            : {}),
         },
         include: {
           project: {
@@ -520,30 +542,36 @@ router.get(
         }),
       ]);
 
-      // Calculate overdue tickets (OPEN or IN_PROGRESS with follow-up date in the past)
-      const overdueTickets = await prisma.supportTicket.findMany({
+      const openForOverdue = await prisma.supportTicket.findMany({
         where: {
           ...statsWhere,
           status: {
             in: [SupportTicketStatus.OPEN, SupportTicketStatus.IN_PROGRESS],
           },
+        },
+        select: {
+          status: true,
+          createdAt: true,
+          source: true,
           activities: {
-            some: {
-              followUpDate: {
-                lte: new Date(),
-              },
-            },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { createdAt: true, followUpDate: true },
           },
         },
-        select: { id: true },
       });
 
-      const overdueCount = overdueTickets.length;
+      const overdueCount = openForOverdue.filter((t) => isSupportTicketOverdue(t)).length;
 
       const enriched = await attachHubUsernames(tickets);
+      const ticketsWithQueue = enriched.map((t) => ({
+        ...t,
+        isOverdue: isSupportTicketOverdue(t),
+        nextFollowUpDate: ticketNextFollowUpDate(t)?.toISOString() ?? null,
+      }));
 
       res.json({
-        tickets: enriched,
+        tickets: ticketsWithQueue,
         statistics: {
           open: openCount,
           inProgress: inProgressCount,

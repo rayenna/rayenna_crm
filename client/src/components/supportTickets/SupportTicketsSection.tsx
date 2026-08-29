@@ -55,6 +55,7 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
       queryClient.invalidateQueries({ queryKey: ['support-tickets', projectId] })
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       queryClient.invalidateQueries({ queryKey: ['support-tickets-dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['zenith-focus'] })
     },
     onError: (err: unknown) => {
       toast.error(getFriendlyApiErrorMessage(err))
@@ -70,6 +71,7 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
       queryClient.invalidateQueries({ queryKey: ['support-tickets', projectId] })
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       queryClient.invalidateQueries({ queryKey: ['support-tickets-dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['zenith-focus'] })
     },
     onError: (err: unknown) => {
       toast.error(getFriendlyApiErrorMessage(err))
@@ -108,6 +110,7 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
     queryClient.invalidateQueries({ queryKey: ['support-tickets', projectId] })
     queryClient.invalidateQueries({ queryKey: ['projects'] })
     queryClient.invalidateQueries({ queryKey: ['support-tickets-dashboard'] })
+    queryClient.invalidateQueries({ queryKey: ['zenith-focus'] })
   }
 
   return (
@@ -337,6 +340,8 @@ const SupportTicketsSection = ({ projectId, projectStatus }: SupportTicketsSecti
             setShowCreateModal(false)
             queryClient.invalidateQueries({ queryKey: ['support-tickets', projectId] })
             queryClient.invalidateQueries({ queryKey: ['support-tickets-dashboard'] })
+            queryClient.invalidateQueries({ queryKey: ['zenith-focus'] })
+            queryClient.invalidateQueries({ queryKey: ['zenith-focus'] })
           }}
         />
       )}

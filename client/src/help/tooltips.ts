@@ -77,7 +77,8 @@ export const helpTooltips: Record<string, HelpTooltip> = {
   'support-tickets.overdue': {
     key: 'support-tickets.overdue',
     title: 'Overdue Tickets',
-    content: 'Open or in-progress tickets with follow-up dates that have passed.'
+    content:
+      'Open or in-progress tickets whose latest next follow-up date has passed, or that have had no next date for 7 days.',
   },
   'support-tickets.ticket-number': {
     key: 'support-tickets.ticket-number',

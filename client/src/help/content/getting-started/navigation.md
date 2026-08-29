@@ -262,11 +262,11 @@ Accessible from the top navigation menu (**Admin**, **Sales**, **Operations**, *
 
 #### Support Ticket Features
 
-- **Create Ticket**: From project detail page
+- **Create Ticket**: From the Support Tickets page or project detail
 - **View Ticket**: Click ticket number or View button
-- **Add Follow-up**: Add activity notes with optional follow-up date
+- **Add Follow-up**: Add activity notes with a next follow-up date
 - **Close Ticket**: Mark ticket as resolved
-- **Filter Tickets**: Use KPI cards or chart slices
+- **Filter Tickets**: Use KPI cards, chart slices, source chips, or search
 
 ### Support Tickets in Project Details
 

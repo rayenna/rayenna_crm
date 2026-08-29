@@ -11,7 +11,7 @@ Collapsible panels under **Pipeline and priorities** — expand only what you ne
 
 | Role | What you see (each in its own collapsible panel when applicable) |
 | :-- | :-- |
-| **Sales** | **Your pipeline today** (full table) and **Proposal Engine** buckets. [Column list, actions, and PE drill-down →](#sales-pipeline-activity-and-proposal-engine) |
+| **Sales** | **Your pipeline today** (full table) and **Proposal Engine** buckets. A **Support tickets** strip (open / overdue / Solar Hub) links to the tickets queue. [Column list, actions, and PE drill-down →](#sales-pipeline-activity-and-proposal-engine) |
 | **Finance** | **Payment radar** — see [Payment radar (Finance)](#payment-radar-finance) below. |
 | **Operations** | **Installation pulse** — see [Installation pulse (Operations)](#installation-pulse-operations) below. |
 | **Management / Admin** | **Company pipeline today**, **Payment radar**, and **Installation pulse** in sequence, then **Proposal Engine** — all collapsible under **Your focus** (company-wide where applicable). **Proposal Engine** rows behave like **Sales**: click a bucket → **Quick Actions** list + **Open in Projects →** with the same filters as **Projects** for that bucket. |
@@ -20,7 +20,7 @@ If there is nothing to show for the current filters, **Your Focus** may be hidde
 
 ## Sales: pipeline, activity, and Proposal Engine
 
-For **Sales**, expand **Your pipeline today** and **Proposal Engine** under **Your focus** when you need detail beyond the KPI strip and **Today’s Hit List**.
+For **Sales**, expand **Your pipeline today** and **Proposal Engine** under **Your focus** when you need detail beyond the KPI strip and **Today’s Hit List**. Open tickets needing you today also appear in the compact **Support tickets** strip (counts link to **Support Tickets** with the matching filter).
 
 **Your pipeline today**
 

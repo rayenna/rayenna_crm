@@ -32,7 +32,8 @@ A practical **15–20 minute** flow for Sales users. Adjust filters to your curr
 1. Expand **Your Focus** panels you use daily — collapse the rest to reduce scroll.
 2. Review **Your pipeline today** buckets; open weak **Deal Health** scores ([Deal Health Score](#deal-health-score-zenith)).
 3. Check **Proposal Engine** rows for projects in proposal stages — same drawer pattern ([Sales pipeline & PE](#sales-pipeline-activity-and-proposal-engine)).
-4. Optional: open **☀ My Day** (**Ctrl+Shift+M**) and tick off pinned tasks; leave **Log to project remarks when done** on if the team should see completion.
+4. If the **Support tickets** strip shows overdue or Solar Hub counts, open it and work those customers the same morning.
+5. Optional: open **☀ My Day** (**Ctrl+Shift+M**) and tick off pinned tasks; leave **Log to project remarks when done** on if the team should see completion.
 
 ## 5. Competitive pulse and funnel (~3 min)
 

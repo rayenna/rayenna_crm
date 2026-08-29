@@ -82,6 +82,8 @@ export interface SupportTicket {
   updatedAt: string
   project?: Project
   activities?: SupportTicketActivity[]
+  isOverdue?: boolean
+  nextFollowUpDate?: string | null
 }
 
 export interface SupportTicketActivity {

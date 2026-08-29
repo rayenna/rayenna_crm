@@ -16,6 +16,7 @@ export type MyDaySuggestionSource =
   | 'payment_overdue'
   | 'install_delayed'
   | 'lifecycle_brands'
+  | 'support_ticket'
 
 export interface MyDaySuggestion {
   /** Stable key for list rendering */
@@ -68,6 +69,20 @@ type ZenithFocusPayload = {
     missingPanel: boolean
     missingInverter: boolean
   }>
+  supportQueue?: {
+    open?: number
+    overdue?: number
+    hubOpen?: number
+    overdueTickets?: Array<{
+      ticketId: string
+      ticketNumber: string
+      title: string
+      projectId: string
+      projectSerialNumber: number | null
+      customerName: string
+      source: string
+    }>
+  }
 }
 
 function suggestionsFromHitList(
@@ -166,10 +181,25 @@ function suggestionsFromInstallDelayed(
     })
 }
 
-/**
- * Build CRM-backed My Day suggestions from zenith-focus payload.
- * Pure function — safe to unit-test; does not mutate tasks.
- */
+function suggestionsFromOverdueTickets(
+  overdueTickets: NonNullable<ZenithFocusPayload['supportQueue']>['overdueTickets'],
+): MyDaySuggestion[] {
+  if (!overdueTickets?.length) return []
+  return overdueTickets.slice(0, 4).map((row) => {
+    const label = projectLabel(row.customerName, row.projectSerialNumber)
+    const hub = row.source === 'CONSUMER_APP' ? 'Solar Hub · ' : ''
+    return {
+      id: `ticket:${row.ticketId}`,
+      source: 'support_ticket' as const,
+      content: `Follow up ticket ${row.ticketNumber} — ${row.title}`,
+      projectId: row.projectId,
+      projectLabel: label,
+      urgency: 'critical' as const,
+      meta: `${hub}Overdue · ${row.ticketNumber}`,
+    }
+  })
+}
+
 export function buildMyDaySuggestions(args: {
   focusData: ZenithFocusPayload | null | undefined
   role: UserRole
@@ -220,10 +250,21 @@ export function buildMyDaySuggestions(args: {
     raw.push(...suggestionsFromLifecycleBrandGaps(lifecycleGaps))
   }
 
+  const ticketRows = focusData.supportQueue?.overdueTickets
+  if (
+    ticketRows &&
+    (role === UserRole.SALES ||
+      role === UserRole.OPERATIONS ||
+      role === UserRole.ADMIN ||
+      role === UserRole.MANAGEMENT)
+  ) {
+    raw.push(...suggestionsFromOverdueTickets(ticketRows))
+  }
+
   const seen = new Set<string>()
   const deduped: MyDaySuggestion[] = []
   for (const s of raw) {
-    const key = s.projectId ?? s.id
+    const key = s.source === 'support_ticket' ? s.id : (s.projectId ?? s.id)
     if (seen.has(key)) continue
     seen.add(key)
     deduped.push(s)

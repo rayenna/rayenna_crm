@@ -25,7 +25,7 @@ Dashboard **FY / Quarter / Month** apply to tiles and charts. Opening **Projects
 ## Support Tickets
 
 ### How do I create a support ticket?
-From **Project detail** → **Support / Service Tickets** → **Create Ticket** (not available for **Lost** projects). Or **Support Tickets** in the top menu (**Ctrl+Shift+K** / **⌘⇧K**). Guide: [Support Tickets](/help/modules#support-tickets-module).
+From **Support Tickets** → **Create ticket** (search a project by customer or project number), or **Project detail** → **Support / Service Tickets** → **Create Ticket** (not available for **Lost** projects). Shortcut **Ctrl+Shift+K** / **⌘⇧K**. Guide: [Support Tickets](/help/modules#support-tickets-module).
 
 ### How do I add follow-ups to tickets?
 Open the ticket (list or project) → **Ticket Details** drawer → add a follow-up. Timeline shows history. [Support Tickets](/help/modules#support-tickets-module).

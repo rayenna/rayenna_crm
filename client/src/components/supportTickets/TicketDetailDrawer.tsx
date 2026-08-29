@@ -21,6 +21,9 @@ import {
   supportTicketStatusLabel,
   supportTicketStatusPillClass,
 } from './supportTicketsZenith'
+import AddToMyDayButton from '../my-day/components/AddToMyDayButton'
+import { defaultNextFollowUpYmd, supportTicketMyDayContent, supportTicketProjectLabel } from '../../utils/supportTicketQueue'
+import { MY_DAY_SUGGESTIONS_QUERY_KEY } from '../../hooks/useMyDaySuggestionsQuery'
 
 interface TicketDetailDrawerProps {
   ticket: SupportTicket | null
@@ -37,7 +40,7 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh, projectId }: T
   const { hasRole } = useAuth()
   const queryClient = useQueryClient()
   const [note, setNote] = useState('')
-  const [followUpDate, setFollowUpDate] = useState('')
+  const [followUpDate, setFollowUpDate] = useState(() => defaultNextFollowUpYmd())
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
 
@@ -66,6 +69,8 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh, projectId }: T
     }
     queryClient.invalidateQueries({ queryKey: ['support-tickets-dashboard'] })
     queryClient.invalidateQueries({ queryKey: ['projects'] })
+    queryClient.invalidateQueries({ queryKey: ['zenith-focus'] })
+    queryClient.invalidateQueries({ queryKey: MY_DAY_SUGGESTIONS_QUERY_KEY })
   }
 
   const addActivityMutation = useMutation({
@@ -76,7 +81,7 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh, projectId }: T
     onSuccess: () => {
       toast.success('Follow-up added successfully')
       setNote('')
-      setFollowUpDate('')
+      setFollowUpDate(defaultNextFollowUpYmd())
       onRefresh()
       invalidateTicketQueries()
       void refetchDetails()
@@ -125,10 +130,14 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh, projectId }: T
       toast.error('Please enter a note')
       return
     }
+    if (!followUpDate) {
+      toast.error('Set a next follow-up date')
+      return
+    }
     setIsSubmitting(true)
     addActivityMutation.mutate({
       note: note.trim(),
-      followUpDate: followUpDate || undefined,
+      followUpDate,
     })
   }
 
@@ -265,9 +274,16 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh, projectId }: T
                     <div>
                       <p className={stFieldMetaLabelCls}>Project</p>
                       <p className="mt-1.5 text-sm text-[color:var(--text-secondary)]">
-                        {displayTicket.project
-                          ? `#${displayTicket.project.slNo} - ${displayTicket.project.customer?.customerName || 'Unknown Customer'}`
-                          : 'N/A'}
+                        {displayTicket.project ? (
+                          <Link
+                            to={`/projects/${displayTicket.projectId}`}
+                            className="font-semibold text-[color:var(--accent-teal)] hover:underline"
+                          >
+                            #{displayTicket.project.slNo} - {displayTicket.project.customer?.customerName || 'Unknown Customer'}
+                          </Link>
+                        ) : (
+                          'N/A'
+                        )}
                       </p>
                     </div>
 
@@ -297,6 +313,17 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh, projectId }: T
                       <p className={stFieldMetaLabelCls}>Created By</p>
                       <p className="mt-1.5 text-sm font-medium text-[color:var(--text-primary)]">{displayTicket.createdBy?.name || 'N/A'}</p>
                     </div>
+
+                    {canManageTickets && displayTicket.status !== SupportTicketStatus.CLOSED ? (
+                      <div className="pt-1">
+                        <AddToMyDayButton
+                          content={supportTicketMyDayContent(displayTicket)}
+                          projectId={displayTicket.projectId}
+                          projectLabel={supportTicketProjectLabel(displayTicket)}
+                          usageEvent="task_added"
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 
@@ -358,7 +385,7 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh, projectId }: T
                       </div>
                       <div>
                         <label htmlFor="st-drawer-follow-up" className={stLabelCls}>
-                          Follow-up Date (Optional)
+                          Next follow-up date *
                         </label>
                         <input
                           type="date"
@@ -366,7 +393,9 @@ const TicketDetailDrawer = ({ ticket, isOpen, onClose, onRefresh, projectId }: T
                           className={`mt-1.5 ${stSelectCls}`}
                           value={followUpDate}
                           onChange={(e) => setFollowUpDate(e.target.value)}
+                          required
                         />
+                        <p className={`${stMutedCls} mt-1.5`}>Defaults to 3 days from today. Overdue uses this latest date only.</p>
                       </div>
                       <button type="submit" disabled={isSubmitting} className={`w-full ${stPrimaryBtn}`}>
                         {isSubmitting ? 'Adding…' : 'Add follow-up'}

@@ -9,6 +9,8 @@ import {
   Prisma,
   InstallationStatus,
   LostReason,
+  SupportTicketStatus,
+  SupportTicketSource,
 } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
@@ -18,6 +20,7 @@ import {
   withChartPercentages,
 } from '../utils/customerTypeCharts';
 import { loadLifecycleBrandGaps } from '../utils/lifecycleBrandGaps';
+import { isSupportTicketOverdue } from '../utils/supportTicketQueue';
 
 const router = express.Router();
 
@@ -3027,12 +3030,83 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
       return { rows, avgInstallationDays, delayedCount };
     };
 
+    const buildSupportQueue = async (scope: 'self' | 'all') => {
+      const ticketWhere: Record<string, unknown> = {
+        status: { in: [SupportTicketStatus.OPEN, SupportTicketStatus.IN_PROGRESS] },
+      };
+      if (scope === 'self') {
+        ticketWhere.project = { salespersonId: userId };
+      }
+
+      const tickets = await prisma.supportTicket.findMany({
+        where: ticketWhere,
+        select: {
+          id: true,
+          ticketNumber: true,
+          title: true,
+          source: true,
+          status: true,
+          createdAt: true,
+          projectId: true,
+          project: {
+            select: {
+              slNo: true,
+              customer: { select: { customerName: true } },
+            },
+          },
+          activities: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { createdAt: true, followUpDate: true },
+          },
+        },
+      });
+
+      let overdue = 0;
+      let hubOpen = 0;
+      const overdueTickets: Array<{
+        ticketId: string
+        ticketNumber: string
+        title: string
+        projectId: string
+        projectSerialNumber: number | null
+        customerName: string
+        source: string
+      }> = [];
+
+      for (const t of tickets) {
+        if (t.source === SupportTicketSource.CONSUMER_APP) hubOpen += 1;
+        if (isSupportTicketOverdue(t)) {
+          overdue += 1;
+          overdueTickets.push({
+            ticketId: t.id,
+            ticketNumber: t.ticketNumber,
+            title: t.title,
+            projectId: t.projectId,
+            projectSerialNumber: t.project.slNo ?? null,
+            customerName: t.project.customer?.customerName?.trim() || '—',
+            source: t.source,
+          });
+        }
+      }
+
+      overdueTickets.sort((a, b) => a.ticketNumber.localeCompare(b.ticketNumber));
+
+      return {
+        open: tickets.length,
+        overdue,
+        hubOpen,
+        overdueTickets: overdueTickets.slice(0, 5),
+      };
+    };
+
     if (role === UserRole.SALES) {
-      const [salesPipeline, lifecycleBrandGaps] = await Promise.all([
+      const [salesPipeline, lifecycleBrandGaps, supportQueue] = await Promise.all([
         buildSalesPipeline('self'),
         loadLifecycleBrandGaps(where as Prisma.ProjectWhereInput, { salespersonId: userId }),
+        buildSupportQueue('self'),
       ]);
-      return res.json({ focusKind: 'SALES', salesPipeline, lifecycleBrandGaps });
+      return res.json({ focusKind: 'SALES', salesPipeline, lifecycleBrandGaps, supportQueue });
     }
 
     if (role === UserRole.FINANCE) {
@@ -3041,27 +3115,30 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
     }
 
     if (role === UserRole.OPERATIONS) {
-      const [installPulse, lifecycleBrandGaps] = await Promise.all([
+      const [installPulse, lifecycleBrandGaps, supportQueue] = await Promise.all([
         buildInstallPulse(),
         loadLifecycleBrandGaps(where as Prisma.ProjectWhereInput),
+        buildSupportQueue('all'),
       ]);
-      return res.json({ focusKind: 'OPERATIONS', installPulse, lifecycleBrandGaps });
+      return res.json({ focusKind: 'OPERATIONS', installPulse, lifecycleBrandGaps, supportQueue });
     }
 
     if (role === UserRole.MANAGEMENT || role === UserRole.ADMIN) {
-      const [salesPipeline, financeRadar, installPulse, lifecycleBrandGaps] = await Promise.all([
+      const [salesPipeline, financeRadar, installPulse, lifecycleBrandGaps, supportQueue] = await Promise.all([
         buildSalesPipeline('all'),
         buildFinanceRadar(),
         buildInstallPulse(),
         role === UserRole.ADMIN
           ? loadLifecycleBrandGaps(where as Prisma.ProjectWhereInput)
           : Promise.resolve([]),
+        buildSupportQueue('all'),
       ]);
       return res.json({
         focusKind: 'MANAGEMENT',
         salesPipeline,
         financeRadar,
         installPulse,
+        supportQueue,
         ...(role === UserRole.ADMIN ? { lifecycleBrandGaps } : {}),
       });
     }

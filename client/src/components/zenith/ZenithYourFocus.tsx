@@ -26,6 +26,7 @@ import { computeDealHealth, pipelineRowToHealthProject } from '../../utils/dealH
 import ReminderModal from './ReminderModal'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
 import { ZENITH_CHART_GROUP } from '../../constants/zenithChartGroups'
+import SupportTicketQueueStrip from './SupportTicketQueueStrip'
 import ZenithFocusCollapsible from './ZenithFocusCollapsible'
 import ZenithProposalEngineCard from './ZenithProposalEngineCard'
 import ZenithScrollHint from './ZenithScrollHint'
@@ -243,9 +244,28 @@ function overdueRowToReminderProject(row: FinanceOverdueRow): ReminderTemplatePr
   }
 }
 
+type SupportQueueSummary = {
+  open: number
+  overdue: number
+  hubOpen: number
+  overdueTickets?: Array<{
+    ticketId: string
+    ticketNumber: string
+    title: string
+    projectId: string
+    projectSerialNumber: number | null
+    customerName: string
+    source: string
+  }>
+}
+
 type ZenithFocusResponse =
   | { focusKind: 'NONE' }
-  | { focusKind: 'SALES'; salesPipeline: { rows: SalesPipelineRow[]; followUpNeeded: number } }
+  | {
+      focusKind: 'SALES'
+      salesPipeline: { rows: SalesPipelineRow[]; followUpNeeded: number }
+      supportQueue?: SupportQueueSummary
+    }
   | {
       focusKind: 'FINANCE'
       financeRadar: {
@@ -261,6 +281,7 @@ type ZenithFocusResponse =
   | {
       focusKind: 'OPERATIONS'
       installPulse: { rows: InstallRow[]; avgInstallationDays: number | null; delayedCount: number }
+      supportQueue?: SupportQueueSummary
     }
   | {
       focusKind: 'MANAGEMENT'
@@ -275,6 +296,7 @@ type ZenithFocusResponse =
         donut: { collected: number; outstanding: number; subsidyPending: number }
       }
       installPulse: { rows: InstallRow[]; avgInstallationDays: number | null; delayedCount: number }
+      supportQueue?: SupportQueueSummary
     }
 
 function SalesPipelineBlock({
@@ -1979,6 +2001,10 @@ export default function ZenithYourFocus({
       </header>
 
       <div className="space-y-4 w-full">
+        {'supportQueue' in data && data.supportQueue ? (
+          <SupportTicketQueueStrip queue={data.supportQueue} />
+        ) : null}
+
         {data.focusKind === 'SALES' && (
           <>
             <ZenithFocusCollapsible title="Your pipeline today" accent="gold" defaultOpen={false}>

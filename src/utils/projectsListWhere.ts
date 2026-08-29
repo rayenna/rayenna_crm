@@ -407,13 +407,16 @@ export function buildProjectsWhere(
   }
 
   if (filters.search) {
-    pushOntoWhereAnd(where, {
-      OR: [
-        { customer: { customerName: { contains: filters.search, mode: 'insensitive' } } },
-        { customer: { customerId: { contains: filters.search, mode: 'insensitive' } } },
-        { customer: { consumerNumber: { contains: filters.search, mode: 'insensitive' } } },
-      ],
-    });
+    const searchOr: Record<string, unknown>[] = [
+      { customer: { customerName: { contains: filters.search, mode: 'insensitive' } } },
+      { customer: { customerId: { contains: filters.search, mode: 'insensitive' } } },
+      { customer: { consumerNumber: { contains: filters.search, mode: 'insensitive' } } },
+    ];
+    const slNo = Number(filters.search);
+    if (Number.isInteger(slNo) && slNo > 0) {
+      searchOr.push({ slNo });
+    }
+    pushOntoWhereAnd(where, { OR: searchOr });
   }
 
   if (filters.hasDocumentsActive) {

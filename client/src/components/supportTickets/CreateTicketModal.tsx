@@ -1,20 +1,36 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useModalEscape } from '../../contexts/ModalEscapeContext'
 import { createPortal } from 'react-dom'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import toast from 'react-hot-toast'
+import { ProjectStatus } from '../../types'
+import { defaultNextFollowUpYmd } from '../../utils/supportTicketQueue'
 import { stGhostBtn, stInputCls, stLabelCls, stMutedCls, stPrimaryBtn, stSectionInner } from './supportTicketsZenith'
 
 interface CreateTicketModalProps {
-  projectId: string
+  projectId?: string
   onClose: () => void
   onSuccess: () => void
 }
 
-const CreateTicketModal = ({ projectId, onClose, onSuccess }: CreateTicketModalProps) => {
+type PickerProject = {
+  id: string
+  slNo?: number
+  projectStatus?: ProjectStatus
+  customer?: { customerName?: string | null }
+}
+
+const CreateTicketModal = ({ projectId: lockedProjectId, onClose, onSuccess }: CreateTicketModalProps) => {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [followUpDate, setFollowUpDate] = useState(() => defaultNextFollowUpYmd())
+  const [pickedProjectId, setPickedProjectId] = useState(lockedProjectId ?? '')
+  const [projectQuery, setProjectQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+
+  const needsPicker = !lockedProjectId
+  const projectId = lockedProjectId || pickedProjectId
 
   useModalEscape(true, onClose)
 
@@ -26,8 +42,39 @@ const CreateTicketModal = ({ projectId, onClose, onSuccess }: CreateTicketModalP
     }
   }, [])
 
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQuery(projectQuery.trim()), 280)
+    return () => window.clearTimeout(t)
+  }, [projectQuery])
+
+  const { data: pickerResults, isFetching: pickerLoading } = useQuery({
+    queryKey: ['support-ticket-project-picker', debouncedQuery],
+    queryFn: async () => {
+      const params = new URLSearchParams()
+      params.set('limit', '15')
+      params.set('sortBy', 'creationDate')
+      params.set('sortOrder', 'desc')
+      if (debouncedQuery) params.set('search', debouncedQuery)
+      const res = await axiosInstance.get(`/api/projects?${params.toString()}`)
+      const projects = (res.data?.projects ?? []) as PickerProject[]
+      return projects.filter((p) => p.projectStatus !== ProjectStatus.LOST)
+    },
+    enabled: needsPicker,
+    staleTime: 15_000,
+  })
+
+  const selectedPickerProject = useMemo(
+    () => (pickerResults ?? []).find((p) => p.id === pickedProjectId) ?? null,
+    [pickerResults, pickedProjectId],
+  )
+
   const createMutation = useMutation({
-    mutationFn: async (data: { projectId: string; title: string; description?: string }) => {
+    mutationFn: async (data: {
+      projectId: string
+      title: string
+      description?: string
+      followUpDate: string
+    }) => {
       const res = await axiosInstance.post('/api/support-tickets', data)
       return res.data
     },
@@ -46,13 +93,25 @@ const CreateTicketModal = ({ projectId, onClose, onSuccess }: CreateTicketModalP
       toast.error('Title is required')
       return
     }
+    if (!projectId) {
+      toast.error('Select a project')
+      return
+    }
+    if (!followUpDate) {
+      toast.error('Set a next follow-up date')
+      return
+    }
 
     createMutation.mutate({
       projectId,
       title: title.trim(),
       description: description.trim() || undefined,
+      followUpDate,
     })
   }
+
+  const projectLabel = (p: PickerProject) =>
+    `#${p.slNo ?? '—'} — ${p.customer?.customerName || 'Unknown customer'}`
 
   const modalContent = (
     <div
@@ -99,6 +158,60 @@ const CreateTicketModal = ({ projectId, onClose, onSuccess }: CreateTicketModalP
                 <h3 className="text-xs font-bold uppercase tracking-wider text-[color:var(--text-primary)]">Ticket Details</h3>
               </div>
               <div className="space-y-4">
+                {needsPicker ? (
+                  <div>
+                    <label className={stLabelCls} htmlFor="st-project-search">
+                      Project <span className="text-[color:var(--accent-red)]">*</span>
+                    </label>
+                    <input
+                      id="st-project-search"
+                      type="search"
+                      value={projectQuery}
+                      onChange={(e) => {
+                        setProjectQuery(e.target.value)
+                        setPickedProjectId('')
+                      }}
+                      className={`mt-1.5 ${stInputCls}`}
+                      placeholder="Search by customer name or project number"
+                      autoComplete="off"
+                    />
+                    {pickedProjectId && selectedPickerProject ? (
+                      <p className="mt-1.5 text-sm font-medium text-[color:var(--accent-teal)]">
+                        Selected: {projectLabel(selectedPickerProject)}
+                      </p>
+                    ) : pickedProjectId ? (
+                      <p className={`${stMutedCls} mt-1.5`}>Project selected</p>
+                    ) : (
+                      <p className={`${stMutedCls} mt-1.5`}>
+                        {pickerLoading ? 'Searching…' : 'Pick a project from the list below'}
+                      </p>
+                    )}
+                    <ul className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)]">
+                      {(pickerResults ?? []).length === 0 && !pickerLoading ? (
+                        <li className="px-3 py-2 text-sm text-[color:var(--text-muted)]">No matching projects</li>
+                      ) : (
+                        (pickerResults ?? []).map((p) => (
+                          <li key={p.id}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPickedProjectId(p.id)
+                                setProjectQuery(projectLabel(p))
+                              }}
+                              className={`w-full px-3 py-2 text-left text-sm hover:bg-[color:var(--bg-card-hover)] ${
+                                pickedProjectId === p.id
+                                  ? 'bg-[color:var(--accent-gold-muted)] font-semibold text-[color:var(--accent-gold)]'
+                                  : 'text-[color:var(--text-primary)]'
+                              }`}
+                            >
+                              {projectLabel(p)}
+                            </button>
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  </div>
+                ) : null}
                 <div>
                   <label className={stLabelCls}>
                     Title <span className="text-[color:var(--accent-red)]">*</span>
@@ -124,6 +237,20 @@ const CreateTicketModal = ({ projectId, onClose, onSuccess }: CreateTicketModalP
                     placeholder="Detailed description of the issue, steps to reproduce, etc."
                   />
                 </div>
+                <div>
+                  <label className={stLabelCls} htmlFor="st-create-follow-up">
+                    Next follow-up date <span className="text-[color:var(--accent-red)]">*</span>
+                  </label>
+                  <input
+                    id="st-create-follow-up"
+                    type="date"
+                    value={followUpDate}
+                    onChange={(e) => setFollowUpDate(e.target.value)}
+                    className={`mt-1.5 ${stInputCls}`}
+                    required
+                  />
+                  <p className={`${stMutedCls} mt-1.5`}>Defaults to 3 days from today so the ticket stays on your queue.</p>
+                </div>
               </div>
             </div>
 
@@ -133,7 +260,7 @@ const CreateTicketModal = ({ projectId, onClose, onSuccess }: CreateTicketModalP
               </button>
               <button
                 type="submit"
-                disabled={createMutation.isPending || !title.trim()}
+                disabled={createMutation.isPending || !title.trim() || !projectId || !followUpDate}
                 className={stPrimaryBtn}
               >
                 {createMutation.isPending ? 'Creating…' : 'Create Ticket'}
