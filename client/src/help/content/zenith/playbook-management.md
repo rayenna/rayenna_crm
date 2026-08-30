@@ -11,7 +11,7 @@ A **weekly or monthly** executive pass through Zenith for **Management** (and **
 ## 2. Executive KPIs and forecast (~5 min)
 
 1. Scan the **KPI strip** with YoY badges and sparklines ([KPI strip](#kpi-strip-and-year-on-year)).
-2. Read the wide **Revenue Forecast** tile when shown ([Revenue Forecast](#revenue-forecast-wide-kpi-tile)).
+2. Read the **Weighted open pipeline** tile when shown ([Weighted open pipeline](#weighted-open-pipeline-revenue-forecast-tile)).
 3. Click **AI Insights** lines that point to revenue, pipeline, or concentration risks ([AI Insights](#ai-insights-ticker)).
 
 **Phone:** **Today** tab — **Hit List** plus KPIs ([Executive layout](#executive-sales-management-admin)).

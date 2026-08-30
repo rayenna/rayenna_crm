@@ -540,42 +540,63 @@ export default function ZenithExecutiveBody({
     <div className="zenith-exec-main mx-auto px-3 sm:px-5 py-5 lg:py-6 pb-24 max-lg:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] space-y-5 lg:space-y-6">
       {showOverview ? (
         <>
-          {/* A. KPIs beside Revenue Forecast on lg+; stacked on mobile (KPIs first) */}
+          {/*
+            A. One CSS grid: 8 equal KPI cells + forecast spanning both rows.
+            Use 1fr/1fr (not Tailwind grid-rows-2 — that is auto tracks and leaves a gap under KPIs).
+          */}
           <div
             id="zenith-kpis"
-            className="flex flex-col gap-3 scroll-mt-28 lg:flex-row lg:items-stretch lg:gap-3"
+            className={[
+              'grid scroll-mt-28 gap-2.5 sm:gap-3',
+              'grid-cols-2',
+              'md:grid-cols-4',
+              // Laptop: 4 KPI columns + forecast column; two equal-height rows
+              'lg:grid-cols-[repeat(4,minmax(0,1fr))_minmax(17.5rem,22rem)]',
+              'lg:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]',
+              'lg:items-stretch',
+              // Floor so 1fr rows resolve (Tailwind grid-rows-2 uses auto and left a gap)
+              'lg:min-h-[22.5rem]',
+            ].join(' ')}
           >
-            <div className="grid min-w-0 flex-1 content-start grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 xl:grid-cols-4">
-              {kpis.map((k, i) => (
-                <div key={k.key} className="min-w-0 h-full">
-                  {k.key === 'capacity' ? (
-                    <KPIGauge
-                      totalKW={totalCapacityKW}
-                      pipelineKW={gaugePipelineKW}
-                      targetKW={targetKW}
-                    />
-                  ) : (
-                    <KPICard
-                      item={k}
-                      index={i}
-                      icon={KPI_ICON_BY_KEY[k.key] ?? icons[i] ?? Zap}
-                      onClick={
-                        k.key === 'loan'
-                          ? onAvailingLoanKpiClick
-                          : k.key === 'lost'
-                            ? onLostProjectsKpiClick
-                            : k.key === 'outstanding'
-                              ? onOutstandingKpiClick
-                              : undefined
-                      }
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="min-w-0 w-full shrink-0 lg:w-[min(22rem,36%)] lg:max-w-[24rem]">
+            {kpis.map((k, i) => (
+              <div key={k.key} className="min-h-0 min-w-0 h-full">
+                {k.key === 'capacity' ? (
+                  <KPIGauge
+                    totalKW={totalCapacityKW}
+                    pipelineKW={gaugePipelineKW}
+                    targetKW={targetKW}
+                  />
+                ) : (
+                  <KPICard
+                    item={k}
+                    index={i}
+                    icon={KPI_ICON_BY_KEY[k.key] ?? icons[i] ?? Zap}
+                    onClick={
+                      k.key === 'loan'
+                        ? onAvailingLoanKpiClick
+                        : k.key === 'lost'
+                          ? onLostProjectsKpiClick
+                          : k.key === 'outstanding'
+                            ? onOutstandingKpiClick
+                            : undefined
+                    }
+                  />
+                )}
+              </div>
+            ))}
+            <div
+              className={[
+                'flex min-h-0 min-w-0 flex-col',
+                // Mobile / iPad: full width under KPIs
+                'col-span-2 md:col-span-4',
+                // Laptop: right column spanning both rows — same height as the 2×4 KPI block
+                'lg:col-span-1 lg:col-start-5 lg:row-span-2 lg:row-start-1',
+                'lg:h-full',
+              ].join(' ')}
+            >
               <ForecastKPI
                 compactSidebar
+                role={role}
                 projects={explorerProjects}
                 onOpenForecastList={(args) =>
                   onOpenDrawerListMode({

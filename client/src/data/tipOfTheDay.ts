@@ -112,7 +112,7 @@ export const TIPS: string[] = [
   'Sales in Zenith: use Log activity in Your Focus to add a quick project remark — it updates last-activity signals for your pipeline row.',
   'Zenith KPI cards count up when you load or change date filters, show a 7-point FY sparkline (gold up, crimson down), and a teal/crimson % badge when a prior-period comparison exists.',
   'In Zenith, select exactly one Financial Year to see comparison % badges on KPI tiles when a prior-period comparison is available.',
-  'Zenith Revenue forecast: the headline is weighted by stage (deal value × win probability) — tabs split the same total by Source, Sales, Segment, or Stage; +N more opens all open deals in the drawer.',
+  'Zenith Weighted open pipeline: Top 3 = % of forecast; role accents differ (source risk, open balance, Confirmed+ kW). When filters need expected commissioning.',
   'Zenith Revenue forecast tile height is fixed on purpose so switching tabs does not jitter the Hit List or funnel beside it.',
   'Zenith — Revenue & profit by FY: tap the orange point for a revenue project list (totals = order value); tap the teal bar for profit (totals = gross profit). Small or zero bars still open profit for that year.',
   'When you filter Zenith to one or more FYs, the Revenue & profit by FY chart only shows those years — hover matches what you filtered.',

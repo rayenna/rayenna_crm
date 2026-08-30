@@ -162,17 +162,19 @@ Full detail: [Zenith → Mobile, offline, and limits](/help/zenith#mobile-pwa-an
 
 **Speaker notes:** Train users to read **Alert** + **Last activity** together, then **Confirmation** for closure hygiene. Demo **filter + sort** on the Hit List, then contrast with **Your pipeline today** for the **full** list beyond seven rows.
 
-## Revenue forecast
+## Weighted open pipeline
 
-**SLIDE: Weighted forecast — critical concept**
+**SLIDE: Weighted pipeline — critical concept**
 
 **Key points:**
 
-- **Not** sum of every open deal at 100%.
-- **Order value × stage win probability** per open deal; early stages contribute less.
-- **Tabs** (Source, Sales, Segment, Stage) **split the same total**; **+N more** → full drawer list.
+- **Not** cash; early stages discounted, **Confirmed+ at 100%**.
+- Compare **Raw** and **Win rate**; **Weights** shows stage %.
+- **All / Early / Committed** plus **When** (Month / Quarter / Rest of FY) — commissioning date required for When.
+- **Top 3 = X%** concentration; role accent (source risk / open balance / Confirmed+ kW).
+- **Tabs** split the same total; **click a row** or **+N more** category → that slice’s deals.
 
-**Exercise (5 min):** Read headline + N deals; switch **Stage** tab; open **+N more** if visible.
+**Exercise (5 min):** Toggle **Month** vs **Rest of FY**; note **Top 3 %**; open a Source row.
 
 ---
 

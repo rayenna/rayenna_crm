@@ -190,9 +190,9 @@ export const helpTooltips: Record<string, HelpTooltip> = {
   },
   'zenith.revenue-forecast': {
     key: 'zenith.revenue-forecast',
-    title: 'Revenue forecast (Zenith)',
+    title: 'Weighted open pipeline (Zenith)',
     content:
-      'Weighted pipeline forecast: each open deal adds order value × stage win probability (not 100% for early stages). Tabs split the same total by Source, Sales, Segment, or Stage. +N more opens all open deals in the drawer.',
+      'Headline = order value × stage % (Confirmed+ at 100%; not cash). When filters use expected commissioning only. Band All/Early/Committed; tabs split the total; rows and +N more open deals.',
   },
   'zenith.revenue-profit-fy-chart': {
     key: 'zenith.revenue-profit-fy-chart',

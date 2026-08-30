@@ -1,6 +1,6 @@
 # Ribbons and KPIs
 
-Below the sticky command bar: **Solar News**, **AI Insights**, then the **KPI strip** and **Revenue forecast** (executive roles).
+Below the sticky command bar: **Solar News**, **AI Insights**, then the **KPI strip** and **Weighted open pipeline** tile (executive roles).
 
 
 ## Solar News ticker
@@ -44,18 +44,28 @@ Cards **stagger in** slightly when the strip appears (animation order by column)
 
 Metrics and labels are **role-specific** (see below). **Sales** sees data **scoped to you**; **Management**, **Admin**, **Operations**, and **Finance** see **company-wide** views where applicable.
 
-## Revenue Forecast (wide KPI tile)
+## Weighted open pipeline (Revenue Forecast tile)
 
-**Where** — Spans the width of the KPI band on **Sales**, **Management**, and **Admin** (executive Zenith).
+**Where** — Beside the KPI grid on **Sales**, **Management**, **Admin**, **Finance**, and **Operations** Zenith.
 
-**What the big number is** — A **weighted pipeline forecast**, not raw pipeline value. Each **open** deal (not Completed, not Subsidy Credited, not Lost) contributes **order value × a win probability for its current stage** (for example Lead 10%, Proposal 45%, Confirmed Order 85%, Under Installation 90%, Submitted for Subsidy 95%). Early-stage deals count for less so the headline reflects **expected** revenue, not “every deal at 100%.”
+**What the big number is** — A **weighted open pipeline** total, **not** cash or collections. Each **open** deal (not Completed, not Subsidy Credited, not Lost) contributes **order value × a win probability for its current stage**. **Early** stages are discounted (Lead 10% … Proposal 45%); **Confirmed+** count at **100%** for scheduling. Use **Weights** for the chip list.
 
-**Subtitle** — **Expected from N open deals** is the count of those weighted deals.
+**Dual context** — Under the headline: **Raw** = sum of order values for the same open cohort; **Win rate** = weighted ÷ raw (implied blend of stage mix).
 
-**Tabs: Source, Sales, Customer type, Stage** — The **total** does not change when you switch tabs; tabs only **split the same weighted total** by lead source, assigned salesperson, **customer type** (Residential, Apartment, Commercial from Customer Master), or stage. Each row shows that slice’s **weighted** sum; bars are relative to the **largest row in the current tab**. **+N more** means there are more categories than the three rows shown — click it to open the drawer with **all open deals** (sorted by weighted contribution).
+**Band: All / Early / Committed** — **All** = every open stage. **Early** = Lead, Site Survey, Proposal. **Committed** = Confirmed Order, Under Installation, Submitted for Subsidy.
 
-**Layout** — The tile uses a **fixed height** so switching tabs does not resize the KPI row (that keeps **Today’s Hit List** and the funnel from jumping on large screens).
+**When: Any time / Month / Quarter / Rest of FY** — Timing uses **expected commissioning date only** (IST). Confirmation / stage-entered are **not** used (they are history, not a due date). Deals **without** commissioning appear only under **Any time** (subtitle shows **unscheduled** count). **Month** = commissioning this month or overdue. **Quarter** = through end of the current Indian FY quarter. **Rest of FY** = after this quarter through 31 Mar of the current Indian FY.
 
-**Info line** — **Stage-weighted probability** — hover or refer here for the full idea.
+**Subtitle** — **Expected from N open deals** reflects the active band + when filters. If the explorer hit its scan cap, a **Based on explorer cohort (max N)** note appears.
+
+**Concentration** — **Top 3 = X% of forecast** (click to open those deals). Always shown when the forecast is non-zero.
+
+**Role accent** (one thin line under concentration):
+- **Sales** — commissioning / past-due nudge on your scoped book
+- **Management / Admin** — warning if one lead source is ≥ 50% of the weighted forecast
+- **Finance** — weighted value of deals with open balance (PENDING/PARTIAL or balance > 0)
+- **Operations** — Confirmed+ weighted value and kW in the current filter
+
+**Tabs: Source, Sales, Customer type, Stage** — Tabs only **split the same weighted total** for the active band + when. Each row is **clickable** and opens the drawer for that slice. Bars are relative to the **largest row in the current tab**. **+N more** opens a floating list of **remaining categories**; pick one to open its deals.
 
 ---

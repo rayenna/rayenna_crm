@@ -16,7 +16,7 @@ import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTo
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
-import { ProjectStatus } from '../../types'
+import { ProjectStatus, UserRole } from '../../types'
 import { getProjectStatusColor } from '../dashboard/projectStatusColors'
 import { buildOperationsZenithKpis } from './zenithKpi'
 import {
@@ -52,13 +52,17 @@ import { useZenithExplorerQuery } from '../../hooks/useZenithExplorerQuery'
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
-import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
+import {
+  buildForecastOpenDealsProjectsHref,
+  buildZenithDrawerListProjectsHref,
+} from '../../utils/zenithListProjectsDeepLink'
 import { buildZenithLifecycleBrandBarRows } from '../../utils/zenithPanelInverterBrandChartData'
 import ZenithLifecycleBrandBarCharts from './ZenithLifecycleBrandBarCharts'
 import { ZENITH_CHART_HEIGHT_FLOOR, zenithStandardChartHeight } from './zenithChartHeight'
 import { isZenithMobileTabActive } from './zenithMobileTabVisibility'
 import type { ZenithMobileTab } from './zenithMobileNav'
 import DashboardPlanAttentionRow from '../dashboard/DashboardPlanAttentionRow'
+import ForecastKPI from './ForecastKPI'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
 
@@ -359,9 +363,10 @@ export default function ZenithOperationsBody({
     <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-6 space-y-8 pb-24 max-lg:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
       {showOverview ? (
         <>
+          {/* Row 1: four Ops KPIs — full width, original tile sizes */}
           <div
             id="zenith-kpis"
-            className="grid w-full grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 pb-2 scroll-mt-28"
+            className="grid w-full grid-cols-2 gap-3 pb-2 scroll-mt-28 sm:grid-cols-2 lg:grid-cols-4"
           >
             {kpis.map((k, i) => (
               <div key={k.key} className="min-w-0">
@@ -382,16 +387,38 @@ export default function ZenithOperationsBody({
               </div>
             ))}
           </div>
-          <div id="zenith-todays-plan" className="scroll-mt-28">
-            <DashboardPlanAttentionRow
-              showLifecycleReminder
-              explorerProjects={explorerProjects}
-              tileParams={{
-                selectedFYs: dateFilter.selectedFYs,
-                selectedQuarters: dateFilter.selectedQuarters,
-                selectedMonths: dateFilter.selectedMonths,
-              }}
-            />
+
+          {/* Row 2: Today's plan | Weighted open pipeline — equal width + matched height from md */}
+          <div className="grid w-full grid-cols-1 gap-3 scroll-mt-28 md:grid-cols-2 md:items-stretch md:gap-4">
+            <div
+              id="zenith-todays-plan"
+              className="flex min-h-0 min-w-0 flex-col scroll-mt-28 md:h-full"
+            >
+              <DashboardPlanAttentionRow
+                stackAttention
+                fillColumnHeight
+                showLifecycleReminder
+                explorerProjects={explorerProjects}
+                tileParams={{
+                  selectedFYs: dateFilter.selectedFYs,
+                  selectedQuarters: dateFilter.selectedQuarters,
+                  selectedMonths: dateFilter.selectedMonths,
+                }}
+              />
+            </div>
+            <div className="flex min-h-0 min-w-0 flex-col md:h-full [&_.zenith-forecast-root]:h-full">
+              <ForecastKPI
+                compactSidebar
+                role={UserRole.OPERATIONS}
+                projects={explorerProjects}
+                onOpenForecastList={(args) =>
+                  onOpenDrawerListMode({
+                    ...args,
+                    projectsPageHref: buildForecastOpenDealsProjectsHref(dateFilter),
+                  })
+                }
+              />
+            </div>
           </div>
         </>
       ) : null}

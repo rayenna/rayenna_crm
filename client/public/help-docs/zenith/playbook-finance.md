@@ -11,6 +11,7 @@ A focused flow for **Finance** users monitoring collections and loan exposure in
 ## 2. KPI strip — cash and loans (~3 min)
 
 1. On the **KPI strip**, review **revenue received**, **outstanding**, and related finance tiles ([KPI strip](#kpi-strip-and-year-on-year)).
+2. Check the **Weighted open pipeline** tile for concentration and the **open balance** accent ([Weighted open pipeline](#weighted-open-pipeline-revenue-forecast-tile)).
 2. Click **Availing Loan** (when shown) — opens a **Quick Actions** list of projects in loan-related states ([Explore shortcuts](#charts-funnels-and-shortcuts)).
 3. Note YoY badges — use them to spot collection or recognition shifts vs prior year.
 

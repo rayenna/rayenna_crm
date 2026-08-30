@@ -11,6 +11,7 @@ How **Operations** users use Zenith for execution visibility, lifecycle quality,
 ## 2. KPIs and Ops tab (~4 min)
 
 1. Review execution-oriented **KPI strip** tiles ([KPI strip](#kpi-strip-and-year-on-year)).
+2. Scan **Weighted open pipeline** for Confirmed+ value / kW in the role accent ([Weighted open pipeline](#weighted-open-pipeline-revenue-forecast-tile)).
 2. On mobile, use **KPIs** then **Ops** tabs ([Mobile navigation](#mobile-navigation-and-layout-zenith)).
 3. Open **Your Focus** → **Installation pulse** — tables of jobs under installation, subsidy pending, or similar ops cohorts ([Installation pulse](#installation-pulse-operations)).
 

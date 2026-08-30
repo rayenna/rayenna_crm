@@ -16,7 +16,7 @@ import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTo
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
-import { ProjectStatus } from '../../types'
+import { ProjectStatus, UserRole } from '../../types'
 import { buildFinanceZenithKpis } from './zenithKpi'
 import {
   buildDealFlowDrawerFilterLabel,
@@ -49,11 +49,15 @@ import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../..
 import { useZenithExplorerQuery } from '../../hooks/useZenithExplorerQuery'
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
-import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
+import {
+  buildForecastOpenDealsProjectsHref,
+  buildZenithDrawerListProjectsHref,
+} from '../../utils/zenithListProjectsDeepLink'
 import { ZENITH_CHART_HEIGHT_FLOOR, zenithStandardChartHeight } from './zenithChartHeight'
 import { isZenithMobileTabActive } from './zenithMobileTabVisibility'
 import type { ZenithMobileTab } from './zenithMobileNav'
 import DashboardPlanAttentionRow from '../dashboard/DashboardPlanAttentionRow'
+import ForecastKPI from './ForecastKPI'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
 
@@ -327,9 +331,10 @@ export default function ZenithFinanceBody({
     <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-6 space-y-8 pb-24 max-lg:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
       {showOverview ? (
         <>
+          {/* Row 1: finance KPIs — full width, original tile sizes */}
           <div
             id="zenith-kpis"
-            className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pb-2 scroll-mt-28"
+            className="grid w-full grid-cols-2 gap-3 pb-2 scroll-mt-28 sm:grid-cols-3 lg:grid-cols-5"
           >
             {kpis.map((k, i) => (
               <div key={k.key} className="min-w-0">
@@ -348,14 +353,36 @@ export default function ZenithFinanceBody({
               </div>
             ))}
           </div>
-          <div id="zenith-todays-plan" className="scroll-mt-28">
-            <DashboardPlanAttentionRow
-              tileParams={{
-                selectedFYs: dateFilter.selectedFYs,
-                selectedQuarters: dateFilter.selectedQuarters,
-                selectedMonths: dateFilter.selectedMonths,
-              }}
-            />
+
+          {/* Row 2: Today's plan | Weighted open pipeline — equal width + matched height from md */}
+          <div className="grid w-full grid-cols-1 gap-3 scroll-mt-28 md:grid-cols-2 md:items-stretch md:gap-4">
+            <div
+              id="zenith-todays-plan"
+              className="flex min-h-0 min-w-0 flex-col scroll-mt-28 md:h-full"
+            >
+              <DashboardPlanAttentionRow
+                stackAttention
+                fillColumnHeight
+                tileParams={{
+                  selectedFYs: dateFilter.selectedFYs,
+                  selectedQuarters: dateFilter.selectedQuarters,
+                  selectedMonths: dateFilter.selectedMonths,
+                }}
+              />
+            </div>
+            <div className="flex min-h-0 min-w-0 flex-col md:h-full [&_.zenith-forecast-root]:h-full">
+              <ForecastKPI
+                compactSidebar
+                role={UserRole.FINANCE}
+                projects={explorerProjects}
+                onOpenForecastList={(args) =>
+                  onOpenDrawerListMode({
+                    ...args,
+                    projectsPageHref: buildForecastOpenDealsProjectsHref(dateFilter),
+                  })
+                }
+              />
+            </div>
           </div>
         </>
       ) : null}

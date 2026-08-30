@@ -62,7 +62,7 @@ export default function KPICard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className={`zenith-kpi-card relative rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-3.5 w-full min-w-0 h-full overflow-hidden group transition-[box-shadow,transform,border-color] duration-200 ease-out hover:-translate-y-px hover:border-[color:var(--border-strong)]${to || onClick ? ' cursor-pointer' : ''}`}
+      className={`zenith-kpi-card relative flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-3.5 group transition-[box-shadow,transform,border-color] duration-200 ease-out hover:-translate-y-px hover:border-[color:var(--border-strong)]${to || onClick ? ' cursor-pointer' : ''}`}
     >
       <div
         className="zenith-kpi-card__blob pointer-events-none absolute -top-8 -right-8 w-28 h-28 rounded-full opacity-[0.12] blur-2xl transition-opacity duration-300 group-hover:opacity-[0.18]"
@@ -78,20 +78,20 @@ export default function KPICard({
         </div>
       ) : null}
 
-      <div className={`relative flex items-start gap-2 mb-1.5 ${showBadge ? 'pr-14' : 'pr-2'}`}>
+      <div className={`relative flex shrink-0 items-start gap-2 mb-1.5 ${showBadge ? 'pr-14' : 'pr-2'}`}>
         <div className="p-1.5 rounded-lg bg-[color:var(--bg-surface)] border border-[color:var(--border-default)] shrink-0">
           <Icon className="w-[18px] h-[18px] text-[color:var(--accent-gold)]" strokeWidth={2} />
         </div>
       </div>
 
-      <p className="zenith-kpi-value relative text-lg tabular-nums leading-tight text-[color:var(--text-primary)] sm:text-xl">
+      <p className="zenith-kpi-value relative shrink-0 text-lg tabular-nums leading-tight text-[color:var(--text-primary)] sm:text-xl">
         {formatDisplay(item, animated)}
       </p>
-      <p className="mt-1 line-clamp-2 text-[10px] font-semibold uppercase leading-tight tracking-wider text-[color:var(--text-secondary)]">
+      <p className="mt-1 line-clamp-2 shrink-0 text-[10px] font-semibold uppercase leading-tight tracking-wider text-[color:var(--text-secondary)]">
         {item.label}
       </p>
 
-      <div className="h-8 sm:h-9 mt-2 w-full opacity-[0.88] group-hover:opacity-100 transition-opacity duration-200">
+      <div className="mt-auto h-8 w-full pt-2 opacity-[0.88] transition-opacity duration-200 group-hover:opacity-100 sm:h-9">
         <ResponsiveContainer width="100%" height={36} minWidth={0}>
           <LineChart data={sparkData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
             <Line

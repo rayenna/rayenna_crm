@@ -14,6 +14,11 @@ interface Props {
   showDataSenseReminder?: boolean
   /** Keep attention under plan (for Zenith Plan | Hit List desktop row). */
   stackAttention?: boolean
+  /**
+   * Stretch the plan card to the parent column height (Ops/Finance beside Weighted open pipeline).
+   * Attention cards (if any) stack under the plan inside the same column.
+   */
+  fillColumnHeight?: boolean
 }
 
 /**
@@ -27,6 +32,7 @@ export default function DashboardPlanAttentionRow({
   showLifecycleReminder = false,
   showDataSenseReminder = false,
   stackAttention = false,
+  fillColumnHeight = false,
 }: Props) {
   const list = explorerProjects ?? []
   const missing =
@@ -35,6 +41,29 @@ export default function DashboardPlanAttentionRow({
     showDataSenseReminder && tileParams ? dataSenseHitsOnExplorerProjects(list) : []
   const showAttention = (missing.length > 0 || dataSenseHits.length > 0) && tileParams != null
   const paired = showAttention
+
+  if (fillColumnHeight) {
+    return (
+      <div className="mb-0 flex h-full min-h-0 min-w-0 flex-col gap-3">
+        <DashboardMyDayPlanCard
+          paired={paired}
+          fillHeight
+          className={showAttention ? 'min-h-0 flex-1' : 'min-h-0 h-full flex-1'}
+        />
+        {showAttention ? (
+          <DashboardLifecycleBrandReminder
+            compact
+            paired
+            projects={explorerProjects}
+            tileParams={tileParams}
+            className="min-h-0 shrink-0"
+            showBrandGaps={showLifecycleReminder}
+            dataSenseHits={dataSenseHits}
+          />
+        ) : null}
+      </div>
+    )
+  }
 
   return (
     <div

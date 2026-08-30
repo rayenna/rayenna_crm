@@ -1,4 +1,5 @@
 import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../types/zenithExplorer'
+import { getForecastOpenDeals, weightedDealValue } from './revenueForecast'
 
 /**
  * Normalize en/em dashes and collapse whitespace so donut/chart labels match explorer `customer_segment` (customer type label)
@@ -28,13 +29,6 @@ const REVENUE_PROJECT_STATUSES = new Set([
   'UNDER_INSTALLATION',
   'COMPLETED',
   'COMPLETED_SUBSIDY_CREDITED',
-])
-
-/** Open pipeline forecast / “+N more” — deals we treat as closed or lost (not weighted forecast). */
-const FORECAST_EXCLUDED_STAGE_LABELS = new Set([
-  'Completed',
-  'Completed - Subsidy Credited',
-  'Lost',
 ])
 
 /** Mirrors `getPipelineWhere`: not LOST, order value present (projectCost not null in DB). */
@@ -156,8 +150,10 @@ export function filterProjectsByChartSlice(
       return all.filter((p) => p.financial_year === value && matchesDashboardRevenueWhere(p))
     }
     case 'forecast': {
-      const open = all.filter((p) => !FORECAST_EXCLUDED_STAGE_LABELS.has(p.stageLabel))
-      return [...open].sort((a, b) => weightedForecastSortKey(b) - weightedForecastSortKey(a))
+      // Deep-links / legacy “all open”; tile row drills use filterForecastSliceDeals.
+      return getForecastOpenDeals(all, 'all').sort(
+        (a, b) => weightedDealValue(b) - weightedDealValue(a),
+      )
     }
     case 'loan_bank':
       return all.filter((p) => (p.loan_bank_label ?? '') === value && (p.loan_bank_label ?? '') !== '')
@@ -190,23 +186,4 @@ export function filterProjectsByChartSlice(
     default:
       return []
   }
-}
-
-function weightedForecastSortKey(p: ZenithExplorerProject): number {
-  const v = Number(p.deal_value ?? 0)
-  const mult =
-    p.stageLabel === 'Lead'
-      ? 0.1
-      : p.stageLabel === 'Site Survey'
-        ? 0.25
-        : p.stageLabel === 'Proposal'
-          ? 0.45
-          : p.stageLabel === 'Confirmed Order'
-            ? 0.85
-            : p.stageLabel === 'Under Installation'
-              ? 0.9
-              : p.stageLabel === 'Submitted for Subsidy'
-                ? 0.95
-                : 0.1
-  return v * mult
 }

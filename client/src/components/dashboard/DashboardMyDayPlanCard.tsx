@@ -8,11 +8,17 @@ import MyDayButton from '../my-day/MyDayButton'
 interface Props {
   /** Side-by-side with lifecycle attention card on lg+. */
   paired?: boolean
+  /**
+   * Stretch to the parent column height (e.g. Ops/Finance beside Weighted open pipeline).
+   * Scroll body grows with flex instead of a fixed max-height.
+   */
+  fillHeight?: boolean
   className?: string
 }
 
 export default function DashboardMyDayPlanCard({
   paired = false,
+  fillHeight = false,
   className = '',
 }: Props) {
   const { openTab } = useMyDayContext()
@@ -37,6 +43,7 @@ export default function DashboardMyDayPlanCard({
     <section
       className={[
         'flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] border-l-4 border-l-[color:var(--accent-gold)]',
+        fillHeight ? 'h-full' : '',
         className,
       ].join(' ')}
       aria-labelledby="dashboard-myday-plan-heading"
@@ -74,7 +81,11 @@ export default function DashboardMyDayPlanCard({
       <div
         className={[
           'min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2.5 sm:px-3.5 sm:py-3',
-          paired ? 'max-h-[220px] lg:max-h-[280px]' : 'max-h-[320px]',
+          fillHeight
+            ? ''
+            : paired
+              ? 'max-h-[220px] lg:max-h-[280px]'
+              : 'max-h-[320px]',
         ].join(' ')}
         tabIndex={0}
         aria-label="Today's plan — scroll for more"
