@@ -46,6 +46,7 @@ import {
 import type { ZenithListAmountMode } from '../../hooks/useQuickAction'
 import { ZENITH_QUERY_STALE_MS } from '../../constants/zenithQueryStale'
 import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../../types/zenithExplorer'
+import { useZenithExplorerQuery } from '../../hooks/useZenithExplorerQuery'
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
 import { buildZenithDrawerListProjectsHref } from '../../utils/zenithListProjectsDeepLink'
@@ -134,6 +135,8 @@ export default function ZenithFinanceBody({
   const effQ = dateFilter.selectedQuarters
   const effM = dateFilter.selectedMonths
 
+  const { data: explorerProjects = [] } = useZenithExplorerQuery(effFYs, effQ, effM, !!user)
+
   const { data: revLead } = useQuery({
     queryKey: ['zenith', 'finRevLead', effFYs, effQ, effM],
     queryFn: async () => {
@@ -166,7 +169,6 @@ export default function ZenithFinanceBody({
     staleTime: ZENITH_QUERY_STALE_MS,
   })
 
-  const explorerProjects = (data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]
   const availingLoanProjectsUrl = buildProjectsUrl({ availingLoan: true }, dateFilter)
   const outstandingProjectsUrl = buildProjectsUrl(
     { paymentStatus: ['PENDING', 'PARTIAL'] },

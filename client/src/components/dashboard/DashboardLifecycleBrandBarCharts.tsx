@@ -11,6 +11,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { useZenithExplorerQuery } from '../../hooks/useZenithExplorerQuery'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
@@ -195,7 +196,14 @@ export default function DashboardLifecycleBrandBarCharts({
     user?.role === UserRole.ADMIN ||
     user?.role === UserRole.OPERATIONS
 
-  const list = Array.isArray(projects) ? projects : []
+  const { data: fetchedExplorer = [] } = useZenithExplorerQuery(
+    tileParams.selectedFYs,
+    tileParams.selectedQuarters,
+    tileParams.selectedMonths,
+    canView && !(Array.isArray(projects) && projects.length > 0),
+  )
+
+  const list = Array.isArray(projects) && projects.length > 0 ? projects : fetchedExplorer
 
   const panelRows = useMemo(() => buildZenithLifecycleBrandBarRows(list, 'panel'), [list])
   const inverterRows = useMemo(() => buildZenithLifecycleBrandBarRows(list, 'inverter'), [list])

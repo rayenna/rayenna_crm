@@ -48,6 +48,7 @@ import {
 } from '../../utils/zenithChartResetGroup'
 import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
 import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../../types/zenithExplorer'
+import { useZenithExplorerQuery } from '../../hooks/useZenithExplorerQuery'
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
@@ -154,7 +155,7 @@ export default function ZenithOperationsBody({
     staleTime: ZENITH_QUERY_STALE_MS,
   })
 
-  const explorerProjects = (data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]
+  const { data: explorerProjects = [] } = useZenithExplorerQuery(effFYs, effQ, effM, !!user)
 
   const pendingInstallationProjectsUrl = buildProjectsUrl(
     { status: [ProjectStatus.CONFIRMED, ProjectStatus.UNDER_INSTALLATION] },

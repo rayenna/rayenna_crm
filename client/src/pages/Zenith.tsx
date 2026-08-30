@@ -4,6 +4,7 @@ import { UserRole } from '../types'
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useZenithMainQuery } from '../hooks/useZenithMainQuery'
+import { useZenithExplorerQuery } from '../hooks/useZenithExplorerQuery'
 import '../styles/zenith.css'
 import CommandBar from '../components/zenith/CommandBar'
 import DailyBriefing from '../components/zenith/DailyBriefing'
@@ -173,6 +174,13 @@ const Zenith = () => {
     selectedQuarters,
     selectedMonths,
     initialDataWhenFiltersEmpty,
+  )
+
+  const { data: explorerProjects = [] } = useZenithExplorerQuery(
+    selectedFYs,
+    selectedQuarters,
+    selectedMonths,
+    !!user,
   )
 
   // Stable close callbacks only — hook return objects (`quickAction`, etc.) are new every render.
@@ -552,6 +560,7 @@ const Zenith = () => {
             role={user.role}
             currentUserName={user.name}
             data={(zenithData ?? {}) as Record<string, unknown>}
+            explorerProjects={explorerProjects}
             myDaySnapshot={myDaySnapQ.data ?? null}
             myDaySnapshotLoading={myDaySnapQ.isLoading}
             myDaySnapshotError={myDaySnapQ.isError}

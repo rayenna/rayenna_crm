@@ -58,6 +58,7 @@ router.get(
     query('search').optional().isString(),
     query('page').optional().isInt({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 500 }),
+    query('picker').optional().isIn(['true', '1', 'false', '0']),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -72,11 +73,13 @@ router.get(
         limit = '25',
         salespersonId,
         myCustomers, // For Sales users: 'true' to show only their customers
+        picker,
       } = req.query;
 
       const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
       const requestedTake = parseInt(limit as string);
-      const maxTake = req.user?.role === UserRole.SALES ? 500 : 200;
+      const isPicker = picker === 'true' || picker === '1';
+      const maxTake = isPicker ? 25 : req.user?.role === UserRole.SALES ? 500 : 200;
       const take = Math.min(Number.isFinite(requestedTake) ? requestedTake : 25, maxTake);
 
       const where: any = {};
@@ -171,40 +174,53 @@ router.get(
           skip,
           take,
           orderBy: { createdAt: 'desc' },
-          select: {
-            id: true,
-            customerId: true,
-            customerName: true,
-            prefix: true,
-            firstName: true,
-            middleName: true,
-            lastName: true,
-            addressLine1: true,
-            addressLine2: true,
-            city: true,
-            state: true,
-            country: true,
-            pinCode: true,
-            latitude: true,
-            longitude: true,
-            consumerNumber: true,
-            contactNumbers: true,
-            email: true,
-            createdAt: true,
-            createdById: true,
-            salespersonId: true,
-            customerType: true,
-            companyName: true,
-            _count: {
-              select: { projects: true },
-            },
-            projects: {
-              select: {
+          select: isPicker
+            ? {
+                id: true,
+                customerId: true,
+                customerName: true,
+                prefix: true,
+                firstName: true,
+                middleName: true,
+                lastName: true,
+                consumerNumber: true,
+                customerType: true,
+                companyName: true,
+              }
+            : {
+                id: true,
+                customerId: true,
+                customerName: true,
+                prefix: true,
+                firstName: true,
+                middleName: true,
+                lastName: true,
+                addressLine1: true,
+                addressLine2: true,
+                city: true,
+                state: true,
+                country: true,
+                pinCode: true,
+                latitude: true,
+                longitude: true,
+                consumerNumber: true,
+                contactNumbers: true,
+                email: true,
+                createdAt: true,
                 createdById: true,
+                salespersonId: true,
+                customerType: true,
+                companyName: true,
+                _count: {
+                  select: { projects: true },
+                },
+                projects: {
+                  select: {
+                    createdById: true,
+                  },
+                  take: 1,
+                },
               },
-              take: 1,
-            },
-          },
         }),
         prisma.customer.count({ where }),
       ]);

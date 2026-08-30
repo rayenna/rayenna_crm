@@ -71,8 +71,9 @@ function generateBriefing(args: {
   role: UserRole
   currentUserName?: string | null
   data: Record<string, unknown>
+  explorerProjects?: ZenithExplorerProject[]
 }): { greeting: string; firstName: string; lines: BriefingLine[] } {
-  const { role, currentUserName, data } = args
+  const { role, currentUserName, data, explorerProjects = [] } = args
   const now = new Date()
   const greeting = greetingForHour(now.getHours())
   const firstName = firstNameOf(currentUserName)
@@ -174,7 +175,7 @@ function generateBriefing(args: {
   }
 
   if (role === UserRole.ADMIN || role === UserRole.SALES || role === UserRole.OPERATIONS) {
-    const explorer = (data as { zenithExplorerProjects?: ZenithExplorerProject[] }).zenithExplorerProjects
+    const explorer = explorerProjects
     const missing = zenithExplorerProjectsMissingLifecycleBrands(
       Array.isArray(explorer) ? explorer : [],
     )
@@ -191,7 +192,7 @@ function generateBriefing(args: {
   }
 
   if (role === UserRole.ADMIN || role === UserRole.SALES || role === UserRole.MANAGEMENT) {
-    const explorerForSense = (data as { zenithExplorerProjects?: ZenithExplorerProject[] }).zenithExplorerProjects
+    const explorerForSense = explorerProjects
     const senseHits = dataSenseHitsOnExplorerProjects(Array.isArray(explorerForSense) ? explorerForSense : [])
     if (senseHits.length > 0) {
       const a1 = senseHits.filter((h) => h.findings.some((f) => f.id === 'A1')).length
@@ -242,6 +243,7 @@ export default function DailyBriefing({
   role,
   currentUserName,
   data,
+  explorerProjects = [],
   myDaySnapshot = null,
   myDaySnapshotLoading = false,
   myDaySnapshotError = false,
@@ -251,6 +253,7 @@ export default function DailyBriefing({
   role: UserRole
   currentUserName?: string | null
   data: Record<string, unknown>
+  explorerProjects?: ZenithExplorerProject[]
   myDaySnapshot?: MyDaySnapshot | null
   myDaySnapshotLoading?: boolean
   myDaySnapshotError?: boolean
@@ -260,8 +263,8 @@ export default function DailyBriefing({
   const today = useMemo(() => new Date(), [])
 
   const briefing = useMemo(
-    () => generateBriefing({ role, currentUserName, data }),
-    [role, currentUserName, data],
+    () => generateBriefing({ role, currentUserName, data, explorerProjects }),
+    [role, currentUserName, data, explorerProjects],
   )
 
   const jumpToMyDayTab = (tab: MyDayTabId) => {

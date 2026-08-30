@@ -345,8 +345,8 @@ function formatLeadSourceForExplorer(ls: LeadSource | null | undefined): string 
 }
 
 
-/** Max projects scanned for Zenith funnel avg-days (aligned with explorer batch cap). */
-const ZENITH_FUNNEL_METRICS_PROJECT_CAP = 5000;
+/** Max projects scanned for Zenith funnel avg-days and explorer batch. */
+const ZENITH_FUNNEL_METRICS_PROJECT_CAP = 2000;
 
 /** Lightweight project rows for Zenith chart drill-down + revenue forecast (same FY/date scope as dashboard). */
 async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
@@ -1081,7 +1081,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
 
     const projectsByPaymentStatus = await buildProjectsByPaymentStatus(where as Prisma.ProjectWhereInput);
 
-    const zenithExplorerProjects = await loadZenithExplorerProjects(where as Prisma.ProjectWhereInput);
+    const zenithExplorerProjects: Awaited<ReturnType<typeof loadZenithExplorerProjects>> = [];
 
     res.json({
       leads: {
@@ -1397,7 +1397,7 @@ router.get('/operations', authenticate, async (req: Request, res) => {
       }
     }
 
-    const zenithExplorerProjects = await loadZenithExplorerProjects(where as Prisma.ProjectWhereInput);
+    const zenithExplorerProjects: Awaited<ReturnType<typeof loadZenithExplorerProjects>> = [];
 
     res.json({
       pendingInstallation,
@@ -1723,7 +1723,7 @@ router.get('/finance', authenticate, async (req: Request, res) => {
       }
     }
 
-    const zenithExplorerProjects = await loadZenithExplorerProjects(where as Prisma.ProjectWhereInput);
+    const zenithExplorerProjects: Awaited<ReturnType<typeof loadZenithExplorerProjects>> = [];
 
     res.json({
       totalProjectValue: totalProjectValue._sum.projectCost || 0,
@@ -2100,7 +2100,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
       }
     }
 
-    const zenithExplorerProjects = await loadZenithExplorerProjects(where as Prisma.ProjectWhereInput);
+    const zenithExplorerProjects: Awaited<ReturnType<typeof loadZenithExplorerProjects>> = [];
 
     res.json({
       sales,
@@ -2595,6 +2595,36 @@ const ZENITH_FINANCE_EARLY_OR_LOST: ProjectStatus[] = [
   ProjectStatus.LOST,
 ];
 
+function dashboardDateFiltersFromQuery(req: { query: Record<string, unknown> }) {
+  const fyFilters = req.query.fy
+    ? ((Array.isArray(req.query.fy) ? req.query.fy : [req.query.fy]) as string[])
+    : [];
+  const monthFilters = req.query.month
+    ? ((Array.isArray(req.query.month) ? req.query.month : [req.query.month]) as string[])
+    : [];
+  const quarterFilters = req.query.quarter
+    ? ((Array.isArray(req.query.quarter) ? req.query.quarter : [req.query.quarter]) as string[])
+    : [];
+  return { fyFilters, monthFilters, quarterFilters };
+}
+
+/** Lightweight explorer rows for Zenith / brand charts — not attached to KPI dashboard payloads. */
+router.get('/zenith-explorer', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { fyFilters, monthFilters, quarterFilters } = dashboardDateFiltersFromQuery(req);
+    const baseWhere: Record<string, unknown> = {};
+    if (req.user?.role === UserRole.SALES) {
+      baseWhere.salespersonId = req.user.id;
+    }
+    const where = applyDateFilters(baseWhere, fyFilters, monthFilters, quarterFilters);
+    const zenithExplorerProjects = await loadZenithExplorerProjects(where as Prisma.ProjectWhereInput);
+    res.json({ zenithExplorerProjects });
+  } catch (error: unknown) {
+    console.error('[dashboard] zenith-explorer:', error);
+    res.status(500).json({ error: 'Failed to load explorer projects' });
+  }
+});
+
 /** Role-specific “Your Focus” data for Zenith (KPI strip → funnel). */
 router.get('/zenith-focus', authenticate, async (req: Request, res: Response) => {
   try {
@@ -2706,7 +2736,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
               lastPaymentDate: { not: null },
             },
             select: { confirmationDate: true, lastPaymentDate: true },
-            take: 500,
+            take: 120,
           }),
           prisma.project.count({
             where: { ...where, projectStatus: ProjectStatus.SUBMITTED_FOR_SUBSIDY },
@@ -2732,7 +2762,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
               customer: { select: { customerName: true, phone: true, email: true } },
             },
             orderBy: { balanceAmount: 'desc' },
-            take: 800,
+            take: 200,
           }),
           prisma.project.aggregate({
             where: getRevenueWhere(where),
@@ -2774,7 +2804,7 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
               customer: { select: { customerName: true } },
             },
             orderBy: { updatedAt: 'desc' },
-            take: 500,
+            take: 40,
           }),
         ]);
 

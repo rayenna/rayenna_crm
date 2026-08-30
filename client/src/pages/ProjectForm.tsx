@@ -39,6 +39,7 @@ import {
   type DataSenseFinding,
 } from '../utils/dataSense'
 import { calculateFYInIst } from '../utils/istCalendar'
+import { useDebounce } from '../hooks/useDebounce'
 
 function customerPickerLabel(customer: Customer): string {
   return `${customer.customerId} - ${getCustomerDisplayName(customer)}`
@@ -249,6 +250,7 @@ const ProjectForm = () => {
   const { hasRole, user } = useAuth()
   const queryClient = useQueryClient()
   const isEdit = !!id
+  const [customerSearch, setCustomerSearch] = useState('')
   const isFinanceOnly = user?.role === UserRole.FINANCE && isEdit
   /** Edit flow: return to project detail. New project: return to list. (ErrorModal uses capture-phase Esc first.) */
   const exitPath = isEdit && id ? `/projects/${id}` : '/projects'
@@ -278,26 +280,22 @@ const ProjectForm = () => {
     },
   })
 
-  // Sales users fetch only their currently-assigned customers (server enforces salespersonId = user.id).
-  // Admin/Management/Operations fetch all customers.
-  // This ensures re-allocated customers disappear from the Sales user's dropdown immediately.
   const isSalesUser = user?.role === UserRole.SALES
-  const customersUrl = isSalesUser
-    ? '/api/customers?limit=10000&myCustomers=true'
-    : '/api/customers?limit=10000'
+  const debouncedCustomerSearch = useDebounce(customerSearch, 300)
 
   const { data: customers, isLoading: customersLoading, error: customersError } = useQuery({
-    queryKey: ['customers', isSalesUser ? 'mine' : 'all'],
+    queryKey: ['customers', 'picker', isSalesUser, debouncedCustomerSearch],
     queryFn: async () => {
-      try {
-        const res = await axiosInstance.get(customersUrl)
-        return res.data
-      } catch (error: unknown) {
-        if (import.meta.env.DEV) console.error('Error fetching customers:', error)
-        throw error
-      }
+      const params = new URLSearchParams()
+      params.set('limit', '25')
+      params.set('picker', 'true')
+      if (isSalesUser) params.set('myCustomers', 'true')
+      const q = debouncedCustomerSearch.trim()
+      if (q) params.set('search', q)
+      const res = await axiosInstance.get(`/api/customers?${params.toString()}`)
+      return res.data
     },
-    enabled: !!user, // Wait until user is known so the correct URL is used
+    enabled: !!user && !isEdit,
     retry: 2,
   })
 
@@ -313,7 +311,6 @@ const ProjectForm = () => {
   const financingBank = watch('financingBank')
   const projectType = watch('type')
   const systemCapacityWatched = watch('systemCapacity')
-  const [customerSearch, setCustomerSearch] = useState('')
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[] | null>(null)
   const [validationErrorSource, setValidationErrorSource] = useState<'file' | 'form' | null>(null)

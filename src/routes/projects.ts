@@ -42,6 +42,10 @@ import * as XLSX from 'xlsx';
 
 const router = express.Router();
 
+/** In-memory Deal Health sort: score at most this many newest matching rows, then paginate. */
+const DEAL_HEALTH_LIST_SCAN_CAP = 2000;
+const DEAL_HEALTH_EXPORT_SCAN_CAP = 3000;
+
 /** Project system capacity (kW): non-negative integer; null if empty/invalid. Rounds numeric input. */
 function parseSystemCapacityKw(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;
@@ -279,6 +283,8 @@ router.get(
           ? prisma.project.findMany({
               where,
               select: baseSelect,
+              orderBy: { updatedAt: 'desc' },
+              take: DEAL_HEALTH_LIST_SCAN_CAP,
             })
           : prisma.project.findMany({
               where,
@@ -345,9 +351,12 @@ router.get(
         pagination: {
           page: parseInt(page as string),
           limit: take,
-          total,
-          pages: Math.ceil(total / take),
+          total: wantsHealthSort ? Math.min(total, DEAL_HEALTH_LIST_SCAN_CAP) : total,
+          pages: Math.ceil((wantsHealthSort ? Math.min(total, DEAL_HEALTH_LIST_SCAN_CAP) : total) / take),
         },
+        ...(wantsHealthSort && total > DEAL_HEALTH_LIST_SCAN_CAP
+          ? { dealHealthSortCapped: true, dealHealthSortScanCap: DEAL_HEALTH_LIST_SCAN_CAP }
+          : {}),
       });
     } catch (error: any) {
       console.error('Error fetching projects:', error?.message ?? error);
@@ -2231,6 +2240,8 @@ async function fetchProjectsForExport(
     const all = await prisma.project.findMany({
       where,
       include: PROJECTS_EXPORT_INCLUDE,
+      orderBy: { updatedAt: 'desc' },
+      take: DEAL_HEALTH_EXPORT_SCAN_CAP,
     });
     const order = sortOrder === 'asc' ? 'asc' : 'desc';
     const scored = all.map((p) => ({

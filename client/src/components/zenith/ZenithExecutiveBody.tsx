@@ -46,6 +46,7 @@ import type {
 } from '../../hooks/useQuickAction'
 import { ZENITH_QUERY_STALE_MS } from '../../constants/zenithQueryStale'
 import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../../types/zenithExplorer'
+import { useZenithExplorerQuery } from '../../hooks/useZenithExplorerQuery'
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
 import ForecastKPI from './ForecastKPI'
@@ -242,9 +243,9 @@ export default function ZenithExecutiveBody({
       ? focusData.salesPipeline.rows
       : []
 
-  const hitListResult = useHitList(pipelineRows, role, user ?? null)
+  const { data: explorerProjects = [] } = useZenithExplorerQuery(effFYs, effQ, effM, !!user)
 
-  const explorerProjects = (data?.zenithExplorerProjects ?? []) as ZenithExplorerProject[]
+  const hitListResult = useHitList(pipelineRows, role, user ?? null)
   const availingLoanProjectsUrl = buildProjectsUrl({ availingLoan: true }, dateFilter)
   const lostDealsPageUrl = buildLostDealsUrl(dateFilter)
   const outstandingProjectsUrl = buildProjectsUrl(

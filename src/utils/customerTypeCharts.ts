@@ -22,24 +22,31 @@ export type CustomerTypeChartSlice = {
   percentage?: string;
 };
 
-/** Sum order value grouped by linked customer’s Customer Master type. */
+/** Sum order value grouped by linked customer’s Customer Master type (SQL GROUP BY). */
 export async function aggregateProjectsByCustomerType(
   where: Prisma.ProjectWhereInput,
 ): Promise<CustomerTypeChartSlice[]> {
-  const rows = await prisma.project.findMany({
+  const grouped = await prisma.project.groupBy({
+    by: ['customerId'],
     where,
-    select: {
-      projectCost: true,
-      customer: { select: { customerType: true } },
-    },
+    _sum: { projectCost: true },
+    _count: { _all: true },
   });
 
+  if (grouped.length === 0) return [];
+
+  const types = await prisma.customer.findMany({
+    where: { id: { in: grouped.map((g) => g.customerId) } },
+    select: { id: true, customerType: true },
+  });
+  const typeById = new Map(types.map((c) => [c.id, c.customerType ?? 'RESIDENTIAL']));
+
   const map = new Map<string, { value: number; count: number }>();
-  for (const row of rows) {
-    const ct = row.customer?.customerType ?? 'RESIDENTIAL';
+  for (const row of grouped) {
+    const ct = typeById.get(row.customerId) ?? 'RESIDENTIAL';
     const cur = map.get(ct) ?? { value: 0, count: 0 };
-    cur.value += Number(row.projectCost) || 0;
-    cur.count += 1;
+    cur.value += Number(row._sum.projectCost) || 0;
+    cur.count += row._count._all;
     map.set(ct, cur);
   }
 
