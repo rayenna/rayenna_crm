@@ -51,9 +51,12 @@ function renderTickerItems(items: ZenithTickerItem[], keySuffix: 'a' | 'b') {
 export default function ZenithAiInsightsTicker({
   items,
   isLoading,
+  belowKpis = false,
 }: {
   items: ZenithTickerItem[]
   isLoading: boolean
+  /** Sit under the KPI strip: full-bleed in the body, borders above and below. */
+  belowKpis?: boolean
 }) {
   const marqueeRef = useRef<HTMLDivElement | null>(null)
   const [durationS, setDurationS] = useState<number>(32)
@@ -80,10 +83,21 @@ export default function ZenithAiInsightsTicker({
     return () => ro.disconnect()
   }, [items.length])
 
+  const rootClass = [
+    'zenith-ai-insights-root bg-[color:color-mix(in srgb,var(--bg-surface) 96%, transparent)]',
+    belowKpis
+      ? 'zenith-ai-insights-root--below-kpis -mx-3 sm:-mx-5 border-y border-[color:var(--border-default)]'
+      : 'border-b border-[color:var(--border-default)]',
+  ].join(' ')
+
+  const innerClass = belowKpis
+    ? 'px-3 sm:px-5 py-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 min-h-0'
+    : 'zenith-exec-main mx-auto px-3 sm:px-5 py-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 min-h-0'
+
   if (isLoading && items.length === 0) {
     return (
-      <div className="zenith-ai-insights-root border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 96%, transparent)]">
-        <div className="zenith-exec-main mx-auto px-3 sm:px-5 py-2 flex flex-col sm:block">
+      <div className={rootClass}>
+        <div className={belowKpis ? 'px-3 sm:px-5 py-2 flex flex-col sm:block' : 'zenith-exec-main mx-auto px-3 sm:px-5 py-2 flex flex-col sm:block'}>
           <div className="h-10 sm:h-9 rounded-full bg-[color:var(--bg-ticker)] zenith-skeleton" aria-hidden />
         </div>
       </div>
@@ -93,8 +107,8 @@ export default function ZenithAiInsightsTicker({
   if (items.length === 0) return null
 
   return (
-    <div className="zenith-ai-insights-root border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 96%, transparent)]">
-      <div className="zenith-exec-main mx-auto px-3 sm:px-5 py-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 min-h-0">
+    <div className={rootClass}>
+      <div className={innerClass}>
         <div className="flex items-center justify-center sm:justify-start shrink-0">
           <span className="zenith-display text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.22em] inline-flex items-center gap-1.5">
             <span

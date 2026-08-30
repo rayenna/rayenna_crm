@@ -2,7 +2,7 @@
 
 **Zenith** is Rayenna CRM’s full-screen **command center for analytics**. It uses the **same trusted numbers and date-filter rules** as the classic **[Dashboard](/help/dashboard)**, with Zenith styling in **Light** and **Dark** theme.
 
-> **Summary:** **Solar News** and **AI Insights** ribbons sit under the sticky **command bar**. **Your Focus** holds collapsible, role-specific panels. **Charts, KPIs, and the deal funnel** open **Quick Actions** or **Open in Projects →** with matching filters. On phones, a **bottom tab bar** shows one section at a time. With the CRM installed as a **PWA**, Zenith can show **saved dashboard data** offline and **queue** drawer changes until you reconnect.
+> **Summary:** **Solar News** sits under the sticky **command bar**, then the **KPI tiles**, then **AI Insights**. **Your Focus** holds collapsible, role-specific panels. **Charts, KPIs, and the deal funnel** open **Quick Actions** or **Open in Projects →** with matching filters. On phones, a **bottom tab bar** shows one section at a time. With the CRM installed as a **PWA**, Zenith can show **saved dashboard data** offline and **queue** drawer changes until you reconnect.
 
 ## Classic Dashboard vs Zenith
 

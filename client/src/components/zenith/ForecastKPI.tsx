@@ -299,7 +299,8 @@ export default function ForecastKPI({
 
   const ROW_SLOT_PX = 34
   const BREAKDOWN_H = ROW_SLOT_PX * 3 + 6
-  const FOOTER_H = 28
+  /** Keep “+N more” fully inside the card — never clipped by flex shrink. */
+  const FOOTER_H = 40
 
   const weightsPortal =
     legendOpen && legendPos && typeof document !== 'undefined'
@@ -440,10 +441,10 @@ export default function ForecastKPI({
   return (
     <div
       className={[
-        'zenith-forecast-root relative box-border flex w-full shrink-0 flex-col rounded-[14px] border border-[color:var(--accent-teal-border)] bg-[color:var(--bg-card)] p-3.5 shadow-[0_1px_0_color-mix(in_srgb,#ffffff_55%,transparent)] sm:p-4',
+        'zenith-forecast-root relative box-border flex w-full shrink-0 flex-col overflow-hidden rounded-[14px] border border-[color:var(--accent-teal-border)] bg-[color:var(--bg-card)] p-3.5 pb-3 shadow-[0_1px_0_color-mix(in_srgb,#ffffff_55%,transparent)] sm:p-4 sm:pb-3.5',
         compactSidebar
-          ? 'h-full min-h-[280px] w-full flex-1 lg:min-h-full'
-          : 'h-auto min-h-[360px] sm:min-h-[368px]',
+          ? 'h-full min-h-0 w-full flex-1'
+          : 'h-auto min-h-[448px] sm:min-h-[448px]',
       ].join(' ')}
       style={{ fontFamily: 'DM Sans, sans-serif' }}
     >
@@ -458,7 +459,7 @@ export default function ForecastKPI({
             setLegendOpen((v) => !v)
             setMoreOpen(false)
           }}
-          className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-[color:var(--text-muted)] hover:bg-[color:var(--accent-teal-muted)] hover:text-[color:var(--accent-teal)] transition-colors cursor-pointer touch-manipulation"
+          className="zenith-forecast-weights inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-[color:var(--text-muted)] hover:bg-[color:var(--accent-teal-muted)] hover:text-[color:var(--accent-teal)] transition-colors cursor-pointer touch-manipulation"
           aria-expanded={legendOpen}
           aria-controls="forecast-weight-legend"
           title="Stage win probabilities"
@@ -539,7 +540,7 @@ export default function ForecastKPI({
             type="button"
             title={b.title}
             onClick={() => setBand(b.key)}
-            className={`flex-1 rounded-md px-1.5 py-1 text-[10px] font-semibold transition-colors cursor-pointer touch-manipulation ${
+            className={`zenith-forecast-seg flex-1 rounded-md px-1.5 py-1 text-[10px] font-semibold leading-tight transition-colors cursor-pointer touch-manipulation ${
               band === b.key
                 ? 'bg-[color:var(--bg-card)] text-[color:var(--accent-teal)] shadow-sm'
                 : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]'
@@ -562,7 +563,7 @@ export default function ForecastKPI({
             type="button"
             title={t.title}
             onClick={() => setTiming(t.key)}
-            className={`flex-1 rounded-md px-1 py-1 text-[10px] font-semibold transition-colors cursor-pointer touch-manipulation ${
+            className={`zenith-forecast-seg flex-1 min-w-0 rounded-md px-0.5 py-1 text-[10px] font-semibold leading-tight transition-colors cursor-pointer touch-manipulation ${
               timing === t.key
                 ? 'bg-[color:var(--bg-card)] text-[color:var(--accent-teal)] shadow-sm'
                 : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]'
@@ -606,13 +607,13 @@ export default function ForecastKPI({
       </div>
 
       <div
-        className="mt-auto flex min-h-0 flex-1 flex-col"
+        className="mt-auto flex min-h-0 flex-1 flex-col justify-end"
         style={{ minHeight: BREAKDOWN_H + FOOTER_H }}
       >
-        <div className="flex min-h-0 flex-1 flex-col justify-start" style={{ minHeight: BREAKDOWN_H }}>
+        <div className="flex shrink-0 flex-col justify-start" style={{ height: BREAKDOWN_H }}>
           {activeDimension.length === 0 ? (
-            <div className="h-full flex items-center justify-center px-2">
-              <p className="text-xs text-[color:var(--text-muted)] text-center">{emptyMessage()}</p>
+            <div className="flex h-full items-center justify-center px-2">
+              <p className="text-center text-xs text-[color:var(--text-muted)]">{emptyMessage()}</p>
             </div>
           ) : (
             [0, 1, 2].map((slot) => {
@@ -633,24 +634,24 @@ export default function ForecastKPI({
                   key={item.label}
                   type="button"
                   onClick={() => openSlice(item.label)}
-                  className="shrink-0 flex flex-col justify-center w-full text-left rounded-md px-0.5 -mx-0.5 hover:bg-[color:var(--accent-teal-muted)]/50 transition-colors cursor-pointer touch-manipulation focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-teal)]"
+                  className="flex w-full shrink-0 cursor-pointer touch-manipulation flex-col justify-center rounded-md px-0.5 -mx-0.5 text-left transition-colors hover:bg-[color:var(--accent-teal-muted)]/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-teal)]"
                   style={{ height: ROW_SLOT_PX }}
                   title={`Open ${item.count} deal${item.count === 1 ? '' : 's'} · raw ${formatINR(item.raw)}`}
                 >
-                  <div className="flex justify-between gap-2 mb-0.5">
+                  <div className="mb-0.5 flex justify-between gap-2">
                     <span
-                      className="text-[11px] text-[color:var(--text-secondary)] truncate max-w-[60%]"
+                      className="max-w-[60%] truncate text-[11px] text-[color:var(--text-secondary)]"
                       title={item.label}
                     >
                       {item.label}
                     </span>
-                    <span className="text-[11px] font-medium shrink-0 text-[color:var(--accent-teal)]">
+                    <span className="shrink-0 text-[11px] font-medium text-[color:var(--accent-teal)]">
                       {formatINR(item.weighted)}
                     </span>
                   </div>
-                  <div className="h-[3px] rounded-sm bg-[color:var(--bg-ticker)] overflow-hidden">
+                  <div className="h-[3px] overflow-hidden rounded-sm bg-[color:var(--bg-ticker)]">
                     <div
-                      className="h-full rounded-sm transition-[width] duration-[600ms] ease-out bg-[color:var(--accent-teal)]"
+                      className="h-full rounded-sm bg-[color:var(--accent-teal)] transition-[width] duration-[600ms] ease-out"
                       style={{
                         width: `${top > 0 ? (item.weighted / top) * 100 : 0}%`,
                         opacity: 1 - i * 0.25,
@@ -663,7 +664,10 @@ export default function ForecastKPI({
           )}
         </div>
 
-        <div className="shrink-0 flex items-center pb-0.5" style={{ height: FOOTER_H }}>
+        <div
+          className="flex shrink-0 items-center border-t border-transparent pt-1"
+          style={{ minHeight: FOOTER_H }}
+        >
           {remaining > 0 ? (
             <button
               ref={moreBtnRef}
@@ -672,7 +676,7 @@ export default function ForecastKPI({
                 setMoreOpen((v) => !v)
                 setLegendOpen(false)
               }}
-              className="text-[11px] leading-snug text-left w-full cursor-pointer hover:text-[color:var(--accent-teal)] text-[color:var(--text-muted)] transition-colors"
+              className="zenith-forecast-more flex w-full cursor-pointer touch-manipulation items-center py-0.5 text-left text-[11px] leading-snug text-[color:var(--text-muted)] transition-colors hover:text-[color:var(--accent-teal)]"
               aria-expanded={moreOpen}
               aria-haspopup="dialog"
               aria-controls="forecast-more-categories"
@@ -681,7 +685,7 @@ export default function ForecastKPI({
             </button>
           ) : (
             <span
-              className="text-[11px] leading-snug text-left w-full text-[color:var(--text-muted)] opacity-0 pointer-events-none select-none"
+              className="pointer-events-none w-full select-none py-0.5 text-left text-[11px] leading-snug text-[color:var(--text-muted)] opacity-0"
               aria-hidden
             >
               +

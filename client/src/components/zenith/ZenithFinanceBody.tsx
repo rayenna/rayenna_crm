@@ -10,7 +10,7 @@ import {
   Legend,
   Cell,
 } from 'recharts'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, type ReactNode } from 'react'
 import { useChartColors } from '../../hooks/useChartColors'
 import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTooltipStyles'
 import { useQuery } from '@tanstack/react-query'
@@ -115,6 +115,7 @@ export default function ZenithFinanceBody({
   onOpenDrawerListMode,
   onOpenFinanceDrawer,
   mobileTab = null,
+  insightsBar = null,
 }: {
   data: Record<string, unknown>
   isLoading: boolean
@@ -128,6 +129,7 @@ export default function ZenithFinanceBody({
   }) => void
   onOpenFinanceDrawer?: (projectId: string) => void
   mobileTab?: ZenithMobileTab | null
+  insightsBar?: ReactNode
 }) {
   const { user } = useAuth()
   const chartColors = useChartColors()
@@ -276,8 +278,11 @@ export default function ZenithFinanceBody({
 
   if (isLoading) {
     return (
-      <div className="px-3 sm:px-5 py-6 space-y-6 max-w-[1600px] mx-auto">
-        <div className="zenith-skeleton h-40 rounded-2xl" />
+      <div className="px-3 sm:px-5 pt-3 pb-6 space-y-6 max-w-[1600px] mx-auto">
+        <div className="zenith-kpi-ticker-stack">
+          <div className="zenith-skeleton h-40 rounded-2xl" />
+          {insightsBar}
+        </div>
       </div>
     )
   }
@@ -328,13 +333,14 @@ export default function ZenithFinanceBody({
   const showMore = isZenithMobileTabActive(mobileTab, 'more')
 
   return (
-    <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-6 space-y-8 pb-24 max-lg:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
+    <div className="max-w-[1600px] mx-auto px-3 sm:px-5 pt-3 lg:pt-4 space-y-8 pb-24 max-lg:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
       {showOverview ? (
         <>
+          <div className="zenith-kpi-ticker-stack">
           {/* Row 1: finance KPIs — full width, original tile sizes */}
           <div
             id="zenith-kpis"
-            className="grid w-full grid-cols-2 gap-3 pb-2 scroll-mt-28 sm:grid-cols-3 lg:grid-cols-5"
+            className="grid w-full grid-cols-2 gap-3 scroll-mt-28 lg:grid-cols-5"
           >
             {kpis.map((k, i) => (
               <div key={k.key} className="min-w-0">
@@ -353,12 +359,14 @@ export default function ZenithFinanceBody({
               </div>
             ))}
           </div>
+          {insightsBar}
+          </div>
 
-          {/* Row 2: Today's plan | Weighted open pipeline — equal width + matched height from md */}
-          <div className="grid w-full grid-cols-1 gap-3 scroll-mt-28 md:grid-cols-2 md:items-stretch md:gap-4">
+          {/* Row 2: Today's plan | Weighted open pipeline */}
+          <div className="grid w-full grid-cols-1 gap-3 scroll-mt-28 min-[744px]:grid-cols-2 min-[744px]:items-stretch min-[744px]:gap-4">
             <div
               id="zenith-todays-plan"
-              className="flex min-h-0 min-w-0 flex-col scroll-mt-28 md:h-full"
+              className="zenith-overview-panel flex min-h-0 min-w-0 flex-col scroll-mt-28"
             >
               <DashboardPlanAttentionRow
                 stackAttention
@@ -370,7 +378,7 @@ export default function ZenithFinanceBody({
                 }}
               />
             </div>
-            <div className="flex min-h-0 min-w-0 flex-col md:h-full [&_.zenith-forecast-root]:h-full">
+            <div className="zenith-overview-panel flex min-h-0 min-w-0 flex-col [&_.zenith-forecast-root]:h-full">
               <ForecastKPI
                 compactSidebar
                 role={UserRole.FINANCE}
@@ -385,7 +393,9 @@ export default function ZenithFinanceBody({
             </div>
           </div>
         </>
-      ) : null}
+      ) : (
+        insightsBar
+      )}
       {showPipeline ? (
       <>
       <div id="zenith-focus" className="scroll-mt-28">

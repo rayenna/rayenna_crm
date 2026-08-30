@@ -189,11 +189,11 @@ export default function HitList({
       initial={{ opacity: 0, y: -16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="zenith-hit-list mb-5 flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl ring-1 ring-[color:var(--border-default)] md:mb-6 lg:mb-0"
+      className="zenith-hit-list mb-0 flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl ring-1 ring-[color:var(--border-default)]"
       style={{ ...cardBase, borderLeft }}
     >
       <div
-        className="flex shrink-0 flex-wrap items-start justify-between gap-2 md:gap-2 px-5 py-4 md:px-3.5 md:py-2.5"
+        className="zenith-hit-list-header flex shrink-0 flex-wrap items-start justify-between gap-2 md:gap-2 px-5 py-4 md:px-3.5 md:py-2.5"
         style={{
           borderBottom: '1px solid var(--border-default)',
         }}
@@ -246,7 +246,7 @@ export default function HitList({
       </div>
 
       {allClear ? (
-        <div className="flex flex-col items-center justify-center gap-1 min-h-[64px] md:min-h-[52px] px-5 md:px-3.5 py-3 md:py-2 lg:min-h-0 lg:flex-1">
+        <div className="zenith-hit-list-allclear flex flex-col items-center justify-center gap-1 min-h-[64px] md:min-h-[52px] px-5 md:px-3.5 py-3 md:py-2 lg:min-h-0 lg:flex-1">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-[18px] h-[18px] md:w-4 md:h-4 shrink-0" color="var(--accent-teal)" aria-hidden />
             <span
@@ -264,7 +264,7 @@ export default function HitList({
           </p>
         </div>
       ) : (
-        <div className="flex h-full min-h-[8rem] w-full max-h-[min(42vh,320px)] flex-col overflow-hidden overscroll-y-contain sm:max-h-[min(44vh,340px)] lg:min-h-0 lg:max-h-none lg:flex-1">
+        <div className="zenith-hit-list-main flex h-full min-h-[8rem] w-full max-h-[min(42vh,320px)] flex-col overflow-hidden overscroll-y-contain sm:max-h-[min(44vh,340px)] lg:min-h-0 lg:max-h-none lg:flex-1">
           <div
             className="shrink-0 border-b border-[color:var(--border-default)] px-3 py-1.5 md:px-2 md:py-1.5"
             style={{ fontFamily: 'var(--zenith-font-body)' }}

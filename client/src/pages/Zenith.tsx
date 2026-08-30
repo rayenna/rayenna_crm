@@ -318,6 +318,15 @@ const Zenith = () => {
 
   const mobileTabProp = narrow ? mobileTab : null
 
+  const insightsBar =
+    !isFyError && user?.role && (hasZenithBodyData || !isError) ? (
+      <ZenithAiInsightsTicker
+        belowKpis
+        items={tickerItems}
+        isLoading={isLoading && !hasZenithBodyData}
+      />
+    ) : null
+
   const body = useMemo(() => {
     if (!user?.role) return null
     const data = zenithDataClean
@@ -333,6 +342,7 @@ const Zenith = () => {
             dateFilter={dateFilter}
             onOpenDrawerListMode={openDrawerListMode}
             mobileTab={mobileTabProp}
+            insightsBar={insightsBar}
             onOpenFinanceDrawer={
               user.role === UserRole.ADMIN || user.role === UserRole.MANAGEMENT
                 ? financeQuickDrawer.open
@@ -350,6 +360,7 @@ const Zenith = () => {
             dateFilter={dateFilter}
             onOpenDrawerListMode={openDrawerListMode}
             mobileTab={mobileTabProp}
+            insightsBar={insightsBar}
             onOpenOperationsDrawer={operationsQuickDrawer.open}
             onOpenProjectQuickDrawer={openZenithProjectQuickDrawer}
           />
@@ -362,6 +373,7 @@ const Zenith = () => {
             dateFilter={dateFilter}
             onOpenDrawerListMode={openDrawerListMode}
             mobileTab={mobileTabProp}
+            insightsBar={insightsBar}
             onOpenFinanceDrawer={financeQuickDrawer.open}
           />
         )
@@ -382,6 +394,7 @@ const Zenith = () => {
     operationsQuickDrawer.open,
     openZenithProjectQuickDrawer,
     mobileTabProp,
+    insightsBar,
   ])
 
   return (
@@ -420,12 +433,8 @@ const Zenith = () => {
 
       <div id="zenith-mobile-nav-sentinel" className="h-0 w-0 overflow-hidden" aria-hidden />
 
-      {/* Solar news — place above AI insights bar */}
+      {/* Solar news — above KPI tiles; AI Insights is passed into each role body under the tiles */}
       {user?.role ? <SolarNewsTicker deferLoadMs={2000} /> : null}
-
-      {!isFyError && user?.role && (hasZenithBodyData || !isError) ? (
-        <ZenithAiInsightsTicker items={tickerItems} isLoading={isLoading && !hasZenithBodyData} />
-      ) : null}
 
       {showQuickActionDrawer && quickAction.listMode && quickAction.isOpen ? (
         <div

@@ -1,11 +1,10 @@
 # Ribbons and KPIs
 
-Below the sticky command bar: **Solar News**, **AI Insights**, then the **KPI strip** and **Weighted open pipeline** tile (executive roles).
-
+Below the sticky command bar: **Solar News**, then the **KPI strip**, then **AI Insights**, then the rest of the overview (including **Weighted open pipeline** on executive roles).
 
 ## Solar News ticker
 
-**Where** — Full-width strip **below** the command bar and **above** [AI Insights](#ai-insights-ticker).
+**Where** — Full-width strip **below** the command bar and **above** the KPI tiles.
 
 **What** — Short **headlines** from a fixed set of **solar / energy RSS feeds** (no HTML scraping). The CRM server fetches and normalises feeds on a **~30 minute** cache (`/api/solar-news`); the browser loads the ticker from that API after login.
 
@@ -17,7 +16,7 @@ Below the sticky command bar: **Solar News**, **AI Insights**, then the **KPI st
 
 ## AI Insights ticker
 
-Directly **below** **Solar News**, Zenith shows an **AI Insights** ribbon: a **horizontal scrolling strip** of short, plain-English highlights derived from the **same dashboard data** already loaded for your filters (no external AI service).
+Directly **below** the **KPI tiles**, Zenith shows an **AI Insights** ribbon: a **horizontal scrolling strip** of short, plain-English highlights derived from the **same dashboard data** already loaded for your filters (no external AI service). The KPI strip sits **between** Solar News (above) and AI Insights (below) for every role.
 
 - **Content** — Examples include conversion vs a simple benchmark, top pipeline or revenue by salesperson, stale pipeline signals, revenue vs a prior period, loan concentration by bank, and role-relevant finance or operations notes. The exact lines change with your **role** and **filters**.
 - **Motion** — Text scrolls continuously; **hover** over the strip to **pause** scrolling.
@@ -46,7 +45,7 @@ Metrics and labels are **role-specific** (see below). **Sales** sees data **scop
 
 ## Weighted open pipeline (Revenue Forecast tile)
 
-**Where** — Beside the KPI grid on **Sales**, **Management**, **Admin**, **Finance**, and **Operations** Zenith.
+**Where** — On **Sales / Management / Admin**: below the full-width KPI grid, beside **Things needing attention**. On **Finance / Operations**: beside **Today’s plan**.
 
 **What the big number is** — A **weighted open pipeline** total, **not** cash or collections. Each **open** deal (not Completed, not Subsidy Credited, not Lost) contributes **order value × a win probability for its current stage**. **Early** stages are discounted (Lead 10% … Proposal 45%); **Confirmed+** count at **100%** for scheduling. Use **Weights** for the chip list.
 

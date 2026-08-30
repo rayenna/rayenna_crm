@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -50,6 +50,9 @@ import { useZenithExplorerQuery } from '../../hooks/useZenithExplorerQuery'
 import type { DrilldownOpts } from '../../utils/zenithChartDrilldown'
 import { buildFilterLabel, filterProjectsByChartSlice } from '../../utils/zenithChartDrilldown'
 import ForecastKPI from './ForecastKPI'
+import DashboardMyDayPlanCard from '../dashboard/DashboardMyDayPlanCard'
+import DashboardLifecycleBrandReminder from '../dashboard/DashboardLifecycleBrandReminder'
+import { dataSenseHitsOnExplorerProjects } from '../../utils/dataSense'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
 import { ZENITH_CHART_GROUP } from '../../constants/zenithChartGroups'
 import type { ZenithChartGroup } from '../../constants/zenithChartGroups'
@@ -69,7 +72,6 @@ import ZenithLifecycleBrandBarCharts from './ZenithLifecycleBrandBarCharts'
 import { ZENITH_CHART_HEIGHT_FLOOR, zenithStandardChartHeight } from './zenithChartHeight'
 import { isZenithMobileTabActive } from './zenithMobileTabVisibility'
 import type { ZenithMobileTab } from './zenithMobileNav'
-import DashboardPlanAttentionRow from '../dashboard/DashboardPlanAttentionRow'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent, Landmark, XCircle, Wallet]
 
@@ -99,13 +101,16 @@ function monthsInSelectedPeriod(dateFilter: ZenithDateFilter): number {
   return 1
 }
 
-function ZenithSkeleton() {
+function ZenithSkeleton({ insightsBar }: { insightsBar?: ReactNode }) {
   return (
-    <div className="zenith-exec-main mx-auto space-y-5 px-3 sm:px-5 py-5 lg:py-6">
-      <div className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div key={i} className="zenith-skeleton h-32 rounded-xl min-w-0" />
-        ))}
+    <div className="zenith-exec-main mx-auto space-y-5 px-3 sm:px-5 pt-3 pb-5 lg:pt-4 lg:pb-6">
+      <div className="zenith-kpi-ticker-stack">
+        <div className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="zenith-skeleton h-32 rounded-xl min-w-0" />
+          ))}
+        </div>
+        {insightsBar}
       </div>
       <div className="zenith-skeleton h-40 rounded-xl" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -179,6 +184,7 @@ export default function ZenithExecutiveBody({
   onOpenOperationsDrawer,
   onOpenProjectQuickDrawer,
   mobileTab = null,
+  insightsBar = null,
 }: {
   role: UserRole
   data: Record<string, unknown>
@@ -197,6 +203,8 @@ export default function ZenithExecutiveBody({
   onOpenProjectQuickDrawer: (p: QuickActionProjectRef, section?: ZenithAutoFocusSection | null) => void
   /** Mobile-only: one tab visible at a time; null = desktop (show all). */
   mobileTab?: ZenithMobileTab | null
+  /** AI Insights ticker — rendered under the KPI tiles. */
+  insightsBar?: ReactNode
 }) {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -368,36 +376,23 @@ export default function ZenithExecutiveBody({
     })
   }, [explorerProjects, onOpenDrawerListMode, outstandingProjectsUrl])
 
-  /** Match Hit List height to Today's plan column on lg+ (side-by-side action row). */
-  const planBandRef = useRef<HTMLDivElement>(null)
-  const [planBandHeightPx, setPlanBandHeightPx] = useState(0)
+  const attentionTileParams = useMemo(
+    () => ({
+      selectedFYs: dateFilter.selectedFYs,
+      selectedQuarters: dateFilter.selectedQuarters,
+      selectedMonths: dateFilter.selectedMonths,
+    }),
+    [dateFilter.selectedFYs, dateFilter.selectedMonths, dateFilter.selectedQuarters],
+  )
 
-  useLayoutEffect(() => {
-    if (!showHitList) {
-      setPlanBandHeightPx(0)
-      return
-    }
-    const el = planBandRef.current
-    if (!el) return
-    const mq = window.matchMedia('(min-width: 1024px)')
-    const sync = () => {
-      if (!mq.matches) {
-        setPlanBandHeightPx(0)
-        return
-      }
-      setPlanBandHeightPx(el.offsetHeight)
-    }
-    sync()
-    const ro = new ResizeObserver(sync)
-    ro.observe(el)
-    mq.addEventListener('change', sync)
-    window.addEventListener('resize', sync)
-    return () => {
-      ro.disconnect()
-      mq.removeEventListener('change', sync)
-      window.removeEventListener('resize', sync)
-    }
-  }, [showHitList, focusLoading, isLoading])
+  const showLifecycleReminder = role === UserRole.SALES || role === UserRole.ADMIN
+  const showDataSenseReminder =
+    role === UserRole.SALES || role === UserRole.ADMIN || role === UserRole.MANAGEMENT
+  const attentionDataSenseHits = useMemo(
+    () =>
+      showDataSenseReminder ? dataSenseHitsOnExplorerProjects(explorerProjects) : [],
+    [explorerProjects, showDataSenseReminder],
+  )
 
   const { data: revLeadData } = useQuery({
     queryKey: ['zenith', 'revenueLead', effFYs, effQ, effM, user?.role],
@@ -455,7 +450,7 @@ export default function ZenithExecutiveBody({
     [drill],
   )
 
-  if (isLoading) return <ZenithSkeleton />
+  if (isLoading) return <ZenithSkeleton insightsBar={insightsBar} />
 
   const kpis = buildExecutiveZenithKpis(role, data, dateFilter.selectedFYs)
   const totalCapacityKW = Number(kpis.find((k) => k.key === 'capacity')?.value ?? 0)
@@ -537,29 +532,17 @@ export default function ZenithExecutiveBody({
   const showMore = isZenithMobileTabActive(mobileTab, 'more')
 
   return (
-    <div className="zenith-exec-main mx-auto px-3 sm:px-5 py-5 lg:py-6 pb-24 max-lg:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] space-y-5 lg:space-y-6">
+    <div className="zenith-exec-main mx-auto px-3 sm:px-5 pt-3 lg:pt-4 pb-24 max-lg:pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] space-y-5 lg:space-y-6">
       {showOverview ? (
         <>
-          {/*
-            A. One CSS grid: 8 equal KPI cells + forecast spanning both rows.
-            Use 1fr/1fr (not Tailwind grid-rows-2 — that is auto tracks and leaves a gap under KPIs).
-          */}
+          <div className="zenith-kpi-ticker-stack">
+          {/* Row 1: KPI tiles full width — same 2×4 / 2-col rhythm as Ops/Finance */}
           <div
             id="zenith-kpis"
-            className={[
-              'grid scroll-mt-28 gap-2.5 sm:gap-3',
-              'grid-cols-2',
-              'md:grid-cols-4',
-              // Laptop: 4 KPI columns + forecast column; two equal-height rows
-              'lg:grid-cols-[repeat(4,minmax(0,1fr))_minmax(17.5rem,22rem)]',
-              'lg:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]',
-              'lg:items-stretch',
-              // Floor so 1fr rows resolve (Tailwind grid-rows-2 uses auto and left a gap)
-              'lg:min-h-[22.5rem]',
-            ].join(' ')}
+            className="grid w-full grid-cols-2 gap-2.5 scroll-mt-28 sm:gap-3 lg:grid-cols-4"
           >
             {kpis.map((k, i) => (
-              <div key={k.key} className="min-h-0 min-w-0 h-full">
+              <div key={k.key} className="min-h-0 min-w-0">
                 {k.key === 'capacity' ? (
                   <KPIGauge
                     totalKW={totalCapacityKW}
@@ -584,16 +567,26 @@ export default function ZenithExecutiveBody({
                 )}
               </div>
             ))}
-            <div
-              className={[
-                'flex min-h-0 min-w-0 flex-col',
-                // Mobile / iPad: full width under KPIs
-                'col-span-2 md:col-span-4',
-                // Laptop: right column spanning both rows — same height as the 2×4 KPI block
-                'lg:col-span-1 lg:col-start-5 lg:row-span-2 lg:row-start-1',
-                'lg:h-full',
-              ].join(' ')}
-            >
+          </div>
+          {insightsBar}
+          </div>
+
+          {/* Row 2: Things needing attention | Weighted open pipeline — equal height */}
+          <div className="grid w-full grid-cols-1 gap-3 scroll-mt-28 min-[744px]:grid-cols-2 min-[744px]:items-stretch min-[744px]:gap-4">
+            <div className="zenith-overview-panel flex min-h-0 min-w-0 flex-col">
+              <DashboardLifecycleBrandReminder
+                fillHeight
+                showEmptyAllClear
+                compact
+                paired
+                projects={explorerProjects}
+                tileParams={attentionTileParams}
+                showBrandGaps={showLifecycleReminder}
+                dataSenseHits={attentionDataSenseHits}
+                className="h-full"
+              />
+            </div>
+            <div className="zenith-overview-panel flex min-h-0 min-w-0 flex-col [&_.zenith-forecast-root]:h-full">
               <ForecastKPI
                 compactSidebar
                 role={role}
@@ -608,39 +601,24 @@ export default function ZenithExecutiveBody({
             </div>
           </div>
 
-          {/* B. Today's plan + Hit List — equal width on lg+ */}
-          <div className="grid grid-cols-1 gap-4 scroll-mt-28 lg:grid-cols-2 lg:items-start lg:gap-4">
+          {/* Row 3: Today's plan | Today's Hit List — same panel height */}
+          <div className="grid w-full grid-cols-1 gap-3 scroll-mt-28 min-[744px]:grid-cols-2 min-[744px]:items-stretch min-[744px]:gap-4">
             <div
               id="zenith-todays-plan"
-              ref={planBandRef}
-              className="min-w-0 w-full scroll-mt-28"
+              className="zenith-overview-panel flex min-h-0 min-w-0 flex-col scroll-mt-28"
             >
-              <DashboardPlanAttentionRow
-                stackAttention
-                showLifecycleReminder={role === UserRole.SALES || role === UserRole.ADMIN}
-                showDataSenseReminder={
-                  role === UserRole.SALES || role === UserRole.ADMIN || role === UserRole.MANAGEMENT
-                }
-                explorerProjects={explorerProjects}
-                tileParams={{
-                  selectedFYs: dateFilter.selectedFYs,
-                  selectedQuarters: dateFilter.selectedQuarters,
-                  selectedMonths: dateFilter.selectedMonths,
-                }}
-              />
+              <DashboardMyDayPlanCard fillHeight paired className="h-full" />
             </div>
             {focusLoading ? (
               <div
                 id="zenith-hit-list"
-                className="zenith-skeleton h-36 w-full min-w-0 rounded-xl"
-                style={planBandHeightPx > 0 ? { height: planBandHeightPx } : undefined}
+                className="zenith-overview-panel zenith-skeleton w-full min-w-0 rounded-xl"
                 aria-hidden
               />
-            ) : (
+            ) : showHitList ? (
               <div
                 id="zenith-hit-list"
-                className="scroll-mt-28 flex min-w-0 w-full flex-col lg:min-h-0 lg:overflow-hidden"
-                style={planBandHeightPx > 0 ? { height: planBandHeightPx } : undefined}
+                className="zenith-overview-panel flex min-h-0 min-w-0 flex-col overflow-hidden scroll-mt-28"
               >
                 <HitList
                   hitList={hitListResult.hitList}
@@ -650,10 +628,12 @@ export default function ZenithExecutiveBody({
                   onOpenDrawer={(p) => onOpenProjectQuickDrawer(p)}
                 />
               </div>
-            )}
+            ) : null}
           </div>
         </>
-      ) : null}
+      ) : (
+        insightsBar
+      )}
 
       {showOverview &&
       (role === UserRole.SALES || role === UserRole.ADMIN || role === UserRole.MANAGEMENT) ? (

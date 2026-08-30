@@ -299,6 +299,60 @@
   max-width: 1520px;
 }
 
+/**
+ * Shared height for overview panels (Attention, Weighted pipeline, Today's plan, Hit List,
+ * and Ops/Finance plan | pipeline). Forecast (incl. +N more) is the reference.
+ *
+ * Phone (stacked): same fixed height so tiles match; inner lists scroll.
+ * iPad / tablet (2-col, < lg): slightly taller for 40px tap targets on forecast.
+ * Desktop (lg+): 28rem.
+ */
+.zenith-root .zenith-overview-panel {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 28rem;
+  min-height: 28rem;
+  max-height: 28rem;
+}
+
+.zenith-root .zenith-overview-panel > * {
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+}
+
+@media (max-width: 1023px) {
+  .zenith-root .zenith-overview-panel {
+    /* Extra height vs desktop: band/timing/tabs use 40px tap targets. */
+    height: 32rem;
+    min-height: 32rem;
+    max-height: 32rem;
+  }
+
+  /* Hit List otherwise caps at ~42vh until lg — leaves empty space in the shared panel on iPad. */
+  .zenith-root .zenith-overview-panel .zenith-hit-list-main,
+  .zenith-root .zenith-overview-panel .zenith-hit-list-allclear {
+    max-height: none;
+    min-height: 0;
+    flex: 1 1 0%;
+  }
+
+  .zenith-root .zenith-overview-panel .zenith-hit-list-header {
+    padding: 0.625rem 0.875rem;
+  }
+
+  .zenith-root .zenith-forecast-seg {
+    min-height: 40px;
+  }
+
+  .zenith-root .zenith-forecast-more,
+  .zenith-root .zenith-forecast-weights {
+    min-height: 40px;
+  }
+}
+
 .zenith-root .zenith-exec-section {
   border-top: 1px solid var(--border-default);
   padding-top: 1.25rem;
@@ -550,6 +604,19 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
     0 0 12px rgba(245, 166, 35, 0.85),
     0 0 24px rgba(0, 212, 180, 0.45);
   z-index: 5;
+}
+
+/* KPI strip sits between Solar News (page-level) and AI Insights (below tiles). */
+.zenith-root .zenith-kpi-ticker-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (min-width: 1024px) {
+  .zenith-root .zenith-kpi-ticker-stack {
+    gap: 1rem;
+  }
 }
 
 /* AI Insights ticker — clip only; keyframes + animation live inline on the component (same as Dashboard). */
@@ -1065,7 +1132,7 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   }
 
   .zenith-root .zenith-forecast-tab {
-    min-height: 44px;
+    min-height: 40px;
     min-width: 44px;
     padding-left: 0.75rem;
     padding-right: 0.75rem;

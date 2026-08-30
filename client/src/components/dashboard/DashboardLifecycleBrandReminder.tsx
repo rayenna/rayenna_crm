@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ClipboardList } from 'lucide-react'
+import { CheckCircle2, ClipboardList } from 'lucide-react'
 import { ProjectStatus, UserRole } from '../../types'
 import { useAuth } from '../../contexts/AuthContext'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
@@ -31,6 +31,13 @@ interface Props {
   className?: string
   dataSenseHits?: DataSenseExplorerHit[]
   showBrandGaps?: boolean
+  /**
+   * When there are no attention items, show an “All clear” card instead of hiding
+   * (keeps 50/50 layout beside Weighted open pipeline).
+   */
+  showEmptyAllClear?: boolean
+  /** Fill parent height (e.g. `.zenith-overview-panel`). */
+  fillHeight?: boolean
 }
 
 const MAX_VISIBLE = 5
@@ -51,6 +58,8 @@ export default function DashboardLifecycleBrandReminder({
   className = '',
   dataSenseHits = [],
   showBrandGaps = true,
+  showEmptyAllClear = false,
+  fillHeight = false,
 }: Props) {
   const { user } = useAuth()
   const cardRef = useRef<HTMLElement>(null)
@@ -94,7 +103,48 @@ export default function DashboardLifecycleBrandReminder({
     }
   }, [hasItems, user?.id])
 
-  if (!hasItems) return null
+  if (!hasItems) {
+    if (!showEmptyAllClear) return null
+    return (
+      <section
+        ref={cardRef}
+        id="zenith-things-needing-attention"
+        className={[
+          'zenith-attention-card flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border shadow-[var(--shadow-card)]',
+          fillHeight ? 'h-full' : '',
+          className,
+        ].join(' ')}
+        role="region"
+        aria-labelledby="dashboard-notice-board-heading"
+      >
+        <div className="flex shrink-0 items-start gap-2 border-b border-[color:var(--border-default)] px-3 py-2.5 sm:px-3.5 sm:py-3">
+          <ClipboardList
+            className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--accent-teal)]"
+            aria-hidden
+          />
+          <div className="min-w-0">
+            <h2
+              id="dashboard-notice-board-heading"
+              className="text-sm font-bold leading-tight text-[color:var(--text-primary)]"
+              style={{ fontFamily: "'Syne', sans-serif" }}
+            >
+              Things needing attention
+            </h2>
+            <p className="mt-0.5 text-[11px] leading-snug text-[color:var(--text-secondary)]">
+              Data Sense & lifecycle gaps
+            </p>
+          </div>
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-4 py-6 text-center">
+          <CheckCircle2 className="h-8 w-8 text-[color:var(--accent-teal)]" aria-hidden />
+          <p className="text-sm font-semibold text-[color:var(--accent-teal)]">All clear</p>
+          <p className="max-w-[16rem] text-[11px] leading-snug text-[color:var(--text-muted)]">
+            No date, payment, or lifecycle brand issues in the current filter.
+          </p>
+        </div>
+      </section>
+    )
+  }
 
   const activeRule =
     senseRuleFilter && counts[senseRuleFilter] > 0 ? senseRuleFilter : null
@@ -164,6 +214,7 @@ export default function DashboardLifecycleBrandReminder({
       id="zenith-things-needing-attention"
       className={[
         'zenith-attention-card flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border shadow-[var(--shadow-card)]',
+        fillHeight ? 'h-full' : '',
         hasCritical ? 'zenith-attention-card--critical' : '',
         introPulse ? 'zenith-attention-card--intro' : '',
         className,
@@ -264,7 +315,7 @@ export default function DashboardLifecycleBrandReminder({
                         aria-pressed={activeRule === rule}
                         onClick={() => toggleRule(rule)}
                         className={[
-                          'rounded-md border px-1.5 py-0.5 text-[10px] font-semibold transition',
+                          'min-h-[32px] rounded-md border px-2 py-0.5 text-[10px] font-semibold transition touch-manipulation',
                           activeRule === rule
                             ? 'border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] text-[color:var(--accent-teal)]'
                             : 'border-[color:var(--border-default)] bg-[color:var(--bg-badge)] text-[color:var(--text-secondary)] hover:border-[color:var(--accent-teal-border)] hover:text-[color:var(--accent-teal)]',
@@ -280,7 +331,7 @@ export default function DashboardLifecycleBrandReminder({
           </div>
           <Link
             to={projectsHref}
-            className="inline-flex min-h-[32px] shrink-0 items-center justify-center self-start rounded-lg border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-2.5 text-[11px] font-bold text-[color:var(--accent-teal)] transition hover:brightness-105"
+            className="inline-flex min-h-[40px] shrink-0 items-center justify-center self-start rounded-lg border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-2.5 text-[11px] font-bold text-[color:var(--accent-teal)] transition hover:brightness-105 touch-manipulation"
           >
             Projects →
           </Link>
@@ -289,7 +340,7 @@ export default function DashboardLifecycleBrandReminder({
         <ul
           className={[
             'min-h-0 flex-1 divide-y divide-[color:var(--border-default)] overflow-y-auto bg-[color:color-mix(in_srgb,var(--bg-card)_92%,var(--zenith-table-header-bg))]',
-            paired ? 'max-h-[220px] lg:max-h-[240px]' : 'max-h-[280px]',
+            fillHeight ? '' : paired ? 'max-h-[220px] lg:max-h-[240px]' : 'max-h-[280px]',
           ].join(' ')}
         >
           {senseVisible.map((hit) => {
