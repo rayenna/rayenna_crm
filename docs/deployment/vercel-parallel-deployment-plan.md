@@ -11,9 +11,7 @@
 **Render is production. This plan does not change or replace it.**
 
 - **render.yaml:** Not modified. Render uses `rootDir: client`, `buildCommand: npm install && npm run build`, `staticPublishPath: dist`, and `VITE_API_BASE_URL` from the blueprint. No edits to `render.yaml` are required or recommended.
-- **Backend CORS:** The only backend change is **additive** — allowing `*.vercel.app` in `isOriginAllowed()`. All Render origins remain allowed:
-  - `https://rayenna-crm-frontend.onrender.com` is in the explicit `allowedOrigins` list.
-  - Any origin whose URL contains `render.com` is allowed (covers all `*.onrender.com`).
+- **Backend CORS:** Production allows explicit frontend URLs (`FRONTEND_URL`, Render/Vercel app hosts, Hub). Extra hosts can be added via **`CORS_ALLOWED_ORIGINS`** (comma-separated). **`*.vercel.app`** is allowed. Localhost origins are allowed only when `NODE_ENV=development`. Do not rely on a broad `render.com` substring match.
 - **Build:** The same `client/` build runs on both Render and Vercel. `client/vercel.json` is used only by Vercel; Render ignores it and uses `render.yaml` only.
 - **Do not:** Change or remove Render services, alter `render.yaml`, remove Render origins from CORS, or point production DNS away from Render until you explicitly choose to. Vercel is additive only; Render stays the production system.
 
@@ -35,6 +33,8 @@
 
 ### Backend env (CRM on Render) – for Proposal Engine & AI Roof Layout
 - **GOOGLE_MAPS_API_KEY:** Required for **AI Roof Layout** (Proposal Engine). The CRM backend uses it to fetch satellite imagery via Google Static Maps API (`src/services/satelliteFetcher.ts`). If unset in production, the roof layout job throws and the frontend sees 500/errors. Set this in the **CRM backend** service env on Render (same place as `JWT_SECRET`, `DATABASE_URL`, etc.).
+- **CONSUMER_INITIAL_PASSWORD (optional):** Used when auto-creating Solar Hub consumer logins. In production, auto-create is skipped if this is unset — provision from Solar Hub admin instead so a one-time password can be shown. After admin reset, Hub users have `mustChangePassword` until they change it.
+- **CORS_ALLOWED_ORIGINS (optional):** Comma-separated extra browser origins allowed by the API (in addition to `FRONTEND_URL`, listed Render/Vercel hosts, and `*.vercel.app`).
 
 ### STEP 3: Vercel config
 - **Current:** `client/vercel.json` exists with SPA rewrites and cache headers.
@@ -50,8 +50,8 @@
 - Do **not** remove Render deployment or change DNS. Both Render and Vercel URLs will stay live.
 
 ### STEP 6: Backend CORS
-- **Current:** Backend (`src/server.ts`) allows specific origins and has a custom `isOriginAllowed()` that also allows `render.com` and `localhost`. One Vercel URL is listed; new Vercel deployments (e.g. `*-xxx.vercel.app`) may get a different host.
-- **Action:** Allow any `*.vercel.app` origin in backend CORS (e.g. in `isOriginAllowed`) so any Vercel preview/production URL works without backend code change for each new URL. Render and existing behaviour unchanged.
+- **Current:** Backend (`src/server.ts`) allows an explicit origin list (`FRONTEND_URL`, known Render/Vercel/Hub hosts), optional `CORS_ALLOWED_ORIGINS`, and `*.vercel.app`. Localhost is allowed only in development.
+- **Action:** Keep `*.vercel.app` so preview URLs work. Add any extra production hosts to `CORS_ALLOWED_ORIGINS` rather than broadening substring matches.
 
 ### STEP 7: Test on Vercel URL
 - Open `https://<your-vercel-app>.vercel.app` and test: login, dashboard, project filters, dynamic tiles, file uploads (Cloudinary), API calls (no CORS errors).

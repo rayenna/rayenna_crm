@@ -20,6 +20,7 @@ export type ConsumerPublicUser = {
   points: number;
   memberTier: ConsumerMemberTier;
   profileComplete: boolean;
+  mustChangePassword: boolean;
 };
 
 const TIER_THRESHOLDS: { tier: ConsumerMemberTier; minPoints: number }[] = [
@@ -59,6 +60,7 @@ export function toConsumerPublicUser(user: ConsumerUser): ConsumerPublicUser {
     points: user.points,
     memberTier: user.memberTier,
     profileComplete: user.profileComplete,
+    mustChangePassword: user.mustChangePassword,
   };
 }
 

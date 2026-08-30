@@ -148,7 +148,7 @@ router.post(
       const hashed = await bcrypt.hash(newPassword, 10);
       await prisma.consumerUser.update({
         where: { id: consumer.id },
-        data: { password: hashed },
+        data: { password: hashed, mustChangePassword: false },
       });
 
       return res.json({ ok: true });

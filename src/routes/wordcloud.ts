@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { ProjectStatus, UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
+import { istMonthBoundsForFyMonth } from '../utils/istCalendar';
 
 const router = express.Router();
 
@@ -16,11 +17,8 @@ function monthDateRangesForFY(fy: string, months: string[]): { start: Date; end:
   );
 
   return uniqMonths.map((mm) => {
-    const monthNum = parseInt(mm, 10); // 1-12
-    const year = monthNum >= 1 && monthNum <= 3 ? startYear + 1 : startYear;
-    const start = new Date(year, monthNum - 1, 1, 0, 0, 0, 0);
-    const end = new Date(year, monthNum, 0, 23, 59, 59, 999);
-    return { start, end };
+    const monthNum = parseInt(mm, 10);
+    return istMonthBoundsForFyMonth(startYear, monthNum);
   });
 }
 

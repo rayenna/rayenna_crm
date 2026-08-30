@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { body, param, query, validationResult } from 'express-validator'
 import { authenticate } from '../middleware/auth'
+import { requireProjectAccess } from '../utils/staffAccess'
 import prisma from '../prisma'
 import { randomUUID } from 'crypto'
 
@@ -161,6 +162,7 @@ router.get(
     try {
       const userId = req.user!.id
       const { projectId } = req.params
+      if (!(await requireProjectAccess(req, res, projectId))) return
 
       const rows = await prisma.$queryRaw<TaskRow[]>`
         SELECT * FROM user_tasks

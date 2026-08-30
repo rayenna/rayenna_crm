@@ -1,7 +1,23 @@
 import { CustomerType, type Customer } from '@prisma/client';
 import { isBusinessCustomerType } from './customerRecord';
+import crypto from 'crypto';
 
-export const CONSUMER_DEFAULT_PASSWORD = 'rayenna123';
+/** 12-char password for new Hub accounts and admin resets. Never commit a shared default. */
+export function generateHubTemporaryPassword(): string {
+  const raw = crypto.randomBytes(9).toString('base64url').replace(/[^a-zA-Z0-9]/g, 'A');
+  return `Ray${raw.slice(0, 9)}`;
+}
+
+/**
+ * Password used when auto-provisioning a Hub account (project status sync).
+ * Set CONSUMER_INITIAL_PASSWORD on Render. If unset in production, auto-create is skipped.
+ */
+export function consumerProvisioningPassword(): string | null {
+  const fromEnv = process.env.CONSUMER_INITIAL_PASSWORD?.trim();
+  if (fromEnv && fromEnv.length >= 8) return fromEnv;
+  if (process.env.NODE_ENV !== 'production') return generateHubTemporaryPassword();
+  return null;
+}
 
 /** Dev/demo login — never auto-deactivated by project status sync */
 export const DEMO_HUB_USERNAME = 'hub.demo';

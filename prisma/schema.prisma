@@ -167,6 +167,8 @@ model User {
   themePreference  ThemePreference @default(DARK)
   resetToken       String?   @unique
   resetTokenExpiry DateTime?
+  isActive         Boolean   @default(true)
+  tokenVersion     Int       @default(0)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -897,6 +899,7 @@ model ConsumerUser {
   points          Int                @default(0)
   memberTier      ConsumerMemberTier @default(BRONZE)
   isActive        Boolean            @default(true)
+  mustChangePassword Boolean         @default(false)
   profileComplete Boolean            @default(false)
   lastLoginAt     DateTime?
   createdAt       DateTime           @default(now())

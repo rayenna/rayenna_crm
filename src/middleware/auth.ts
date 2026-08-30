@@ -20,24 +20,60 @@ export const authenticate = async (
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
       userId: string;
-      email: string;
-      role: UserRole;
+      email?: string;
+      role?: UserRole;
+      tokenVersion?: number;
     };
 
-    // Verify user still exists
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isActive: true,
+        tokenVersion: true,
+      },
     });
 
     if (!user) {
-      logAccess({ actionType: 'auth_failure', userId: decoded.userId, email: decoded.email, role: decoded.role, req });
+      logAccess({
+        actionType: 'auth_failure',
+        userId: decoded.userId,
+        email: decoded.email,
+        role: decoded.role,
+        req,
+      });
       return res.status(401).json({ error: 'User not found' });
     }
 
+    if (!user.isActive) {
+      logAccess({
+        actionType: 'auth_failure',
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        req,
+      });
+      return res.status(401).json({ error: 'Account disabled' });
+    }
+
+    const tokenVersion = decoded.tokenVersion ?? 0;
+    if (tokenVersion !== user.tokenVersion) {
+      logAccess({
+        actionType: 'auth_failure',
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        req,
+      });
+      return res.status(401).json({ error: 'Session expired. Please sign in again.' });
+    }
+
     req.user = {
-      id: decoded.userId,
-      email: decoded.email,
-      role: decoded.role,
+      id: user.id,
+      email: user.email,
+      role: user.role,
     };
 
     next();

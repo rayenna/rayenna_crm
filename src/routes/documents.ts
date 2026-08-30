@@ -9,6 +9,8 @@ import { authenticate, authorize } from '../middleware/auth';
 import { createAuditLog } from '../utils/audit';
 import { logSecurityAudit } from '../utils/auditLogger';
 import { v2 as cloudinary } from 'cloudinary';
+import { requireProjectAccess } from '../utils/staffAccess';
+import { sendErrorResponse } from '../utils/publicApiError';
 
 const router = express.Router();
 
@@ -152,6 +154,8 @@ router.get('/project/:projectId', authenticate, async (req: Request, res) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
+    if (!(await requireProjectAccess(req, res, projectId))) return;
+
     const documents = await prisma.document.findMany({
       where: { projectId },
       include: {
@@ -212,7 +216,7 @@ router.post(
       const { projectId } = req.params;
       const { category, description } = req.body;
 
-      // Validate category first (before uploading to Cloudinary if needed)
+      if (!(await requireProjectAccess(req, res, projectId))) return;
       const validCategories = ['photos_videos', 'documents', 'sheets'];
       if (!category || !validCategories.includes(category)) {
         return res.status(400).json({ 

@@ -18,7 +18,7 @@ const usersHeaderInner =
   'flex min-h-[2rem] w-full min-w-0 items-center px-1.5 py-1 sm:min-h-[2.5rem] sm:px-2 sm:py-1.5'
 
 const Users = () => {
-  const { hasRole } = useAuth()
+  const { hasRole, user } = useAuth()
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
@@ -105,6 +105,31 @@ const Users = () => {
     onError: (err: unknown) => {
       const apiMsg = getApiErrorMessage(err)
       if (apiMsg.includes('Cannot delete your own account')) {
+        setPolicyModal({
+          open: true,
+          type: 'warning',
+          message: apiMsg,
+        })
+        return
+      }
+      toast.error(getFriendlyApiErrorMessage(err))
+    },
+  })
+
+  const setActiveMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      return axiosInstance.put(`/api/users/${id}`, { isActive })
+    },
+    onSuccess: (_data, vars) => {
+      toast.success(vars.isActive ? 'User enabled' : 'User disabled')
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+    onError: (err: unknown) => {
+      const apiMsg = getApiErrorMessage(err)
+      if (
+        apiMsg.includes('Cannot disable your own account') ||
+        apiMsg.includes('Cannot disable the last active ADMIN')
+      ) {
         setPolicyModal({
           open: true,
           type: 'warning',
@@ -388,6 +413,9 @@ const Users = () => {
                   <span className="mt-3 inline-flex w-fit max-w-full items-center rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-badge)] px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-secondary)]">
                     {u.role}
                   </span>
+                  {u.isActive === false ? (
+                    <p className="mt-2 text-xs font-semibold text-[color:var(--accent-red)]">Disabled</p>
+                  ) : null}
                   <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     <Link
                       to={`/audit-security?userId=${encodeURIComponent(u.id)}`}
@@ -402,6 +430,16 @@ const Users = () => {
                       className="inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-4 py-2.5 text-sm font-semibold text-[color:var(--accent-teal)] transition-opacity hover:opacity-95 disabled:opacity-45"
                     >
                       {resetPasswordMutation.isPending ? 'Generating…' : 'Reset password'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setActiveMutation.mutate({ id: u.id, isActive: u.isActive === false })
+                      }
+                      disabled={setActiveMutation.isPending || u.id === user?.id}
+                      className="inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2.5 text-sm font-semibold text-[color:var(--text-primary)] transition-opacity hover:opacity-95 disabled:opacity-45"
+                    >
+                      {u.isActive === false ? 'Enable' : 'Disable'}
                     </button>
                     <button
                       type="button"
@@ -423,10 +461,11 @@ const Users = () => {
               <div className={usersTableScrollShell} role="region" aria-label="User accounts table">
                 <table className="w-full min-w-[52rem] table-fixed border-collapse text-sm leading-snug">
                   <colgroup>
-                    <col className="w-[22%]" />
-                    <col className="w-[36%]" />
-                    <col className="min-w-[8.25rem] w-[14%]" />
-                    <col className="w-[28%]" />
+                    <col className="w-[20%]" />
+                    <col className="w-[32%]" />
+                    <col className="min-w-[8.25rem] w-[12%]" />
+                    <col className="min-w-[6rem] w-[10%]" />
+                    <col className="w-[26%]" />
                   </colgroup>
                   <thead>
                     <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--zenith-table-header-bg)]">
@@ -443,6 +482,11 @@ const Users = () => {
                       <th scope="col" className="px-2.5 py-2 text-left align-middle sm:px-3 sm:py-2.5">
                         <div className={`${usersHeaderInner} w-full`}>
                           <span className={usersHeaderLabel}>Role</span>
+                        </div>
+                      </th>
+                      <th scope="col" className="px-2.5 py-2 text-left align-middle sm:px-3 sm:py-2.5">
+                        <div className={`${usersHeaderInner} w-full`}>
+                          <span className={usersHeaderLabel}>Status</span>
                         </div>
                       </th>
                       <th scope="col" className="px-2.5 py-2 text-right align-middle sm:px-3 sm:py-2.5">
@@ -471,6 +515,17 @@ const Users = () => {
                           </span>
                         </td>
                         <td className="min-w-0 px-2 py-2.5 align-middle sm:px-3 sm:py-3">
+                          <span
+                            className={`text-xs font-semibold ${
+                              u.isActive === false
+                                ? 'text-[color:var(--accent-red)]'
+                                : 'text-[color:var(--text-secondary)]'
+                            }`}
+                          >
+                            {u.isActive === false ? 'Disabled' : 'Active'}
+                          </span>
+                        </td>
+                        <td className="min-w-0 px-2 py-2.5 align-middle sm:px-3 sm:py-3">
                           <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
                             <Link
                               to={`/audit-security?userId=${encodeURIComponent(u.id)}`}
@@ -485,6 +540,16 @@ const Users = () => {
                               className="touch-manipulation text-sm font-semibold text-[color:var(--accent-teal)] transition-opacity hover:opacity-90 disabled:opacity-45"
                             >
                               {resetPasswordMutation.isPending ? 'Generating…' : 'Reset password'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setActiveMutation.mutate({ id: u.id, isActive: u.isActive === false })
+                              }
+                              disabled={setActiveMutation.isPending || u.id === user?.id}
+                              className="touch-manipulation text-sm font-semibold text-[color:var(--text-secondary)] transition-opacity hover:text-[color:var(--accent-teal)] disabled:opacity-45"
+                            >
+                              {u.isActive === false ? 'Enable' : 'Disable'}
                             </button>
                             <button
                               type="button"

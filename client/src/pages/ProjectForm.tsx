@@ -38,6 +38,7 @@ import {
   isDataSenseImpossibleResponse,
   type DataSenseFinding,
 } from '../utils/dataSense'
+import { calculateFYInIst } from '../utils/istCalendar'
 
 function customerPickerLabel(customer: Customer): string {
   return `${customer.customerId} - ${getCustomerDisplayName(customer)}`
@@ -300,33 +301,6 @@ const ProjectForm = () => {
     retry: 2,
   })
 
-  // Function to calculate Financial Year from a date
-  // FY runs from April 1 to March 31
-  // e.g., April 1, 2024 to March 31, 2025 = FY 2024-25
-  const calculateFY = (date: Date | string | null | undefined): string | null => {
-    if (!date) return null;
-    
-    try {
-      const dateObj = typeof date === 'string' ? new Date(date) : date;
-      if (isNaN(dateObj.getTime())) return null;
-      
-      const year = dateObj.getFullYear();
-      const month = dateObj.getMonth() + 1; // getMonth() returns 0-11
-      
-      // If month is April (4) or later, FY starts in current year
-      // If month is Jan-Mar (1-3), FY started in previous year
-      if (month >= 4) {
-        // April 2024 to March 2025 = FY 2024-25
-        return `${year}-${String(year + 1).slice(-2)}`;
-      } else {
-        // January 2025 to March 2025 = FY 2024-25 (started in 2024)
-        return `${year - 1}-${String(year).slice(-2)}`;
-      }
-    } catch (error) {
-      return null;
-    }
-  };
-
   const { register, handleSubmit, setValue, getValues, watch, control } = useForm({
     shouldFocusError: false, // keep focus on validation ErrorModal instead of first error field
   })
@@ -373,7 +347,7 @@ const ProjectForm = () => {
   // Auto-calculate FY when confirmationDate changes
   useEffect(() => {
     if (confirmationDate) {
-      const fy = calculateFY(confirmationDate);
+      const fy = calculateFYInIst(confirmationDate);
       if (fy) {
         setValue('year', fy);
       }

@@ -29,7 +29,7 @@ ALLOW_CONSUMER_AUTO_SEED=1 npm run prisma:seed:consumer
 # username: hub.demo / password: hubdemo123
 ```
 
-Auto-provisioned production accounts use **username + password** (`rayenna123` default) when a project reaches **Completed** or **Completed–Subsidy Credited**. Backfill existing completed projects:
+Auto-provisioned production accounts use **username + a one-time password**. Set **`CONSUMER_INITIAL_PASSWORD`** on the CRM API (Render) if you want a known initial password; otherwise provision from Solar Hub admin so a generated password can be shown. Existing Hub users keep their current password until reset.
 
 ```bash
 npm run prisma:backfill:consumer-hub

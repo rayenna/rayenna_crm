@@ -2,10 +2,11 @@ import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { SupportTicketStatus, SupportTicketSource, UserRole, ProjectStatus } from '@prisma/client';
 import prisma from '../prisma';
-import { authenticate } from '../middleware/auth';
+import { authenticate, authorize } from '../middleware/auth';
 import { logSecurityAudit } from '../utils/auditLogger';
 import { attachHubUsernames } from '../utils/supportTicketEnrich';
 import { isSupportTicketOverdue, ticketNextFollowUpDate } from '../utils/supportTicketQueue';
+import { requireProjectAccess, SUPPORT_TICKET_QUEUE_ROLES } from '../utils/staffAccess';
 
 const router = express.Router();
 
@@ -70,10 +71,11 @@ router.post(
       const { projectId, title, description, followUpDate } = req.body;
       const createdById = req.user!.id;
 
-      // Verify project exists
+      if (!(await requireProjectAccess(req, res, projectId))) return;
+
       const project = await prisma.project.findUnique({
         where: { id: projectId },
-        select: { id: true, salespersonId: true, projectStatus: true },
+        select: { id: true, projectStatus: true },
       });
 
       if (!project) {
@@ -82,10 +84,6 @@ router.post(
 
       if (project.projectStatus === ProjectStatus.LOST) {
         return res.status(400).json({ error: 'Cannot create tickets for projects in Lost stage' });
-      }
-
-      if (userRole === UserRole.SALES && project.salespersonId !== createdById) {
-        return res.status(403).json({ error: 'Sales users can only create tickets for their own projects' });
       }
 
       // Generate unique ticket number
@@ -158,6 +156,7 @@ router.post(
 router.get('/project/:projectId', authenticate, async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
+    if (!(await requireProjectAccess(req, res, projectId))) return;
 
     const tickets = await prisma.supportTicket.findMany({
       where: { projectId },
@@ -234,6 +233,8 @@ router.get('/:ticketId', authenticate, async (req: Request, res: Response) => {
     if (!ticket) {
       return res.status(404).json({ error: 'Support ticket not found' });
     }
+
+    if (!(await requireProjectAccess(req, res, ticket.projectId))) return;
 
     const [enriched] = await attachHubUsernames([ticket]);
     res.json(enriched);
@@ -449,6 +450,7 @@ router.delete(
 router.get(
   '/',
   authenticate,
+  authorize(...SUPPORT_TICKET_QUEUE_ROLES),
   async (req: Request, res: Response) => {
     try {
       const { status, projectId, source } = req.query;

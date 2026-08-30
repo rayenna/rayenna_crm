@@ -38,6 +38,7 @@ if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
 }
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Security headers (X-Content-Type-Options, frameguard, etc.). CSP off for JSON API; CORP allows credentialed SPA on another origin.
 app.use(
@@ -68,8 +69,19 @@ function isOriginAllowed(origin: string | undefined): boolean {
   if (!origin) return true;
   const n = normalizeOrigin(origin);
   if (allowedOrigins.map(normalizeOrigin).includes(n)) return true;
-  if (process.env.NODE_ENV === 'development') return true;
-  if (origin.includes('render.com') || origin.includes('localhost')) return true;
+  const extra = (process.env.CORS_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((s) => normalizeOrigin(s.trim()))
+    .filter(Boolean);
+  if (extra.includes(n)) return true;
+  if (process.env.NODE_ENV === 'development') {
+    try {
+      const u = new URL(origin);
+      if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') return true;
+    } catch {
+      return false;
+    }
+  }
   try {
     const u = new URL(origin);
     if (u.hostname.endsWith('.vercel.app')) return true;
@@ -133,8 +145,19 @@ app.options('*', cors(corsOptions));
 
 // Proposal Engine sync sends large proposal payloads (editedHtml) and roof layout saves can include base64 images.
 // Allow a higher limit to avoid 413 on legitimate operations.
-app.use(express.json({ limit: '25mb' }));
-app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+function jsonBodyLimit(reqPath: string): string {
+  if (reqPath.startsWith('/api/proposal-engine') || reqPath.startsWith('/api/roof')) {
+    return '25mb';
+  }
+  return '1mb';
+}
+
+app.use((req, res, next) => {
+  express.json({ limit: jsonBodyLimit(req.path) })(req, res, next);
+});
+app.use((req, res, next) => {
+  express.urlencoded({ extended: true, limit: jsonBodyLimit(req.path) })(req, res, next);
+});
 
 // Compress responses when client sends Accept-Encoding: gzip (reduces payload size for dashboard, project list, etc.)
 app.use(compression());

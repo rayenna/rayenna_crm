@@ -3,12 +3,14 @@ import { body, validationResult } from 'express-validator';
 import { InstallationStatus } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
+import { requireProjectAccess } from '../utils/staffAccess';
 
 const router = express.Router();
 
 // Get installations for a project
 router.get('/project/:projectId', authenticate, async (req: Request, res: express.Response) => {
   try {
+    if (!(await requireProjectAccess(req, res, req.params.projectId))) return;
     const installations = await prisma.installation.findMany({
       where: { projectId: req.params.projectId },
       include: {
@@ -46,6 +48,8 @@ router.get('/:id', authenticate, async (req: Request, res: express.Response) => 
       return res.status(404).json({ error: 'Installation not found' });
     }
 
+    if (!(await requireProjectAccess(req, res, installation.projectId))) return;
+
     res.json(installation);
   } catch (error: any) {
     console.error('Error fetching installation:', error);
@@ -68,6 +72,8 @@ router.post(
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
       }
+
+      if (!(await requireProjectAccess(req, res, req.body.projectId))) return;
 
       const installation = await prisma.installation.create({
         data: {
@@ -121,6 +127,15 @@ router.put(
         return res.status(400).json({ errors: errors.array() });
       }
 
+      const existing = await prisma.installation.findUnique({
+        where: { id: req.params.id },
+        select: { projectId: true },
+      });
+      if (!existing) {
+        return res.status(404).json({ error: 'Installation not found' });
+      }
+      if (!(await requireProjectAccess(req, res, existing.projectId))) return;
+
       const installation = await prisma.installation.update({
         where: { id: req.params.id },
         data: req.body,
@@ -158,6 +173,15 @@ router.put(
 // Delete installation
 router.delete('/:id', authenticate, async (req: Request, res: express.Response) => {
   try {
+    const existing = await prisma.installation.findUnique({
+      where: { id: req.params.id },
+      select: { projectId: true },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'Installation not found' });
+    }
+    if (!(await requireProjectAccess(req, res, existing.projectId))) return;
+
     await prisma.installation.delete({
       where: { id: req.params.id },
     });

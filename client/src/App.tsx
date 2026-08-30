@@ -9,6 +9,7 @@ import { ThemeProvider } from './hooks/useTheme'
 import { AuthProvider } from './contexts/AuthContext'
 import { ModalEscapeProvider } from './contexts/ModalEscapeContext'
 import PrivateRoute from './components/PrivateRoute'
+import { ROUTE_ROLES } from './constants/routeRoles'
 import ErrorBoundary from './components/ErrorBoundary'
 import PageLoader from './components/PageLoader'
 import Layout from './components/Layout'
@@ -203,51 +204,63 @@ function App() {
             <Route
               path="users"
               element={
+                <PrivateRoute roles={ROUTE_ROLES.users}>
                 <ErrorBoundary>
                   <Suspense fallback={<PageLoader />}><Users /></Suspense>
                 </ErrorBoundary>
+                </PrivateRoute>
               }
             />
             <Route
               path="audit-security"
               element={
+                <PrivateRoute roles={ROUTE_ROLES.auditSecurity}>
                 <ErrorBoundary>
                   <Suspense fallback={<PageLoader />}><AuditSecurity /></Suspense>
                 </ErrorBoundary>
+                </PrivateRoute>
               }
             />
             <Route
               path="tally-export"
               element={
+                <PrivateRoute roles={ROUTE_ROLES.tallyExport}>
                 <ErrorBoundary>
                   <Suspense fallback={<PageLoader />}><TallyExport /></Suspense>
                 </ErrorBoundary>
+                </PrivateRoute>
               }
             />
             <Route
               path="lost-deals"
               element={
+                <PrivateRoute roles={ROUTE_ROLES.lostDeals}>
                 <ErrorBoundary>
                   <Suspense fallback={<PageLoader />}><LostDeals /></Suspense>
                 </ErrorBoundary>
+                </PrivateRoute>
               }
             />
             <Route
               path="support-tickets"
               element={
+                <PrivateRoute roles={ROUTE_ROLES.supportTickets}>
                 <ErrorBoundary>
                   <Suspense fallback={<PageLoader />}><SupportTicketsDashboard /></Suspense>
                 </ErrorBoundary>
+                </PrivateRoute>
               }
             />
             <Route
               path="solar-hub"
               element={
+                <PrivateRoute roles={ROUTE_ROLES.solarHub}>
                 <ErrorBoundary>
                   <Suspense fallback={<PageLoader />}>
                     <SolarHubLayout />
                   </Suspense>
                 </ErrorBoundary>
+                </PrivateRoute>
               }
             >
               <Route index element={<Navigate to="users" replace />} />
@@ -303,9 +316,11 @@ function App() {
             <Route
               path="solar-hub/users/:id"
               element={
+                <PrivateRoute roles={ROUTE_ROLES.solarHub}>
                 <ErrorBoundary>
                   <Suspense fallback={<PageLoader />}><SolarHubUserDetail /></Suspense>
                 </ErrorBoundary>
+                </PrivateRoute>
               }
             />
             <Route

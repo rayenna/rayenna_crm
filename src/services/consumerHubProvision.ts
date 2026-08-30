@@ -5,7 +5,7 @@ import { generateReferralCode } from '../utils/consumerAuth';
 import { consumerMasterContactFields } from '../utils/consumerCustomerProfile';
 import {
   buildBaseUsername,
-  CONSUMER_DEFAULT_PASSWORD,
+  consumerProvisioningPassword,
   HUB_ELIGIBLE_PROJECT_STATUSES,
   isDemoHubUsername,
   resolveUniqueUsernameCandidate,
@@ -59,12 +59,17 @@ async function syncConsumerUserContactFields(consumerUserId: string, customerId:
   const { phone, email } = consumerMasterContactFields(customer);
   await prisma.consumerUser.update({
     where: { id: consumerUserId },
-    data: { phone, email },
+    data: {
+      phone,
+      email,
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+    },
   });
 }
 
 export type ProvisionResult =
-  | { action: 'created'; username: string }
+  | { action: 'created'; username: string; temporaryPassword: string }
   | { action: 'reactivated'; username: string }
   | { action: 'deactivated'; username: string }
   | { action: 'synced'; username: string }
@@ -151,7 +156,14 @@ export async function syncConsumerHubForProject(
   const username = await allocateUsername(project.customerId, project.id);
   const nameSeed = project.customer.firstName || project.customer.companyName || project.customer.customerName;
   const referralCode = await allocateReferralCode(nameSeed);
-  const password = await bcrypt.hash(CONSUMER_DEFAULT_PASSWORD, 10);
+  const temporaryPassword = consumerProvisioningPassword();
+  if (!temporaryPassword) {
+    return {
+      action: 'skipped',
+      reason: 'CONSUMER_INITIAL_PASSWORD is not set; provision from Solar Hub admin so a one-time password can be shown.',
+    };
+  }
+  const password = await bcrypt.hash(temporaryPassword, 10);
 
   await prisma.consumerUser.create({
     data: {
@@ -163,10 +175,11 @@ export async function syncConsumerHubForProject(
       lastName: project.customer.lastName,
       phone: contactFields.phone,
       referralCode,
+      mustChangePassword: true,
     },
   });
 
-  return { action: 'created', username };
+  return { action: 'created', username, temporaryPassword };
 }
 
 export type BackfillSummary = {

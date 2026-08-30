@@ -1,6 +1,5 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { body, validationResult } from 'express-validator';
 import { UserRole } from '@prisma/client';
@@ -10,6 +9,7 @@ import { rateLimit } from '../middleware/rateLimit';
 import { logPasswordReset } from '../utils/passwordResetAudit';
 import { logAccess, logSecurityAudit } from '../utils/auditLogger';
 import { PUBLIC_ERRORS, sendErrorResponse } from '../utils/publicApiError';
+import { signStaffJwt } from '../utils/staffJwt';
 
 const router = express.Router();
 
@@ -85,26 +85,23 @@ router.post(
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
+      if (!user.isActive) {
+        logAccess({ actionType: 'login_failure', email: user.email, success: false, req });
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
       const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
         logAccess({ actionType: 'login_failure', email: user.email, success: false, req });
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      const expiresIn: string = process.env.JWT_EXPIRES_IN || '7d';
-
-      const payload = {
-        userId: user.id,
+      const token = signStaffJwt({
+        id: user.id,
         email: user.email,
         role: user.role,
-      };
-
-      // Type assertion to fix TypeScript overload resolution
-      const token = (jwt.sign as any)(
-        payload,
-        jwtSecret,
-        { expiresIn }
-      ) as string;
+        tokenVersion: user.tokenVersion,
+      });
 
       res.json({
         token,
@@ -232,19 +229,17 @@ router.post(
       }
       const user = await prisma.user.findUnique({
         where: { id: parsed.userId },
-        select: { id: true, email: true, name: true, role: true },
+        select: { id: true, email: true, name: true, role: true, isActive: true, tokenVersion: true },
       });
-      if (!user) {
+      if (!user || !user.isActive) {
         return res.status(401).json({ error: 'User not found' });
       }
-      const jwtSecret = process.env.JWT_SECRET;
-      if (!jwtSecret || jwtSecret.trim() === '') {
-        console.error('SSO exchange: JWT_SECRET is missing');
-        return res.status(500).json({ error: 'Server misconfiguration' });
-      }
-      const expiresIn: string = process.env.JWT_EXPIRES_IN || '7d';
-      const payload = { userId: user.id, email: user.email, role: user.role };
-      const token = (jwt.sign as any)(payload, jwtSecret, { expiresIn }) as string;
+      const token = signStaffJwt({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        tokenVersion: user.tokenVersion,
+      });
       logAccess({ userId: user.id, email: user.email, role: user.role, actionType: 'sso_ticket_exchanged', success: true, req });
       res.json({
         token,
@@ -299,7 +294,7 @@ router.post(
       // Update password
       await prisma.user.update({
         where: { id: req.user.id },
-        data: { password: hashedPassword },
+        data: { password: hashedPassword, tokenVersion: { increment: 1 } },
       });
 
       res.json({ message: 'Password changed successfully' });
@@ -465,6 +460,7 @@ router.post(
           password: hashedPassword,
           resetToken: null,
           resetTokenExpiry: null,
+          tokenVersion: { increment: 1 },
         },
       });
 

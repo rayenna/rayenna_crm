@@ -1,10 +1,11 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { body, validationResult } from 'express-validator';
-import { UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { logSecurityAudit } from '../utils/auditLogger';
+import { sendErrorResponse } from '../utils/publicApiError';
 
 const router = express.Router();
 
@@ -17,6 +18,7 @@ router.get('/', authenticate, authorize(UserRole.ADMIN), async (req: Request, re
         email: true,
         name: true,
         role: true,
+        isActive: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -25,7 +27,7 @@ router.get('/', authenticate, authorize(UserRole.ADMIN), async (req: Request, re
 
     res.json(users);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    sendErrorResponse(res, 500, error);
   }
 });
 
@@ -39,6 +41,7 @@ router.get('/:id', authenticate, authorize(UserRole.ADMIN), async (req: Request,
         email: true,
         name: true,
         role: true,
+        isActive: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -50,7 +53,7 @@ router.get('/:id', authenticate, authorize(UserRole.ADMIN), async (req: Request,
 
     res.json(user);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    sendErrorResponse(res, 500, error);
   }
 });
 
@@ -104,12 +107,14 @@ router.post(
           name,
           password: hashedPassword,
           role,
+          isActive: true,
         },
         select: {
           id: true,
           email: true,
           name: true,
           role: true,
+          isActive: true,
           createdAt: true,
         },
       });
@@ -119,7 +124,7 @@ router.post(
       }
       res.status(201).json(user);
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      sendErrorResponse(res, 500, error);
     }
   }
 );
@@ -134,6 +139,10 @@ router.put(
     body('name').optional().notEmpty().trim(),
     body('password').optional().isLength({ min: 6 }),
     body('role').optional().isIn(Object.values(UserRole)),
+    body('isActive')
+      .optional()
+      .custom((value) => typeof value === 'boolean')
+      .withMessage('isActive must be a boolean'),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -142,7 +151,7 @@ router.put(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { email, name, password, role } = req.body;
+      const { email, name, password, role, isActive } = req.body;
       const userId = req.params.id;
 
       // Get current user data
@@ -181,12 +190,32 @@ router.put(
         }
       }
 
-      const updateData: any = {};
+      if (typeof isActive === 'boolean' && isActive === false && userId === req.user?.id) {
+        return res.status(400).json({ error: 'Cannot disable your own account' });
+      }
+
+      if (typeof isActive === 'boolean' && isActive === false && currentUser.role === UserRole.ADMIN) {
+        const otherActiveAdmins = await prisma.user.count({
+          where: { role: UserRole.ADMIN, isActive: true, id: { not: userId } },
+        });
+        if (otherActiveAdmins === 0) {
+          return res.status(400).json({ error: 'Cannot disable the last active ADMIN account.' });
+        }
+      }
+
+      const updateData: Prisma.UserUpdateInput = {};
       if (email) updateData.email = email;
       if (name) updateData.name = name;
       if (role) updateData.role = role;
       if (password) {
         updateData.password = await bcrypt.hash(password, 10);
+        updateData.tokenVersion = { increment: 1 };
+      }
+      if (typeof isActive === 'boolean') {
+        updateData.isActive = isActive;
+        if (isActive === false) {
+          updateData.tokenVersion = { increment: 1 };
+        }
       }
 
       const user = await prisma.user.update({
@@ -197,6 +226,7 @@ router.put(
           email: true,
           name: true,
           role: true,
+          isActive: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -210,7 +240,7 @@ router.put(
       if (error.code === 'P2025') {
         return res.status(404).json({ error: 'User not found' });
       }
-      res.status(500).json({ error: error.message });
+      sendErrorResponse(res, 500, error);
     }
   }
 );
@@ -250,7 +280,7 @@ router.delete('/:id', authenticate, authorize(UserRole.ADMIN), async (req: Reque
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'User not found' });
     }
-    res.status(500).json({ error: error.message });
+    sendErrorResponse(res, 500, error);
   }
 });
 
@@ -260,6 +290,7 @@ router.get('/role/sales', authenticate, async (req: Request, res: Response) => {
     const salespersons = await prisma.user.findMany({
       where: {
         role: UserRole.SALES,
+        isActive: true,
       },
       select: {
         id: true,
@@ -271,7 +302,7 @@ router.get('/role/sales', authenticate, async (req: Request, res: Response) => {
 
     res.json(salespersons);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    sendErrorResponse(res, 500, error);
   }
 });
 

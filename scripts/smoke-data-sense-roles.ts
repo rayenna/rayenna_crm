@@ -34,10 +34,14 @@ function fail(name: string, detail: string) {
   FAIL.push(`${name}: ${detail}`)
 }
 
-function tokenFor(user: { id: string; email: string; role: UserRole }) {
+function tokenFor(user: { id: string; email: string; role: UserRole; tokenVersion: number }) {
   const secret = process.env.JWT_SECRET
   if (!secret) throw new Error('JWT_SECRET missing')
-  return jwt.sign({ userId: user.id, email: user.email, role: user.role }, secret, { expiresIn: '15m' })
+  return jwt.sign(
+    { userId: user.id, email: user.email, role: user.role, tokenVersion: user.tokenVersion },
+    secret,
+    { expiresIn: '15m' },
+  )
 }
 
 async function api(
@@ -74,7 +78,7 @@ async function main() {
   else fail('Projects unauthenticated', `expected 401 got ${unauth}`)
 
   const allUsers = await prisma.user.findMany({
-    select: { id: true, email: true, role: true, name: true },
+    select: { id: true, email: true, role: true, name: true, tokenVersion: true },
     orderBy: [{ role: 'asc' }, { createdAt: 'asc' }],
   })
   const byRole = new Map<UserRole, typeof allUsers>()

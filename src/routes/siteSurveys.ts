@@ -2,12 +2,14 @@ import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
+import { requireProjectAccess } from '../utils/staffAccess';
 
 const router = express.Router();
 
 // Get surveys for a project
 router.get('/project/:projectId', authenticate, async (req: Request, res: express.Response) => {
   try {
+    if (!(await requireProjectAccess(req, res, req.params.projectId))) return;
     const surveys = await prisma.siteSurvey.findMany({
       where: { projectId: req.params.projectId },
       include: {
@@ -47,6 +49,8 @@ router.get('/:id', authenticate, async (req: Request, res: express.Response) => 
       return res.status(404).json({ error: 'Survey not found' });
     }
 
+    if (!(await requireProjectAccess(req, res, survey.projectId))) return;
+
     res.json(survey);
   } catch (error: any) {
     console.error('Error fetching survey:', error);
@@ -72,6 +76,8 @@ router.post(
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
       }
+
+      if (!(await requireProjectAccess(req, res, req.body.projectId))) return;
 
       const survey = await prisma.siteSurvey.create({
         data: {

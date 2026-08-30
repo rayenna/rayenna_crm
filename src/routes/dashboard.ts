@@ -14,6 +14,7 @@ import {
 } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
+import { istMonthBoundsForFyMonth } from '../utils/istCalendar';
 import {
   aggregateProjectsByCustomerType,
   formatCustomerTypeForExplorer,
@@ -95,12 +96,7 @@ function applyDateFilters(
         // Use confirmationDate only – must match Projects API for tile counts to match Projects page
         effectiveMonthFilters.forEach((month) => {
           const monthNum = parseInt(month);
-          let year = startYear;
-          if (monthNum >= 1 && monthNum <= 3) {
-            year = startYear + 1;
-          }
-          const startDate = new Date(year, monthNum - 1, 1);
-          const endDate = new Date(year, monthNum, 0, 23, 59, 59, 999);
+          const { start: startDate, end: endDate } = istMonthBoundsForFyMonth(startYear, monthNum);
           dateFilters.push({
             confirmationDate: { gte: startDate, lte: endDate },
           });

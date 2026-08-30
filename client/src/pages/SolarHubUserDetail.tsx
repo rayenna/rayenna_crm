@@ -278,7 +278,7 @@ export default function SolarHubUserDetail() {
                 className="flex w-full items-center gap-2 rounded-xl border border-[color:var(--border-default)] px-4 py-3 text-left text-sm font-semibold text-[color:var(--text-primary)] hover:bg-[color:var(--bg-card-hover)]"
               >
                 <KeyRound className="h-4 w-4 text-[color:var(--accent-gold)]" />
-                Reset password to default (rayenna123)
+                Reset password (initial / env password)
               </button>
               <button
                 type="button"

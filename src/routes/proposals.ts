@@ -4,12 +4,14 @@ import { ProposalStatus } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
 import { logSecurityAudit } from '../utils/auditLogger';
+import { requireProjectAccess } from '../utils/staffAccess';
 
 const router = express.Router();
 
 // Get proposals for a project (legacy CRM Proposal records — read-only archive)
 router.get('/project/:projectId', authenticate, async (req: Request, res: express.Response) => {
   try {
+    if (!(await requireProjectAccess(req, res, req.params.projectId))) return;
     const proposals = await prisma.proposal.findMany({
       where: { projectId: req.params.projectId },
       include: {
@@ -48,6 +50,8 @@ router.get('/:id', authenticate, async (req: Request, res: express.Response) => 
     if (!proposal) {
       return res.status(404).json({ error: 'Proposal not found' });
     }
+
+    if (!(await requireProjectAccess(req, res, proposal.projectId))) return;
 
     res.json(proposal);
   } catch (error: any) {

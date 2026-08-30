@@ -146,6 +146,7 @@ export interface User {
   email: string
   name: string
   role: UserRole
+  isActive?: boolean
   themePreference?: 'light' | 'dark' | null
   createdAt?: string
 }

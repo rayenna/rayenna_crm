@@ -7,7 +7,7 @@ import {
 import bcrypt from 'bcryptjs';
 import prisma from '../prisma';
 import { consumerMasterContactFields } from '../utils/consumerCustomerProfile';
-import { CONSUMER_DEFAULT_PASSWORD, isDemoHubUsername } from '../utils/consumerUsername';
+import { consumerProvisioningPassword, generateHubTemporaryPassword, isDemoHubUsername } from '../utils/consumerUsername';
 import { syncConsumerHubForProject, type ProvisionResult } from './consumerHubProvision';
 
 const HUB_VIEW_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.OPERATIONS, UserRole.MANAGEMENT];
@@ -252,15 +252,16 @@ export async function resetSolarHubPassword(
   const existing = await prisma.consumerUser.findUnique({ where: { id } });
   if (!existing) throw new Error('Solar Hub user not found');
 
+  const envInitial = consumerProvisioningPassword();
   const temporaryPassword =
-    mode === 'default'
-      ? CONSUMER_DEFAULT_PASSWORD
-      : `Ray${Math.random().toString(36).slice(2, 6)}${Math.floor(10 + Math.random() * 89)}`;
+    mode === 'default' && envInitial
+      ? envInitial
+      : generateHubTemporaryPassword();
 
   const hashed = await bcrypt.hash(temporaryPassword, 10);
   await prisma.consumerUser.update({
     where: { id },
-    data: { password: hashed },
+    data: { password: hashed, mustChangePassword: true },
   });
 
   return { username: existing.username, temporaryPassword };

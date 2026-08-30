@@ -1,7 +1,16 @@
+import { type ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { CRM_DEFAULT_HOME } from '../constants/defaultHomeRoute'
+import type { UserRole } from '../types'
 
-const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
+const PrivateRoute = ({
+  children,
+  roles,
+}: {
+  children: ReactNode
+  roles?: readonly UserRole[]
+}) => {
   const { user, isLoading } = useAuth()
 
   if (isLoading) {
@@ -18,6 +27,10 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (!user) {
     return <Navigate to="/login" replace />
+  }
+
+  if (roles && roles.length > 0 && !roles.includes(user.role)) {
+    return <Navigate to={CRM_DEFAULT_HOME} replace />
   }
 
   return <>{children}</>

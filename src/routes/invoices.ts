@@ -1,14 +1,17 @@
 import express, { Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
-import { InvoiceStatus, PaymentMode } from '@prisma/client';
+import { InvoiceStatus, PaymentMode, UserRole } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
+import { requireProjectAccess, salesProjectListWhere, operationsProjectListWhere } from '../utils/staffAccess';
+import { sendErrorResponse } from '../utils/publicApiError';
 
 const router = express.Router();
 
 // Get invoices for a project
 router.get('/project/:projectId', authenticate, async (req: Request, res: express.Response) => {
   try {
+    if (!(await requireProjectAccess(req, res, req.params.projectId))) return;
     const invoices = await prisma.invoice.findMany({
       where: { projectId: req.params.projectId },
       include: {
@@ -37,9 +40,18 @@ router.get(
     try {
       const { status, projectId, page = 1, limit = 20 } = req.query;
 
+      if (projectId && typeof projectId === 'string') {
+        if (!(await requireProjectAccess(req, res, projectId))) return;
+      }
+
       const where: any = {};
       if (status) where.status = status;
       if (projectId) where.projectId = projectId as string;
+      if (req.user?.role === UserRole.SALES) {
+        where.project = salesProjectListWhere(req.user.id);
+      } else if (req.user?.role === UserRole.OPERATIONS) {
+        where.project = operationsProjectListWhere();
+      }
 
       const skip = (Number(page) - 1) * Number(limit);
 
@@ -96,6 +108,8 @@ router.get('/:id', authenticate, async (req: Request, res: express.Response) => 
       return res.status(404).json({ error: 'Invoice not found' });
     }
 
+    if (!(await requireProjectAccess(req, res, invoice.projectId))) return;
+
     res.json(invoice);
   } catch (error: any) {
     console.error('Error fetching invoice:', error);
@@ -120,6 +134,8 @@ router.post(
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
       }
+
+      if (!(await requireProjectAccess(req, res, req.body.projectId))) return;
 
       const { amount, gst = 0 } = req.body;
       const total = amount + gst;

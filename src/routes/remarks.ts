@@ -2,15 +2,11 @@ import express, { Request, Response } from 'express';
 import { body, param, validationResult } from 'express-validator';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
+import { requireProjectAccess } from '../utils/staffAccess';
+import { sendErrorResponse } from '../utils/publicApiError';
 
 const router = express.Router();
 
-// Debug: Test endpoint to verify route is accessible
-router.get('/test', authenticate, (req: Request, res: Response) => {
-  res.json({ message: 'Remarks API is working', userId: req.user?.id });
-});
-
-// Get all remarks for a project
 router.get(
   '/project/:projectId',
   authenticate,
@@ -23,15 +19,7 @@ router.get(
       }
 
       const { projectId } = req.params;
-
-      // Verify project exists
-      const project = await prisma.project.findUnique({
-        where: { id: projectId },
-      });
-
-      if (!project) {
-        return res.status(404).json({ error: 'Project not found' });
-      }
+      if (!(await requireProjectAccess(req, res, projectId))) return;
 
       const remarks = await prisma.projectRemark.findMany({
         where: { projectId },
@@ -50,14 +38,8 @@ router.get(
 
       res.json(remarks);
     } catch (error: any) {
-      const projectId = req.params.projectId;
       console.error('[REMARKS API] Error fetching remarks:', error);
-      console.error('[REMARKS API] Error details:', {
-        projectId,
-        errorMessage: error.message,
-        errorCode: error.code,
-      });
-      res.status(500).json({ error: error.message || 'Failed to fetch remarks' });
+      sendErrorResponse(res, 500, error);
     }
   }
 );
@@ -90,18 +72,10 @@ router.post(
       const userId = req.user?.id;
 
       if (!userId) {
-        console.error('[REMARKS API] No userId found');
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      // Verify project exists
-      const project = await prisma.project.findUnique({
-        where: { id: projectId },
-      });
-
-      if (!project) {
-        return res.status(404).json({ error: 'Project not found' });
-      }
+      if (!(await requireProjectAccess(req, res, projectId))) return;
       if (process.env.NODE_ENV === 'development') {
         console.log('[REMARKS API] Creating remark:', { projectId, userId, remarkLength: remark?.length });
       }
@@ -125,31 +99,8 @@ router.post(
       if (process.env.NODE_ENV === 'development') console.log('[REMARKS API] Remark created successfully:', newRemark.id);
       res.status(201).json(newRemark);
     } catch (error: any) {
-      const { projectId } = req.params;
-      const { remark } = req.body;
-      const userId = req.user?.id;
-      
       console.error('[REMARKS API] Error creating remark:', error);
-      console.error('[REMARKS API] Error details:', {
-        projectId,
-        userId,
-        remark: remark?.substring?.(0, 50),
-        errorMessage: error.message,
-        errorCode: error.code,
-        errorStack: error.stack?.substring(0, 500),
-      });
-      
-      // Provide more detailed error message
-      let errorMessage = 'Failed to create remark';
-      if (error.code === 'P2003') {
-        errorMessage = 'Invalid project or user reference';
-      } else if (error.code === 'P2002') {
-        errorMessage = 'Duplicate entry';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      res.status(500).json({ error: errorMessage });
+      sendErrorResponse(res, 500, error);
     }
   }
 );
@@ -210,7 +161,7 @@ router.put(
 
       res.json(updatedRemark);
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      sendErrorResponse(res, 500, error);
     }
   }
 );
@@ -254,7 +205,7 @@ router.delete(
 
       res.json({ message: 'Remark deleted successfully' });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      sendErrorResponse(res, 500, error);
     }
   }
 );

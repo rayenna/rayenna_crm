@@ -20,6 +20,7 @@ import {
   dataSenseImpossibleConflict,
   dataSenseImpossibleHttpBody,
 } from '../utils/dataSense';
+import { sendErrorResponse } from '../utils/publicApiError';
 
 // Valid values for lostToCompetitionReason (required when lostReason is LOST_TO_COMPETITION)
 const LOST_TO_COMPETITION_REASON_VALUES = [
@@ -955,16 +956,8 @@ router.post(
         message: error.message,
         code: error.code,
         meta: error.meta,
-        stack: error.stack,
-        body: req.body,
       });
-      res.status(500).json({ 
-        error: error.message || 'Failed to create project',
-        details: process.env.NODE_ENV === 'development' ? {
-          code: error.code,
-          meta: error.meta,
-        } : undefined,
-      });
+      sendErrorResponse(res, 500, error, 'Failed to create project');
     }
   }
 );

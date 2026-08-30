@@ -26,6 +26,8 @@ import { logSecurityAudit } from '../utils/auditLogger';
 import { scheduleConsumerContactSyncForCustomer } from '../services/consumerHubProvision';
 import { CustomerType, Prisma } from '@prisma/client';
 import * as XLSX from 'xlsx';
+import { requireCustomerAccess } from '../utils/staffAccess';
+import { sendErrorResponse } from '../utils/publicApiError';
 
 const router = express.Router();
 
@@ -55,7 +57,7 @@ router.get(
   [
     query('search').optional().isString(),
     query('page').optional().isInt({ min: 1 }),
-    query('limit').optional().isInt({ min: 1, max: 10000 }),
+    query('limit').optional().isInt({ min: 1, max: 500 }),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -73,17 +75,16 @@ router.get(
       } = req.query;
 
       const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
-      const take = parseInt(limit as string);
+      const requestedTake = parseInt(limit as string);
+      const maxTake = req.user?.role === UserRole.SALES ? 500 : 200;
+      const take = Math.min(Number.isFinite(requestedTake) ? requestedTake : 25, maxTake);
 
       const where: any = {};
 
-      // For Sales users: if myCustomers is 'true', show only customers
-      // where they are the *currently assigned* salesperson.
-      if (req.user?.role === UserRole.SALES && myCustomers === 'true') {
+      // Sales always see assigned customers only (client cannot opt out).
+      if (req.user?.role === UserRole.SALES) {
         where.salespersonId = req.user.id;
-      } else if (req.user?.role !== UserRole.SALES) {
-        // For non-Sales users: filter by current salesperson assignment if provided
-        if (salespersonId) {
+      } else if (salespersonId) {
           const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : [salespersonId];
           // Filter out empty strings and null values, and ensure they're strings
           const validSalespersonIds = salespersonIdArray
@@ -113,8 +114,6 @@ router.get(
 
             where.OR = orConditions;
           }
-        }
-        // If no salespersonId is provided, show all customers (no filter applied)
       }
 
       if (search) {
@@ -217,15 +216,9 @@ router.get(
         limit: take,
         totalPages: Math.ceil(total / take),
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[CUSTOMERS API] Error fetching customers:', error);
-      console.error('[CUSTOMERS API] Error stack:', error.stack);
-      console.error('[CUSTOMERS API] Error details:', {
-        message: error.message,
-        code: error.code,
-        meta: error.meta,
-      });
-      res.status(500).json({ error: error.message || 'Internal server error' });
+      sendErrorResponse(res, 500, error);
     }
   }
 );
@@ -233,6 +226,7 @@ router.get(
 // Get single customer (all authenticated users can view)
 router.get('/:id', authenticate, async (req: Request, res: Response) => {
   try {
+    if (!(await requireCustomerAccess(req, res, req.params.id))) return;
     const customer = await prisma.customer.findUnique({
       where: { id: req.params.id },
       select: {

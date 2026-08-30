@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
+import { ROUTE_ROLES } from '../constants/routeRoles'
 import ThemeToggle from './ThemeToggle'
 import TipOfTheDay from './TipOfTheDay'
 import { getHelpPathForRoute } from '../help/sections'
@@ -26,19 +27,8 @@ function isHelpMenuPathActive(itemPath: string, pathname: string, locHash: strin
 }
 
 /** Keyboard Ctrl/Cmd+Shift shortcuts — same access as main nav / buttons */
-const SHORTCUT_ROLES_CUSTOMERS_PROJECTS: UserRole[] = [
-  UserRole.ADMIN,
-  UserRole.SALES,
-  UserRole.OPERATIONS,
-  UserRole.FINANCE,
-  UserRole.MANAGEMENT,
-]
-const SHORTCUT_ROLES_SUPPORT: UserRole[] = [
-  UserRole.ADMIN,
-  UserRole.SALES,
-  UserRole.OPERATIONS,
-  UserRole.MANAGEMENT,
-]
+const SHORTCUT_ROLES_CUSTOMERS_PROJECTS: UserRole[] = [...ROUTE_ROLES.allStaff]
+const SHORTCUT_ROLES_SUPPORT: UserRole[] = [...ROUTE_ROLES.supportTickets]
 const SHORTCUT_ROLES_NEW_CUSTOMER: UserRole[] = [UserRole.SALES, UserRole.MANAGEMENT, UserRole.ADMIN]
 const SHORTCUT_ROLES_NEW_PROJECT: UserRole[] = [UserRole.ADMIN, UserRole.SALES]
 
@@ -71,15 +61,15 @@ const Layout = () => {
   const dashboardNavRoles = [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE, UserRole.MANAGEMENT]
 
   const navigation = [
-    { name: 'Customers', path: '/customers', roles: [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE, UserRole.MANAGEMENT] },
-    { name: 'Projects', path: '/projects', roles: [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.FINANCE, UserRole.MANAGEMENT] },
-    { name: 'Support Tickets', path: '/support-tickets', roles: [UserRole.ADMIN, UserRole.SALES, UserRole.OPERATIONS, UserRole.MANAGEMENT] },
+    { name: 'Customers', path: '/customers', roles: [...ROUTE_ROLES.allStaff] },
+    { name: 'Projects', path: '/projects', roles: [...ROUTE_ROLES.allStaff] },
+    { name: 'Support Tickets', path: '/support-tickets', roles: [...ROUTE_ROLES.supportTickets] },
     { name: 'Dashboard (Old)', path: '/dashboard', roles: dashboardNavRoles },
-    { name: 'Solar Hub', path: '/solar-hub', roles: [UserRole.ADMIN, UserRole.OPERATIONS, UserRole.MANAGEMENT] },
-    { name: 'Tally Export', path: '/tally-export', roles: [UserRole.ADMIN, UserRole.FINANCE] },
-    { name: 'Lost Deals', path: '/lost-deals', roles: [UserRole.ADMIN, UserRole.MANAGEMENT] },
-    { name: 'Users', path: '/users', roles: [UserRole.ADMIN] },
-    { name: 'Audit & Security', path: '/audit-security', roles: [UserRole.ADMIN] },
+    { name: 'Solar Hub', path: '/solar-hub', roles: [...ROUTE_ROLES.solarHub] },
+    { name: 'Tally Export', path: '/tally-export', roles: [...ROUTE_ROLES.tallyExport] },
+    { name: 'Lost Deals', path: '/lost-deals', roles: [...ROUTE_ROLES.lostDeals] },
+    { name: 'Users', path: '/users', roles: [...ROUTE_ROLES.users] },
+    { name: 'Audit & Security', path: '/audit-security', roles: [...ROUTE_ROLES.auditSecurity] },
   ]
 
   const filteredNav = navigation.filter((nav) => hasRole(nav.roles))
