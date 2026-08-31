@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
+import { ZENITH_EXPAND_PANEL_EVENT } from './zenithSectionNavigation'
 
 const ACCENTS = {
   gold: 'var(--accent-gold)',
@@ -30,6 +31,16 @@ export default function ZenithFocusCollapsible({
 }: Props) {
   const [open, setOpen] = useState(defaultOpen)
   const borderColor = ACCENTS[accent]
+
+  useEffect(() => {
+    if (!id || typeof window === 'undefined') return
+    const onExpand = (e: Event) => {
+      const detail = (e as CustomEvent<{ id?: string }>).detail
+      if (detail?.id === id) setOpen(true)
+    }
+    window.addEventListener(ZENITH_EXPAND_PANEL_EVENT, onExpand)
+    return () => window.removeEventListener(ZENITH_EXPAND_PANEL_EVENT, onExpand)
+  }, [id])
 
   return (
     <div

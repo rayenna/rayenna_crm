@@ -316,7 +316,7 @@ function LeaderboardRow({
 
   return (
     <li
-      className="flex items-center gap-3 border-b border-[color:var(--border-default)] transition-colors duration-150"
+      className="zenith-leaderboard-row flex items-center gap-3 border-b border-[color:var(--border-default)] transition-colors duration-150 hover:bg-[color:var(--bg-table-hover)] focus-within:bg-[color:var(--bg-table-hover)] focus-within:ring-2 focus-within:ring-inset focus-within:ring-[color:var(--accent-gold)]"
       style={{
         padding: '10px 16px',
         background: isCurrentUser ? 'color-mix(in srgb, var(--accent-gold) 10%, transparent)' : undefined,

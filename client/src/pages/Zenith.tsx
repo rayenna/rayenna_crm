@@ -37,6 +37,15 @@ import {
   type ZenithMobileTab,
 } from '../components/zenith/zenithMobileNav'
 import { scrollToZenithElementId } from '../components/zenith/zenithScrollToSection'
+import {
+  flashZenithSection,
+  requestZenithPanelExpand,
+  resolveZenithSectionMobileTab,
+} from '../components/zenith/zenithSectionNavigation'
+import {
+  readZenithMobileTab,
+  writeZenithMobileTab,
+} from '../utils/zenithMobileTabPreferences'
 import ZenithOfflineSnapshotBanner from '../components/zenith/ZenithOfflineSnapshotBanner'
 import { fetchZenithWithOfflineCache } from '../utils/zenithOfflineFetch'
 import {
@@ -46,6 +55,7 @@ import {
 } from '../utils/zenithOfflineCache'
 import { clearZenithDrawerBodyLock } from '../utils/zenithDrawerLifecycle'
 import { ZENITH_QUERY_STALE_MS } from '../constants/zenithQueryStale'
+import { formatZenithFilterSummary } from '../utils/zenithFilterSummary'
 
 const Zenith = () => {
   const { user } = useAuth()
@@ -95,6 +105,39 @@ const Zenith = () => {
   const myDaySnapQ = useMyDaySnapshotQuery(!!user)
   const narrow = useZenithNarrowLayout()
   const [mobileTab, setMobileTab] = useState<ZenithMobileTab>('overview')
+  const [mobileTabHydrated, setMobileTabHydrated] = useState(false)
+
+  useEffect(() => {
+    if (!user?.id || mobileTabHydrated) return
+    const saved = readZenithMobileTab(user.id)
+    if (saved) setMobileTab(saved)
+    setMobileTabHydrated(true)
+  }, [user?.id, mobileTabHydrated])
+
+  const handleMobileTabChange = useCallback(
+    (tab: ZenithMobileTab) => {
+      setMobileTab(tab)
+      if (user?.id) writeZenithMobileTab(user.id, tab)
+    },
+    [user?.id],
+  )
+
+  const handlePriorityNavigate = useCallback(
+    (targetId: string) => {
+      if (!user?.role) return
+      const tab = resolveZenithSectionMobileTab(targetId, user.role)
+      if (narrow && tab) {
+        handleMobileTabChange(tab)
+      }
+      requestZenithPanelExpand(targetId)
+      const delay = narrow && tab ? 140 : 50
+      window.setTimeout(() => {
+        scrollToZenithElementId(targetId)
+        flashZenithSection(targetId)
+      }, delay)
+    },
+    [narrow, user?.role, handleMobileTabChange],
+  )
 
   const showExecHitList =
     user?.role === UserRole.SALES ||
@@ -165,9 +208,11 @@ const Zenith = () => {
   const {
     data: zenithData,
     isLoading,
+    isFetching,
     isError,
     error,
     refetch,
+    dataUpdatedAt,
   } = useZenithMainQuery(
     user?.role,
     selectedFYs,
@@ -250,6 +295,11 @@ const Zenith = () => {
 
   const dateFilter = useMemo(
     () => ({ selectedFYs, selectedQuarters, selectedMonths }),
+    [selectedFYs, selectedQuarters, selectedMonths],
+  )
+
+  const filterSummary = useMemo(
+    () => formatZenithFilterSummary(selectedFYs, selectedQuarters, selectedMonths),
     [selectedFYs, selectedQuarters, selectedMonths],
   )
 
@@ -350,6 +400,7 @@ const Zenith = () => {
             }
             onOpenOperationsDrawer={operationsQuickDrawer.open}
             onOpenProjectQuickDrawer={openZenithProjectQuickDrawer}
+            onPriorityNavigate={handlePriorityNavigate}
           />
         )
       case UserRole.OPERATIONS:
@@ -363,6 +414,7 @@ const Zenith = () => {
             insightsBar={insightsBar}
             onOpenOperationsDrawer={operationsQuickDrawer.open}
             onOpenProjectQuickDrawer={openZenithProjectQuickDrawer}
+            onPriorityNavigate={handlePriorityNavigate}
           />
         )
       case UserRole.FINANCE:
@@ -375,6 +427,7 @@ const Zenith = () => {
             mobileTab={mobileTabProp}
             insightsBar={insightsBar}
             onOpenFinanceDrawer={financeQuickDrawer.open}
+            onPriorityNavigate={handlePriorityNavigate}
           />
         )
       default:
@@ -395,6 +448,7 @@ const Zenith = () => {
     openZenithProjectQuickDrawer,
     mobileTabProp,
     insightsBar,
+    handlePriorityNavigate,
   ])
 
   return (
@@ -415,6 +469,9 @@ const Zenith = () => {
           onResetFilters={handleResetFilters}
           onShowBriefing={showBriefing}
           isOnline={isOnline}
+          filterSummary={filterSummary}
+          dataUpdatedAt={dataUpdatedAt}
+          isRefreshing={isFetching && !isLoading}
         />
 
         <OfflineBanner
@@ -553,7 +610,7 @@ const Zenith = () => {
           <ZenithMobileBottomNav
             role={user.role}
             activeTab={mobileTab}
-            onTabChange={setMobileTab}
+            onTabChange={handleMobileTabChange}
             showHitList={showExecHitList}
             pendingSyncCount={pendingCount}
             isOnline={isOnline}

@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Info, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Info, X } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
+import {
+  readZenithForecastPrefs,
+  writeZenithForecastPrefs,
+} from '../../utils/zenithForecastPreferences'
 import {
   buildForecastRoleAccent,
   computeForecast,
@@ -108,8 +113,12 @@ export default function ForecastKPI({
   /** Drives the thin role accent under concentration (shared tile). */
   role?: UserRole | string | null
 }) {
+  const { user } = useAuth()
+  const userId = user?.id
+  const [prefsLoaded, setPrefsLoaded] = useState(false)
   const [band, setBand] = useState<ForecastBand>('all')
   const [timing, setTiming] = useState<ForecastTiming>('all')
+  const [adjustOpen, setAdjustOpen] = useState(false)
   const forecast = useMemo(
     () => computeForecast(projects, { band, timing }),
     [projects, band, timing],
@@ -128,6 +137,24 @@ export default function ForecastKPI({
   )
   const cohortCapped = explorerCohortLooksCapped((projects ?? []).length)
   const [activeTab, setActiveTab] = useState<TabKey>('source')
+
+  useEffect(() => {
+    if (!userId) {
+      setPrefsLoaded(false)
+      return
+    }
+    const prefs = readZenithForecastPrefs(userId)
+    setBand(prefs.band)
+    setTiming(prefs.timing)
+    setActiveTab(prefs.activeTab)
+    setAdjustOpen(prefs.adjustOpen)
+    setPrefsLoaded(true)
+  }, [userId])
+
+  useEffect(() => {
+    if (!userId || !prefsLoaded) return
+    writeZenithForecastPrefs(userId, { band, timing, activeTab, adjustOpen })
+  }, [userId, prefsLoaded, band, timing, activeTab, adjustOpen])
   const [displayTotal, setDisplayTotal] = useState(0)
   const [legendOpen, setLegendOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
@@ -297,6 +324,11 @@ export default function ForecastKPI({
     contextBits.push(`${forecast.pastDueCount} past due`)
   }
 
+  const adjustSummary = [
+    forecastBandLabel(band),
+    forecastTimingLabel(timing),
+  ].join(' · ')
+
   const ROW_SLOT_PX = 34
   const BREAKDOWN_H = ROW_SLOT_PX * 3 + 6
   /** Keep “+N more” fully inside the card — never clipped by flex shrink. */
@@ -448,25 +480,8 @@ export default function ForecastKPI({
       ].join(' ')}
       style={{ fontFamily: 'DM Sans, sans-serif' }}
     >
-      <div className="flex items-start justify-between gap-2 shrink-0">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[color:var(--text-secondary)]">
-          Weighted open pipeline
-        </div>
-        <button
-          ref={legendBtnRef}
-          type="button"
-          onClick={() => {
-            setLegendOpen((v) => !v)
-            setMoreOpen(false)
-          }}
-          className="zenith-forecast-weights inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-[color:var(--text-muted)] hover:bg-[color:var(--accent-teal-muted)] hover:text-[color:var(--accent-teal)] transition-colors cursor-pointer touch-manipulation"
-          aria-expanded={legendOpen}
-          aria-controls="forecast-weight-legend"
-          title="Stage win probabilities"
-        >
-          <Info className="w-3 h-3 shrink-0 opacity-80" aria-hidden />
-          Weights
-        </button>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[color:var(--text-secondary)] shrink-0">
+        Weighted open pipeline
       </div>
 
       <div
@@ -475,105 +490,146 @@ export default function ForecastKPI({
       >
         {formatINR(displayTotal)}
       </div>
-      <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[11px] text-[color:var(--text-muted)] shrink-0">
-        <span title="Sum of order values for open deals in this band">
-          Raw {formatINRCompact(forecast.totalRaw)}
+
+      <button
+        type="button"
+        onClick={() => setAdjustOpen((v) => !v)}
+        className="zenith-forecast-adjust mt-1.5 flex w-full shrink-0 items-center justify-between gap-2 rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-ticker)] px-2.5 py-1.5 text-left transition-colors hover:border-[color:var(--accent-teal-border)] hover:bg-[color:var(--accent-teal-muted)]/40 cursor-pointer touch-manipulation focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-teal)]"
+        aria-expanded={adjustOpen}
+        aria-controls="forecast-adjust-panel"
+      >
+        <span className="min-w-0 flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
+          <span className="text-[10px] font-semibold text-[color:var(--text-primary)]">Adjust</span>
+          {!adjustOpen ? (
+            <span className="truncate text-[10px] text-[color:var(--text-muted)]">{adjustSummary}</span>
+          ) : null}
         </span>
-        <span className="opacity-40" aria-hidden>
-          ·
-        </span>
-        <span title="Weighted expected ÷ raw open pipeline">
-          Win rate {formatWinRate(forecast.impliedWinRate)}
-        </span>
-      </div>
-      <div className="text-[11px] text-[color:var(--text-muted)] mt-0.5 shrink-0">
-        Expected from {forecast.dealCount} open deal{forecast.dealCount === 1 ? '' : 's'}
-        {contextBits.length > 0 ? (
-          <span className="text-[color:var(--text-secondary)]"> · {contextBits.join(' · ')}</span>
-        ) : null}
-      </div>
-      {concentration.dealCount > 0 && forecast.totalForecast > 0 ? (
-        <button
-          type="button"
-          onClick={openTopConcentration}
-          className="mt-1 text-left text-[11px] leading-snug text-[color:var(--text-secondary)] hover:text-[color:var(--accent-teal)] transition-colors cursor-pointer touch-manipulation shrink-0"
-          title={concentration.names.join(' · ')}
-        >
-          Top {concentration.dealCount} = {Math.round(concentration.share * 100)}% of forecast
-          <span className="text-[color:var(--text-muted)]">
-            {' '}
-            · {formatINRCompact(concentration.weighted)}
-          </span>
-        </button>
-      ) : null}
-      {roleAccent ? (
-        <div
-          className={`mt-0.5 text-[10px] leading-snug shrink-0 ${
-            roleAccent.tone === 'warning'
-              ? 'text-[color:var(--accent-gold)]'
-              : roleAccent.tone === 'info'
-                ? 'text-[color:var(--accent-teal)]'
-                : 'text-[color:var(--text-muted)]'
-          }`}
-          title={roleAccent.title}
-        >
-          {roleAccent.text}
+        {adjustOpen ? (
+          <ChevronUp className="h-3.5 w-3.5 shrink-0 text-[color:var(--text-muted)]" aria-hidden />
+        ) : (
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[color:var(--text-muted)]" aria-hidden />
+        )}
+      </button>
+
+      {adjustOpen ? (
+        <div id="forecast-adjust-panel" className="mt-1.5 flex shrink-0 flex-col gap-1.5">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[11px] text-[color:var(--text-muted)]">
+            <span title="Sum of order values for open deals in this band">
+              Raw {formatINRCompact(forecast.totalRaw)}
+            </span>
+            <span className="opacity-40" aria-hidden>
+              ·
+            </span>
+            <span title="Weighted expected ÷ raw open pipeline">
+              Win rate {formatWinRate(forecast.impliedWinRate)}
+            </span>
+          </div>
+          <div className="text-[11px] text-[color:var(--text-muted)]">
+            Expected from {forecast.dealCount} open deal{forecast.dealCount === 1 ? '' : 's'}
+            {contextBits.length > 0 ? (
+              <span className="text-[color:var(--text-secondary)]"> · {contextBits.join(' · ')}</span>
+            ) : null}
+          </div>
+          {concentration.dealCount > 0 && forecast.totalForecast > 0 ? (
+            <button
+              type="button"
+              onClick={openTopConcentration}
+              className="text-left text-[11px] leading-snug text-[color:var(--text-secondary)] hover:text-[color:var(--accent-teal)] transition-colors cursor-pointer touch-manipulation focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-teal)] rounded-sm"
+              title={concentration.names.join(' · ')}
+            >
+              Top {concentration.dealCount} = {Math.round(concentration.share * 100)}% of forecast
+              <span className="text-[color:var(--text-muted)]">
+                {' '}
+                · {formatINRCompact(concentration.weighted)}
+              </span>
+            </button>
+          ) : null}
+          {roleAccent ? (
+            <div
+              className={`text-[10px] leading-snug ${
+                roleAccent.tone === 'warning'
+                  ? 'text-[color:var(--accent-gold)]'
+                  : roleAccent.tone === 'info'
+                    ? 'text-[color:var(--accent-teal)]'
+                    : 'text-[color:var(--text-muted)]'
+              }`}
+              title={roleAccent.title}
+            >
+              {roleAccent.text}
+            </div>
+          ) : null}
+          {cohortCapped ? (
+            <div
+              className="text-[10px] leading-snug text-[color:var(--text-muted)]"
+              title={`Zenith explorer loads at most ${ZENITH_EXPLORER_PROJECT_CAP} projects (newest updates first).`}
+            >
+              Based on explorer cohort (max {ZENITH_EXPLORER_PROJECT_CAP.toLocaleString('en-IN')})
+            </div>
+          ) : null}
+
+          <div
+            className="flex rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-ticker)] p-0.5"
+            role="group"
+            aria-label="Pipeline band"
+          >
+            {BANDS.map((b) => (
+              <button
+                key={b.key}
+                type="button"
+                title={b.title}
+                onClick={() => setBand(b.key)}
+                className={`zenith-forecast-seg flex-1 rounded-md px-1.5 py-1 text-[10px] font-semibold leading-tight transition-colors cursor-pointer touch-manipulation ${
+                  band === b.key
+                    ? 'bg-[color:var(--bg-card)] text-[color:var(--accent-teal)] shadow-sm'
+                    : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]'
+                }`}
+                aria-pressed={band === b.key}
+              >
+                {b.label}
+              </button>
+            ))}
+          </div>
+
+          <div
+            className="flex rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-ticker)] p-0.5"
+            role="group"
+            aria-label="When scheduled"
+          >
+            {TIMINGS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                title={t.title}
+                onClick={() => setTiming(t.key)}
+                className={`zenith-forecast-seg flex-1 min-w-0 rounded-md px-0.5 py-1 text-[10px] font-semibold leading-tight transition-colors cursor-pointer touch-manipulation ${
+                  timing === t.key
+                    ? 'bg-[color:var(--bg-card)] text-[color:var(--accent-teal)] shadow-sm'
+                    : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]'
+                }`}
+                aria-pressed={timing === t.key}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          <button
+            ref={legendBtnRef}
+            type="button"
+            onClick={() => {
+              setLegendOpen((v) => !v)
+              setMoreOpen(false)
+            }}
+            className="zenith-forecast-weights inline-flex w-fit items-center gap-1 rounded-md border border-[color:var(--border-default)] px-2 py-1 text-[10px] text-[color:var(--text-muted)] hover:bg-[color:var(--accent-teal-muted)] hover:text-[color:var(--accent-teal)] transition-colors cursor-pointer touch-manipulation focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-teal)]"
+            aria-expanded={legendOpen}
+            aria-controls="forecast-weight-legend"
+            title="Stage win probabilities"
+          >
+            <Info className="w-3 h-3 shrink-0 opacity-80" aria-hidden />
+            Weights
+          </button>
         </div>
       ) : null}
-      {cohortCapped ? (
-        <div
-          className="mt-0.5 text-[10px] leading-snug text-[color:var(--text-muted)] shrink-0"
-          title={`Zenith explorer loads at most ${ZENITH_EXPLORER_PROJECT_CAP} projects (newest updates first).`}
-        >
-          Based on explorer cohort (max {ZENITH_EXPLORER_PROJECT_CAP.toLocaleString('en-IN')})
-        </div>
-      ) : null}
-
-      <div
-        className="mt-2 flex rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-ticker)] p-0.5 shrink-0"
-        role="group"
-        aria-label="Pipeline band"
-      >
-        {BANDS.map((b) => (
-          <button
-            key={b.key}
-            type="button"
-            title={b.title}
-            onClick={() => setBand(b.key)}
-            className={`zenith-forecast-seg flex-1 rounded-md px-1.5 py-1 text-[10px] font-semibold leading-tight transition-colors cursor-pointer touch-manipulation ${
-              band === b.key
-                ? 'bg-[color:var(--bg-card)] text-[color:var(--accent-teal)] shadow-sm'
-                : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]'
-            }`}
-            aria-pressed={band === b.key}
-          >
-            {b.label}
-          </button>
-        ))}
-      </div>
-
-      <div
-        className="mt-1.5 flex rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-ticker)] p-0.5 shrink-0"
-        role="group"
-        aria-label="When scheduled"
-      >
-        {TIMINGS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            title={t.title}
-            onClick={() => setTiming(t.key)}
-            className={`zenith-forecast-seg flex-1 min-w-0 rounded-md px-0.5 py-1 text-[10px] font-semibold leading-tight transition-colors cursor-pointer touch-manipulation ${
-              timing === t.key
-                ? 'bg-[color:var(--bg-card)] text-[color:var(--accent-teal)] shadow-sm'
-                : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]'
-            }`}
-            aria-pressed={timing === t.key}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
 
       <div
         className="flex flex-nowrap gap-1 mt-2.5 mb-1.5 pb-2 border-b border-[color:var(--border-default)] shrink-0 overflow-x-auto overflow-y-hidden"

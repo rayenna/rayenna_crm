@@ -53,6 +53,15 @@ import ForecastKPI from './ForecastKPI'
 import DashboardMyDayPlanCard from '../dashboard/DashboardMyDayPlanCard'
 import DashboardLifecycleBrandReminder from '../dashboard/DashboardLifecycleBrandReminder'
 import { dataSenseHitsOnExplorerProjects } from '../../utils/dataSense'
+import { zenithExplorerProjectsMissingLifecycleBrands } from '../../utils/zenithBriefingMissingBrands'
+import ZenithPriorityRibbon from './ZenithPriorityRibbon'
+import {
+  ZenithFunnelSkeleton,
+  ZenithHitListPanelSkeleton,
+  ZenithKpiSkeletonGrid,
+  ZenithOverviewPairSkeleton,
+} from './ZenithOverviewSkeletons'
+import { buildExecutivePriorityItems } from '../../utils/zenithPriorityItems'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
 import { ZENITH_CHART_GROUP } from '../../constants/zenithChartGroups'
 import type { ZenithChartGroup } from '../../constants/zenithChartGroups'
@@ -105,14 +114,16 @@ function ZenithSkeleton({ insightsBar }: { insightsBar?: ReactNode }) {
   return (
     <div className="zenith-exec-main mx-auto space-y-5 px-3 sm:px-5 pt-3 pb-5 lg:pt-4 lg:pb-6">
       <div className="zenith-kpi-ticker-stack">
-        <div className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="zenith-skeleton h-32 rounded-xl min-w-0" />
-          ))}
-        </div>
+        <ZenithKpiSkeletonGrid count={6} />
         {insightsBar}
+        <div className="mt-2 flex gap-2" aria-hidden>
+          <div className="zenith-skeleton h-8 w-28 rounded-full" />
+          <div className="zenith-skeleton h-8 w-24 rounded-full" />
+        </div>
       </div>
-      <div className="zenith-skeleton h-40 rounded-xl" />
+      <ZenithOverviewPairSkeleton />
+      <ZenithOverviewPairSkeleton />
+      <ZenithFunnelSkeleton />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="zenith-skeleton h-72 rounded-xl min-w-0" />
@@ -185,6 +196,7 @@ export default function ZenithExecutiveBody({
   onOpenProjectQuickDrawer,
   mobileTab = null,
   insightsBar = null,
+  onPriorityNavigate,
 }: {
   role: UserRole
   data: Record<string, unknown>
@@ -203,8 +215,8 @@ export default function ZenithExecutiveBody({
   onOpenProjectQuickDrawer: (p: QuickActionProjectRef, section?: ZenithAutoFocusSection | null) => void
   /** Mobile-only: one tab visible at a time; null = desktop (show all). */
   mobileTab?: ZenithMobileTab | null
-  /** AI Insights ticker — rendered under the KPI tiles. */
   insightsBar?: ReactNode
+  onPriorityNavigate?: (targetId: string) => void
 }) {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -393,6 +405,40 @@ export default function ZenithExecutiveBody({
       showDataSenseReminder ? dataSenseHitsOnExplorerProjects(explorerProjects) : [],
     [explorerProjects, showDataSenseReminder],
   )
+  const brandGapCount = useMemo(
+    () =>
+      showLifecycleReminder
+        ? zenithExplorerProjectsMissingLifecycleBrands(explorerProjects).length
+        : 0,
+    [explorerProjects, showLifecycleReminder],
+  )
+
+  const paymentItemsEarly = (data?.projectsByPaymentStatus ?? []) as {
+    status: string
+    count: number
+  }[]
+
+  const priorityItems = useMemo(
+    () =>
+      buildExecutivePriorityItems({
+        hitListCount: hitListResult.hitList.length,
+        hitListAllClear: hitListResult.allClear,
+        dataSenseCount: attentionDataSenseHits.length,
+        brandGapCount,
+        overdueCount:
+          (paymentItemsEarly.find((p) => p.status === 'PENDING')?.count ?? 0) +
+          (paymentItemsEarly.find((p) => p.status === 'PARTIAL')?.count ?? 0),
+        role,
+      }),
+    [
+      hitListResult.hitList.length,
+      hitListResult.allClear,
+      attentionDataSenseHits.length,
+      brandGapCount,
+      paymentItemsEarly,
+      role,
+    ],
+  )
 
   const { data: revLeadData } = useQuery({
     queryKey: ['zenith', 'revenueLead', effFYs, effQ, effM, user?.role],
@@ -569,11 +615,16 @@ export default function ZenithExecutiveBody({
             ))}
           </div>
           {insightsBar}
+          <ZenithPriorityRibbon
+            items={priorityItems}
+            isLoading={focusLoading && showHitList}
+            onNavigate={onPriorityNavigate ?? (() => {})}
+          />
           </div>
 
           {/* Row 2: Things needing attention | Weighted open pipeline — equal height */}
           <div className="grid w-full grid-cols-1 gap-3 scroll-mt-28 min-[744px]:grid-cols-2 min-[744px]:items-stretch min-[744px]:gap-4">
-            <div className="zenith-overview-panel flex min-h-0 min-w-0 flex-col">
+            <div className="zenith-overview-panel flex min-h-0 min-w-0 flex-col scroll-mt-28">
               <DashboardLifecycleBrandReminder
                 fillHeight
                 showEmptyAllClear
@@ -610,15 +661,13 @@ export default function ZenithExecutiveBody({
               <DashboardMyDayPlanCard fillHeight paired className="h-full" />
             </div>
             {focusLoading ? (
-              <div
-                id="zenith-hit-list"
-                className="zenith-overview-panel zenith-skeleton w-full min-w-0 rounded-xl"
-                aria-hidden
-              />
+              <div id="zenith-hit-list" className="zenith-overview-panel flex min-h-0 min-w-0 flex-col">
+                <ZenithHitListPanelSkeleton />
+              </div>
             ) : showHitList ? (
               <div
                 id="zenith-hit-list"
-                className="zenith-overview-panel flex min-h-0 min-w-0 flex-col overflow-hidden scroll-mt-28"
+                className="zenith-overview-panel flex min-h-0 min-w-0 flex-col scroll-mt-28 overflow-hidden"
               >
                 <HitList
                   hitList={hitListResult.hitList}
@@ -687,7 +736,7 @@ export default function ZenithExecutiveBody({
             Explore the landscape
           </h2>
           <p
-            className="mt-1.5 text-[11px] sm:text-xs text-[color:var(--text-muted)] italic leading-snug max-w-2xl"
+            className="zenith-explore-section-intro mt-1.5 text-[11px] sm:text-xs text-[color:var(--text-muted)] italic leading-snug max-w-2xl"
             style={{ fontFamily: 'DM Sans, sans-serif' }}
           >
             These charts are live: click any bar, point, or slice to open matching projects in the quick

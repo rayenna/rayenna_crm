@@ -84,15 +84,15 @@ function StageTooltip({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 6, scale: 0.98 }}
       transition={{ duration: 0.2 }}
-      className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-[min(220px,46vw)] rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-modal)]/95 backdrop-blur-xl shadow-[var(--shadow-dropdown)] px-3 py-2.5 text-left pointer-events-auto z-40"
+      className="zenith-deal-flow-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-[min(220px,46vw)] rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-dropdown)] px-3 py-2.5 text-left pointer-events-auto z-40 shadow-xl ring-1 ring-[color:var(--border-strong)]"
     >
       <p className="text-xs font-bold text-[color:var(--text-primary)]">{stage.label}</p>
       <p className="text-sm font-extrabold text-[color:var(--accent-gold)] tabular-nums mt-1">
         {stage.count} projects
       </p>
-      <p className="text-[11px] text-[color:var(--text-secondary)] mt-1">
+      <p className="text-[11px] text-[color:var(--text-primary)] mt-1">
         Avg in stage:{' '}
-        <span className="text-[color:var(--text-primary)] font-semibold">
+        <span className="font-semibold">
           {stage.avgDaysInStage != null ? `${stage.avgDaysInStage} days` : '—'}
         </span>
       </p>
@@ -139,14 +139,14 @@ function OpenDealsTooltip({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 4, scale: 0.98 }}
       transition={{ duration: 0.2 }}
-      className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[min(240px,52vw)] rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--bg-modal)]/95 backdrop-blur-xl shadow-[var(--shadow-dropdown)] px-3 py-2.5 text-left pointer-events-auto z-50"
+      className="zenith-deal-flow-tooltip absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-[min(240px,52vw)] rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-dropdown)] px-3 py-2.5 text-left pointer-events-auto z-50 shadow-xl ring-1 ring-[color:var(--border-strong)]"
     >
       <p className="text-xs font-bold text-[color:var(--text-primary)]">Open Deals (total)</p>
       <p className="text-sm font-extrabold text-[color:var(--accent-gold)] tabular-nums mt-1">
         {aggregate.count} projects
       </p>
-      <p className="text-[11px] text-[color:var(--text-secondary)] mt-1 leading-snug">{breakdownLong}</p>
-      <p className="text-[11px] text-[color:var(--text-muted)] mt-0.5 tabular-nums">Σ {breakdownShort}</p>
+      <p className="text-[11px] text-[color:var(--text-primary)] mt-1 leading-snug font-medium">{breakdownLong}</p>
+      <p className="text-[11px] text-[color:var(--text-secondary)] mt-0.5 tabular-nums font-semibold">Σ {breakdownShort}</p>
       {onDealFlowStageClick ? (
         <button
           type="button"
@@ -194,7 +194,7 @@ function StageHitTarget({
     return (
       <button
         type="button"
-        className="absolute inset-0 flex flex-col items-center justify-center text-center px-0.5 no-underline group cursor-pointer bg-transparent border-0"
+        className="absolute inset-0 flex flex-col items-center justify-center text-center px-0.5 no-underline group cursor-pointer bg-transparent border-0 zenith-funnel-stage-hit focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--text-inverse)]"
         onClick={() => onDealFlowStageClick(stage)}
         aria-label={`${stage.label}: ${stage.count} projects, open quick list`}
       >
@@ -206,7 +206,7 @@ function StageHitTarget({
   return (
     <Link
       to={stage.to}
-      className="absolute inset-0 flex flex-col items-center justify-center text-center px-0.5 no-underline group"
+      className="absolute inset-0 flex flex-col items-center justify-center text-center px-0.5 no-underline group zenith-funnel-stage-hit"
     >
       {body}
     </Link>

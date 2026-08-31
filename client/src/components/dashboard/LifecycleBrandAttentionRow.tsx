@@ -31,7 +31,7 @@ export default function LifecycleBrandAttentionRow({ project, compact = false }:
           <Link
             to={`/projects/${project.id}`}
             className={[
-              'font-semibold text-[color:var(--text-primary)] underline decoration-[color:color-mix(in_srgb,var(--accent-teal)_35%,transparent)] underline-offset-2 transition hover:text-[color:var(--accent-teal)]',
+              'font-semibold text-[color:var(--text-primary)] underline decoration-[color:color-mix(in_srgb,var(--accent-teal)_35%,transparent)] underline-offset-2 transition hover:text-[color:var(--accent-teal)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-teal)] rounded-sm',
               compact ? 'text-[12px]' : 'text-sm',
             ].join(' ')}
           >
@@ -57,7 +57,7 @@ export default function LifecycleBrandAttentionRow({ project, compact = false }:
         />
         <Link
           to={`/projects/${project.id}`}
-          className="inline-flex min-h-[36px] items-center justify-center rounded-lg border border-[color:var(--border-default)] px-2.5 text-[11px] font-bold text-[color:var(--accent-teal)] transition hover:border-[color:var(--accent-teal-border)] hover:bg-[color:var(--accent-teal-muted)]"
+          className="zenith-attention-open inline-flex min-h-[36px] items-center justify-center rounded-lg border border-[color:var(--border-default)] px-2.5 text-[11px] font-bold text-[color:var(--accent-teal)] transition hover:border-[color:var(--accent-teal-border)] hover:bg-[color:var(--accent-teal-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-teal)]"
         >
           Open →
         </Link>

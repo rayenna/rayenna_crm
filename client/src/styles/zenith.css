@@ -317,6 +317,22 @@
   max-height: 28rem;
 }
 
+@media (max-height: 800px) and (min-width: 1024px) {
+  .zenith-root .zenith-overview-panel {
+    height: min(22rem, calc(100dvh - 14rem));
+    min-height: min(22rem, calc(100dvh - 14rem));
+    max-height: min(22rem, calc(100dvh - 14rem));
+  }
+}
+
+@media (max-width: 743px) {
+  .zenith-root .zenith-overview-panel {
+    height: auto;
+    min-height: 18rem;
+    max-height: none;
+  }
+}
+
 .zenith-root .zenith-overview-panel > * {
   min-height: 0;
   height: 100%;
@@ -325,10 +341,18 @@
 
 @media (max-width: 1023px) {
   .zenith-root .zenith-overview-panel {
-    /* Extra height vs desktop: band/timing/tabs use 40px tap targets. */
-    height: 32rem;
-    min-height: 32rem;
-    max-height: 32rem;
+    /* Slightly shorter after pipeline Adjust disclosure; 40px tap targets on segments. */
+    height: 28rem;
+    min-height: 28rem;
+    max-height: 28rem;
+  }
+
+  @media (max-width: 743px) {
+    .zenith-root .zenith-overview-panel {
+      height: auto;
+      min-height: 18rem;
+      max-height: none;
+    }
   }
 
   /* Hit List otherwise caps at ~42vh until lg — leaves empty space in the shared panel on iPad. */
@@ -348,9 +372,16 @@
   }
 
   .zenith-root .zenith-forecast-more,
-  .zenith-root .zenith-forecast-weights {
+  .zenith-root .zenith-forecast-weights,
+  .zenith-root .zenith-forecast-adjust {
     min-height: 40px;
   }
+}
+
+/* Deal flow hover tooltips — solid panel over funnel (no glass blur) */
+.zenith-deal-flow-tooltip {
+  background-color: var(--bg-dropdown);
+  box-shadow: var(--shadow-dropdown);
 }
 
 .zenith-root .zenith-exec-section {
@@ -1439,5 +1470,99 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   border: none;
   background: var(--accent-gold);
   color: var(--text-inverse);
+}
+
+/* KPI drill-down affordance */
+.zenith-root .zenith-kpi-card--drill:focus-visible {
+  outline: 2px solid var(--accent-gold-border);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1023px) {
+  .zenith-root .zenith-kpi-drill-hint {
+    display: none;
+  }
+}
+
+/* Deal flow stage targets */
+.zenith-root .zenith-funnel-stage-hit:hover {
+  background: color-mix(in srgb, #000 12%, transparent);
+}
+
+@keyframes zenith-section-nav-flash {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-teal) 55%, transparent);
+  }
+  35% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-teal) 45%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+.zenith-root .zenith-section-nav-flash {
+  animation: zenith-section-nav-flash 1.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zenith-root .zenith-section-nav-flash {
+    animation: none;
+    outline: 2px solid var(--accent-teal-border);
+    outline-offset: 2px;
+  }
+}
+
+/* Priority ribbon */
+.zenith-root .zenith-priority-ribbon {
+  scroll-margin-top: 6rem;
+}
+
+/* Short viewport: trim explore chrome (EliteBook) */
+@media (max-height: 800px) {
+  .zenith-root .zenith-explore-section-intro,
+  .zenith-root .zenith-explore-hint {
+    display: none;
+  }
+}
+
+/* Shaped skeletons */
+.zenith-root .zenith-skeleton-kpi,
+.zenith-root .zenith-skeleton-overview-panel,
+.zenith-root .zenith-skeleton-hit-list,
+.zenith-root .zenith-skeleton-funnel {
+  position: relative;
+  overflow: hidden;
+}
+
+@media (max-width: 1023px), (max-height: 800px) {
+  .zenith-root .zenith-kpi-card__sparkline {
+    display: none;
+  }
+}
+
+/* Hit List — collapse filters behind icon on short viewports */
+.zenith-root .zenith-hit-list-filter-toggle {
+  display: none;
+}
+
+@media (max-height: 800px) {
+  .zenith-root .zenith-hit-list-filter-toggle {
+    display: inline-flex;
+  }
+
+  .zenith-root .zenith-hit-list-filters-panel:not(.is-open) {
+    display: none;
+  }
+}
+
+/* Attention — clearer next-action affordance on list rows */
+.zenith-root .zenith-attention-card li {
+  transition: background-color 0.15s ease;
+}
+
+.zenith-root .zenith-attention-card li:hover,
+.zenith-root .zenith-attention-card li:focus-within {
+  background: color-mix(in srgb, var(--accent-teal-muted) 40%, transparent);
 }
 

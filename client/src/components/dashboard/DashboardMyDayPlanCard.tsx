@@ -110,11 +110,18 @@ export default function DashboardMyDayPlanCard({
         ) : null}
 
         {showEmptyCta ? (
-          <p className="mt-1 text-[11px] leading-snug text-[color:var(--text-secondary)]">
-            Pin from <strong className="text-[color:var(--text-primary)]">Suggested from CRM</strong> below
-            or Zenith <strong className="text-[color:var(--text-primary)]">Hit List</strong> with{' '}
-            <strong className="text-[color:var(--text-primary)]">+ My Day</strong>.
-          </p>
+          <div className="flex flex-col items-center gap-2 py-4 text-center">
+            <p className="text-[11px] leading-snug text-[color:var(--text-secondary)]">
+              No tasks pinned yet.
+            </p>
+            <button
+              type="button"
+              onClick={() => openTab('tasks')}
+              className="min-h-[40px] touch-manipulation rounded-lg border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-3 py-1.5 text-[11px] font-bold text-[color:var(--accent-gold)] transition hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-gold)]"
+            >
+              Open My Day
+            </button>
+          </div>
         ) : null}
 
         {!loading && snap && snap.isQuietPersonal && snap.summaryFragments.length === 0 && !showEmptyCta ? (

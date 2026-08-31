@@ -28,6 +28,7 @@ import ZenithChartTouchReset from './ZenithChartTouchReset'
 import { ZENITH_CHART_GROUP } from '../../constants/zenithChartGroups'
 import SupportTicketQueueStrip from './SupportTicketQueueStrip'
 import ZenithFocusCollapsible from './ZenithFocusCollapsible'
+import { useZenithShortViewport } from '../../hooks/useZenithShortViewport'
 import ZenithProposalEngineCard from './ZenithProposalEngineCard'
 import ZenithScrollHint from './ZenithScrollHint'
 import { useChartColors } from '../../hooks/useChartColors'
@@ -1947,6 +1948,8 @@ export default function ZenithYourFocus({
   onPeBucketListClick?: (args: PeBucketListClickArgs) => void
 }) {
   const { user } = useAuth()
+  const shortViewport = useZenithShortViewport()
+  const primaryFocusOpen = shortViewport
   const effFYs = dateFilter.selectedFYs
   const effQ = dateFilter.selectedQuarters
   const effM = dateFilter.selectedMonths
@@ -1995,7 +1998,7 @@ export default function ZenithYourFocus({
         </h2>
         {role !== UserRole.FINANCE && role !== UserRole.OPERATIONS ? (
           <p
-            className="mt-1.5 text-[11px] text-[color:var(--text-muted)] leading-snug max-w-2xl"
+            className="zenith-explore-section-intro mt-1.5 text-[11px] text-[color:var(--text-muted)] leading-snug max-w-2xl"
             style={{ fontFamily: 'DM Sans, sans-serif' }}
           >
             Click on each of the sections to open and work on them.
@@ -2010,7 +2013,7 @@ export default function ZenithYourFocus({
 
         {data.focusKind === 'SALES' && (
           <>
-            <ZenithFocusCollapsible title="Your pipeline today" accent="gold" defaultOpen={false}>
+            <ZenithFocusCollapsible title="Your pipeline today" accent="gold" defaultOpen={primaryFocusOpen}>
               <SalesPipelineBlock
                 title="Your pipeline today"
                 data={data.salesPipeline}
@@ -2045,11 +2048,13 @@ export default function ZenithYourFocus({
         )}
 
         {data.focusKind === 'FINANCE' && (
-          <FinanceRadarBlock
-            data={data.financeRadar}
-            accentClass="border-l-4 border-[color:var(--accent-teal)]"
-            onOpenFinanceDrawer={onOpenFinanceDrawer}
-          />
+          <div id="zenith-payment-radar" className="scroll-mt-24">
+            <FinanceRadarBlock
+              data={data.financeRadar}
+              accentClass="border-l-4 border-[color:var(--accent-teal)]"
+              onOpenFinanceDrawer={onOpenFinanceDrawer}
+            />
+          </div>
         )}
 
         {data.focusKind === 'OPERATIONS' && (
@@ -2063,7 +2068,7 @@ export default function ZenithYourFocus({
 
         {data.focusKind === 'MANAGEMENT' && (
           <>
-            <ZenithFocusCollapsible title="Company pipeline today" accent="gold" defaultOpen={false}>
+            <ZenithFocusCollapsible title="Company pipeline today" accent="gold" defaultOpen={primaryFocusOpen}>
               <SalesPipelineBlock
                 title="Company pipeline today"
                 data={data.salesPipeline}
@@ -2072,7 +2077,7 @@ export default function ZenithYourFocus({
                 embedded
               />
             </ZenithFocusCollapsible>
-            <ZenithFocusCollapsible title="Payment radar" accent="teal" defaultOpen={false}>
+            <ZenithFocusCollapsible id="zenith-payment-radar" title="Payment radar" accent="teal" defaultOpen={false}>
               <FinanceRadarBlock
                 data={data.financeRadar}
                 accentClass="border-l-4 border-[color:var(--accent-teal)]"

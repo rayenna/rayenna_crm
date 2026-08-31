@@ -17,6 +17,12 @@ interface Props {
   isOnline?: boolean
   /** When true, sticky positioning is on the parent stack (with OfflineBanner). */
   stacked?: boolean
+  /** e.g. "FY 2025–26 · Q1" — shown under filters on desktop. */
+  filterSummary?: string
+  /** Unix ms when dashboard data last succeeded (React Query dataUpdatedAt). */
+  dataUpdatedAt?: number | null
+  /** True while Zenith queries are refetching. */
+  isRefreshing?: boolean
 }
 
 export default function CommandBar({
@@ -31,34 +37,41 @@ export default function CommandBar({
   onShowBriefing,
   isOnline = true,
   stacked = false,
+  filterSummary,
+  dataUpdatedAt = null,
+  isRefreshing = false,
 }: Props) {
   const [secondsAgo, setSecondsAgo] = useState(0)
-  const [lastFetched, setLastFetched] = useState(() => new Date())
+  const [filterAnchor, setFilterAnchor] = useState(() => new Date())
 
   const fyKey = selectedFYs.join('|')
   const qKey = selectedQuarters.join('|')
   const mKey = selectedMonths.join('|')
 
   useEffect(() => {
-    setLastFetched(new Date())
+    setFilterAnchor(new Date())
     setSecondsAgo(0)
   }, [fyKey, qKey, mKey])
+
+  const refreshAnchorMs = dataUpdatedAt ?? filterAnchor.getTime()
 
   useEffect(() => {
     const tick = () => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
-      const diff = Math.floor((new Date().getTime() - lastFetched.getTime()) / 1000)
-      setSecondsAgo(diff)
+      const diff = Math.floor((Date.now() - refreshAnchorMs) / 1000)
+      setSecondsAgo(Math.max(0, diff))
     }
+    tick()
     const interval = setInterval(tick, 1000)
     document.addEventListener('visibilitychange', tick)
     return () => {
       clearInterval(interval)
       document.removeEventListener('visibilitychange', tick)
     }
-  }, [lastFetched])
+  }, [refreshAnchorMs])
 
   const timeLabel = secondsAgo < 60 ? `${secondsAgo}s ago` : `${Math.floor(secondsAgo / 60)}m ago`
+  const liveLabel = isRefreshing ? 'Updating…' : `Updated ${timeLabel}`
 
   const hasAnyFilter =
     selectedFYs.length > 0 || selectedQuarters.length > 0 || selectedMonths.length > 0
@@ -79,7 +92,7 @@ export default function CommandBar({
         {isOnline ? (
           <>
             <span className="zenith-command-live-dot inline-block align-middle" aria-hidden />
-            <span>Live · {timeLabel}</span>
+            <span>Live · {liveLabel}</span>
           </>
         ) : (
           <>
@@ -139,7 +152,11 @@ export default function CommandBar({
             />
             {hasAnyFilter ? (
               <p className="mt-1.5 text-center text-[10px] leading-snug text-[color:var(--text-muted)]">
-                Date filters active — KPIs and charts update below
+                {filterSummary ?? 'Date filters active — KPIs and charts update below'}
+              </p>
+            ) : filterSummary ? (
+              <p className="zenith-command-filter-summary mt-1.5 text-center text-[10px] leading-snug text-[color:var(--text-muted)]">
+                {filterSummary}
               </p>
             ) : null}
           </div>
@@ -154,6 +171,11 @@ export default function CommandBar({
               onMonthChange={onMonthChange}
               onResetAll={onResetFilters}
             />
+            {filterSummary ? (
+              <p className="zenith-command-filter-summary mt-1.5 text-center text-[10px] leading-snug text-[color:var(--text-muted)]">
+                {filterSummary}
+              </p>
+            ) : null}
           </div>
         </div>
       </div>

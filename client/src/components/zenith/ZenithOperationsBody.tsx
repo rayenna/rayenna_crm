@@ -63,6 +63,9 @@ import { isZenithMobileTabActive } from './zenithMobileTabVisibility'
 import type { ZenithMobileTab } from './zenithMobileNav'
 import DashboardPlanAttentionRow from '../dashboard/DashboardPlanAttentionRow'
 import ForecastKPI from './ForecastKPI'
+import ZenithPriorityRibbon from './ZenithPriorityRibbon'
+import { ZenithKpiSkeletonGrid } from './ZenithOverviewSkeletons'
+import { buildOperationsPriorityItems } from '../../utils/zenithPriorityItems'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
 
@@ -122,6 +125,7 @@ export default function ZenithOperationsBody({
   onOpenProjectQuickDrawer,
   mobileTab = null,
   insightsBar = null,
+  onPriorityNavigate,
 }: {
   data: Record<string, unknown>
   isLoading: boolean
@@ -137,6 +141,7 @@ export default function ZenithOperationsBody({
   onOpenProjectQuickDrawer: (p: QuickActionProjectRef, section?: ZenithAutoFocusSection | null) => void
   mobileTab?: ZenithMobileTab | null
   insightsBar?: ReactNode
+  onPriorityNavigate?: (targetId: string) => void
 }) {
   const { user } = useAuth()
   const chartColors = useChartColors()
@@ -306,14 +311,24 @@ export default function ZenithOperationsBody({
     [drill],
   )
 
+  const opsPendingCount = useMemo(() => {
+    const early = buildOperationsZenithKpis(data, effFYs)
+    const pend = early.find((k) => k.key === 'pend')
+    return typeof pend?.value === 'number' ? Math.round(pend.value) : 0
+  }, [data, effFYs])
+
+  const opsPriorityItems = useMemo(
+    () => buildOperationsPriorityItems({ underInstallationCount: opsPendingCount }),
+    [opsPendingCount],
+  )
+
   if (isLoading) {
     return (
       <div className="px-3 sm:px-5 pt-3 pb-6 space-y-6 max-w-[1600px] mx-auto">
         <div className="zenith-kpi-ticker-stack">
-          <div className="zenith-skeleton h-40 rounded-2xl" />
+          <ZenithKpiSkeletonGrid count={4} />
           {insightsBar}
         </div>
-        <div className="zenith-skeleton h-48 rounded-2xl" />
       </div>
     )
   }
@@ -394,6 +409,10 @@ export default function ZenithOperationsBody({
             ))}
           </div>
           {insightsBar}
+          <ZenithPriorityRibbon
+            items={opsPriorityItems}
+            onNavigate={onPriorityNavigate ?? (() => {})}
+          />
           </div>
 
           {/* Row 2: Today's plan | Weighted open pipeline */}
@@ -465,7 +484,7 @@ export default function ZenithOperationsBody({
             Explore the landscape
           </h2>
           <p
-            className="mt-1.5 text-[11px] sm:text-xs text-[color:var(--text-muted)] italic leading-snug max-w-2xl"
+            className="zenith-explore-section-intro mt-1.5 text-[11px] sm:text-xs text-[color:var(--text-muted)] italic leading-snug max-w-2xl"
             style={{ fontFamily: 'DM Sans, sans-serif' }}
           >
             These charts are live: click any bar, point, or slice to open matching projects in the quick

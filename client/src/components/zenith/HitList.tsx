@@ -1,8 +1,8 @@
 import type { CSSProperties } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { format, parseISO } from 'date-fns'
-import { Target, CheckCircle2 } from 'lucide-react'
+import { Target, CheckCircle2, SlidersHorizontal } from 'lucide-react'
 import { UserRole } from '../../types'
 import { hitListItemToMyDayTask, type HitListItem, type HitListLabel } from '../../hooks/useHitList'
 import AddToMyDayButton from '../my-day/components/AddToMyDayButton'
@@ -106,6 +106,16 @@ export default function HitList({
   const [stageFilter, setStageFilter] = useState<string>('ALL')
   const [salesPersonFilter, setSalesPersonFilter] = useState<string>('ALL')
   const [customerFilter, setCustomerFilter] = useState<string>('')
+  const [filtersOpen, setFiltersOpen] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(max-height: 800px)')
+    const sync = () => setFiltersOpen(!mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
 
   const salesPersonOptions = useMemo(() => {
     const labels = new Set<string>()
@@ -218,18 +228,26 @@ export default function HitList({
             >
               {subtitle}
             </p>
-            {!allClear && n > 0 ? (
-              <p
-                className="mt-1.5 hidden max-w-xl text-[12px] leading-snug text-[color:var(--text-muted)] md:mt-1 md:block md:text-[10px]"
-                style={{ fontFamily: 'var(--zenith-font-body)' }}
-              >
-                Please scroll to the right and click{' '}
-                <span className="text-[color:var(--text-secondary)]">Open →</span> to open the
-                Quick Actions drawer and work on the project.
-              </p>
-            ) : null}
           </div>
         </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {!allClear ? (
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((v) => !v)}
+              className="zenith-hit-list-filter-toggle inline-flex min-h-[36px] items-center justify-center rounded-lg border border-[color:var(--border-default)] px-2 text-[color:var(--text-secondary)] transition hover:border-[color:var(--accent-gold-border)] hover:text-[color:var(--text-primary)] touch-manipulation focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-gold)] md:min-h-[32px]"
+              aria-expanded={filtersOpen}
+              aria-controls="zenith-hit-list-filters"
+              aria-label={filtersOpen ? 'Hide filters' : 'Show filters'}
+            >
+              <SlidersHorizontal className="h-4 w-4" aria-hidden />
+              {hasActiveFilters ? (
+                <span className="ml-1 rounded bg-[color:var(--accent-gold-muted)] px-1 text-[9px] font-bold text-[color:var(--accent-gold)]">
+                  •
+                </span>
+              ) : null}
+            </button>
+          ) : null}
         {!allClear && (
           <span
             className="shrink-0 rounded-[20px] px-3 py-1 md:px-2 md:py-0.5 text-[13px] md:text-[11px] font-medium"
@@ -243,6 +261,7 @@ export default function HitList({
             {totalAtRisk} at Risk
           </span>
         )}
+        </div>
       </div>
 
       {allClear ? (
@@ -266,7 +285,11 @@ export default function HitList({
       ) : (
         <div className="zenith-hit-list-main flex h-full min-h-[8rem] w-full max-h-[min(42vh,320px)] flex-col overflow-hidden overscroll-y-contain sm:max-h-[min(44vh,340px)] lg:min-h-0 lg:max-h-none lg:flex-1">
           <div
-            className="shrink-0 border-b border-[color:var(--border-default)] px-3 py-1.5 md:px-2 md:py-1.5"
+            id="zenith-hit-list-filters"
+            className={[
+              'shrink-0 border-b border-[color:var(--border-default)] px-3 py-1.5 md:px-2 md:py-1.5',
+              filtersOpen ? 'zenith-hit-list-filters-panel is-open' : 'zenith-hit-list-filters-panel',
+            ].join(' ')}
             style={{ fontFamily: 'var(--zenith-font-body)' }}
           >
             <div className="zenith-hit-list-filters flex min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto">
@@ -409,7 +432,7 @@ export default function HitList({
                   return (
                     <motion.tr
                       key={project.id}
-                      className="group border-b border-[color:var(--border-default)] hover:bg-[color:var(--bg-table-hover)]"
+                      className="group border-b border-[color:var(--border-default)] hover:bg-[color:var(--bg-table-hover)] focus-within:bg-[color:var(--bg-table-hover)] focus-within:ring-2 focus-within:ring-inset focus-within:ring-[color:var(--accent-teal)]"
                       initial={{ opacity: 0, x: -6 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.05, duration: 0.25 }}
@@ -521,7 +544,7 @@ export default function HitList({
                 return (
                   <motion.div
                     key={project.id}
-                    className="group py-3.5 first:pt-2"
+                    className="group rounded-lg py-3.5 first:pt-2 hover:bg-[color:var(--bg-table-hover)] focus-within:bg-[color:var(--bg-table-hover)] focus-within:ring-2 focus-within:ring-[color:var(--accent-teal)]"
                     initial={{ opacity: 0, x: -6 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05, duration: 0.25 }}

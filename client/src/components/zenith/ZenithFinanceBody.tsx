@@ -58,6 +58,9 @@ import { isZenithMobileTabActive } from './zenithMobileTabVisibility'
 import type { ZenithMobileTab } from './zenithMobileNav'
 import DashboardPlanAttentionRow from '../dashboard/DashboardPlanAttentionRow'
 import ForecastKPI from './ForecastKPI'
+import ZenithPriorityRibbon from './ZenithPriorityRibbon'
+import { ZenithKpiSkeletonGrid } from './ZenithOverviewSkeletons'
+import { buildFinancePriorityItems } from '../../utils/zenithPriorityItems'
 
 const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
 
@@ -116,6 +119,7 @@ export default function ZenithFinanceBody({
   onOpenFinanceDrawer,
   mobileTab = null,
   insightsBar = null,
+  onPriorityNavigate,
 }: {
   data: Record<string, unknown>
   isLoading: boolean
@@ -130,6 +134,7 @@ export default function ZenithFinanceBody({
   onOpenFinanceDrawer?: (projectId: string) => void
   mobileTab?: ZenithMobileTab | null
   insightsBar?: ReactNode
+  onPriorityNavigate?: (targetId: string) => void
 }) {
   const { user } = useAuth()
   const chartColors = useChartColors()
@@ -276,12 +281,30 @@ export default function ZenithFinanceBody({
     })
   }, [explorerProjects, onOpenDrawerListMode, outstandingProjectsUrl])
 
+  const paymentItemsEarly = (data?.projectsByPaymentStatus ?? []) as {
+    status: string
+    count: number
+    outstanding: number
+  }[]
+
+  const financePriorityItems = useMemo(
+    () =>
+      buildFinancePriorityItems({
+        overdueCount: paymentItemsEarly.find((p) => p.status === 'PENDING')?.count ?? 0,
+        pendingPaymentCount: paymentItemsEarly.find((p) => p.status === 'PARTIAL')?.count ?? 0,
+      }),
+    [paymentItemsEarly],
+  )
+
   if (isLoading) {
     return (
       <div className="px-3 sm:px-5 pt-3 pb-6 space-y-6 max-w-[1600px] mx-auto">
         <div className="zenith-kpi-ticker-stack">
-          <div className="zenith-skeleton h-40 rounded-2xl" />
+          <ZenithKpiSkeletonGrid count={5} />
           {insightsBar}
+          <div className="mt-2 flex gap-2" aria-hidden>
+            <div className="zenith-skeleton h-8 w-28 rounded-full" />
+          </div>
         </div>
       </div>
     )
@@ -360,6 +383,10 @@ export default function ZenithFinanceBody({
             ))}
           </div>
           {insightsBar}
+          <ZenithPriorityRibbon
+            items={financePriorityItems}
+            onNavigate={onPriorityNavigate ?? (() => {})}
+          />
           </div>
 
           {/* Row 2: Today's plan | Weighted open pipeline */}
@@ -427,7 +454,7 @@ export default function ZenithFinanceBody({
             Explore the landscape
           </h2>
           <p
-            className="mt-1.5 text-[11px] sm:text-xs text-[color:var(--text-muted)] italic leading-snug max-w-2xl"
+            className="zenith-explore-section-intro mt-1.5 text-[11px] sm:text-xs text-[color:var(--text-muted)] italic leading-snug max-w-2xl"
             style={{ fontFamily: 'DM Sans, sans-serif' }}
           >
             These charts are live: click any bar, point, or slice to open matching projects in the quick

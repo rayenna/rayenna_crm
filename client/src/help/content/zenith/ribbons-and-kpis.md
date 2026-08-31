@@ -27,7 +27,7 @@ Directly **below** the **KPI tiles**, Zenith shows an **AI Insights** ribbon: a 
 The **top row of KPI cards** summarises key metrics for your role. Each card includes:
 
 - A **large value** that **animates from zero** when the page loads or when you **change date filters** (about 1.2 seconds, ease-out), for a quick read of the current number.
-- A **mini sparkline** (line chart, no axes) using the **last seven financial-year buckets** available for that metric in the payload — the line is **gold** when the series trends up and **crimson** when it trends down.
+- A **mini sparkline** (line chart, no axes) using the **last seven financial-year buckets** available for that metric in the payload — the line is **gold** when the series trends up and **crimson** when it trends down. Sparklines are **hidden on phones, tablets, and short laptop screens** so the value and badge stay primary.
 - A **trend badge** in the **top-right** (e.g. **▲ 12%** in teal / **▼ 3%** in crimson) when a **period-over-period %** is available — same rules as classic dashboard comparisons (e.g. one FY selected for YoY-style badges).
 - A subtle **hover glow** (gold-tinted shadow) on the card.
 
@@ -47,9 +47,11 @@ Metrics and labels are **role-specific** (see below). **Sales** sees data **scop
 
 **Where** — On **Sales / Management / Admin**: below the full-width KPI grid, beside **Things needing attention**. On **Finance / Operations**: beside **Today’s plan**.
 
-**What the big number is** — A **weighted open pipeline** total, **not** cash or collections. Each **open** deal (not Completed, not Subsidy Credited, not Lost) contributes **order value × a win probability for its current stage**. **Early** stages are discounted (Lead 10% … Proposal 45%); **Confirmed+** count at **100%** for scheduling. Use **Weights** for the chip list.
+**What the big number is** — A **weighted open pipeline** total, **not** cash or collections. Each **open** deal (not Completed, not Subsidy Credited, not Lost) contributes **order value × a win probability for its current stage**. **Early** stages are discounted (Lead 10% … Proposal 45%); **Confirmed+** count at **100%** for scheduling.
 
-**Dual context** — Under the headline: **Raw** = sum of order values for the same open cohort; **Win rate** = weighted ÷ raw (implied blend of stage mix).
+**Adjust (progressive disclosure)** — By default the tile shows the **hero ₹**, breakdown **tabs**, the **top three rows**, and **+N more**. Tap **Adjust** to open band (**All / Early / Committed**), when (**Any time / Month / Quarter / Rest of FY**), **Weights** (stage win %), raw/win-rate context, concentration, and role accent lines. Your last **Adjust** open/closed state and filter choices are remembered per user on this device.
+
+**Dual context** — Under the headline when Adjust is open: **Raw** = sum of order values for the same open cohort; **Win rate** = weighted ÷ raw (implied blend of stage mix).
 
 **Band: All / Early / Committed** — **All** = every open stage. **Early** = Lead, Site Survey, Proposal. **Committed** = Confirmed Order, Under Installation, Submitted for Subsidy.
 

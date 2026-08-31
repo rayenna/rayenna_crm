@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CheckCircle2, ClipboardList } from 'lucide-react'
+import { CheckCircle2, ClipboardList, SlidersHorizontal } from 'lucide-react'
 import { ProjectStatus, UserRole } from '../../types'
 import { useAuth } from '../../contexts/AuthContext'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
@@ -65,6 +65,7 @@ export default function DashboardLifecycleBrandReminder({
   const cardRef = useRef<HTMLElement>(null)
   const [senseRuleFilter, setSenseRuleFilter] = useState<DataSenseRuleId | null>(null)
   const [introPulse, setIntroPulse] = useState(false)
+  const [filtersExpanded, setFiltersExpanded] = useState(false)
 
   const list = Array.isArray(projects) ? projects : []
   const missing = showBrandGaps ? zenithExplorerProjectsMissingLifecycleBrands(list) : []
@@ -73,6 +74,7 @@ export default function DashboardLifecycleBrandReminder({
   const rollup = useMemo(() => dataSenseRollupBySalesperson(senseHits), [senseHits])
   const showSalespersonRollup =
     (user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGEMENT) && rollup.length > 0
+  const showFilterControls = showSalespersonRollup || senseHits.length > 0
   const hasItems = missing.length > 0 || senseHits.length > 0
   const hasCritical = senseHits.some(
     (h) => h.primary.severity === 'critical' || h.findings.some((f) => f.id === 'A1'),
@@ -110,7 +112,7 @@ export default function DashboardLifecycleBrandReminder({
         ref={cardRef}
         id="zenith-things-needing-attention"
         className={[
-          'zenith-attention-card flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border shadow-[var(--shadow-card)]',
+          'zenith-attention-card flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border shadow-[var(--shadow-card)] scroll-mt-28',
           fillHeight ? 'h-full' : '',
           className,
         ].join(' ')}
@@ -213,7 +215,7 @@ export default function DashboardLifecycleBrandReminder({
       ref={cardRef}
       id="zenith-things-needing-attention"
       className={[
-        'zenith-attention-card flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border shadow-[var(--shadow-card)]',
+        'zenith-attention-card flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border shadow-[var(--shadow-card)] scroll-mt-28',
         fillHeight ? 'h-full' : '',
         hasCritical ? 'zenith-attention-card--critical' : '',
         introPulse ? 'zenith-attention-card--intro' : '',
@@ -270,8 +272,25 @@ export default function DashboardLifecycleBrandReminder({
               <p className="mt-1 text-[11px] leading-snug text-[color:var(--text-secondary)]">
                 {subtitleParts.join(' · ')}
               </p>
-              {showSalespersonRollup ? (
-                <div className="mt-1.5" aria-label="Needs review by salesperson">
+              {showFilterControls ? (
+                <button
+                  type="button"
+                  onClick={() => setFiltersExpanded((v) => !v)}
+                  className="zenith-attention-filters-toggle mt-1.5 inline-flex min-h-[32px] items-center gap-1 rounded-md border border-[color:var(--border-default)] bg-[color:var(--bg-badge)] px-2 py-0.5 text-[10px] font-semibold text-[color:var(--text-secondary)] transition hover:border-[color:var(--accent-teal-border)] hover:text-[color:var(--accent-teal)] touch-manipulation focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-teal)]"
+                  aria-expanded={filtersExpanded}
+                  aria-controls="zenith-attention-filters-panel"
+                >
+                  <SlidersHorizontal className="h-3 w-3 shrink-0" aria-hidden />
+                  Filters
+                  {activeRule ? (
+                    <span className="rounded bg-[color:var(--accent-teal-muted)] px-1 text-[9px] text-[color:var(--accent-teal)]">
+                      1
+                    </span>
+                  ) : null}
+                </button>
+              ) : null}
+              {filtersExpanded && showSalespersonRollup ? (
+                <div id="zenith-attention-filters-panel" className="mt-1.5" aria-label="Needs review by salesperson">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-muted)]">
                     By salesperson
                   </p>
@@ -287,7 +306,7 @@ export default function DashboardLifecycleBrandReminder({
                         <li key={row.salespersonId ?? 'unassigned'} className="min-w-0">
                           <Link
                             to={href}
-                            className="inline-flex max-w-full items-baseline gap-1.5 text-[11px] text-[color:var(--text-secondary)] hover:text-[color:var(--accent-teal)]"
+                            className="zenith-attention-rollup-link inline-flex max-w-full items-baseline gap-1.5 rounded-sm text-[11px] text-[color:var(--text-secondary)] hover:text-[color:var(--accent-teal)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-teal)]"
                           >
                             <span className="truncate font-semibold">{row.salespersonName}</span>
                             <span className="shrink-0 tabular-nums text-[color:var(--text-muted)]">
@@ -305,8 +324,12 @@ export default function DashboardLifecycleBrandReminder({
                   ) : null}
                 </div>
               ) : null}
-              {senseHits.length > 0 ? (
-                <div className="mt-1.5 flex flex-wrap gap-1" role="group" aria-label="Filter needs review by rule">
+              {filtersExpanded && senseHits.length > 0 ? (
+                <div
+                  className="mt-1.5 flex flex-wrap gap-1"
+                  role="group"
+                  aria-label="Filter needs review by rule"
+                >
                   {DATA_SENSE_ZENITH_RULE_IDS.map((rule) =>
                     counts[rule] > 0 ? (
                       <button
@@ -315,7 +338,7 @@ export default function DashboardLifecycleBrandReminder({
                         aria-pressed={activeRule === rule}
                         onClick={() => toggleRule(rule)}
                         className={[
-                          'min-h-[32px] rounded-md border px-2 py-0.5 text-[10px] font-semibold transition touch-manipulation',
+                          'min-h-[32px] rounded-md border px-2 py-0.5 text-[10px] font-semibold transition touch-manipulation focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-teal)]',
                           activeRule === rule
                             ? 'border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] text-[color:var(--accent-teal)]'
                             : 'border-[color:var(--border-default)] bg-[color:var(--bg-badge)] text-[color:var(--text-secondary)] hover:border-[color:var(--accent-teal-border)] hover:text-[color:var(--accent-teal)]',
