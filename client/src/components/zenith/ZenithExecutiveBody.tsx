@@ -78,6 +78,7 @@ import {
 import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
 import { buildZenithLifecycleBrandBarRows } from '../../utils/zenithPanelInverterBrandChartData'
 import ZenithLifecycleBrandBarCharts from './ZenithLifecycleBrandBarCharts'
+import ZenithInsightChartsRow from './ZenithInsightChartsRow'
 import { ZENITH_CHART_HEIGHT_FLOOR, zenithStandardChartHeight } from './zenithChartHeight'
 import { isZenithMobileTabActive } from './zenithMobileTabVisibility'
 import type { ZenithMobileTab } from './zenithMobileNav'
@@ -727,7 +728,14 @@ export default function ZenithExecutiveBody({
       ) : null}
 
       {showCharts ? (
-      <section className="zenith-exec-section space-y-3" aria-label="Analytics charts">
+      <section className="zenith-exec-section space-y-5" aria-label="Analytics charts">
+        <ZenithInsightChartsRow
+          explorerProjects={explorerProjects}
+          chartHeight={exploreChartHeight}
+          chartGroup={ZENITH_CHART_GROUP.EXEC_EXPLORE}
+          onDrill={(dimension, value) => drill(dimension, value)}
+        />
+        <div className="space-y-3">
         <header id="zenith-charts" className="scroll-mt-24 px-0.5">
           <h2
             className="zenith-display text-lg sm:text-xl font-bold text-[color:var(--text-primary)] tracking-tight"
@@ -975,6 +983,7 @@ export default function ZenithExecutiveBody({
             />
           </div>
         ) : null}
+        </div>
       </section>
       ) : null}
 

@@ -38,6 +38,7 @@ import ZenithYourFocus from './ZenithYourFocus'
 import ChartPanel from './ChartPanel'
 import SegmentDonut from './SegmentDonut'
 import ZenithRevenueProfitFyChart from './ZenithRevenueProfitFyChart'
+import ZenithInsightChartsRow from './ZenithInsightChartsRow'
 import ZenithChartTouchReset from './ZenithChartTouchReset'
 import { ZENITH_CHART_GROUP } from '../../constants/zenithChartGroups'
 import type { ZenithChartGroup } from '../../constants/zenithChartGroups'
@@ -475,7 +476,14 @@ export default function ZenithOperationsBody({
       </>
       ) : null}
       {showCharts ? (
-      <section className="zenith-exec-section space-y-3" aria-label="Operations charts">
+      <section className="zenith-exec-section space-y-5" aria-label="Operations charts">
+        <ZenithInsightChartsRow
+          explorerProjects={explorerProjects}
+          chartHeight={exploreChartHeight}
+          chartGroup={ZENITH_CHART_GROUP.OPS_EXPLORE}
+          onDrill={(dimension, value) => drill(dimension, value)}
+        />
+        <div className="space-y-3">
         <header id="zenith-charts" className="scroll-mt-24 px-0.5">
           <h2
             className="zenith-display text-lg sm:text-xl font-bold text-[color:var(--text-primary)] tracking-tight"
@@ -645,6 +653,7 @@ export default function ZenithOperationsBody({
             onPanelBrandClick={onPanelBrandBarClick}
             onInverterBrandClick={onInverterBrandBarClick}
           />
+        </div>
         </div>
       </section>
       ) : null}

@@ -32,6 +32,7 @@ import ChartPanel from './ChartPanel'
 import SegmentDonut from './SegmentDonut'
 import CustomerProfitabilityRank from './CustomerProfitabilityRank'
 import ZenithRevenueProfitFyChart from './ZenithRevenueProfitFyChart'
+import ZenithInsightChartsRow from './ZenithInsightChartsRow'
 import { buildProjectsUrl } from '../../utils/dashboardTileLinks'
 import { projectValueRowsVisibleInZenithFyChart } from '../../utils/zenithFyChartData'
 import { getLoanBankBarColor } from '../dashboard/loanBankChartColors'
@@ -445,7 +446,14 @@ export default function ZenithFinanceBody({
       </>
       ) : null}
       {showCharts ? (
-      <section className="zenith-exec-section space-y-3" aria-label="Finance charts">
+      <section className="zenith-exec-section space-y-5" aria-label="Finance charts">
+        <ZenithInsightChartsRow
+          explorerProjects={explorerProjects}
+          chartHeight={exploreChartHeight}
+          chartGroup={ZENITH_CHART_GROUP.FIN_EXPLORE}
+          onDrill={(dimension, value) => drill(dimension, value)}
+        />
+        <div className="space-y-3">
         <header id="zenith-charts" className="scroll-mt-24 px-0.5">
           <h2
             className="zenith-display text-lg sm:text-xl font-bold text-[color:var(--text-primary)] tracking-tight"
@@ -629,6 +637,7 @@ export default function ZenithFinanceBody({
               </ZenithChartTouchReset>
             </ChartPanel>
           </div>
+        </div>
         </div>
       </section>
       ) : null}

@@ -1,5 +1,15 @@
 import type { ZenithExplorerProject, ZenithChartDrilldownDimension } from '../types/zenithExplorer'
 import { getForecastOpenDeals, weightedDealValue } from './revenueForecast'
+import {
+  buildCommissioningFilterLabel,
+  buildOutstandingSalesFilterLabel,
+  buildPipelineAgeFilterLabel,
+  filterCommissioningBucket,
+  filterOutstandingBySalesperson,
+  filterPipelineAgeBucket,
+  type CommissioningBucketId,
+  type PipelineAgeBucketId,
+} from './zenithInsightCharts'
 
 /**
  * Normalize en/em dashes and collapse whitespace so donut/chart labels match explorer `customer_segment` (customer type label)
@@ -91,6 +101,15 @@ export function buildFilterLabel(
       ? `FY ${opts.lifecycleMetricFy} · Inverter — ${value}`
       : `Inverter — ${value}`
   }
+  if (dimension === 'pipeline_age') {
+    return buildPipelineAgeFilterLabel(value as PipelineAgeBucketId)
+  }
+  if (dimension === 'commissioning_timeline') {
+    return buildCommissioningFilterLabel(value as CommissioningBucketId)
+  }
+  if (dimension === 'outstanding_sales') {
+    return buildOutstandingSalesFilterLabel(value)
+  }
   const labels: Record<ZenithChartDrilldownDimension, string> = {
     lead_source: `${value} — Lead Source`,
     assigned_to: `${value} — Sales`,
@@ -102,6 +121,9 @@ export function buildFilterLabel(
     payment_status: '',
     panel_brand: `Panel — ${value}`,
     inverter_brand: `Inverter — ${value}`,
+    pipeline_age: buildPipelineAgeFilterLabel(value as PipelineAgeBucketId),
+    commissioning_timeline: buildCommissioningFilterLabel(value as CommissioningBucketId),
+    outstanding_sales: buildOutstandingSalesFilterLabel(value),
   }
   return labels[dimension] ?? value
 }
@@ -183,6 +205,12 @@ export function filterProjectsByChartSlice(
         return (p.inverter_brand || '') === value
       })
     }
+    case 'pipeline_age':
+      return filterPipelineAgeBucket(all, value as PipelineAgeBucketId)
+    case 'commissioning_timeline':
+      return filterCommissioningBucket(all, value as CommissioningBucketId)
+    case 'outstanding_sales':
+      return filterOutstandingBySalesperson(all, value)
     default:
       return []
   }

@@ -634,6 +634,7 @@ function FinanceRadarBlock({
   onOpenFinanceDrawer?: (projectId: string) => void
 }) {
   const chartColors = useChartColors()
+  const shortViewport = useZenithShortViewport()
   const [sortField, setSortField] = useState<'amount' | 'days' | 'customer' | 'salesperson' | null>('amount')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [customerFilter, setCustomerFilter] = useState<string>('')
@@ -653,6 +654,9 @@ function FinanceRadarBlock({
     mq.addEventListener('change', sync)
     return () => mq.removeEventListener('change', sync)
   }, [])
+
+  /** Stack tables above pie/bar on phone, tablet, and short laptop viewports. */
+  const stackPaymentRadarCharts = narrowPaymentCharts || shortViewport
 
   const ageingBuckets = data.ageingBuckets ?? []
   const monthlyCollections = data.monthlyCollections ?? []
@@ -896,8 +900,14 @@ function FinanceRadarBlock({
           </div>
         ) : null}
 
-        {/* lg: keep tables readable + chart column stable; allow 2 tables + charts side-by-side */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 lg:items-stretch lg:[grid-auto-rows:minmax(640px,auto)] gap-8 lg:gap-5 xl:gap-6">
+        {/* lg: keep tables readable + chart column stable; demote pie/bar below tables on narrow/short viewports */}
+        <div
+          className={
+            stackPaymentRadarCharts
+              ? 'grid grid-cols-1 gap-8 lg:gap-5 xl:gap-6'
+              : 'grid grid-cols-1 lg:grid-cols-3 lg:items-stretch lg:[grid-auto-rows:minmax(640px,auto)] gap-8 lg:gap-5 xl:gap-6'
+          }
+        >
           <div className="min-w-0 flex flex-col lg:h-full lg:min-h-0">
             <div className="grid gap-2 mb-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1278,7 +1288,7 @@ function FinanceRadarBlock({
           </div>
 
           <div
-            className="zenith-payment-radar-charts zenith-stat-well min-w-0 flex flex-col rounded-xl overflow-visible lg:overflow-hidden lg:h-full lg:min-h-0"
+            className={`zenith-payment-radar-charts zenith-stat-well min-w-0 flex flex-col rounded-xl overflow-visible lg:overflow-hidden lg:h-full lg:min-h-0${stackPaymentRadarCharts ? ' order-last' : ''}`}
             aria-label="Payment mix and collections trend"
           >
             <div className="flex flex-col max-lg:h-auto lg:h-full min-h-0 lg:min-h-[320px]">

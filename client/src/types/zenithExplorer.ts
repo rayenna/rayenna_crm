@@ -54,3 +54,6 @@ export type ZenithChartDrilldownDimension =
   | 'payment_status'
   | 'panel_brand'
   | 'inverter_brand'
+  | 'pipeline_age'
+  | 'commissioning_timeline'
+  | 'outstanding_sales'
