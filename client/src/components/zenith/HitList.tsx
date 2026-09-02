@@ -199,7 +199,7 @@ export default function HitList({
       initial={{ opacity: 0, y: -16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="zenith-hit-list mb-0 flex h-full min-h-0 w-full flex-col overflow-hidden rounded-xl ring-1 ring-[color:var(--border-default)]"
+      className="zenith-hit-list mb-0 flex h-full min-h-0 w-full flex-col overflow-hidden max-lg:overflow-visible rounded-xl ring-1 ring-[color:var(--border-default)]"
       style={{ ...cardBase, borderLeft }}
     >
       <div
@@ -283,7 +283,7 @@ export default function HitList({
           </p>
         </div>
       ) : (
-        <div className="zenith-hit-list-main flex h-full min-h-[8rem] w-full max-h-[min(42vh,320px)] flex-col overflow-hidden overscroll-y-contain sm:max-h-[min(44vh,340px)] lg:min-h-0 lg:max-h-none lg:flex-1">
+        <div className="zenith-hit-list-main flex h-full min-h-0 w-full flex-col overflow-hidden max-lg:max-h-none max-lg:overflow-visible lg:min-h-0 lg:max-h-none lg:flex-1">
           <div
             id="zenith-hit-list-filters"
             className={[
@@ -333,10 +333,10 @@ export default function HitList({
               )}
             </div>
           </div>
-          <div className="zenith-hit-list-body min-h-0 flex-1 overflow-y-auto">
-            <div className="zenith-scroll-x overflow-x-auto px-3 py-1 lg:px-2 lg:py-0">
+          <div className="zenith-hit-list-body min-h-0 flex-1 max-lg:overflow-visible lg:overflow-y-auto">
+            <div className="zenith-scroll-x hidden overflow-x-auto px-2 py-0 lg:block">
             {/* Desktop — same columns as “Your pipeline today” + alert + confirmation */}
-            <table className="zenith-table--data hidden lg:table w-full text-left text-[11px] sm:text-xs min-w-[920px]">
+            <table className="zenith-table--data w-full text-left text-[11px] sm:text-xs min-w-[920px]">
               <thead>
                 <tr className="border-b border-[color:var(--border-default)]">
                   <th
@@ -525,9 +525,10 @@ export default function HitList({
                 })}
               </tbody>
             </table>
+            </div>
 
-            {/* Mobile — same data, no oversized day count column */}
-            <div className="divide-y divide-[color:var(--border-default)] lg:hidden">
+            {/* Mobile — card list; page scroll (not nested horizontal scroll wrapper). */}
+            <div className="zenith-hit-list-mobile-cards divide-y divide-[color:var(--border-default)] px-3 py-1 lg:hidden">
               {displayRows.length === 0 ? (
                 <p
                   className="py-8 text-center text-[13px] text-[color:var(--text-muted)]"
@@ -636,7 +637,6 @@ export default function HitList({
                   </motion.div>
                 )
               })}
-            </div>
             </div>
           </div>
         </div>

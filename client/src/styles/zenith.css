@@ -341,18 +341,15 @@
 
 @media (max-width: 1023px) {
   .zenith-root .zenith-overview-panel {
-    /* Slightly shorter after pipeline Adjust disclosure; 40px tap targets on segments. */
-    height: 28rem;
-    min-height: 28rem;
-    max-height: 28rem;
+    /* Let the page scroll on phone/tablet — avoid nested scroll traps in plan / hit list. */
+    height: auto;
+    min-height: 0;
+    max-height: none;
   }
 
-  @media (max-width: 743px) {
-    .zenith-root .zenith-overview-panel {
-      height: auto;
-      min-height: 18rem;
-      max-height: none;
-    }
+  .zenith-root .zenith-overview-panel > * {
+    height: auto;
+    min-height: 0;
   }
 
   /* Hit List otherwise caps at ~42vh until lg — leaves empty space in the shared panel on iPad. */
@@ -1180,6 +1177,26 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   .zenith-root .zenith-hit-list-filters .zenith-native-select {
     min-height: 2.25rem;
     font-size: 13px;
+  }
+
+  /* Hit List + Today's plan: full-width vertical pan on mobile (no nested horizontal scroll trap). */
+  .zenith-root .zenith-hit-list-main {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .zenith-root .zenith-hit-list-body {
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+
+  .zenith-root .zenith-hit-list-mobile-cards {
+    touch-action: pan-y;
+  }
+
+  .zenith-root .zenith-myday-plan-scroll {
+    overflow: visible;
+    overscroll-behavior: auto;
   }
 
   .zenith-scroll-x-wrap {

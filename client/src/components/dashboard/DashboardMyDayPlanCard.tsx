@@ -42,8 +42,8 @@ export default function DashboardMyDayPlanCard({
   return (
     <section
       className={[
-        'flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] border-l-4 border-l-[color:var(--accent-gold)]',
-        fillHeight ? 'h-full' : '',
+        'flex min-h-0 min-w-0 flex-col overflow-hidden max-lg:overflow-visible rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] border-l-4 border-l-[color:var(--accent-gold)]',
+        fillHeight ? 'h-full max-lg:h-auto' : '',
         className,
       ].join(' ')}
       aria-labelledby="dashboard-myday-plan-heading"
@@ -80,14 +80,14 @@ export default function DashboardMyDayPlanCard({
 
       <div
         className={[
-          'min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2.5 sm:px-3.5 sm:py-3',
+          'zenith-myday-plan-scroll min-h-0 flex-1 px-3 py-2.5 sm:px-3.5 sm:py-3',
           fillHeight
-            ? ''
+            ? 'max-lg:overflow-visible lg:overflow-y-auto lg:overscroll-contain'
             : paired
-              ? 'max-h-[220px] lg:max-h-[280px]'
-              : 'max-h-[320px]',
+              ? 'max-h-[220px] overflow-y-auto lg:max-h-[280px]'
+              : 'max-h-[320px] overflow-y-auto',
         ].join(' ')}
-        tabIndex={0}
+        tabIndex={fillHeight ? undefined : 0}
         aria-label="Today's plan — scroll for more"
       >
         {loading ? (

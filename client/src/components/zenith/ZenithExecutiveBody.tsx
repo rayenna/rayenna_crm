@@ -668,7 +668,7 @@ export default function ZenithExecutiveBody({
             ) : showHitList ? (
               <div
                 id="zenith-hit-list"
-                className="zenith-overview-panel flex min-h-0 min-w-0 flex-col scroll-mt-28 overflow-hidden"
+                className="zenith-overview-panel flex min-h-0 min-w-0 flex-col scroll-mt-28 max-lg:overflow-visible lg:overflow-hidden"
               >
                 <HitList
                   hitList={hitListResult.hitList}
