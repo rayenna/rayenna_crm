@@ -91,7 +91,7 @@ const MetricCard = ({ title, value, icon, gradient, trend, to, variant = 'defaul
           </div>
           {to && (
             <div
-              className={`flex items-center gap-1.5 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200 pt-0.5 ${
+              className={`flex items-center gap-1.5 text-xs font-medium opacity-100 max-lg:opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-200 pt-0.5 ${
                 isZenith ? 'text-[color:var(--accent-teal)]' : 'text-primary-600'
               }`}
             >

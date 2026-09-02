@@ -17,6 +17,7 @@ import ZenithDrawerRemarksPanel from './ZenithDrawerRemarksPanel'
 import ZenithDrawerProjectTitle from './ZenithDrawerProjectTitle'
 import ZenithDrawerPaymentSummary from './ZenithDrawerPaymentSummary'
 import { formatZenithSystemCapacityKw } from '../../utils/zenithSystemCapacityFormat'
+import { useZenithDrawerToastStyle } from '../../utils/zenithDrawerToastStyle'
 import {
   zenithDrawerMotion,
   ZENITH_DRAWER_CLOSE_BTN_CLASS,
@@ -107,6 +108,8 @@ export default function OperationsQuickDrawer({
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<ToastState>(null)
   const [queuedToast, setQueuedToast] = useState<QueuedToastState>(null)
+  const drawerToastStyle = useZenithDrawerToastStyle()
+  const drawerToastStackedStyle = useZenithDrawerToastStyle({ stacked: true })
   const [error, setError] = useState<string | null>(null)
 
   const [noteText, setNoteText] = useState('')
@@ -676,10 +679,7 @@ export default function OperationsQuickDrawer({
       {toast ? (
         <div
           style={{
-            position: 'fixed',
-            bottom: 24,
-            left: '50%',
-            transform: 'translateX(-50%)',
+            ...drawerToastStyle,
             background: 'var(--accent-gold-muted)',
             border: '1px solid var(--accent-gold-border)',
             borderRadius: 10,
@@ -687,7 +687,6 @@ export default function OperationsQuickDrawer({
             color: 'var(--accent-gold)',
             fontFamily: 'DM Sans, sans-serif',
             fontSize: 14,
-            zIndex: 6100,
           }}
           role="status"
           aria-live="polite"
@@ -699,10 +698,7 @@ export default function OperationsQuickDrawer({
       {queuedToast ? (
         <div
           style={{
-            position: 'fixed',
-            bottom: toast ? 72 : 24,
-            left: '50%',
-            transform: 'translateX(-50%)',
+            ...drawerToastStackedStyle,
             background: 'var(--accent-gold-muted)',
             border: '1px solid var(--accent-gold-border)',
             borderRadius: 10,
@@ -710,7 +706,6 @@ export default function OperationsQuickDrawer({
             color: 'var(--accent-gold)',
             fontFamily: 'DM Sans, sans-serif',
             fontSize: 14,
-            zIndex: 6100,
           }}
           role="status"
           aria-live="polite"

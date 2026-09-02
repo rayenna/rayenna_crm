@@ -1245,7 +1245,7 @@ const ProjectForm = () => {
                             setShowCustomerDropdown(false)
                             setValue('customerId', '')
                           }}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 transform text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]"
+                          className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-[color:var(--text-muted)] hover:bg-[color:var(--bg-card-hover)] hover:text-[color:var(--text-primary)] touch-manipulation"
                         >
                           ✕
                         </button>

@@ -1,8 +1,10 @@
 import { useEffect, useState, type CSSProperties } from 'react'
+import { useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ProjectStatus } from '../../types'
 import type { VictoryToastDetail } from '../../hooks/useVictoryToast'
-import { useIsMobile } from '../../hooks/useIsMobile'
+import { useZenithNarrowLayout } from '../../hooks/useZenithNarrowLayout'
+import { ZENITH_MOBILE_ABOVE_NAV_BOTTOM } from '../../constants/zenithMobileNav'
 
 const DOTS = [
   { top: '10%', left: '15%', color: 'var(--accent-gold)', delay: '0s' },
@@ -49,7 +51,9 @@ type Props = {
 }
 
 export default function VictoryToast({ toast, onDismiss }: Props) {
-  const isMobile = useIsMobile()
+  const narrow = useZenithNarrowLayout()
+  const { pathname } = useLocation()
+  const onZenith = pathname.startsWith('/zenith')
   const displayValue = useCountUp(toast?.dealValue ?? 0, 1000)
 
   useEffect(() => {
@@ -58,13 +62,14 @@ export default function VictoryToast({ toast, onDismiss }: Props) {
     return () => window.clearTimeout(t)
   }, [toast?.id, onDismiss])
 
-  const containerStyle: CSSProperties = isMobile
+  const containerStyle: CSSProperties = narrow
     ? {
         position: 'fixed',
-        bottom: 12,
+        bottom: onZenith ? ZENITH_MOBILE_ABOVE_NAV_BOTTOM : 'max(12px, env(safe-area-inset-bottom, 12px))',
         left: 12,
         right: 12,
         width: 'auto',
+        maxWidth: 'none',
         zIndex: 1100,
         pointerEvents: 'none',
       }
@@ -150,7 +155,7 @@ export default function VictoryToast({ toast, onDismiss }: Props) {
                 <button
                   type="button"
                   onClick={onDismiss}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-input)] text-[color:var(--text-muted)] transition-colors hover:bg-[color:var(--bg-card-hover)] hover:text-[color:var(--text-secondary)]"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-input)] text-[color:var(--text-muted)] transition-colors hover:bg-[color:var(--bg-card-hover)] hover:text-[color:var(--text-secondary)] touch-manipulation"
                   aria-label="Dismiss"
                 >
                   ×

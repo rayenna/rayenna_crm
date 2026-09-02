@@ -1286,7 +1286,7 @@ const DocumentDownloadButton = ({ documentId }: { documentId: string }) => {
     <button
       onClick={handleDownload}
       disabled={downloading}
-      className="text-[color:var(--accent-teal)] hover:opacity-75 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+      className="text-[color:var(--accent-teal)] hover:opacity-75 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] min-w-[44px] inline-flex items-center justify-center touch-manipulation"
       title="View/Download file"
     >
       <svg
@@ -1358,7 +1358,7 @@ const DocumentDeleteButton = ({ documentId, projectId }: { documentId: string; p
   return (
     <button
       onClick={handleDelete}
-      className="ml-2 text-[color:var(--accent-red)] hover:opacity-75 opacity-0 group-hover:opacity-100 transition-opacity"
+      className="ml-2 text-[color:var(--accent-red)] hover:opacity-75 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity min-h-[44px] min-w-[44px] inline-flex items-center justify-center touch-manipulation"
       title="Delete document"
     >
       <svg

@@ -95,6 +95,9 @@ function App() {
       <AuthProvider>
         <Toaster
           position="top-right"
+          containerStyle={{
+            top: 'max(0.75rem, env(safe-area-inset-top))',
+          }}
           toastOptions={{
             className: 'font-sans',
             style: {
@@ -102,6 +105,7 @@ function App() {
               color: 'var(--text-primary)',
               border: '1px solid var(--border-default)',
               boxShadow: 'var(--shadow-dropdown)',
+              maxWidth: 'min(24rem, calc(100vw - 2rem))',
             },
             success: {
               iconTheme: { primary: 'var(--text-inverse)', secondary: 'var(--accent-gold)' },

@@ -13,10 +13,12 @@ import {
 import { getHelpContent } from '../help/contentLoader'
 import { searchHelpContent } from '../help/searchHelp'
 import HelpSidebar from '../components/help/HelpSidebar'
+import HelpSearch from '../components/help/HelpSearch'
+import HelpTopicsDrawer from '../components/help/HelpTopicsDrawer'
 import HelpExportButton from '../components/help/HelpExportButton'
 import DealHealthScoreHelpIllustration from '../components/help/DealHealthScoreHelpIllustration'
 import ErrorBoundary from '../components/ErrorBoundary'
-import { BookOpen } from 'lucide-react'
+import { BookOpen, List } from 'lucide-react'
 import { resolveHelpExitPath } from '../constants/defaultHomeRoute'
 import { slugifyHeadingLabel, textFromChildren } from '../help/markdownHeadingUtils'
 
@@ -34,6 +36,8 @@ const Help = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const helpContextPathRef = useRef<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [topicsOpen, setTopicsOpen] = useState(false)
 
   // Legacy URL: /help/analytics (combined Dashboard + Zenith) → split pages
   useEffect(() => {
@@ -99,20 +103,23 @@ const Help = () => {
     }
   }, [section, selectedSection, navigate])
 
-  // Esc key to close Help
+  // Esc: close topics drawer first, then exit Help
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        navigate(resolveHelpExitPath(helpContextPathRef.current))
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      if (topicsOpen) {
+        setTopicsOpen(false)
+        return
       }
+      navigate(resolveHelpExitPath(helpContextPathRef.current))
     }
 
     document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [navigate])
+  }, [navigate, topicsOpen])
 
   // Content is loaded at build time via Vite – no fetch
   const rawContent = selectedSection
@@ -131,7 +138,6 @@ const Help = () => {
     return () => window.clearTimeout(timer)
   }, [section, selectedSection?.id, markdownContent, location.hash])
 
-  const [searchQuery, setSearchQuery] = useState('')
   const allContent = useMemo(
     () =>
       helpSections.map((s) => ({
@@ -147,9 +153,11 @@ const Help = () => {
     [searchQuery, allContent]
   )
 
-  const handleSectionSelect = (section: HelpSection) => {
+  const handleSectionSelect = (sec: HelpSection) => {
     helpContextPathRef.current = null
-    navigate(`/help/${section.routeKey}`)
+    navigate(`/help/${sec.routeKey}`)
+    setTopicsOpen(false)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleSearchResultClick = (routeKey: string) => {
@@ -157,6 +165,8 @@ const Help = () => {
     if (sec) handleSectionSelect(sec)
     setSearchQuery('')
   }
+
+  const closeTopicsDrawer = () => setTopicsOpen(false)
 
   const contextLabel = helpContextPathRef.current ? getHelpContextLabel(helpContextPathRef.current) : null
   const helpDocZenith = selectedSection?.id === 'zenith'
@@ -190,63 +200,44 @@ const Help = () => {
                 <p className="mt-0.5 text-sm text-[color:var(--text-secondary)]">Documentation and guidance for using the CRM</p>
               </div>
             </div>
+            <div className="mt-3 flex items-center gap-2 border-t border-[color:var(--border-default)] pt-3 lg:hidden">
+              <button
+                type="button"
+                onClick={() => setTopicsOpen(true)}
+                className="inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-3.5 py-2 text-sm font-semibold text-[color:var(--accent-gold)] touch-manipulation"
+                aria-expanded={topicsOpen}
+                aria-controls="help-topics-drawer"
+              >
+                <List size={16} aria-hidden />
+                Topics
+              </button>
+              <p className="min-w-0 truncate text-sm text-[color:var(--text-secondary)]">
+                <span className="text-[color:var(--text-muted)]">Viewing </span>
+                <strong className="font-semibold text-[color:var(--text-primary)]">{selectedSection.title}</strong>
+              </p>
+            </div>
           </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-x-6 gap-y-8 lg:gap-y-6">
-          {/* Left Sidebar */}
-          <div className="lg:col-span-1 min-h-0 space-y-4">
-            {/* Search */}
-            <div className="flex-shrink-0 overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)]">
-              <label htmlFor="help-search" className="sr-only">
-                Search help
-              </label>
-              <input
-                id="help-search"
-                type="search"
-                placeholder="Search help…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="zenith-native-filter-input w-full rounded-none border-0 px-4 py-3 text-sm placeholder:text-[color:var(--text-placeholder)] focus:ring-0"
-                aria-describedby={searchQuery.length > 0 ? 'help-search-results' : undefined}
-              />
-              {searchQuery.trim().length > 0 && (
-                <div
-                  id="help-search-results"
-                  className="max-h-64 overflow-y-auto border-t border-[color:var(--border-default)]"
-                  role="list"
-                >
-                  {searchResults.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-[color:var(--text-muted)]">No matches</p>
-                  ) : (
-                    searchResults.map((r) => (
-                      <button
-                        key={r.routeKey}
-                        type="button"
-                        onClick={() => handleSearchResultClick(r.routeKey)}
-                        className="w-full border-b border-[color:var(--border-default)] px-4 py-3 text-left text-sm transition-colors last:border-b-0 hover:bg-[color:var(--bg-table-hover)]"
-                        role="listitem"
-                      >
-                        <span className="block font-semibold text-[color:var(--accent-gold)]">{r.sectionTitle}</span>
-                        <span className="line-clamp-2 text-[color:var(--text-secondary)]">{r.snippet}</span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-            {selectedSection && (
-              <HelpSidebar
-                sections={helpSections}
-                selectedSection={selectedSection}
-                onSectionSelect={handleSectionSelect}
-                sectionSubNav={helpSectionSubNav}
-              />
-            )}
+          {/* Desktop sidebar — search + topics */}
+          <div className="hidden lg:block lg:col-span-1 min-h-0 space-y-4">
+            <HelpSearch
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              searchResults={searchResults}
+              onResultClick={handleSearchResultClick}
+            />
+            <HelpSidebar
+              sections={helpSections}
+              selectedSection={selectedSection}
+              onSectionSelect={handleSectionSelect}
+              sectionSubNav={helpSectionSubNav}
+            />
           </div>
 
-          {/* Right Content Area */}
-          <div className="border-t border-[color:var(--border-default)] pt-6 lg:col-span-3 lg:border-t-0 lg:pl-1 lg:pt-0">
+          {/* Article */}
+          <div className="lg:col-span-3 lg:pl-1">
             <div className="overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)]">
               <div
                 className="h-1.5 bg-gradient-to-r from-[color:var(--accent-gold)] via-[color:var(--accent-amber)] to-[color:var(--accent-teal)]"
@@ -595,6 +586,24 @@ const Help = () => {
             </div>
           </div>
         </div>
+
+        <HelpTopicsDrawer open={topicsOpen} onClose={closeTopicsDrawer}>
+          <HelpSearch
+            id="help-search-mobile"
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+            searchResults={searchResults}
+            onResultClick={handleSearchResultClick}
+          />
+          <HelpSidebar
+            embedded
+            sections={helpSections}
+            selectedSection={selectedSection}
+            onSectionSelect={handleSectionSelect}
+            sectionSubNav={helpSectionSubNav}
+            onNavigate={closeTopicsDrawer}
+          />
+        </HelpTopicsDrawer>
       </div>
     </div>
   )

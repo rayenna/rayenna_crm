@@ -19,6 +19,10 @@ interface HelpSidebarProps {
   onSectionSelect: (section: HelpSection) => void
   /** Optional per-section in-page anchors (e.g. Modules → Customer Master, Projects, …). */
   sectionSubNav?: Partial<Record<string, HelpSubNavItem[]>>
+  /** Inside mobile topics drawer — drop outer card chrome and sticky positioning. */
+  embedded?: boolean
+  /** Close mobile drawer after in-page / About navigation. */
+  onNavigate?: () => void
 }
 
 const HelpSidebar = ({
@@ -26,26 +30,32 @@ const HelpSidebar = ({
   selectedSection,
   onSectionSelect,
   sectionSubNav = {},
+  embedded = false,
+  onNavigate,
 }: HelpSidebarProps) => {
   const location = useLocation()
 
-  return (
-    <div className="flex h-full max-h-[calc(100vh-8rem)] flex-col overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] sticky top-6">
-      {/* Header */}
-      <div className="flex-shrink-0 border-b border-[color:var(--border-default)] bg-[color:var(--zenith-table-header-bg)] px-4 py-3.5">
-        <h2 className="zenith-display text-base font-bold tracking-tight text-[color:var(--zenith-table-header-fg)]">
-          Help Topics
-        </h2>
-        <p className="mt-1 text-xs font-medium text-[color:var(--text-secondary)]">
-          Press{' '}
-          <kbd className="rounded border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-1 py-0.5 font-mono text-[10px] text-[color:var(--accent-gold)]">
-            ?
-          </kbd>{' '}
-          from any page
-        </p>
-      </div>
+  const shellClass = embedded
+    ? 'flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)]'
+    : 'flex h-full max-h-[calc(100vh-8rem)] flex-col overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] sticky top-6'
 
-      {/* Scrollable Navigation + About in one list with consistent spacing */}
+  return (
+    <div className={shellClass}>
+      {!embedded ? (
+        <div className="flex-shrink-0 border-b border-[color:var(--border-default)] bg-[color:var(--zenith-table-header-bg)] px-4 py-3.5">
+          <h2 className="zenith-display text-base font-bold tracking-tight text-[color:var(--zenith-table-header-fg)]">
+            Help Topics
+          </h2>
+          <p className="mt-1 text-xs font-medium text-[color:var(--text-secondary)]">
+            Press{' '}
+            <kbd className="rounded border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-1 py-0.5 font-mono text-[10px] text-[color:var(--accent-gold)]">
+              ?
+            </kbd>{' '}
+            from any page
+          </p>
+        </div>
+      ) : null}
+
       <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
         {sections.map((section) => {
           const isSelected = selectedSection?.id === section.id
@@ -54,8 +64,11 @@ const HelpSidebar = ({
             <div key={section.id} className="space-y-0.5">
               <button
                 type="button"
-                onClick={() => onSectionSelect(section)}
-                className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 ${
+                onClick={() => {
+                  onSectionSelect(section)
+                  onNavigate?.()
+                }}
+                className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 touch-manipulation min-h-[44px] ${
                   isSelected
                     ? 'border-l-4 border-[color:var(--accent-gold)] bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)] shadow-sm ring-1 ring-[color:var(--accent-gold-border)]'
                     : 'border-l-4 border-transparent text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)]'
@@ -80,7 +93,8 @@ const HelpSidebar = ({
                       <li key={item.hash}>
                         <Link
                           to={to}
-                          className={`flex w-full rounded-lg px-2 py-1.5 text-left text-xs font-medium leading-snug transition-colors ${
+                          onClick={() => onNavigate?.()}
+                          className={`flex w-full rounded-lg px-2 py-2 text-left text-xs font-medium leading-snug transition-colors touch-manipulation min-h-[40px] items-center ${
                             hashActive
                               ? 'bg-[color:var(--accent-teal-muted)] text-[color:var(--accent-teal)] ring-1 ring-[color:var(--accent-teal-border)]'
                               : 'text-[color:var(--text-muted)] hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)]'
@@ -96,11 +110,11 @@ const HelpSidebar = ({
             </div>
           )
         })}
-        {/* About: same vertical rhythm as topics, minimal gap */}
         <div className="mt-1 border-t border-[color:var(--border-default)] pt-2">
           <Link
             to="/about"
-            className="flex w-full items-center gap-2.5 rounded-xl border-l-4 border-transparent px-3 py-2.5 text-left text-sm font-medium text-[color:var(--text-secondary)] transition-all duration-200 hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)]"
+            onClick={() => onNavigate?.()}
+            className="flex w-full items-center gap-2.5 rounded-xl border-l-4 border-transparent px-3 py-2.5 text-left text-sm font-medium text-[color:var(--text-secondary)] transition-all duration-200 hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)] touch-manipulation min-h-[44px]"
           >
             <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center text-base leading-none" aria-hidden>
               ℹ️

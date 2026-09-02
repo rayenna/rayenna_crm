@@ -334,9 +334,9 @@ export default function HitList({
             </div>
           </div>
           <div className="zenith-hit-list-body min-h-0 flex-1 overflow-y-auto">
-            <div className="zenith-scroll-x overflow-x-auto px-3 py-1 md:px-2 md:py-0">
-            {/* Desktop / tablet — same columns as “Your pipeline today” + alert + confirmation */}
-            <table className="zenith-table--data hidden md:table w-full text-left text-[11px] sm:text-xs min-w-[920px]">
+            <div className="zenith-scroll-x overflow-x-auto px-3 py-1 lg:px-2 lg:py-0">
+            {/* Desktop — same columns as “Your pipeline today” + alert + confirmation */}
+            <table className="zenith-table--data hidden lg:table w-full text-left text-[11px] sm:text-xs min-w-[920px]">
               <thead>
                 <tr className="border-b border-[color:var(--border-default)]">
                   <th
@@ -527,7 +527,7 @@ export default function HitList({
             </table>
 
             {/* Mobile — same data, no oversized day count column */}
-            <div className="divide-y divide-[color:var(--border-default)] md:hidden">
+            <div className="divide-y divide-[color:var(--border-default)] lg:hidden">
               {displayRows.length === 0 ? (
                 <p
                   className="py-8 text-center text-[13px] text-[color:var(--text-muted)]"

@@ -17,7 +17,7 @@ import {
 import axiosInstance from '../../utils/axios'
 import { ZENITH_QUERY_STALE_MS } from '../../constants/zenithQueryStale'
 import { useAuth } from '../../contexts/AuthContext'
-import { UserRole, ProjectStatus } from '../../types'
+import { UserRole } from '../../types'
 import type { ZenithDateFilter } from './zenithTypes'
 import type { ZenithAutoFocusSection } from '../../hooks/useQuickAction'
 import type { ZenithExplorerProject } from '../../types/zenithExplorer'
@@ -39,100 +39,34 @@ import {
   zenithLastActivityTone,
   ZENITH_DEAL_OPEN_BUTTON_CLASS,
 } from './zenithDealCardUi'
-
-type SalesPipelineRow = {
-  projectId: string
-  projectSerialNumber?: number
-  customerName: string
-  stage: string
-  dealValue: number
-  daysSinceActivity: number
-  /** Extra fields from zenith-focus for Today’s Hit List (same API, no extra fetch). */
-  expectedCloseDate?: string | null
-  confirmationDate?: string | null
-  advanceReceived?: number
-  createdAt?: string
-  updatedAt?: string
-  /** When current stage was entered — Deal Health momentum. */
-  stageEnteredAt?: string | null
-  salespersonId?: string
-  /** Display name from zenith-focus (assigned project salesperson). */
-  salespersonName?: string | null
-  leadSource?: string | null
-  paymentStatus?: string | null
-  balanceAmount?: number | null
-  lastRemarkAt?: string | null
-  lastPaymentDate?: string | null
-}
-
-type FinanceOverdueRow = {
-  projectId: string
-  projectSerialNumber?: number
-  customerName: string
-  amount: number
-  dueSince: string
-  daysOverdue: number
-  customerPhone?: string | null
-  customerEmail?: string | null
-  orderValue?: number
-  amountPaid?: number
-  projectStatus?: string
-  /** Prisma PaymentStatus from zenith-focus overdue list */
-  paymentStatus?: string
-  salespersonId?: string | null
-  salespersonName?: string | null
-}
-
-type LatestPaymentRow = {
-  projectId: string
-  projectSerialNumber?: number | null
-  customerName: string
-  salespersonName: string
-  amount: number
-  receivedAt: string
-  installmentType: 'ADVANCE' | 'PAYMENT_1' | 'PAYMENT_2' | 'PAYMENT_3' | 'LAST_PAYMENT'
-  paymentStatus?: string | null
-  projectStatus?: string
-}
-
-/** Installation pulse: customer name colour by project stage (theme-aware — avoids pastel sky on light cards). */
-const INSTALL_PULSE_NAME_CONFIRMED = 'var(--accent-blue)'
-const INSTALL_PULSE_NAME_UNDER_INSTALLATION = 'var(--accent-gold)'
-
-function installPulseProjectNameColor(projectStatus: string | undefined): string {
-  if (projectStatus === ProjectStatus.CONFIRMED) return INSTALL_PULSE_NAME_CONFIRMED
-  if (projectStatus === ProjectStatus.UNDER_INSTALLATION) return INSTALL_PULSE_NAME_UNDER_INSTALLATION
-  return 'var(--text-primary)'
-}
-
-const INSTALL_PULSE_STAGE_LABEL: Partial<Record<ProjectStatus, string>> = {
-  [ProjectStatus.CONFIRMED]: 'Confirmed Order',
-  [ProjectStatus.UNDER_INSTALLATION]: 'Under Installation',
-}
-
-function installPulseStageLabel(projectStatus: string | undefined): string {
-  if (!projectStatus) return '—'
-  const ps = projectStatus as ProjectStatus
-  return INSTALL_PULSE_STAGE_LABEL[ps] ?? projectStatus
-}
-
-/** Payment radar: name colours follow theme accents (pending = blue, partial = gold). */
-const PAYMENT_RADAR_NAME_PENDING = 'var(--accent-blue)'
-const PAYMENT_RADAR_NAME_PARTIAL = 'var(--accent-gold)'
-const PAYMENT_RADAR_NAME_FULLY_PAID = 'var(--accent-teal)'
+import type {
+  FinanceOverdueRow,
+  InstallRow,
+  LatestPaymentRow,
+  SalesPipelineRow,
+} from './zenithFocusRowTypes'
+import ZenithFocusPipelineCards from './ZenithFocusPipelineCards'
+import ZenithFocusOverdueCards from './ZenithFocusOverdueCards'
+import ZenithFocusLatestPaymentCards from './ZenithFocusLatestPaymentCards'
+import ZenithFocusInstallCards from './ZenithFocusInstallCards'
+import ZenithFocusInstallProgress from './ZenithFocusInstallProgress'
+import {
+  computeInstallProgress,
+  INSTALL_PULSE_NAME_CONFIRMED,
+  INSTALL_PULSE_NAME_UNDER_INSTALLATION,
+  installPulseProjectNameColor,
+  installPulseRowOverdue,
+  installPulseStageLabel,
+} from './zenithInstallPulseUtils'
+import {
+  PAYMENT_RADAR_NAME_FULLY_PAID,
+  PAYMENT_RADAR_NAME_PARTIAL,
+  PAYMENT_RADAR_NAME_PENDING,
+  paymentRadarProjectNameColor,
+} from './zenithPaymentRadarUi'
 
 /** Brighter than `--text-muted` for Payment radar section labels (readable in light + dark). */
 const PAYMENT_RADAR_SUBHEAD_COLOR = 'color-mix(in srgb, var(--text-secondary) 70%, var(--text-primary) 30%)'
-
-function paymentRadarProjectNameColor(
-  paymentStatus: string | undefined,
-): string {
-  const s = String(paymentStatus ?? 'PENDING').toUpperCase()
-  if (s === 'FULLY_PAID') return PAYMENT_RADAR_NAME_FULLY_PAID
-  if (s === 'PARTIAL') return PAYMENT_RADAR_NAME_PARTIAL
-  if (s === 'PENDING') return PAYMENT_RADAR_NAME_PENDING
-  return 'var(--text-primary)'
-}
 
 type AgeingBucket = {
   id: '0-30' | '31-60' | '61-90' | '90+'
@@ -142,95 +76,6 @@ type AgeingBucket = {
 }
 
 type MonthlyCollectionPoint = { label: string; collected: number; outstanding: number }
-
-type InstallRow = {
-  projectId: string
-  projectSerialNumber?: number
-  customerName: string
-  kW: number | null
-  salespersonName: string
-  startDate: string | null
-  expectedCompletion: string | null
-  percentComplete: number | null
-  overdue: boolean
-  projectStatus?: string
-  lastNote?: string | null
-}
-
-function isInstallDoneStatus(s: string | undefined): boolean {
-  if (!s) return false
-  return (
-    s === ProjectStatus.COMPLETED ||
-    s === ProjectStatus.SUBMITTED_FOR_SUBSIDY ||
-    s === ProjectStatus.COMPLETED_SUBSIDY_CREDITED
-  )
-}
-
-function expectedDateBeforeStart(startStr: string | null, expectedStr: string | null): boolean {
-  if (!startStr || !expectedStr) return false
-  const start = new Date(startStr)
-  const expected = new Date(expectedStr)
-  if (Number.isNaN(start.getTime()) || Number.isNaN(expected.getTime())) return false
-  return expected.getTime() < start.getTime()
-}
-
-function computeInstallProgress(row: InstallRow): number {
-  if (isInstallDoneStatus(row.projectStatus)) return 100
-
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const startStr = row.startDate
-  const expectedStr = row.expectedCompletion
-
-  if (!startStr) return 0
-
-  const start = new Date(startStr)
-  start.setHours(0, 0, 0, 0)
-
-  let target: Date
-  if (expectedStr) {
-    target = new Date(expectedStr)
-    target.setHours(0, 0, 0, 0)
-  } else {
-    target = new Date(start)
-    target.setDate(target.getDate() + 45)
-  }
-
-  if (start > today) return 0
-  if (target < start) return 0
-
-  const totalDays = Math.max(1, (target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-  const elapsedDays = Math.max(0, (today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-  const pct = Math.round((elapsedDays / totalDays) * 100)
-  return Math.min(pct, 100)
-}
-
-function installTimelineOverdue(row: InstallRow, progressPct: number): boolean {
-  if (!row.expectedCompletion || progressPct >= 100) return false
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const exp = new Date(row.expectedCompletion)
-  exp.setHours(0, 0, 0, 0)
-  return today.getTime() > exp.getTime()
-}
-
-/** Row tint / dot / "Overdue only" — same rule as the Progress column (not raw API `overdue` alone). */
-function installPulseRowOverdue(row: InstallRow): boolean {
-  return installTimelineOverdue(row, computeInstallProgress(row))
-}
-
-function getProgressColor(pct: number, isOverdue: boolean): string {
-  if (isOverdue) return 'var(--accent-red)'
-  if (pct >= 80) return 'var(--accent-gold)'
-  if (pct >= 40) return 'var(--accent-teal)'
-  return 'var(--accent-blue)'
-}
-
-function barWidthPercent(_row: InstallRow, progressPct: number, overdue: boolean): number {
-  if (overdue && progressPct < 100) return 100
-  return progressPct
-}
 
 function overdueRowToReminderProject(row: FinanceOverdueRow): ReminderTemplateProject {
   return {
@@ -438,9 +283,10 @@ function SalesPipelineBlock({
             </span>
           )}
         </div>
-        <ZenithScrollHint className="mb-1 px-0.5" />
-        <div className="zenith-scroll-x-wrap">
-          <div className="zenith-scroll-x overflow-x-auto -mx-1 max-lg:pb-1">
+        <ZenithScrollHint className="mb-1 px-0.5 hidden lg:block" />
+        <ZenithFocusPipelineCards rows={displayRows} onOpenDrawer={onOpenDrawer} />
+        <div className="zenith-scroll-x-wrap hidden lg:block">
+          <div className="zenith-scroll-x overflow-x-auto -mx-1">
           <table className="zenith-table--data w-full text-left text-xs sm:text-sm min-w-[760px]">
             <thead>
               <tr className="border-b border-[color:var(--border-default)]">
@@ -992,8 +838,18 @@ function FinanceRadarBlock({
                 </span>{' '}
                 to send a reminder.
               </p>
-              <ZenithScrollHint className="px-2 sm:px-2.5 pt-1" />
-              <div className="zenith-scroll-x-wrap flex-1 min-h-0 flex flex-col">
+              <ZenithScrollHint className="px-2 sm:px-2.5 pt-1 hidden lg:block" />
+              <ZenithFocusOverdueCards
+                rows={overdueRows}
+                emptyMessage={
+                  ageFilter
+                    ? 'No overdue rows in this ageing bucket (adjust filter or customer search).'
+                    : 'No overdue rows in top slice.'
+                }
+                onOpenFinanceDrawer={onOpenFinanceDrawer}
+                onRemind={setReminderProject}
+              />
+              <div className="zenith-scroll-x-wrap flex-1 min-h-0 hidden lg:flex flex-col">
               <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 max-h-[min(70vh,520px)] lg:max-h-none zenith-scroll-x">
                 <table className="zenith-table--data w-full min-w-[520px] text-left text-[11px] sm:text-xs">
                   <thead>
@@ -1169,8 +1025,9 @@ function FinanceRadarBlock({
               >
                 Latest 10 received payments across the current date filters.
               </p>
-              <ZenithScrollHint className="px-2 sm:px-2.5" />
-              <div className="zenith-scroll-x-wrap flex-1 min-h-0 flex flex-col">
+              <ZenithScrollHint className="px-2 sm:px-2.5 hidden lg:block" />
+              <ZenithFocusLatestPaymentCards rows={paymentRows} onOpenFinanceDrawer={onOpenFinanceDrawer} />
+              <div className="zenith-scroll-x-wrap flex-1 min-h-0 hidden lg:flex flex-col">
               <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 max-h-[min(70vh,520px)] lg:max-h-none zenith-scroll-x">
                 <table className="zenith-table--data w-full min-w-[660px] text-left text-[11px] sm:text-xs">
                   <thead>
@@ -1526,67 +1383,6 @@ function FinanceRadarBlock({
   )
 }
 
-function InstallationProgressCell({ row }: { row: InstallRow }) {
-  const progressPct = computeInstallProgress(row)
-  const dateInvalid = expectedDateBeforeStart(row.startDate, row.expectedCompletion)
-  const overdue = installTimelineOverdue(row, progressPct)
-  const fillPct = barWidthPercent(row, progressPct, overdue)
-  const color = getProgressColor(progressPct, overdue)
-  const displayPct = overdue && progressPct < 100 ? 100 : progressPct
-  const [w, setW] = useState(0)
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setW(fillPct))
-    return () => cancelAnimationFrame(id)
-  }, [fillPct])
-
-  let statusLabel: string | null = null
-  if (overdue && progressPct < 100) statusLabel = 'OVERDUE'
-  else if (progressPct === 0 && !row.startDate) statusLabel = 'NOT STARTED'
-  else if (progressPct === 0 && row.startDate) {
-    const st = new Date(row.startDate)
-    st.setHours(0, 0, 0, 0)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    if (st > today) statusLabel = `STARTS ${format(st, 'dd MMM yy')}`
-  }
-
-  return (
-    <div className="min-w-[7.5rem] sm:min-w-[8.5rem]">
-      <div className="flex items-center justify-end gap-1 mb-0.5 min-h-[14px]">
-        {statusLabel ? (
-          <span
-            className="text-[9px] font-bold tracking-wide"
-            style={{ color: overdue ? 'var(--accent-red)' : 'var(--text-muted)' }}
-          >
-            {statusLabel}
-          </span>
-        ) : null}
-        {dateInvalid ? (
-          <span
-            title="Expected date is before start date — please update the project record"
-            className="text-[10px] cursor-help"
-            style={{ color: 'var(--accent-gold)' }}
-          >
-            ⚠️
-          </span>
-        ) : null}
-      </div>
-      <div className="flex items-center gap-2 min-w-0">
-        <div
-          className="flex-1 h-[5px] rounded-[3px] overflow-hidden min-w-[48px] sm:min-w-[64px]"
-          style={{ background: 'var(--bg-ticker)' }}
-        >
-          <div
-            className="h-full rounded-[3px] transition-[width] duration-[800ms] ease-out"
-            style={{ width: `${w}%`, background: color }}
-          />
-        </div>
-        <span className="text-[11px] tabular-nums text-[color:var(--text-muted)] shrink-0 w-8 sm:w-9 text-right">{displayPct}%</span>
-      </div>
-    </div>
-  )
-}
-
 function InstallationPulseBlock({
   data,
   accentClass,
@@ -1686,12 +1482,17 @@ function InstallationPulseBlock({
             <strong className={uiDelayedCount > 0 ? 'text-[color:var(--accent-red)]' : 'text-[color:var(--accent-teal)]'}>{uiDelayedCount}</strong>
           </span>
         </div>
-        <ZenithScrollHint className="mb-2" />
-        <div className="zenith-scroll-x-wrap rounded-lg sm:rounded-none">
+        <ZenithScrollHint className="mb-2 hidden lg:block" />
+        <ZenithFocusInstallCards
+          rows={displayRows}
+          onOpenDrawer={onOpenDrawer}
+          onOpenOperationsDrawer={onOpenOperationsDrawer}
+        />
+        <div className="zenith-scroll-x-wrap rounded-lg sm:rounded-none hidden lg:block">
         <div
           className="zenith-scroll-x zenith-install-pulse-scroll overflow-x-auto overscroll-x-contain -mx-1 px-1 sm:px-0"
           role="region"
-          aria-label="Installation projects table, scroll horizontally on small screens"
+          aria-label="Installation projects table"
         >
           <table className="zenith-table--data w-full min-w-[960px] md:min-w-[1020px] xl:min-w-[1080px] text-left text-xs sm:text-sm border-separate border-spacing-0">
             <thead>
@@ -1835,7 +1636,7 @@ function InstallationPulseBlock({
                         )}
                       </td>
                       <td className="py-2.5 pl-3 align-middle">
-                        <InstallationProgressCell row={r} />
+                        <ZenithFocusInstallProgress row={r} />
                       </td>
                       <td className="py-2.5 pl-2 align-middle whitespace-nowrap">
                         {onOpenOperationsDrawer || onOpenDrawer ? (
@@ -1958,8 +1759,6 @@ export default function ZenithYourFocus({
   onPeBucketListClick?: (args: PeBucketListClickArgs) => void
 }) {
   const { user } = useAuth()
-  const shortViewport = useZenithShortViewport()
-  const primaryFocusOpen = shortViewport
   const effFYs = dateFilter.selectedFYs
   const effQ = dateFilter.selectedQuarters
   const effM = dateFilter.selectedMonths
@@ -2023,7 +1822,7 @@ export default function ZenithYourFocus({
 
         {data.focusKind === 'SALES' && (
           <>
-            <ZenithFocusCollapsible title="Your pipeline today" accent="gold" defaultOpen={primaryFocusOpen}>
+            <ZenithFocusCollapsible title="Your pipeline today" accent="gold" defaultOpen={false}>
               <SalesPipelineBlock
                 title="Your pipeline today"
                 data={data.salesPipeline}
@@ -2078,7 +1877,7 @@ export default function ZenithYourFocus({
 
         {data.focusKind === 'MANAGEMENT' && (
           <>
-            <ZenithFocusCollapsible title="Company pipeline today" accent="gold" defaultOpen={primaryFocusOpen}>
+            <ZenithFocusCollapsible title="Company pipeline today" accent="gold" defaultOpen={false}>
               <SalesPipelineBlock
                 title="Company pipeline today"
                 data={data.salesPipeline}
