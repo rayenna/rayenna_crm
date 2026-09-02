@@ -9,9 +9,9 @@ import { FRIENDLY_DEFAULT, sanitizeUserFacingMessage } from './utils/friendlyErr
 import './styles/tokens.css'
 import './index.css'
 
-registerSW({
+const updateSW = registerSW({
   onNeedRefresh() {
-    console.log('New version available — updating...')
+    void updateSW(true)
   },
   onOfflineReady() {
     console.log('Zenith is ready to work offline')
