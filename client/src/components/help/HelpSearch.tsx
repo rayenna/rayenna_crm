@@ -7,6 +7,8 @@ type HelpSearchProps = {
   searchResults: HelpSearchResult[]
   onResultClick: (routeKey: string) => void
   className?: string
+  /** Opaque panel for mobile topics drawer (dark mode `--bg-card` is translucent). */
+  surface?: 'card' | 'input'
 }
 
 export default function HelpSearch({
@@ -16,12 +18,14 @@ export default function HelpSearch({
   searchResults,
   onResultClick,
   className = '',
+  surface = 'card',
 }: HelpSearchProps) {
   const resultsId = `${id}-results`
+  const bgClass = surface === 'input' ? 'bg-[color:var(--bg-input)]' : 'bg-[color:var(--bg-card)]'
 
   return (
     <div
-      className={`flex-shrink-0 overflow-hidden rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ${className}`.trim()}
+      className={`flex-shrink-0 overflow-hidden rounded-2xl border border-[color:var(--border-card)] ${bgClass} shadow-[var(--shadow-card)] ${className}`.trim()}
     >
       <label htmlFor={id} className="sr-only">
         Search help

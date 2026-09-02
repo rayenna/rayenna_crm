@@ -590,6 +590,7 @@ const Help = () => {
         <HelpTopicsDrawer open={topicsOpen} onClose={closeTopicsDrawer}>
           <HelpSearch
             id="help-search-mobile"
+            surface="input"
             searchQuery={searchQuery}
             onSearchQueryChange={setSearchQuery}
             searchResults={searchResults}

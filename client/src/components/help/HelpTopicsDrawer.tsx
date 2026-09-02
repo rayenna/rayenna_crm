@@ -37,15 +37,15 @@ export default function HelpTopicsDrawer({ open, onClose, children }: HelpTopics
             role="dialog"
             aria-modal="true"
             aria-label="Help topics"
-            className="fixed inset-y-0 left-0 z-[46] flex w-[min(20rem,92vw)] max-w-full flex-col border-r border-[color:var(--border-default)] bg-[color:var(--bg-card)] shadow-2xl lg:hidden pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
+            className="fixed inset-y-0 left-0 z-[46] flex w-[min(20rem,92vw)] max-w-full flex-col border-r border-[color:var(--border-default)] bg-[color:var(--bg-modal)] shadow-2xl lg:hidden pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
           >
-            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--border-default)] bg-[color:var(--zenith-table-header-bg)] px-4 py-3">
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] px-4 py-3">
               <div className="min-w-0">
-                <h2 className="zenith-display text-base font-bold tracking-tight text-[color:var(--zenith-table-header-fg)]">
+                <h2 className="zenith-display text-base font-bold tracking-tight text-[color:var(--text-primary)]">
                   Help topics
                 </h2>
                 <p className="mt-0.5 text-[11px] text-[color:var(--text-secondary)]">
