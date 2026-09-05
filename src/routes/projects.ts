@@ -46,6 +46,85 @@ const router = express.Router();
 const DEAL_HEALTH_LIST_SCAN_CAP = 2000;
 const DEAL_HEALTH_EXPORT_SCAN_CAP = 3000;
 
+/**
+ * Scalar / enum fields Prisma accepts on `project.update` data.
+ * Admin previously spread `req.body`, which re-sent null relation keys from the GET
+ * payload (`lead`, `roofLayout`, …) and caused PrismaClientValidationError.
+ */
+const PROJECT_UPDATE_DATA_KEYS = new Set([
+  'type',
+  'projectServiceType',
+  'salespersonId',
+  'assignedOpsId',
+  'leadId',
+  'year',
+  'systemCapacity',
+  'systemType',
+  'panelBrand',
+  'panelType',
+  'panelCapacityW',
+  'inverterBrand',
+  'inverterCapacityKw',
+  'roofType',
+  'projectStage',
+  'lostDate',
+  'lostReason',
+  'lostToCompetitionReason',
+  'lostOtherReason',
+  'lostRevenue',
+  'siteAddress',
+  'expectedCommissioningDate',
+  'leadSource',
+  'leadSourceDetails',
+  'projectCost',
+  'projectValue',
+  'marginEstimate',
+  'confirmationDate',
+  'loanDetails',
+  'availingLoan',
+  'financingBank',
+  'financingBankOther',
+  'incentiveEligible',
+  'expectedProfit',
+  'grossProfit',
+  'profitability',
+  'mnrePortalRegistrationDate',
+  'feasibilityDate',
+  'registrationDate',
+  'installationCompletionDate',
+  'completionReportSubmissionDate',
+  'mnreInstallationDetails',
+  'subsidyRequestDate',
+  'subsidyCreditedDate',
+  'projectStatus',
+  'totalProjectCost',
+  'advanceReceived',
+  'advanceReceivedDate',
+  'payment1',
+  'payment1Date',
+  'payment2',
+  'payment2Date',
+  'payment3',
+  'payment3Date',
+  'lastPayment',
+  'lastPaymentDate',
+  'totalAmountReceived',
+  'balanceAmount',
+  'paymentStatus',
+  'remarks',
+  'internalNotes',
+]);
+
+function pickProjectUpdateData(source: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of PROJECT_UPDATE_DATA_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
+      out[key] = source[key];
+    }
+  }
+  return out;
+}
+
 /** Project system capacity (kW): non-negative integer; null if empty/invalid. Rounds numeric input. */
 function parseSystemCapacityKw(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;
@@ -1625,26 +1704,13 @@ router.put(
           );
         }
       } else if (req.user?.role === UserRole.ADMIN) {
-        // Admin can update everything except immutable fields
-        updateData = { ...req.body };
-        // Remove immutable/system fields that shouldn't be updated
-        delete updateData.id;
-        delete updateData.slNo;
-        delete updateData.count;
-        delete updateData.createdById;
-        delete updateData.createdAt;
-        delete updateData.updatedAt;
+        // Admin can update project scalars — never spread req.body (relations / UI-only keys break Prisma)
+        updateData = pickProjectUpdateData(req.body as Record<string, unknown>);
         delete updateData.totalAmountReceived;
         delete updateData.balanceAmount;
         delete updateData.paymentStatus;
         delete updateData.expectedProfit;
-        delete updateData.customer; // Remove relation objects
-        delete updateData.createdBy; // Remove relation objects
-        delete updateData.salesperson; // Remove relation objects
-        delete updateData.opsPerson; // Remove relation objects
-        delete updateData.documents; // Remove relation objects
-        delete updateData.auditLogs; // Remove relation objects
-        
+
         // Handle date fields
         const dateFields = [
           'confirmationDate',
@@ -1757,7 +1823,15 @@ router.put(
         if (updateData.incentiveEligible !== undefined) {
           updateData.incentiveEligible = Boolean(updateData.incentiveEligible);
         }
-        
+        if (updateData.availingLoan !== undefined) {
+          const raw = updateData.availingLoan;
+          const truthyValues = ['true', 'YES', 'yes', '1', 'on', true, 1];
+          const falsyValues = ['false', 'NO', 'no', '0', false, 0];
+          if (truthyValues.includes(raw as any)) updateData.availingLoan = true;
+          else if (falsyValues.includes(raw as any) || raw === '' || raw === null) updateData.availingLoan = false;
+          else updateData.availingLoan = Boolean(raw);
+        }
+
         // Handle enum fields
         if (updateData.type !== undefined && !Object.values(ProjectType).includes(updateData.type as ProjectType)) {
           delete updateData.type;
@@ -2009,13 +2083,8 @@ router.put(
         return res.status(400).json({ error: 'No valid fields to update' });
       }
 
-      // Final cleanup: Remove any remaining relation objects that might have been missed
-      const relationFields = ['customer', 'createdBy', 'salesperson', 'opsPerson', 'documents', 'auditLogs'];
-      relationFields.forEach(field => {
-        if (updateData[field] !== undefined) {
-          delete updateData[field];
-        }
-      });
+      // Final cleanup: keep only Prisma-safe scalar update keys (strips relations / UI-only fields)
+      updateData = pickProjectUpdateData(updateData as Record<string, unknown>);
 
       const futurePaymentDate = assertPaymentCollectionDatesNotFuture(updateData);
       if (futurePaymentDate) {

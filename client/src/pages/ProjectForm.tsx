@@ -974,17 +974,17 @@ const ProjectForm = () => {
       }
     });
     
-    // For new project creation, only send fields that backend expects
-    if (!isEdit) {
-      // Backend only accepts these fields for creation:
+    // For create and edit: only send fields the backend Project update/create accepts
+    {
+      // Backend only accepts these fields for creation / Admin update:
       const allowedFields = [
         'customerId', 'type', 'projectServiceType', 'salespersonId', 'year',
         'systemCapacity', 'projectCost', 'confirmationDate', 'loanDetails',
         'availingLoan', 'financingBank', 'financingBankOther',
         'incentiveEligible', 'leadSource', 'leadSourceDetails',
         'roofType', 'systemType', 'projectStatus', 'lostDate', 'lostReason', 'lostToCompetitionReason', 'lostOtherReason',
-        'leadId', 'assignedOpsId', 'panelBrand', 'inverterBrand', 'inverterCapacityKw',
-        'siteAddress', 'expectedCommissioningDate', 'internalNotes',
+        'leadId', 'assignedOpsId', 'panelBrand', 'panelType', 'panelCapacityW', 'inverterBrand', 'inverterCapacityKw',
+        'siteAddress', 'expectedCommissioningDate', 'internalNotes', 'remarks',
         // Payment fields (optional for new projects)
         'advanceReceived', 'advanceReceivedDate', 'payment1', 'payment1Date',
         'payment2', 'payment2Date', 'payment3', 'payment3Date',
