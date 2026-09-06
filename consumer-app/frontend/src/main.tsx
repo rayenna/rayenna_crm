@@ -5,12 +5,19 @@ import App from './App'
 import './styles/zenith.css'
 import './index.css'
 
-registerSW({
+const updateSW = registerSW({
+  immediate: true,
   onNeedRefresh() {
-    console.log('Solar Hub update available')
+    void updateSW(true)
   },
-  onRegistered(swRegistration) {
-    void swRegistration?.update()
+  onRegisteredSW(_url, registration) {
+    if (!registration) return
+    void registration.update()
+    window.setInterval(() => void registration.update(), 60 * 60 * 1000)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void registration.update()
+    }
+    document.addEventListener('visibilitychange', onVisible)
   },
   onRegisterError(error) {
     console.error('Solar Hub service worker registration failed:', error)
@@ -20,5 +27,5 @@ registerSW({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
-  </StrictMode>
+  </StrictMode>,
 )
