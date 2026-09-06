@@ -5,6 +5,7 @@ import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
 import { UserRole } from '../../types'
 import type { SolarHubProvisionResponse, SolarHubUser } from '../../types/solarHub'
+import HubHandoverScriptCard from './HubHandoverScriptCard'
 
 type Props = {
   projectId: string
@@ -42,8 +43,13 @@ export default function ProjectSolarHubCard({ projectId, projectStatus }: Props)
   })
 
   const user = data?.user
-  const eligible =
-    projectStatus === 'COMPLETED' || projectStatus === 'COMPLETED_SUBSIDY_CREDITED'
+  const eligible = [
+    'CONFIRMED',
+    'UNDER_INSTALLATION',
+    'SUBMITTED_FOR_SUBSIDY',
+    'COMPLETED',
+    'COMPLETED_SUBSIDY_CREDITED',
+  ].includes(projectStatus)
 
   return (
     <div className="rounded-2xl border border-[color:var(--border-default)] border-l-4 border-l-[color:var(--accent-gold)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)]">
@@ -108,11 +114,15 @@ export default function ProjectSolarHubCard({ projectId, projectStatus }: Props)
             <p className="mt-2 text-xs text-[color:var(--text-muted)]">
               {eligible
                 ? 'Only Admin or Operations can provision accounts.'
-                : 'Accounts are auto-created when project reaches Completed or Subsidy Credited.'}
+                : 'Accounts are auto-created from Confirmed (paid) through installation and completion.'}
             </p>
           )}
         </div>
       )}
+
+      <div className="mt-4">
+        <HubHandoverScriptCard username={user?.username} defaultOpen={Boolean(user)} />
+      </div>
     </div>
   )
 }

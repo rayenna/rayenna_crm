@@ -17,6 +17,18 @@ export interface SupportMeta {
   supportEmail: string
   referralCode: string
   referralRewardLabel: string
+  referralSuccessCount: number
+  referralChampionAt: number
+  chatBotEnabled: boolean
+}
+
+export type ChatEscalate = 'emergency' | 'whatsapp' | 'ticket' | null
+
+export interface ConsumerChatReply {
+  sessionId: string
+  reply: string
+  escalate: ChatEscalate
+  articleIds: string[]
 }
 
 export interface SupportTicketItem {
@@ -25,7 +37,9 @@ export interface SupportTicketItem {
   title: string
   description: string | null
   status: string
+  source?: string
   createdAt: string
+  updatedAt?: string
 }
 
 export interface SubmitSupportQueryInput {

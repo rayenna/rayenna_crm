@@ -3,7 +3,6 @@ import toast from 'react-hot-toast'
 import {
   AlertTriangle,
   CheckCircle2,
-  ChevronRight,
   Clock,
   Shield,
   TriangleAlert,
@@ -11,6 +10,7 @@ import {
 } from 'lucide-react'
 import {
   useCreateMaintenanceRequest,
+  useMaintenanceRequests,
   useMaintenanceSchedule,
   useWarranty,
 } from '@/hooks/useConsumerMaintain'
@@ -126,9 +126,17 @@ function RequestModal({
   )
 }
 
+function requestStatusLabel(status: string) {
+  if (status === 'IN_PROGRESS') return 'Scheduled'
+  if (status === 'COMPLETED') return 'Completed'
+  if (status === 'CANCELLED') return 'Cancelled'
+  return 'Open'
+}
+
 export default function Maintain() {
   const warrantyQuery = useWarranty()
   const scheduleQuery = useMaintenanceSchedule()
+  const requestsQuery = useMaintenanceRequests()
   const [modalType, setModalType] = useState<MaintenanceRequestType | null>(null)
 
   const loading = warrantyQuery.isLoading || scheduleQuery.isLoading
@@ -278,10 +286,44 @@ export default function Maintain() {
                         </p>
                       ) : null}
                     </div>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-[color:var(--text-muted)]" />
                   </div>
                 )
               })
+              )}
+            </div>
+          </section>
+
+          <section className="mb-4">
+            <h2 className="mb-3 text-sm font-bold text-[color:var(--text-primary)]">Your requests</h2>
+            <div className="zenith-glass overflow-hidden rounded-2xl">
+              {requestsQuery.isLoading ? (
+                <p className="px-4 py-6 text-center text-sm text-[color:var(--text-muted)]">Loading…</p>
+              ) : (requestsQuery.data ?? []).length === 0 ? (
+                <p className="px-4 py-6 text-center text-sm text-[color:var(--text-muted)]">
+                  No service or issue requests yet.
+                </p>
+              ) : (
+                <ul className="divide-y divide-[color:var(--border-default)]">
+                  {(requestsQuery.data ?? []).map((req) => (
+                    <li key={req.id} className="px-4 py-3.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-medium text-[color:var(--text-primary)]">{req.title}</p>
+                        <span className="shrink-0 text-[10px] font-bold uppercase text-[color:var(--accent-gold)]">
+                          {requestStatusLabel(req.status)}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-[10px] text-[color:var(--text-muted)]">
+                        {req.requestType === 'REPORT_ISSUE' ? 'Issue' : 'Service'}
+                        {' · '}
+                        {new Date(req.createdAt).toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           </section>

@@ -4,6 +4,11 @@ import { SupportTicketStatus, SupportTicketSource, UserRole, ProjectStatus } fro
 import prisma from '../prisma';
 import { authenticate, authorize } from '../middleware/auth';
 import { logSecurityAudit } from '../utils/auditLogger';
+import {
+  notifyTicketClosed,
+  notifyTicketInProgress,
+  resolveHubUserIdForProject,
+} from '../services/consumerNotificationService';
 import { attachHubUsernames } from '../utils/supportTicketEnrich';
 import { isSupportTicketOverdue, ticketNextFollowUpDate } from '../utils/supportTicketQueue';
 import { requireProjectAccess, SUPPORT_TICKET_QUEUE_ROLES } from '../utils/staffAccess';
@@ -313,6 +318,19 @@ router.post(
           where: { id: ticketId },
           data: { status: SupportTicketStatus.IN_PROGRESS },
         });
+        try {
+          const hubUserId =
+            ticket.consumerUserId || (await resolveHubUserIdForProject(ticket.projectId));
+          if (hubUserId) {
+            await notifyTicketInProgress({
+              consumerUserId: hubUserId,
+              ticketNumber: ticket.ticketNumber,
+              title: ticket.title,
+            });
+          }
+        } catch (err) {
+          console.error('Hub ticket in-progress notification failed', err);
+        }
       }
 
       res.status(201).json(activity);
@@ -393,6 +411,19 @@ router.patch(
 
       if (req.user) {
         logSecurityAudit({ userId: req.user.id, role: req.user.role, actionType: 'support_ticket_closed', entityType: 'SupportTicket', entityId: ticketId, summary: `Ticket ${ticket.ticketNumber} closed`, req });
+      }
+      try {
+        const hubUserId =
+          ticket.consumerUserId || (await resolveHubUserIdForProject(ticket.projectId));
+        if (hubUserId) {
+          await notifyTicketClosed({
+            consumerUserId: hubUserId,
+            ticketNumber: ticket.ticketNumber,
+            title: ticket.title,
+          });
+        }
+      } catch (err) {
+        console.error('Hub ticket closed notification failed', err);
       }
       res.json(updatedTicket);
     } catch (error: any) {

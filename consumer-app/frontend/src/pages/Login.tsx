@@ -7,6 +7,7 @@ import {
   apiBaseUrl,
   getFriendlyApiErrorMessage,
   isTimeoutOrNetworkError,
+  readRememberPreference,
 } from '@/utils/axios'
 
 const isProd = typeof window !== 'undefined' && !window.location.hostname.includes('localhost')
@@ -17,6 +18,7 @@ type ServerStatus = 'checking' | 'ready' | 'slow' | 'unknown'
 export default function Login() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(readRememberPreference)
   const [isLoading, setIsLoading] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [serverStatus, setServerStatus] = useState<ServerStatus>('unknown')
@@ -78,7 +80,7 @@ export default function Login() {
     startElapsedCounter()
 
     try {
-      await login(username.trim(), password)
+      await login(username.trim(), password, rememberMe)
       stopElapsedCounter()
       toast.success('Login successful')
       navigate(postLoginPath, { replace: true })
@@ -223,6 +225,16 @@ export default function Login() {
               />
             </div>
           </div>
+
+          <label className="flex items-center gap-2 text-sm text-[color:var(--nav-text-active)]">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="h-4 w-4 rounded border-[color:var(--border-input)] accent-[color:var(--accent-gold)]"
+            />
+            Stay signed in on this device
+          </label>
 
           <div className="pt-1">
             <button

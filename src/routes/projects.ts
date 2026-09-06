@@ -38,6 +38,7 @@ import { calculatePayments, calculateExpectedProfit, calculateGrossProfit, calcu
 import { predictProjectDelay } from '../utils/ai';
 import { suggestOptimalPricing } from '../utils/ai';
 import { scheduleConsumerHubSync } from '../services/consumerHubProvision';
+import { scheduleHubReferralAttribute } from '../services/consumerReferralService';
 import * as XLSX from 'xlsx';
 
 const router = express.Router();
@@ -2110,6 +2111,9 @@ router.put(
       if (updateData.projectStatus !== undefined && req.user) {
         logSecurityAudit({ userId: req.user.id, role: req.user.role, actionType: 'project_status_changed', entityType: 'Project', entityId: req.params.id, summary: `Status ${project.projectStatus} -> ${updateData.projectStatus}`, req });
         scheduleConsumerHubSync(updatedProject.id, updatedProject.projectStatus);
+      }
+      if (updateData.leadSource !== undefined || updateData.leadSourceDetails !== undefined) {
+        scheduleHubReferralAttribute(updatedProject.id);
       }
       if (req.user && updateTouchesPaymentTracking(updateData)) {
         const slNo = updatedProject.slNo ?? project.slNo;

@@ -2,11 +2,17 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Copy, Download, KeyRound, RefreshCw, ShieldOff, ShieldCheck, Trash2 } from 'lucide-react'
+import { ArrowLeft, Copy, Download, KeyRound, RefreshCw, ShieldOff, ShieldCheck, Trash2, Zap } from 'lucide-react'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import type { SolarHubPasswordResetResponse, SolarHubUser } from '../types/solarHub'
+import HubHandoverScriptCard from '../components/solarHub/HubHandoverScriptCard'
+import HubNotifyCard from '../components/solarHub/HubNotifyCard'
+import {
+  buildHubStaffCredentialsCopy,
+  getSolarHubPublicUrl,
+} from '../utils/hubHandoverScript'
 
 export default function SolarHubUserDetail() {
   const { id } = useParams<{ id: string }>()
@@ -19,6 +25,10 @@ export default function SolarHubUserDetail() {
   const [credentials, setCredentials] = useState<SolarHubPasswordResetResponse | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [pdfLoading, setPdfLoading] = useState(false)
+  const now = new Date()
+  const [energyYear, setEnergyYear] = useState(now.getFullYear())
+  const [energyMonth, setEnergyMonth] = useState(now.getMonth() + 1)
+  const [energyKwh, setEnergyKwh] = useState('')
 
   const { data: user, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['solar-hub-user', id],
@@ -84,9 +94,28 @@ export default function SolarHubUserDetail() {
     onError: (err) => toast.error(getFriendlyApiErrorMessage(err)),
   })
 
+  const energyMutation = useMutation({
+    mutationFn: () =>
+      axiosInstance.post('/api/consumer/energy', {
+        consumerUserId: id,
+        year: energyYear,
+        month: energyMonth,
+        totalGenerated: Number(energyKwh),
+      }),
+    onSuccess: () => {
+      toast.success('Inverter kWh saved for Hub Track')
+      setEnergyKwh('')
+    },
+    onError: (err) => toast.error(getFriendlyApiErrorMessage(err)),
+  })
+
   const copyCredentials = async () => {
     if (!credentials) return
-    const text = `Rayenna Solar Hub login\nUsername: ${credentials.username}\nPassword: ${credentials.temporaryPassword}`
+    const text = buildHubStaffCredentialsCopy({
+      hubUrl: getSolarHubPublicUrl(),
+      username: credentials.username,
+      password: credentials.temporaryPassword,
+    })
     try {
       await navigator.clipboard.writeText(text)
       toast.success('Copied to clipboard')
@@ -168,6 +197,12 @@ export default function SolarHubUserDetail() {
         </p>
       </header>
 
+      <div className="mb-6">
+        <HubHandoverScriptCard username={user.username} defaultOpen />
+      </div>
+
+      {canManage ? <HubNotifyCard userId={user.id} phone={user.phone} /> : null}
+
       <section className="mb-6 rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-5">
         <h2 className="text-xs font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Account</h2>
         <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
@@ -201,6 +236,76 @@ export default function SolarHubUserDetail() {
           </Link>
         </div>
       </section>
+
+      {canManage ? (
+        <section className="mb-6 rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-5">
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4 text-[color:var(--accent-gold)]" />
+            <h2 className="text-xs font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
+              Hub energy (inverter kWh)
+            </h2>
+          </div>
+          <p className="mt-2 text-xs text-[color:var(--text-muted)]">
+            Log this month’s generation from the inverter or OEM app. Do not use the KSEB bill
+            (export is not total generation). Savings in Hub are typical splits, not the bill.
+          </p>
+          <form
+            className="mt-4 grid gap-3 sm:grid-cols-4"
+            onSubmit={(e) => {
+              e.preventDefault()
+              const n = Number(energyKwh)
+              if (!Number.isFinite(n) || n < 0) {
+                toast.error('Enter inverter kWh')
+                return
+              }
+              energyMutation.mutate()
+            }}
+          >
+            <label className="text-xs font-semibold text-[color:var(--text-muted)]">
+              Year
+              <input
+                type="number"
+                min={2000}
+                max={2100}
+                value={energyYear}
+                onChange={(e) => setEnergyYear(Number(e.target.value))}
+                className="mt-1 w-full rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 text-sm text-[color:var(--text-primary)]"
+              />
+            </label>
+            <label className="text-xs font-semibold text-[color:var(--text-muted)]">
+              Month
+              <input
+                type="number"
+                min={1}
+                max={12}
+                value={energyMonth}
+                onChange={(e) => setEnergyMonth(Number(e.target.value))}
+                className="mt-1 w-full rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 text-sm text-[color:var(--text-primary)]"
+              />
+            </label>
+            <label className="text-xs font-semibold text-[color:var(--text-muted)] sm:col-span-2">
+              Generated kWh
+              <input
+                type="number"
+                min={0}
+                max={50000}
+                step="1"
+                value={energyKwh}
+                onChange={(e) => setEnergyKwh(e.target.value)}
+                placeholder="From inverter / ShinePhone"
+                className="mt-1 w-full rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 text-sm text-[color:var(--text-primary)]"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={energyMutation.isPending}
+              className="rounded-xl bg-[color:var(--accent-gold)] px-4 py-2 text-sm font-bold text-[color:var(--text-inverse)] disabled:opacity-50 sm:col-span-4"
+            >
+              {energyMutation.isPending ? 'Saving…' : 'Save generation'}
+            </button>
+          </form>
+        </section>
+      ) : null}
 
       {credentials ? (
         <section className="mb-6 rounded-2xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] p-5">

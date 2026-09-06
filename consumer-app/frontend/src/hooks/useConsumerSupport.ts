@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from '@/utils/axios'
 import type {
+  ConsumerChatReply,
   LearnTipItem,
   SubmitSupportQueryInput,
   SupportFaqItem,
@@ -30,6 +31,18 @@ export function useSupportFaq() {
   })
 }
 
+export function useSupportTickets() {
+  return useQuery({
+    queryKey: ['consumer-support-tickets'],
+    queryFn: async () => {
+      const { data } = await axios.get<{ items: SupportTicketItem[] }>(
+        '/api/consumer/support-tickets',
+      )
+      return data.items
+    },
+  })
+}
+
 export function useSubmitSupportQuery() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -42,6 +55,17 @@ export function useSubmitSupportQuery() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['consumer-support-tickets'] })
+      queryClient.invalidateQueries({ queryKey: ['consumer-notifications'] })
+      queryClient.invalidateQueries({ queryKey: ['consumer-home'] })
+    },
+  })
+}
+
+export function useConsumerChat() {
+  return useMutation({
+    mutationFn: async (input: { sessionId?: string; message: string }) => {
+      const { data } = await axios.post<ConsumerChatReply>('/api/consumer/chat', input)
+      return data
     },
   })
 }

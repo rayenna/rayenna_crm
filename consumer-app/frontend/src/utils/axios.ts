@@ -6,6 +6,44 @@ export const API_TIMEOUT_MS = 90_000
 export const apiBaseUrl = API_BASE_URL
 
 export const CONSUMER_TOKEN_KEY = 'consumerToken'
+export const CONSUMER_REMEMBER_KEY = 'consumerRememberMe'
+
+export function readConsumerToken(): string | null {
+  try {
+    return localStorage.getItem(CONSUMER_TOKEN_KEY) || sessionStorage.getItem(CONSUMER_TOKEN_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function persistConsumerToken(token: string, remember: boolean): void {
+  try {
+    sessionStorage.removeItem(CONSUMER_TOKEN_KEY)
+    localStorage.removeItem(CONSUMER_TOKEN_KEY)
+    if (remember) localStorage.setItem(CONSUMER_TOKEN_KEY, token)
+    else sessionStorage.setItem(CONSUMER_TOKEN_KEY, token)
+    localStorage.setItem(CONSUMER_REMEMBER_KEY, remember ? '1' : '0')
+  } catch {
+    sessionStorage.setItem(CONSUMER_TOKEN_KEY, token)
+  }
+}
+
+export function clearConsumerToken(): void {
+  try {
+    sessionStorage.removeItem(CONSUMER_TOKEN_KEY)
+    localStorage.removeItem(CONSUMER_TOKEN_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+export function readRememberPreference(): boolean {
+  try {
+    return localStorage.getItem(CONSUMER_REMEMBER_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
 
 export function isTimeoutOrNetworkError(error: unknown): boolean {
   const err = error as { code?: string; message?: string }
@@ -23,7 +61,7 @@ export function getFriendlyApiErrorMessage(error: unknown): string {
   }
   const err = error as { response?: { status?: number; data?: { error?: string } } }
   if (err?.response?.status === 401) {
-    return 'Invalid email or password.'
+    return 'Invalid username or password.'
   }
   if (err?.response?.status === 503) {
     return 'Consumer login is not configured on the API yet. Add CONSUMER_JWT_SECRET to the repo root .env and restart the backend (npm run dev:server).'
@@ -49,7 +87,7 @@ axiosInstance.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err?.response?.status === 401) {
-      sessionStorage.removeItem(CONSUMER_TOKEN_KEY)
+      clearConsumerToken()
       delete axiosInstance.defaults.headers.common.Authorization
       if (!window.location.pathname.startsWith('/login')) {
         window.location.href = '/login'

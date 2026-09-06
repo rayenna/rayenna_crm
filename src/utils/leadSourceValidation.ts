@@ -14,7 +14,7 @@ export function leadSourceRequiresDetails(leadSource: string | null | undefined)
 export function getLeadSourceDetailsRequiredError(leadSource: LeadSource): string {
   switch (leadSource) {
     case LeadSource.REFERRAL:
-      return 'Referral Name is required when Lead Source is Referral';
+      return 'Referral name or Hub code is required when Lead Source is Referral';
     case LeadSource.CHANNEL_PARTNER:
       return 'Channel Partner Name is required when Lead Source is Channel Partner';
     case LeadSource.OTHER:

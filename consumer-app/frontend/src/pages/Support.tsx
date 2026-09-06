@@ -14,17 +14,37 @@ import {
   Send,
   Share2,
 } from 'lucide-react'
-import { useSubmitSupportQuery, useSupportMeta } from '@/hooks/useConsumerSupport'
+import { useSubmitSupportQuery, useSupportMeta, useSupportTickets } from '@/hooks/useConsumerSupport'
+import SupportChatSheet from '@/components/SupportChatSheet'
 
 function telHref(phone: string) {
   return `tel:${phone.replace(/[^\d+]/g, '')}`
 }
 
+function whatsAppHref(phone: string) {
+  const digits = phone.replace(/\D/g, '')
+  return `https://wa.me/${digits}`
+}
+
+function ticketStatusLabel(status: string) {
+  if (status === 'IN_PROGRESS') return 'In progress'
+  if (status === 'CLOSED') return 'Closed'
+  return 'Open'
+}
+
+function ticketStatusClass(status: string) {
+  if (status === 'CLOSED') return 'text-[color:var(--accent-green)]'
+  if (status === 'IN_PROGRESS') return 'text-[color:var(--accent-gold)]'
+  return 'text-[color:var(--accent-teal)]'
+}
+
 export default function Support() {
   const metaQuery = useSupportMeta()
+  const ticketsQuery = useSupportTickets()
   const submitQuery = useSubmitSupportQuery()
   const [subject, setSubject] = useState('')
   const [description, setDescription] = useState('')
+  const [chatOpen, setChatOpen] = useState(false)
 
   const meta = metaQuery.data
   const loading = metaQuery.isLoading
@@ -41,7 +61,7 @@ export default function Support() {
 
   const shareReferral = async () => {
     if (!meta?.referralCode) return
-    const text = `Join Rayenna Solar with my referral code ${meta.referralCode}`
+    const text = `Join Rayenna Solar — give them my Hub referral code ${meta.referralCode} when you book.`
     if (navigator.share) {
       try {
         await navigator.share({ title: 'Rayenna Referral', text })
@@ -125,15 +145,32 @@ export default function Support() {
 
           {/* Contact channels */}
           <section className="grid grid-cols-3 gap-2">
-            <a
-              href="mailto:support@rayennaenergy.com"
-              className="zenith-glass flex flex-col items-center gap-1.5 rounded-2xl p-3 text-center"
-            >
-              <MessageCircle className="h-5 w-5 text-[color:var(--accent-teal)]" />
-              <span className="text-[10px] font-semibold text-[color:var(--text-secondary)]">
-                Live Chat
-              </span>
-            </a>
+            {meta?.chatBotEnabled ? (
+              <button
+                type="button"
+                onClick={() => setChatOpen(true)}
+                aria-label="Open live chat"
+                className="zenith-glass flex flex-col items-center gap-1.5 rounded-2xl p-3 text-center"
+              >
+                <MessageCircle className="h-5 w-5 text-[color:var(--accent-teal)]" />
+                <span className="text-[10px] font-semibold text-[color:var(--text-secondary)]">
+                  Live Chat
+                </span>
+              </button>
+            ) : (
+              <a
+                href={meta ? whatsAppHref(meta.emergencyPhone) : '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open WhatsApp chat"
+                className="zenith-glass flex flex-col items-center gap-1.5 rounded-2xl p-3 text-center"
+              >
+                <MessageCircle className="h-5 w-5 text-[color:var(--accent-teal)]" />
+                <span className="text-[10px] font-semibold text-[color:var(--text-secondary)]">
+                  Live Chat
+                </span>
+              </a>
+            )}
             <a
               href={meta ? telHref(meta.emergencyPhone) : '#'}
               className="zenith-glass flex flex-col items-center gap-1.5 rounded-2xl p-3 text-center"
@@ -186,6 +223,42 @@ export default function Support() {
             </form>
           </section>
 
+          <section className="zenith-glass rounded-2xl p-4">
+            <h2 className="text-sm font-bold text-[color:var(--text-primary)]">Your queries</h2>
+            {ticketsQuery.isLoading ? (
+              <p className="mt-3 text-xs text-[color:var(--text-muted)]">Loading…</p>
+            ) : (ticketsQuery.data ?? []).length === 0 ? (
+              <p className="mt-3 text-xs text-[color:var(--text-muted)]">
+                No queries yet. Submit one above and it will show here.
+              </p>
+            ) : (
+              <ul className="mt-3 divide-y divide-[color:var(--border-default)]">
+                {(ticketsQuery.data ?? []).map((ticket) => (
+                  <li key={ticket.id} className="py-3 first:pt-0 last:pb-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-semibold text-[color:var(--text-primary)]">
+                        {ticket.title}
+                      </p>
+                      <span className={`shrink-0 text-[10px] font-bold uppercase ${ticketStatusClass(ticket.status)}`}>
+                        {ticketStatusLabel(ticket.status)}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-[10px] text-[color:var(--text-muted)]">
+                      {ticket.ticketNumber}
+                      {ticket.source === 'CONSUMER_APP' ? ' · Hub' : ticket.source === 'CRM' ? ' · Office' : ''}
+                      {' · '}
+                      {new Date(ticket.updatedAt ?? ticket.createdAt).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
           {/* Refer & Earn */}
           {meta && (
             <section className="relative overflow-hidden rounded-2xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] p-4">
@@ -195,6 +268,10 @@ export default function Support() {
                   <h2 className="text-sm font-bold text-[color:var(--text-primary)]">Refer & Earn</h2>
                   <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">
                     {meta.referralRewardLabel}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-[color:var(--text-primary)]">
+                    {meta.referralSuccessCount ?? 0} of {meta.referralChampionAt ?? 3} toward Referral
+                    Champion
                   </p>
                   <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-[color:var(--bg-card)] px-3 py-1.5">
                     <span className="font-mono text-sm font-bold tracking-wide text-[color:var(--text-primary)]">
@@ -223,6 +300,14 @@ export default function Support() {
           )}
         </div>
       )}
+
+      {meta ? (
+        <SupportChatSheet
+          open={chatOpen}
+          onClose={() => setChatOpen(false)}
+          emergencyPhone={meta.emergencyPhone}
+        />
+      ) : null}
     </div>
   )
 }

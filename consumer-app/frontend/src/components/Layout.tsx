@@ -1,5 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import BottomNav from './BottomNav'
+import InstallHubPrompt from './InstallHubPrompt'
+import HubPushOptIn from './HubPushOptIn'
 
 export default function Layout() {
   return (
@@ -7,6 +9,8 @@ export default function Layout() {
       <main className="min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
         <Outlet />
       </main>
+      <InstallHubPrompt />
+      <HubPushOptIn />
       <BottomNav />
     </div>
   )

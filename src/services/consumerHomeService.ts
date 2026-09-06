@@ -95,12 +95,12 @@ export async function getConsumerHome(consumerUserId: string): Promise<ConsumerH
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
 
-  const [energy, health, schedule, notifications] = await Promise.all([
+  const [energy, health, schedule] = await Promise.all([
     getOrCreateMonthlyReading(consumerUserId, year, month),
     getSystemHealth(consumerUserId),
     getMaintenanceSchedule(consumerUserId),
-    listConsumerNotifications(consumerUserId),
   ]);
+  const notifications = await listConsumerNotifications(consumerUserId);
 
   const days = daysInMonth(year, month);
   const estimatedTodayKwh = days > 0 ? Math.round(energy.totalGenerated / days) : 0;

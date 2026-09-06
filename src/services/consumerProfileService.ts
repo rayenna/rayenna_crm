@@ -17,6 +17,8 @@ import {
   type MemberStatusDto,
 } from '../utils/consumerGamification';
 import { estimateMonthlyEnergy } from '../utils/consumerEnergyEstimate';
+import { countReferralSuccesses } from './consumerReferralService';
+import { getMaintenanceSchedule } from './consumerMaintainService';
 import {
   buildConsumerSystemSpec,
   type ConsumerSystemSpecDto,
@@ -106,12 +108,6 @@ async function estimateCo2TonsSaved(
   return Math.round((totalKwh * CO2_KG_PER_KWH) / 1000 * 10) / 10;
 }
 
-async function countReferralSuccesses(_referralCode: string): Promise<number> {
-  // Phase 1: referral attribution is not persisted yet; unlock when CRM adds referredBy tracking.
-  void _referralCode;
-  return 0;
-}
-
 async function awardPoints(consumerUserId: string, amount: number): Promise<void> {
   if (amount <= 0) return;
   const updated = await prisma.consumerUser.update({
@@ -124,18 +120,14 @@ async function awardPoints(consumerUserId: string, amount: number): Promise<void
   });
 }
 
-async function syncAchievements(
-  consumerUserId: string,
-  installDate: Date,
-  referralCode: string,
-): Promise<void> {
+async function syncAchievements(consumerUserId: string, installDate: Date): Promise<void> {
   const existing = await prisma.consumerAchievement.findMany({
     where: { consumerUserId },
     select: { type: true },
   });
   const unlocked = new Set(existing.map((a) => a.type));
 
-  const referralCount = await countReferralSuccesses(referralCode);
+  const referralCount = await countReferralSuccesses(consumerUserId);
 
   const checks: { type: ConsumerAchievementType; eligible: boolean }[] = [
     { type: ConsumerAchievementType.EARLY_ADOPTER, eligible: isEarlyAdopterEligible(installDate) },
@@ -213,7 +205,7 @@ export async function getConsumerProfile(consumerUserId: string): Promise<Consum
   await ensureWelcomeNotification(consumerUserId);
 
   const installDate = resolveInstallDate(consumer.project);
-  await syncAchievements(consumerUserId, installDate, consumer.referralCode);
+  await syncAchievements(consumerUserId, installDate);
 
   const refreshed = await prisma.consumerUser.findUnique({
     where: { id: consumerUserId },
@@ -270,6 +262,11 @@ export async function listConsumerNotifications(
   consumerUserId: string,
 ): Promise<{ items: ConsumerNotificationDto[]; unreadCount: number }> {
   await ensureWelcomeNotification(consumerUserId);
+  try {
+    await getMaintenanceSchedule(consumerUserId);
+  } catch (err) {
+    console.error('Hub cleaning notification sync failed', err);
+  }
 
   const items = await prisma.consumerNotification.findMany({
     where: { consumerUserId },

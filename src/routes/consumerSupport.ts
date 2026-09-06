@@ -43,7 +43,7 @@ router.post(
   '/support-tickets',
   authenticateConsumer,
   [
-    body('title').trim().notEmpty().isLength({ max: 500 }),
+    body('title').optional().trim().isLength({ max: 500 }),
     body('description').optional().isString().isLength({ max: 5000 }),
     body('subject').optional().trim().isLength({ max: 500 }),
   ],

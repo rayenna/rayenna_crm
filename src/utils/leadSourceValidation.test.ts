@@ -17,7 +17,7 @@ describe('leadSourceValidation', () => {
   it('rejects empty details when source requires them', () => {
     expect(validateLeadSourceDetailsPair(LeadSource.REFERRAL, '  ')).toEqual({
       ok: false,
-      error: 'Referral Name is required when Lead Source is Referral',
+      error: 'Referral name or Hub code is required when Lead Source is Referral',
     });
   });
 

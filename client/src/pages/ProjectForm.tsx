@@ -1499,7 +1499,7 @@ const ProjectForm = () => {
                     className={`${inputCls} ${!canEditSalesCommercial ? disabledControlCls : ''}`}
                     placeholder={
                       watch('leadSource') === LeadSource.CHANNEL_PARTNER ? 'Enter channel partner name' :
-                      watch('leadSource') === LeadSource.REFERRAL ? 'Enter referral name' :
+                      watch('leadSource') === LeadSource.REFERRAL ? 'Name and/or Hub code (e.g. ANILK4821)' :
                       'Enter details'
                     }
                   />

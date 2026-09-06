@@ -92,7 +92,8 @@ No **Tally export** or **Projects Excel/CSV** — request from **Finance** or **
 2. Update **lifecycle dates** as milestones complete.  
 3. Raise **support tickets** for blockers on site.  
 4. Coordinate with **Sales** when commercial fields on confirmed jobs need correction.  
-5. Pin follow-ups in **My Day** (**Ctrl+Shift+M** / **⌘⇧M**).
+5. At install/handover, use **Install Hub on this visit** on the project (and Solar Hub admin for accounts). [Solar Hub handover](/help/modules#solar-hub-handover)  
+6. Pin follow-ups in **My Day** (**Ctrl+Shift+M** / **⌘⇧M**).
 
 ## Shortcuts
 

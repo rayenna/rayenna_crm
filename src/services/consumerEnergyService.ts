@@ -2,12 +2,27 @@ import { Prisma } from '@prisma/client';
 import prisma from '../prisma';
 import {
   buildHourlyReadings,
+  derivedTotalsFromGeneration,
   estimateMonthlyEnergy,
+  isEnergyPeriodInFuture,
   type HourlyEnergyPoint,
 } from '../utils/consumerEnergyEstimate';
 
 export const ENERGY_ESTIMATE_DISCLAIMER =
-  'Estimated based on system size and local conditions.';
+  'Expected generation for a plant this size in Kerala — not live inverter data.';
+
+export const ENERGY_MANUAL_DISCLAIMER =
+  'Generation logged from the inverter. Self-use, export and rupee savings use typical splits — not your KSEB bill.';
+
+export const ENERGY_MIXED_YEAR_DISCLAIMER =
+  'Some months are expected (Kerala typical). Logged months use inverter units; splits are still typical, not the bill.';
+
+export class EnergyPeriodError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'EnergyPeriodError';
+  }
+}
 
 export type EnergyReadingDto = {
   year: number;
@@ -41,6 +56,15 @@ async function resolveSystemKw(consumerUserId: string): Promise<number> {
   return DEFAULT_SYSTEM_KW;
 }
 
+function assertUsablePeriod(year: number, month: number): void {
+  if (month < 1 || month > 12) {
+    throw new EnergyPeriodError('Invalid month');
+  }
+  if (isEnergyPeriodInFuture(year, month)) {
+    throw new EnergyPeriodError('Cannot use energy data for a future month');
+  }
+}
+
 function rowToDto(
   row: {
     year: number;
@@ -67,7 +91,7 @@ function rowToDto(
     totalSavings: row.totalSavings,
     dailyReadings,
     isEstimated,
-    disclaimer: isEstimated ? ENERGY_ESTIMATE_DISCLAIMER : null,
+    disclaimer: isEstimated ? ENERGY_ESTIMATE_DISCLAIMER : ENERGY_MANUAL_DISCLAIMER,
     systemKw,
   };
 }
@@ -77,9 +101,7 @@ export async function getOrCreateMonthlyReading(
   year: number,
   month: number,
 ): Promise<EnergyReadingDto> {
-  if (month < 1 || month > 12) {
-    throw new Error('Invalid month');
-  }
+  assertUsablePeriod(year, month);
 
   const systemKw = await resolveSystemKw(consumerUserId);
 
@@ -117,20 +139,40 @@ export async function getAnnualReadings(
   year: number,
 ): Promise<AnnualEnergyDto> {
   const months: EnergyReadingDto[] = [];
-  let anyEstimated = false;
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const lastMonth = year < currentYear ? 12 : year === currentYear ? currentMonth : 0;
 
-  for (let month = 1; month <= 12; month++) {
+  let estimatedCount = 0;
+  for (let month = 1; month <= lastMonth; month++) {
     const reading = await getOrCreateMonthlyReading(consumerUserId, year, month);
-    if (reading.isEstimated) anyEstimated = true;
+    if (reading.isEstimated) estimatedCount += 1;
     months.push(reading);
   }
+
+  const anyEstimated = estimatedCount > 0;
+  const allEstimated = lastMonth > 0 && estimatedCount === months.length;
+  let disclaimer: string | null = null;
+  if (allEstimated) disclaimer = ENERGY_ESTIMATE_DISCLAIMER;
+  else if (anyEstimated) disclaimer = ENERGY_MIXED_YEAR_DISCLAIMER;
+  else if (months.length > 0) disclaimer = ENERGY_MANUAL_DISCLAIMER;
 
   return {
     year,
     months,
     isEstimated: anyEstimated,
-    disclaimer: anyEstimated ? ENERGY_ESTIMATE_DISCLAIMER : null,
+    disclaimer,
   };
+}
+
+export async function upsertLoggedGeneration(
+  consumerUserId: string,
+  year: number,
+  month: number,
+  totalGenerated: number,
+): Promise<EnergyReadingDto> {
+  return upsertManualReading(consumerUserId, year, month, derivedTotalsFromGeneration(totalGenerated));
 }
 
 export async function upsertManualReading(
@@ -144,6 +186,8 @@ export async function upsertManualReading(
     totalSavings: number;
   },
 ): Promise<EnergyReadingDto> {
+  assertUsablePeriod(year, month);
+
   const systemKw = await resolveSystemKw(consumerUserId);
   const dailyReadings = buildHourlyReadings(data.totalGenerated, data.totalConsumed);
 

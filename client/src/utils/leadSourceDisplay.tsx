@@ -31,13 +31,13 @@ export const LEAD_SOURCE_ACCENT_VARS: Record<LeadSource, string> = {
 }
 
 const DETAIL_FIELD_LABELS: Partial<Record<LeadSource, string>> = {
-  [LeadSource.REFERRAL]: 'Referral Name',
+  [LeadSource.REFERRAL]: 'Referral name or Hub code',
   [LeadSource.CHANNEL_PARTNER]: 'Channel Partner Name',
   [LeadSource.OTHER]: 'Other Details',
 }
 
 const DETAIL_INSIGHT_LINES: Partial<Record<LeadSource, string>> = {
-  [LeadSource.REFERRAL]: 'Referred by this contact.',
+  [LeadSource.REFERRAL]: 'Referred by this contact. Include their Hub code (e.g. ANILK4821) so Solar Hub can attribute the referral.',
   [LeadSource.CHANNEL_PARTNER]: 'Lead from this channel partner.',
   [LeadSource.OTHER]: 'Additional lead source information.',
 }

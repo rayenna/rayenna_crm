@@ -11,9 +11,10 @@ import {
   resolveUniqueUsernameCandidate,
   resolveUsernameNameParts,
 } from '../utils/consumerUsername';
+import { attributeHubReferralIfPresent } from './consumerReferralService';
 
 export function isHubEligibleProjectStatus(status: ProjectStatus): boolean {
-  return (HUB_ELIGIBLE_PROJECT_STATUSES as readonly string[]).includes(status);
+  return HUB_ELIGIBLE_PROJECT_STATUSES.includes(status);
 }
 
 async function countCustomerHubAccounts(customerId: string, excludeProjectId?: string): Promise<number> {
@@ -147,6 +148,11 @@ export async function syncConsumerHubForProject(
         lastName: project.customer.lastName,
       },
     });
+    try {
+      await attributeHubReferralIfPresent(existing.id);
+    } catch (err) {
+      console.error('Hub referral attribute failed', existing.id, err);
+    }
     if (existing.isActive) {
       return { action: 'synced', username: existing.username };
     }
@@ -177,6 +183,13 @@ export async function syncConsumerHubForProject(
       referralCode,
       mustChangePassword: true,
     },
+  }).then(async (created) => {
+    try {
+      await attributeHubReferralIfPresent(created.id);
+    } catch (err) {
+      console.error('Hub referral attribute failed', created.id, err);
+    }
+    return created;
   });
 
   return { action: 'created', username, temporaryPassword };

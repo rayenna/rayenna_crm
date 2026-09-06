@@ -1,4 +1,4 @@
-import { CustomerType, type Customer } from '@prisma/client';
+import { CustomerType, ProjectStatus, type Customer } from '@prisma/client';
 import { isBusinessCustomerType } from './customerRecord';
 import crypto from 'crypto';
 
@@ -26,7 +26,14 @@ export function isDemoHubUsername(username: string): boolean {
   return normalizeUsername(username) === DEMO_HUB_USERNAME;
 }
 
-export const HUB_ELIGIBLE_PROJECT_STATUSES = ['COMPLETED', 'COMPLETED_SUBSIDY_CREDITED'] as const;
+/** Hub from first paid/install status — not only completed. */
+export const HUB_ELIGIBLE_PROJECT_STATUSES: ProjectStatus[] = [
+  ProjectStatus.CONFIRMED,
+  ProjectStatus.UNDER_INSTALLATION,
+  ProjectStatus.SUBMITTED_FOR_SUBSIDY,
+  ProjectStatus.COMPLETED,
+  ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
+];
 
 export type CustomerContactRow = {
   prefix?: string | null;

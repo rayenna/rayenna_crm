@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import type { BulkProvisionSummary, ProvisioningGapListResponse } from '../types/solarHub'
 import { solarHubTableScrollShell } from '../components/solarHub/tableScrollShell'
+import HubHandoverScriptCard from '../components/solarHub/HubHandoverScriptCard'
 
 function formatSummary(summary: BulkProvisionSummary): string {
   const parts: string[] = []
@@ -115,9 +116,12 @@ export default function SolarHubProvisioning() {
 
   return (
     <>
+      <div className="mb-4">
+        <HubHandoverScriptCard />
+      </div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-[color:var(--text-muted)]">
-          Completed projects without a Solar Hub login
+          Confirmed, installation, and completed projects without a Solar Hub login
         </p>
         {canManage ? (
           <div className="flex flex-wrap gap-2">

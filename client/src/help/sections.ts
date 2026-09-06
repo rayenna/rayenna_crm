@@ -36,6 +36,7 @@ export const helpSectionSubNav: Partial<Record<string, HelpSubNavItem[]>> = {
     { label: 'Key Artifacts', hash: 'key-artifacts-module' },
     { label: 'Support Tickets', hash: 'support-tickets-module' },
     { label: 'Tally Export', hash: 'tally-export-module' },
+    { label: 'Solar Hub handover', hash: 'solar-hub-handover' },
   ],
   dashboard: [
     { label: 'Overview', hash: 'dashboard' },
@@ -112,6 +113,7 @@ export function getHelpHashForRoute(currentPath: string): string | null {
   if (currentPath === '/tally-export' || currentPath.startsWith('/tally-export/')) {
     return 'tally-export-module'
   }
+  if (currentPath.startsWith('/solar-hub')) return 'solar-hub-handover'
   if (currentPath === '/users' || currentPath.startsWith('/users/')) return 'users'
   if (currentPath === '/audit-security' || currentPath.startsWith('/audit-security/')) {
     return 'audit-and-security'
@@ -160,7 +162,7 @@ export const helpSections: HelpSection[] = [
     title: 'Modules',
     routeKey: 'modules',
     markdownPath: '/help-docs/modules/index.md',
-    routePatterns: ['/customers', '/projects', '/tally-export']
+    routePatterns: ['/customers', '/projects', '/tally-export', '/solar-hub']
   },
   {
     id: 'dashboard',

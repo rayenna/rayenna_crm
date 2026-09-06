@@ -4,6 +4,7 @@ import { ConsumerMaintenanceRequestStatus, UserRole } from '@prisma/client';
 import { authenticate } from '../middleware/auth';
 import { logSecurityAudit } from '../utils/auditLogger';
 import { generateHubCredentialsPdf } from '../utils/hubCredentialsPdf';
+import { getHubPublicUrlForDocuments } from '../utils/hubPublicUrl';
 import {
   activateSolarHubUser,
   bulkProvisionSolarHub,
@@ -34,6 +35,11 @@ import {
   updateConsumerHelpFaqAdmin,
 } from '../services/consumerHelpService';
 import { CONSUMER_HELP_CATEGORIES } from '../constants/consumerHelpContent';
+import {
+  listHubMessageTemplates,
+  listRecentOutbound,
+  sendHubUserMessage,
+} from '../services/hubCrmMessageService';
 
 const router = express.Router();
 
@@ -101,6 +107,70 @@ router.get('/users/:id', authenticate, async (req: Request, res: Response) => {
     return res.status(500).json({ error: 'Failed to load Solar Hub user' });
   }
 });
+
+router.get('/message-templates', authenticate, async (_req: Request, res: Response) => {
+  if (!requireView(_req, res)) return;
+  return res.json(listHubMessageTemplates());
+});
+
+router.get('/users/:id/messages', authenticate, async (req: Request, res: Response) => {
+  if (!requireView(req, res)) return;
+  try {
+    const user = await getSolarHubUser(req.params.id);
+    if (!user) return res.status(404).json({ error: 'Solar Hub user not found' });
+    const items = await listRecentOutbound(req.params.id);
+    return res.json({ items });
+  } catch (err) {
+    console.error('Solar Hub messages GET error:', err);
+    return res.status(500).json({ error: 'Failed to load messages' });
+  }
+});
+
+router.post(
+  '/users/:id/messages',
+  authenticate,
+  [
+    body('templateId').trim().notEmpty().isLength({ max: 64 }),
+    body('title').optional().isString().isLength({ max: 500 }),
+    body('body').optional().isString().isLength({ max: 4000 }),
+    body('channels').optional().isObject(),
+  ],
+  async (req: Request, res: Response) => {
+    if (!requireManage(req, res)) return;
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    try {
+      const channels = (req.body.channels || { hub: true, push: true, whatsapp: true }) as {
+        hub?: boolean;
+        push?: boolean;
+        whatsapp?: boolean;
+      };
+      const payload = await sendHubUserMessage({
+        consumerUserId: req.params.id,
+        templateId: String(req.body.templateId),
+        title: req.body.title,
+        body: req.body.body,
+        channels,
+        createdById: req.user!.id,
+      });
+      logSecurityAudit({
+        userId: req.user!.id,
+        role: req.user!.role,
+        actionType: 'hub_user_message',
+        entityType: 'ConsumerUser',
+        entityId: req.params.id,
+        summary: `Hub message template ${req.body.templateId}`,
+        req,
+      });
+      return res.status(201).json(payload);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to send message';
+      const status = msg.includes('not found') || msg.includes('Unknown') ? 404 : 400;
+      console.error('Solar Hub message POST error:', err);
+      return res.status(status).json({ error: msg });
+    }
+  },
+);
 
 router.get('/projects/:projectId/user', authenticate, async (req: Request, res: Response) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
@@ -426,6 +496,7 @@ router.post(
         password,
         customerName: user.project.customerName,
         projectSlNo: user.project.slNo,
+        hubUrl: getHubPublicUrlForDocuments(),
       });
 
       const filename = `solar-hub-${user.username}.pdf`;

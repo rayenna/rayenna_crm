@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from 'react'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import type { SolarHubUserListResponse } from '../types/solarHub'
 import { solarHubTableScrollShell } from '../components/solarHub/tableScrollShell'
+import HubHandoverScriptCard from '../components/solarHub/HubHandoverScriptCard'
 
 export default function SolarHub() {
   const [searchParams] = useSearchParams()
@@ -39,6 +40,9 @@ export default function SolarHub() {
 
   return (
     <>
+        <div className="mb-4">
+          <HubHandoverScriptCard />
+        </div>
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
           <input
             type="search"

@@ -907,12 +907,19 @@ model ConsumerUser {
 
   energyReadings        EnergyReading[]
   notifications         ConsumerNotification[]
+  pushSubscriptions     ConsumerPushSubscription[]
+  outboundMessages      ConsumerOutboundMessage[]
   maintenanceRequests   ConsumerMaintenanceRequest[]
   achievements          ConsumerAchievement[]
   warrantyItems         ConsumerWarrantyItem[]
   maintenanceSchedule   MaintenanceScheduleItem[]
+  chatSessions          ConsumerChatSession[]
+  referredById          String?
+  referredBy            ConsumerUser?  @relation("ConsumerReferrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referredUsers         ConsumerUser[] @relation("ConsumerReferrals")
 
   @@index([projectId])
+  @@index([referredById])
   @@map("consumer_users")
 }
 
@@ -936,6 +943,32 @@ model EnergyReading {
   @@map("consumer_energy_readings")
 }
 
+model ConsumerChatSession {
+  id             String                @id @default(cuid())
+  consumerUserId String
+  consumerUser   ConsumerUser          @relation(fields: [consumerUserId], references: [id], onDelete: Cascade)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  messages       ConsumerChatMessage[]
+
+  @@index([consumerUserId, updatedAt(sort: Desc)])
+  @@map("consumer_chat_sessions")
+}
+
+model ConsumerChatMessage {
+  id        String              @id @default(cuid())
+  sessionId String
+  session   ConsumerChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      String              @db.VarChar(16)
+  content   String              @db.Text
+  escalate  String?             @db.VarChar(32)
+  articleIds String[]           @default([])
+  createdAt DateTime            @default(now())
+
+  @@index([sessionId, createdAt])
+  @@map("consumer_chat_messages")
+}
+
 model ConsumerNotification {
   id             String       @id @default(cuid())
   consumerUserId String
@@ -943,11 +976,47 @@ model ConsumerNotification {
   title          String       @db.VarChar(500)
   body           String       @db.Text
   isRead         Boolean      @default(false)
+  kind           String?      @db.VarChar(64)
+  refKey         String?      @db.VarChar(128)
   createdAt      DateTime     @default(now())
 
   @@index([consumerUserId, isRead])
   @@index([consumerUserId, createdAt(sort: Desc)])
+  @@index([consumerUserId, kind, refKey])
   @@map("consumer_notifications")
+}
+
+model ConsumerPushSubscription {
+  id             String       @id @default(cuid())
+  consumerUserId String
+  consumerUser   ConsumerUser @relation(fields: [consumerUserId], references: [id], onDelete: Cascade)
+  endpoint       String       @db.VarChar(2048)
+  p256dh         String       @db.VarChar(255)
+  auth           String       @db.VarChar(255)
+  userAgent      String?      @db.VarChar(512)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([endpoint])
+  @@index([consumerUserId])
+  @@map("consumer_push_subscriptions")
+}
+
+model ConsumerOutboundMessage {
+  id             String       @id @default(cuid())
+  consumerUserId String
+  consumerUser   ConsumerUser @relation(fields: [consumerUserId], references: [id], onDelete: Cascade)
+  channel        String       @db.VarChar(16)
+  templateId     String       @db.VarChar(64)
+  title          String       @db.VarChar(500)
+  body           String       @db.Text
+  status         String       @db.VarChar(32)
+  detail         String?      @db.Text
+  createdById    String?
+  createdAt      DateTime     @default(now())
+
+  @@index([consumerUserId, createdAt(sort: Desc)])
+  @@map("consumer_outbound_messages")
 }
 
 model ConsumerMaintenanceRequest {

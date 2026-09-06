@@ -81,6 +81,29 @@ export function buildHourlyReadings(
   }));
 }
 
+/** Split + rupee totals from inverter kWh. Self-use / export are typical ratios, not the bill. */
+export function derivedTotalsFromGeneration(
+  totalGenerated: number,
+  tariffRs = DEFAULT_TARIFF_RS,
+  exportRateRs = DEFAULT_EXPORT_RATE_RS,
+): Pick<MonthlyEnergyEstimate, 'totalGenerated' | 'totalConsumed' | 'gridExport' | 'totalSavings'> {
+  const gen = Math.round(Math.max(0, totalGenerated));
+  const totalConsumed = Math.round(gen * SELF_CONSUMPTION_RATIO);
+  const gridExport = Math.round(gen * GRID_EXPORT_RATIO);
+  const totalSavings = Math.round(totalConsumed * tariffRs + gridExport * exportRateRs);
+  return {
+    totalGenerated: gen,
+    totalConsumed,
+    gridExport,
+    totalSavings,
+  };
+}
+
+export function isEnergyPeriodInFuture(year: number, month: number, now = new Date()): boolean {
+  const nowKey = now.getFullYear() * 12 + (now.getMonth() + 1);
+  return year * 12 + month > nowKey;
+}
+
 export function estimateMonthlyEnergy(
   systemKw: number,
   year: number,
@@ -88,19 +111,15 @@ export function estimateMonthlyEnergy(
   tariffRs = DEFAULT_TARIFF_RS,
   exportRateRs = DEFAULT_EXPORT_RATE_RS,
 ): MonthlyEnergyEstimate {
-  const totalGenerated = Math.round(estimateMonthlyGenerationKw(systemKw, year, month));
-  const totalConsumed = Math.round(totalGenerated * SELF_CONSUMPTION_RATIO);
-  const gridExport = Math.round(totalGenerated * GRID_EXPORT_RATIO);
-  const selfSavings = totalConsumed * tariffRs;
-  const exportSavings = gridExport * exportRateRs;
-  const totalSavings = Math.round(selfSavings + exportSavings);
+  const totals = derivedTotalsFromGeneration(
+    estimateMonthlyGenerationKw(systemKw, year, month),
+    tariffRs,
+    exportRateRs,
+  );
 
   return {
-    totalGenerated,
-    totalConsumed,
-    gridExport,
-    totalSavings,
-    dailyReadings: buildHourlyReadings(totalGenerated, totalConsumed),
+    ...totals,
+    dailyReadings: buildHourlyReadings(totals.totalGenerated, totals.totalConsumed),
   };
 }
 

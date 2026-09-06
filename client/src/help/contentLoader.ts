@@ -24,6 +24,7 @@ const MODULES_PART_FILES = [
   'key-artifacts.md',
   'support-tickets.md',
   'tally-export.md',
+  'solar-hub.md',
 ] as const
 
 /** Classic Dashboard hub + sub-pages (order = sidebar scroll order). */

@@ -13,6 +13,7 @@ import {
   resolvePanelCount,
   type ConsumerSystemSpecDto,
 } from '../utils/consumerProjectSystemSpec';
+import { notifyCleaningDue, notifyServiceBooked } from './consumerNotificationService';
 
 const PANEL_WARRANTY_YEARS = 25;
 const INVERTER_WARRANTY_YEARS = 5;
@@ -354,7 +355,7 @@ export async function getMaintenanceSchedule(
     orderBy: { dueDate: 'asc' },
   });
 
-  return rows.map((row) => {
+  const items = rows.map((row) => {
     if (row.taskKey === PANEL_CLEANING_TASK_KEY) {
       return {
         id: row.id,
@@ -379,6 +380,31 @@ export async function getMaintenanceSchedule(
       planNote: null,
     };
   });
+
+  const cleaning = items.find((item) => item.taskKey === PANEL_CLEANING_TASK_KEY);
+  if (
+    cleaning?.dueDate &&
+    (cleaning.status === MaintenanceScheduleStatus.OVERDUE ||
+      cleaning.status === MaintenanceScheduleStatus.DUE)
+  ) {
+    const due = new Date(`${cleaning.dueDate}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((due.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+    if (cleaning.status === MaintenanceScheduleStatus.OVERDUE || diffDays <= 7) {
+      try {
+        await notifyCleaningDue({
+          consumerUserId,
+          dueDate: cleaning.dueDate,
+          overdue: cleaning.status === MaintenanceScheduleStatus.OVERDUE,
+        });
+      } catch (err) {
+        console.error('Hub cleaning notification failed', err);
+      }
+    }
+  }
+
+  return items;
 }
 
 export async function listMaintenanceRequests(
@@ -423,6 +449,17 @@ export async function createMaintenanceRequest(
       preferredDate,
     },
   });
+
+  try {
+    await notifyServiceBooked({
+      consumerUserId,
+      requestId: row.id,
+      title: row.title,
+      isIssue: input.requestType === ConsumerMaintenanceRequestType.REPORT_ISSUE,
+    });
+  } catch (err) {
+    console.error('Hub service notification failed', err);
+  }
 
   return {
     id: row.id,

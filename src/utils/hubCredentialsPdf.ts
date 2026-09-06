@@ -5,6 +5,7 @@ export type HubCredentialsPdfInput = {
   password: string;
   customerName: string;
   projectSlNo: number;
+  hubUrl: string;
 };
 
 export function generateHubCredentialsPdf(input: HubCredentialsPdfInput): Promise<Buffer> {
@@ -37,9 +38,22 @@ export function generateHubCredentialsPdf(input: HubCredentialsPdfInput): Promis
     doc.y = boxY + 115;
 
     doc.moveDown(1);
+    doc.fontSize(11).fillColor('#666666').text('Open Solar Hub');
+    doc.fontSize(12).fillColor('#111111').text(input.hubUrl);
+    doc.moveDown(1);
+    doc.fontSize(9).fillColor('#333333').text('On this visit, install the app on the home screen:', {
+      width: doc.page.width - 100,
+    });
+    doc.moveDown(0.3);
+    doc.fontSize(9).fillColor('#555555').text(
+      'Android: Chrome → sign in (username, not email) → Stay signed in → Add to Home Screen.\n' +
+        'iPhone: Safari → Share → Add to Home Screen.\n' +
+        'Do not use WhatsApp’s in-app browser. Change the password after first sign-in.',
+      { width: doc.page.width - 100 },
+    );
+    doc.moveDown(0.8);
     doc.fontSize(9).fillColor('#888888').text(
-      'Sign in at the Rayenna Solar Hub app using your username and password. ' +
-        'Keep this document secure. Contact Rayenna Energy if you need assistance.',
+      'Keep this document secure. Contact Rayenna Energy if you need assistance.',
       { align: 'left', width: doc.page.width - 100 },
     );
     doc.moveDown(1);

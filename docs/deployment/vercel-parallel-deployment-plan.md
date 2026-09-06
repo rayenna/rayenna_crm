@@ -28,6 +28,7 @@
 ### STEP 2: Environment variables (frontend)
 - **Required:** `VITE_API_BASE_URL` – backend API base (e.g. `https://rayenna-crm.onrender.com`). Used in `client/src/utils/axios.ts`; no fallback URL in code.
 - **Optional:** `VITE_SENTRY_DSN` – Sentry DSN; if unset, Sentry is not initialised (`client/src/main.tsx`).
+- **Optional:** `VITE_SOLAR_HUB_URL` – public Solar Hub origin (no trailing slash), e.g. `https://rayenna-solar-hub.onrender.com`. Used in the CRM **Install Hub on this visit** script. Local dev falls back to `http://localhost:5175`. Set the same value on Render (`render.yaml` for `rayenna-crm-frontend`) and Vercel.
 - **No hardcoded backend URLs** in `client/src`. All API usage goes through `axios` with `baseURL: import.meta.env.VITE_API_BASE_URL`.
 - **Action:** In Vercel project settings, set `VITE_API_BASE_URL` to the same Render backend URL as on Render. Optionally set `VITE_SENTRY_DSN` if you use Sentry.
 
@@ -114,6 +115,7 @@
 |----------|----------|---------|--------|
 | `VITE_API_BASE_URL` | **Yes** | `utils/axios.ts` (baseURL), Login/Users UI copy | Backend API base, e.g. `https://rayenna-crm.onrender.com`. Must be set in Vercel. |
 | `VITE_SENTRY_DSN` | No | `main.tsx` | Sentry DSN; if unset, Sentry is not initialised. |
+| `VITE_SOLAR_HUB_URL` | No (needed for handover script) | `utils/hubHandoverScript.ts` | Public Solar Hub origin, no trailing slash. Same value on Render CRM frontend and Vercel. |
 
 All other `import.meta.env` usage is standard (e.g. `DEV`, `MODE`, `PROD`) and does not need to be set in Vercel.
 
@@ -169,6 +171,10 @@ Third static frontend at `consumer-app/frontend` (port **5175** local). Same dua
 
 **API service env (required for login):** `CONSUMER_JWT_SECRET` — separate from `JWT_SECRET`; set only on the CRM Web Service, not the Hub static site.
 
+**API service env (Web Push):** `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, optional `VAPID_SUBJECT` (e.g. `mailto:ops@rayenna.in`). Generate with `npx web-push generate-vapid-keys`. Hub reads the public key from `GET /api/consumer/push/config` (no extra `VITE_*`). Without VAPID, in-app + CRM WhatsApp drafts still work.
+
+**API service env (WhatsApp Cloud, optional):** `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_TEMPLATE_HUB_ALERT` (approved template, two body variables: title then body), optional `WHATSAPP_TEMPLATE_LANG` (default `en`). `WHATSAPP_AUTO_NOTIFY=1` also sends Cloud templates on ticket/service/cleaning events. Unset Cloud vars → CRM **Open WhatsApp draft** (`wa.me`) only.
+
 ### Vercel
 
 - **Root Directory:** `consumer-app/frontend`
@@ -192,4 +198,6 @@ Must produce `dist/` and `dist/404.html`.
 - [ ] Login (consumer account linked to a project)
 - [ ] Home dashboard, Track charts, Profile theme toggle
 - [ ] PWA manifest loads (`/manifest.json`); install prompt on mobile HTTPS
+- [ ] Profile → App settings → Enable alerts (needs VAPID on API; HTTPS or localhost)
+- [ ] CRM Solar Hub user → Notify customer templates (Hub bell / Push / WhatsApp draft)
 

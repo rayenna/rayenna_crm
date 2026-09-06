@@ -274,6 +274,8 @@ const server = app.listen(PORT, async () => {
     const consumerHelpRoutes     = (await import('./routes/consumerHelp')).default;
     const consumerProfileRoutes  = (await import('./routes/consumerProfile')).default;
     const consumerHomeRoutes     = (await import('./routes/consumerHome')).default;
+    const consumerChatRoutes     = (await import('./routes/consumerChat')).default;
+    const consumerPushRoutes     = (await import('./routes/consumerPush')).default;
 
     apiRouter.use('/auth', authRoutes);
     apiRouter.use('/projects', projectRoutes);
@@ -304,6 +306,8 @@ const server = app.listen(PORT, async () => {
     apiRouter.use('/consumer/energy', consumerEnergyRoutes);
     apiRouter.use('/consumer', consumerMaintainRoutes);
     apiRouter.use('/consumer', consumerSupportRoutes);
+    apiRouter.use('/consumer', consumerChatRoutes);
+    apiRouter.use('/consumer', consumerPushRoutes);
     apiRouter.use('/consumer', consumerHelpRoutes);
     apiRouter.use('/consumer', consumerProfileRoutes);
     apiRouter.use('/consumer', consumerHomeRoutes);

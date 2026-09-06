@@ -29,6 +29,18 @@ export function useMaintenanceSchedule() {
   })
 }
 
+export function useMaintenanceRequests() {
+  return useQuery({
+    queryKey: ['consumer-maintenance-requests'],
+    queryFn: async () => {
+      const { data } = await axios.get<{ items: MaintenanceRequest[] }>(
+        '/api/consumer/maintenance-requests',
+      )
+      return data.items
+    },
+  })
+}
+
 export function useCreateMaintenanceRequest() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -42,6 +54,8 @@ export function useCreateMaintenanceRequest() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['consumer-maintenance-requests'] })
       queryClient.invalidateQueries({ queryKey: ['consumer-warranty'] })
+      queryClient.invalidateQueries({ queryKey: ['consumer-notifications'] })
+      queryClient.invalidateQueries({ queryKey: ['consumer-home'] })
     },
   })
 }

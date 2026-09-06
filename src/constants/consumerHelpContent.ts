@@ -65,14 +65,14 @@ export const CONSUMER_HELP_FAQ_ITEMS: ConsumerHelpFaqItem[] = [
     category: 'getting-started',
     question: 'How do I log in to Solar Hub?',
     answer:
-      'Use the username and temporary password Rayenna shared when your project reached completion. Open the Hub, enter your username (not your email), and sign in. Change your password under Profile → Change Password after first login.',
+      'Use the username and temporary password Rayenna shared when your project was confirmed. Open the Hub, enter your username (not your email), and sign in. Change your password under Profile → Change Password after first login.',
   },
   {
     id: 'who-gets-access',
     category: 'getting-started',
     question: 'When do I get Hub access?',
     answer:
-      'Hub accounts are created automatically when your CRM project status is Completed or Subsidy Credited. If you believe your system is live but you cannot log in, contact Support with your customer name and site address.',
+      'Hub accounts are created automatically once your project is confirmed (order paid) and stay available through installation, subsidy, and completion. If you should have access but cannot log in, contact Support with your customer name and site address.',
   },
   {
     id: 'system-spec-location',
@@ -93,7 +93,7 @@ export const CONSUMER_HELP_FAQ_ITEMS: ConsumerHelpFaqItem[] = [
     category: 'energy',
     question: 'How do I read my generation charts in Track?',
     answer:
-      'Track shows daily, monthly, and yearly energy from your inverter or monitoring gateway when connected. Compare sunny vs cloudy days and use exports if you need records for DISCOM or personal tracking. Data may take up to 24 hours to refresh after commissioning.',
+      'Track shows expected monthly generation for your plant size in Kerala until you (or Rayenna) log inverter kWh. Logged months use your inverter total; self-use, export and rupee savings are typical splits — not your KSEB bill. Live inverter monitoring is not connected yet.',
   },
   {
     id: 'net-metering-basics',

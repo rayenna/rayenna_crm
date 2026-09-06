@@ -29,6 +29,8 @@ services:
     envVars:
       - key: VITE_API_BASE_URL
         value: https://rayenna-crm.onrender.com
+      - key: VITE_SOLAR_HUB_URL
+        value: https://rayenna-solar-hub.onrender.com
       # Reduce OOM risk during build (Vite + tsc can be memory-heavy on free tier)
       - key: NODE_OPTIONS
         value: "--max-old-space-size=2048"

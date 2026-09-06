@@ -5,7 +5,6 @@ import {
   Award,
   Bell,
   ChevronRight,
-  FileText,
   HelpCircle,
   Leaf,
   LogOut,
@@ -27,6 +26,7 @@ import {
   useConsumerProfile,
 } from '@/hooks/useConsumerProfile'
 import type { AchievementItem, CrmProfile } from '@/types/profile'
+import { subscribeHubPush } from '@/utils/hubPush'
 
 function customerTypeLabel(type: CrmProfile['customerType']) {
   if (type === 'APARTMENT') return 'Apartment'
@@ -299,6 +299,26 @@ function AppSettingsModal({ open, onClose }: { open: boolean; onClose: () => voi
         </div>
 
         <div className="mt-5 rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] p-4">
+          <p className="text-sm font-semibold text-[color:var(--text-primary)]">Phone alerts</p>
+          <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">
+            Ticket, cleaning, and service updates when Hub is closed. iPhone: add to Home Screen first.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              void subscribeHubPush().then((result) => {
+                if (result === 'subscribed') toast.success('Alerts enabled on this phone')
+                else if (result === 'denied') toast.error('Notifications are blocked in browser settings')
+                else toast.error('Alerts are not available on this device yet')
+              })
+            }}
+            className="mt-3 w-full rounded-xl bg-[color:var(--accent-gold)] py-2.5 text-sm font-bold text-[color:var(--text-inverse)]"
+          >
+            Enable alerts
+          </button>
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] p-4">
           <p className="text-sm font-semibold text-[color:var(--text-primary)]">Appearance</p>
           <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">
             Dark or light mode for the app
@@ -341,8 +361,6 @@ type SettingsKey =
   | 'personal'
   | 'password'
   | 'notifications'
-  | 'documents'
-  | 'privacy'
   | 'app'
   | 'help'
   | 'logout'
@@ -385,7 +403,6 @@ export default function Profile() {
       logout()
       return
     }
-    toast('Coming soon', { icon: '🚧' })
   }
 
   const settingsItems: {
@@ -402,7 +419,6 @@ export default function Profile() {
       icon: Bell,
       badge: notificationsQuery.data?.unreadCount,
     },
-    { key: 'documents', label: 'Documents & Reports', icon: FileText },
     { key: 'app', label: 'App Settings', icon: Settings },
     { key: 'help', label: 'Help Center', icon: HelpCircle },
     { key: 'logout', label: 'Log Out', icon: LogOut },

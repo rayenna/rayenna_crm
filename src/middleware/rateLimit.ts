@@ -27,7 +27,7 @@ setInterval(() => {
  */
 export const rateLimit = (maxRequests: number, windowMs: number) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const userId = req.user?.id || req.ip || 'anonymous';
+    const userId = req.consumer?.id || req.user?.id || req.ip || 'anonymous';
     const key = `${req.path}:${userId}`;
     const now = Date.now();
 

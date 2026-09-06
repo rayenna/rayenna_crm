@@ -1,4 +1,4 @@
-export const CONSUMER_SUPPORT_PHONE = process.env.CONSUMER_SUPPORT_PHONE || '+918045678900';
+export const CONSUMER_SUPPORT_PHONE = process.env.CONSUMER_SUPPORT_PHONE || '+91 7907 369 304';
 export const CONSUMER_SUPPORT_EMAIL =
   process.env.CONSUMER_SUPPORT_EMAIL || 'support@rayennaenergy.com';
 

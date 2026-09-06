@@ -7,7 +7,8 @@ import {
 import bcrypt from 'bcryptjs';
 import prisma from '../prisma';
 import { consumerMasterContactFields } from '../utils/consumerCustomerProfile';
-import { consumerProvisioningPassword, generateHubTemporaryPassword, isDemoHubUsername } from '../utils/consumerUsername';
+import { consumerProvisioningPassword, generateHubTemporaryPassword, HUB_ELIGIBLE_PROJECT_STATUSES, isDemoHubUsername } from '../utils/consumerUsername';
+import { notifyServiceStatus } from './consumerNotificationService';
 import { syncConsumerHubForProject, type ProvisionResult } from './consumerHubProvision';
 
 const HUB_VIEW_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.OPERATIONS, UserRole.MANAGEMENT];
@@ -296,11 +297,6 @@ export async function provisionSolarHubForProjectAdmin(projectId: string) {
   return syncConsumerHubForProject(projectId, project.projectStatus);
 }
 
-const ELIGIBLE_HUB_STATUSES: ProjectStatus[] = [
-  ProjectStatus.COMPLETED,
-  ProjectStatus.COMPLETED_SUBSIDY_CREDITED,
-];
-
 export type ProvisioningGapItem = {
   projectId: string;
   slNo: number;
@@ -318,7 +314,7 @@ export async function listProvisioningGaps(input: {
   const skip = (page - 1) * limit;
 
   const where = {
-    projectStatus: { in: ELIGIBLE_HUB_STATUSES },
+    projectStatus: { in: HUB_ELIGIBLE_PROJECT_STATUSES },
     consumerUser: null,
   };
 
@@ -375,7 +371,7 @@ export async function bulkProvisionSolarHub(projectIds: string[]): Promise<BulkP
         summary.errors.push({ projectId, message: 'Project not found' });
         continue;
       }
-      if (!ELIGIBLE_HUB_STATUSES.includes(project.projectStatus)) {
+      if (!HUB_ELIGIBLE_PROJECT_STATUSES.includes(project.projectStatus)) {
         summary.skipped += 1;
         continue;
       }
@@ -395,7 +391,7 @@ export async function bulkProvisionSolarHub(projectIds: string[]): Promise<BulkP
 export async function provisionAllSolarHubGaps(): Promise<BulkProvisionSummary> {
   const rows = await prisma.project.findMany({
     where: {
-      projectStatus: { in: ELIGIBLE_HUB_STATUSES },
+      projectStatus: { in: HUB_ELIGIBLE_PROJECT_STATUSES },
       consumerUser: null,
     },
     select: { id: true },
@@ -533,6 +529,23 @@ export async function updateHubMaintenanceRequestStatus(
       },
     },
   });
+
+  if (
+    status === ConsumerMaintenanceRequestStatus.IN_PROGRESS ||
+    status === ConsumerMaintenanceRequestStatus.COMPLETED ||
+    status === ConsumerMaintenanceRequestStatus.CANCELLED
+  ) {
+    try {
+      await notifyServiceStatus({
+        consumerUserId: existing.consumerUserId,
+        requestId: existing.id,
+        title: existing.title,
+        status,
+      });
+    } catch (err) {
+      console.error('Hub service status notification failed', err);
+    }
+  }
 
   return mapMaintenanceRow(refreshed);
 }

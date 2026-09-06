@@ -1,0 +1,28 @@
+---
+description: Rayenna Hub Support chatbot (Help RAG + WhatsApp escalate). Read when working on Hub Support chat.
+globs: consumer-app/**,src/constants/consumerSupportContent.ts,src/services/consumerSupportService.ts,src/services/consumerChatService.ts,src/routes/consumerChat.ts
+alwaysApply: false
+---
+
+# Rayenna Hub — Support Live Chat
+
+**Status (2026-09-06):** Phase 2 shipped. Live Chat opens an in-Hub sheet grounded in Help Center. WhatsApp and 24/7 call remain human/emergency lanes.
+
+## Phase 1 (keep)
+
+- Emergency number: `CONSUMER_SUPPORT_PHONE` default **+91 7907 369 304**
+- **Call Us** / emergency button → `tel:`
+- If `CONSUMER_SUPPORT_BOT=0`, Live Chat falls back to WhatsApp
+
+## Phase 2 (current)
+
+- `POST /api/consumer/chat` (consumer JWT, 20 req / 10 min)
+- RAG over Help FAQs + articles; OpenAI `gpt-4o-mini` when `OPENAI_API_KEY` is set, else top Help hit
+- Safety keywords (smoke, fire, shock, exposed wiring) → emergency call CTA, no DIY
+- “Talk to someone” / WhatsApp → escalate chip opens `wa.me`
+- Transcripts in `consumer_chat_sessions` / `consumer_chat_messages`
+- UI: `SupportChatSheet` from Support → Live Chat
+
+## Related chat
+
+- [Hub support WhatsApp and chatbot plan](6920bdf6-b5f6-410a-9b0e-bf3b79b72e64)

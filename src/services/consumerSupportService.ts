@@ -11,6 +11,9 @@ import {
   generateSupportTicketNumber,
   resolveConsumerTicketActorUserId,
 } from '../utils/supportTicketHelpers';
+import { isConsumerSupportBotEnabled } from './consumerChatService';
+import { countReferralSuccesses } from './consumerReferralService';
+import { notifyTicketReceived } from './consumerNotificationService';
 
 const SUPPORT_TICKET_POINTS = 25;
 
@@ -20,7 +23,9 @@ export type ConsumerSupportTicketDto = {
   title: string;
   description: string | null;
   status: SupportTicketStatus;
+  source: SupportTicketSource;
   createdAt: string;
+  updatedAt: string;
 };
 
 export type ConsumerSupportMetaDto = {
@@ -28,6 +33,9 @@ export type ConsumerSupportMetaDto = {
   supportEmail: string;
   referralCode: string;
   referralRewardLabel: string;
+  referralSuccessCount: number;
+  referralChampionAt: number;
+  chatBotEnabled: boolean;
 };
 
 export async function getConsumerSupportMeta(consumerUserId: string): Promise<ConsumerSupportMetaDto> {
@@ -37,11 +45,17 @@ export async function getConsumerSupportMeta(consumerUserId: string): Promise<Co
   });
   if (!consumer) throw new Error('Consumer not found');
 
+  const referralSuccessCount = await countReferralSuccesses(consumerUserId);
+
   return {
     emergencyPhone: CONSUMER_SUPPORT_PHONE,
     supportEmail: CONSUMER_SUPPORT_EMAIL,
     referralCode: consumer.referralCode,
-    referralRewardLabel: 'Get ₹1,000 off next service',
+    referralRewardLabel:
+      'Share this code with Rayenna when a friend books solar. Each attributed referral is +50 Hub points; 3 unlock Referral Champion.',
+    referralSuccessCount,
+    referralChampionAt: 3,
+    chatBotEnabled: isConsumerSupportBotEnabled(),
   };
 }
 
@@ -57,9 +71,8 @@ export async function listConsumerSupportTickets(
   const tickets = await prisma.supportTicket.findMany({
     where: {
       projectId: consumer.projectId,
-      source: SupportTicketSource.CONSUMER_APP,
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { updatedAt: 'desc' },
     take: 20,
   });
 
@@ -69,7 +82,9 @@ export async function listConsumerSupportTickets(
     title: t.title,
     description: t.description,
     status: t.status,
+    source: t.source,
     createdAt: t.createdAt.toISOString(),
+    updatedAt: t.updatedAt.toISOString(),
   }));
 }
 
@@ -116,13 +131,25 @@ export async function createConsumerSupportTicket(
     });
   }
 
+  try {
+    await notifyTicketReceived({
+      consumerUserId,
+      ticketNumber: ticket.ticketNumber,
+      title: ticket.title,
+    });
+  } catch (err) {
+    console.error('Hub ticket notification failed', err);
+  }
+
   return {
     id: ticket.id,
     ticketNumber: ticket.ticketNumber,
     title: ticket.title,
     description: ticket.description,
     status: ticket.status,
+    source: ticket.source,
     createdAt: ticket.createdAt.toISOString(),
+    updatedAt: ticket.updatedAt.toISOString(),
   };
 }
 

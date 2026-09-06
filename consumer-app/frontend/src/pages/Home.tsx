@@ -182,7 +182,9 @@ export default function Home() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Zap className="h-4 w-4 text-[color:var(--accent-green)]" />
-                <h2 className="text-sm font-bold text-[color:var(--text-primary)]">Energy</h2>
+                <h2 className="text-sm font-bold text-[color:var(--text-primary)]">
+                  {home.energy.isEstimated ? 'Expected this month' : 'This month'}
+                </h2>
               </div>
               <Link
                 to="/track"
@@ -194,23 +196,21 @@ export default function Home() {
             </div>
             <p className="mt-0.5 text-[10px] text-[color:var(--text-tertiary)]">
               {home.energy.monthLabel}
-              {home.energy.isEstimated ? ' · estimated' : ''}
+              {home.energy.isEstimated
+                ? ` · typical for a ${home.energy.systemKw} kW plant in Kerala`
+                : ' · logged from inverter'}
             </p>
-            <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="mt-3 grid grid-cols-2 gap-2">
               <div>
-                <p className="text-[10px] text-[color:var(--text-tertiary)]">Today (avg)</p>
-                <p className="zenith-kpi-value text-base font-bold text-[color:var(--text-primary)]">
-                  {formatKwh(home.energy.estimatedTodayKwh)}
+                <p className="text-[10px] text-[color:var(--text-tertiary)]">
+                  {home.energy.isEstimated ? 'Expected generation' : 'Generated'}
                 </p>
-              </div>
-              <div>
-                <p className="text-[10px] text-[color:var(--text-tertiary)]">This month</p>
                 <p className="zenith-kpi-value text-base font-bold text-[color:var(--text-primary)]">
                   {formatKwh(home.energy.totalGenerated)}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-[color:var(--text-tertiary)]">Savings</p>
+                <p className="text-[10px] text-[color:var(--text-tertiary)]">Typical savings</p>
                 <p className="zenith-kpi-value flex items-center gap-0.5 text-base font-bold text-[color:var(--accent-green)]">
                   <IndianRupee className="h-3.5 w-3.5" aria-hidden />
                   {formatRupee(home.energy.totalSavings).replace('₹', '')}
@@ -286,7 +286,7 @@ export default function Home() {
                   Track energy
                 </span>
                 <span className="text-xs text-[color:var(--text-muted)]">
-                  Charts, savings & exports
+                  Log inverter kWh or see expected generation
                 </span>
               </span>
               <ChevronRight className="h-4 w-4 text-[color:var(--text-tertiary)]" />
