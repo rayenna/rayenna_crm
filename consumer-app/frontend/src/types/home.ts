@@ -14,6 +14,7 @@ export interface HomeEnergySummary {
   totalSavings: number
   estimatedTodayKwh: number
   isEstimated: boolean
+  liveFromSolis?: boolean
   systemKw: number
 }
 

@@ -14,6 +14,7 @@ export interface EnergyReading {
   totalSavings: number
   dailyReadings: HourlyEnergyPoint[]
   isEstimated: boolean
+  liveFromSolis?: boolean
   disclaimer: string | null
   systemKw: number
 }
@@ -22,6 +23,7 @@ export interface AnnualEnergyResponse {
   year: number
   months: EnergyReading[]
   isEstimated: boolean
+  liveFromSolis?: boolean
   disclaimer: string | null
 }
 

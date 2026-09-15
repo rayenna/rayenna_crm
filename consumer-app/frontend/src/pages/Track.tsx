@@ -15,6 +15,7 @@ import {
 } from 'recharts'
 import { Calendar, ChevronLeft, ChevronRight, Info } from 'lucide-react'
 import HelpContextSuggestions from '@/components/HelpContextSuggestions'
+import HubLiveSolisPill from '@/components/HubLiveSolisPill'
 import { useAnnualEnergy, useLogMonthlyEnergy, useMonthlyEnergy } from '@/hooks/useConsumerEnergy'
 import {
   distributionFromReading,
@@ -95,6 +96,8 @@ export default function Track() {
 
   const stats = viewMode === 'year' && ytd ? ytd : reading
   const monthIsEstimated = reading?.isEstimated !== false
+  const liveFromSolis =
+    viewMode === 'year' ? Boolean(annualQuery.data?.liveFromSolis) : Boolean(reading?.liveFromSolis)
   const canLog = viewMode === 'month' && isCurrentOrPastMonth(year, month)
 
   const distribution = useMemo(
@@ -157,23 +160,40 @@ export default function Track() {
   return (
     <div className="min-w-0 overflow-x-clip px-4 py-6 pb-8">
       <header className="mb-4">
-        <h1 className="zenith-display text-2xl font-bold text-[color:var(--text-primary)]">
-          Track
-        </h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="zenith-display text-2xl font-bold text-[color:var(--text-primary)]">
+            Track
+          </h1>
+          {liveFromSolis ? <HubLiveSolisPill /> : null}
+        </div>
         <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
           {viewMode === 'year'
-            ? annualQuery.data?.isEstimated
-              ? 'Year so far — expected months until you log inverter kWh'
-              : 'Year so far — logged inverter generation'
-            : monthIsEstimated
-              ? 'Expected generation for your plant size'
-              : 'Monthly generation from your inverter log'}
+            ? annualQuery.data?.liveFromSolis
+              ? 'Year so far — live from your Solis inverter'
+              : annualQuery.data?.isEstimated
+                ? 'Year so far — expected months until you log inverter kWh'
+                : 'Year so far — logged inverter generation'
+            : reading?.liveFromSolis
+              ? 'Live monthly generation from SolisCloud'
+              : monthIsEstimated
+                ? 'Expected generation for your plant size'
+                : 'Monthly generation from your inverter log'}
         </p>
       </header>
 
       {disclaimer ? (
-        <div className="mb-4 flex gap-2 rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-3 py-2 text-xs font-medium text-[color:var(--text-secondary)]">
-          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--accent-gold)]" />
+        <div
+          className={`mb-4 flex gap-2 rounded-xl border px-3 py-2 text-xs font-medium ${
+            liveFromSolis
+              ? 'border-[color:var(--accent-green-border)] bg-[color:var(--accent-green-muted)] text-[color:var(--text-secondary)]'
+              : 'border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] text-[color:var(--text-secondary)]'
+          }`}
+        >
+          <Info
+            className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${
+              liveFromSolis ? 'text-[color:var(--accent-green)]' : 'text-[color:var(--accent-gold)]'
+            }`}
+          />
           <span>{disclaimer}</span>
         </div>
       ) : null}
@@ -232,10 +252,14 @@ export default function Track() {
             <StatCard
               label={
                 viewMode === 'year'
-                  ? 'Generated (YTD)'
-                  : monthIsEstimated
-                    ? 'Expected generated'
-                    : 'Generated'
+                  ? liveFromSolis
+                    ? 'Generated live (YTD)'
+                    : 'Generated (YTD)'
+                  : reading?.liveFromSolis
+                    ? 'Generated live'
+                    : monthIsEstimated
+                      ? 'Expected generated'
+                      : 'Generated'
               }
               value={stats ? formatKwh(stats.totalGenerated) : '—'}
             />
@@ -262,9 +286,9 @@ export default function Track() {
                 Log this month’s inverter kWh
               </h2>
               <p className="mt-1 text-xs text-[color:var(--text-secondary)]">
-                Use this month’s generation from the inverter screen or SolisCloud / ShinePhone.
-                Do not use the KSEB bill (export is not total generation). Linked Solis plants
-                update Hub automatically.
+                {reading?.liveFromSolis
+                  ? 'This month is already live from SolisCloud. You only need this box if Rayenna asks you to correct a reading. Do not use the KSEB bill.'
+                  : 'Use this month’s generation from the inverter screen or SolisCloud / ShinePhone. Do not use the KSEB bill (export is not total generation). Linked Solis plants update Hub automatically.'}
               </p>
               <form onSubmit={handleLog} className="mt-3 flex gap-2">
                 <input
