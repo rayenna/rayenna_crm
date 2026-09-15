@@ -7,6 +7,7 @@ import {
   isEnergyPeriodInFuture,
   type HourlyEnergyPoint,
 } from '../utils/consumerEnergyEstimate';
+import { normalizeCapacityKw, sanitizeStoredMonthlyKwh } from '../utils/solisEnergyUnits';
 
 export const ENERGY_ESTIMATE_DISCLAIMER =
   'Expected generation for a plant this size in Kerala — not live inverter data.';
@@ -64,9 +65,31 @@ async function resolveEnergyMeta(consumerUserId: string): Promise<{
   });
   const kw = consumer?.project?.systemCapacity;
   return {
-    systemKw: kw && kw > 0 ? kw : DEFAULT_SYSTEM_KW,
+    systemKw: kw && kw > 0 ? normalizeCapacityKw(kw) : DEFAULT_SYSTEM_KW,
     solisLinked: Boolean(consumer?.project?.solisStationId),
   };
+}
+
+async function repairInflatedSolisReading<
+  T extends {
+    id: string;
+    totalGenerated: number;
+    isEstimated: boolean;
+  },
+>(row: T, systemKw: number, solisLinked: boolean): Promise<T> {
+  if (!solisLinked || row.isEstimated) return row;
+  const kwh = sanitizeStoredMonthlyKwh(row.totalGenerated, systemKw);
+  if (kwh <= 0 || kwh >= row.totalGenerated) return row;
+  const data = derivedTotalsFromGeneration(kwh);
+  const dailyReadings = buildHourlyReadings(data.totalGenerated, data.totalConsumed);
+  const updated = await prisma.energyReading.update({
+    where: { id: row.id },
+    data: {
+      ...data,
+      dailyReadings: dailyReadings as unknown as Prisma.InputJsonValue,
+    },
+  });
+  return updated as T;
 }
 
 function disclaimerFor(isEstimated: boolean, liveFromSolis: boolean): string | null {
@@ -134,7 +157,8 @@ export async function getOrCreateMonthlyReading(
   });
 
   if (existing) {
-    return rowToDto(existing, systemKw, existing.isEstimated, solisLinked);
+    const repaired = await repairInflatedSolisReading(existing, systemKw, solisLinked);
+    return rowToDto(repaired, systemKw, repaired.isEstimated, solisLinked);
   }
 
   const estimate = estimateMonthlyEnergy(systemKw, year, month);
@@ -200,7 +224,9 @@ export async function upsertLoggedGeneration(
   month: number,
   totalGenerated: number,
 ): Promise<EnergyReadingDto> {
-  return upsertManualReading(consumerUserId, year, month, derivedTotalsFromGeneration(totalGenerated));
+  const { systemKw } = await resolveEnergyMeta(consumerUserId);
+  const kwh = sanitizeStoredMonthlyKwh(totalGenerated, systemKw);
+  return upsertManualReading(consumerUserId, year, month, derivedTotalsFromGeneration(kwh));
 }
 
 export async function upsertManualReading(

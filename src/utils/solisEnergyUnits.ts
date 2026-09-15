@@ -22,6 +22,13 @@ export function monthlyKwhPhysicalMax(capacityKw: number | null | undefined): nu
   return normalizeCapacityKw(capacityKw) * 24 * 31;
 }
 
+/**
+ * Solis stationYear `energyStr` is the unit ("kWh"), not a formatted amount.
+ * When they still send Wh in `energy`, Hub months land around 7,95,200 "kWh".
+ * 100 MWh in one month is not a Rayenna rooftop — treat that as Wh.
+ */
+export const ABSURD_MONTHLY_KWH = 100_000;
+
 function unitFromEnergyStr(compact: string): SolisEnergyUnit | null {
   if (compact.includes('gwh')) return 'gwh';
   if (compact.includes('mwh')) return 'mwh';
@@ -38,8 +45,9 @@ function toKwh(value: number, unit: SolisEnergyUnit): number {
 }
 
 /**
- * Solis mixes Wh and kWh, and often puts the true amount in energyStr ("795.20kWh")
- * while `energy` is 795200. Trust a leading number in energyStr; then cap vs nameplate.
+ * Convert one Solis stationYear point to kWh.
+ * Prefer a decimal display in energyStr ("795.20kWh"); otherwise apply the unit
+ * and keep dividing by 1000 until the month fits the plant (or the 100 MWh cap).
  */
 export function energyToKwh(
   energy: number,
@@ -49,22 +57,30 @@ export function energyToKwh(
   if (!Number.isFinite(energy) || energy < 0) return 0;
   const compact = (energyStr ?? '').toLowerCase().replace(/\s+/g, '');
   const unit = unitFromEnergyStr(compact) ?? 'kwh';
-  const lead = compact.match(/^(\d+(?:\.\d+)?)/);
-  const fromStr = lead ? Number(lead[1]) : NaN;
-  const hasStrAmount = Number.isFinite(fromStr);
+  const numMatch = compact.match(/(\d+(?:\.\d+)?)/);
+  const strNum = numMatch ? Number(numMatch[1]) : NaN;
+  const strHasDecimal = Boolean(numMatch?.[1]?.includes('.'));
 
-  let kwh = toKwh(hasStrAmount ? fromStr : energy, unit);
+  let kwh: number;
+  if (strHasDecimal && Number.isFinite(strNum) && !(strNum < 10 && energy >= 100)) {
+    kwh = unit === 'wh' ? strNum / 1000 : toKwh(strNum, unit);
+  } else {
+    kwh = toKwh(energy, unit);
+  }
 
   const maxKwh = monthlyKwhPhysicalMax(capacityKw);
-  if (kwh > maxKwh && energy >= 1000) {
-    const fromFieldWh = energy / 1000;
-    if (fromFieldWh > 0 && fromFieldWh <= maxKwh) kwh = fromFieldWh;
-  }
-  if (kwh > maxKwh && hasStrAmount && fromStr >= 1000) {
-    const fromStrWh = fromStr / 1000;
-    if (fromStrWh > 0 && fromStrWh <= maxKwh) kwh = fromStrWh;
+  while (kwh >= 1000 && (kwh > maxKwh || kwh >= ABSURD_MONTHLY_KWH)) {
+    kwh /= 1000;
   }
   return kwh;
+}
+
+/** Fix Wh stored as kWh in EnergyReading after a bad ingest. */
+export function sanitizeStoredMonthlyKwh(
+  totalGenerated: number,
+  capacityKw?: number | null,
+): number {
+  return Math.round(energyToKwh(totalGenerated, 'kWh', capacityKw));
 }
 
 export function stationIdToString(id: unknown): string | null {
@@ -111,42 +127,70 @@ export type SolisStationYearPoint = {
   kwh: number;
 };
 
-function unwrapRecordList(payload: unknown): unknown[] {
-  if (Array.isArray(payload)) return payload;
-  if (!payload || typeof payload !== 'object') return [];
-  const root = payload as {
-    data?: unknown;
-    page?: { records?: unknown };
-    records?: unknown;
-  };
-  const data = root.data;
-  if (Array.isArray(data)) return data;
-  if (data && typeof data === 'object') {
-    const inner = data as { page?: { records?: unknown }; records?: unknown };
-    if (Array.isArray(inner.page?.records)) return inner.page.records;
-    if (Array.isArray(inner.records)) return inner.records;
+function looksLikeEnergyRows(rows: unknown[]): boolean {
+  return rows.some(
+    (row) =>
+      row &&
+      typeof row === 'object' &&
+      ('energy' in row || 'energyStr' in row) &&
+      ('date' in row || 'dateStr' in row || 'year' in row || 'month' in row),
+  );
+}
+
+function energyArrayScore(rows: unknown[]): number {
+  const seen = new Set<string>();
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue;
+    const rec = row as { date?: unknown; dateStr?: unknown };
+    const period = monthFromSolisDate(rec.date) ?? monthFromSolisDate(rec.dateStr);
+    if (period) seen.add(`${period.year}-${period.month}`);
   }
-  if (Array.isArray(root.page?.records)) return root.page.records;
-  if (Array.isArray(root.records)) return root.records;
-  return [];
+  const distinct = seen.size;
+  if (distinct > 0 && distinct === rows.length && rows.length <= 24) return 100 + distinct;
+  if (rows.length > 24) return 10 + distinct;
+  return distinct;
+}
+
+function unwrapRecordList(payload: unknown): unknown[] {
+  const found: unknown[][] = [];
+  const walk = (node: unknown, depth: number) => {
+    if (depth > 6 || node == null) return;
+    if (Array.isArray(node)) {
+      if (looksLikeEnergyRows(node) || node.some((x) => x && typeof x === 'object' && 'stationName' in (x as object))) {
+        found.push(node);
+      } else {
+        for (const item of node) walk(item, depth + 1);
+      }
+      return;
+    }
+    if (typeof node !== 'object') return;
+    for (const value of Object.values(node as Record<string, unknown>)) walk(value, depth + 1);
+  };
+  walk(payload, 0);
+  const energy = found.filter((rows) => looksLikeEnergyRows(rows));
+  if (energy.length === 0) return found[0] ?? [];
+  energy.sort((a, b) => energyArrayScore(b) - energyArrayScore(a));
+  return energy[0];
 }
 
 export function parseStationYearPoints(payload: unknown, capacityKw?: number | null): SolisStationYearPoint[] {
   const list = unwrapRecordList(payload);
-  const out: SolisStationYearPoint[] = [];
+  const byMonth = new Map<string, SolisStationYearPoint>();
   for (const row of list) {
     if (!row || typeof row !== 'object') continue;
-    const rec = row as { energy?: unknown; energyStr?: unknown; date?: unknown };
-    const period = monthFromSolisDate(rec.date);
+    const rec = row as { energy?: unknown; energyStr?: unknown; date?: unknown; dateStr?: unknown };
+    const period = monthFromSolisDate(rec.date) ?? monthFromSolisDate(rec.dateStr);
     const energy = Number(rec.energy);
     if (!period || !Number.isFinite(energy)) continue;
     const kwh = Math.round(
       energyToKwh(energy, typeof rec.energyStr === 'string' ? rec.energyStr : null, capacityKw),
     );
     if (kwh <= 0) continue;
-    out.push({ ...period, kwh });
+    const key = `${period.year}-${period.month}`;
+    const prev = byMonth.get(key);
+    byMonth.set(key, { ...period, kwh: (prev?.kwh ?? 0) + kwh });
   }
-  return out;
+  return [...byMonth.values()].sort((a, b) => a.year - b.year || a.month - b.month);
 }
 
 export type SolisStationListItem = {

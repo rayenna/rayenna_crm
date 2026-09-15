@@ -74,7 +74,12 @@ async function solisPost(canonicalizedResource: string, payload: Record<string, 
   return json;
 }
 
+let stationListCache: { at: number; items: SolisStationListItem[] } | null = null;
+
 export async function listSolisStations(): Promise<SolisStationListItem[]> {
+  if (stationListCache && Date.now() - stationListCache.at < 5 * 60 * 1000) {
+    return stationListCache.items;
+  }
   const all: SolisStationListItem[] = [];
   for (let pageNo = 1; pageNo <= 20; pageNo += 1) {
     const json = await solisPost('/v1/api/userStationList', { pageNo, pageSize: 100 });
@@ -83,6 +88,7 @@ export async function listSolisStations(): Promise<SolisStationListItem[]> {
     if (page.length < 100) break;
     await new Promise((r) => setTimeout(r, 600));
   }
+  stationListCache = { at: Date.now(), items: all };
   return all;
 }
 
@@ -97,4 +103,21 @@ export async function listStationYearEnergy(
     year: String(year),
   });
   return parseStationYearPoints(json, capacityKw);
+}
+
+export async function listStationMonthEnergy(
+  stationId: string,
+  year: number,
+  month: number,
+  capacityKw?: number | null,
+): Promise<number> {
+  const json = await solisPost('/v1/api/stationMonth', {
+    id: stationId,
+    money: 'INR',
+    month: `${year}-${String(month).padStart(2, '0')}`,
+  });
+  const points = parseStationYearPoints(json, capacityKw);
+  return points
+    .filter((p) => p.year === year && p.month === month)
+    .reduce((sum, p) => sum + p.kwh, 0);
 }
