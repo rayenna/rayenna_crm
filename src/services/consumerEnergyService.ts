@@ -12,10 +12,16 @@ export const ENERGY_ESTIMATE_DISCLAIMER =
   'Expected generation for a plant this size in Kerala — not live inverter data.';
 
 export const ENERGY_MANUAL_DISCLAIMER =
-  'Generation from the inverter or SolisCloud. Self-use, export and rupee savings use typical splits — not your KSEB bill.';
+  'Generation logged from the inverter. Self-use, export and rupee savings use typical splits — not your KSEB bill.';
+
+export const ENERGY_SOLIS_DISCLAIMER =
+  'Live generation from your Solis inverter via SolisCloud. Self-use, export and rupee savings are typical splits — not your KSEB bill.';
 
 export const ENERGY_MIXED_YEAR_DISCLAIMER =
   'Some months are expected (Kerala typical). Logged months use inverter units; splits are still typical, not the bill.';
+
+export const ENERGY_SOLIS_MIXED_YEAR_DISCLAIMER =
+  'Some months are live from SolisCloud. Others are expected Kerala typical. Splits are still typical, not the bill.';
 
 export class EnergyPeriodError extends Error {
   constructor(message: string) {
@@ -33,6 +39,7 @@ export type EnergyReadingDto = {
   totalSavings: number;
   dailyReadings: HourlyEnergyPoint[];
   isEstimated: boolean;
+  liveFromSolis: boolean;
   disclaimer: string | null;
   systemKw: number;
 };
@@ -41,19 +48,31 @@ export type AnnualEnergyDto = {
   year: number;
   months: EnergyReadingDto[];
   isEstimated: boolean;
+  liveFromSolis: boolean;
   disclaimer: string | null;
 };
 
 const DEFAULT_SYSTEM_KW = 5.5;
 
-async function resolveSystemKw(consumerUserId: string): Promise<number> {
+async function resolveEnergyMeta(consumerUserId: string): Promise<{
+  systemKw: number;
+  solisLinked: boolean;
+}> {
   const consumer = await prisma.consumerUser.findUnique({
     where: { id: consumerUserId },
-    include: { project: { select: { systemCapacity: true } } },
+    include: { project: { select: { systemCapacity: true, solisStationId: true } } },
   });
   const kw = consumer?.project?.systemCapacity;
-  if (kw && kw > 0) return kw;
-  return DEFAULT_SYSTEM_KW;
+  return {
+    systemKw: kw && kw > 0 ? kw : DEFAULT_SYSTEM_KW,
+    solisLinked: Boolean(consumer?.project?.solisStationId),
+  };
+}
+
+function disclaimerFor(isEstimated: boolean, liveFromSolis: boolean): string | null {
+  if (isEstimated) return ENERGY_ESTIMATE_DISCLAIMER;
+  if (liveFromSolis) return ENERGY_SOLIS_DISCLAIMER;
+  return ENERGY_MANUAL_DISCLAIMER;
 }
 
 function assertUsablePeriod(year: number, month: number): void {
@@ -78,10 +97,12 @@ function rowToDto(
   },
   systemKw: number,
   isEstimated: boolean,
+  solisLinked: boolean,
 ): EnergyReadingDto {
   const dailyReadings = Array.isArray(row.dailyReadings)
     ? (row.dailyReadings as HourlyEnergyPoint[])
     : [];
+  const liveFromSolis = solisLinked && !isEstimated;
   return {
     year: row.year,
     month: row.month,
@@ -91,7 +112,8 @@ function rowToDto(
     totalSavings: row.totalSavings,
     dailyReadings,
     isEstimated,
-    disclaimer: isEstimated ? ENERGY_ESTIMATE_DISCLAIMER : ENERGY_MANUAL_DISCLAIMER,
+    liveFromSolis,
+    disclaimer: disclaimerFor(isEstimated, liveFromSolis),
     systemKw,
   };
 }
@@ -103,7 +125,7 @@ export async function getOrCreateMonthlyReading(
 ): Promise<EnergyReadingDto> {
   assertUsablePeriod(year, month);
 
-  const systemKw = await resolveSystemKw(consumerUserId);
+  const { systemKw, solisLinked } = await resolveEnergyMeta(consumerUserId);
 
   const existing = await prisma.energyReading.findUnique({
     where: {
@@ -112,7 +134,7 @@ export async function getOrCreateMonthlyReading(
   });
 
   if (existing) {
-    return rowToDto(existing, systemKw, existing.isEstimated);
+    return rowToDto(existing, systemKw, existing.isEstimated, solisLinked);
   }
 
   const estimate = estimateMonthlyEnergy(systemKw, year, month);
@@ -131,7 +153,7 @@ export async function getOrCreateMonthlyReading(
     },
   });
 
-  return rowToDto(created, systemKw, true);
+  return rowToDto(created, systemKw, true, solisLinked);
 }
 
 export async function getAnnualReadings(
@@ -145,16 +167,21 @@ export async function getAnnualReadings(
   const lastMonth = year < currentYear ? 12 : year === currentYear ? currentMonth : 0;
 
   let estimatedCount = 0;
+  let liveSolisCount = 0;
   for (let month = 1; month <= lastMonth; month++) {
     const reading = await getOrCreateMonthlyReading(consumerUserId, year, month);
     if (reading.isEstimated) estimatedCount += 1;
+    if (reading.liveFromSolis) liveSolisCount += 1;
     months.push(reading);
   }
 
   const anyEstimated = estimatedCount > 0;
   const allEstimated = lastMonth > 0 && estimatedCount === months.length;
+  const liveFromSolis = liveSolisCount > 0;
   let disclaimer: string | null = null;
   if (allEstimated) disclaimer = ENERGY_ESTIMATE_DISCLAIMER;
+  else if (liveFromSolis && anyEstimated) disclaimer = ENERGY_SOLIS_MIXED_YEAR_DISCLAIMER;
+  else if (liveFromSolis) disclaimer = ENERGY_SOLIS_DISCLAIMER;
   else if (anyEstimated) disclaimer = ENERGY_MIXED_YEAR_DISCLAIMER;
   else if (months.length > 0) disclaimer = ENERGY_MANUAL_DISCLAIMER;
 
@@ -162,6 +189,7 @@ export async function getAnnualReadings(
     year,
     months,
     isEstimated: anyEstimated,
+    liveFromSolis,
     disclaimer,
   };
 }
@@ -188,7 +216,7 @@ export async function upsertManualReading(
 ): Promise<EnergyReadingDto> {
   assertUsablePeriod(year, month);
 
-  const systemKw = await resolveSystemKw(consumerUserId);
+  const { systemKw, solisLinked } = await resolveEnergyMeta(consumerUserId);
   const dailyReadings = buildHourlyReadings(data.totalGenerated, data.totalConsumed);
 
   const row = await prisma.energyReading.upsert({
@@ -210,5 +238,5 @@ export async function upsertManualReading(
     },
   });
 
-  return rowToDto(row, systemKw, false);
+  return rowToDto(row, systemKw, false, solisLinked);
 }

@@ -1,8 +1,45 @@
 import { calendarYmdInTimeZone } from './istCalendar';
 
+export type SolisEnergyUnit = 'wh' | 'kwh' | 'mwh' | 'gwh';
+
+/** CRM sometimes stores watts in the kW field (e.g. 5500). Solis capacity is usually true kW. */
+export function normalizeCapacityKw(capacityKw: number | null | undefined): number {
+  if (capacityKw == null || !Number.isFinite(capacityKw) || capacityKw <= 0) return 15;
+  if (capacityKw >= 1000) return capacityKw / 1000;
+  return capacityKw;
+}
+
+export function effectiveCapacityKw(
+  crmKw: number | null | undefined,
+  solisKw: number | null | undefined,
+): number {
+  if (solisKw != null && solisKw > 0) return normalizeCapacityKw(solisKw);
+  return normalizeCapacityKw(crmKw);
+}
+
+/** A plant cannot generate more than 24h × 31d at nameplate. */
+export function monthlyKwhPhysicalMax(capacityKw: number | null | undefined): number {
+  return normalizeCapacityKw(capacityKw) * 24 * 31;
+}
+
+function unitFromEnergyStr(compact: string): SolisEnergyUnit | null {
+  if (compact.includes('gwh')) return 'gwh';
+  if (compact.includes('mwh')) return 'mwh';
+  if (compact.includes('kwh')) return 'kwh';
+  if (compact.includes('wh')) return 'wh';
+  return null;
+}
+
+function toKwh(value: number, unit: SolisEnergyUnit): number {
+  if (unit === 'gwh') return value * 1_000_000;
+  if (unit === 'mwh') return value * 1000;
+  if (unit === 'wh') return value / 1000;
+  return value;
+}
+
 /**
- * Convert Solis energy + unit string to kWh.
- * Solis often sends Wh while energyStr says kWh; use plant size as a sanity check.
+ * Solis mixes Wh and kWh, and often puts the true amount in energyStr ("795.20kWh")
+ * while `energy` is 795200. Trust a leading number in energyStr; then cap vs nameplate.
  */
 export function energyToKwh(
   energy: number,
@@ -10,20 +47,22 @@ export function energyToKwh(
   capacityKw?: number | null,
 ): number {
   if (!Number.isFinite(energy) || energy < 0) return 0;
-  const unit = (energyStr ?? '').toLowerCase().replace(/\s+/g, '');
+  const compact = (energyStr ?? '').toLowerCase().replace(/\s+/g, '');
+  const unit = unitFromEnergyStr(compact) ?? 'kwh';
+  const lead = compact.match(/^(\d+(?:\.\d+)?)/);
+  const fromStr = lead ? Number(lead[1]) : NaN;
+  const hasStrAmount = Number.isFinite(fromStr);
 
-  let kwh: number;
-  if (unit.includes('gwh')) kwh = energy * 1_000_000;
-  else if (unit.includes('mwh')) kwh = energy * 1000;
-  else if (unit.includes('kwh')) kwh = energy;
-  else if (unit.includes('wh')) kwh = energy / 1000;
-  else kwh = energy;
+  let kwh = toKwh(hasStrAmount ? fromStr : energy, unit);
 
-  const cap = capacityKw && capacityKw > 0 ? capacityKw : 15;
-  const maxPlausibleKwh = cap * 12 * 31 * 1.25;
-  if (kwh > maxPlausibleKwh && energy >= 1000) {
-    const asWh = energy / 1000;
-    if (asWh > 0 && asWh <= maxPlausibleKwh) return asWh;
+  const maxKwh = monthlyKwhPhysicalMax(capacityKw);
+  if (kwh > maxKwh && energy >= 1000) {
+    const fromFieldWh = energy / 1000;
+    if (fromFieldWh > 0 && fromFieldWh <= maxKwh) kwh = fromFieldWh;
+  }
+  if (kwh > maxKwh && hasStrAmount && fromStr >= 1000) {
+    const fromStrWh = fromStr / 1000;
+    if (fromStrWh > 0 && fromStrWh <= maxKwh) kwh = fromStrWh;
   }
   return kwh;
 }

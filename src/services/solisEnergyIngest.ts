@@ -3,6 +3,7 @@ import { calendarYmdInTimeZone } from '../utils/istCalendar';
 import { isDemoHubUsername } from '../utils/consumerUsername';
 import { upsertLoggedGeneration } from './consumerEnergyService';
 import { getSolisCloudConfig, listSolisStations, listStationYearEnergy, SolisCloudError } from './solisCloudClient';
+import { effectiveCapacityKw } from '../utils/solisEnergyUnits';
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -57,11 +58,22 @@ export async function ingestSolisEnergyForProject(projectId: string): Promise<{ 
     throw new Error('Demo Hub account cannot use live Solis data');
   }
 
+  let solisCapacityKw: number | null = null;
+  try {
+    const stations = await listSolisStations();
+    solisCapacityKw = stations.find((s) => s.id === project.solisStationId)?.capacityKw ?? null;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`[solis] station list for capacity failed project ${projectId}: ${msg}`);
+  }
+  await sleep(600);
+
+  const capacityKw = effectiveCapacityKw(project.systemCapacity, solisCapacityKw);
   const year = istYearNow();
   const years = [year - 1, year];
   let monthsWritten = 0;
   for (const y of years) {
-    const points = await listStationYearEnergy(project.solisStationId, y, project.systemCapacity);
+    const points = await listStationYearEnergy(project.solisStationId, y, capacityKw);
     await sleep(600);
     for (const p of points) {
       try {

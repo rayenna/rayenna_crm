@@ -7,10 +7,23 @@ describe('solisEnergyUnits', () => {
     expect(energyToKwh(412, '412 kWh')).toBe(412);
   });
 
-  it('converts Wh and mislabelled Wh (this Hub screenshot: 795200)', () => {
-    expect(energyToKwh(795200, 'Wh', 5.5)).toBe(795.2);
+  it('prefers the number inside energyStr when Solis sends Wh in energy', () => {
+    expect(energyToKwh(795200, '795.20kWh', 5.5)).toBe(795.2);
+  });
+
+  it('converts Wh mislabelled as kWh for rooftop plants (Angelo / Byju vs Hyder)', () => {
     expect(energyToKwh(795200, 'kWh', 5.5)).toBe(795.2);
+    expect(energyToKwh(769100, 'kWh', 3)).toBe(769.1);
+    expect(energyToKwh(393, 'kWh', 5.5)).toBe(393);
     expect(energyToKwh(800, 'kWh', 5.5)).toBe(800);
+  });
+
+  it('still converts when CRM capacity was stored in watts', () => {
+    expect(energyToKwh(795200, 'kWh', 5500)).toBe(795.2);
+  });
+
+  it('keeps real commercial monthly kWh', () => {
+    expect(energyToKwh(12000, 'kWh', 100)).toBe(12000);
   });
 
   it('parses plant list page.records', () => {
