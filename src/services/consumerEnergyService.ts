@@ -12,7 +12,7 @@ export const ENERGY_ESTIMATE_DISCLAIMER =
   'Expected generation for a plant this size in Kerala — not live inverter data.';
 
 export const ENERGY_MANUAL_DISCLAIMER =
-  'Generation logged from the inverter. Self-use, export and rupee savings use typical splits — not your KSEB bill.';
+  'Generation from the inverter or SolisCloud. Self-use, export and rupee savings use typical splits — not your KSEB bill.';
 
 export const ENERGY_MIXED_YEAR_DISCLAIMER =
   'Some months are expected (Kerala typical). Logged months use inverter units; splits are still typical, not the bill.';

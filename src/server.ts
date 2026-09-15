@@ -242,6 +242,27 @@ const server = app.listen(PORT, async () => {
       void purgeExpiredPESharedProposals();
     }, PE_SHARE_CLEANUP_INTERVAL_MS).unref?.();
 
+    const SOLIS_INGEST_INTERVAL_MS = 6 * 60 * 60 * 1000;
+    const runSolisIngest = async () => {
+      try {
+        const { ingestAllMappedSolisPlants } = await import('./services/solisEnergyIngest');
+        const summary = await ingestAllMappedSolisPlants();
+        if (!summary.skipped) {
+          console.log(
+            `[solis] ingest plants=${summary.plants} months=${summary.monthsWritten} failed=${summary.failed}`,
+          );
+        }
+      } catch (e) {
+        console.warn('[solis] ingest failed:', (e as Error)?.message ?? e);
+      }
+    };
+    setTimeout(() => {
+      void runSolisIngest();
+    }, 120_000).unref?.();
+    setInterval(() => {
+      void runSolisIngest();
+    }, SOLIS_INGEST_INTERVAL_MS).unref?.();
+
     const authRoutes = (await import('./routes/auth')).default;
     const projectRoutes = (await import('./routes/projects')).default;
     const documentRoutes = (await import('./routes/documents')).default;

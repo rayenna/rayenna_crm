@@ -40,6 +40,7 @@ export type SolarHubUserListItem = {
     slNo: number;
     projectStatus: ProjectStatus;
     customerName: string;
+    solisStationId: string | null;
   };
 };
 
@@ -68,6 +69,7 @@ function mapListItem(
       slNo: number;
       projectStatus: ProjectStatus;
       customer: { customerName: string };
+      solisStationId: string | null;
     };
   },
 ): SolarHubUserListItem {
@@ -85,6 +87,7 @@ function mapListItem(
       slNo: row.project.slNo,
       projectStatus: row.project.projectStatus,
       customerName: row.project.customer.customerName,
+      solisStationId: row.project.solisStationId,
     },
   };
 }
@@ -135,6 +138,7 @@ export async function listSolarHubUsers(input: {
             id: true,
             slNo: true,
             projectStatus: true,
+            solisStationId: true,
             customer: { select: { customerName: true } },
           },
         },
@@ -154,6 +158,7 @@ export async function getSolarHubUser(id: string): Promise<SolarHubUserDetail | 
           id: true,
           slNo: true,
           projectStatus: true,
+          solisStationId: true,
           customer: { select: { customerName: true, customerId: true } },
         },
       },
@@ -185,6 +190,7 @@ export async function getSolarHubUserForProject(projectId: string) {
           id: true,
           slNo: true,
           projectStatus: true,
+          solisStationId: true,
           customer: { select: { customerName: true, customerId: true } },
         },
       },

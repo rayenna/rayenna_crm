@@ -9,6 +9,7 @@ import { UserRole } from '../types'
 import type { SolarHubPasswordResetResponse, SolarHubUser } from '../types/solarHub'
 import HubHandoverScriptCard from '../components/solarHub/HubHandoverScriptCard'
 import HubNotifyCard from '../components/solarHub/HubNotifyCard'
+import HubSolisPlantCard from '../components/solarHub/HubSolisPlantCard'
 import {
   buildHubStaffCredentialsCopy,
   getSolarHubPublicUrl,
@@ -202,6 +203,8 @@ export default function SolarHubUserDetail() {
       </div>
 
       {canManage ? <HubNotifyCard userId={user.id} phone={user.phone} /> : null}
+
+      <HubSolisPlantCard user={user} canManage={canManage} />
 
       <section className="mb-6 rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-5">
         <h2 className="text-xs font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Account</h2>

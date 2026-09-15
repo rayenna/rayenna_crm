@@ -380,6 +380,9 @@ model Project {
   roofLayout      ProjectRoofLayout?
   consumerUser    ConsumerUser?
 
+  /// SolisCloud plant / station id for Hub Layer 2 ingest (string — IDs can be large).
+  solisStationId String? @unique
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

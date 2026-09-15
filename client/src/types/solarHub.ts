@@ -18,6 +18,7 @@ export type SolarHubUser = {
     projectStatus: string
     customerName: string
     customerId?: string
+    solisStationId?: string | null
   }
 }
 

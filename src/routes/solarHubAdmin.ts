@@ -40,6 +40,14 @@ import {
   listRecentOutbound,
   sendHubUserMessage,
 } from '../services/hubCrmMessageService';
+import { solisPublicStatus } from '../services/solisCloudClient';
+import {
+  ingestAllMappedSolisPlants,
+  ingestSolisEnergyForProject,
+  listSolisStationsForAdmin,
+  setProjectSolisStation,
+  SolisCloudError,
+} from '../services/solisEnergyIngest';
 
 const router = express.Router();
 
@@ -95,6 +103,75 @@ router.get(
     }
   },
 );
+
+router.get('/solis/status', authenticate, async (req: Request, res: Response) => {
+  if (!requireView(req, res)) return;
+  return res.json(solisPublicStatus());
+});
+
+router.get('/solis/stations', authenticate, async (req: Request, res: Response) => {
+  if (!requireView(req, res)) return;
+  try {
+    const stations = await listSolisStationsForAdmin();
+    return res.json({ items: stations });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to list Solis plants';
+    const status = err instanceof SolisCloudError ? 502 : 500;
+    console.error('Solis station list error:', msg);
+    return res.status(status).json({ error: msg });
+  }
+});
+
+router.post('/solis/sync-all', authenticate, async (req: Request, res: Response) => {
+  if (!requireManage(req, res)) return;
+  try {
+    const summary = await ingestAllMappedSolisPlants();
+    return res.json(summary);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Solis sync failed';
+    console.error('Solis sync-all error:', msg);
+    return res.status(500).json({ error: msg });
+  }
+});
+
+router.patch(
+  '/users/:id/solis-station',
+  authenticate,
+  [param('id').isString(), body('stationId').optional({ nullable: true })],
+  async (req: Request, res: Response) => {
+    if (!requireManage(req, res)) return;
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    try {
+      const user = await getSolarHubUser(req.params.id);
+      if (!user) return res.status(404).json({ error: 'Solar Hub user not found' });
+      const raw = req.body?.stationId;
+      const stationId = typeof raw === 'string' && raw.trim() ? raw.trim() : null;
+      await setProjectSolisStation(user.project.id, stationId);
+      const updated = await getSolarHubUser(req.params.id);
+      return res.json(updated);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to save Solis plant';
+      console.error('Solis station map error:', msg);
+      return res.status(400).json({ error: msg });
+    }
+  },
+);
+
+router.post('/users/:id/solis-sync', authenticate, async (req: Request, res: Response) => {
+  if (!requireManage(req, res)) return;
+  try {
+    const user = await getSolarHubUser(req.params.id);
+    if (!user) return res.status(404).json({ error: 'Solar Hub user not found' });
+    const result = await ingestSolisEnergyForProject(user.project.id);
+    return res.json(result);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Solis sync failed';
+    const status = err instanceof SolisCloudError ? 502 : 400;
+    console.error('Solis user sync error:', msg);
+    return res.status(status).json({ error: msg });
+  }
+});
 
 router.get('/users/:id', authenticate, async (req: Request, res: Response) => {
   if (!requireView(req, res)) return;

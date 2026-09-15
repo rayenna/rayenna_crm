@@ -173,6 +173,8 @@ Third static frontend at `consumer-app/frontend` (port **5175** local). Same dua
 
 **API service env (Web Push):** `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, optional `VAPID_SUBJECT` (e.g. `mailto:ops@rayenna.in`). Generate with `npx web-push generate-vapid-keys`. Hub reads the public key from `GET /api/consumer/push/config` (no extra `VITE_*`). Without VAPID, in-app + CRM WhatsApp drafts still work.
 
+**API service env (SolisCloud, Hub live kWh):** `SOLIS_KEY_ID`, `SOLIS_KEY_SECRET`, `SOLIS_API_BASE_URL` (the API URL from SolisCloud API Management, often `https://www.soliscloud.com:13333`). Do not put these on the Hub static site. After deploy, CRM **Solar Hub → user → SolisCloud plant** maps a plant to the project; ingest runs about every 6 hours. Manual inverter kWh remains the fallback. Do not paste `SOLIS_KEY_SECRET` into chat or git.
+
 **API service env (WhatsApp Cloud, optional):** `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_TEMPLATE_HUB_ALERT` (approved template, two body variables: title then body), optional `WHATSAPP_TEMPLATE_LANG` (default `en`). `WHATSAPP_AUTO_NOTIFY=1` also sends Cloud templates on ticket/service/cleaning events. Unset Cloud vars → CRM **Open WhatsApp draft** (`wa.me`) only.
 
 ### Vercel
