@@ -20,6 +20,14 @@ export type SolarHubUser = {
     customerId?: string
     solisStationId?: string | null
   }
+  energySync?: {
+    liveMonthCount: number
+    lastUpdatedAt: string | null
+    currentYear: number
+    currentMonth: number
+    currentMonthLive: boolean
+    currentMonthKwh: number | null
+  }
 }
 
 export type SolarHubUserListResponse = {

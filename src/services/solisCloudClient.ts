@@ -1,5 +1,5 @@
 import { solisRequestHeaders, compactJsonBody } from '../utils/solisCloudSign';
-import { parseStationList, parseStationYearPoints, type SolisStationListItem, type SolisStationYearPoint } from '../utils/solisEnergyUnits';
+import { parseStationList, parseStationYearPoints, quoteOversizedJsonInts, type SolisStationListItem, type SolisStationYearPoint } from '../utils/solisEnergyUnits';
 
 export class SolisCloudError extends Error {
   constructor(message: string) {
@@ -38,7 +38,7 @@ async function solisPost(canonicalizedResource: string, payload: Record<string, 
     throw new SolisCloudError('SolisCloud is not configured');
   }
 
-  const body = compactJsonBody(payload);
+  const body = compactJsonBody(payload).replace(/"id":"(\d+)"/g, '"id":$1');
   const headers = solisRequestHeaders({
     keyId: cfg.keyId,
     keySecret: cfg.keySecret,
@@ -51,7 +51,7 @@ async function solisPost(canonicalizedResource: string, payload: Record<string, 
   const text = await res.text();
   let json: unknown = null;
   try {
-    json = text ? JSON.parse(text) : null;
+    json = text ? JSON.parse(quoteOversizedJsonInts(text)) : null;
   } catch {
     throw new SolisCloudError(`SolisCloud returned non-JSON (${res.status})`);
   }
@@ -91,10 +91,8 @@ export async function listStationYearEnergy(
   year: number,
   capacityKw?: number | null,
 ): Promise<SolisStationYearPoint[]> {
-  const numericId = Number(stationId);
-  const id = Number.isSafeInteger(numericId) ? numericId : stationId;
   const json = await solisPost('/v1/api/stationYear', {
-    id,
+    id: stationId,
     money: 'INR',
     year: String(year),
   });

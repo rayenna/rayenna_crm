@@ -146,10 +146,29 @@ router.patch(
       const user = await getSolarHubUser(req.params.id);
       if (!user) return res.status(404).json({ error: 'Solar Hub user not found' });
       const raw = req.body?.stationId;
-      const stationId = typeof raw === 'string' && raw.trim() ? raw.trim() : null;
+      const stationId =
+        typeof raw === 'string' && raw.trim()
+          ? raw.trim()
+          : typeof raw === 'number' && Number.isSafeInteger(raw)
+            ? String(raw)
+            : null;
       await setProjectSolisStation(user.project.id, stationId);
+      if (!stationId) {
+        const updated = await getSolarHubUser(req.params.id);
+        return res.json(updated);
+      }
+      let monthsWritten = 0;
+      let ingestError: string | undefined;
+      try {
+        const ingest = await ingestSolisEnergyForProject(user.project.id);
+        monthsWritten = ingest.monthsWritten;
+      } catch (ingestErr) {
+        ingestError = ingestErr instanceof Error ? ingestErr.message : 'Solis kWh pull failed';
+        console.warn('Solis ingest after plant save:', ingestError);
+      }
       const updated = await getSolarHubUser(req.params.id);
-      return res.json(updated);
+      if (!updated) return res.status(404).json({ error: 'Solar Hub user not found' });
+      return res.json({ ...updated, monthsWritten, ingestError });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to save Solis plant';
       console.error('Solis station map error:', msg);
@@ -164,7 +183,8 @@ router.post('/users/:id/solis-sync', authenticate, async (req: Request, res: Res
     const user = await getSolarHubUser(req.params.id);
     if (!user) return res.status(404).json({ error: 'Solar Hub user not found' });
     const result = await ingestSolisEnergyForProject(user.project.id);
-    return res.json(result);
+    const updated = await getSolarHubUser(req.params.id);
+    return res.json({ ...result, user: updated });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Solis sync failed';
     const status = err instanceof SolisCloudError ? 502 : 400;

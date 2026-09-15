@@ -7,6 +7,7 @@ import {
 import bcrypt from 'bcryptjs';
 import prisma from '../prisma';
 import { consumerMasterContactFields } from '../utils/consumerCustomerProfile';
+import { calendarYmdInTimeZone } from '../utils/istCalendar';
 import { consumerProvisioningPassword, generateHubTemporaryPassword, HUB_ELIGIBLE_PROJECT_STATUSES, isDemoHubUsername } from '../utils/consumerUsername';
 import { notifyServiceStatus } from './consumerNotificationService';
 import { syncConsumerHubForProject, type ProvisionResult } from './consumerHubProvision';
@@ -44,6 +45,15 @@ export type SolarHubUserListItem = {
   };
 };
 
+export type SolarHubEnergySync = {
+  liveMonthCount: number;
+  lastUpdatedAt: string | null;
+  currentYear: number;
+  currentMonth: number;
+  currentMonthLive: boolean;
+  currentMonthKwh: number | null;
+};
+
 export type SolarHubUserDetail = SolarHubUserListItem & {
   firstName: string | null;
   lastName: string | null;
@@ -53,6 +63,7 @@ export type SolarHubUserDetail = SolarHubUserListItem & {
   project: SolarHubUserListItem['project'] & {
     customerId: string;
   };
+  energySync: SolarHubEnergySync;
 };
 
 function mapListItem(
@@ -166,6 +177,23 @@ export async function getSolarHubUser(id: string): Promise<SolarHubUserDetail | 
   });
   if (!row) return null;
 
+  const ymd = calendarYmdInTimeZone(new Date());
+  const [currentYear, currentMonth] = ymd.split('-').map(Number);
+  const liveRows = await prisma.energyReading.findMany({
+    where: { consumerUserId: id, isEstimated: false },
+    select: { year: true, month: true, totalGenerated: true, updatedAt: true },
+    orderBy: { updatedAt: 'desc' },
+  });
+  const thisMonth = liveRows.find((r) => r.year === currentYear && r.month === currentMonth);
+  const energySync: SolarHubEnergySync = {
+    liveMonthCount: liveRows.length,
+    lastUpdatedAt: liveRows[0]?.updatedAt.toISOString() ?? null,
+    currentYear,
+    currentMonth,
+    currentMonthLive: Boolean(thisMonth),
+    currentMonthKwh: thisMonth ? thisMonth.totalGenerated : null,
+  };
+
   const base = mapListItem(row);
   return {
     ...base,
@@ -178,6 +206,7 @@ export async function getSolarHubUser(id: string): Promise<SolarHubUserDetail | 
       ...base.project,
       customerId: row.project.customer.customerId,
     },
+    energySync,
   };
 }
 

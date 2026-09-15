@@ -30,8 +30,18 @@ export function energyToKwh(
 
 export function stationIdToString(id: unknown): string | null {
   if (id == null) return null;
+  if (typeof id === 'number') {
+    if (!Number.isFinite(id)) return null;
+    if (!Number.isSafeInteger(id)) return null;
+    return String(id);
+  }
   const s = String(id).trim();
   return s.length > 0 ? s : null;
+}
+
+/** JSON.parse mangles Solis plant ids above 2^53-1. Quote 16+ digit integers first. */
+export function quoteOversizedJsonInts(raw: string): string {
+  return raw.replace(/(:\s*)(\d{16,})(\s*[,}\]])/g, '$1"$2"$3');
 }
 
 export function monthFromSolisDate(date: unknown): { year: number; month: number } | null {
@@ -121,11 +131,12 @@ export function parseStationList(payload: unknown): SolisStationListItem[] {
     if (!row || typeof row !== 'object') continue;
     const rec = row as {
       id?: unknown;
+      stationId?: unknown;
       stationName?: unknown;
       capacity?: unknown;
       capacityStr?: unknown;
     };
-    const id = stationIdToString(rec.id);
+    const id = stationIdToString(rec.id) ?? stationIdToString(rec.stationId);
     if (!id) continue;
     out.push({
       id,
