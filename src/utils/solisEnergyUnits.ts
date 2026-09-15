@@ -1,12 +1,31 @@
 import { calendarYmdInTimeZone } from './istCalendar';
 
-/** Convert Solis energy + unit string to kWh. */
-export function energyToKwh(energy: number, energyStr?: string | null): number {
+/**
+ * Convert Solis energy + unit string to kWh.
+ * Solis often sends Wh while energyStr says kWh; use plant size as a sanity check.
+ */
+export function energyToKwh(
+  energy: number,
+  energyStr?: string | null,
+  capacityKw?: number | null,
+): number {
   if (!Number.isFinite(energy) || energy < 0) return 0;
-  const unit = (energyStr ?? '').toLowerCase();
-  if (unit.includes('gwh')) return energy * 1_000_000;
-  if (unit.includes('mwh')) return energy * 1000;
-  return energy;
+  const unit = (energyStr ?? '').toLowerCase().replace(/\s+/g, '');
+
+  let kwh: number;
+  if (unit.includes('gwh')) kwh = energy * 1_000_000;
+  else if (unit.includes('mwh')) kwh = energy * 1000;
+  else if (unit.includes('kwh')) kwh = energy;
+  else if (unit.includes('wh')) kwh = energy / 1000;
+  else kwh = energy;
+
+  const cap = capacityKw && capacityKw > 0 ? capacityKw : 15;
+  const maxPlausibleKwh = cap * 12 * 31 * 1.25;
+  if (kwh > maxPlausibleKwh && energy >= 1000) {
+    const asWh = energy / 1000;
+    if (asWh > 0 && asWh <= maxPlausibleKwh) return asWh;
+  }
+  return kwh;
 }
 
 export function stationIdToString(id: unknown): string | null {
@@ -63,7 +82,7 @@ function unwrapRecordList(payload: unknown): unknown[] {
   return [];
 }
 
-export function parseStationYearPoints(payload: unknown): SolisStationYearPoint[] {
+export function parseStationYearPoints(payload: unknown, capacityKw?: number | null): SolisStationYearPoint[] {
   const list = unwrapRecordList(payload);
   const out: SolisStationYearPoint[] = [];
   for (const row of list) {
@@ -72,7 +91,9 @@ export function parseStationYearPoints(payload: unknown): SolisStationYearPoint[
     const period = monthFromSolisDate(rec.date);
     const energy = Number(rec.energy);
     if (!period || !Number.isFinite(energy)) continue;
-    const kwh = Math.round(energyToKwh(energy, typeof rec.energyStr === 'string' ? rec.energyStr : null));
+    const kwh = Math.round(
+      energyToKwh(energy, typeof rec.energyStr === 'string' ? rec.energyStr : null, capacityKw),
+    );
     if (kwh <= 0) continue;
     out.push({ ...period, kwh });
   }

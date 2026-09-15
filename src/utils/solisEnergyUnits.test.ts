@@ -7,6 +7,12 @@ describe('solisEnergyUnits', () => {
     expect(energyToKwh(412, '412 kWh')).toBe(412);
   });
 
+  it('converts Wh and mislabelled Wh (this Hub screenshot: 795200)', () => {
+    expect(energyToKwh(795200, 'Wh', 5.5)).toBe(795.2);
+    expect(energyToKwh(795200, 'kWh', 5.5)).toBe(795.2);
+    expect(energyToKwh(800, 'kWh', 5.5)).toBe(800);
+  });
+
   it('parses plant list page.records', () => {
     const items = parseStationList({
       data: {

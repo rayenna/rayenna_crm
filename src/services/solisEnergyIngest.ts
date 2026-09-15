@@ -42,6 +42,7 @@ export async function ingestSolisEnergyForProject(projectId: string): Promise<{ 
     where: { id: projectId },
     select: {
       solisStationId: true,
+      systemCapacity: true,
       consumerUser: { select: { id: true, username: true, isActive: true } },
     },
   });
@@ -60,7 +61,7 @@ export async function ingestSolisEnergyForProject(projectId: string): Promise<{ 
   const years = [year - 1, year];
   let monthsWritten = 0;
   for (const y of years) {
-    const points = await listStationYearEnergy(project.solisStationId, y);
+    const points = await listStationYearEnergy(project.solisStationId, y, project.systemCapacity);
     await sleep(600);
     for (const p of points) {
       try {

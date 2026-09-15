@@ -86,7 +86,11 @@ export async function listSolisStations(): Promise<SolisStationListItem[]> {
   return all;
 }
 
-export async function listStationYearEnergy(stationId: string, year: number): Promise<SolisStationYearPoint[]> {
+export async function listStationYearEnergy(
+  stationId: string,
+  year: number,
+  capacityKw?: number | null,
+): Promise<SolisStationYearPoint[]> {
   const numericId = Number(stationId);
   const id = Number.isSafeInteger(numericId) ? numericId : stationId;
   const json = await solisPost('/v1/api/stationYear', {
@@ -94,5 +98,5 @@ export async function listStationYearEnergy(stationId: string, year: number): Pr
     money: 'INR',
     year: String(year),
   });
-  return parseStationYearPoints(json);
+  return parseStationYearPoints(json, capacityKw);
 }
