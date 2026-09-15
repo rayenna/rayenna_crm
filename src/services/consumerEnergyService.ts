@@ -70,26 +70,32 @@ async function resolveEnergyMeta(consumerUserId: string): Promise<{
   };
 }
 
-async function repairInflatedSolisReading<
-  T extends {
-    id: string;
-    totalGenerated: number;
-    isEstimated: boolean;
-  },
->(row: T, systemKw: number, solisLinked: boolean): Promise<T> {
+async function repairInflatedSolisReading(row: {
+  id: string;
+  year: number;
+  month: number;
+  totalGenerated: number;
+  totalConsumed: number;
+  gridExport: number;
+  totalSavings: number;
+  dailyReadings: Prisma.JsonValue;
+  isEstimated: boolean;
+  consumerUserId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}, systemKw: number, solisLinked: boolean) {
   if (!solisLinked || row.isEstimated) return row;
   const kwh = sanitizeStoredMonthlyKwh(row.totalGenerated, systemKw);
   if (kwh <= 0 || kwh >= row.totalGenerated) return row;
   const data = derivedTotalsFromGeneration(kwh);
   const dailyReadings = buildHourlyReadings(data.totalGenerated, data.totalConsumed);
-  const updated = await prisma.energyReading.update({
+  return prisma.energyReading.update({
     where: { id: row.id },
     data: {
       ...data,
       dailyReadings: dailyReadings as unknown as Prisma.InputJsonValue,
     },
   });
-  return updated as T;
 }
 
 function disclaimerFor(isEstimated: boolean, liveFromSolis: boolean): string | null {
