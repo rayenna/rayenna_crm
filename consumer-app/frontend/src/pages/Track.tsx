@@ -262,8 +262,9 @@ export default function Track() {
                 Log this month’s inverter kWh
               </h2>
               <p className="mt-1 text-xs text-[color:var(--text-secondary)]">
-                Use this month’s generation from the inverter screen or ShinePhone / Solarman. Do
-                not use the KSEB bill (export is not total generation).
+                Use this month’s generation from the inverter screen or SolisCloud / ShinePhone.
+                Do not use the KSEB bill (export is not total generation). Linked Solis plants
+                update Hub automatically.
               </p>
               <form onSubmit={handleLog} className="mt-3 flex gap-2">
                 <input
