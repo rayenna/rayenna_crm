@@ -46,6 +46,7 @@ export type SolarHubProvisionResponse = {
   action: string
   username?: string | null
   reason?: string
+  temporaryPassword?: string
 }
 
 export type HubMaintenanceRequestStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'

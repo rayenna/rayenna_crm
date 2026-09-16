@@ -32,7 +32,9 @@ export default function ProjectSolarHubCard({ projectId, projectStatus }: Props)
       const action = data?.action
       const username = data?.username
       if (action === 'skipped') {
-        toast.error('Could not provision — check project status')
+        toast.error(data.reason || 'Could not provision — check project status')
+      } else if (action === 'created' && data.temporaryPassword && username) {
+        toast.success(`Created ${username} — one-time password: ${data.temporaryPassword}`, { duration: 12_000 })
       } else {
         toast.success(username ? `Solar Hub: ${action} (${username})` : `Solar Hub: ${action}`)
       }

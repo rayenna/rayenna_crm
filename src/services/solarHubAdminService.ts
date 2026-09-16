@@ -329,7 +329,7 @@ export async function resyncSolarHubUserFromCustomer(id: string): Promise<SolarH
 export async function provisionSolarHubForProjectAdmin(projectId: string) {
   const project = await prisma.project.findUnique({ where: { id: projectId } });
   if (!project) throw new Error('Project not found');
-  return syncConsumerHubForProject(projectId, project.projectStatus);
+  return syncConsumerHubForProject(projectId, project.projectStatus, { allowGeneratedPassword: true });
 }
 
 export type ProvisioningGapItem = {
@@ -410,7 +410,9 @@ export async function bulkProvisionSolarHub(projectIds: string[]): Promise<BulkP
         summary.skipped += 1;
         continue;
       }
-      const result = await syncConsumerHubForProject(projectId, project.projectStatus);
+      const result = await syncConsumerHubForProject(projectId, project.projectStatus, {
+        allowGeneratedPassword: true,
+      });
       applyProvisionResult(summary, result);
     } catch (err) {
       summary.errors.push({

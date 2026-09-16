@@ -6,6 +6,7 @@ import { consumerMasterContactFields } from '../utils/consumerCustomerProfile';
 import {
   buildBaseUsername,
   consumerProvisioningPassword,
+  generateHubTemporaryPassword,
   HUB_ELIGIBLE_PROJECT_STATUSES,
   isDemoHubUsername,
   resolveUniqueUsernameCandidate,
@@ -99,6 +100,7 @@ export function scheduleConsumerContactSyncForCustomer(customerId: string): void
 export async function syncConsumerHubForProject(
   projectId: string,
   projectStatus: ProjectStatus,
+  options?: { allowGeneratedPassword?: boolean },
 ): Promise<ProvisionResult> {
   const project = await prisma.project.findUnique({
     where: { id: projectId },
@@ -162,11 +164,13 @@ export async function syncConsumerHubForProject(
   const username = await allocateUsername(project.customerId, project.id);
   const nameSeed = project.customer.firstName || project.customer.companyName || project.customer.customerName;
   const referralCode = await allocateReferralCode(nameSeed);
-  const temporaryPassword = consumerProvisioningPassword();
+  const temporaryPassword =
+    consumerProvisioningPassword() ??
+    (options?.allowGeneratedPassword ? generateHubTemporaryPassword() : null);
   if (!temporaryPassword) {
     return {
       action: 'skipped',
-      reason: 'CONSUMER_INITIAL_PASSWORD is not set; provision from Solar Hub admin so a one-time password can be shown.',
+      reason: 'CONSUMER_INITIAL_PASSWORD is not set; use Solar Hub Provision (Admin/Operations) to create a one-time password.',
     };
   }
   const password = await bcrypt.hash(temporaryPassword, 10);

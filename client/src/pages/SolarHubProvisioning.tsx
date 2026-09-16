@@ -50,7 +50,18 @@ export default function SolarHubProvisioning() {
     mutationFn: (projectId: string) =>
       axiosInstance.post(`/api/admin/solar-hub/projects/${projectId}/provision`),
     onSuccess: (res) => {
-      toast.success(`Provisioned: ${res.data.action}`)
+      const body = res.data as { action?: string; reason?: string; username?: string; temporaryPassword?: string }
+      if (body.action === 'skipped') {
+        toast.error(body.reason || 'Could not provision')
+        return
+      }
+      if (body.action === 'created' && body.username && body.temporaryPassword) {
+        toast.success(`Created ${body.username} — one-time password: ${body.temporaryPassword}`, {
+          duration: 12_000,
+        })
+      } else {
+        toast.success(`Provisioned: ${body.action}`)
+      }
       setSelected(new Set())
       invalidate()
     },
