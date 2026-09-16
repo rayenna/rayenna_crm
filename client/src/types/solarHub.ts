@@ -19,6 +19,7 @@ export type SolarHubUser = {
     customerName: string
     customerId?: string
     solisStationId?: string | null
+    deyeStationId?: string | null
   }
   energySync?: {
     liveMonthCount: number

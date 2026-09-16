@@ -16,6 +16,7 @@ import {
 import { Calendar, ChevronLeft, ChevronRight, Info } from 'lucide-react'
 import HelpContextSuggestions from '@/components/HelpContextSuggestions'
 import HubLiveSolisPill from '@/components/HubLiveSolisPill'
+import HubLiveDeyePill from '@/components/HubLiveDeyePill'
 import { useAnnualEnergy, useLogMonthlyEnergy, useMonthlyEnergy } from '@/hooks/useConsumerEnergy'
 import {
   distributionFromReading,
@@ -98,6 +99,9 @@ export default function Track() {
   const monthIsEstimated = reading?.isEstimated !== false
   const liveFromSolis =
     viewMode === 'year' ? Boolean(annualQuery.data?.liveFromSolis) : Boolean(reading?.liveFromSolis)
+  const liveFromDeye =
+    viewMode === 'year' ? Boolean(annualQuery.data?.liveFromDeye) : Boolean(reading?.liveFromDeye)
+  const liveFromCloud = liveFromSolis || liveFromDeye
   const canLog = viewMode === 'month' && isCurrentOrPastMonth(year, month)
 
   const distribution = useMemo(
@@ -165,16 +169,21 @@ export default function Track() {
             Track
           </h1>
           {liveFromSolis ? <HubLiveSolisPill /> : null}
+          {liveFromDeye ? <HubLiveDeyePill /> : null}
         </div>
         <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
           {viewMode === 'year'
             ? annualQuery.data?.liveFromSolis
               ? 'Year so far — live from your Solis inverter'
+              : annualQuery.data?.liveFromDeye
+                ? 'Year so far — live from your Deye inverter'
               : annualQuery.data?.isEstimated
                 ? 'Year so far — expected months until you log inverter kWh'
                 : 'Year so far — logged inverter generation'
             : reading?.liveFromSolis
               ? 'Live monthly generation from SolisCloud'
+              : reading?.liveFromDeye
+                ? 'Live monthly generation from Deye Cloud'
               : monthIsEstimated
                 ? 'Expected generation for your plant size'
                 : 'Monthly generation from your inverter log'}
@@ -184,14 +193,14 @@ export default function Track() {
       {disclaimer ? (
         <div
           className={`mb-4 flex gap-2 rounded-xl border px-3 py-2 text-xs font-medium ${
-            liveFromSolis
+            liveFromCloud
               ? 'border-[color:var(--accent-green-border)] bg-[color:var(--accent-green-muted)] text-[color:var(--text-secondary)]'
               : 'border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] text-[color:var(--text-secondary)]'
           }`}
         >
           <Info
             className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${
-              liveFromSolis ? 'text-[color:var(--accent-green)]' : 'text-[color:var(--accent-gold)]'
+              liveFromCloud ? 'text-[color:var(--accent-green)]' : 'text-[color:var(--accent-gold)]'
             }`}
           />
           <span>{disclaimer}</span>
@@ -252,10 +261,10 @@ export default function Track() {
             <StatCard
               label={
                 viewMode === 'year'
-                  ? liveFromSolis
+                  ? liveFromCloud
                     ? 'Generated live (YTD)'
                     : 'Generated (YTD)'
-                  : reading?.liveFromSolis
+                  : reading?.liveFromSolis || reading?.liveFromDeye
                     ? 'Generated live'
                     : monthIsEstimated
                       ? 'Expected generated'
@@ -288,7 +297,9 @@ export default function Track() {
               <p className="mt-1 text-xs text-[color:var(--text-secondary)]">
                 {reading?.liveFromSolis
                   ? 'This month is already live from SolisCloud. You only need this box if Rayenna asks you to correct a reading. Do not use the KSEB bill.'
-                  : 'Use this month’s generation from the inverter screen or SolisCloud / ShinePhone. Do not use the KSEB bill (export is not total generation). Linked Solis plants update Hub automatically.'}
+                  : reading?.liveFromDeye
+                    ? 'This month is already live from Deye Cloud. You only need this box if Rayenna asks you to correct a reading. Do not use the KSEB bill.'
+                  : 'Use this month’s generation from the inverter screen or the plant app. Do not use the KSEB bill (export is not total generation). Linked Solis or Deye plants update Hub automatically.'}
               </p>
               <form onSubmit={handleLog} className="mt-3 flex gap-2">
                 <input

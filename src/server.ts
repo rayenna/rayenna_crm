@@ -263,6 +263,26 @@ const server = app.listen(PORT, async () => {
       void runSolisIngest();
     }, SOLIS_INGEST_INTERVAL_MS).unref?.();
 
+    const runDeyeIngest = async () => {
+      try {
+        const { ingestAllMappedDeyePlants } = await import('./services/deyeEnergyIngest');
+        const summary = await ingestAllMappedDeyePlants();
+        if (!summary.skipped) {
+          console.log(
+            `[deye] ingest plants=${summary.plants} months=${summary.monthsWritten} failed=${summary.failed}`,
+          );
+        }
+      } catch (e) {
+        console.warn('[deye] ingest failed:', (e as Error)?.message ?? e);
+      }
+    };
+    setTimeout(() => {
+      void runDeyeIngest();
+    }, 180_000).unref?.();
+    setInterval(() => {
+      void runDeyeIngest();
+    }, SOLIS_INGEST_INTERVAL_MS).unref?.();
+
     const authRoutes = (await import('./routes/auth')).default;
     const projectRoutes = (await import('./routes/projects')).default;
     const documentRoutes = (await import('./routes/documents')).default;

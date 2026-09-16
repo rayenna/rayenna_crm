@@ -16,6 +16,7 @@ export type HomeEnergySummaryDto = {
   estimatedTodayKwh: number;
   isEstimated: boolean;
   liveFromSolis: boolean;
+  liveFromDeye: boolean;
   systemKw: number;
 };
 
@@ -150,6 +151,7 @@ export async function getConsumerHome(consumerUserId: string): Promise<ConsumerH
       estimatedTodayKwh,
       isEstimated: energy.isEstimated,
       liveFromSolis: energy.liveFromSolis,
+      liveFromDeye: energy.liveFromDeye,
       systemKw: energy.systemKw,
     },
     systemHealth: {

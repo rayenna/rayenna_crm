@@ -48,6 +48,14 @@ import {
   setProjectSolisStation,
   SolisCloudError,
 } from '../services/solisEnergyIngest';
+import { deyePublicStatus } from '../services/deyeCloudClient';
+import {
+  ingestAllMappedDeyePlants,
+  ingestDeyeEnergyForProject,
+  listDeyeStationsForAdmin,
+  setProjectDeyeStation,
+  DeyeCloudError,
+} from '../services/deyeEnergyIngest';
 
 const router = express.Router();
 
@@ -189,6 +197,95 @@ router.post('/users/:id/solis-sync', authenticate, async (req: Request, res: Res
     const msg = err instanceof Error ? err.message : 'Solis sync failed';
     const status = err instanceof SolisCloudError ? 502 : 400;
     console.error('Solis user sync error:', msg);
+    return res.status(status).json({ error: msg });
+  }
+});
+
+router.get('/deye/status', authenticate, async (req: Request, res: Response) => {
+  if (!requireView(req, res)) return;
+  return res.json(deyePublicStatus());
+});
+
+router.get('/deye/stations', authenticate, async (req: Request, res: Response) => {
+  if (!requireView(req, res)) return;
+  try {
+    const stations = await listDeyeStationsForAdmin();
+    return res.json({ items: stations });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to list Deye plants';
+    const status = err instanceof DeyeCloudError ? 502 : 500;
+    console.error('Deye station list error:', msg);
+    return res.status(status).json({ error: msg });
+  }
+});
+
+router.post('/deye/sync-all', authenticate, async (req: Request, res: Response) => {
+  if (!requireManage(req, res)) return;
+  try {
+    const summary = await ingestAllMappedDeyePlants();
+    return res.json(summary);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Deye sync failed';
+    console.error('Deye sync-all error:', msg);
+    return res.status(500).json({ error: msg });
+  }
+});
+
+router.patch(
+  '/users/:id/deye-station',
+  authenticate,
+  [param('id').isString(), body('stationId').optional({ nullable: true })],
+  async (req: Request, res: Response) => {
+    if (!requireManage(req, res)) return;
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    try {
+      const user = await getSolarHubUser(req.params.id);
+      if (!user) return res.status(404).json({ error: 'Solar Hub user not found' });
+      const raw = req.body?.stationId;
+      const stationId =
+        typeof raw === 'string' && raw.trim()
+          ? raw.trim()
+          : typeof raw === 'number' && Number.isSafeInteger(raw)
+            ? String(raw)
+            : null;
+      await setProjectDeyeStation(user.project.id, stationId);
+      if (!stationId) {
+        const updated = await getSolarHubUser(req.params.id);
+        return res.json(updated);
+      }
+      let monthsWritten = 0;
+      let ingestError: string | undefined;
+      try {
+        const ingest = await ingestDeyeEnergyForProject(user.project.id);
+        monthsWritten = ingest.monthsWritten;
+      } catch (ingestErr) {
+        ingestError = ingestErr instanceof Error ? ingestErr.message : 'Deye kWh pull failed';
+        console.warn('Deye ingest after plant save:', ingestError);
+      }
+      const updated = await getSolarHubUser(req.params.id);
+      if (!updated) return res.status(404).json({ error: 'Solar Hub user not found' });
+      return res.json({ ...updated, monthsWritten, ingestError });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to save Deye plant';
+      console.error('Deye station map error:', msg);
+      return res.status(400).json({ error: msg });
+    }
+  },
+);
+
+router.post('/users/:id/deye-sync', authenticate, async (req: Request, res: Response) => {
+  if (!requireManage(req, res)) return;
+  try {
+    const user = await getSolarHubUser(req.params.id);
+    if (!user) return res.status(404).json({ error: 'Solar Hub user not found' });
+    const result = await ingestDeyeEnergyForProject(user.project.id);
+    const updated = await getSolarHubUser(req.params.id);
+    return res.json({ ...result, user: updated });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Deye sync failed';
+    const status = err instanceof DeyeCloudError ? 502 : 400;
+    console.error('Deye user sync error:', msg);
     return res.status(status).json({ error: msg });
   }
 });

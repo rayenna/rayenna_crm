@@ -5,8 +5,8 @@ import { Link2, RefreshCw } from 'lucide-react'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import type { SolarHubUser } from '../../types/solarHub'
 
-type SolisStatus = { configured: boolean; apiHost: string | null }
-type SolisStation = { id: string; name: string; capacityKw: number | null }
+type DeyeStatus = { configured: boolean; apiHost: string | null }
+type DeyeStation = { id: string; name: string; capacityKw: number | null }
 
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -28,7 +28,7 @@ function kwhStatusLabel(opts: {
   lastError: string | null
   sync: SolarHubUser['energySync']
 }): { text: string; tone: 'muted' | 'ok' | 'warn' | 'bad' } {
-  if (opts.busy) return { text: 'Pulling kWh from SolisCloud…', tone: 'muted' }
+  if (opts.busy) return { text: 'Pulling kWh from Deye Cloud…', tone: 'muted' }
   if (opts.lastError) return { text: `kWh not synced — ${opts.lastError}`, tone: 'bad' }
   if (!opts.linked) return { text: 'kWh not synced — no plant linked', tone: 'muted' }
   const sync = opts.sync
@@ -44,12 +44,12 @@ function kwhStatusLabel(opts: {
     }
   }
   return {
-    text: `kWh synced · ${sync.liveMonthCount} month${sync.liveMonthCount === 1 ? '' : 's'} · ${monthLabel} not in Solis yet${when ? ` · last ${when}` : ''}`,
+    text: `kWh synced · ${sync.liveMonthCount} month${sync.liveMonthCount === 1 ? '' : 's'} · ${monthLabel} not in Deye yet${when ? ` · last ${when}` : ''}`,
     tone: 'ok',
   }
 }
 
-export default function HubSolisPlantCard({
+export default function HubDeyePlantCard({
   user,
   canManage,
 }: {
@@ -57,8 +57,8 @@ export default function HubSolisPlantCard({
   canManage: boolean
 }) {
   const queryClient = useQueryClient()
-  const linked = user.project.solisStationId ?? ''
-  const deyeLinked = Boolean(user.project.deyeStationId)
+  const linked = user.project.deyeStationId ?? ''
+  const solisLinked = Boolean(user.project.solisStationId)
   const [selectedId, setSelectedId] = useState(linked)
   const [manualId, setManualId] = useState(linked)
   const [lastError, setLastError] = useState<string | null>(null)
@@ -69,33 +69,33 @@ export default function HubSolisPlantCard({
   }, [linked])
 
   const statusQuery = useQuery({
-    queryKey: ['solis-status'],
+    queryKey: ['deye-status'],
     queryFn: async () => {
-      const res = await axiosInstance.get('/api/admin/solar-hub/solis/status')
-      return res.data as SolisStatus
+      const res = await axiosInstance.get('/api/admin/solar-hub/deye/status')
+      return res.data as DeyeStatus
     },
   })
 
   const stationsQuery = useQuery({
-    queryKey: ['solis-stations'],
+    queryKey: ['deye-stations'],
     queryFn: async () => {
-      const res = await axiosInstance.get('/api/admin/solar-hub/solis/stations')
-      return res.data as { items: SolisStation[] }
+      const res = await axiosInstance.get('/api/admin/solar-hub/deye/stations')
+      return res.data as { items: DeyeStation[] }
     },
-    enabled: Boolean(statusQuery.data?.configured) && !deyeLinked,
+    enabled: Boolean(statusQuery.data?.configured) && !solisLinked,
   })
 
   const saveMutation = useMutation({
     mutationFn: (stationId: string | null) =>
-      axiosInstance.patch(`/api/admin/solar-hub/users/${user.id}/solis-station`, { stationId }),
+      axiosInstance.patch(`/api/admin/solar-hub/users/${user.id}/deye-station`, { stationId }),
     onSuccess: (res) => {
       const body = res.data as SolarHubUser & { monthsWritten?: number; ingestError?: string }
-      const saved = body.project?.solisStationId ?? null
+      const saved = body.project?.deyeStationId ?? null
       setSelectedId(saved ?? '')
       setManualId(saved ?? '')
       setLastError(body.ingestError ?? null)
       queryClient.setQueryData(['solar-hub-user', user.id], body)
-      if (!saved) toast.success('Solis plant unlinked')
+      if (!saved) toast.success('Deye plant unlinked')
       else if (!body.ingestError) toast.success('Plant saved')
       void queryClient.invalidateQueries({ queryKey: ['solar-hub-user', user.id] })
       void queryClient.invalidateQueries({ queryKey: ['solar-hub-users'] })
@@ -107,12 +107,12 @@ export default function HubSolisPlantCard({
   })
 
   const syncMutation = useMutation({
-    mutationFn: () => axiosInstance.post(`/api/admin/solar-hub/users/${user.id}/solis-sync`),
+    mutationFn: () => axiosInstance.post(`/api/admin/solar-hub/users/${user.id}/deye-sync`),
     onSuccess: (res) => {
       const body = res.data as { monthsWritten?: number; user?: SolarHubUser }
       setLastError(null)
       if (body.user) queryClient.setQueryData(['solar-hub-user', user.id], body.user)
-      toast.success('kWh updated from SolisCloud')
+      toast.success('kWh updated from Deye Cloud')
       void queryClient.invalidateQueries({ queryKey: ['solar-hub-user', user.id] })
     },
     onError: (err) => {
@@ -146,23 +146,22 @@ export default function HubSolisPlantCard({
       <div className="flex items-center gap-2">
         <Link2 className="h-4 w-4 text-[color:var(--accent-gold)]" />
         <h2 className="text-xs font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
-          SolisCloud plant
+          Deye Cloud plant
         </h2>
       </div>
       <p className="mt-2 text-xs text-[color:var(--text-muted)]">
-        Pick a plant, then Save — that also pulls kWh once. After that, Hub refreshes about every 6
-        hours. You do not need to click Pull kWh each day. Use Pull only if you want the latest
-        numbers right now. Splits are typical, not the KSEB bill.
+        One cloud per project. Pick a Deye plant, then Save — that also pulls kWh once. Hub refreshes
+        about every 6 hours. Splits are typical, not the KSEB bill.
       </p>
 
-      {deyeLinked ? (
+      {solisLinked ? (
         <p className="mt-3 text-sm text-[color:var(--text-primary)]">
-          This project is linked to Deye Cloud. Unlink Deye first if this inverter is on SolisCloud.
+          This project is linked to SolisCloud. Unlink Solis first if this inverter is on Deye Cloud.
         </p>
       ) : !configured ? (
         <p className="mt-3 text-sm text-[color:var(--text-primary)]">
-          Solis keys are not on the CRM API yet. Add <code>SOLIS_KEY_ID</code>,{' '}
-          <code>SOLIS_KEY_SECRET</code>, and <code>SOLIS_API_BASE_URL</code> on Render, then redeploy the API.
+          Deye keys are not on the CRM API yet. Add <code>DEYE_APP_ID</code>, <code>DEYE_APP_SECRET</code>,{' '}
+          <code>DEYE_LOGIN</code>, and <code>DEYE_PASSWORD</code> on Render, then redeploy the API.
         </p>
       ) : (
         <p className="mt-3 text-xs text-[color:var(--text-muted)]">
@@ -178,11 +177,11 @@ export default function HubSolisPlantCard({
         </p>
       )}
 
-      {canManage && !deyeLinked ? (
+      {canManage && !solisLinked ? (
         <div className="mt-4 space-y-3">
           {stations.length > 0 ? (
             <label className="block text-xs font-semibold text-[color:var(--text-muted)]">
-              Plant on this Solis account
+              Plant on this Deye account
               <select
                 className="mt-1 w-full rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 text-sm text-[color:var(--text-primary)]"
                 value={selectedId}
@@ -214,7 +213,7 @@ export default function HubSolisPlantCard({
                 setManualId(e.target.value)
                 setSelectedId(e.target.value.trim())
               }}
-              placeholder="Filled from the list above, or paste from SolisCloud"
+              placeholder="Filled from the list above, or paste from Deye Cloud"
               className="mt-1 w-full rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 font-mono text-sm text-[color:var(--text-primary)]"
             />
           </label>
@@ -247,7 +246,7 @@ export default function HubSolisPlantCard({
       ) : (
         <div className="mt-3 space-y-2">
           <p className="text-sm text-[color:var(--text-primary)]">{linked ? `Linked plant ${linked}` : 'Not linked'}</p>
-          {!deyeLinked ? (
+          {!solisLinked ? (
             <p className={`inline-block rounded-xl border px-3 py-2 text-xs font-semibold ${toneClass}`}>{status.text}</p>
           ) : null}
         </div>

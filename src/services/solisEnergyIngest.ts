@@ -30,6 +30,14 @@ export type SolisIngestSummary = {
 
 export async function setProjectSolisStation(projectId: string, stationId: string | null): Promise<void> {
   const normalized = stationId?.trim() || null;
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { deyeStationId: true },
+  });
+  if (!project) throw new Error('Project not found');
+  if (normalized && project.deyeStationId) {
+    throw new Error('This project is already linked to a Deye Cloud plant. Unlink Deye first.');
+  }
   if (normalized) {
     const clash = await prisma.project.findFirst({
       where: { solisStationId: normalized, NOT: { id: projectId } },
