@@ -21,5 +21,8 @@ Metric tiles and list cards (e.g. leads, **Payment Status**, **Proposal Engine**
 ### Can I open Projects from Dashboard charts?
 **Classic Dashboard** — most charts click through **directly to Projects** with matching filters. **Zenith** — most explore charts open **Quick Actions** first; use **Open in Projects →** for the full grid. **Customer profitability** in both can jump straight to Projects. Details: [Dashboard → Chart click-through](/help/dashboard#classic-dashboard-chart-click-through-to-projects) · [Zenith → Explore charts](/help/zenith#explore-charts-and-drill-down-zenith).
 
+### Why didn’t the Quick Actions drawer update after I changed stage?
+It should. Saving **stage**, value, or dates in **Quick Actions** (or the Operations drawer) updates the drawer **immediately** and **keeps it open**. If you still see the old pill, refresh once; a full Zenith reload is not required for that save. Guide: [Quick Actions drawer](/help/zenith#quick-actions-drawer).
+
 ### What is “Things needing attention”?
 On **Zenith** (not the classic Dashboard), **Sales**, **Admin**, and **Management** may see a card beside **Today's plan** for **Needs review** (dates, payments, capacity, or time in stage). **Management** and **Admin** also see counts **by salesperson**. **Sales**, **Operations**, and **Admin** still see **panel / inverter brand** gaps on the same card. Rows include **+ My Day** and **Open →**. **Finance** does not see the card. Saving a project with reversed commissioning vs confirmation, or advance over order value, asks for **Save anyway**. [Things needing attention](/help/dashboard#things-needing-attention-dashboard) · [Needs review](/help/modules#needs-review-data-sense).

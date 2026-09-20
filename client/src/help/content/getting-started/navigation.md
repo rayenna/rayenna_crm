@@ -28,6 +28,7 @@ Menu items are displayed based on your user role:
 - **Projects**: Project management and tracking
 - **Support Tickets**: Customer service ticket management (Sales, Operations, Admin only)
 - **Tally Export**: Financial data export (Finance and Admin only)
+- **Solar Hub**: Homeowner accounts, plant mapping, Help Center (Operations and Admin)
 - **Users**: User management (Admin only)
 
 ### Active Page Indicator

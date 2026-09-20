@@ -6,10 +6,10 @@ Install **Rayenna Solar Hub** on the homeowner’s phone at handover or a site v
 
 | Role | What you do |
 | :-- | :-- |
-| **Sales** | On **Project detail**, open **Install Hub on this visit**. You can copy the script and WhatsApp the link. You cannot create Hub accounts. |
-| **Operations / Admin** | Same script, plus **Create Hub account** and (Admin) password reset / credentials PDF. |
+| **Sales** | On **Project detail**, open **Install Hub on this visit**. You can copy the script and WhatsApp the link. You cannot create Hub accounts or map inverter plants. |
+| **Operations / Admin** | Same script, plus **Create Hub account**, plant mapping, and (Admin) password reset / credentials PDF. |
 
-→ [Projects](#projects-module)
+→ [Projects](#projects-module) · [Solar Hub plants and generation](#solar-hub-plants-and-generation)
 
 ## On the visit
 
@@ -18,7 +18,7 @@ Install **Rayenna Solar Hub** on the homeowner’s phone at handover or a site v
 3. On **their** phone:
    - **Android:** Chrome → Hub URL → sign in with **username** (not email) → keep **Stay signed in** → Add to Home Screen.
    - **iPhone:** Safari → Share → **Add to Home Screen**.
-4. Close the browser. Open the **Rayenna Solar Hub** icon. Show **Home** and **Support**.
+4. Close the browser. Open the **Rayenna Solar Hub** icon. Show **Home**, **Track**, and **Support**.
 
 Do **not** use WhatsApp’s in-app browser, and do **not** log them into Rayenna CRM.
 
@@ -37,7 +37,41 @@ On **Solar Hub → user detail**, Ops/Admin can send a template (cleaning due, s
 
 Do **not** put Hub passwords in these templates. Ticket/service events also Web-Push automatically when the device is subscribed.
 
-## Related
+---
 
-- Hub accounts are created from **Confirmed** through completion (Ops/Admin).
-- Help for homeowners is inside Hub → **Help Center**.
+# Solar Hub plants and generation
+
+Hub **Home** and **Track** show monthly generation. After Ops/Admin map a plant, mapped months use **live kWh from the inverter cloud**. Unmapped months still use expected Kerala typicals. Self-use, export, and rupee savings are **typical splits — never the KSEB bill**. Export on a bill is not total generation — do not type KSEB figures into Hub.
+
+## One cloud per project
+
+A project can be linked to **SolisCloud** or **Deye Cloud**, not both. Unlink the current plant before switching clouds. Other monitoring portals (including Solarman) are **not** connected to Hub yet.
+
+Match the cloud to the inverter the customer actually uses. Deye Cloud and Solarman are different systems even when the hardware looks similar.
+
+## Map a plant (Operations / Admin)
+
+1. Open **Solar Hub → Users** → the homeowner.
+2. Use **SolisCloud plant** or **Deye Cloud plant**.
+3. Pick the plant from the list (or paste the plant id). **Save** also pulls kWh once.
+4. Confirm the status line shows months synced. Hub **Home** / **Track** then show a **Live · SolisCloud** or **Live · Deye Cloud** pill.
+
+Map by the Hub **username** and the customer you have open — not by an old spreadsheet row number. If Save says the plant is already on another project, unlink it there first (the message includes **#SL** and username).
+
+**Pull kWh** is optional: use it when you want the latest numbers **now**. The API also refreshes mapped plants about every **six hours**. You do not need to click Pull every day.
+
+If a card says keys are not on the CRM API, that is an environment setup issue on the **API** service (not the Hub website). Redeploy the API after keys are added. Do not put cloud secrets in chat or git.
+
+## What homeowners see
+
+- **Live months** — inverter monthly total from the mapped cloud.
+- **Expected months** — typical Kerala curve until a live month exists.
+- **Manual kWh** — still available if Rayenna asks them to correct a month. They should use the inverter screen or plant app, **not** the KSEB bill.
+
+## Accounts (Provisioning)
+
+Hub accounts are created from **Confirmed** through completion (**Ops/Admin**). **Solar Hub → Provisioning** lists projects that still need an account. **Provision** creates the username and shows a **one-time password once** — there is no shared default password. Share it only with the household, then they change it in Hub **Profile**.
+
+## Homeowner Help Center
+
+Homeowners read guides and FAQs inside Hub → **Help**. Ops/Admin edit that content under **Solar Hub → Help**. After CRM API deploys that change the default FAQs, **Admin** can **Reimport** repo defaults so published Hub Help matches this product (live Solis/Deye months, KSEB vs Track).

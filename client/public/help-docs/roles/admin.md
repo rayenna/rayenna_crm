@@ -90,7 +90,8 @@ See [Permission matrix](#permission-matrix) before elevating someone to Admin.
 2. Spot-check **audit log** for unusual exports or deletes.  
 3. Help users with **access denied** issues (wrong role vs wrong assignment).  
 4. Coordinate with Finance on **export** policy.  
-5. Point users to [Getting Started](/help/getting-started) and role guides for self-service.
+5. Point users to [Getting Started](/help/getting-started) and role guides for self-service.  
+6. **Solar Hub** — map Solis/Deye plants, provision accounts, and (when FAQs in the repo change) **Solar Hub → Help → Reimport**. [Solar Hub plants](/help/modules#solar-hub-plants-and-generation).
 
 ## Shortcuts
 

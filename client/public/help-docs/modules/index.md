@@ -14,7 +14,7 @@ The **data modules** in Rayenna CRM are where you create and maintain business r
 | **Key Artifacts** | Photos, PDFs, sheets on a project | [Key Artifacts](#key-artifacts-module) |
 | **Support Tickets** | Service requests linked to projects | [Support Tickets](#support-tickets-module) |
 | **Tally Export** | Accounting handoff (Finance / Admin) | [Tally Export](#tally-export-module) |
-| **Solar Hub handover** | Install the homeowner PWA on the customer’s phone | [Solar Hub handover](#solar-hub-handover) |
+| **Solar Hub** | Install the homeowner PWA; map Solis/Deye plants for live kWh | [Handover](#solar-hub-handover) · [Plants and generation](#solar-hub-plants-and-generation) |
 
 ## Related areas (not in this section)
 

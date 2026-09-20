@@ -28,6 +28,9 @@ Dashboard **FY / Quarter / Month** apply to tiles and charts. Opening **Projects
 ### Does Needs review stop me from saving a project?
 Only two cases ask you to confirm: **expected commissioning before confirmation**, or **advance greater than order value**. Choose **Go back** to fix, or **Save anyway**. Other Needs review flags do **not** block save. [Needs review](/help/modules#needs-review-data-sense).
 
+### Why is Hub Track still showing typical (estimated) generation?
+Live months appear after **Operations / Admin** map **one** inverter cloud on **Solar Hub → user detail** (**SolisCloud plant** or **Deye Cloud plant**). Save pulls kWh once; Hub also refreshes about every six hours. **Pull kWh** is only for an immediate update. One cloud per project — unlink before switching. Do not enter KSEB export as generation. Guide: [Solar Hub plants](/help/modules#solar-hub-plants-and-generation).
+
 ## Support Tickets
 
 ### How do I create a support ticket?

@@ -60,6 +60,8 @@ export const CONSUMER_HELP_FAQ_ARTICLE_LINKS: Record<string, string> = {
   'warranty-coverage': 'warranty-guide',
   'warranty-claim': 'warranty-guide',
   'net-metering-basics': 'understanding-solar-bill',
+  'track-charts': 'understanding-solar-bill',
+  'live-cloud-generation': 'understanding-solar-bill',
   'monsoon-generation': 'monsoon-solar-tips',
   'panel-cleaning-schedule': 'panel-cleaning-guide',
   'inverter-alarm': 'inverter-troubleshooting',

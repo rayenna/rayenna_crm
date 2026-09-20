@@ -1,4 +1,4 @@
-Once **net metering** is active, your KSEB bill reflects both power you draw from the grid and solar you export. Solar Hub **Track** shows generation and estimated savings; your **official bill** is the source of truth for credits.
+Once **net metering** is active, your KSEB bill reflects both power you draw from the grid and solar you export. Solar Hub **Track** shows generation (live from SolisCloud or Deye Cloud when your plant is mapped, otherwise typical Kerala values) and estimated savings. Your **official bill** is the source of truth for credits.
 
 ## Key terms
 
@@ -16,11 +16,14 @@ Once **net metering** is active, your KSEB bill reflects both power you draw fro
 
 | Solar Hub Track | KSEB bill |
 |-----------------|-----------|
-| Daily / monthly generation from monitoring | Official meter readings |
-| Estimated savings | Actual billed amounts |
-| Useful for trends and alerts | Legal record for disputes |
+| Monthly generation from SolisCloud or Deye Cloud when mapped (Live pill) | Official meter readings |
+| Typical Kerala curve for months not yet live | — |
+| Estimated self-use, export, and rupee savings | Actual billed amounts |
+| Useful for trends | Legal record for disputes |
 
-Small differences are normal due to timing, meter vs inverter data, and billing cycle cut-off dates.
+**Never** use KSEB **export** as your generation total. Export is leftover units sent to the grid, not what the inverter produced.
+
+Small differences are normal due to timing, meter vs inverter data, and billing cycle cut-off dates. Live months refresh in Hub about every **six hours**.
 
 ## Tips for reading your first solar bills
 

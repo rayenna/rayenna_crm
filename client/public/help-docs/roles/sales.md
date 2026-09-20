@@ -81,7 +81,7 @@ You can **view** payment status and balances on your projects. **Entering paymen
 2. Update **lead / survey / proposal** stages on active projects; clear **Needs review** flags when the record is wrong.
 3. Create customers and projects for new opportunities.
 4. Log **support tickets** when customers need follow-up.
-5. At handover, open **Project detail** → **Install Hub on this visit** and add Solar Hub to the customer’s home screen. [Solar Hub handover](/help/modules#solar-hub-handover)
+5. At handover, open **Project detail** → **Install Hub on this visit** and add Solar Hub to the customer’s home screen. Operations maps the inverter cloud for live Track kWh. [Solar Hub handover](/help/modules#solar-hub-handover)
 6. Use **My Day** (**Ctrl+Shift+M** / **⌘⇧M**) to pin follow-ups from the dashboard or Hit List.
 
 ## Shortcuts

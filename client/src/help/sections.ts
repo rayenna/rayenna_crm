@@ -37,6 +37,7 @@ export const helpSectionSubNav: Partial<Record<string, HelpSubNavItem[]>> = {
     { label: 'Support Tickets', hash: 'support-tickets-module' },
     { label: 'Tally Export', hash: 'tally-export-module' },
     { label: 'Solar Hub handover', hash: 'solar-hub-handover' },
+    { label: 'Solar Hub plants', hash: 'solar-hub-plants-and-generation' },
   ],
   dashboard: [
     { label: 'Overview', hash: 'dashboard' },

@@ -10,7 +10,7 @@ Write down the code exactly as shown (e.g. `F35`, `Grid lost`). Check the invert
 - **Grid present** — Neighbours have power; not a prolonged KSEB outage
 - **DC isolator** — Should be ON during normal operation (do not open DC side unless trained)
 - **Display** — Screen lit and responsive
-- **Wi-Fi / dongle** — If monitoring uses Wi-Fi, router is online (affects Track, not always generation)
+- **Wi-Fi / dongle** — If monitoring uses Wi-Fi, router is online (affects live Track from SolisCloud or Deye Cloud, not always generation)
 
 **Never** open live electrical panels if you are unsure. Stop if you see burning smell, smoke, or water inside the inverter box.
 
@@ -34,7 +34,7 @@ For **zero generation on clear days for 48+ hours**, call **Support → Emergenc
 | Zero at night | Normal | None |
 | Zero all day, sunny | Grid fault, breaker, or inverter fault | Check breakers; report if persists |
 | Low vs neighbours | Shading, soiling, or sizing | Check trees; see panel cleaning guide |
-| App offline, inverter OK | Monitoring only | Wi-Fi / logger issue — still report if prolonged |
+| App offline, inverter OK | Monitoring only | Wi-Fi / logger issue — Hub live kWh may lag until the next refresh |
 
 ## Warranty
 

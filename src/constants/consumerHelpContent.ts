@@ -93,7 +93,14 @@ export const CONSUMER_HELP_FAQ_ITEMS: ConsumerHelpFaqItem[] = [
     category: 'energy',
     question: 'How do I read my generation charts in Track?',
     answer:
-      'Track shows expected monthly generation for your plant size in Kerala until you (or Rayenna) log inverter kWh. Logged months use your inverter total; self-use, export and rupee savings are typical splits — not your KSEB bill. Live inverter monitoring is not connected yet.',
+      'If Rayenna has mapped your plant, Track and Home show a Live pill (SolisCloud or Deye Cloud) and use monthly kWh from that inverter cloud. Charts refresh about every six hours. Months without live data still show expected Kerala typicals. Self-use, export and rupee savings are typical splits — not your KSEB bill. Never enter KSEB export as generation.',
+  },
+  {
+    id: 'live-cloud-generation',
+    category: 'energy',
+    question: 'What does Live · SolisCloud or Live · Deye Cloud mean?',
+    answer:
+      'It means your installation is linked to the matching inverter cloud (SolisCloud or Deye Cloud — one cloud per system). Track then uses that cloud’s monthly generation. Your KSEB bill is still the legal record for import, export, and charges. Other monitoring apps are not connected to Solar Hub yet.',
   },
   {
     id: 'net-metering-basics',
@@ -198,7 +205,7 @@ export const CONSUMER_HELP_FAQ_ITEMS: ConsumerHelpFaqItem[] = [
     category: 'troubleshooting',
     question: 'My app shows no generation data — what should I check?',
     answer:
-      'Confirm the inverter is on and grid-connected (no islanding alarm). Check Wi-Fi or data logger connectivity if your system uses monitoring. New systems may need up to 48 hours after commissioning for data to flow. If hardware looks fine but Track is empty for several days, report it via Maintain.',
+      'Confirm the inverter is on and grid-connected (no islanding alarm). Check Wi-Fi or the data logger if your plant uses monitoring. Mapped Solis or Deye plants update Hub about every six hours — wait for the next refresh or ask Rayenna to pull kWh. New systems may need a day or two after mapping. If hardware looks fine but Track stays empty, report it via Maintain. Do not type figures from your KSEB bill into Track.',
   },
   {
     id: 'change-password',
