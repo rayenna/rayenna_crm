@@ -6,7 +6,14 @@ import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import type { SolarHubUser } from '../../types/solarHub'
 
 type DeyeStatus = { configured: boolean; apiHost: string | null }
-type DeyeStation = { id: string; name: string; capacityKw: number | null }
+type DeyeStation = {
+  id: string
+  name: string
+  capacityKw: number | null
+  linkedSlNo?: number | null
+  linkedUsername?: string | null
+  linkedCustomerName?: string | null
+}
 
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -195,12 +202,25 @@ export default function HubDeyePlantCard({
                 {selectedId && !stations.some((s) => s.id === selectedId) ? (
                   <option value={selectedId}>Linked plant {selectedId}</option>
                 ) : null}
-                {stations.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.id}
-                    {s.capacityKw ? ` · ${s.capacityKw} kW` : ''})
-                  </option>
-                ))}
+                {stations.map((s) => {
+                  const takenByOther = Boolean(s.linkedSlNo) && s.id !== linked
+                  const takenLabel = takenByOther
+                    ? ` · already #${s.linkedSlNo}${
+                        s.linkedUsername
+                          ? ` @${s.linkedUsername}`
+                          : s.linkedCustomerName
+                            ? ` ${s.linkedCustomerName}`
+                            : ''
+                      }`
+                    : ''
+                  return (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.id}
+                      {s.capacityKw ? ` · ${s.capacityKw} kW` : ''}
+                      {takenLabel})
+                    </option>
+                  )
+                })}
               </select>
             </label>
           ) : null}

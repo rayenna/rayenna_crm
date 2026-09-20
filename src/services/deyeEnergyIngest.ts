@@ -40,10 +40,17 @@ export async function setProjectDeyeStation(projectId: string, stationId: string
   if (normalized) {
     const clash = await prisma.project.findFirst({
       where: { deyeStationId: normalized, NOT: { id: projectId } },
-      select: { slNo: true },
+      select: {
+        slNo: true,
+        customer: { select: { customerName: true } },
+        consumerUser: { select: { username: true } },
+      },
     });
     if (clash) {
-      throw new Error(`That Deye plant is already linked to project #${clash.slNo}`);
+      const who = clash.consumerUser?.username
+        ? `@${clash.consumerUser.username}`
+        : clash.customer.customerName;
+      throw new Error(`That Deye plant is already linked to project #${clash.slNo} (${who}). Unlink it there first.`);
     }
   }
   await prisma.project.update({
@@ -160,7 +167,27 @@ export async function listDeyeStationsForAdmin() {
   if (!getDeyeCloudConfig()) {
     throw new DeyeCloudError('Add DEYE_APP_ID, DEYE_APP_SECRET, DEYE_LOGIN, and DEYE_PASSWORD on the CRM API, then redeploy');
   }
-  return listDeyeStations();
+  const stations = await listDeyeStations();
+  const ids = stations.map((s) => s.id);
+  const linkedRows = await prisma.project.findMany({
+    where: { deyeStationId: { in: ids } },
+    select: {
+      slNo: true,
+      deyeStationId: true,
+      customer: { select: { customerName: true } },
+      consumerUser: { select: { username: true } },
+    },
+  });
+  const byStation = new Map(linkedRows.map((p) => [p.deyeStationId, p]));
+  return stations.map((s) => {
+    const p = byStation.get(s.id);
+    return {
+      ...s,
+      linkedSlNo: p?.slNo ?? null,
+      linkedUsername: p?.consumerUser?.username ?? null,
+      linkedCustomerName: p?.customer.customerName ?? null,
+    };
+  });
 }
 
 export { DeyeCloudError, deyePublicStatus };
