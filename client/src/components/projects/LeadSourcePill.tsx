@@ -87,8 +87,8 @@ function LeadSourcePillWithPopover({
   const anchorRef = useRef<HTMLButtonElement>(null)
   const [pos, setPos] = useState<{ left: number; top: number; place: 'above' | 'below' } | null>(null)
 
-  const tooltipW = 240
-  const tooltipHApprox = 132
+  const tooltipW = 260
+  const tooltipHApprox = 148
   const gutter = 12
   const showCard = hoverCapable ? mouseInside : tapOpen
 
@@ -153,7 +153,18 @@ function LeadSourcePillWithPopover({
             borderBottom: '1px solid var(--chart-tooltip-divider)',
           }}
         >
-          <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--chart-tooltip-fg)', flexShrink: 0 }}>
+          <span
+            style={{
+              fontSize: '13px',
+              fontWeight: 500,
+              color: 'var(--chart-tooltip-fg)',
+              flex: '1 1 0',
+              minWidth: 0,
+              maxWidth: '58%',
+              lineHeight: 1.3,
+              whiteSpace: 'normal',
+            }}
+          >
             {fieldLabel}
           </span>
           <span
@@ -163,7 +174,8 @@ function LeadSourcePillWithPopover({
               color: accent,
               textAlign: 'right',
               lineHeight: 1.35,
-              wordBreak: 'break-word',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
             }}
           >
             {detailValue}
