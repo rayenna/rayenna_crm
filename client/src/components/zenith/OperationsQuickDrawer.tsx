@@ -19,6 +19,10 @@ import ZenithDrawerPaymentSummary from './ZenithDrawerPaymentSummary'
 import { formatZenithSystemCapacityKw } from '../../utils/zenithSystemCapacityFormat'
 import { useZenithDrawerToastStyle } from '../../utils/zenithDrawerToastStyle'
 import {
+  patchZenithDrawerProject,
+  scheduleZenithAfterProjectSave,
+} from '../../utils/zenithDrawerProjectCache'
+import {
   zenithDrawerMotion,
   ZENITH_DRAWER_CLOSE_BTN_CLASS,
   ZENITH_DRAWER_PANEL_CLASS,
@@ -236,25 +240,12 @@ export default function OperationsQuickDrawer({
   const runQueuedToast = (text = '✓ Saved — will sync when back online') =>
     setQueuedToast({ text, shownAt: Date.now() })
 
-  const patchProjectCache = useCallback(
+  const applyProjectPatch = useCallback(
     (id: string, patch: Partial<Project>) => {
-      queryClient.setQueryData([QK, id], (prev: Project | undefined) =>
-        prev ? { ...prev, ...patch } : prev,
-      )
+      patchZenithDrawerProject(queryClient, [QK, id], id, patch)
     },
     [queryClient],
   )
-
-  const invalidateAfterSave = async (id: string) => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['zenith'] }),
-      queryClient.invalidateQueries({ queryKey: ['zenith-focus'] }),
-      queryClient.invalidateQueries({ queryKey: ['projects'] }),
-      queryClient.invalidateQueries({ queryKey: ['project', id] }),
-      queryClient.invalidateQueries({ queryKey: ['remarks', id] }),
-      queryClient.invalidateQueries({ queryKey: [QK, id] }),
-    ])
-  }
 
   const putProjectWithOfflineQueue = async (
     id: string,
@@ -263,7 +254,7 @@ export default function OperationsQuickDrawer({
   ): Promise<'queued' | 'ok'> => {
     const result = await safePutProject(id, body, actionType)
     if (result.queued) return 'queued'
-    await invalidateAfterSave(id)
+    scheduleZenithAfterProjectSave(queryClient, id)
     return 'ok'
   }
 
@@ -415,16 +406,10 @@ export default function OperationsQuickDrawer({
                               { projectStatus: nextStatus },
                               'STAGE_CHANGE',
                             )
-                            if (r === 'queued') {
-                              patchProjectCache(project.id, { projectStatus: nextStatus })
-                              fireVictoryToast({ ...project, projectStatus: nextStatus }, prevStatus)
-                              runQueuedToast()
-                              window.setTimeout(() => closeAndClear(), 1500)
-                            } else {
-                              fireVictoryToast({ ...project, projectStatus: nextStatus }, prevStatus)
-                              runToast(`✓ Moved to ${STATUS_LABELS[nextStatus]}`)
-                              window.setTimeout(() => closeAndClear(), 1500)
-                            }
+                            applyProjectPatch(project.id, { projectStatus: nextStatus })
+                            fireVictoryToast({ ...project, projectStatus: nextStatus }, prevStatus)
+                            if (r === 'queued') runQueuedToast()
+                            else runToast(`✓ Moved to ${STATUS_LABELS[nextStatus]}`)
                           } catch (e: unknown) {
                             setError(getFriendlyApiErrorMessage(e))
                           } finally {
@@ -478,7 +463,7 @@ export default function OperationsQuickDrawer({
                           if (r.queued) {
                             runQueuedToast()
                           } else {
-                            await invalidateAfterSave(project.id)
+                            scheduleZenithAfterProjectSave(queryClient, project.id)
                             runToast('✓ Activity logged')
                           }
                         } catch (e: unknown) {
@@ -532,12 +517,9 @@ export default function OperationsQuickDrawer({
                               { projectCost: cost },
                               'UPDATE_VALUE',
                             )
-                            if (r === 'queued') {
-                              patchProjectCache(project.id, { projectCost: cost })
-                              runQueuedToast()
-                            } else {
-                              runToast('✓ Value updated')
-                            }
+                            applyProjectPatch(project.id, { projectCost: cost })
+                            if (r === 'queued') runQueuedToast()
+                            else runToast('✓ Value updated')
                           } catch (e: unknown) {
                             setError(getFriendlyApiErrorMessage(e))
                           } finally {
@@ -625,12 +607,9 @@ export default function OperationsQuickDrawer({
                         try {
                           const body = { ...milestoneBody }
                           const r = await putProjectWithOfflineQueue(project.id, body, 'UPDATE_DATE')
-                          if (r === 'queued') {
-                            patchProjectCache(project.id, body as Partial<Project>)
-                            runQueuedToast()
-                          } else {
-                            runToast('✓ Dates updated')
-                          }
+                          applyProjectPatch(project.id, body as Partial<Project>)
+                          if (r === 'queued') runQueuedToast()
+                          else runToast('✓ Dates updated')
                         } catch (e: unknown) {
                           setError(getFriendlyApiErrorMessage(e))
                         } finally {

@@ -23,6 +23,10 @@ import ZenithDrawerPaymentSummary from './ZenithDrawerPaymentSummary'
 import { formatZenithSystemCapacityKw } from '../../utils/zenithSystemCapacityFormat'
 import { useZenithDrawerToastStyle } from '../../utils/zenithDrawerToastStyle'
 import {
+  patchZenithDrawerProject,
+  scheduleZenithAfterProjectSave,
+} from '../../utils/zenithDrawerProjectCache'
+import {
   zenithDrawerMotion,
   ZENITH_DRAWER_CLOSE_BTN_CLASS,
   ZENITH_DRAWER_PANEL_CLASS,
@@ -111,6 +115,7 @@ export default function QuickActionDrawer({
   projectsPageHref = null,
   /** Admin / Management / Operations: picking a row opens the operations lifecycle drawer instead of this drawer’s single view. */
   onSelectProjectFromList,
+  onPatchListProject,
 }: {
   isOpen: boolean
   projectId: string | null
@@ -123,6 +128,7 @@ export default function QuickActionDrawer({
   /** List mode: deep link to Projects with the same filters as this drawer list. */
   projectsPageHref?: string | null
   onSelectProjectFromList?: (projectId: string) => void
+  onPatchListProject?: (id: string, patch: Partial<ZenithExplorerProject>) => void
 }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -287,24 +293,24 @@ export default function QuickActionDrawer({
   const runQueuedToast = (text = '✓ Saved — will sync when back online') =>
     setQueuedToast({ text, shownAt: Date.now() })
 
-  const patchQuickActionProjectCache = useCallback(
+  const applyProjectPatch = useCallback(
     (id: string, patch: Partial<Project>) => {
-      queryClient.setQueryData(['quick-action-project', id], (prev: Project | undefined) =>
-        prev ? { ...prev, ...patch } : prev,
-      )
+      patchZenithDrawerProject(queryClient, ['quick-action-project', id], id, patch)
+      if (patch.projectStatus) {
+        onPatchListProject?.(id, {
+          projectStatus: patch.projectStatus,
+          stageLabel: STATUS_LABELS[patch.projectStatus] || String(patch.projectStatus),
+        })
+      }
+      if (patch.projectCost !== undefined) {
+        onPatchListProject?.(id, {
+          deal_value: Number(patch.projectCost ?? 0),
+          has_deal_value: patch.projectCost != null && Number(patch.projectCost) > 0,
+        })
+      }
     },
-    [queryClient],
+    [queryClient, onPatchListProject],
   )
-
-  const invalidateAfterSave = async (id: string) => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['zenith'] }),
-      queryClient.invalidateQueries({ queryKey: ['zenith-focus'] }),
-      queryClient.invalidateQueries({ queryKey: ['projects'] }),
-      queryClient.invalidateQueries({ queryKey: ['project', id] }),
-      queryClient.invalidateQueries({ queryKey: ['remarks', id] }),
-    ])
-  }
 
   const putProjectWithOfflineQueue = async (
     id: string,
@@ -313,7 +319,7 @@ export default function QuickActionDrawer({
   ): Promise<'queued' | 'ok'> => {
     const result = await safePutProject(id, body, actionType)
     if (result.queued) return 'queued'
-    await invalidateAfterSave(id)
+    scheduleZenithAfterProjectSave(queryClient, id)
     return 'ok'
   }
 
@@ -557,16 +563,10 @@ export default function QuickActionDrawer({
                               { projectStatus: nextStatus },
                               'STAGE_CHANGE',
                             )
-                            if (r === 'queued') {
-                              patchQuickActionProjectCache(project.id, { projectStatus: nextStatus })
-                              fireVictoryToast({ ...project, projectStatus: nextStatus }, prevStatus)
-                              runQueuedToast()
-                              window.setTimeout(() => closeAndClear(), 1500)
-                            } else {
-                              fireVictoryToast({ ...project, projectStatus: nextStatus }, prevStatus)
-                              runToast(`✓ Moved to ${STATUS_LABELS[nextStatus]}`)
-                              window.setTimeout(() => closeAndClear(), 1500)
-                            }
+                            applyProjectPatch(project.id, { projectStatus: nextStatus })
+                            fireVictoryToast({ ...project, projectStatus: nextStatus }, prevStatus)
+                            if (r === 'queued') runQueuedToast()
+                            else runToast(`✓ Moved to ${STATUS_LABELS[nextStatus]}`)
                           } catch (e: unknown) {
                             setError(getFriendlyApiErrorMessage(e))
                           } finally {
@@ -623,7 +623,7 @@ export default function QuickActionDrawer({
                           if (r.queued) {
                             runQueuedToast()
                           } else {
-                            await invalidateAfterSave(project.id)
+                            scheduleZenithAfterProjectSave(queryClient, project.id)
                             runToast('✓ Activity logged')
                           }
                         } catch (e: unknown) {
@@ -677,12 +677,9 @@ export default function QuickActionDrawer({
                               { projectCost: cost },
                               'UPDATE_VALUE',
                             )
-                            if (r === 'queued') {
-                              patchQuickActionProjectCache(project.id, { projectCost: cost })
-                              runQueuedToast()
-                            } else {
-                              runToast('✓ Value updated')
-                            }
+                            applyProjectPatch(project.id, { projectCost: cost })
+                            if (r === 'queued') runQueuedToast()
+                            else runToast('✓ Value updated')
                           } catch (e: unknown) {
                             setError(getFriendlyApiErrorMessage(e))
                           } finally {
@@ -752,14 +749,11 @@ export default function QuickActionDrawer({
                               { confirmationDate: iso },
                               'UPDATE_DATE',
                             )
-                            if (r === 'queued') {
-                              patchQuickActionProjectCache(project.id, {
-                                confirmationDate: iso === null ? undefined : iso,
-                              })
-                              runQueuedToast()
-                            } else {
-                              runToast('✓ Date updated')
-                            }
+                            applyProjectPatch(project.id, {
+                              confirmationDate: iso === null ? undefined : iso,
+                            })
+                            if (r === 'queued') runQueuedToast()
+                            else runToast('✓ Date updated')
                           } catch (e: unknown) {
                             setError(getFriendlyApiErrorMessage(e))
                           } finally {

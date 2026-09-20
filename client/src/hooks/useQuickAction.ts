@@ -40,6 +40,7 @@ export type ZenithQuickActionHandle = {
     chartResetGroup?: ZenithChartGroup
   }) => void
   closeDrawer: () => void
+  patchFilteredProject: (id: string, patch: Partial<ZenithExplorerProject>) => void
   setSaving: Dispatch<SetStateAction<boolean>>
   setSaveSuccess: Dispatch<SetStateAction<boolean>>
   setError: Dispatch<SetStateAction<string | null>>
@@ -110,6 +111,10 @@ export function useQuickAction(): ZenithQuickActionHandle {
     if (resetGroup) dispatchZenithChartsTouchReset(resetGroup)
   }, [])
 
+  const patchFilteredProject = useCallback((id: string, patch: Partial<ZenithExplorerProject>) => {
+    setFilteredProjects((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)))
+  }, [])
+
   return useMemo<ZenithQuickActionHandle>(
     () => ({
       isOpen,
@@ -126,6 +131,7 @@ export function useQuickAction(): ZenithQuickActionHandle {
       openDrawer,
       openDrawerListMode,
       closeDrawer,
+      patchFilteredProject,
       setSaving,
       setSaveSuccess,
       setError,
@@ -145,6 +151,7 @@ export function useQuickAction(): ZenithQuickActionHandle {
       openDrawer,
       openDrawerListMode,
       closeDrawer,
+      patchFilteredProject,
     ],
   )
 }

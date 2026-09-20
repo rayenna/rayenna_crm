@@ -576,6 +576,7 @@ const Zenith = () => {
           listAmountMode={quickAction.listAmountMode}
           autoFocusSection={quickAction.autoFocusSection}
           projectsPageHref={quickAction.projectsPageHref}
+          onPatchListProject={quickAction.patchFilteredProject}
           onSelectProjectFromList={
             user?.role === UserRole.ADMIN ||
             user?.role === UserRole.MANAGEMENT ||
