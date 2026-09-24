@@ -77,10 +77,10 @@ export function useRoofLayoutEditorState(params: Params) {
   );
 
   const allPanelsFlat = flattenFacetPanels(facets);
+  // Polygon + image is enough for live 3D. Do not require panels — clearing panels
+  // briefly (e.g. mid-rotate) must not kick the user back to the 2D tab on mobile.
   const has3DRoofData =
-    facets.some((f) => f.polygon != null && f.polygon.length >= 3) &&
-    allPanelsFlat.length > 0 &&
-    imageSize != null;
+    facets.some((f) => f.polygon != null && f.polygon.length >= 3) && imageSize != null;
 
   const crmProjectId = activeProject?.master?.crmProjectId;
   const isSavedForThisProject =

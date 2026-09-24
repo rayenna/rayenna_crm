@@ -28,6 +28,11 @@ type Props = {
   onExportPNG: (dataUrl: string) => void | Promise<void>;
   /** Portrait module footprint (m) from CRM SKU resolution — visual parity with 2D packing. */
   portraitModuleSizeM?: { widthM: number; heightM: number };
+  /** When true, drag the 3D array to translate the shared roof outline (2D-parity). */
+  layoutDragEnabled?: boolean;
+  onTranslateLayout?: (delta: { dxPx: number; dyPx: number }) => void;
+  onRotateLayout?: (delta: { angleRad: number }) => void;
+  onTogglePanelOrientation?: () => void;
 };
 
 export function RoofLayout3DPreviewShell({
@@ -50,6 +55,10 @@ export function RoofLayout3DPreviewShell({
   last3dPngDataUrl,
   onExportPNG,
   portraitModuleSizeM,
+  layoutDragEnabled = false,
+  onTranslateLayout,
+  onRotateLayout,
+  onTogglePanelOrientation,
 }: Props) {
   const panelCoordinates = allPanelsFlat.map((p) => ({
     x: p.x,
@@ -70,6 +79,10 @@ export function RoofLayout3DPreviewShell({
     panelCount,
     onExportPNG,
     portraitModuleSizeM,
+    layoutDragEnabled,
+    onTranslateLayout,
+    onRotateLayout,
+    onTogglePanelOrientation,
   };
 
   return (

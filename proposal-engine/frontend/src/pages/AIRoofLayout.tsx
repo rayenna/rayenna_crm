@@ -31,6 +31,12 @@ import {
   persistRoofLayoutToActiveCustomer,
 } from '../lib/roofLayout/roofLayoutCustomerSync';
 import { computePanelsForPolygon } from '../lib/roofLayout/computePanelsForPolygon';
+import {
+  polygonAabbCenter,
+  rotatePointsAround,
+  rotatePolygonQuarterTurns,
+  snapRotationToRightAngle,
+} from '../lib/roofLayout/rotateRoofLayoutPoints';
 import { runGenerateRoofLayoutDraft } from '../lib/roofLayout/generateRoofLayoutDraft';
 import { parseManualRoofLayoutHydrate } from '../lib/roofLayout/hydrateManualRoofLayout';
 import {
@@ -434,6 +440,84 @@ export default function AIRoofLayout() {
 
   /** Mobile uses Scroll vs Edit tools; desktop always shows roof handles in editing mode. */
   const canEditRoofPolygon = layoutMode === 'editing' && (mapEditTool === 'roof' || !isMobileView);
+
+  /** 3D array drag uses the same gate as 2D outline move (mobile: Move panels tool). */
+  const canDragLayoutIn3d = layoutMode === 'editing' && (mapEditTool === 'roof' || !isMobileView);
+
+  // Keepouts are 2D-only; leaving keepout tool selected would block 3D move on mobile.
+  useEffect(() => {
+    if (roofViewTab === '3d' && mapEditTool === 'keepout') {
+      setMapEditTool('scroll');
+    }
+  }, [roofViewTab, mapEditTool]);
+
+  const handleTranslateLayout3d = (delta: { dxPx: number; dyPx: number }) => {
+    if (!polygon?.length) return;
+    const dx = delta.dxPx;
+    const dy = delta.dyPx;
+    if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+    if (Math.abs(dx) + Math.abs(dy) <= 8) return;
+    const next = polygon.map((p) => ({ x: p.x + dx, y: p.y + dy }));
+    polygonHistory.commitChange(polygon, next);
+    patchActiveFacet({
+      polygon: next,
+      panels: (panels ?? []).map((p) => ({ ...p, x: p.x + dx, y: p.y + dy })),
+    });
+  };
+
+  const handleRotateLayout3d = (delta: { angleRad: number }) => {
+    if (!polygon?.length) return;
+    if (!Number.isFinite(delta.angleRad)) return;
+    const angleRad = snapRotationToRightAngle(delta.angleRad);
+    if (Math.abs(angleRad) < 0.02) return;
+    const pivot = polygonAabbCenter(polygon);
+    const next = rotatePointsAround(polygon, pivot, angleRad);
+    polygonHistory.commitChange(polygon, next);
+
+    // Recompute panels in the same tick — never leave panels empty or mobile 3D
+    // briefly loses has3DRoofData / unmounts the WebGL view.
+    const maxCap = typeof window !== 'undefined' && window.innerWidth < 768 ? 150 : 300;
+    const kwEach = splitTargetKwAcrossFacets(targetSystemKw, facets.length);
+    const { panels: nextPanels } = computePanelsForPolygon(next, {
+      ...panelPackBase,
+      maxPanelsCap: maxCap,
+      targetKw: kwEach,
+    });
+    patchActiveFacet({ polygon: next, panels: nextPanels });
+  };
+
+  const handleTogglePanelOrientation3d = () => {
+    setPanelOrientation((prev) => (prev === 'portrait' ? 'landscape' : 'portrait'));
+  };
+
+  /**
+   * Mobile/desktop Rotate 90° buttons. Seed roofs are nearly square, so outline-only
+   * rotate is hard to see with axis-aligned packing. Always flip module orientation
+   * as well so the panel grid clearly turns (matches user expectation of "rotate 90°").
+   */
+  const handleRotateLayoutByQuarterTurns = (quarters: number) => {
+    if (!polygon?.length) return;
+    if (!Number.isFinite(quarters) || quarters === 0) return;
+
+    const nextPoly = rotatePolygonQuarterTurns(polygon, quarters);
+    const nextOrient: 'portrait' | 'landscape' =
+      panelOrientation === 'portrait' ? 'landscape' : 'portrait';
+
+    polygonHistory.commitChange(polygon, nextPoly);
+    setPanelOrientation(nextOrient);
+
+    const maxCap = typeof window !== 'undefined' && window.innerWidth < 768 ? 150 : 300;
+    const kwEach = splitTargetKwAcrossFacets(targetSystemKw, facets.length);
+    const moduleSizeM = orientModuleDimensions(resolvedModule, nextOrient);
+    const { panels: nextPanels } = computePanelsForPolygon(nextPoly, {
+      ...panelPackBase,
+      panelOrientation: nextOrient,
+      moduleSizeM,
+      maxPanelsCap: maxCap,
+      targetKw: kwEach,
+    });
+    patchActiveFacet({ polygon: nextPoly, panels: nextPanels });
+  };
 
   /** When satellite disk URL 404s, still show the persisted proposal JPEG from Cloudinary/DB. */
   const layoutPreviewFallbackUrl =
@@ -1325,6 +1409,10 @@ export default function AIRoofLayout() {
                         widthM: resolvedModule.portraitWidthM,
                         heightM: resolvedModule.portraitHeightM,
                       }}
+                      layoutDragEnabled={canDragLayoutIn3d}
+                      onTranslateLayout={handleTranslateLayout3d}
+                      onRotateLayout={handleRotateLayout3d}
+                      onTogglePanelOrientation={handleTogglePanelOrientation3d}
                     />
                   ) : (
                     <div
@@ -1467,7 +1555,7 @@ export default function AIRoofLayout() {
                 )}
                 </div>
 
-                  {isNarrowViewport && roofViewTab !== '3d' && layoutMode === 'editing' && (
+                  {isNarrowViewport && layoutMode === 'editing' && (
                     <RoofLayoutMobileMapTools
                       mapEditTool={mapEditTool}
                       layoutMode={layoutMode}
@@ -1476,6 +1564,10 @@ export default function AIRoofLayout() {
                       hasPolygon={!!polygon?.length}
                       onSetMapTool={setMapTool}
                       onCenterMap={centerMapOnActiveRoof}
+                      viewMode={roofViewTab === '3d' ? '3d' : '2d'}
+                      panelOrientation={panelOrientation}
+                      onTogglePanelOrientation={handleTogglePanelOrientation3d}
+                      onRotateQuarterTurn={handleRotateLayoutByQuarterTurns}
                     />
                   )}
 

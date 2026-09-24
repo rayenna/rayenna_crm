@@ -39,6 +39,12 @@ export type Solar3DViewHandle = {
   captureCurrentViewPng: () => Promise<string | null>;
 };
 
+/** Pixel-space translate of the shared roof outline (same contract as 2D bbox drag). */
+export type Solar3DLayoutTranslate = { dxPx: number; dyPx: number };
+
+/** Image-space CCW rotation (radians) around the roof polygon centroid. */
+export type Solar3DLayoutRotate = { angleRad: number };
+
 export interface Solar3DViewProps {
   roofPolygon: { x: number; y: number }[];
   // Pixel coords from Konva panelCoordinates
@@ -67,6 +73,17 @@ export interface Solar3DViewProps {
    * oversized wrapper so touch orbit works and layout does not fight scrollbars. Clamped internally.
    */
   resolutionScale?: number;
+  /**
+   * When true, dragging the panel array (not empty sky) translates the layout in image pixels.
+   * On mobile, parent should gate this (e.g. “Move panels” tool) so orbit remains usable.
+   */
+  layoutDragEnabled?: boolean;
+  /** Commit a translate after pointer-up (same polygon move as 2D). */
+  onTranslateLayout?: (delta: Solar3DLayoutTranslate) => void;
+  /** Commit a yaw after rotate-handle / two-finger gesture (rotates shared roof outline). */
+  onRotateLayout?: (delta: Solar3DLayoutRotate) => void;
+  /** Double-tap the array to flip portrait ↔ landscape (same as Orientation control). */
+  onTogglePanelOrientation?: () => void;
 }
 
 const roofDepthM = 0.6; // panel base height above satellite (legacy “slab” depth; modules sit on metal rack)
@@ -107,6 +124,10 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
     controlsPortalHost = null,
     resolutionScale: resolutionScaleProp = 1,
     portraitModuleSizeM,
+    layoutDragEnabled = false,
+    onTranslateLayout,
+    onRotateLayout,
+    onTogglePanelOrientation,
   },
   ref,
 ) {
@@ -130,6 +151,11 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
   const roofSidesMeshRef = useRef<THREE.Mesh | null>(null);
   const roofTopMeshRef = useRef<THREE.Mesh | null>(null);
   const metalRackGroupRef = useRef<THREE.Group | null>(null);
+  const layoutDragHandleRef = useRef<THREE.Mesh | null>(null);
+  const layoutDragOutlineRef = useRef<THREE.LineSegments | null>(null);
+  const layoutRotateHandleRef = useRef<THREE.Mesh | null>(null);
+  const layoutManipGroupRef = useRef<THREE.Group | null>(null);
+  const layoutManipPivotRef = useRef({ x: 0, y: 0 });
   const gridRef = useRef<THREE.GridHelper | null>(null);
   const groundPlaneRef = useRef<THREE.Mesh | null>(null);
   const groundGridRef = useRef<THREE.GridHelper | null>(null);
@@ -147,6 +173,40 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
   const revealToRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 12, 10));
   const revealFinishedRef = useRef(false);
   const environmentMapRef = useRef<THREE.Texture | null>(null);
+  const layoutDragEnabledRef = useRef(layoutDragEnabled);
+  layoutDragEnabledRef.current = layoutDragEnabled;
+  const onTranslateLayoutRef = useRef(onTranslateLayout);
+  onTranslateLayoutRef.current = onTranslateLayout;
+  const onRotateLayoutRef = useRef(onRotateLayout);
+  onRotateLayoutRef.current = onRotateLayout;
+  const onTogglePanelOrientationRef = useRef(onTogglePanelOrientation);
+  onTogglePanelOrientationRef.current = onTogglePanelOrientation;
+  const metersPerPixelRef = useRef(metersPerPixel);
+  metersPerPixelRef.current = metersPerPixel;
+  const layoutDragSessionRef = useRef<{
+    mode: 'translate' | 'rotate';
+    pointerId: number;
+    startHit: THREE.Vector3;
+    midX: number;
+    midY: number;
+    worldDx: number;
+    worldDy: number;
+    /** World +Z yaw applied to manip group (radians). */
+    worldRotZ: number;
+    startAngle: number;
+    moved: boolean;
+  } | null>(null);
+  const layoutPointersRef = useRef<
+    Map<number, { clientX: number; clientY: number; hit: THREE.Vector3 }>
+  >(new Map());
+  const twoFingerRotateRef = useRef<{ startAngle: number; baseRotZ: number } | null>(null);
+  const lastTapRef = useRef<{ t: number; x: number; y: number } | null>(null);
+  const layoutDragPlaneRef = useRef(new THREE.Plane(new THREE.Vector3(0, 0, 1), 0));
+  const layoutDragRaycasterRef = useRef(new THREE.Raycaster());
+  const layoutDragNdcRef = useRef(new THREE.Vector2());
+  const layoutDragHitRef = useRef(new THREE.Vector3());
+  const [layoutDragging, setLayoutDragging] = useState(false);
+  const [layoutGestureMode, setLayoutGestureMode] = useState<'translate' | 'rotate' | null>(null);
 
   const [tiltDeg, setTiltDeg] = useState(10);
   const [sunElevationDeg, setSunElevationDeg] = useState(45);
@@ -496,10 +556,321 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
 
     animate();
 
+    const raycaster = layoutDragRaycasterRef.current;
+    const ndc = layoutDragNdcRef.current;
+    const hitPoint = layoutDragHitRef.current;
+    const dragPlane = layoutDragPlaneRef.current;
+
+    const setNdcFromEvent = (e: PointerEvent) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      const w = Math.max(1, rect.width);
+      const h = Math.max(1, rect.height);
+      ndc.x = ((e.clientX - rect.left) / w) * 2 - 1;
+      ndc.y = -((e.clientY - rect.top) / h) * 2 + 1;
+    };
+
+    const collectDragTargets = (): THREE.Object3D[] => {
+      const targets: THREE.Object3D[] = [];
+      if (layoutDragHandleRef.current) targets.push(layoutDragHandleRef.current);
+      if (layoutDragOutlineRef.current) targets.push(layoutDragOutlineRef.current);
+      if (layoutRotateHandleRef.current) targets.push(layoutRotateHandleRef.current);
+      for (const p of panelsRef.current) targets.push(p);
+      if (metalRackGroupRef.current) targets.push(metalRackGroupRef.current);
+      return targets;
+    };
+
+    const resetManipVisual = () => {
+      const manip = layoutManipGroupRef.current;
+      if (!manip) return;
+      manip.position.set(layoutManipPivotRef.current.x, layoutManipPivotRef.current.y, 0);
+      manip.rotation.z = 0;
+    };
+
+    const applyManipVisual = (worldDx: number, worldDy: number, worldRotZ: number) => {
+      const manip = layoutManipGroupRef.current;
+      if (!manip) return;
+      manip.position.set(
+        layoutManipPivotRef.current.x + worldDx,
+        layoutManipPivotRef.current.y + worldDy,
+        0,
+      );
+      manip.rotation.z = worldRotZ;
+    };
+
+    const angleAboutPivot = (hit: THREE.Vector3, midX: number, midY: number) =>
+      Math.atan2(hit.y - midY, hit.x - midX);
+
+    const tryDoubleTapToggle = (e: PointerEvent, onArray: boolean) => {
+      if (!onArray || !onTogglePanelOrientationRef.current) return false;
+      const now = performance.now();
+      const prev = lastTapRef.current;
+      lastTapRef.current = { t: now, x: e.clientX, y: e.clientY };
+      if (!prev) return false;
+      const dt = now - prev.t;
+      const dist = Math.hypot(e.clientX - prev.x, e.clientY - prev.y);
+      if (dt <= 350 && dist <= 36) {
+        lastTapRef.current = null;
+        onTogglePanelOrientationRef.current();
+        return true;
+      }
+      return false;
+    };
+
+    const endLayoutDrag = (e: PointerEvent, commit: boolean) => {
+      const session = layoutDragSessionRef.current;
+      layoutPointersRef.current.delete(e.pointerId);
+
+      // Two-finger rotate end when either finger lifts
+      if (twoFingerRotateRef.current && layoutPointersRef.current.size < 2) {
+        const manip = layoutManipGroupRef.current;
+        const worldRotZ = manip?.rotation.z ?? 0;
+        twoFingerRotateRef.current = null;
+        layoutDragSessionRef.current = null;
+        setLayoutDragging(false);
+        setLayoutGestureMode(null);
+        if (controls) controls.enabled = true;
+        try {
+          renderer.domElement.releasePointerCapture(e.pointerId);
+        } catch {
+          /* ignore */
+        }
+        if (commit && Math.abs(worldRotZ) > 0.04) {
+          // World +Z → image CCW (Y-down): negate
+          onRotateLayoutRef.current?.({ angleRad: -worldRotZ });
+        } else {
+          resetManipVisual();
+        }
+        return;
+      }
+
+      if (!session || session.pointerId !== e.pointerId) return;
+      layoutDragSessionRef.current = null;
+      setLayoutDragging(false);
+      setLayoutGestureMode(null);
+      try {
+        renderer.domElement.releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+      if (controls) controls.enabled = true;
+      renderer.domElement.style.cursor = layoutDragEnabledRef.current ? 'grab' : '';
+
+      const mpp = metersPerPixelRef.current;
+      if (!commit || !session.moved || !Number.isFinite(mpp) || mpp <= 0) {
+        resetManipVisual();
+        return;
+      }
+
+      if (session.mode === 'rotate') {
+        if (Math.abs(session.worldRotZ) < 0.04) {
+          resetManipVisual();
+          return;
+        }
+        onRotateLayoutRef.current?.({ angleRad: -session.worldRotZ });
+        return;
+      }
+
+      const dxPx = session.worldDx / mpp;
+      const dyPx = -session.worldDy / mpp;
+      if (Math.abs(dxPx) + Math.abs(dyPx) <= 8) {
+        resetManipVisual();
+        return;
+      }
+      onTranslateLayoutRef.current?.({ dxPx, dyPx });
+    };
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (!layoutDragEnabledRef.current) return;
+      if (!onTranslateLayoutRef.current && !onRotateLayoutRef.current) return;
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      if (!camera) return;
+      setNdcFromEvent(e);
+      raycaster.setFromCamera(ndc, camera);
+      const hits = raycaster.intersectObjects(collectDragTargets(), true);
+      const onArray = hits.length > 0;
+
+      if (tryDoubleTapToggle(e, onArray)) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return;
+      }
+
+      if (!onArray) return;
+
+      const z = hits[0]?.point.z ?? 2.6;
+      dragPlane.set(new THREE.Vector3(0, 0, 1), -z);
+      if (!raycaster.ray.intersectPlane(dragPlane, hitPoint)) return;
+
+      const midX = layoutManipPivotRef.current.x;
+      const midY = layoutManipPivotRef.current.y;
+      layoutPointersRef.current.set(e.pointerId, {
+        clientX: e.clientX,
+        clientY: e.clientY,
+        hit: hitPoint.clone(),
+      });
+
+      // Second finger on array → two-finger rotate
+      if (layoutPointersRef.current.size >= 2 && onRotateLayoutRef.current) {
+        const pts = [...layoutPointersRef.current.values()];
+        const a = pts[0]!.hit;
+        const b = pts[1]!.hit;
+        const startAngle = Math.atan2(b.y - a.y, b.x - a.x);
+        const baseRotZ = layoutManipGroupRef.current?.rotation.z ?? 0;
+        twoFingerRotateRef.current = { startAngle, baseRotZ };
+        layoutDragSessionRef.current = null;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (controls) controls.enabled = false;
+        renderer.domElement.setPointerCapture(e.pointerId);
+        setLayoutDragging(true);
+        setLayoutGestureMode('rotate');
+        return;
+      }
+
+      const hitObj = hits[0]?.object;
+      let isRotateHandle = false;
+      let o: THREE.Object3D | null = hitObj ?? null;
+      while (o) {
+        if (o.userData?.layoutRotateHandle) {
+          isRotateHandle = true;
+          break;
+        }
+        o = o.parent;
+      }
+
+      const mode: 'translate' | 'rotate' =
+        isRotateHandle && onRotateLayoutRef.current ? 'rotate' : 'translate';
+      if (mode === 'translate' && !onTranslateLayoutRef.current) return;
+      if (mode === 'rotate' && !onRotateLayoutRef.current) return;
+
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (controls) controls.enabled = false;
+      renderer.domElement.setPointerCapture(e.pointerId);
+      renderer.domElement.style.cursor = mode === 'rotate' ? 'grabbing' : 'grabbing';
+
+      layoutDragSessionRef.current = {
+        mode,
+        pointerId: e.pointerId,
+        startHit: hitPoint.clone(),
+        midX,
+        midY,
+        worldDx: layoutManipGroupRef.current
+          ? layoutManipGroupRef.current.position.x - midX
+          : 0,
+        worldDy: layoutManipGroupRef.current
+          ? layoutManipGroupRef.current.position.y - midY
+          : 0,
+        worldRotZ: layoutManipGroupRef.current?.rotation.z ?? 0,
+        startAngle: angleAboutPivot(hitPoint, midX, midY),
+        moved: false,
+      };
+      setLayoutDragging(true);
+      setLayoutGestureMode(mode);
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (layoutPointersRef.current.has(e.pointerId)) {
+        setNdcFromEvent(e);
+        raycaster.setFromCamera(ndc, camera!);
+        if (raycaster.ray.intersectPlane(dragPlane, hitPoint)) {
+          layoutPointersRef.current.set(e.pointerId, {
+            clientX: e.clientX,
+            clientY: e.clientY,
+            hit: hitPoint.clone(),
+          });
+        }
+      }
+
+      // Two-finger rotate
+      if (twoFingerRotateRef.current && layoutPointersRef.current.size >= 2) {
+        e.preventDefault();
+        const pts = [...layoutPointersRef.current.values()];
+        const a = pts[0]!.hit;
+        const b = pts[1]!.hit;
+        const ang = Math.atan2(b.y - a.y, b.x - a.x);
+        const delta = ang - twoFingerRotateRef.current.startAngle;
+        const worldRotZ = twoFingerRotateRef.current.baseRotZ + delta;
+        const manip = layoutManipGroupRef.current;
+        const dx = manip ? manip.position.x - layoutManipPivotRef.current.x : 0;
+        const dy = manip ? manip.position.y - layoutManipPivotRef.current.y : 0;
+        applyManipVisual(dx, dy, worldRotZ);
+        return;
+      }
+
+      const session = layoutDragSessionRef.current;
+      if (!session) {
+        if (!layoutDragEnabledRef.current || !camera) return;
+        setNdcFromEvent(e);
+        raycaster.setFromCamera(ndc, camera);
+        const overHits = raycaster.intersectObjects(collectDragTargets(), true);
+        let cursor = '';
+        if (overHits.length) {
+          let o: THREE.Object3D | null = overHits[0]?.object ?? null;
+          let rot = false;
+          while (o) {
+            if (o.userData?.layoutRotateHandle) {
+              rot = true;
+              break;
+            }
+            o = o.parent;
+          }
+          cursor = rot ? 'crosshair' : 'grab';
+        }
+        renderer.domElement.style.cursor = cursor;
+        return;
+      }
+      if (session.pointerId !== e.pointerId) return;
+      if (!camera) return;
+      e.preventDefault();
+      setNdcFromEvent(e);
+      raycaster.setFromCamera(ndc, camera);
+      if (!raycaster.ray.intersectPlane(dragPlane, hitPoint)) return;
+
+      if (session.mode === 'rotate') {
+        const ang = angleAboutPivot(hitPoint, session.midX, session.midY);
+        let delta = ang - session.startAngle;
+        // unwrap
+        while (delta > Math.PI) delta -= Math.PI * 2;
+        while (delta < -Math.PI) delta += Math.PI * 2;
+        if (Math.abs(delta) > 0.04) session.moved = true;
+        if (!session.moved) return;
+        session.worldRotZ = delta;
+        applyManipVisual(session.worldDx, session.worldDy, session.worldRotZ);
+        return;
+      }
+
+      const worldDx = hitPoint.x - session.startHit.x;
+      const worldDy = hitPoint.y - session.startHit.y;
+      const mpp = metersPerPixelRef.current || 0.149;
+      const distPx = (Math.abs(worldDx) + Math.abs(worldDy)) / mpp;
+      if (distPx > 8) session.moved = true;
+      if (!session.moved) return;
+      session.worldDx = worldDx;
+      session.worldDy = worldDy;
+      applyManipVisual(worldDx, worldDy, session.worldRotZ);
+    };
+
+    const onPointerUp = (e: PointerEvent) => endLayoutDrag(e, true);
+    const onPointerCancel = (e: PointerEvent) => endLayoutDrag(e, false);
+
+    renderer.domElement.addEventListener('pointerdown', onPointerDown, true);
+    renderer.domElement.addEventListener('pointermove', onPointerMove);
+    renderer.domElement.addEventListener('pointerup', onPointerUp);
+    renderer.domElement.addEventListener('pointercancel', onPointerCancel);
+
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       if (resizeRaf != null) cancelAnimationFrame(resizeRaf);
       resizeObserver.disconnect();
+
+      renderer.domElement.removeEventListener('pointerdown', onPointerDown, true);
+      renderer.domElement.removeEventListener('pointermove', onPointerMove);
+      renderer.domElement.removeEventListener('pointerup', onPointerUp);
+      renderer.domElement.removeEventListener('pointercancel', onPointerCancel);
+      layoutDragSessionRef.current = null;
+      layoutPointersRef.current.clear();
+      twoFingerRotateRef.current = null;
 
       scene.environment = null;
       if (environmentMapRef.current) {
@@ -541,6 +912,10 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
       roofSidesMeshRef.current = null;
       roofTopMeshRef.current = null;
       metalRackGroupRef.current = null;
+      layoutDragHandleRef.current = null;
+      layoutDragOutlineRef.current = null;
+      layoutRotateHandleRef.current = null;
+      layoutManipGroupRef.current = null;
       gridRef.current = null;
       groundPlaneRef.current = null;
       groundGridRef.current = null;
@@ -566,6 +941,23 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }, [resolutionScale]);
+
+  useEffect(() => {
+    const handle = layoutDragHandleRef.current;
+    const outline = layoutDragOutlineRef.current;
+    const rot = layoutRotateHandleRef.current;
+    if (handle) {
+      handle.visible = layoutDragEnabled;
+      const mat = handle.material as THREE.MeshBasicMaterial;
+      mat.opacity = layoutDragEnabled ? (layoutDragging ? 0.2 : 0.1) : 0;
+      mat.needsUpdate = true;
+    }
+    if (outline) outline.visible = layoutDragEnabled;
+    if (rot) rot.visible = layoutDragEnabled;
+    layoutManipGroupRef.current?.traverse((obj) => {
+      if (obj.userData?.layoutRotateHandle) obj.visible = layoutDragEnabled;
+    });
+  }, [layoutDragEnabled, layoutDragging]);
 
   useEffect(() => {
     const group = groupRef.current;
@@ -641,9 +1033,34 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
         const material = (mesh as any).material as THREE.Material | undefined;
         if (material) mats.add(material);
       });
-      group.remove(metalRackGroupRef.current);
+      metalRackGroupRef.current.parent?.remove(metalRackGroupRef.current);
       for (const m of mats) m.dispose();
       metalRackGroupRef.current = null;
+    }
+
+    if (layoutDragHandleRef.current) {
+      group.remove(layoutDragHandleRef.current);
+      layoutDragHandleRef.current.geometry.dispose();
+      const hm = layoutDragHandleRef.current.material as THREE.Material;
+      hm.dispose();
+      layoutDragHandleRef.current = null;
+    }
+    if (layoutDragOutlineRef.current) {
+      group.remove(layoutDragOutlineRef.current);
+      layoutDragOutlineRef.current.geometry.dispose();
+      const om = layoutDragOutlineRef.current.material as THREE.Material;
+      om.dispose();
+      layoutDragOutlineRef.current = null;
+    }
+    if (layoutRotateHandleRef.current) {
+      layoutRotateHandleRef.current.geometry.dispose();
+      const rm = layoutRotateHandleRef.current.material as THREE.Material;
+      rm.dispose();
+      layoutRotateHandleRef.current = null;
+    }
+    if (layoutManipGroupRef.current) {
+      group.remove(layoutManipGroupRef.current);
+      layoutManipGroupRef.current = null;
     }
 
     const tiltNow = tiltDegRef.current;
@@ -848,8 +1265,19 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
       rackRoot.add(pad);
     }
 
-    group.add(rackRoot);
     metalRackGroupRef.current = rackRoot;
+
+    // Parent rack under manip group (relative to array center) so translate+rotate share one pivot.
+    const manip = new THREE.Group();
+    manip.position.set(midX, midY, 0);
+    layoutManipPivotRef.current = { x: midX, y: midY };
+    for (const child of rackRoot.children) {
+      child.position.x -= midX;
+      child.position.y -= midY;
+    }
+    manip.add(rackRoot);
+    group.add(manip);
+    layoutManipGroupRef.current = manip;
 
     roofSidesMeshRef.current = null;
     roofTopMeshRef.current = null;
@@ -908,10 +1336,11 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
 
     // Panels
     for (const old of panelsRef.current) {
-      group.remove(old);
+      old.parent?.remove(old);
       disposeMesh(old);
     }
     const panels: THREE.Mesh[] = [];
+    const manipForPanels = layoutManipGroupRef.current;
 
     for (const panel of panelsToRender) {
       const mesh = panelToMesh(panel, effectiveImageSize, metersPerPixel, panelTopTexture);
@@ -938,16 +1367,87 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
 
       // Apply tilt around each panel's local X-axis (panel center).
       mesh.rotation.x = tiltNowRad;
-      // Place panels ON TOP of the roof.
-      // Panel center sits on top of the roof cap surface.
+      // Place panels ON TOP of the roof (local to manip pivot).
+      mesh.position.x -= midX;
+      mesh.position.y -= midY;
       mesh.position.z = roofBaseZ + roofDepthM + PANEL_MESH_THICKNESS_M / 2 + 0.02;
       mesh.castShadow = true;
       mesh.receiveShadow = true;
 
-      group.add(mesh);
+      (manipForPanels ?? group).add(mesh);
       panels.push(mesh);
     }
     panelsRef.current = panels;
+
+    // Drag pad + outline + rotate handle (local to manip).
+    if (panelInsts.length > 0 && manipForPanels) {
+      const padZ = roofBaseZ + roofDepthM + PANEL_MESH_THICKNESS_M + 0.08;
+      const padGeo = new THREE.PlaneGeometry(spanX + 0.55, spanY + 0.55);
+      const pad = new THREE.Mesh(
+        padGeo,
+        new THREE.MeshBasicMaterial({
+          color: 0x16a34a,
+          transparent: true,
+          opacity: layoutDragEnabledRef.current ? 0.1 : 0.0,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        }),
+      );
+      pad.position.set(0, 0, padZ);
+      pad.userData.layoutDragHandle = true;
+      pad.visible = layoutDragEnabledRef.current;
+      manipForPanels.add(pad);
+      layoutDragHandleRef.current = pad;
+
+      const edgeSrc = new THREE.PlaneGeometry(spanX + 0.55, spanY + 0.55);
+      const outline = new THREE.LineSegments(
+        new THREE.EdgesGeometry(edgeSrc),
+        new THREE.LineBasicMaterial({
+          color: 0x16a34a,
+          transparent: true,
+          opacity: 0.95,
+          depthWrite: false,
+        }),
+      );
+      edgeSrc.dispose();
+      outline.position.set(0, 0, padZ + 0.01);
+      outline.userData.layoutDragHandle = true;
+      outline.visible = layoutDragEnabledRef.current;
+      manipForPanels.add(outline);
+      layoutDragOutlineRef.current = outline;
+
+      // Rotate handle — large touch target above the array (north of bbox in local Y).
+      const rotHandle = new THREE.Mesh(
+        new THREE.SphereGeometry(Math.max(0.18, Math.min(0.32, spanY * 0.12)), 16, 12),
+        new THREE.MeshBasicMaterial({
+          color: 0x16a34a,
+          transparent: true,
+          opacity: 0.92,
+          depthWrite: false,
+        }),
+      );
+      rotHandle.position.set(0, spanY / 2 + 0.55, padZ + 0.12);
+      rotHandle.userData.layoutRotateHandle = true;
+      rotHandle.visible = layoutDragEnabledRef.current;
+      manipForPanels.add(rotHandle);
+      layoutRotateHandleRef.current = rotHandle;
+
+      // Stem from outline to rotate handle (visual affordance).
+      const stemLen = 0.55;
+      const stem = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.025, 0.025, stemLen, 8),
+        new THREE.MeshBasicMaterial({
+          color: 0x16a34a,
+          transparent: true,
+          opacity: 0.75,
+          depthWrite: false,
+        }),
+      );
+      stem.position.set(0, spanY / 2 + stemLen / 2, padZ + 0.06);
+      stem.userData.layoutRotateHandle = true;
+      stem.visible = layoutDragEnabledRef.current;
+      manipForPanels.add(stem);
+    }
 
     if (rackGroupRef.current) {
       rackGroupRef.current.children.slice().forEach((child) => {
@@ -1581,6 +2081,16 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
                     </span>
                   </label>
 
+                  {layoutDragEnabled && (
+                    <p className="rounded-lg border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-2 text-[11px] leading-snug text-emerald-100">
+                      {layoutDragging
+                        ? layoutGestureMode === 'rotate'
+                          ? 'Rotating array… release to place.'
+                          : 'Moving array… release to place.'
+                        : 'Drag pad to move · green knob to rotate · two-finger twist on phone · double-tap flips Portrait/Landscape.'}
+                    </p>
+                  )}
+
                   <div className="flex items-center justify-between gap-3">
                     <label className="whitespace-nowrap text-white/90">Panel Tilt</label>
                     <span className="w-14 text-right tabular-nums font-semibold">{tiltDeg}°</span>
@@ -1699,6 +2209,16 @@ const Solar3DView = forwardRef<Solar3DViewHandle, Solar3DViewProps>(function Sol
                       </span>
                     </span>
                   </label>
+
+                  {layoutDragEnabled && (
+                    <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-[11px] leading-snug text-emerald-900">
+                      {layoutDragging
+                        ? layoutGestureMode === 'rotate'
+                          ? 'Rotating array… release to place.'
+                          : 'Moving array… release to place.'
+                        : 'Drag pad to move · green knob to rotate · two-finger twist · double-tap flips Portrait/Landscape. On phone, use Move panels first.'}
+                    </p>
+                  )}
 
                   <div className="flex items-center justify-between gap-3">
                     <label className="whitespace-nowrap text-gray-700 font-medium">Panel tilt</label>

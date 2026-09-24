@@ -795,8 +795,8 @@ export default function HelpPage() {
             </p>
             <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
               <li><strong>Locate site</strong> — CRM coordinates, optional Maps override, <strong>Generate / Regenerate AI Layout</strong></li>
-              <li><strong>Outline roof</strong> — drag corners; <strong>Undo</strong> / <strong>Redo</strong></li>
-              <li><strong>Place panels</strong> — keepouts, density, orientation, <strong>Refill panels</strong> toward target kW</li>
+              <li><strong>Outline roof</strong> — drag corners in <strong>2D</strong>; or move/rotate the array in <strong>3D</strong>; <strong>Undo</strong> / <strong>Redo</strong></li>
+              <li><strong>Place panels</strong> — keepouts (2D), density, orientation, <strong>Refill panels</strong> toward target kW</li>
               <li><strong>Review &amp; save</strong> — status strip (panels, kW, module size, yield hint), then <strong>Save to Proposal</strong> or <strong>⬇ Site plan PDF</strong> (letterhead, customer block, module metrics, north arrow, scale bar — use <em>Save as PDF</em> in the print dialog; enable <strong>Background graphics</strong>)</li>
             </ol>
           </div>
@@ -921,7 +921,14 @@ export default function HelpPage() {
             </p>
             <ul className="mt-2 space-y-1.5 text-sm text-gray-600 list-disc list-inside">
               <li>
-                <strong>Polygon:</strong> Drag <strong>green corner handles</strong> or move the whole roof from inside. <strong>Undo</strong> / <strong>Redo</strong> available. Hover a roof edge for length in metres.
+                <strong>Polygon (2D):</strong> Drag <strong>green corner handles</strong> or move the whole roof
+                from inside the outline. <strong>Undo</strong> / <strong>Redo</strong> available. Hover a roof
+                edge for length in metres.
+              </li>
+              <li>
+                <strong>3D move / rotate:</strong> Same shared outline — drag the green pad to shift; green knob
+                or two-finger twist to rotate; mobile <strong>Rotate 90°</strong> for snap turns. See{' '}
+                <strong>2D vs 3D preview</strong> below.
               </li>
               <li>
                 <strong>Keepouts:</strong> Add <strong>rectangle</strong> or <strong>circle</strong> obstructions (vents, tanks); panels will not fill those areas. Use the keepout tool on mobile or in the tools sidebar on desktop.
@@ -953,15 +960,24 @@ export default function HelpPage() {
           <div>
             <h3 className="font-semibold text-gray-800 mb-2">Laptop / desktop vs phone — what&apos;s different</h3>
             <p className="text-sm text-gray-600 leading-relaxed mb-3">
-              The same tools exist on both, but <strong>mobile adds a mode switch</strong> so you can pan a large map without accidentally dragging the roof.
+              The same tools exist on both, but <strong>mobile adds a mode switch</strong> so you can pan (2D) or
+              orbit (3D) without accidentally dragging the roof.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-600 mb-2">💻 Laptop / desktop</p>
                 <ul className="space-y-1.5 text-sm text-gray-600 list-disc list-inside">
-                  <li>The canvas is always ready to edit: drag <strong>corner handles</strong> or the <strong>whole polygon</strong> with your mouse or trackpad.</li>
-                  <li>Pan the preview by scrolling inside the <strong>layout preview</strong> area (scrollbars or trackpad) while zoomed in.</li>
-                  <li>No separate &quot;Scroll map&quot; toggle — editing and scrolling share the same view naturally.</li>
+                  <li>
+                    <strong>2D:</strong> canvas is always ready to edit — drag <strong>corner handles</strong> or
+                    the <strong>whole polygon</strong> with mouse/trackpad. Pan by scrolling the preview when
+                    zoomed in.
+                  </li>
+                  <li>
+                    <strong>3D:</strong> drag the green pad to move; drag the green knob (or empty sky to orbit).
+                    Double-click/tap the array to flip Portrait/Landscape. Layout tools include density and
+                    Orientation.
+                  </li>
+                  <li>Keyboard in 2D edit: <strong>Esc</strong> scroll · <strong>E</strong> edit outline · <strong>K</strong> keepouts · <strong>Ctrl/Cmd+Z</strong> undo · <strong>Ctrl/Cmd+Y</strong> redo.</li>
                   <li>The app may draw a fuller panel grid on screen for preview (higher cap) while you work.</li>
                 </ul>
               </div>
@@ -969,27 +985,68 @@ export default function HelpPage() {
                 <p className="text-xs font-bold uppercase tracking-wide text-amber-900 mb-2">📱 Mobile (narrow screen)</p>
                 <ul className="space-y-1.5 text-sm text-gray-700 list-disc list-inside">
                   <li>
-                    Above the map: <strong>Scroll map</strong>, <strong>Edit polygon</strong>, and <strong>Keepouts</strong>. Use <strong>Scroll map</strong> to pan the satellite image with one finger.
+                    <strong>2D tools:</strong> <strong>Scroll map</strong>, <strong>Edit polygon</strong>, and{' '}
+                    <strong>Keepouts</strong>. Start in Scroll to frame the building, then Edit polygon to adjust
+                    the roof.
                   </li>
                   <li>
-                    <strong>Edit polygon</strong> — move green handles or the whole roof. <strong>Keepouts</strong> — draw rectangles for vents/tanks.
+                    <strong>3D tools:</strong> <strong>Orbit view</strong> (tumble camera) vs <strong>Move panels</strong>{' '}
+                    (drag pad / green knob / two-finger twist). When Move panels is on:{' '}
+                    <strong>Rotate 90° ↻/↺</strong> and <strong>Portrait ↔ Landscape</strong> appear under the mode
+                    buttons.
                   </li>
                   <li>
-                    Controls (zoom, density, orientation, snap) use larger tap targets; you may see a slightly <strong>simplified on-screen panel grid</strong> while dragging for performance, but <strong>Roof / Usable / Panel count</strong> in the summary still follow the same rules.
+                    Controls (zoom, density, orientation) use larger tap targets; you may see a slightly{' '}
+                    <strong>simplified on-screen panel grid</strong> while dragging for performance, but summary
+                    metrics still follow the same rules.
                   </li>
                 </ul>
               </div>
             </div>
             <p className="text-sm text-gray-600 leading-relaxed mt-3">
-              <strong>Tip:</strong> On a phone, start in <strong>Scroll map</strong> to frame the building, then switch to <strong>Edit polygon</strong> to adjust the roof and panel count.
+              <strong>Tip:</strong> On a phone, frame the site in <strong>Scroll map</strong> (2D) or{' '}
+              <strong>Orbit view</strong> (3D), then switch to <strong>Edit polygon</strong> /{' '}
+              <strong>Move panels</strong> only when you intend to change geometry.
             </p>
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-800 mb-2">2D vs 3D preview</h3>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              Use the <strong>2D</strong> / <strong>3D</strong> tabs above the map. <strong>2D</strong> is the editable layout used for proposals by default. <strong>3D</strong> is an optional perspective view — module blocks use the same CRM module size as 2D (not a generic placeholder). You can capture a 3D PNG and choose 2D or 3D for the proposal embed when saving.
+            <h3 className="font-semibold text-gray-800 mb-2">2D vs 3D preview — and editing in 3D</h3>
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">
+              Use the <strong>2D</strong> / <strong>3D</strong> tabs above the map. <strong>2D</strong> is the primary
+              editable layout (polygon handles, keepouts). <strong>3D</strong> is a live perspective of the same
+              geometry — module blocks use the same CRM module size as 2D. You can <strong>move and rotate the
+              array in 3D</strong>; changes update the shared outline and panels (so 2D and Save stay in sync).
+              Capture a 3D PNG and choose 2D or 3D for the proposal embed when saving.
             </p>
+            <ul className="text-sm text-gray-600 space-y-1.5 list-disc list-inside mb-2">
+              <li>
+                <strong>Move:</strong> Drag the semi-transparent <strong>green pad</strong> (or the panels) to
+                shift the whole array on the roof — same idea as dragging the green outline in 2D.
+              </li>
+              <li>
+                <strong>Rotate (free):</strong> Drag the <strong>green knob</strong> above the array, or use a{' '}
+                <strong>two-finger twist</strong> on a phone/tablet. Near 90° snaps to a right angle. Empty sky
+                still orbits the camera.
+              </li>
+              <li>
+                <strong>Rotate 90° buttons</strong> (mobile tools, when Move panels is on): snap the outline by
+                90° and flip <strong>Portrait ↔ Landscape</strong> so the module grid clearly turns (seed roofs
+                are often nearly square, so outline-only rotate can look unchanged).
+              </li>
+              <li>
+                <strong>Double-tap</strong> the array in 3D to flip Portrait ↔ Landscape without moving the
+                outline (same as the Orientation control).
+              </li>
+              <li>
+                <strong>Keepouts</strong> stay a <strong>2D-only</strong> tool — switch to the 2D tab to add or
+                move keepouts, then return to 3D to review.
+              </li>
+            </ul>
+            <Tip>
+              On a phone in 3D: use <strong>Orbit view</strong> to tumble the camera, then <strong>Move panels</strong>{' '}
+              to drag / rotate the array. Use <strong>Rotate 90°</strong> for quick snaps.
+            </Tip>
           </div>
 
           <div>
@@ -1019,7 +1076,11 @@ export default function HelpPage() {
               <KbdRow keys={['Tab']}           desc="Move to the next input field in a row" />
               <KbdRow keys={['Shift', 'Tab']}  desc="Move to the previous input field" />
               <KbdRow keys={['Enter']}         desc="Confirm a modal or dialog" />
-              <KbdRow keys={['Esc']}           desc="Close a modal or cancel an action" />
+              <KbdRow keys={['Esc']}           desc="Close a modal, or on AI Roof Layout 2D: Scroll map tool" />
+              <KbdRow keys={['E']}             desc="AI Roof Layout 2D: Edit polygon tool" />
+              <KbdRow keys={['K']}             desc="AI Roof Layout 2D: Keepouts tool" />
+              <KbdRow keys={['Ctrl/Cmd', 'Z']} desc="AI Roof Layout 2D: Undo outline change" />
+              <KbdRow keys={['Ctrl/Cmd', 'Y']} desc="AI Roof Layout 2D: Redo outline change" />
             </div>
           </div>
 
@@ -1217,6 +1278,14 @@ export default function HelpPage() {
 
           <FaqItem q="Can I continue a roof layout on another laptop?">
             Yes — after <strong>Save to Proposal</strong>, open the same CRM project on the other device and go to <strong>AI Roof Layout</strong>. The saved polygon, keepouts, and panels reload from the server. Unsaved work-in-progress on one browser is not synced until you save.
+          </FaqItem>
+
+          <FaqItem q="Can I move or rotate panels in the 3D view?">
+            Yes. In <strong>3D</strong>, drag the <strong>green pad</strong> to move the array, or the <strong>green knob</strong> / two-finger twist to rotate. On a phone, switch to <strong>Move panels</strong> first (vs <strong>Orbit view</strong>). Use <strong>Rotate 90°</strong> for snap turns — that also flips Portrait/Landscape so the change is obvious on near-square roofs. Keepouts are still edited in the <strong>2D</strong> tab.
+          </FaqItem>
+
+          <FaqItem q="Why did Rotate 90° also change Portrait to Landscape?">
+            Module packing is axis-aligned. Seed roof outlines are often nearly square, so rotating the outline alone can look unchanged from above. <strong>Rotate 90°</strong> therefore also flips module orientation so the grid clearly turns. Use the separate <strong>Portrait ↔ Landscape</strong> control (or double-tap the array in 3D) if you only want to change module orientation without rotating the outline.
           </FaqItem>
 
           <FaqItem q="What is the difference between Regenerate and Delete layout?">
