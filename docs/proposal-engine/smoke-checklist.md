@@ -38,11 +38,17 @@ Use after PE frontend and/or CRM API deploys, or before merging large PE PRs.
 - [ ] Override Google Maps URL (full URL or `lat, lng`) → regenerate → satellite image changes
 - [ ] Multi-facet: add second roof section → switch facet → panels independent
 - [ ] Edit polygon / keepouts → Save to proposal → reopen `/ai-layout` → geometry restored
+- [ ] **2D move:** drag green outline / corner handles → panels refill → Undo restores prior outline
+- [ ] **3D desktop (Edit):** drag green pad → array shifts; drag green knob → array rotates; empty sky still orbits; switch to 2D → same outline
+- [ ] **3D mobile:** Orbit view vs Move panels; Move panels → drag pad / two-finger twist; **Rotate 90°** flips Portrait/Landscape and stays on 3D tab; Portrait→Landscape button alone still works
+- [ ] **3D double-tap** array → Portrait ↔ Landscape without moving outline
+- [ ] Keepouts: add in 2D only → visible exclusion in panel fill; 3D tools do not offer Keepouts
 - [ ] **Delete layout** → confirm modal → blank page + **Generate AI Layout** → no layout on reopen until regenerated
 - [ ] Customers card: **Map GPS** / **Roof layout** badges and **5** artifact dots when applicable
 - [ ] Customers card (saved layout): **📐 N panels · X.XX kW · brand · W** when `roofLayoutSummary` present
-- [ ] Proposal embed shows layout image when enabled
+- [ ] Proposal embed shows layout image when enabled (2D or 3D preference)
 - [ ] **Site plan PDF:** ⬇ Site plan PDF → print dialog → Save as PDF (logo, customer block, north arrow, scale bar, metrics)
+- [ ] Help → **AI Roof Layout** section documents 2D/3D move-rotate and mobile Orbit / Move panels
 
 ## Roles (spot-check one role you care about)
 
