@@ -41,6 +41,7 @@ export type SolarHubUserListItem = {
     slNo: number;
     projectStatus: ProjectStatus;
     customerName: string;
+    inverterBrand: string | null;
     solisStationId: string | null;
     deyeStationId: string | null;
   };
@@ -81,6 +82,7 @@ function mapListItem(
       slNo: number;
       projectStatus: ProjectStatus;
       customer: { customerName: string };
+      inverterBrand: string | null;
       solisStationId: string | null;
       deyeStationId: string | null;
     };
@@ -100,15 +102,22 @@ function mapListItem(
       slNo: row.project.slNo,
       projectStatus: row.project.projectStatus,
       customerName: row.project.customer.customerName,
+      inverterBrand: row.project.inverterBrand,
       solisStationId: row.project.solisStationId,
       deyeStationId: row.project.deyeStationId,
     },
   };
 }
 
+export type SolarHubPlantLinkFilter = 'solis' | 'deye' | 'none';
+export type SolarHubUserSortBy = 'default' | 'createdAt_desc' | 'createdAt_asc' | 'lastLogin_desc' | 'username_asc';
+
 export async function listSolarHubUsers(input: {
   search?: string;
   active?: 'true' | 'false';
+  inverterBrand?: string;
+  plantLink?: SolarHubPlantLinkFilter;
+  sortBy?: SolarHubUserSortBy;
   page?: number;
   limit?: number;
 }): Promise<{ items: SolarHubUserListItem[]; total: number; page: number; limit: number }> {
@@ -116,28 +125,74 @@ export async function listSolarHubUsers(input: {
   const limit = Math.min(100, Math.max(1, input.limit ?? 50));
   const skip = (page - 1) * limit;
 
-  const where: {
-    isActive?: boolean;
-    OR?: Array<Record<string, unknown>>;
-  } = {};
+  const andParts: Array<Record<string, unknown>> = [];
 
-  if (input.active === 'true') where.isActive = true;
-  if (input.active === 'false') where.isActive = false;
+  if (input.active === 'true') andParts.push({ isActive: true });
+  if (input.active === 'false') andParts.push({ isActive: false });
+
+  const brand = input.inverterBrand?.trim();
+  if (brand) {
+    andParts.push({ project: { inverterBrand: { equals: brand, mode: 'insensitive' } } });
+  }
+
+  if (input.plantLink === 'solis') {
+    andParts.push({ project: { solisStationId: { not: null } } });
+  } else if (input.plantLink === 'deye') {
+    andParts.push({ project: { deyeStationId: { not: null } } });
+  } else if (input.plantLink === 'none') {
+    andParts.push({
+      project: {
+        AND: [{ solisStationId: null }, { deyeStationId: null }],
+      },
+    });
+  }
 
   const q = input.search?.trim();
   if (q) {
-    where.OR = [
+    const or: Array<Record<string, unknown>> = [
       { username: { contains: q, mode: 'insensitive' } },
       { email: { contains: q, mode: 'insensitive' } },
       { phone: { contains: q, mode: 'insensitive' } },
       { project: { customer: { customerName: { contains: q, mode: 'insensitive' } } } },
       { project: { customer: { customerId: { contains: q, mode: 'insensitive' } } } },
+      { project: { inverterBrand: { contains: q, mode: 'insensitive' } } },
     ];
     const slNo = Number(q.replace(/^#/, ''));
     if (Number.isFinite(slNo) && slNo > 0) {
-      where.OR.push({ project: { slNo } });
+      or.push({ project: { slNo } });
     }
+    andParts.push({ OR: or });
   }
+
+  const where =
+    andParts.length === 0 ? {} : andParts.length === 1 ? andParts[0]! : { AND: andParts };
+
+  const sortBy = input.sortBy ?? 'default';
+  const orderBy: Array<Record<string, unknown>> = (() => {
+    switch (sortBy) {
+      case 'createdAt_asc':
+        return [{ createdAt: 'asc' }];
+      case 'createdAt_desc':
+        return [{ createdAt: 'desc' }];
+      case 'lastLogin_desc':
+        return [{ lastLoginAt: 'desc' }, { createdAt: 'desc' }];
+      case 'username_asc':
+        return [{ username: 'asc' }];
+      case 'default':
+      default:
+        return [{ isActive: 'desc' }, { createdAt: 'desc' }];
+    }
+  })();
+
+  const projectSelect = {
+    id: true,
+    slNo: true,
+    projectStatus: true,
+    inverterBrand: true,
+    solisStationId: true,
+    deyeStationId: true,
+    customer: { select: { customerName: true } },
+  } as const;
 
   const [total, rows] = await Promise.all([
     prisma.consumerUser.count({ where }),
@@ -145,17 +200,10 @@ export async function listSolarHubUsers(input: {
       where,
       skip,
       take: limit,
-      orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }],
+      orderBy,
       include: {
         project: {
-          select: {
-            id: true,
-            slNo: true,
-            projectStatus: true,
-            solisStationId: true,
-            deyeStationId: true,
-            customer: { select: { customerName: true } },
-          },
+          select: projectSelect,
         },
       },
     }),
@@ -173,6 +221,7 @@ export async function getSolarHubUser(id: string): Promise<SolarHubUserDetail | 
           id: true,
           slNo: true,
           projectStatus: true,
+          inverterBrand: true,
           solisStationId: true,
           deyeStationId: true,
           customer: { select: { customerName: true, customerId: true } },
@@ -224,6 +273,7 @@ export async function getSolarHubUserForProject(projectId: string) {
           id: true,
           slNo: true,
           projectStatus: true,
+          inverterBrand: true,
           solisStationId: true,
           deyeStationId: true,
           customer: { select: { customerName: true, customerId: true } },

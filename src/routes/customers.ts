@@ -28,6 +28,12 @@ import { CustomerType, Prisma } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import { requireCustomerAccess } from '../utils/staffAccess';
 import { sendErrorResponse } from '../utils/publicApiError';
+import {
+  buildCustomerListWhere,
+  customerListOrderBy,
+  parseCustomerSortBy,
+  parseCustomerTypeParam,
+} from '../utils/customerListFilters';
 
 const router = express.Router();
 
@@ -59,6 +65,9 @@ router.get(
     query('page').optional().isInt({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 500 }),
     query('picker').optional().isIn(['true', '1', 'false', '0']),
+    query('customerType').optional().isString(),
+    query('sortBy').optional().isIn(['createdAt_desc', 'createdAt_asc', 'name_asc']),
+    query('myCustomers').optional().isIn(['true', 'false', '1', '0']),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -74,98 +83,47 @@ router.get(
         salespersonId,
         myCustomers, // For Sales users: 'true' to show only their customers
         picker,
+        customerType: customerTypeRaw,
+        sortBy: sortByRaw,
       } = req.query;
+
+      // Reject unknown customerType values early (optional filter).
+      if (
+        typeof customerTypeRaw === 'string' &&
+        customerTypeRaw.trim() &&
+        !parseCustomerTypeParam(customerTypeRaw)
+      ) {
+        return res.status(400).json({ error: 'Invalid customerType' });
+      }
 
       const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
       const requestedTake = parseInt(limit as string);
       const isPicker = picker === 'true' || picker === '1';
       const maxTake = isPicker ? 25 : req.user?.role === UserRole.SALES ? 500 : 200;
       const take = Math.min(Number.isFinite(requestedTake) ? requestedTake : 25, maxTake);
+      const sortBy = parseCustomerSortBy(sortByRaw);
 
-      const where: any = {};
-
-      // Sales always see assigned customers only (client cannot opt out).
-      if (req.user?.role === UserRole.SALES) {
-        where.salespersonId = req.user.id;
-      } else if (salespersonId) {
-          const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : [salespersonId];
-          // Filter out empty strings and null values, and ensure they're strings
-          const validSalespersonIds = salespersonIdArray
-            .filter((id): id is string => typeof id === 'string' && id.trim() !== '');
-          
-          if (validSalespersonIds.length > 0) {
-            // Build condition: filter by current salesperson assignment on the customer
-            // and by any projects currently assigned to that salesperson.
-            const userProjects = await prisma.project.findMany({
-              where: {
-                salespersonId: { in: validSalespersonIds },
-              },
-              select: {
-                customerId: true,
-              },
-              distinct: ['customerId'],
-            });
-            const customerIdsFromProjects = userProjects.map(p => p.customerId);
-
-            const orConditions: any[] = [
-              { salespersonId: { in: validSalespersonIds } },
-            ];
-
-            if (customerIdsFromProjects.length > 0) {
-              orConditions.push({ id: { in: customerIdsFromProjects } });
-            }
-
-            where.OR = orConditions;
-          }
-      }
-
-      if (search) {
-        const searchConditions = {
-          OR: [
-            { firstName: { contains: search as string, mode: 'insensitive' } },
-            { middleName: { contains: search as string, mode: 'insensitive' } },
-            { lastName: { contains: search as string, mode: 'insensitive' } },
-            { customerName: { contains: search as string, mode: 'insensitive' } }, // Legacy search
-            { customerId: { contains: search as string, mode: 'insensitive' } },
-            { consumerNumber: { contains: search as string, mode: 'insensitive' } },
-            { addressLine1: { contains: search as string, mode: 'insensitive' } },
-            { city: { contains: search as string, mode: 'insensitive' } },
-            { state: { contains: search as string, mode: 'insensitive' } },
-            { pinCode: { contains: search as string, mode: 'insensitive' } },
-          ],
-        };
-        
-        // If we already have OR conditions (from myCustomers or salespersonId filter), combine them with AND
-        if (where.OR) {
-          const existingOR = where.OR;
-          where.AND = [
-            { OR: existingOR },
-            searchConditions,
-          ];
-          delete where.OR;
-        } else {
-          // If we have other conditions (like salespersonId as direct filter), combine with AND
-          const existingConditions: any = {};
-          Object.keys(where).forEach(key => {
-            if (key !== 'AND' && key !== 'OR') {
-              existingConditions[key] = where[key];
-              delete where[key];
-            }
-          });
-          
-          if (Object.keys(existingConditions).length > 0) {
-            where.AND = [
-              existingConditions,
-              searchConditions,
-            ];
-          } else {
-            where.OR = searchConditions.OR;
-          }
-        }
-      }
+      const where = await buildCustomerListWhere({
+        role: req.user!.role,
+        userId: req.user!.id,
+        search,
+        salespersonId,
+        myCustomers,
+        customerType: customerTypeRaw,
+      });
 
       if (process.env.NODE_ENV === 'development') {
-        console.log('[CUSTOMERS API] Query params:', { search, page, limit, salespersonId, myCustomers, userRole: req.user?.role, userId: req.user?.id });
+        console.log('[CUSTOMERS API] Query params:', {
+          search,
+          page,
+          limit,
+          salespersonId,
+          myCustomers,
+          customerType: customerTypeRaw,
+          sortBy,
+          userRole: req.user?.role,
+          userId: req.user?.id,
+        });
         console.log('[CUSTOMERS API] Where clause:', JSON.stringify(where, null, 2));
       }
       const [customers, total] = await Promise.all([
@@ -173,7 +131,7 @@ router.get(
           where,
           skip,
           take,
-          orderBy: { createdAt: 'desc' },
+          orderBy: customerListOrderBy(sortBy),
           select: isPicker
             ? {
                 id: true,
@@ -939,81 +897,17 @@ router.delete('/:id', authenticate, authorize(UserRole.ADMIN), async (req: Reque
 // Export customers to Excel (Admin only)
 router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req: Request, res: Response) => {
   try {
-    const { search, salespersonId, myCustomers } = req.query;
+    const { search, salespersonId, myCustomers, customerType, sortBy: sortByRaw } = req.query;
+    const sortBy = parseCustomerSortBy(sortByRaw);
 
-    const where: any = {};
-
-    // Apply filters similar to GET /api/customers
-    if (req.user?.role === UserRole.SALES && myCustomers === 'true') {
-      const userProjects = await prisma.project.findMany({
-        where: { createdById: req.user.id },
-        select: { customerId: true },
-        distinct: ['customerId'],
-      });
-      const customerIdsFromProjects = userProjects.map(p => p.customerId);
-      const orConditions: any[] = [
-        { createdById: req.user.id },
-        { salespersonId: req.user.id },
-      ];
-      if (customerIdsFromProjects.length > 0) {
-        orConditions.push({ id: { in: customerIdsFromProjects } });
-      }
-      where.OR = orConditions;
-    } else if (req.user?.role !== UserRole.SALES && salespersonId) {
-      const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : [salespersonId];
-      const validSalespersonIds = salespersonIdArray
-        .filter((id): id is string => typeof id === 'string' && id.trim() !== '');
-      if (validSalespersonIds.length > 0) {
-        const userProjects = await prisma.project.findMany({
-          where: { salespersonId: { in: validSalespersonIds } },
-          select: { customerId: true },
-          distinct: ['customerId'],
-        });
-        const customerIdsFromProjects = userProjects.map(p => p.customerId);
-        const orConditions: any[] = [
-          { salespersonId: { in: validSalespersonIds } },
-        ];
-        if (customerIdsFromProjects.length > 0) {
-          orConditions.push({ id: { in: customerIdsFromProjects } });
-        }
-        where.OR = orConditions;
-      }
-    }
-
-    if (search) {
-      const searchConditions = {
-        OR: [
-          { firstName: { contains: search as string, mode: 'insensitive' } },
-          { middleName: { contains: search as string, mode: 'insensitive' } },
-          { lastName: { contains: search as string, mode: 'insensitive' } },
-          { customerName: { contains: search as string, mode: 'insensitive' } },
-          { customerId: { contains: search as string, mode: 'insensitive' } },
-          { consumerNumber: { contains: search as string, mode: 'insensitive' } },
-          { addressLine1: { contains: search as string, mode: 'insensitive' } },
-          { city: { contains: search as string, mode: 'insensitive' } },
-          { state: { contains: search as string, mode: 'insensitive' } },
-          { pinCode: { contains: search as string, mode: 'insensitive' } },
-        ],
-      };
-      if (where.OR) {
-        const existingOR = where.OR;
-        where.AND = [{ OR: existingOR }, searchConditions];
-        delete where.OR;
-      } else {
-        const existingConditions: any = {};
-        Object.keys(where).forEach(key => {
-          if (key !== 'AND' && key !== 'OR') {
-            existingConditions[key] = where[key];
-            delete where[key];
-          }
-        });
-        if (Object.keys(existingConditions).length > 0) {
-          where.AND = [existingConditions, searchConditions];
-        } else {
-          where.OR = searchConditions.OR;
-        }
-      }
-    }
+    const where = await buildCustomerListWhere({
+      role: req.user!.role,
+      userId: req.user!.id,
+      search,
+      salespersonId,
+      myCustomers,
+      customerType,
+    });
 
     const customers = await prisma.customer.findMany({
       where,
@@ -1025,7 +919,7 @@ router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req:
           select: { projects: true },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: customerListOrderBy(sortBy),
     });
 
     // Format data for Excel
@@ -1085,81 +979,17 @@ router.get('/export/excel', authenticate, authorize(UserRole.ADMIN), async (req:
 // Export customers to CSV (Admin only)
 router.get('/export/csv', authenticate, authorize(UserRole.ADMIN), async (req: Request, res: Response) => {
   try {
-    const { search, salespersonId, myCustomers } = req.query;
+    const { search, salespersonId, myCustomers, customerType, sortBy: sortByRaw } = req.query;
+    const sortBy = parseCustomerSortBy(sortByRaw);
 
-    const where: any = {};
-
-    // Apply filters similar to GET /api/customers
-    if (req.user?.role === UserRole.SALES && myCustomers === 'true') {
-      const userProjects = await prisma.project.findMany({
-        where: { createdById: req.user.id },
-        select: { customerId: true },
-        distinct: ['customerId'],
-      });
-      const customerIdsFromProjects = userProjects.map(p => p.customerId);
-      const orConditions: any[] = [
-        { createdById: req.user.id },
-        { salespersonId: req.user.id },
-      ];
-      if (customerIdsFromProjects.length > 0) {
-        orConditions.push({ id: { in: customerIdsFromProjects } });
-      }
-      where.OR = orConditions;
-    } else if (req.user?.role !== UserRole.SALES && salespersonId) {
-      const salespersonIdArray = Array.isArray(salespersonId) ? salespersonId : [salespersonId];
-      const validSalespersonIds = salespersonIdArray
-        .filter((id): id is string => typeof id === 'string' && id.trim() !== '');
-      if (validSalespersonIds.length > 0) {
-        const userProjects = await prisma.project.findMany({
-          where: { salespersonId: { in: validSalespersonIds } },
-          select: { customerId: true },
-          distinct: ['customerId'],
-        });
-        const customerIdsFromProjects = userProjects.map(p => p.customerId);
-        const orConditions: any[] = [
-          { salespersonId: { in: validSalespersonIds } },
-        ];
-        if (customerIdsFromProjects.length > 0) {
-          orConditions.push({ id: { in: customerIdsFromProjects } });
-        }
-        where.OR = orConditions;
-      }
-    }
-
-    if (search) {
-      const searchConditions = {
-        OR: [
-          { firstName: { contains: search as string, mode: 'insensitive' } },
-          { middleName: { contains: search as string, mode: 'insensitive' } },
-          { lastName: { contains: search as string, mode: 'insensitive' } },
-          { customerName: { contains: search as string, mode: 'insensitive' } },
-          { customerId: { contains: search as string, mode: 'insensitive' } },
-          { consumerNumber: { contains: search as string, mode: 'insensitive' } },
-          { addressLine1: { contains: search as string, mode: 'insensitive' } },
-          { city: { contains: search as string, mode: 'insensitive' } },
-          { state: { contains: search as string, mode: 'insensitive' } },
-          { pinCode: { contains: search as string, mode: 'insensitive' } },
-        ],
-      };
-      if (where.OR) {
-        const existingOR = where.OR;
-        where.AND = [{ OR: existingOR }, searchConditions];
-        delete where.OR;
-      } else {
-        const existingConditions: any = {};
-        Object.keys(where).forEach(key => {
-          if (key !== 'AND' && key !== 'OR') {
-            existingConditions[key] = where[key];
-            delete where[key];
-          }
-        });
-        if (Object.keys(existingConditions).length > 0) {
-          where.AND = [existingConditions, searchConditions];
-        } else {
-          where.OR = searchConditions.OR;
-        }
-      }
-    }
+    const where = await buildCustomerListWhere({
+      role: req.user!.role,
+      userId: req.user!.id,
+      search,
+      salespersonId,
+      myCustomers,
+      customerType,
+    });
 
     const customers = await prisma.customer.findMany({
       where,
@@ -1171,7 +1001,7 @@ router.get('/export/csv', authenticate, authorize(UserRole.ADMIN), async (req: R
           select: { projects: true },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: customerListOrderBy(sortBy),
     });
 
     // Format data for CSV

@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
@@ -7,18 +7,22 @@ import { Customer, UserRole } from '../types'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import { useDebounce } from '../hooks/useDebounce'
-import MultiSelect from '../components/MultiSelect'
-import { Users, Plus, Download, Search } from 'lucide-react'
+import { Users, Plus, Download } from 'lucide-react'
 import { ErrorModal } from '@/components/common/ErrorModal'
 import { CustomerForm } from '../components/customers/CustomerForm'
-import { formatCustomerTypeDisplay, getCustomerDisplayName } from '../utils/customerRecord'
+import CustomerListFilters from '../components/customers/CustomerListFilters'
+import { formatCustomerTypeDisplay, getCustomerDisplayName, type CustomerType } from '../utils/customerRecord'
 import { getCustomerTypeBadgeClasses } from '../utils/customerTypeStyles'
 import { GoogleMapsIconButton } from '../components/customers/GoogleMapsIconButton'
 import { formatCustomerStringList, parseCustomerStringList } from '../utils/customerContactFields'
 import {
+  applyCustomerListStateToSearchParams,
   buildCustomerExportQueryParams,
   buildCustomerListFilterInput,
   buildCustomerListQueryParams,
+  DEFAULT_CUSTOMER_LIST_SORT,
+  parseCustomerListStateFromSearchParams,
+  type CustomerListSortBy,
 } from '../utils/customerListQuery'
 
 const CustomerMaster = () => {
@@ -26,19 +30,25 @@ const CustomerMaster = () => {
   const { user, hasRole } = useAuth()
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
+  const urlInit = parseCustomerListStateFromSearchParams(searchParams)
+
   const [page, setPage] = useState(1)
-  const [searchInput, setSearchInput] = useState('')
-  const debouncedSearch = useDebounce(searchInput, 500) // 500ms debounce
+  const [searchInput, setSearchInput] = useState(urlInit.search)
+  const debouncedSearch = useDebounce(searchInput, 500)
   const [showForm, setShowForm] = useState(false)
   const [showExportConfirm, setShowExportConfirm] = useState(false)
   const [pendingExportType, setPendingExportType] = useState<'excel' | 'csv' | null>(null)
 
-  // Filter state: For Sales users - 'all' or 'my', For others - salespersonId array
-  const [customerFilter, setCustomerFilter] = useState<'all' | 'my'>('my') // Default to 'my' for Sales users
-  const [selectedSalespersonIds, setSelectedSalespersonIds] = useState<string[]>([])
+  const [customerFilter, setCustomerFilter] = useState<'all' | 'my'>(urlInit.customerFilter)
+  const [selectedSalespersonIds, setSelectedSalespersonIds] = useState<string[]>(
+    urlInit.selectedSalespersonIds,
+  )
+  const [customerType, setCustomerType] = useState<CustomerType | ''>(urlInit.customerType)
+  const [sortBy, setSortBy] = useState<CustomerListSortBy>(urlInit.sortBy)
 
   const canCreate = hasRole([UserRole.SALES, UserRole.MANAGEMENT, UserRole.ADMIN])
   const isSalesUser = user?.role === UserRole.SALES
+  const skipUrlSyncRef = useRef(true)
 
   const shell = (children: ReactNode) => (
     <div className="zenith-root zenith-animated-bg w-full max-w-full min-w-0 min-h-[calc(100dvh-5rem)] min-h-[calc(100vh-5rem)] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-[max(0.35rem,env(safe-area-inset-top,0px))] [-webkit-tap-highlight-color:transparent]">
@@ -56,20 +66,44 @@ const CustomerMaster = () => {
     setShowForm(true)
   }, [searchParams, setSearchParams, canCreate])
 
-  // Fetch sales users for the filter dropdown (only for non-SALES users)
+  // Sync filters → URL (skip first paint so we don't overwrite unrelated params)
+  useEffect(() => {
+    if (skipUrlSyncRef.current) {
+      skipUrlSyncRef.current = false
+      return
+    }
+    const next = applyCustomerListStateToSearchParams(searchParams, {
+      search: debouncedSearch,
+      customerFilter,
+      selectedSalespersonIds,
+      customerType,
+      sortBy,
+      isSalesUser,
+    })
+    const same = next.toString() === searchParams.toString()
+    if (!same) setSearchParams(next, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only sync when filter values change
+  }, [
+    debouncedSearch,
+    customerFilter,
+    selectedSalespersonIds,
+    customerType,
+    sortBy,
+    isSalesUser,
+  ])
+
   const { data: salesUsers } = useQuery({
     queryKey: ['salesUsers'],
     queryFn: async () => {
       const res = await axiosInstance.get('/api/users/role/sales')
       return res.data
     },
-    enabled: !isSalesUser, // Only fetch if user is not SALES
+    enabled: !isSalesUser,
   })
 
-  // Reset page when search or filters change
   useEffect(() => {
     setPage(1)
-  }, [debouncedSearch, customerFilter, selectedSalespersonIds])
+  }, [debouncedSearch, customerFilter, selectedSalespersonIds, customerType, sortBy])
 
   const listFilters = buildCustomerListFilterInput(
     debouncedSearch,
@@ -77,16 +111,34 @@ const CustomerMaster = () => {
     isSalesUser,
     customerFilter,
     selectedSalespersonIds,
+    customerType,
+    sortBy,
   )
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ['customers', debouncedSearch, page, customerFilter, selectedSalespersonIds],
+    queryKey: [
+      'customers',
+      debouncedSearch,
+      page,
+      customerFilter,
+      selectedSalespersonIds,
+      customerType,
+      sortBy,
+    ],
     queryFn: async () => {
       const params = buildCustomerListQueryParams(listFilters)
       const res = await axiosInstance.get(`/api/customers?${params.toString()}`)
       return res.data
     },
   })
+
+  const clearAllFilters = () => {
+    setSearchInput('')
+    setCustomerFilter('my')
+    setSelectedSalespersonIds([])
+    setCustomerType('')
+    setSortBy(DEFAULT_CUSTOMER_LIST_SORT)
+  }
 
   const getCustomerGoogleMapsUrl = (customer: Customer) => {
     const lat = customer.latitude
@@ -110,17 +162,18 @@ const CustomerMaster = () => {
         isSalesUser,
         customerFilter,
         selectedSalespersonIds,
+        customerType,
+        sortBy,
       })
 
-      const endpoint = pendingExportType === 'excel' 
-        ? `/api/customers/export/excel` 
-        : `/api/customers/export/csv`
+      const endpoint =
+        pendingExportType === 'excel' ? `/api/customers/export/excel` : `/api/customers/export/csv`
       const fileExtension = pendingExportType === 'excel' ? 'xlsx' : 'csv'
-      
+
       const response = await axiosInstance.get(`${endpoint}?${params.toString()}`, {
         responseType: 'blob',
       })
-      
+
       const url = window.URL.createObjectURL(new Blob([response.data]))
       const link = document.createElement('a')
       link.href = url
@@ -129,7 +182,7 @@ const CustomerMaster = () => {
       link.click()
       link.remove()
       window.URL.revokeObjectURL(url)
-      
+
       toast.success(`Customers exported to ${pendingExportType.toUpperCase()} successfully`)
     } catch (error: unknown) {
       if (import.meta.env.DEV) console.error('Export error:', error)
@@ -195,7 +248,9 @@ const CustomerMaster = () => {
               <Users className="h-5 w-5 text-[color:var(--accent-gold)]" strokeWidth={2} aria-hidden />
             </div>
             <div className="min-w-0">
-              <h1 className="zenith-display text-xl font-bold tracking-tight text-[color:var(--text-primary)] sm:text-2xl">Customer Master</h1>
+              <h1 className="zenith-display text-xl font-bold tracking-tight text-[color:var(--text-primary)] sm:text-2xl">
+                Customer Master
+              </h1>
               <p className="mt-0.5 text-sm text-[color:var(--text-secondary)]">Manage your customer database</p>
             </div>
           </div>
@@ -235,220 +290,186 @@ const CustomerMaster = () => {
         </div>
       </header>
 
-      <div className="mb-6 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5">
-        <div className="space-y-2 sm:space-y-3">
-          {/* Row 1: Search Bar (aligned with Projects page styling) */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-            <div className="relative w-full sm:flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-muted)]" aria-hidden />
-              <input
-                type="text"
-                placeholder="Search by name, ID, or consumer number..."
-                className="zenith-native-filter-input h-[44px] w-full rounded-xl pl-10 pr-3 py-2.5 text-sm placeholder:text-[color:var(--text-placeholder)]"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
-              />
-            </div>
-            {/* Filter for Sales users: All Customers / My Customers */}
-            {isSalesUser ? (
-              <div className="flex min-h-[44px] w-full flex-col gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-3 shadow-sm sm:ml-auto sm:w-auto sm:flex-row sm:items-center sm:gap-4 sm:py-2.5">
-                <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-[color:var(--text-muted)]">Filter</span>
-                <div className="flex flex-wrap gap-4">
-                  <label className="flex cursor-pointer items-center">
-                    <input
-                      type="radio"
-                      name="customerFilter"
-                      value="all"
-                      checked={customerFilter === 'all'}
-                      onChange={(e) => setCustomerFilter(e.target.value as 'all' | 'my')}
-                      className="mr-2 h-4 w-4 shrink-0 accent-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
-                    />
-                    <span className="text-sm font-medium text-[color:var(--text-primary)]">All Customers</span>
-                  </label>
-                  <label className="flex cursor-pointer items-center">
-                    <input
-                      type="radio"
-                      name="customerFilter"
-                      value="my"
-                      checked={customerFilter === 'my'}
-                      onChange={(e) => setCustomerFilter(e.target.value as 'all' | 'my')}
-                      className="mr-2 h-4 w-4 shrink-0 accent-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
-                    />
-                    <span className="text-sm font-medium text-[color:var(--text-primary)]">My Customers</span>
-                  </label>
-                </div>
-              </div>
-            ) : (
-              /* Filter for other users: Sales Person dropdown - right-aligned on desktop, full width on mobile; wide enough for full name on one line */
-              <div className="flex min-h-[44px] w-full items-center sm:ml-auto sm:w-auto sm:min-w-[260px] sm:justify-end">
-                <MultiSelect
-                  className="w-full sm:min-w-[260px]"
-                  variant="zenith"
-                  options={salesUsers?.map((salesUser: any) => ({
-                    value: salesUser.id,
-                    label: salesUser.name,
-                  })) || []}
-                  selectedValues={selectedSalespersonIds}
-                  onChange={(values) => setSelectedSalespersonIds(values)}
-                  placeholder="All Sales Persons"
-                  showSelectedLabels
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <CustomerListFilters
+        searchInput={searchInput}
+        onSearchChange={setSearchInput}
+        sortBy={sortBy}
+        onSortByChange={setSortBy}
+        customerType={customerType}
+        onCustomerTypeChange={setCustomerType}
+        isSalesUser={isSalesUser}
+        customerFilter={customerFilter}
+        onCustomerFilterChange={setCustomerFilter}
+        selectedSalespersonIds={selectedSalespersonIds}
+        onSalespersonIdsChange={setSelectedSalespersonIds}
+        salesUsers={salesUsers}
+        resultTotal={data?.total}
+        onClearAll={clearAllFilters}
+      />
 
       {isError ? (
         listErrorPanel
       ) : (
         <>
-      {/* Customer list - card-like rows (visual rhythm aligned with Projects table) */}
-      <div className="space-y-3">
-        {data?.customers?.map((customer: Customer, index: number) => (
-          <div
-            key={customer.id}
-            role="button"
-            tabIndex={0}
-            onClick={(e) => {
-              const t = e.target as HTMLElement
-              if (t.closest('a, button')) return
-              navigate(`/customers/${customer.id}`)
-            }}
-            onKeyDown={(e) => {
-              if (e.key !== 'Enter' && e.key !== ' ') return
-              e.preventDefault()
-              navigate(`/customers/${customer.id}`)
-            }}
-            className={`group w-full cursor-pointer rounded-2xl border border-[color:var(--border-card)] text-left shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] transition-colors duration-150 hover:bg-[color:var(--bg-table-hover)] ${
-              index % 2 === 1 ? 'bg-[color:var(--bg-table-alt)]' : 'bg-[color:var(--bg-card)]'
-            }`}
-          >
-            <div className="px-4 py-4 sm:px-6 sm:py-5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                {/* Left: Primary info - Who & status */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                    <span className="inline-flex items-center rounded-lg bg-[color:var(--accent-gold)] px-2.5 py-1 text-xs font-bold text-[color:var(--text-inverse)] shadow-sm">
-                      ID: {customer.customerId}
-                    </span>
-                    <h3 className="truncate text-base font-semibold text-[color:var(--text-primary)] transition-colors group-hover:text-[color:var(--accent-gold)] sm:text-lg">
-                      {getCustomerDisplayName(customer)}
-                    </h3>
-                    <span
-                      className={`inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 text-xs font-semibold ${getCustomerTypeBadgeClasses(customer.customerType)}`}
-                      title="Customer type"
-                    >
-                      {formatCustomerTypeDisplay(customer.customerType)}
-                    </span>
-                    {customer._count != null && customer._count.projects > 0 && (
-                      <span className="inline-flex items-center rounded-md border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-2 py-0.5 text-xs font-semibold text-[color:var(--accent-teal)]">
-                        {customer._count.projects} Project{customer._count.projects !== 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </div>
-                  {/* Secondary info - muted, easy to scan */}
-                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[color:var(--text-secondary)]">
-                    {(() => {
-                      const hasAnyAddress =
-                        customer.addressLine1 || customer.addressLine2 || customer.city || customer.state || customer.country || customer.pinCode
-                      const mapsUrl = getCustomerGoogleMapsUrl(customer)
-                      if (!hasAnyAddress && !mapsUrl) return null
-                      const addressText = [
-                        customer.addressLine1,
-                        customer.addressLine2,
-                        customer.city,
-                        customer.state,
-                        customer.country,
-                        customer.pinCode,
-                      ]
-                        .filter(Boolean)
-                        .join(', ')
-                      return (
-                        <span className="inline-flex items-center gap-1.5">
-                          {addressText && <span className="truncate max-w-[200px] sm:max-w-none">{addressText}</span>}
-                          {mapsUrl && <GoogleMapsIconButton href={mapsUrl} />}
+          <div className="space-y-3">
+            {data?.customers?.map((customer: Customer, index: number) => (
+              <div
+                key={customer.id}
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  const t = e.target as HTMLElement
+                  if (t.closest('a, button')) return
+                  navigate(`/customers/${customer.id}`)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter' && e.key !== ' ') return
+                  e.preventDefault()
+                  navigate(`/customers/${customer.id}`)
+                }}
+                className={`group w-full cursor-pointer rounded-2xl border border-[color:var(--border-card)] text-left shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] transition-colors duration-150 hover:bg-[color:var(--bg-table-hover)] ${
+                  index % 2 === 1 ? 'bg-[color:var(--bg-table-alt)]' : 'bg-[color:var(--bg-card)]'
+                }`}
+              >
+                <div className="px-4 py-4 sm:px-6 sm:py-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <span className="inline-flex items-center rounded-lg bg-[color:var(--accent-gold)] px-2.5 py-1 text-xs font-bold text-[color:var(--text-inverse)] shadow-sm">
+                          ID: {customer.customerId}
                         </span>
-                      )
-                    })()}
-                    {customer.consumerNumber && (
-                      <span className="text-[color:var(--text-secondary)]">
-                        <span className="text-[color:var(--text-muted)]">Consumer:</span> {customer.consumerNumber}
-                      </span>
-                    )}
-                    {customer.contactNumbers && (
-                      <span className="font-medium text-[color:var(--accent-teal)]">
-                        {formatCustomerStringList(parseCustomerStringList(customer.contactNumbers))}
-                      </span>
-                    )}
-                    {customer.email && (() => {
-                      const emailList = parseCustomerStringList(customer.email)
-                      if (emailList.length === 0) return null
-                      const mailtoHref = `mailto:${emailList.join(',')}`
-                      return (
-                        <span>
-                          <a
-                            href={mailtoHref}
-                            className="text-[color:var(--accent-blue)] underline-offset-2 hover:underline"
-                            title="Open in email application"
-                          >
-                            {formatCustomerStringList(emailList)}
-                          </a>
+                        <h3 className="truncate text-base font-semibold text-[color:var(--text-primary)] transition-colors group-hover:text-[color:var(--accent-gold)] sm:text-lg">
+                          {getCustomerDisplayName(customer)}
+                        </h3>
+                        <span
+                          className={`inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 text-xs font-semibold ${getCustomerTypeBadgeClasses(customer.customerType)}`}
+                          title="Customer type"
+                        >
+                          {formatCustomerTypeDisplay(customer.customerType)}
                         </span>
-                      )
-                    })()}
+                        {customer._count != null && customer._count.projects > 0 && (
+                          <span className="inline-flex items-center rounded-md border border-[color:var(--accent-teal-border)] bg-[color:var(--accent-teal-muted)] px-2 py-0.5 text-xs font-semibold text-[color:var(--accent-teal)]">
+                            {customer._count.projects} Project
+                            {customer._count.projects !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[color:var(--text-secondary)]">
+                        {(() => {
+                          const hasAnyAddress =
+                            customer.addressLine1 ||
+                            customer.addressLine2 ||
+                            customer.city ||
+                            customer.state ||
+                            customer.country ||
+                            customer.pinCode
+                          const mapsUrl = getCustomerGoogleMapsUrl(customer)
+                          if (!hasAnyAddress && !mapsUrl) return null
+                          const addressText = [
+                            customer.addressLine1,
+                            customer.addressLine2,
+                            customer.city,
+                            customer.state,
+                            customer.country,
+                            customer.pinCode,
+                          ]
+                            .filter(Boolean)
+                            .join(', ')
+                          return (
+                            <span className="inline-flex items-center gap-1.5">
+                              {addressText && (
+                                <span className="truncate max-w-[200px] sm:max-w-none">{addressText}</span>
+                              )}
+                              {mapsUrl && <GoogleMapsIconButton href={mapsUrl} />}
+                            </span>
+                          )
+                        })()}
+                        {customer.consumerNumber && (
+                          <span className="text-[color:var(--text-secondary)]">
+                            <span className="text-[color:var(--text-muted)]">Consumer:</span>{' '}
+                            {customer.consumerNumber}
+                          </span>
+                        )}
+                        {customer.contactNumbers && (
+                          <span className="font-medium text-[color:var(--accent-teal)]">
+                            {formatCustomerStringList(parseCustomerStringList(customer.contactNumbers))}
+                          </span>
+                        )}
+                        {customer.email &&
+                          (() => {
+                            const emailList = parseCustomerStringList(customer.email)
+                            if (emailList.length === 0) return null
+                            const mailtoHref = `mailto:${emailList.join(',')}`
+                            return (
+                              <span>
+                                <a
+                                  href={mailtoHref}
+                                  className="text-[color:var(--accent-blue)] underline-offset-2 hover:underline"
+                                  title="Open in email application"
+                                >
+                                  {formatCustomerStringList(emailList)}
+                                </a>
+                              </span>
+                            )
+                          })()}
+                      </div>
+                    </div>
+                    <div className="flex min-w-0 flex-shrink-0 items-center justify-end">
+                      <p className="truncate text-xs font-medium tabular-nums text-[color:var(--text-secondary)]">
+                        Created {format(new Date(customer.createdAt), 'MMM dd, yyyy')}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                {/* Right: created date */}
-                <div className="flex min-w-0 flex-shrink-0 items-center justify-end">
-                  <p className="truncate text-xs font-medium tabular-nums text-[color:var(--text-secondary)]">
-                    Created {format(new Date(customer.createdAt), 'MMM dd, yyyy')}
-                  </p>
                 </div>
               </div>
-            </div>
+            ))}
+            {data != null && (!data.customers || data.customers.length === 0) && (
+              <div className="rounded-2xl border border-dashed border-[color:var(--border-default)] bg-[color:var(--bg-card)] px-6 py-14 text-center shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
+                <p className="mx-auto max-w-md font-semibold text-[color:var(--text-primary)]">
+                  No customers match your search or filters.
+                </p>
+                <p className="mx-auto mt-2 max-w-md text-xs text-[color:var(--text-muted)]">
+                  Try a different search, type, or salesperson filter — or clear filters.
+                </p>
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="mt-4 inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2.5 text-sm font-semibold text-[color:var(--text-primary)]"
+                >
+                  Clear filters
+                </button>
+              </div>
+            )}
           </div>
-        ))}
-        {data != null && (!data.customers || data.customers.length === 0) && (
-          <div className="rounded-2xl border border-dashed border-[color:var(--border-default)] bg-[color:var(--bg-card)] px-6 py-14 text-center shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
-            <p className="mx-auto max-w-md font-semibold text-[color:var(--text-primary)]">No customers match your search or filters.</p>
-            <p className="mx-auto mt-2 max-w-md text-xs text-[color:var(--text-muted)]">
-              Try a different search term or widen the salesperson filter.
-            </p>
-          </div>
-        )}
-      </div>
 
-      {data != null && (
-        <div className="mt-5 flex flex-col items-center justify-between gap-4 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] px-4 py-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:flex-row sm:px-5">
-          <div className="text-sm text-[color:var(--text-secondary)]">
-            Showing page {data.page} of {data.totalPages || 1} ({data.total} total)
-          </div>
-          {data.totalPages != null && data.totalPages > 1 && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="min-h-[44px] touch-manipulation rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] shadow-sm transition-all hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => setPage(p => Math.min(data.totalPages, p + 1))}
-                disabled={page >= data.totalPages}
-                className="min-h-[44px] touch-manipulation rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] shadow-sm transition-all hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Next
-              </button>
+          {data != null && (
+            <div className="mt-5 flex flex-col items-center justify-between gap-4 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] px-4 py-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:flex-row sm:px-5">
+              <div className="text-sm text-[color:var(--text-secondary)]">
+                Showing page {data.page} of {data.totalPages || 1} ({data.total} total)
+              </div>
+              {data.totalPages != null && data.totalPages > 1 && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="min-h-[44px] touch-manipulation rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] shadow-sm transition-all hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
+                    disabled={page >= data.totalPages}
+                    className="min-h-[44px] touch-manipulation rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] shadow-sm transition-all hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
         </>
       )}
 
-      {/* Modals rendered outside PageCard to avoid overflow/stacking issues */}
       {showForm && (
         <CustomerForm
           customer={null}
@@ -456,8 +477,6 @@ const CustomerMaster = () => {
           onSuccess={() => {
             setShowForm(false)
             queryClient.invalidateQueries({ queryKey: ['customers'] })
-            // Reassigning a customer cascades salespersonId to all its projects on the server.
-            // Invalidate projects cache so both old and new salesperson see updated ownership immediately.
             queryClient.invalidateQueries({ queryKey: ['projects'] })
           }}
         />

@@ -89,6 +89,15 @@ router.get(
   [
     query('search').optional().isString().trim(),
     query('active').optional().isIn(['true', 'false']),
+    query('inverterBrand').optional().isString().trim(),
+    query('plantLink').optional().isIn(['solis', 'deye', 'none']),
+    query('sortBy').optional().isIn([
+      'default',
+      'createdAt_desc',
+      'createdAt_asc',
+      'lastLogin_desc',
+      'username_asc',
+    ]),
     query('page').optional().isInt({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 100 }),
   ],
@@ -101,6 +110,15 @@ router.get(
       const result = await listSolarHubUsers({
         search: req.query.search as string | undefined,
         active: req.query.active as 'true' | 'false' | undefined,
+        inverterBrand: req.query.inverterBrand as string | undefined,
+        plantLink: req.query.plantLink as 'solis' | 'deye' | 'none' | undefined,
+        sortBy: req.query.sortBy as
+          | 'default'
+          | 'createdAt_desc'
+          | 'createdAt_asc'
+          | 'lastLogin_desc'
+          | 'username_asc'
+          | undefined,
         page: req.query.page ? Number(req.query.page) : undefined,
         limit: req.query.limit ? Number(req.query.limit) : undefined,
       });
