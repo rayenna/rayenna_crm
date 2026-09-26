@@ -2,7 +2,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Copy, Download, KeyRound, RefreshCw, ShieldOff, ShieldCheck, Trash2, Zap } from 'lucide-react'
+import { ArrowLeft, KeyRound, RefreshCw, ShieldOff, ShieldCheck, Trash2, Zap } from 'lucide-react'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
@@ -11,6 +11,8 @@ import HubHandoverScriptCard from '../components/solarHub/HubHandoverScriptCard'
 import HubNotifyCard from '../components/solarHub/HubNotifyCard'
 import HubSolisPlantCard from '../components/solarHub/HubSolisPlantCard'
 import HubDeyePlantCard from '../components/solarHub/HubDeyePlantCard'
+import HubCredentialsPanel from '../components/solarHub/HubCredentialsPanel'
+import SolarHubListSkeleton from '../components/solarHub/SolarHubListSkeleton'
 import {
   buildHubStaffCredentialsCopy,
   getSolarHubPublicUrl,
@@ -151,12 +153,16 @@ export default function SolarHubUserDetail() {
   }
 
   if (isLoading) {
-    return <div className="py-16 text-center text-sm text-[color:var(--text-muted)]">Loading…</div>
+    return (
+      <div className="mx-auto max-w-3xl">
+        <SolarHubListSkeleton rows={4} variant="cards" />
+      </div>
+    )
   }
 
   if (isError || !user) {
     return (
-      <div className="mx-auto max-w-lg p-6 text-center">
+      <div className="mx-auto max-w-lg py-6 text-center">
         <p className="text-sm text-[color:var(--accent-red)]">{getFriendlyApiErrorMessage(error)}</p>
         <Link to="/solar-hub/users" className="mt-4 inline-block text-sm font-semibold text-[color:var(--accent-gold)]">
           Back to Solar Hub
@@ -168,12 +174,12 @@ export default function SolarHubUserDetail() {
   const canDelete = isAdmin && user.project.projectStatus === 'LOST' && !user.isDemo
 
   return (
-    <div className="zenith-root w-full max-w-3xl mx-auto px-4 py-6 pb-12">
+    <div className="mx-auto max-w-3xl pb-4">
       <Link
         to="/solar-hub/users"
-        className="mb-4 inline-flex items-center gap-1 text-sm font-semibold text-[color:var(--accent-gold)]"
+        className="mb-4 inline-flex min-h-[44px] touch-manipulation items-center gap-1 text-sm font-semibold text-[color:var(--accent-gold)]"
       >
-        <ArrowLeft className="h-4 w-4" /> Solar Hub users
+        <ArrowLeft className="h-4 w-4" /> Back to Users
       </Link>
 
       <header className="mb-6">
@@ -198,6 +204,17 @@ export default function SolarHubUserDetail() {
           {user.project.customerName} · Project #{user.project.slNo}
         </p>
       </header>
+
+      {credentials ? (
+        <HubCredentialsPanel
+          credentials={credentials}
+          onDismiss={() => setCredentials(null)}
+          onCopy={() => void copyCredentials()}
+          onDownloadPdf={isAdmin ? () => void downloadCredentialsPdf() : undefined}
+          pdfLoading={pdfLoading}
+          subtitle="Password reset — copy now; shown only once"
+        />
+      ) : null}
 
       <div className="mb-6">
         <HubHandoverScriptCard username={user.username} defaultOpen />
@@ -309,37 +326,6 @@ export default function SolarHubUserDetail() {
               {energyMutation.isPending ? 'Saving…' : 'Save generation'}
             </button>
           </form>
-        </section>
-      ) : null}
-
-      {credentials ? (
-        <section className="mb-6 rounded-2xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] p-5">
-          <h2 className="text-sm font-bold text-[color:var(--text-primary)]">New credentials</h2>
-          <p className="mt-2 font-mono text-sm text-[color:var(--text-primary)]">
-            Username: <strong>{credentials.username}</strong>
-            <br />
-            Password: <strong>{credentials.temporaryPassword}</strong>
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void copyCredentials()}
-              className="inline-flex items-center gap-2 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2 text-sm font-bold text-[color:var(--text-inverse)]"
-            >
-              <Copy className="h-4 w-4" /> Copy to clipboard
-            </button>
-            {isAdmin ? (
-              <button
-                type="button"
-                onClick={() => void downloadCredentialsPdf()}
-                disabled={pdfLoading}
-                className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--border-default)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] disabled:opacity-50"
-              >
-                <Download className="h-4 w-4 text-[color:var(--accent-teal)]" />
-                {pdfLoading ? 'Generating…' : 'Download PDF'}
-              </button>
-            ) : null}
-          </div>
         </section>
       ) : null}
 

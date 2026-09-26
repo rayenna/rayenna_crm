@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   Bar,
@@ -13,18 +13,29 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { AlertTriangle, XCircle } from 'lucide-react'
+import { AlertTriangle, Search, X, XCircle } from 'lucide-react'
 import axiosInstance from '../utils/axios'
 import { useAuth } from '../contexts/AuthContext'
 import { UserRole } from '../types'
 import DashboardFilters from '../components/dashboard/DashboardFilters'
 import ChartPanel from '../components/zenith/ChartPanel'
 import { useChartColors } from '../hooks/useChartColors'
+import { useDebounce } from '../hooks/useDebounce'
 import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../components/dashboard/zenithRechartsTooltipStyles'
 import {
   lostReasonLabel,
   lostToCompetitionLabel,
 } from '../utils/lostReasonLabels'
+import {
+  lostListInsightChipLabel,
+  projectMatchesLostListInsightFilter,
+  type LostListInsightFilter,
+} from '../utils/lostDealsListInsightFilter'
+import LostDealsMobileCardList from '../components/lostDeals/LostDealsMobileCardList'
+import LostDealsInsightsSection from '../components/lostDeals/LostDealsInsightsSection'
+import LostDealsHowToRead from '../components/lostDeals/LostDealsHowToRead'
+import LostDealsPageSkeleton from '../components/lostDeals/LostDealsPageSkeleton'
+import { useLostDealsNarrowList } from '../components/lostDeals/useLostDealsNarrowList'
 
 type LostDealsSummary = {
   lostCount: number
@@ -276,12 +287,17 @@ function CompetitionTooltip({
 
 const LostDeals = () => {
   const { hasRole } = useAuth()
+  const navigate = useNavigate()
   const chartColors = useChartColors()
+  const isNarrow = useLostDealsNarrowList()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [uncategorizedOnly, setUncategorizedOnly] = useState(false)
+  const [insightFilter, setInsightFilter] = useState<LostListInsightFilter>({ kind: 'none' })
+  const [searchInput, setSearchInput] = useState('')
+  const debouncedSearch = useDebounce(searchInput, 300)
   const [sortKey, setSortKey] = useState<LostTableSortKey>('slNo')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [page, setPage] = useState(1)
+  const [showMethodNote, setShowMethodNote] = useState(false)
 
   const selectedFYs = useMemo(() => readListParam(searchParams, 'fy'), [searchParams])
   const selectedQuarters = useMemo(() => readListParam(searchParams, 'quarter'), [searchParams])
@@ -431,10 +447,26 @@ const LostDeals = () => {
 
   const tableProjects = useMemo(() => {
     const rows = [...(data?.projects ?? [])]
-    const filtered = uncategorizedOnly ? rows.filter((p) => !p.lostReason) : rows
+    let filtered = rows.filter((p) => projectMatchesLostListInsightFilter(p, insightFilter))
+    const q = debouncedSearch.trim().toLowerCase()
+    if (q) {
+      filtered = filtered.filter((p) => {
+        const reason = p.lostReason ? reasonDisplayLabel(p.lostReason) : 'uncategorized'
+        const hay = [
+          p.customerName ?? '',
+          p.salespersonName ?? '',
+          p.slNo != null ? String(p.slNo) : '',
+          p.year ?? '',
+          reason,
+        ]
+          .join(' ')
+          .toLowerCase()
+        return hay.includes(q)
+      })
+    }
     filtered.sort((a, b) => compareLostRows(a, b, sortKey, sortOrder))
     return filtered
-  }, [data?.projects, uncategorizedOnly, sortKey, sortOrder])
+  }, [data?.projects, insightFilter, debouncedSearch, sortKey, sortOrder])
 
   const totalPages = Math.max(1, Math.ceil(tableProjects.length / LOST_TABLE_PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
@@ -450,7 +482,7 @@ const LostDeals = () => {
   }, [page, totalPages])
 
   // Reset to first page when FY filters, uncategorized chip, or sort identity changes.
-  const filterResetKey = `${selectedFYs.join('|')}|${selectedQuarters.join('|')}|${selectedMonths.join('|')}|${uncategorizedOnly}|${sortKey}|${sortOrder}`
+  const filterResetKey = `${selectedFYs.join('|')}|${selectedQuarters.join('|')}|${selectedMonths.join('|')}|${JSON.stringify(insightFilter)}|${debouncedSearch}|${sortKey}|${sortOrder}`
   const prevFilterResetKey = useRef(filterResetKey)
   useEffect(() => {
     if (prevFilterResetKey.current === filterResetKey) return
@@ -475,6 +507,22 @@ const LostDeals = () => {
     return sortOrder === 'asc' ? 'ascending' : 'descending'
   }
 
+  const applyInsightFilter = (next: LostListInsightFilter) => {
+    setInsightFilter(next)
+    setPage(1)
+    // Defer scroll so the list has re-rendered with the chip visible.
+    requestAnimationFrame(() => {
+      document.getElementById('lost-projects-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
+
+  const clearInsightFilter = () => {
+    setInsightFilter({ kind: 'none' })
+    setPage(1)
+  }
+
+  const insightChipLabel = lostListInsightChipLabel(insightFilter)
+
   if (!canAccess) {
     return shell(
       <div className="flex min-h-[50vh] flex-col items-center justify-center px-2 pt-6 text-center">
@@ -493,75 +541,68 @@ const LostDeals = () => {
     )
   }
 
-  const kpiItems = [
-    {
-      key: 'lost-count',
-      label: 'Lost count',
-      value: summary ? String(summary.lostCount) : '—',
-    },
-    {
-      key: 'lost-value',
-      label: 'Lost ₹',
-      value: summary ? formatInr(summary.lostValue) : '—',
-    },
-    {
-      key: 'win-count',
-      label: 'Win rate (count)',
-      value: summary ? formatPct(summary.winRateCount) : '—',
-    },
-    {
-      key: 'win-value',
-      label: 'Win rate (₹)',
-      value: summary ? formatPct(summary.winRateValue) : '—',
-    },
-    {
-      key: 'uncat',
-      label: 'Uncategorized',
-      value: summary
-        ? `${summary.uncategorizedCount} (${formatPct(uncategorizedPct)})`
-        : '—',
-    },
-  ]
-
   return shell(
     <div className="space-y-5 pt-4 sm:pt-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <h1 className="zenith-display text-xl font-bold tracking-tight text-[color:var(--text-primary)] sm:text-2xl">
             Lost Deals
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-[color:var(--text-secondary)]">
-            Lost value uses project cost. Win rate compares Confirmed / Installation / Completed /
-            Subsidy Credited vs Lost in the same FY filter scope.
-          </p>
+          {isNarrow ? (
+            <div className="mt-1">
+              <p className="text-sm text-[color:var(--text-secondary)]">
+                Lost ₹ is project cost · win rate vs Confirmed+ pipeline
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowMethodNote((v) => !v)}
+                className="mt-1 text-[11px] font-semibold text-[color:var(--accent-gold)] touch-manipulation"
+                aria-expanded={showMethodNote}
+              >
+                {showMethodNote ? 'Hide calculation notes' : 'How this is calculated'}
+              </button>
+              {showMethodNote ? (
+                <p className="mt-1.5 text-[11px] leading-snug text-[color:var(--text-muted)]">
+                  Lost value uses project cost. Win rate compares Confirmed / Installation /
+                  Completed / Subsidy Credited vs Lost in the same FY · Quarter · Month filter
+                  scope.
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="mt-1 max-w-2xl text-sm text-[color:var(--text-secondary)]">
+              Lost value uses project cost. Win rate compares Confirmed / Installation / Completed /
+              Subsidy Credited vs Lost in the same FY filter scope.
+            </p>
+          )}
         </div>
       </div>
 
       <div className="rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3 shadow-[var(--shadow-card)] sm:p-4">
-        <DashboardFilters
-          variant="zenith"
-          availableFYs={availableFYs}
-          selectedFYs={selectedFYs}
-          selectedQuarters={selectedQuarters}
-          selectedMonths={selectedMonths}
-          onFYChange={onFYChange}
-          onQuarterChange={onQuarterChange}
-          onMonthChange={onMonthChange}
-        />
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+          <DashboardFilters
+            variant="zenith"
+            compact
+            gridLayout
+            availableFYs={availableFYs}
+            selectedFYs={selectedFYs}
+            selectedQuarters={selectedQuarters}
+            selectedMonths={selectedMonths}
+            onFYChange={onFYChange}
+            onQuarterChange={onQuarterChange}
+            onMonthChange={onMonthChange}
+          />
+        </div>
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="zenith-skeleton h-24 rounded-xl" />
-          ))}
-        </div>
+        <LostDealsPageSkeleton narrow={isNarrow} />
       ) : isError ? (
         <div className="rounded-xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] p-4 text-sm text-[color:var(--text-primary)]">
           {(error as Error)?.message || 'Failed to load Lost Deals.'}{' '}
           <button
             type="button"
-            className="font-semibold text-[color:var(--accent-gold)] underline"
+            className="mt-2 inline-flex min-h-[44px] touch-manipulation items-center rounded-xl bg-[color:var(--accent-gold)] px-4 py-2 text-sm font-bold text-[color:var(--text-inverse)]"
             onClick={() => refetch()}
           >
             Retry
@@ -569,21 +610,63 @@ const LostDeals = () => {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-            {kpiItems.map((k) => (
-              <div
-                key={k.key}
-                className="rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]"
-              >
-                <div className="text-[11px] font-medium uppercase tracking-wide text-[color:var(--text-muted)]">
-                  {k.label}
+          {/* KPI hero: Lost count + Lost ₹ primary; win rates secondary; Uncategorized is a cue not a 5th tile */}
+          {isNarrow ? (
+            <div className="space-y-2.5">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3.5 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
+                  <div className="text-[11px] font-medium uppercase tracking-wide text-[color:var(--text-muted)]">
+                    Lost count
+                  </div>
+                  <div className="zenith-display mt-1.5 text-2xl font-bold tabular-nums text-[color:var(--text-primary)]">
+                    {summary ? String(summary.lostCount) : '—'}
+                  </div>
                 </div>
-                <div className="zenith-display mt-1.5 text-lg font-bold tabular-nums text-[color:var(--text-primary)] sm:text-xl">
-                  {k.value}
+                <div className="rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3.5 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]">
+                  <div className="text-[11px] font-medium uppercase tracking-wide text-[color:var(--text-muted)]">
+                    Lost ₹
+                  </div>
+                  <div className="zenith-display mt-1.5 text-xl font-bold tabular-nums text-[color:var(--text-primary)] sm:text-2xl">
+                    {summary ? formatInr(summary.lostValue) : '—'}
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
+              <p className="px-0.5 text-[12px] text-[color:var(--text-muted)]">
+                Win rate{' '}
+                <span className="font-semibold tabular-nums text-[color:var(--text-secondary)]">
+                  {summary ? formatPct(summary.winRateCount) : '—'}
+                </span>
+                {' · '}
+                Win ₹{' '}
+                <span className="font-semibold tabular-nums text-[color:var(--text-secondary)]">
+                  {summary ? formatPct(summary.winRateValue) : '—'}
+                </span>
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+              {(
+                [
+                  { key: 'lost-count', label: 'Lost count', value: summary ? String(summary.lostCount) : '—' },
+                  { key: 'lost-value', label: 'Lost ₹', value: summary ? formatInr(summary.lostValue) : '—' },
+                  { key: 'win-count', label: 'Win rate (count)', value: summary ? formatPct(summary.winRateCount) : '—' },
+                  { key: 'win-value', label: 'Win rate (₹)', value: summary ? formatPct(summary.winRateValue) : '—' },
+                ] as const
+              ).map((k) => (
+                <div
+                  key={k.key}
+                  className="rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]"
+                >
+                  <div className="text-[11px] font-medium uppercase tracking-wide text-[color:var(--text-muted)]">
+                    {k.label}
+                  </div>
+                  <div className="zenith-display mt-1.5 text-lg font-bold tabular-nums text-[color:var(--text-primary)] sm:text-xl">
+                    {k.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {summary && summary.uncategorizedCount > 0 && uncategorizedPct >= 40 ? (
             <div className="flex gap-3 rounded-xl border border-[color:var(--accent-gold-border,var(--accent-gold))] bg-[color:var(--accent-gold-muted)] px-3 py-3 sm:px-4">
@@ -602,17 +685,233 @@ const LostDeals = () => {
                 </p>
                 <button
                   type="button"
-                  className="mt-2 text-sm font-semibold text-[color:var(--accent-gold)] underline"
-                  onClick={() => setUncategorizedOnly(true)}
+                  className="mt-2 min-h-[44px] touch-manipulation text-sm font-semibold text-[color:var(--accent-gold)] underline"
+                  onClick={() => applyInsightFilter({ kind: 'uncategorized' })}
                 >
-                  Show uncategorized in table
+                  Show uncategorized in list
                 </button>
               </div>
             </div>
+          ) : summary && summary.uncategorizedCount > 0 ? (
+            <button
+              type="button"
+              onClick={() => applyInsightFilter({ kind: 'uncategorized' })}
+              className="inline-flex min-h-[40px] w-full touch-manipulation items-center justify-between gap-2 rounded-xl border border-dashed border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-3 py-2 text-left text-sm text-[color:var(--text-primary)] sm:w-auto"
+            >
+              <span>
+                <span className="font-semibold tabular-nums text-[color:var(--accent-gold)]">
+                  {summary.uncategorizedCount}
+                </span>{' '}
+                uncategorized — review
+              </span>
+              <span className="shrink-0 text-xs font-semibold text-[color:var(--accent-gold)]">Show</span>
+            </button>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <ChartPanel title="Lost ₹ by reason" subtitle="Mix of tagged loss reasons">
+          {/* List first — open stack (no nested card chrome); Insights below */}
+          <section id="lost-projects-list" className="scroll-mt-24 space-y-3">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div className="min-w-0">
+                <h2 className="zenith-display text-sm font-semibold text-[color:var(--text-primary)] sm:text-[15px]">
+                  Lost projects
+                </h2>
+                <p className="mt-0.5 text-xs text-[color:var(--text-muted)]">
+                  Showing {pagedProjects.length} of {tableProjects.length}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {insightChipLabel ? (
+                  <button
+                    type="button"
+                    onClick={clearInsightFilter}
+                    className="inline-flex min-h-[36px] max-w-[16rem] touch-manipulation items-center gap-1.5 rounded-full border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-3 text-xs font-semibold text-[color:var(--accent-gold)]"
+                    title="Clear list filter"
+                  >
+                    <span className="truncate">{insightChipLabel}</span>
+                    <span aria-hidden>×</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => applyInsightFilter({ kind: 'uncategorized' })}
+                    className="inline-flex min-h-[36px] touch-manipulation items-center rounded-lg border border-dashed border-[color:var(--border-default)] px-2.5 py-1 text-xs font-medium text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]"
+                  >
+                    Filter: uncategorized
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-muted)]"
+                aria-hidden
+              />
+              <input
+                type="search"
+                inputMode="search"
+                enterKeyHint="search"
+                placeholder="Search customer, #, sales, reason…"
+                className="zenith-native-filter-input min-h-[44px] w-full rounded-xl pl-10 pr-10 py-2.5 text-sm placeholder:text-[color:var(--text-placeholder)]"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.preventDefault()
+                }}
+                aria-label="Search lost projects"
+              />
+              {searchInput ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchInput('')}
+                  className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 touch-manipulation items-center justify-center rounded-lg text-[color:var(--text-muted)] hover:bg-[color:var(--bg-card-hover)] hover:text-[color:var(--text-primary)]"
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4" aria-hidden />
+                </button>
+              ) : null}
+            </div>
+
+            <LostDealsHowToRead />
+
+            {isNarrow ? (
+              <LostDealsMobileCardList
+                projects={pagedProjects}
+                onOpen={(id) => navigate(`/projects/${id}`)}
+                formatInr={formatInr}
+                formatShortDate={formatShortDate}
+              />
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)]">
+                <table className="min-w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] shadow-sm">
+                      {(
+                        [
+                          { key: 'slNo', label: '#', align: 'left' },
+                          { key: 'customerName', label: 'Customer', align: 'left' },
+                          { key: 'salespersonName', label: 'Sales', align: 'left' },
+                          { key: 'year', label: 'FY', align: 'left' },
+                          { key: 'projectCost', label: 'Value', align: 'right' },
+                          { key: 'lostReason', label: 'Reason', align: 'left' },
+                          { key: 'lostDate', label: 'Lost date', align: 'left' },
+                        ] as const
+                      ).map((col) => (
+                        <th
+                          key={col.key}
+                          scope="col"
+                          className={`px-2 py-2 font-medium ${col.align === 'right' ? 'text-right' : ''}`}
+                          aria-sort={headerAriaSort(col.key)}
+                        >
+                          <button
+                            type="button"
+                            className={`${SORT_BTN} ${col.align === 'right' ? 'justify-end' : ''}`}
+                            onClick={() => handleColumnSort(col.key)}
+                            title={`Sort by ${col.label}`}
+                          >
+                            <span className={SORT_LABEL}>{col.label}</span>
+                            <LostSortGlyph active={sortKey === col.key} />
+                          </button>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tableProjects.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={7}
+                          className="px-2 py-8 text-center text-[color:var(--text-muted)]"
+                        >
+                          No projects match this view
+                        </td>
+                      </tr>
+                    ) : (
+                      pagedProjects.map((p) => (
+                        <tr
+                          key={p.id}
+                          className="cursor-pointer border-b border-[color:var(--border-default)]/60 hover:bg-[color:var(--bg-hover,transparent)]"
+                          onClick={() => navigate(`/projects/${p.id}`)}
+                        >
+                          <td className="px-2 py-2 tabular-nums text-[color:var(--text-secondary)]">
+                            <Link
+                              to={`/projects/${p.id}`}
+                              className="font-semibold text-[color:var(--accent-teal)] hover:underline"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {p.slNo ?? '—'}
+                            </Link>
+                          </td>
+                          <td className="max-w-[12rem] truncate px-2 py-2 text-[color:var(--text-primary)]">
+                            <Link
+                              to={`/projects/${p.id}`}
+                              className="hover:underline"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {p.customerName || '—'}
+                            </Link>
+                          </td>
+                          <td className="px-2 py-2 text-[color:var(--text-secondary)]">
+                            {p.salespersonName || '—'}
+                          </td>
+                          <td className="px-2 py-2 tabular-nums text-[color:var(--text-secondary)]">
+                            {p.year || '—'}
+                          </td>
+                          <td className="px-2 py-2 text-right tabular-nums text-[color:var(--text-primary)]">
+                            {formatInr(Number(p.projectCost) || 0)}
+                          </td>
+                          <td className="px-2 py-2 text-[color:var(--text-secondary)]">
+                            {p.lostReason ? (
+                              reasonDisplayLabel(p.lostReason)
+                            ) : (
+                              <span className="text-[color:var(--accent-gold)]">Uncategorized</span>
+                            )}
+                          </td>
+                          <td className="px-2 py-2 tabular-nums text-[color:var(--text-secondary)]">
+                            {formatShortDate(p.lostDate)}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {tableProjects.length > 0 ? (
+              <div className="mt-5 flex flex-col items-center justify-between gap-4 border-t border-[color:var(--border-default)] px-1 pt-4 sm:flex-row">
+                <div className="text-sm text-[color:var(--text-secondary)]">
+                  Showing page {safePage} of {totalPages} ({tableProjects.length} total)
+                </div>
+                {totalPages > 1 ? (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={safePage === 1}
+                      className="min-h-[44px] touch-manipulation rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-extrabold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={safePage >= totalPages}
+                      className="min-h-[44px] touch-manipulation rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-extrabold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      Next
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+
+          <LostDealsInsightsSection alwaysOpen={!isNarrow} chartCount={4}>
+            <ChartPanel
+              title="Lost ₹ by reason"
+              subtitle="Tap a slice or row to filter the list"
+            >
               {reasonChartData.length === 0 ? (
                 <div className="flex h-[220px] items-center justify-center text-sm text-[color:var(--text-muted)]">
                   No lost deals in this filter
@@ -629,6 +928,18 @@ const LostDeals = () => {
                       innerRadius={55}
                       outerRadius={90}
                       paddingAngle={2}
+                      style={{ cursor: 'pointer' }}
+                      onClick={(sector) => {
+                        const reason =
+                          (sector as { reason?: string; payload?: { reason?: string } })?.reason ??
+                          (sector as { payload?: { reason?: string } })?.payload?.reason
+                        if (!reason) return
+                        applyInsightFilter(
+                          reason === 'UNCATEGORIZED'
+                            ? { kind: 'uncategorized' }
+                            : { kind: 'reason', reason },
+                        )
+                      }}
                     >
                       {reasonChartData.map((entry, i) => (
                         <Cell
@@ -637,6 +948,23 @@ const LostDeals = () => {
                             entry.reason === 'UNCATEGORIZED'
                               ? chartColors.gold
                               : REASON_COLORS[i % REASON_COLORS.length]
+                          }
+                          cursor="pointer"
+                          stroke={
+                            (insightFilter.kind === 'uncategorized' &&
+                              entry.reason === 'UNCATEGORIZED') ||
+                            (insightFilter.kind === 'reason' &&
+                              insightFilter.reason === entry.reason)
+                              ? 'var(--text-primary)'
+                              : undefined
+                          }
+                          strokeWidth={
+                            (insightFilter.kind === 'uncategorized' &&
+                              entry.reason === 'UNCATEGORIZED') ||
+                            (insightFilter.kind === 'reason' &&
+                              insightFilter.reason === entry.reason)
+                              ? 2
+                              : 0
                           }
                         />
                       ))}
@@ -648,22 +976,34 @@ const LostDeals = () => {
               {reasonChartData.length > 0 ? (
                 <ul className="mt-1 max-h-36 space-y-1 overflow-y-auto text-xs text-[color:var(--text-secondary)]">
                   {reasonChartData.map((r, i) => (
-                    <li key={r.reason} className="flex items-center justify-between gap-2">
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span
-                          className="h-2.5 w-2.5 shrink-0 rounded-sm"
-                          style={{
-                            background:
-                              r.reason === 'UNCATEGORIZED'
-                                ? chartColors.gold
-                                : REASON_COLORS[i % REASON_COLORS.length],
-                          }}
-                        />
-                        <span className="truncate">{r.name}</span>
-                      </span>
-                      <span className="shrink-0 tabular-nums">
-                        {r.count} · {formatInr(r.value)}
-                      </span>
+                    <li key={r.reason}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          applyInsightFilter(
+                            r.reason === 'UNCATEGORIZED'
+                              ? { kind: 'uncategorized' }
+                              : { kind: 'reason', reason: r.reason },
+                          )
+                        }
+                        className="flex min-h-[36px] w-full touch-manipulation items-center justify-between gap-2 rounded-lg px-1 text-left hover:bg-[color:var(--bg-card-hover)]"
+                      >
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span
+                            className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                            style={{
+                              background:
+                                r.reason === 'UNCATEGORIZED'
+                                  ? chartColors.gold
+                                  : REASON_COLORS[i % REASON_COLORS.length],
+                            }}
+                          />
+                          <span className="truncate">{r.name}</span>
+                        </span>
+                        <span className="shrink-0 tabular-nums">
+                          {r.count} · {formatInr(r.value)}
+                        </span>
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -674,7 +1014,7 @@ const LostDeals = () => {
               title="Competition subtypes"
               subtitle={
                 competitionDealCount > 0
-                  ? `${competitionDealCount} deal${competitionDealCount === 1 ? '' : 's'} · ${formatInr(competitionLostValue)} — breakdown of Lost to Competition`
+                  ? `${competitionDealCount} deal${competitionDealCount === 1 ? '' : 's'} · ${formatInr(competitionLostValue)} — tap a bar to filter`
                   : competitionReasonCount > 0
                     ? 'Lost to Competition deals are missing subtype tags'
                     : 'Only deals tagged Lost to Competition'
@@ -718,16 +1058,35 @@ const LostDeals = () => {
                         tick={{ fill: chartColors.axisText, fontSize: 12, fontWeight: 600 }}
                       />
                       <Tooltip content={<CompetitionTooltip />} />
-                      <Bar dataKey="value" fill={chartColors.red} radius={[0, 4, 4, 0]} />
+                      <Bar
+                        dataKey="value"
+                        fill={chartColors.red}
+                        radius={[0, 4, 4, 0]}
+                        cursor="pointer"
+                        onClick={(bar) => {
+                          const subtype = (bar as { payload?: { subtype?: string } })?.payload
+                            ?.subtype
+                          if (!subtype) return
+                          applyInsightFilter({ kind: 'competition', subtype })
+                        }}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                   <ul className="mt-1 max-h-36 space-y-1 overflow-y-auto text-xs text-[color:var(--text-secondary)]">
                     {competitionChartData.map((r) => (
-                      <li key={r.subtype} className="flex items-center justify-between gap-2">
-                        <span className="min-w-0 truncate">{r.fullName}</span>
-                        <span className="shrink-0 tabular-nums">
-                          {r.count} · {formatInr(r.value)}
-                        </span>
+                      <li key={r.subtype}>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            applyInsightFilter({ kind: 'competition', subtype: r.subtype })
+                          }
+                          className="flex min-h-[36px] w-full touch-manipulation items-center justify-between gap-2 rounded-lg px-1 text-left hover:bg-[color:var(--bg-card-hover)]"
+                        >
+                          <span className="min-w-0 truncate">{r.fullName}</span>
+                          <span className="shrink-0 tabular-nums">
+                            {r.count} · {formatInr(r.value)}
+                          </span>
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -735,7 +1094,10 @@ const LostDeals = () => {
               )}
             </ChartPanel>
 
-            <ChartPanel title="Lost ₹ by salesperson" subtitle="Deal value on Lost projects">
+            <ChartPanel
+              title="Lost ₹ by salesperson"
+              subtitle="Tap a bar to filter the list"
+            >
               {salesChartData.length === 0 ? (
                 <div className="flex h-[220px] items-center justify-center text-sm text-[color:var(--text-muted)]">
                   No lost deals in this filter
@@ -756,13 +1118,23 @@ const LostDeals = () => {
                       tick={{ fill: chartColors.axisText, fontSize: 11 }}
                     />
                     <Tooltip content={<InrTooltip />} />
-                    <Bar dataKey="value" fill={chartColors.teal} radius={[0, 4, 4, 0]} />
+                    <Bar
+                      dataKey="value"
+                      fill={chartColors.teal}
+                      radius={[0, 4, 4, 0]}
+                      cursor="pointer"
+                      onClick={(bar) => {
+                        const name = (bar as { payload?: { name?: string } })?.payload?.name
+                        if (!name) return
+                        applyInsightFilter({ kind: 'salesperson', name })
+                      }}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               )}
             </ChartPanel>
 
-            <ChartPanel title="Lost by financial year" subtitle="Count and value by FY">
+            <ChartPanel title="Lost by financial year" subtitle="Tap a bar to filter the list">
               {fyChartData.length === 0 ? (
                 <div className="flex h-[220px] items-center justify-center text-sm text-[color:var(--text-muted)]">
                   No lost deals in this filter
@@ -774,169 +1146,27 @@ const LostDeals = () => {
                     <XAxis dataKey="name" tick={{ fill: chartColors.axisText, fontSize: 11 }} />
                     <YAxis tick={{ fill: chartColors.axisText, fontSize: 11 }} />
                     <Tooltip content={<InrTooltip />} />
-                    <Bar dataKey="value" fill={chartColors.blue} radius={[4, 4, 0, 0]} />
+                    <Bar
+                      dataKey="value"
+                      fill={chartColors.blue}
+                      radius={[4, 4, 0, 0]}
+                      cursor="pointer"
+                      onClick={(bar) => {
+                        const fy = (bar as { payload?: { name?: string } })?.payload?.name
+                        if (!fy) return
+                        applyInsightFilter({ kind: 'fy', fy })
+                      }}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               )}
             </ChartPanel>
-          </div>
-
-          <div className="rounded-xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-4">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="zenith-display text-sm font-semibold text-[color:var(--text-primary)] sm:text-[15px]">
-                Lost projects
-              </h2>
-              <div className="flex flex-wrap items-center gap-2">
-                {uncategorizedOnly ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setUncategorizedOnly(false)
-                      setPage(1)
-                    }}
-                    className="rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-elevated,var(--bg-card))] px-2.5 py-1 text-xs font-semibold text-[color:var(--text-primary)]"
-                  >
-                    Uncategorized ×
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setUncategorizedOnly(true)
-                      setPage(1)
-                    }}
-                    className="rounded-lg border border-dashed border-[color:var(--border-default)] px-2.5 py-1 text-xs font-medium text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]"
-                  >
-                    Filter: uncategorized
-                  </button>
-                )}
-                <span className="text-xs text-[color:var(--text-muted)]">
-                  Showing {pagedProjects.length} of {tableProjects.length}
-                </span>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] shadow-sm">
-                    {(
-                      [
-                        { key: 'slNo', label: '#', align: 'left' },
-                        { key: 'customerName', label: 'Customer', align: 'left' },
-                        { key: 'salespersonName', label: 'Sales', align: 'left' },
-                        { key: 'year', label: 'FY', align: 'left' },
-                        { key: 'projectCost', label: 'Value', align: 'right' },
-                        { key: 'lostReason', label: 'Reason', align: 'left' },
-                        { key: 'lostDate', label: 'Lost date', align: 'left' },
-                      ] as const
-                    ).map((col) => (
-                      <th
-                        key={col.key}
-                        scope="col"
-                        className={`px-2 py-2 font-medium ${col.align === 'right' ? 'text-right' : ''}`}
-                        aria-sort={headerAriaSort(col.key)}
-                      >
-                        <button
-                          type="button"
-                          className={`${SORT_BTN} ${col.align === 'right' ? 'justify-end' : ''}`}
-                          onClick={() => handleColumnSort(col.key)}
-                          title={`Sort by ${col.label}`}
-                        >
-                          <span className={SORT_LABEL}>{col.label}</span>
-                          <LostSortGlyph active={sortKey === col.key} />
-                        </button>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableProjects.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={7}
-                        className="px-2 py-8 text-center text-[color:var(--text-muted)]"
-                      >
-                        No projects match this view
-                      </td>
-                    </tr>
-                  ) : (
-                    pagedProjects.map((p) => (
-                      <tr
-                        key={p.id}
-                        className="border-b border-[color:var(--border-default)]/60 hover:bg-[color:var(--bg-hover,transparent)]"
-                      >
-                        <td className="px-2 py-2 tabular-nums text-[color:var(--text-secondary)]">
-                          <Link
-                            to={`/projects/${p.id}`}
-                            className="font-semibold text-[color:var(--accent-teal)] hover:underline"
-                          >
-                            {p.slNo ?? '—'}
-                          </Link>
-                        </td>
-                        <td className="max-w-[12rem] truncate px-2 py-2 text-[color:var(--text-primary)]">
-                          <Link to={`/projects/${p.id}`} className="hover:underline">
-                            {p.customerName || '—'}
-                          </Link>
-                        </td>
-                        <td className="px-2 py-2 text-[color:var(--text-secondary)]">
-                          {p.salespersonName || '—'}
-                        </td>
-                        <td className="px-2 py-2 tabular-nums text-[color:var(--text-secondary)]">
-                          {p.year || '—'}
-                        </td>
-                        <td className="px-2 py-2 text-right tabular-nums text-[color:var(--text-primary)]">
-                          {formatInr(Number(p.projectCost) || 0)}
-                        </td>
-                        <td className="px-2 py-2 text-[color:var(--text-secondary)]">
-                          {p.lostReason
-                            ? reasonDisplayLabel(p.lostReason)
-                            : (
-                              <span className="text-[color:var(--accent-gold)]">Uncategorized</span>
-                            )}
-                        </td>
-                        <td className="px-2 py-2 tabular-nums text-[color:var(--text-secondary)]">
-                          {formatShortDate(p.lostDate)}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {tableProjects.length > 0 ? (
-              <div className="mt-5 flex flex-col items-center justify-between gap-4 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] px-4 py-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:flex-row sm:px-5">
-                <div className="text-sm text-[color:var(--text-secondary)]">
-                  Showing page {safePage} of {totalPages} ({tableProjects.length} total)
-                </div>
-                {totalPages > 1 ? (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={safePage === 1}
-                      className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-extrabold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-45"
-                    >
-                      Previous
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={safePage >= totalPages}
-                      className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-extrabold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)] disabled:cursor-not-allowed disabled:opacity-45"
-                    >
-                      Next
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
+          </LostDealsInsightsSection>
         </>
       )}
     </div>,
   )
 }
+
 
 export default LostDeals

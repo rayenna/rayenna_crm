@@ -111,26 +111,30 @@ The tile counts and filters match the dashboard filters (FY, Quarter, Month) you
 
 1. Navigate to **Projects** from the top menu (or click a dashboard Quick Access tile).
 2. Use the **search bar** to find projects by customer name, customer ID, or consumer number.
-3. Apply **filters** (click **Show Filters** to expand):
+3. **Quick views** (one tap) — presets such as **Open pipeline**, **Needs review**, **Availing loan**, **Pending subsidy**, and **Outstanding payment**. They replace the matching pipeline flags; use **Clear All** to reset.
+4. Apply **filters** (click **Show Filters** to expand):
    - **FY, Quarter, Month**: Same dashboard-style date filters. Tile counts and Quick Access links use these.
    - **Pipeline** (status): Lead, Site Survey, Proposal, Confirmed, Installation, Completed, etc.
    - **Customer type**: Residential, Apartment, Commercial (from **Customer Master** — not the same as **Segment**)
    - **Segment**: Subsidy or Non-Subsidy (on the project)
    - **Project Types** (service): EPC, Panel Cleaning, Maintenance, etc.
-   - **Payment Status**, **Lead source**, **Ticket status**, **Sales users** (non-Sales), **Has Artifacts**, **Availing Loan**, **Needs review**
-4. **Active filters** chips appear under the search bar when anything is applied; click **×** on a chip to remove that slice only.
-5. Use **Clear All** to reset search, filters, sort, and dates. Works even when arriving from a dashboard or Zenith chart link.
-6. **Admins**: **Export to Excel/CSV** downloads the **same filtered list** (see full Projects help for columns).
-7. Sort by creation date, confirmation date, order value, customer name, profitability, system capacity, or **Deal Health Score**. Default is confirmation date (newest first).
-8. Click a **project row** or **project number** to open the **Project Detail** page.
+   - **Payment Status**, **Lead source**, **Ticket status**, **Sales users** (non-Sales), **Has Artifacts**, **Availing Loan**, **Pending subsidy**, **Needs review**
+5. **Active filters** chips appear under the search bar when anything is applied; click **×** on a chip to remove that slice only.
+6. Use **Clear All** to reset search, filters, sort, and dates. Works even when arriving from a dashboard or Zenith chart link.
+7. **Phones (under ~744px):** the list defaults to **cards** — tap the card to open the project. Use **Cards / Table** if you need the wide grid. Wider screens keep the table.
+8. **Admins**: **Export to Excel/CSV** downloads the **same filtered list** (see full Projects help for columns). Export and Columns menus use an opaque panel so text stays readable in dark mode.
+9. Sort by creation date, confirmation date, order value, customer name, profitability, system capacity, or **Deal Health Score**. Default is confirmation date (newest first).
+10. Click a **project row**, **card**, or **project number** to open the **Project Detail** page.
 
 Filters are remembered when you navigate to a project and use **Back** to return.
+
+**Pending subsidy** means **Segment = Subsidy** and **Status = Completed** (not yet **Completed – Subsidy Credited**). It is available as a Quick view and as a checkbox under Show Filters.
 
 **Needs review** (filter checkbox, list **Review** pill, and detail banner) flags dates, payments, or capacity that do not match the current stage. Full rules, Zenith, My Day, and **Save anyway**: [Needs review (Data Sense)](#needs-review-data-sense).
 
 ### Subtotals, payment balance, financing bank, and lead source (list)
 
-- **Subtotals**: Select multiple projects using the checkboxes. The bottom of the list shows subtotals for Order Value, Amount Received, and Outstanding.
+- **Subtotals**: Select multiple projects using the checkboxes. The bottom of the list shows subtotals for Order Value, Amount Received, and Outstanding — totals and column headers stay aligned under the matching columns on the table layout.
 - **Payment status (Pending / Partial)** — When there is a **positive outstanding balance**, open a **popover** from the status pill: **hover** on **laptop / mouse**, or **tap** on **touch** (phone or tablet). The card uses the **same dark “Deal Health” look** (navy panel, teal accent for the **₹** balance, short footer note) so it matches the **Deal Health** badge popover on the same page.
 - **Financing bank icon** — A small **bank** icon under the salesperson appears only when **Availing Loan/Financing** is **Yes** **and** a **financing bank** is set (dropdown or **Other** name). **Hover** or **tap** the icon for the **full bank name** in the **same popover style** as Deal Health. On mobile, tapping the icon does **not** open the project row (tap outside to dismiss).
 - **Lead source column** — From **tablet width** up, each project shows a **color-coded pill** (Website blue, Referral green, Google gold, Channel Partner red, Digital Marketing purple, Sales pink, Management Connect cyan, Other lime). For **Referral**, **Channel Partner**, or **Other**, when a detail name is saved, **hover** or **tap** the pill to see it in the **same popover style**. The field label (for example **Referral name or Hub code**) may wrap; the **name stays on one line**. Tapping the pill does not open the project row.

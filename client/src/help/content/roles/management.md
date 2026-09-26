@@ -11,9 +11,9 @@ You get a **company-wide lens**: every dashboard, **Zenith**, and read-only visi
 | **Create and edit any customer**; **reassign salesperson** | Delete projects or customers |
 | **Support tickets** — create, follow up, close | **Tally export** (Finance / Admin) |
 | **Proposal Engine** visibility on dashboard / Zenith | **Users** or **Audit & Security** (Admin) |
-| **My Day** and full Help | Bulk Excel/CSV export (Admin) |
+| **My Day**, full Help, and **Lost Deals** analytics | Bulk Excel/CSV export (Admin) |
 
-→ [Permission matrix](#permission-matrix) · [Zenith](/help/zenith#zenith-command-center)
+→ [Permission matrix](#permission-matrix) · [Zenith](/help/zenith#zenith-command-center) · [Lost Deals](/help/modules#lost-deals-analytics)
 
 ## Your dashboard
 
@@ -27,11 +27,15 @@ You get a **company-wide lens**: every dashboard, **Zenith**, and read-only visi
 
 ## Projects (read-only)
 
-- **Projects** lists **every** status including early pipeline and Lost.  
+- **Projects** lists **every** status including early pipeline and Lost. On phones, use **cards** and **Quick views** (including **Pending subsidy**) the same as other roles.  
 - Open any project for detail, documents, remarks, and payment **view**.  
 - **Edit** is not available for project fields — escalate changes to **Sales** (own projects), **Operations** (execution), or **Finance** (payments).
 
 Use filters (salesperson, status, PE buckets, **Needs review**) to review team data quality without changing records. On **Zenith**, **Things needing attention** includes a **by salesperson** rollup. Guide: [Needs review](/help/modules#needs-review-data-sense).
+
+## Lost Deals
+
+Open **Lost Deals** from the menu for lost count / ₹, win rates, reason mix, and a working list of lost projects. Tap a chart slice to filter the list; finish tagging **Reason for Loss** on the project when deals are uncategorized. Guide: [Lost Deals](/help/modules#lost-deals-analytics).
 
 ## Customers (limited write)
 
@@ -59,9 +63,10 @@ View payment status and financial KPIs on dashboards. **Tally export** remains F
 
 1. Start **Zenith** or **Dashboard** with the right FY/month.  
 2. Drill from charts into **Projects** lists.  
-3. Open detail for qualitative context (remarks, documents).  
-4. Assign or correct **customers** when ownership is wrong.  
-5. Open **support tickets** when a customer issue needs tracking without a project edit.
+3. Review **Lost Deals** for reason mix and uncategorized losses.  
+4. Open detail for qualitative context (remarks, documents).  
+5. Assign or correct **customers** when ownership is wrong.  
+6. Open **support tickets** when a customer issue needs tracking without a project edit.
 
 ## Daily rhythm
 

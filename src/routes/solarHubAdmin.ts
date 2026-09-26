@@ -91,6 +91,7 @@ router.get(
     query('active').optional().isIn(['true', 'false']),
     query('inverterBrand').optional().isString().trim(),
     query('plantLink').optional().isIn(['solis', 'deye', 'none']),
+    query('neverLoggedIn').optional().isIn(['true', 'false']),
     query('sortBy').optional().isIn([
       'default',
       'createdAt_desc',
@@ -112,6 +113,7 @@ router.get(
         active: req.query.active as 'true' | 'false' | undefined,
         inverterBrand: req.query.inverterBrand as string | undefined,
         plantLink: req.query.plantLink as 'solis' | 'deye' | 'none' | undefined,
+        neverLoggedIn: req.query.neverLoggedIn === 'true',
         sortBy: req.query.sortBy as
           | 'default'
           | 'createdAt_desc'

@@ -21,6 +21,8 @@ export type SolarHubUserListFiltersProps = {
   onInverterBrandChange: (value: string) => void
   plantLink: SolarHubPlantLinkFilter
   onPlantLinkChange: (value: SolarHubPlantLinkFilter) => void
+  neverLoggedIn: boolean
+  onNeverLoggedInChange: (value: boolean) => void
   resultTotal?: number
   onClearAll: () => void
 }
@@ -61,23 +63,28 @@ export default function SolarHubUserListFilters({
   onInverterBrandChange,
   plantLink,
   onPlantLinkChange,
+  neverLoggedIn,
+  onNeverLoggedInChange,
   resultTotal,
   onClearAll,
 }: SolarHubUserListFiltersProps) {
   // Collapsed by default — mobile-first declutter (same pattern as Projects).
   const [showFilters, setShowFilters] = useState(false)
 
+  // Sort does not inflate the Show Filters (N) badge.
   const moreFiltersActiveCount = useMemo(() => {
     let n = 0
     if (active !== 'all') n += 1
     if (inverterBrand.trim()) n += 1
     if (plantLink) n += 1
-    if (sortBy !== DEFAULT_SOLAR_HUB_USER_SORT) n += 1
+    if (neverLoggedIn) n += 1
     return n
-  }, [active, inverterBrand, plantLink, sortBy])
+  }, [active, inverterBrand, plantLink, neverLoggedIn])
 
   const hasAnyFilters =
-    Boolean(searchInput.trim()) || moreFiltersActiveCount > 0
+    Boolean(searchInput.trim()) ||
+    moreFiltersActiveCount > 0 ||
+    sortBy !== DEFAULT_SOLAR_HUB_USER_SORT
 
   const brandInQuick = SOLAR_HUB_INVERTER_QUICK_BRANDS.some(
     (b) => b.toLowerCase() === inverterBrand.trim().toLowerCase(),
@@ -106,6 +113,13 @@ export default function SolarHubUserListFilters({
         onRemove: () => onPlantLinkChange(''),
       })
     }
+    if (neverLoggedIn) {
+      chips.push({
+        key: 'never',
+        label: 'Never logged in',
+        onRemove: () => onNeverLoggedInChange(false),
+      })
+    }
     if (sortBy !== DEFAULT_SOLAR_HUB_USER_SORT) {
       const sortLabel =
         SOLAR_HUB_USER_SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? sortBy
@@ -120,17 +134,19 @@ export default function SolarHubUserListFilters({
     active,
     inverterBrand,
     plantLink,
+    neverLoggedIn,
     sortBy,
     onActiveChange,
     onInverterBrandChange,
     onPlantLinkChange,
+    onNeverLoggedInChange,
     onSortByChange,
   ])
 
   return (
     <div className="mb-4 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-4">
       <div className="space-y-2 sm:space-y-3">
-        {/* Always visible: search + Show/Hide + Clear */}
+        {/* Always visible: search + Show/Hide + Clear (when idle Clear hides) */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="relative w-full sm:min-w-0 sm:flex-1">
             <Search
@@ -188,14 +204,16 @@ export default function SolarHubUserListFilters({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
-            <button
-              type="button"
-              onClick={onClearAll}
-              className="inline-flex min-h-[44px] flex-1 touch-manipulation items-center justify-center rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)] sm:flex-none"
-              title="Clear search and all filters"
-            >
-              Clear All
-            </button>
+            {hasAnyFilters ? (
+              <button
+                type="button"
+                onClick={onClearAll}
+                className="inline-flex min-h-[44px] flex-1 touch-manipulation items-center justify-center rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)] sm:flex-none"
+                title="Clear search and all filters"
+              >
+                Clear All
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -355,6 +373,28 @@ export default function SolarHubUserListFilters({
                     {opt.label}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--text-muted)]">
+                Login
+              </span>
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Login status">
+                <button
+                  type="button"
+                  onClick={() => onNeverLoggedInChange(false)}
+                  className={`inline-flex min-h-[40px] shrink-0 touch-manipulation items-center rounded-full border px-3.5 text-xs font-semibold transition-colors ${chipClass(!neverLoggedIn)}`}
+                >
+                  Any login
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNeverLoggedInChange(!neverLoggedIn)}
+                  className={`inline-flex min-h-[40px] shrink-0 touch-manipulation items-center rounded-full border px-3.5 text-xs font-semibold transition-colors ${chipClass(neverLoggedIn)}`}
+                >
+                  Never logged in
+                </button>
               </div>
             </div>
 

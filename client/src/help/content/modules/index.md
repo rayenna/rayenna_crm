@@ -14,7 +14,8 @@ The **data modules** in Rayenna CRM are where you create and maintain business r
 | **Key Artifacts** | Photos, PDFs, sheets on a project | [Key Artifacts](#key-artifacts-module) |
 | **Support Tickets** | Service requests linked to projects | [Support Tickets](#support-tickets-module) |
 | **Tally Export** | Accounting handoff (Finance / Admin) | [Tally Export](#tally-export-module) |
-| **Solar Hub** | Install the homeowner PWA; map Solis/Deye plants for live kWh | [Handover](#solar-hub-handover) · [Plants and generation](#solar-hub-plants-and-generation) |
+| **Solar Hub** | Install the homeowner PWA; staff lists (Users / Maintenance / Provisioning); map Solis/Deye plants for live kWh | [Handover](#solar-hub-handover) · [Staff lists](#solar-hub-staff-lists) · [Plants](#solar-hub-plants-and-generation) |
+| **Lost Deals** | Lost count / ₹, win rates, reason charts, and a mobile-first lost list (**Admin / Management**) | [Lost Deals](#lost-deals-analytics) |
 
 ## Related areas (not in this section)
 
@@ -47,8 +48,8 @@ Many dashboard tiles and Zenith charts **open Projects** with filters already ap
 | **Sales** | [Projects](#projects-module) · [Customer Master](#customer-master-module) |
 | **Operations** | [Projects](#projects-module) (Confirmed → Subsidy Credited) |
 | **Finance** | [Projects](#projects-module) (payments) · [Tally Export](#tally-export-module) |
-| **Management** | [Projects](#projects-module) (view) · [Customer Master](#customer-master-module) |
-| **Admin** | All modules · [Security](/help/security) |
+| **Management** | [Projects](#projects-module) (view) · [Lost Deals](#lost-deals-analytics) · [Customer Master](#customer-master-module) |
+| **Admin** | All modules · [Lost Deals](#lost-deals-analytics) · [Security](/help/security) |
 
 Full access tables: [Roles → Permission matrix](/help/roles#permission-matrix).
 

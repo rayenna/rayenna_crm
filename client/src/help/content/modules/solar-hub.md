@@ -7,9 +7,42 @@ Install **Rayenna Solar Hub** on the homeowner’s phone at handover or a site v
 | Role | What you do |
 | :-- | :-- |
 | **Sales** | On **Project detail**, open **Install Hub on this visit**. You can copy the script and WhatsApp the link. You cannot create Hub accounts or map inverter plants. |
-| **Operations / Admin** | Same script, plus **Create Hub account**, plant mapping, and (Admin) password reset / credentials PDF. |
+| **Operations / Admin** | Same script, plus **Create Hub account**, plant mapping, and (Admin) password reset / credentials PDF. Staff work lives under **Solar Hub** in the menu. |
 
-→ [Projects](#projects-module) · [Solar Hub plants and generation](#solar-hub-plants-and-generation)
+→ [Projects](#projects-module) · [Solar Hub plants and generation](#solar-hub-plants-and-generation) · [Solar Hub staff lists](#solar-hub-staff-lists)
+
+## Solar Hub staff lists
+
+**Solar Hub** in the CRM menu has tabs: **Users**, **Maintenance**, **Provisioning**, and **Help Content**. Tabs use large touch targets and scroll sideways on narrow phones (they do not wrap to two rows).
+
+### Start here
+
+On first visit (until you dismiss it), a **Start here** strip orders the job:
+
+1. **Provisioning** — create Hub logins for confirmed / install / completed gaps  
+2. **Unlinked users** — Users list filtered to accounts with no Solis/Deye plant  
+3. **Install Hub script** — jumps to the compact handover script on Users  
+
+Dismiss stores a preference in this browser only (not synced across devices).
+
+### Users
+
+- **Phones (under ~744px):** **cards** by default — `@username`, customer, plant (Solis / Deye / **Unlinked**), quiet Active/Inactive, last login. **Tap the whole card** to open user detail. Optional **Cards / Table** toggle is remembered for the session.
+- **Wider screens:** sortable table; row tap opens detail.
+- **Quick views** — one-tap presets: Unlinked plants, Inactive, Never logged in, Solis linked, Deye linked.
+- **Filters** — search, Active/Inactive, inverter brand, cloud plant, never logged in, sort. **Clear All** appears only when something is applied. Sort does not inflate the **Show Filters (N)** count.
+- **How to read this list** — short plant legend (Solis / Deye / Unlinked).
+- **Install Hub script** — collapsed by default on the Users list so accounts stay above the fold; expand when you need the visit script. Full script stays open on **user detail** and **Provisioning**.
+
+User detail stays under the **Solar Hub** tabs (Users stays highlighted). After **password reset**, a **New credentials** panel stays on screen until you dismiss it (do not rely on toasts alone on phone).
+
+### Maintenance
+
+Service requests from the Hub app. On phones, use **cards** with large status actions. Links to Hub users use the Users search (`?q=`).
+
+### Provisioning
+
+Projects that still need a Hub login. On phones, use **cards** with provision actions. After you **Provision** one account, a **persistent credentials panel** shows the one-time password — copy it before dismissing. Bulk provision still summarizes counts; open the user to reset password if you need credentials again.
 
 ## On the visit
 
@@ -51,7 +84,7 @@ Match the cloud to the inverter the customer actually uses. Deye Cloud and Solar
 
 ## Map a plant (Operations / Admin)
 
-1. Open **Solar Hub → Users** → the homeowner.
+1. Open **Solar Hub → Users** → the homeowner (card or table).
 2. Use **SolisCloud plant** or **Deye Cloud plant**.
 3. Pick the plant from the list (or paste the plant id). **Save** also pulls kWh once.
 4. Confirm the status line shows months synced. Hub **Home** / **Track** then show a **Live · SolisCloud** or **Live · Deye Cloud** pill.
@@ -70,7 +103,7 @@ If a card says keys are not on the CRM API, that is an environment setup issue o
 
 ## Accounts (Provisioning)
 
-Hub accounts are created from **Confirmed** through completion (**Ops/Admin**). **Solar Hub → Provisioning** lists projects that still need an account. **Provision** creates the username and shows a **one-time password once** — there is no shared default password. Share it only with the household, then they change it in Hub **Profile**.
+Hub accounts are created from **Confirmed** through completion (**Ops/Admin**). **Solar Hub → Provisioning** lists projects that still need an account. **Provision** creates the username and shows a **one-time password once** in the on-page credentials panel — there is no shared default password. Share it only with the household, then they change it in Hub **Profile**.
 
 ## Homeowner Help Center
 

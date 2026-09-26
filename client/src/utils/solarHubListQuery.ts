@@ -30,6 +30,7 @@ export type SolarHubUserListFilterState = {
   inverterBrand: string
   plantLink: SolarHubPlantLinkFilter
   sortBy: SolarHubUserSortBy
+  neverLoggedIn: boolean
 }
 
 export function buildSolarHubUserListQueryParams(
@@ -41,6 +42,7 @@ export function buildSolarHubUserListQueryParams(
   if (state.active === 'inactive') params.set('active', 'false')
   if (state.inverterBrand.trim()) params.set('inverterBrand', state.inverterBrand.trim())
   if (state.plantLink) params.set('plantLink', state.plantLink)
+  if (state.neverLoggedIn) params.set('neverLoggedIn', 'true')
   if (state.sortBy && state.sortBy !== DEFAULT_SOLAR_HUB_USER_SORT) {
     params.set('sortBy', state.sortBy)
   } else {
@@ -58,6 +60,7 @@ export function parseSolarHubUserListStateFromSearchParams(
   const plantRaw = params.get('plant') || params.get('plantLink') || ''
   const sortRaw = params.get('sort') || params.get('sortBy') || ''
   const brand = params.get('inverter') || params.get('inverterBrand') || ''
+  const neverRaw = params.get('neverLoggedIn') || params.get('neverLogin') || ''
 
   let active: SolarHubActiveFilter = 'all'
   if (activeRaw === 'true' || activeRaw === 'active') active = 'active'
@@ -84,6 +87,7 @@ export function parseSolarHubUserListStateFromSearchParams(
     inverterBrand: brand,
     plantLink,
     sortBy,
+    neverLoggedIn: neverRaw === 'true' || neverRaw === '1',
   }
 }
 
@@ -92,7 +96,19 @@ export function applySolarHubUserListStateToSearchParams(
   state: SolarHubUserListFilterState,
 ): URLSearchParams {
   const next = new URLSearchParams(prev)
-  for (const key of ['q', 'search', 'active', 'inverter', 'inverterBrand', 'plant', 'plantLink', 'sort', 'sortBy']) {
+  for (const key of [
+    'q',
+    'search',
+    'active',
+    'inverter',
+    'inverterBrand',
+    'plant',
+    'plantLink',
+    'sort',
+    'sortBy',
+    'neverLoggedIn',
+    'neverLogin',
+  ]) {
     next.delete(key)
   }
 
@@ -101,6 +117,7 @@ export function applySolarHubUserListStateToSearchParams(
   if (state.active === 'inactive') next.set('active', 'false')
   if (state.inverterBrand.trim()) next.set('inverter', state.inverterBrand.trim())
   if (state.plantLink) next.set('plant', state.plantLink)
+  if (state.neverLoggedIn) next.set('neverLoggedIn', 'true')
   if (state.sortBy !== DEFAULT_SOLAR_HUB_USER_SORT) next.set('sort', state.sortBy)
 
   return next
@@ -113,5 +130,6 @@ export function defaultSolarHubUserListState(): SolarHubUserListFilterState {
     inverterBrand: '',
     plantLink: '',
     sortBy: DEFAULT_SOLAR_HUB_USER_SORT,
+    neverLoggedIn: false,
   }
 }

@@ -22,8 +22,10 @@ Roles: **ADMIN** · **SALES** · **OPS** (Operations) · **FINANCE** · **MGMT**
 | **My Day** (tasks, journal, reminders) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | **Customers** | ✓ | ◐ | 👁 | 👁 | ◐ |
 | **Projects** | ✓ | ◐ | ◐ | ◐ | 👁 |
+| **Lost Deals** (analytics) | ✓ | — | — | — | ✓ |
 | **Support tickets** | ✓ | ✓ | ✓ | — | ✓ |
 | **Tally export** | ✓ | — | — | ✓ | — |
+| **Solar Hub** (Users / Maintenance / Provisioning / Help) | ✓ | — | ✓ | — | — |
 | **Users** | ✓ | — | — | — | — |
 | **Audit & Security** | ✓ | — | — | — | — |
 | **Help** | ✓ | ✓ | ✓ | ✓ | ✓ |

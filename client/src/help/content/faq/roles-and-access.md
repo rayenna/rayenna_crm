@@ -10,6 +10,8 @@ Menus are **role-based**. Examples:
 | :-- | :-- |
 | **Users**, **Audit & Security** | Admin only |
 | **Tally Export** | Finance and Admin |
+| **Lost Deals** | Admin and Management |
+| **Solar Hub** | Operations and Admin |
 | **Support Tickets** | Not Finance |
 
 If you need access, contact your administrator. Per-role guides: [Roles](/help/roles).

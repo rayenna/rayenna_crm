@@ -37,7 +37,9 @@ export const helpSectionSubNav: Partial<Record<string, HelpSubNavItem[]>> = {
     { label: 'Support Tickets', hash: 'support-tickets-module' },
     { label: 'Tally Export', hash: 'tally-export-module' },
     { label: 'Solar Hub handover', hash: 'solar-hub-handover' },
+    { label: 'Solar Hub staff lists', hash: 'solar-hub-staff-lists' },
     { label: 'Solar Hub plants', hash: 'solar-hub-plants-and-generation' },
+    { label: 'Lost Deals', hash: 'lost-deals-analytics' },
   ],
   dashboard: [
     { label: 'Overview', hash: 'dashboard' },
@@ -115,6 +117,9 @@ export function getHelpHashForRoute(currentPath: string): string | null {
     return 'tally-export-module'
   }
   if (currentPath.startsWith('/solar-hub')) return 'solar-hub-handover'
+  if (currentPath === '/lost-deals' || currentPath.startsWith('/lost-deals/')) {
+    return 'lost-deals-analytics'
+  }
   if (currentPath === '/users' || currentPath.startsWith('/users/')) return 'users'
   if (currentPath === '/audit-security' || currentPath.startsWith('/audit-security/')) {
     return 'audit-and-security'
@@ -163,7 +168,7 @@ export const helpSections: HelpSection[] = [
     title: 'Modules',
     routeKey: 'modules',
     markdownPath: '/help-docs/modules/index.md',
-    routePatterns: ['/customers', '/projects', '/tally-export', '/solar-hub']
+    routePatterns: ['/customers', '/projects', '/tally-export', '/solar-hub', '/lost-deals']
   },
   {
     id: 'dashboard',
@@ -208,6 +213,8 @@ export const routeToHelpMapping: Record<string, string> = {
   '/projects': 'modules',
   '/support-tickets': 'modules',
   '/tally-export': 'modules',
+  '/lost-deals': 'modules',
+  '/solar-hub': 'modules',
   '/users': 'security',
   '/change-password': 'security',
   '/audit-security': 'security',
@@ -259,6 +266,8 @@ const routeToContextLabel: Record<string, string> = {
   '/projects/new': 'New project',
   '/support-tickets': 'Support Tickets',
   '/tally-export': 'Tally Export',
+  '/lost-deals': 'Lost Deals',
+  '/solar-hub': 'Solar Hub',
   '/users': 'Users',
   '/change-password': 'Change Password',
   '/audit-security': 'Audit & Security',
@@ -288,5 +297,7 @@ export function getHelpContextLabel(currentPath: string): string | null {
     return 'Customer details'
   }
   if (currentPath.startsWith('/support-tickets/')) return 'Ticket details'
+  if (currentPath.startsWith('/solar-hub')) return 'Solar Hub'
+  if (currentPath.startsWith('/lost-deals')) return 'Lost Deals'
   return null
 }

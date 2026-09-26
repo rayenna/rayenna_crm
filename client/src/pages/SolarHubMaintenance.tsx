@@ -11,6 +11,9 @@ import type {
   HubMaintenanceListResponse,
 } from '../types/solarHub'
 import { solarHubTableScrollShell } from '../components/solarHub/tableScrollShell'
+import SolarHubMaintenanceMobileCardList from '../components/solarHub/SolarHubMaintenanceMobileCardList'
+import SolarHubListSkeleton from '../components/solarHub/SolarHubListSkeleton'
+import { useSolarHubNarrowList } from '../components/solarHub/useSolarHubNarrowList'
 
 const STATUS_OPTIONS: { value: '' | HubMaintenanceRequestStatus; label: string }[] = [
   { value: '', label: 'All statuses' },
@@ -41,6 +44,7 @@ export default function SolarHubMaintenance() {
   const queryClient = useQueryClient()
   const { hasRole } = useAuth()
   const canManage = hasRole([UserRole.ADMIN, UserRole.OPERATIONS])
+  const isNarrow = useSolarHubNarrowList()
 
   const [statusFilter, setStatusFilter] = useState<'' | HubMaintenanceRequestStatus>('')
   const [page, setPage] = useState(1)
@@ -72,6 +76,9 @@ export default function SolarHubMaintenance() {
     return Math.max(1, Math.ceil(data.total / data.limit))
   }, [data])
 
+  const items = data?.items ?? []
+  const isEmpty = items.length === 0
+
   return (
     <>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -84,7 +91,7 @@ export default function SolarHubMaintenance() {
             setStatusFilter(e.target.value as '' | HubMaintenanceRequestStatus)
             setPage(1)
           }}
-          className="rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-sm text-[color:var(--text-primary)]"
+          className="min-h-[44px] touch-manipulation rounded-xl border border-[color:var(--border-input)] bg-[color:var(--bg-input)] px-3 py-2.5 text-sm text-[color:var(--text-primary)]"
         >
           {STATUS_OPTIONS.map((opt) => (
             <option key={opt.value || 'all'} value={opt.value}>
@@ -101,103 +108,117 @@ export default function SolarHubMaintenance() {
           <button
             type="button"
             onClick={() => void refetch()}
-            className="mt-4 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2 text-sm font-bold text-[color:var(--text-inverse)]"
+            className="mt-4 min-h-[44px] touch-manipulation rounded-xl bg-[color:var(--accent-gold)] px-4 py-2 text-sm font-bold text-[color:var(--text-inverse)]"
           >
             Try again
           </button>
         </div>
       ) : isLoading ? (
-        <div className="py-16 text-center text-sm text-[color:var(--text-muted)]">Loading…</div>
+        <SolarHubListSkeleton rows={5} variant={isNarrow ? 'cards' : 'table'} />
       ) : (
         <>
           <p className="mb-2 text-xs text-[color:var(--text-muted)]">
             {data?.total ?? 0} request{(data?.total ?? 0) === 1 ? '' : 's'}
             {isFetching ? ' · Updating…' : ''}
           </p>
-          <div className={solarHubTableScrollShell}>
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] text-left text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
-                  <th className="px-4 py-3">Submitted</th>
-                  <th className="px-4 py-3">Customer / Hub user</th>
-                  <th className="px-4 py-3">Request</th>
-                  <th className="px-4 py-3">Preferred date</th>
-                  <th className="px-4 py-3">Status</th>
-                  {canManage ? <th className="px-4 py-3">Actions</th> : null}
-                </tr>
-              </thead>
-              <tbody>
-                {(data?.items ?? []).map((row: HubMaintenanceRequest) => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-[color:var(--border-default)] hover:bg-[color:var(--bg-card-hover)]"
-                  >
-                    <td className="px-4 py-3 text-[color:var(--text-muted)]">
-                      {new Date(row.createdAt).toLocaleDateString('en-IN')}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-[color:var(--text-primary)]">{row.customerName}</div>
-                      <div className="text-xs text-[color:var(--text-muted)]">
-                        <Link
-                          to={`/solar-hub/users?search=${encodeURIComponent(row.username)}`}
-                          className="text-[color:var(--accent-teal)] hover:underline"
-                        >
-                          @{row.username}
-                        </Link>
-                        {' · '}
-                        <Link
-                          to={`/projects/${row.projectId}`}
-                          className="text-[color:var(--accent-teal)] hover:underline"
-                        >
-                          Project #{row.projectSlNo}
-                        </Link>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-[color:var(--text-primary)]">{row.title}</div>
-                      <div className="text-xs text-[color:var(--text-muted)]">
-                        {row.requestType === 'SCHEDULE_SERVICE' ? 'Schedule service' : 'Report issue'}
-                        {row.description ? ` · ${row.description.slice(0, 80)}${row.description.length > 80 ? '…' : ''}` : ''}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-[color:var(--text-secondary)]">
-                      {row.preferredDate
-                        ? new Date(row.preferredDate).toLocaleDateString('en-IN')
-                        : '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${statusBadge(row.status)}`}
-                      >
-                        {row.status.replace(/_/g, ' ')}
-                      </span>
-                    </td>
-                    {canManage ? (
+
+          {isNarrow ? (
+            <SolarHubMaintenanceMobileCardList
+              items={items}
+              canManage={canManage}
+              busy={updateMutation.isPending}
+              onStatusChange={(id, status) => updateMutation.mutate({ id, status })}
+              nextStatuses={NEXT_STATUS}
+              statusBadgeClass={statusBadge}
+            />
+          ) : isEmpty ? (
+            <p className="rounded-2xl border border-dashed border-[color:var(--border-default)] bg-[color:var(--bg-card)] px-6 py-12 text-center text-sm text-[color:var(--text-muted)]">
+              No maintenance requests yet.
+            </p>
+          ) : (
+            <div className={solarHubTableScrollShell}>
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] text-left text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
+                    <th className="px-4 py-3">Submitted</th>
+                    <th className="px-4 py-3">Customer / Hub user</th>
+                    <th className="px-4 py-3">Request</th>
+                    <th className="px-4 py-3">Preferred date</th>
+                    <th className="px-4 py-3">Status</th>
+                    {canManage ? <th className="px-4 py-3">Actions</th> : null}
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((row: HubMaintenanceRequest) => (
+                    <tr
+                      key={row.id}
+                      className="border-b border-[color:var(--border-default)] hover:bg-[color:var(--bg-card-hover)]"
+                    >
+                      <td className="px-4 py-3 text-[color:var(--text-muted)]">
+                        {new Date(row.createdAt).toLocaleDateString('en-IN')}
+                      </td>
                       <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {(NEXT_STATUS[row.status] ?? []).map((next) => (
-                            <button
-                              key={next}
-                              type="button"
-                              disabled={updateMutation.isPending}
-                              onClick={() => updateMutation.mutate({ id: row.id, status: next })}
-                              className="rounded-lg border border-[color:var(--border-default)] px-2 py-1 text-[10px] font-bold uppercase text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-card-hover)] disabled:opacity-50"
-                            >
-                              → {next.replace(/_/g, ' ')}
-                            </button>
-                          ))}
+                        <div className="font-medium text-[color:var(--text-primary)]">{row.customerName}</div>
+                        <div className="text-xs text-[color:var(--text-muted)]">
+                          <Link
+                            to={`/solar-hub/users?q=${encodeURIComponent(row.username)}`}
+                            className="text-[color:var(--accent-teal)] hover:underline"
+                          >
+                            @{row.username}
+                          </Link>
+                          {' · '}
+                          <Link
+                            to={`/projects/${row.projectId}`}
+                            className="text-[color:var(--accent-teal)] hover:underline"
+                          >
+                            Project #{row.projectSlNo}
+                          </Link>
                         </div>
                       </td>
-                    ) : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {(data?.items ?? []).length === 0 ? (
-            <p className="mt-6 text-center text-sm text-[color:var(--text-muted)]">No maintenance requests yet.</p>
-          ) : null}
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-[color:var(--text-primary)]">{row.title}</div>
+                        <div className="text-xs text-[color:var(--text-muted)]">
+                          {row.requestType === 'SCHEDULE_SERVICE' ? 'Schedule service' : 'Report issue'}
+                          {row.description
+                            ? ` · ${row.description.slice(0, 80)}${row.description.length > 80 ? '…' : ''}`
+                            : ''}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-[color:var(--text-secondary)]">
+                        {row.preferredDate
+                          ? new Date(row.preferredDate).toLocaleDateString('en-IN')
+                          : '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${statusBadge(row.status)}`}
+                        >
+                          {row.status.replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                      {canManage ? (
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {(NEXT_STATUS[row.status] ?? []).map((next) => (
+                              <button
+                                key={next}
+                                type="button"
+                                disabled={updateMutation.isPending}
+                                onClick={() => updateMutation.mutate({ id: row.id, status: next })}
+                                className="min-h-[36px] rounded-lg border border-[color:var(--border-default)] px-2.5 py-1.5 text-[11px] font-bold uppercase text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-card-hover)] disabled:opacity-50"
+                              >
+                                → {next.replace(/_/g, ' ')}
+                              </button>
+                            ))}
+                          </div>
+                        </td>
+                      ) : null}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {totalPages > 1 ? (
             <div className="mt-4 flex items-center justify-center gap-3">
@@ -205,7 +226,7 @@ export default function SolarHubMaintenance() {
                 type="button"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => p - 1)}
-                className="rounded-lg border border-[color:var(--border-default)] px-3 py-1.5 text-sm disabled:opacity-40"
+                className="min-h-[44px] touch-manipulation rounded-lg border border-[color:var(--border-default)] px-3 py-1.5 text-sm disabled:opacity-40"
               >
                 Previous
               </button>
@@ -216,7 +237,7 @@ export default function SolarHubMaintenance() {
                 type="button"
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => p + 1)}
-                className="rounded-lg border border-[color:var(--border-default)] px-3 py-1.5 text-sm disabled:opacity-40"
+                className="min-h-[44px] touch-manipulation rounded-lg border border-[color:var(--border-default)] px-3 py-1.5 text-sm disabled:opacity-40"
               >
                 Next
               </button>

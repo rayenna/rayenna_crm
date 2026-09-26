@@ -31,6 +31,15 @@ Only two cases ask you to confirm: **expected commissioning before confirmation*
 ### Why is Hub Track still showing typical (estimated) generation?
 Live months appear after **Operations / Admin** map **one** inverter cloud on **Solar Hub → user detail** (**SolisCloud plant** or **Deye Cloud plant**). Save pulls kWh once; Hub also refreshes about every six hours. **Pull kWh** is only for an immediate update. One cloud per project — unlink before switching. Do not enter KSEB export as generation. Guide: [Solar Hub plants](/help/modules#solar-hub-plants-and-generation).
 
+### How do I work Solar Hub Users / Provisioning on a phone?
+Open **Solar Hub** → **Users**, **Maintenance**, or **Provisioning**. On phones the lists use **cards** (tap the card to open). Use **Start here** the first time, then **Quick views** (e.g. Unlinked plants). After **Provision** or **password reset**, copy the one-time password from the on-page credentials panel before dismissing. Guide: [Solar Hub staff lists](/help/modules#solar-hub-staff-lists).
+
+### What is Pending subsidy on Projects?
+**Pending subsidy** means **Segment = Subsidy** and **Status = Completed** (not yet **Completed – Subsidy Credited**). Use the **Quick views** chip or the checkbox under **Show Filters**. Guide: [Projects module](/help/modules#projects-module).
+
+### What is the Lost Deals page?
+**Lost Deals** (Admin / Management) shows lost count and ₹, win rates, reason / competition charts, and a working list of lost projects. On phones the list uses **cards** and charts sit in an **Insights** accordion. Tap a chart slice to filter the list. Guide: [Lost Deals](/help/modules#lost-deals-analytics).
+
 ## Support Tickets
 
 ### How do I create a support ticket?

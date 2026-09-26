@@ -277,6 +277,14 @@ function App() {
                 }
               />
               <Route
+                path="users/:id"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <SolarHubUserDetail />
+                  </Suspense>
+                }
+              />
+              <Route
                 path="maintenance"
                 element={
                   <Suspense fallback={<PageLoader />}>
@@ -317,16 +325,6 @@ function App() {
                 }
               />
             </Route>
-            <Route
-              path="solar-hub/users/:id"
-              element={
-                <PrivateRoute roles={ROUTE_ROLES.solarHub}>
-                <ErrorBoundary>
-                  <Suspense fallback={<PageLoader />}><SolarHubUserDetail /></Suspense>
-                </ErrorBoundary>
-                </PrivateRoute>
-              }
-            />
             <Route
               path="change-password"
               element={

@@ -9,6 +9,14 @@ import { UserRole } from '../types'
 import type { BulkProvisionSummary, ProvisioningGapListResponse } from '../types/solarHub'
 import { solarHubTableScrollShell } from '../components/solarHub/tableScrollShell'
 import HubHandoverScriptCard from '../components/solarHub/HubHandoverScriptCard'
+import HubCredentialsPanel from '../components/solarHub/HubCredentialsPanel'
+import SolarHubProvisioningMobileCardList from '../components/solarHub/SolarHubProvisioningMobileCardList'
+import SolarHubListSkeleton from '../components/solarHub/SolarHubListSkeleton'
+import { useSolarHubNarrowList } from '../components/solarHub/useSolarHubNarrowList'
+import {
+  buildHubStaffCredentialsCopy,
+  getSolarHubPublicUrl,
+} from '../utils/hubHandoverScript'
 
 function formatSummary(summary: BulkProvisionSummary): string {
   const parts: string[] = []
@@ -26,9 +34,14 @@ export default function SolarHubProvisioning() {
   const { hasRole } = useAuth()
   const canManage = hasRole([UserRole.ADMIN, UserRole.OPERATIONS])
   const isAdmin = hasRole([UserRole.ADMIN])
+  const isNarrow = useSolarHubNarrowList()
 
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [lastCredentials, setLastCredentials] = useState<{
+    username: string
+    temporaryPassword: string
+  } | null>(null)
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['solar-hub-provisioning-gaps', page],
@@ -50,15 +63,22 @@ export default function SolarHubProvisioning() {
     mutationFn: (projectId: string) =>
       axiosInstance.post(`/api/admin/solar-hub/projects/${projectId}/provision`),
     onSuccess: (res) => {
-      const body = res.data as { action?: string; reason?: string; username?: string; temporaryPassword?: string }
+      const body = res.data as {
+        action?: string
+        reason?: string
+        username?: string
+        temporaryPassword?: string
+      }
       if (body.action === 'skipped') {
         toast.error(body.reason || 'Could not provision')
         return
       }
       if (body.action === 'created' && body.username && body.temporaryPassword) {
-        toast.success(`Created ${body.username} — one-time password: ${body.temporaryPassword}`, {
-          duration: 12_000,
+        setLastCredentials({
+          username: body.username,
+          temporaryPassword: body.temporaryPassword,
         })
+        toast.success(`Created ${body.username} — copy password below`)
       } else {
         toast.success(`Provisioned: ${body.action}`)
       }
@@ -67,6 +87,21 @@ export default function SolarHubProvisioning() {
     },
     onError: (err) => toast.error(getFriendlyApiErrorMessage(err)),
   })
+
+  const copyLastCredentials = async () => {
+    if (!lastCredentials) return
+    const text = buildHubStaffCredentialsCopy({
+      hubUrl: getSolarHubPublicUrl(),
+      username: lastCredentials.username,
+      password: lastCredentials.temporaryPassword,
+    })
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success('Copied to clipboard')
+    } catch {
+      toast.error('Could not copy — select and copy manually')
+    }
+  }
 
   const bulkMutation = useMutation({
     mutationFn: (projectIds: string[]) =>
@@ -130,6 +165,16 @@ export default function SolarHubProvisioning() {
       <div className="mb-4">
         <HubHandoverScriptCard />
       </div>
+
+      {lastCredentials ? (
+        <HubCredentialsPanel
+          credentials={lastCredentials}
+          onDismiss={() => setLastCredentials(null)}
+          onCopy={() => void copyLastCredentials()}
+          subtitle={`Created ${lastCredentials.username} — copy now; password shown only once`}
+        />
+      ) : null}
+
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-[color:var(--text-muted)]">
           Confirmed, installation, and completed projects without a Solar Hub login
@@ -180,13 +225,28 @@ export default function SolarHubProvisioning() {
           </button>
         </div>
       ) : isLoading ? (
-        <div className="py-16 text-center text-sm text-[color:var(--text-muted)]">Loading…</div>
+        <SolarHubListSkeleton rows={5} variant={isNarrow ? 'cards' : 'table'} />
       ) : (
         <>
           <p className="mb-2 text-xs text-[color:var(--text-muted)]">
             {data?.total ?? 0} project{(data?.total ?? 0) === 1 ? '' : 's'} missing Hub account
             {isFetching ? ' · Updating…' : ''}
           </p>
+
+          {isNarrow ? (
+            <SolarHubProvisioningMobileCardList
+              items={data?.items ?? []}
+              canManage={canManage}
+              busy={busy}
+              selected={selected}
+              onToggle={toggleOne}
+              onProvision={(projectId) => provisionOneMutation.mutate(projectId)}
+            />
+          ) : (data?.items ?? []).length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-[color:var(--border-default)] bg-[color:var(--bg-card)] px-6 py-12 text-center text-sm text-[color:var(--text-muted)]">
+              All eligible projects have Hub accounts.
+            </p>
+          ) : (
           <div className={solarHubTableScrollShell}>
             <table className="min-w-full text-sm">
               <thead>
@@ -244,7 +304,7 @@ export default function SolarHubProvisioning() {
                           type="button"
                           disabled={busy}
                           onClick={() => provisionOneMutation.mutate(row.projectId)}
-                          className="rounded-lg border border-[color:var(--border-default)] px-3 py-1 text-xs font-semibold text-[color:var(--accent-teal)] hover:bg-[color:var(--bg-card-hover)] disabled:opacity-50"
+                          className="min-h-[36px] rounded-lg border border-[color:var(--border-default)] px-3 py-1.5 text-xs font-semibold text-[color:var(--accent-teal)] hover:bg-[color:var(--bg-card-hover)] disabled:opacity-50"
                         >
                           Provision
                         </button>
@@ -255,12 +315,7 @@ export default function SolarHubProvisioning() {
               </tbody>
             </table>
           </div>
-
-          {(data?.items ?? []).length === 0 ? (
-            <p className="mt-6 text-center text-sm text-[color:var(--text-muted)]">
-              All eligible projects have Hub accounts.
-            </p>
-          ) : null}
+          )}
 
           {totalPages > 1 ? (
             <div className="mt-4 flex items-center justify-center gap-3">
@@ -268,7 +323,7 @@ export default function SolarHubProvisioning() {
                 type="button"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => p - 1)}
-                className="rounded-lg border border-[color:var(--border-default)] px-3 py-1.5 text-sm disabled:opacity-40"
+                className="min-h-[44px] touch-manipulation rounded-lg border border-[color:var(--border-default)] px-3 py-1.5 text-sm disabled:opacity-40"
               >
                 Previous
               </button>
@@ -279,7 +334,7 @@ export default function SolarHubProvisioning() {
                 type="button"
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => p + 1)}
-                className="rounded-lg border border-[color:var(--border-default)] px-3 py-1.5 text-sm disabled:opacity-40"
+                className="min-h-[44px] touch-manipulation rounded-lg border border-[color:var(--border-default)] px-3 py-1.5 text-sm disabled:opacity-40"
               >
                 Next
               </button>

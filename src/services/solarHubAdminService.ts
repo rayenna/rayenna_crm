@@ -117,6 +117,7 @@ export async function listSolarHubUsers(input: {
   active?: 'true' | 'false';
   inverterBrand?: string;
   plantLink?: SolarHubPlantLinkFilter;
+  neverLoggedIn?: boolean;
   sortBy?: SolarHubUserSortBy;
   page?: number;
   limit?: number;
@@ -129,6 +130,10 @@ export async function listSolarHubUsers(input: {
 
   if (input.active === 'true') andParts.push({ isActive: true });
   if (input.active === 'false') andParts.push({ isActive: false });
+
+  if (input.neverLoggedIn) {
+    andParts.push({ lastLoginAt: null });
+  }
 
   const brand = input.inverterBrand?.trim();
   if (brand) {
