@@ -64,7 +64,7 @@ export default function ProjectsTablePrefsMenu({
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 z-40 mt-1.5 w-64 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]"
+          className="absolute right-0 z-50 mt-1.5 w-64 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-dropdown)] p-3 shadow-[var(--shadow-dropdown)] ring-1 ring-[color:var(--border-default)]"
         >
           <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
             Density

@@ -1457,7 +1457,7 @@ const Projects = () => {
                 {exportMenuOpen ? (
                   <div
                     role="menu"
-                    className="absolute right-0 z-40 mt-1.5 w-48 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-1.5 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]"
+                    className="absolute right-0 z-50 mt-1.5 w-48 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-dropdown)] p-1.5 shadow-[var(--shadow-dropdown)] ring-1 ring-[color:var(--border-default)]"
                   >
                     <button
                       type="button"

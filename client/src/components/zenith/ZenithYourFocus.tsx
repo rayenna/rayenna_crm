@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
@@ -28,7 +28,6 @@ import ZenithChartTouchReset from './ZenithChartTouchReset'
 import { ZENITH_CHART_GROUP } from '../../constants/zenithChartGroups'
 import SupportTicketQueueStrip from './SupportTicketQueueStrip'
 import ZenithFocusCollapsible from './ZenithFocusCollapsible'
-import { useZenithShortViewport } from '../../hooks/useZenithShortViewport'
 import ZenithProposalEngineCard from './ZenithProposalEngineCard'
 import ZenithScrollHint from './ZenithScrollHint'
 import { useChartColors } from '../../hooks/useChartColors'
@@ -480,29 +479,12 @@ function FinanceRadarBlock({
   onOpenFinanceDrawer?: (projectId: string) => void
 }) {
   const chartColors = useChartColors()
-  const shortViewport = useZenithShortViewport()
   const [sortField, setSortField] = useState<'amount' | 'days' | 'customer' | 'salesperson' | null>('amount')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [customerFilter, setCustomerFilter] = useState<string>('')
   const [salesPersonFilter, setSalesPersonFilter] = useState<string>('ALL')
   const [ageFilter, setAgeFilter] = useState<AgeingBucket['id'] | null>(null)
   const [reminderProject, setReminderProject] = useState<FinanceOverdueRow | null>(null)
-  /** Recharts pie Legend is absolutely positioned; with global mobile `overflow:visible` it bleeds into the next section — hide legend on narrow widths (footnote + bar key still explain colours). */
-  const [narrowPaymentCharts, setNarrowPaymentCharts] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches,
-  )
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const mq = window.matchMedia('(max-width: 1023px)')
-    const sync = () => setNarrowPaymentCharts(mq.matches)
-    sync()
-    mq.addEventListener('change', sync)
-    return () => mq.removeEventListener('change', sync)
-  }, [])
-
-  /** Stack tables above pie/bar on phone, tablet, and short laptop viewports. */
-  const stackPaymentRadarCharts = narrowPaymentCharts || shortViewport
 
   const ageingBuckets = data.ageingBuckets ?? []
   const monthlyCollections = data.monthlyCollections ?? []
@@ -746,15 +728,10 @@ function FinanceRadarBlock({
           </div>
         ) : null}
 
-        {/* lg: keep tables readable + chart column stable; demote pie/bar below tables on narrow/short viewports */}
-        <div
-          className={
-            stackPaymentRadarCharts
-              ? 'grid grid-cols-1 gap-8 lg:gap-5 xl:gap-6'
-              : 'grid grid-cols-1 lg:grid-cols-3 lg:items-stretch lg:[grid-auto-rows:minmax(640px,auto)] gap-8 lg:gap-5 xl:gap-6'
-          }
-        >
-          <div className="min-w-0 flex flex-col lg:h-full lg:min-h-0">
+        {/* Mobile: stack. lg+: tables side-by-side, then charts side-by-side (2×2). */}
+        <div className="flex flex-col gap-6 lg:gap-5 xl:gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch lg:gap-5 xl:gap-6">
+          <div className="min-w-0 flex flex-col lg:min-h-0">
             <div className="grid gap-2 mb-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2 min-w-0">
@@ -964,7 +941,7 @@ function FinanceRadarBlock({
             </div>
           </div>
 
-          <div className="min-w-0 flex flex-col lg:h-full lg:min-h-0">
+          <div className="min-w-0 flex flex-col lg:min-h-0">
             <div className="grid gap-2 mb-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2 min-w-0">
@@ -1143,21 +1120,26 @@ function FinanceRadarBlock({
               </div>
             </div>
           </div>
+          </div>
 
           <div
-            className={`zenith-payment-radar-charts zenith-stat-well min-w-0 flex flex-col rounded-xl overflow-visible lg:overflow-hidden lg:h-full lg:min-h-0${stackPaymentRadarCharts ? ' order-last' : ''}`}
+            className="zenith-payment-radar-charts grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:gap-5 xl:gap-6 sm:items-stretch"
             aria-label="Payment mix and collections trend"
           >
-            <div className="flex flex-col max-lg:h-auto lg:h-full min-h-0 lg:min-h-[320px]">
-              {/* Upper: on lg split height with bar; on mobile natural height so the bar block keeps room */}
-              <div className="flex flex-col flex-none lg:flex-1 lg:min-h-0 lg:basis-0 border-b border-[color:var(--border-default)] p-3 sm:p-4">
+            <div className="zenith-stat-well min-w-0 flex flex-col rounded-xl overflow-hidden p-3 sm:p-4 min-h-[260px] sm:min-h-[300px]">
                 <h4
-                  className="text-xs font-bold uppercase tracking-widest mb-2 shrink-0"
+                  className="text-xs font-bold uppercase tracking-widest mb-1 shrink-0"
                   style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
                 >
                   Collected vs outstanding
                 </h4>
-                <div className="zenith-chart-slot zenith-payment-radar-pie-slot w-full max-lg:h-[200px] max-lg:flex-none lg:flex-1 lg:min-h-[160px] relative">
+                <p
+                  className="text-[10px] leading-snug mb-3 shrink-0"
+                  style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
+                >
+                  Share of cash collected, still owed, and subsidy pending
+                </p>
+                <div className="zenith-chart-slot zenith-payment-radar-pie-slot w-full flex-1 min-h-[200px] relative">
                   {pieData.length === 0 ? (
                     <p
                       className="text-sm flex items-center justify-center h-full text-left px-1"
@@ -1168,7 +1150,7 @@ function FinanceRadarBlock({
                   ) : (
                     <ZenithChartTouchReset
                       chartGroup={ZENITH_CHART_GROUP.FOCUS}
-                      className="h-full w-full min-w-0 min-h-[160px] max-lg:min-h-[200px]"
+                      className="h-full w-full min-w-0 min-h-[200px]"
                     >
                       {(rk) => (
                         <ResponsiveContainer
@@ -1176,13 +1158,13 @@ function FinanceRadarBlock({
                           width="100%"
                           height="100%"
                           minWidth={0}
-                          minHeight={narrowPaymentCharts ? 200 : 160}
+                          minHeight={200}
                         >
                           <PieChart
                             margin={{
                               top: 4,
                               right: 8,
-                              bottom: narrowPaymentCharts ? 4 : 8,
+                              bottom: 8,
                               left: 8,
                             }}
                           >
@@ -1190,9 +1172,9 @@ function FinanceRadarBlock({
                               data={pieData}
                               dataKey="value"
                               cx="50%"
-                              cy={narrowPaymentCharts ? '50%' : '44%'}
-                              innerRadius="54%"
-                              outerRadius="78%"
+                              cy="46%"
+                              innerRadius="52%"
+                              outerRadius="76%"
                               paddingAngle={2}
                             >
                               {pieData.map((e, i) => (
@@ -1211,48 +1193,44 @@ function FinanceRadarBlock({
                               labelStyle={{ color: 'var(--chart-tooltip-fg)', fontWeight: 600 }}
                               itemStyle={{ color: 'var(--chart-tooltip-fg-muted)' }}
                             />
-                            {!narrowPaymentCharts ? (
-                              <Legend
-                                layout="horizontal"
-                                verticalAlign="bottom"
-                                align="center"
-                                wrapperStyle={{ paddingTop: 4 }}
-                                formatter={(value) => (
-                                  <span className="text-[10px] sm:text-[11px]" style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}>
-                                    {value}
-                                  </span>
-                                )}
-                              />
-                            ) : null}
+                            <Legend
+                              layout="horizontal"
+                              verticalAlign="bottom"
+                              align="center"
+                              wrapperStyle={{ paddingTop: 4 }}
+                              formatter={(value) => (
+                                <span className="text-[10px] sm:text-[11px]" style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}>
+                                  {value}
+                                </span>
+                              )}
+                            />
                           </PieChart>
                         </ResponsiveContainer>
                       )}
                     </ZenithChartTouchReset>
                   )}
                 </div>
-                <p
-                  className="text-[9px] sm:text-[10px] text-left mt-1.5 shrink-0 leading-relaxed"
-                  style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
-                >
-                  Amounts in ₹ · Collected, outstanding, subsidy pending
-                </p>
-              </div>
+            </div>
 
-              {/* Lower half: bars */}
+            <div className="zenith-stat-well min-w-0 flex flex-col rounded-xl overflow-visible lg:overflow-hidden p-3 sm:p-4 min-h-[260px] sm:min-h-[300px]">
               {monthlyCollections.length > 0 ? (
-                <div className="flex flex-col flex-none lg:flex-1 lg:min-h-0 lg:basis-0 p-3 sm:p-4 max-lg:pb-4">
+                <>
                 <h4
-                  className="text-xs font-bold uppercase tracking-widest mb-2 shrink-0 max-lg:leading-snug"
+                  className="text-xs font-bold uppercase tracking-widest mb-1 shrink-0"
                   style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
                 >
-                  <span className="max-lg:block lg:inline">Collections</span>
-                  <span className="max-lg:hidden"> — </span>
-                  <span className="max-lg:block lg:inline max-lg:mt-0.5">last 6 months</span>
+                  Collections — last 6 months
                 </h4>
-                  <div className="zenith-chart-slot zenith-payment-radar-bar-slot w-full max-lg:h-[240px] max-lg:flex-none lg:flex-1 lg:min-h-[140px] relative">
+                <p
+                  className="text-[10px] leading-snug mb-3 shrink-0"
+                  style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
+                >
+                  Monthly collected vs still outstanding
+                </p>
+                  <div className="zenith-chart-slot zenith-payment-radar-bar-slot w-full flex-1 min-h-[200px] relative">
                     <ZenithChartTouchReset
                       chartGroup={ZENITH_CHART_GROUP.FOCUS}
-                      className="h-full w-full min-w-0 min-h-[140px] max-lg:min-h-[240px]"
+                      className="h-full w-full min-w-0 min-h-[200px]"
                     >
                       {(rk) => (
                         <ResponsiveContainer
@@ -1260,20 +1238,20 @@ function FinanceRadarBlock({
                           width="100%"
                           height="100%"
                           minWidth={0}
-                          minHeight={narrowPaymentCharts ? 240 : 140}
+                          minHeight={200}
                         >
                           <BarChart
                             data={monthlyCollections}
                             margin={{
                               top: 4,
-                              right: 4,
-                              bottom: narrowPaymentCharts ? 22 : 0,
+                              right: 8,
+                              bottom: 4,
                               left: 0,
                             }}
                           >
                             <XAxis
                               dataKey="label"
-                              tick={{ fontSize: 9, fill: 'var(--chart-axis-text)' }}
+                              tick={{ fontSize: 10, fill: 'var(--chart-axis-text)' }}
                               axisLine={false}
                               tickLine={false}
                             />
@@ -1314,7 +1292,7 @@ function FinanceRadarBlock({
                     </ZenithChartTouchReset>
                   </div>
                   <div
-                    className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-[10px] shrink-0"
+                    className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[10px] shrink-0"
                     style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
                   >
                     <span className="inline-flex items-center gap-1.5">
@@ -1341,10 +1319,10 @@ function FinanceRadarBlock({
                       )}
                     </p>
                   ) : null}
-                </div>
+                </>
               ) : (
                 <div
-                  className="flex flex-col flex-1 min-h-0 basis-0 items-center justify-center p-4 text-xs border-t border-[color:var(--border-default)]"
+                  className="flex flex-1 min-h-[200px] items-center justify-center text-xs"
                   style={{ color: PAYMENT_RADAR_SUBHEAD_COLOR }}
                 >
                   No monthly collections trend for this period.
