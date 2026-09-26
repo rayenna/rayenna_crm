@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import {
   UserRole,
   ProjectStatus,
+  ProjectType,
   LeadStatus,
   ProjectStage,
   LeadSource,
@@ -415,6 +416,8 @@ async function loadZenithExplorerProjects(where: Prisma.ProjectWhereInput) {
         : '',
     /** Parity with `availingLoanCount` KPI (not Lost, availing loan). */
     availing_loan: Boolean(p.availingLoan),
+    /** Project segment (`SUBSIDY` / `NON_SUBSIDY`) — Pending Subsidy KPI = SUBSIDY + COMPLETED. */
+    project_type: p.type ?? null,
     /** Resolved payment enum for dashboard payment pills (null → PENDING); N/A bucket uses `matchesZenithPaymentNaBucket` client-side. */
     payment_status: p.paymentStatus ?? 'PENDING',
     panel_brand: p.panelBrand?.trim() ? p.panelBrand.trim() : null,
@@ -1015,7 +1018,8 @@ router.get('/sales', authenticate, async (req: Request, res) => {
     });
 
     // Availing Loan count + by bank (same semantics as Management/Finance tiles: not Lost, availingLoan true)
-    const [availingLoanByBankRaw, availingLoanCount] = await Promise.all([
+    // Pending Subsidy = Subsidy segment + Completed (same as Projects `pendingSubsidy=true`)
+    const [availingLoanByBankRaw, availingLoanCount, pendingSubsidyCount] = await Promise.all([
       prisma.project.groupBy({
         by: ['financingBank'],
         where: { ...where, availingLoan: true, financingBank: { not: null } },
@@ -1023,6 +1027,13 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       }),
       prisma.project.count({
         where: { ...where, projectStatus: { not: ProjectStatus.LOST }, availingLoan: true },
+      }),
+      prisma.project.count({
+        where: {
+          ...where,
+          type: ProjectType.SUBSIDY,
+          projectStatus: ProjectStatus.COMPLETED,
+        },
       }),
     ]);
     const availingLoanByBank = buildAvailingLoanByBank(availingLoanByBankRaw);
@@ -1118,6 +1129,7 @@ router.get('/sales', authenticate, async (req: Request, res) => {
       projectsByPaymentStatus,
       availingLoanByBank,
       availingLoanCount,
+      pendingSubsidyCount,
       zenithExplorerProjects,
     });
   } catch (error: any) {
@@ -1141,6 +1153,7 @@ router.get('/operations', authenticate, async (req: Request, res) => {
       subsidyCredited,
       completedInstallation,
       pendingSubsidy,
+      pendingSubsidyCount,
       ksebBottlenecks,
       mnreBottlenecks,
       confirmedOrderRevenueAgg,
@@ -1167,7 +1180,7 @@ router.get('/operations', authenticate, async (req: Request, res) => {
           projectStatus: { in: [ProjectStatus.COMPLETED, ProjectStatus.COMPLETED_SUBSIDY_CREDITED] },
         },
       }),
-      // Pending subsidy (submitted but not credited)
+      // Pending subsidy list (legacy ops: submitted but not credited) — keep for Ops dashboard list
       prisma.project.findMany({
         where: {
           ...where,
@@ -1183,6 +1196,14 @@ router.get('/operations', authenticate, async (req: Request, res) => {
           },
           subsidyRequestDate: true,
           projectStatus: true,
+        },
+      }),
+      // Zenith KPI: Subsidy segment + Completed (Projects `pendingSubsidy=true`)
+      prisma.project.count({
+        where: {
+          ...where,
+          type: ProjectType.SUBSIDY,
+          projectStatus: ProjectStatus.COMPLETED,
         },
       }),
       // KSEB bottlenecks (feasibility or registration pending)
@@ -1405,6 +1426,7 @@ router.get('/operations', authenticate, async (req: Request, res) => {
       subsidyCredited,
       completedInstallation,
       confirmedOrderRevenue,
+      pendingSubsidyCount,
       pendingSubsidy: pendingSubsidy.map((p) => ({
         ...p,
         customerName: p.customer?.customerName || 'Unknown',
@@ -1559,9 +1581,17 @@ router.get('/finance', authenticate, async (req: Request, res) => {
     ];
 
     // Availing Loan count: active pipeline (all stages except Lost) with availingLoan = true (for Quick Access tile)
-    const [availingLoanCount, projectsByStatusRawFinance, pendingInstallation, subsidyCredited] = await Promise.all([
+    // Pending Subsidy = Subsidy segment + Completed (Projects `pendingSubsidy=true`)
+    const [availingLoanCount, pendingSubsidyCount, projectsByStatusRawFinance, pendingInstallation, subsidyCredited] = await Promise.all([
       prisma.project.count({
         where: { ...where, projectStatus: { not: ProjectStatus.LOST }, availingLoan: true },
+      }),
+      prisma.project.count({
+        where: {
+          ...where,
+          type: ProjectType.SUBSIDY,
+          projectStatus: ProjectStatus.COMPLETED,
+        },
       }),
       prisma.project.groupBy({
         by: ['projectStatus'],
@@ -1732,6 +1762,7 @@ router.get('/finance', authenticate, async (req: Request, res) => {
       totalOutstanding: totalOutstanding, // Use the calculated totalOutstanding (only PENDING and PARTIAL)
       projectsByPaymentStatus, // Use the calculated effective payment status
       availingLoanCount,
+      pendingSubsidyCount,
       availingLoanByBank,
       projectsByStatus,
       operations,
@@ -1857,6 +1888,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
       pipelineCapacityResult,
       projectsByStatusRawMgmt,
       availingLoanCount,
+      pendingSubsidyCount,
       profitabilityData,
       availingLoanByBankRawMgmt,
     ] = await Promise.all([
@@ -1910,6 +1942,13 @@ router.get('/management', authenticate, async (req: Request, res) => {
       }),
       prisma.project.count({
         where: { ...where, projectStatus: { not: ProjectStatus.LOST }, availingLoan: true },
+      }),
+      prisma.project.count({
+        where: {
+          ...where,
+          type: ProjectType.SUBSIDY,
+          projectStatus: ProjectStatus.COMPLETED,
+        },
       }),
       prisma.project.findMany({
         where: { ...where, projectStatus: { not: ProjectStatus.LOST }, profitability: { not: null } },
@@ -2115,6 +2154,7 @@ router.get('/management', authenticate, async (req: Request, res) => {
       wordCloudData,
       projectsByPaymentStatus,
       availingLoanCount,
+      pendingSubsidyCount,
       availingLoanByBank,
       revenueBySalesperson,
       pipeline: { atRisk: openDealsCount },

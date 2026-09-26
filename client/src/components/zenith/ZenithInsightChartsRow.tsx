@@ -232,7 +232,7 @@ export default function ZenithInsightChartsRow({
             height={chartHeight}
             chartGroup={chartGroup}
             valueMode="count"
-            barColor={chartColors.gold}
+            barColor={chartColors.blue}
             chartColors={chartColors}
             onBarClick={(row) => onDrill('commissioning_timeline', row.key)}
           />

@@ -6,6 +6,11 @@ import {
 } from '../types'
 import { canEditCustomer } from './customerPermissions'
 import { canEditProject } from './projectPermissions'
+import {
+  defaultPanelTypeForProjectSegment,
+  isSubsidyProjectType,
+  panelTypeMatchesProjectSegment,
+} from './projectSegment'
 
 export type LifecycleDataQualitySeverity = 'warning' | 'info'
 
@@ -142,6 +147,8 @@ export function evaluateLifecycleDataQuality(
     | 'id'
     | 'customerId'
     | 'projectStatus'
+    | 'type'
+    | 'panelType'
     | 'systemCapacity'
     | 'panelCapacityW'
     | 'panelBrand'
@@ -161,6 +168,21 @@ export function evaluateLifecycleDataQuality(
     : undefined
   const peOpenStatus =
     status === ProjectStatus.PROPOSAL || status === ProjectStatus.CONFIRMED
+
+  // Segment ↔ Panel type — always (except LOST)
+  if (project.type && !panelTypeMatchesProjectSegment(project.type, project.panelType)) {
+    const expected = defaultPanelTypeForProjectSegment(project.type)
+    const segmentLabel = isSubsidyProjectType(project.type) ? 'Subsidy' : 'Non-Subsidy'
+    findings.push({
+      id: 'panel_type_segment_mismatch',
+      severity: 'warning',
+      title: 'Panel type does not match Segment',
+      detail: `${segmentLabel} projects must use ${expected} panels. Open edit and save to correct (Panel type is locked to Segment).`,
+      href: editHref,
+      peSoftGate: false,
+      fixKind: 'lifecycle',
+    })
+  }
 
   // GPS — SITE_SURVEY+
   if (statusAtOrAfter(status, ProjectStatus.SITE_SURVEY)) {

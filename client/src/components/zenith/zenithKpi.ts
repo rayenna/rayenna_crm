@@ -233,6 +233,14 @@ export function buildExecutiveZenithKpis(
       changePct: loanChangePct,
       sparkline: fySparkline(rows, () => loans),
     },
+    {
+      key: 'pendingSubsidy',
+      label: 'Pending Subsidy',
+      value: Number(data?.pendingSubsidyCount ?? 0),
+      format: 'number',
+      changePct: null,
+      sparkline: fySparkline(rows, () => Number(data?.pendingSubsidyCount ?? 0)),
+    },
   ]
 
   if (showLostKpi) {
@@ -278,6 +286,7 @@ export function buildOperationsZenithKpis(
 
   const pend = Number(data?.pendingInstallation ?? 0)
   const done = Number(data?.completedInstallation ?? 0)
+  const pendingSubsidy = Number(data?.pendingSubsidyCount ?? 0)
   const cred = Number(data?.subsidyCredited ?? 0)
 
   return [
@@ -296,6 +305,14 @@ export function buildOperationsZenithKpis(
       format: 'number',
       changePct: singleFY && prev ? pctChange(done, prev.completedInstallation) : null,
       sparkline: fySparkline(rows, () => done),
+    },
+    {
+      key: 'pendingSubsidy',
+      label: 'Pending Subsidy',
+      value: pendingSubsidy,
+      format: 'number',
+      changePct: null,
+      sparkline: fySparkline(rows, () => pendingSubsidy),
     },
     {
       key: 'cred',
@@ -337,6 +354,7 @@ export function buildFinanceZenithKpis(
   const totalOut = Number(data?.totalOutstanding ?? 0)
   const totalProfit = Number(data?.totalGrossProfit ?? 0)
   const loans = Number(data?.availingLoanCount ?? 0)
+  const pendingSubsidy = Number(data?.pendingSubsidyCount ?? 0)
 
   return [
     {
@@ -378,6 +396,14 @@ export function buildFinanceZenithKpis(
       format: 'number',
       changePct: singleFY && prev ? pctChange(loans, prev.availingLoanCount) : null,
       sparkline: fySparkline(rows, () => loans),
+    },
+    {
+      key: 'pendingSubsidy',
+      label: 'Pending Subsidy',
+      value: pendingSubsidy,
+      format: 'number',
+      changePct: null,
+      sparkline: fySparkline(rows, () => pendingSubsidy),
     },
   ]
 }

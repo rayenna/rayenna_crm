@@ -14,6 +14,8 @@ function baseProject(
     id: 'proj-1',
     customerId: 'cust-1',
     projectStatus: ProjectStatus.PROPOSAL,
+    type: 'SUBSIDY' as any,
+    panelType: 'DCR',
     systemCapacity: 10,
     panelCapacityW: 590,
     panelBrand: 'Waaree',
@@ -31,11 +33,43 @@ describe('evaluateLifecycleDataQuality', () => {
         projectStatus: ProjectStatus.LOST,
         systemCapacity: undefined,
         panelCapacityW: null,
+        panelType: 'Non-DCR',
         customer: { latitude: null, longitude: null } as any,
       }),
       { peStatus: 'none' },
     )
     expect(findings).toEqual([])
+  })
+
+  it('flags Subsidy projects with Non-DCR (or missing) panel type', () => {
+    const wrong = evaluateLifecycleDataQuality(
+      baseProject({ type: 'SUBSIDY' as any, panelType: 'Non-DCR' }),
+    )
+    expect(wrong.map((f) => f.id)).toContain('panel_type_segment_mismatch')
+
+    const missing = evaluateLifecycleDataQuality(
+      baseProject({ type: 'SUBSIDY' as any, panelType: null as any }),
+    )
+    expect(missing.map((f) => f.id)).toContain('panel_type_segment_mismatch')
+  })
+
+  it('flags Non-Subsidy projects with DCR panel type', () => {
+    const findings = evaluateLifecycleDataQuality(
+      baseProject({ type: 'NON_SUBSIDY' as any, panelType: 'DCR' }),
+    )
+    expect(findings.map((f) => f.id)).toContain('panel_type_segment_mismatch')
+  })
+
+  it('does not flag when Segment and panel type match', () => {
+    const subsidyOk = evaluateLifecycleDataQuality(
+      baseProject({ type: 'SUBSIDY' as any, panelType: 'DCR' }),
+    )
+    expect(subsidyOk.map((f) => f.id)).not.toContain('panel_type_segment_mismatch')
+
+    const nonOk = evaluateLifecycleDataQuality(
+      baseProject({ type: 'NON_SUBSIDY' as any, panelType: 'Non-DCR' }),
+    )
+    expect(nonOk.map((f) => f.id)).not.toContain('panel_type_segment_mismatch')
   })
 
   it('flags PROPOSAL missing capacity and GPS as PE soft-gates', () => {

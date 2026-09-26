@@ -1,4 +1,4 @@
-import { Zap, TrendingUp, IndianRupee, Target, Percent } from 'lucide-react'
+import { Zap, TrendingUp, IndianRupee, Target, Percent, HandCoins } from 'lucide-react'
 import {
   BarChart,
   Bar,
@@ -16,7 +16,7 @@ import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTo
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
-import { ProjectStatus, UserRole } from '../../types'
+import { ProjectStatus, ProjectType, UserRole } from '../../types'
 import { buildFinanceZenithKpis } from './zenithKpi'
 import {
   buildDealFlowDrawerFilterLabel,
@@ -63,7 +63,7 @@ import ZenithPriorityRibbon from './ZenithPriorityRibbon'
 import { ZenithKpiSkeletonGrid } from './ZenithOverviewSkeletons'
 import { buildFinancePriorityItems } from '../../utils/zenithPriorityItems'
 
-const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
+const icons = [Zap, TrendingUp, IndianRupee, Target, Percent, HandCoins]
 
 function ExploreInrTooltip({
   active,
@@ -182,6 +182,7 @@ export default function ZenithFinanceBody({
   })
 
   const availingLoanProjectsUrl = buildProjectsUrl({ availingLoan: true }, dateFilter)
+  const pendingSubsidyProjectsUrl = buildProjectsUrl({ pendingSubsidy: true }, dateFilter)
   const outstandingProjectsUrl = buildProjectsUrl(
     { paymentStatus: ['PENDING', 'PARTIAL'] },
     dateFilter,
@@ -264,6 +265,20 @@ export default function ZenithFinanceBody({
     })
   }, [explorerProjects, onOpenDrawerListMode, availingLoanProjectsUrl])
 
+  const onPendingSubsidyKpiClick = useCallback(() => {
+    const filtered = explorerProjects.filter(
+      (p) =>
+        p.project_type === ProjectType.SUBSIDY && p.projectStatus === ProjectStatus.COMPLETED,
+    )
+    onOpenDrawerListMode({
+      filterLabel: 'Pending subsidy',
+      filteredProjects: filtered,
+      listAmountMode: 'deal_value',
+      projectsPageHref: pendingSubsidyProjectsUrl,
+      chartResetGroup: exploreChartResetGroup('fin'),
+    })
+  }, [explorerProjects, onOpenDrawerListMode, pendingSubsidyProjectsUrl])
+
   const onOutstandingKpiClick = useCallback(() => {
     const pending = filterProjectsByChartSlice(explorerProjects, 'payment_status', 'PENDING')
     const partial = filterProjectsByChartSlice(explorerProjects, 'payment_status', 'PARTIAL')
@@ -301,7 +316,7 @@ export default function ZenithFinanceBody({
     return (
       <div className="px-3 sm:px-5 pt-3 pb-6 space-y-6 max-w-[1600px] mx-auto">
         <div className="zenith-kpi-ticker-stack">
-          <ZenithKpiSkeletonGrid count={5} />
+          <ZenithKpiSkeletonGrid count={6} />
           {insightsBar}
           <div className="mt-2 flex gap-2" aria-hidden>
             <div className="zenith-skeleton h-8 w-28 rounded-full" />
@@ -361,10 +376,10 @@ export default function ZenithFinanceBody({
       {showOverview ? (
         <>
           <div className="zenith-kpi-ticker-stack">
-          {/* Row 1: finance KPIs — full width, original tile sizes */}
+          {/* Finance KPIs — 2 rows (3+3) so Pending Subsidy stays readable on tablet/phone */}
           <div
             id="zenith-kpis"
-            className="grid w-full grid-cols-2 gap-3 scroll-mt-28 lg:grid-cols-5"
+            className="grid w-full grid-cols-2 gap-3 scroll-mt-28 min-[744px]:grid-cols-3 lg:grid-cols-3"
           >
             {kpis.map((k, i) => (
               <div key={k.key} className="min-w-0">
@@ -375,9 +390,11 @@ export default function ZenithFinanceBody({
                   onClick={
                     k.key === 'loan'
                       ? onAvailingLoanKpiClick
-                      : k.key === 'out'
-                        ? onOutstandingKpiClick
-                        : undefined
+                      : k.key === 'pendingSubsidy'
+                        ? onPendingSubsidyKpiClick
+                        : k.key === 'out'
+                          ? onOutstandingKpiClick
+                          : undefined
                   }
                 />
               </div>

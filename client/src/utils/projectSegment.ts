@@ -21,8 +21,18 @@ export function isSubsidyProjectType(type: string): boolean {
   return type === ProjectType.SUBSIDY || type === LEGACY_SUBSIDY
 }
 
+/** Mandatory panel type from Segment: Subsidy → DCR, Non-Subsidy → Non-DCR. */
 export function defaultPanelTypeForProjectSegment(type: string): 'DCR' | 'Non-DCR' {
   return isSubsidyProjectType(type) ? 'DCR' : 'Non-DCR'
+}
+
+/** True when stored panelType matches the Segment rule (treats blank as mismatch). */
+export function panelTypeMatchesProjectSegment(
+  type: string,
+  panelType: string | null | undefined,
+): boolean {
+  const expected = defaultPanelTypeForProjectSegment(type)
+  return (panelType ?? '').trim() === expected
 }
 
 export const PROJECT_SEGMENT_FILTER_OPTIONS = Object.values(ProjectType).map((value) => ({

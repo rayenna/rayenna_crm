@@ -39,14 +39,46 @@ describe('buildExecutiveZenithKpis outstanding', () => {
         projectsByPaymentStatus: paymentBuckets,
         lostProjectsCount: 4,
         availingLoanCount: 1,
+        pendingSubsidyCount: 7,
         projectValueProfitByFY: [],
       },
       ['2025-26'],
     )
     const keys = kpis.map((k) => k.key)
     expect(keys).toContain('lost')
+    expect(keys).toContain('pendingSubsidy')
+    expect(kpis.find((k) => k.key === 'pendingSubsidy')?.value).toBe(7)
     expect(keys[keys.length - 1]).toBe('outstanding')
     expect(kpis.find((k) => k.key === 'outstanding')?.value).toBe(350000)
+    // Admin/Mgmt second row: conversion, loan, pendingSubsidy, lost, outstanding
+    expect(keys.slice(4)).toEqual([
+      'conversion',
+      'loan',
+      'pendingSubsidy',
+      'lost',
+      'outstanding',
+    ])
+  })
+
+  it('includes pendingSubsidy for Sales without lost', () => {
+    const kpis = buildExecutiveZenithKpis(
+      UserRole.SALES,
+      {
+        revenue: { totalCapacity: 10, totalRevenue: 100 },
+        totalPipeline: 200,
+        totalProfit: 50,
+        projectsByPaymentStatus: paymentBuckets,
+        availingLoanCount: 0,
+        pendingSubsidyCount: 3,
+        projectValueProfitByFY: [],
+      },
+      [],
+    )
+    const keys = kpis.map((k) => k.key)
+    expect(keys).toContain('pendingSubsidy')
+    expect(keys).not.toContain('lost')
+    expect(kpis.find((k) => k.key === 'pendingSubsidy')?.value).toBe(3)
+    expect(keys.slice(4)).toEqual(['conversion', 'loan', 'pendingSubsidy', 'outstanding'])
   })
 
   it('prefers totalOutstanding API when provided', () => {

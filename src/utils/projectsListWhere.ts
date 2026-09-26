@@ -35,6 +35,7 @@ export type ProjectsListFilterInput = {
   search: string | null;
   hasDocumentsActive: boolean;
   availingLoanActive: boolean;
+  pendingSubsidyActive: boolean;
   peBucket: string | null;
   zenithClosedFrom: string | null;
   zenithClosedTo: string | null;
@@ -138,6 +139,7 @@ export function parseProjectsListFilters(query: ParsedQs): ProjectsListFilterInp
     search,
     hasDocuments,
     availingLoan,
+    pendingSubsidy,
     peBucket,
     financingBank,
     zenithClosedFrom,
@@ -179,6 +181,7 @@ export function parseProjectsListFilters(query: ParsedQs): ProjectsListFilterInp
     hasDocumentsActive:
       hasDocuments === 'true' || (Array.isArray(hasDocuments) && hasDocuments.includes('true')),
     availingLoanActive: availingLoan === 'true',
+    pendingSubsidyActive: pendingSubsidy === 'true',
     peBucket:
       typeof peBucket === 'string' && ['proposal-ready', 'draft', 'not-started', 'rest'].includes(peBucket)
         ? peBucket
@@ -443,6 +446,16 @@ export function buildProjectsWhere(
     pushOntoWhereAnd(where, { availingLoan: true });
   }
 
+  // Subsidy segment + Completed status = pending subsidy credit (not yet COMPLETED_SUBSIDY_CREDITED).
+  if (filters.pendingSubsidyActive) {
+    pushOntoWhereAnd(where, {
+      AND: [
+        { type: ProjectType.SUBSIDY },
+        { projectStatus: ProjectStatus.COMPLETED },
+      ],
+    });
+  }
+
   if (!skipDateFilters && filters.fyFilters.length > 0) {
     where.year = { in: filters.fyFilters };
   }
@@ -612,6 +625,7 @@ export const projectsListQueryValidators = [
   query('search').optional().isString(),
   query('hasDocuments').optional().isIn(['true', 'false']),
   query('availingLoan').optional().isIn(['true']),
+  query('pendingSubsidy').optional().isIn(['true']),
   query('financingBank').optional().custom((value) => {
     if (!value) return true;
     const values = Array.isArray(value) ? value : [value];

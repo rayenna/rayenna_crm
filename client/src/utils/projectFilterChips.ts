@@ -105,6 +105,7 @@ export type BuildProjectFilterChipsInput = {
     paymentStatus: string[]
     hasDocuments: boolean
     availingLoan: boolean
+    pendingSubsidy: boolean
     peBucket: PeBucketParam | null
     financingBank: string[]
     zenithClosedFrom: string | null
@@ -325,6 +326,14 @@ export function buildProjectFilterChips(input: BuildProjectFilterChipsInput): Pr
       id: 'availing-loan',
       label: 'Availing loan',
       onRemove: () => onPatchFilters({ availingLoan: false }),
+    })
+  }
+
+  if (filters.pendingSubsidy) {
+    chips.push({
+      id: 'pending-subsidy',
+      label: 'Pending subsidy',
+      onRemove: () => onPatchFilters({ pendingSubsidy: false }),
     })
   }
 

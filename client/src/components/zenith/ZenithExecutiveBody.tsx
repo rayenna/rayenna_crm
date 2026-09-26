@@ -12,10 +12,10 @@ import {
   Cell,
   Legend,
 } from 'recharts'
-import { XCircle, Zap, TrendingUp, IndianRupee, Target, Percent, Landmark, Wallet } from 'lucide-react'
+import { XCircle, Zap, TrendingUp, IndianRupee, Target, Percent, Landmark, Wallet, HandCoins } from 'lucide-react'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
-import { ProjectStatus, UserRole } from '../../types'
+import { ProjectStatus, ProjectType, UserRole } from '../../types'
 import { getProjectStatusColor } from '../dashboard/projectStatusColors'
 import { getLoanBankBarColor } from '../dashboard/loanBankChartColors'
 import { buildExecutiveZenithKpis } from './zenithKpi'
@@ -83,7 +83,7 @@ import { ZENITH_CHART_HEIGHT_FLOOR, zenithStandardChartHeight } from './zenithCh
 import { isZenithMobileTabActive } from './zenithMobileTabVisibility'
 import type { ZenithMobileTab } from './zenithMobileNav'
 
-const icons = [Zap, TrendingUp, IndianRupee, Target, Percent, Landmark, XCircle, Wallet]
+const icons = [Zap, TrendingUp, IndianRupee, Target, Percent, Landmark, HandCoins, XCircle, Wallet]
 
 const KPI_ICON_BY_KEY: Record<string, (typeof icons)[number]> = {
   pipeline: TrendingUp,
@@ -91,6 +91,7 @@ const KPI_ICON_BY_KEY: Record<string, (typeof icons)[number]> = {
   profit: Target,
   conversion: Percent,
   loan: Landmark,
+  pendingSubsidy: HandCoins,
   lost: XCircle,
   outstanding: Wallet,
 }
@@ -115,7 +116,7 @@ function ZenithSkeleton({ insightsBar }: { insightsBar?: ReactNode }) {
   return (
     <div className="zenith-exec-main mx-auto space-y-5 px-3 sm:px-5 pt-3 pb-5 lg:pt-4 lg:pb-6">
       <div className="zenith-kpi-ticker-stack">
-        <ZenithKpiSkeletonGrid count={6} />
+        <ZenithKpiSkeletonGrid count={8} />
         {insightsBar}
         <div className="mt-2 flex gap-2" aria-hidden>
           <div className="zenith-skeleton h-8 w-28 rounded-full" />
@@ -268,6 +269,7 @@ export default function ZenithExecutiveBody({
 
   const hitListResult = useHitList(pipelineRows, role, user ?? null)
   const availingLoanProjectsUrl = buildProjectsUrl({ availingLoan: true }, dateFilter)
+  const pendingSubsidyProjectsUrl = buildProjectsUrl({ pendingSubsidy: true }, dateFilter)
   const lostDealsPageUrl = buildLostDealsUrl(dateFilter)
   const outstandingProjectsUrl = buildProjectsUrl(
     { paymentStatus: ['PENDING', 'PARTIAL'] },
@@ -366,6 +368,20 @@ export default function ZenithExecutiveBody({
       chartResetGroup: exploreChartResetGroup('exec'),
     })
   }, [explorerProjects, onOpenDrawerListMode, availingLoanProjectsUrl])
+
+  const onPendingSubsidyKpiClick = useCallback(() => {
+    const filtered = explorerProjects.filter(
+      (p) =>
+        p.project_type === ProjectType.SUBSIDY && p.projectStatus === ProjectStatus.COMPLETED,
+    )
+    onOpenDrawerListMode({
+      filterLabel: 'Pending subsidy',
+      filteredProjects: filtered,
+      listAmountMode: 'deal_value',
+      projectsPageHref: pendingSubsidyProjectsUrl,
+      chartResetGroup: exploreChartResetGroup('exec'),
+    })
+  }, [explorerProjects, onOpenDrawerListMode, pendingSubsidyProjectsUrl])
 
   const onLostProjectsKpiClick = useCallback(() => {
     navigate(lostDealsPageUrl)
@@ -500,6 +516,15 @@ export default function ZenithExecutiveBody({
   if (isLoading) return <ZenithSkeleton insightsBar={insightsBar} />
 
   const kpis = buildExecutiveZenithKpis(role, data, dateFilter.selectedFYs)
+  const kpiRow1 = kpis.slice(0, 4)
+  const kpiRow2 = kpis.slice(4)
+  const kpiRow2GridClass =
+    kpiRow2.length >= 5
+      ? 'grid w-full grid-cols-2 gap-2.5 scroll-mt-28 sm:gap-3 min-[744px]:grid-cols-3 lg:grid-cols-5'
+      : kpiRow2.length === 4
+        ? 'grid w-full grid-cols-2 gap-2.5 scroll-mt-28 sm:gap-3 lg:grid-cols-4'
+        : 'grid w-full grid-cols-2 gap-2.5 scroll-mt-28 sm:gap-3 lg:grid-cols-3'
+
   const totalCapacityKW = Number(kpis.find((k) => k.key === 'capacity')?.value ?? 0)
   const pipelineCapacityKW = Number((data as { pipelineCapacityKW?: number })?.pipelineCapacityKW ?? 0)
   const hasExplicitPeriod =
@@ -509,6 +534,36 @@ export default function ZenithExecutiveBody({
   const monthlyTargetKW = role === UserRole.SALES ? SALES_MONTHLY_TARGET_KW : DEFAULT_MONTHLY_TARGET_KW
   const targetKW = hasExplicitPeriod ? monthlyTargetKW * monthsInSelectedPeriod(dateFilter) : null
   const gaugePipelineKW = hasExplicitPeriod ? pipelineCapacityKW : null
+
+  const renderKpiTile = (k: (typeof kpis)[number], i: number) => (
+    <div key={k.key} className="min-h-0 min-w-0">
+      {k.key === 'capacity' ? (
+        <KPIGauge
+          totalKW={totalCapacityKW}
+          pipelineKW={gaugePipelineKW}
+          targetKW={targetKW}
+        />
+      ) : (
+        <KPICard
+          item={k}
+          index={i}
+          icon={KPI_ICON_BY_KEY[k.key] ?? icons[i] ?? Zap}
+          onClick={
+            k.key === 'loan'
+              ? onAvailingLoanKpiClick
+              : k.key === 'pendingSubsidy'
+                ? onPendingSubsidyKpiClick
+                : k.key === 'lost'
+                  ? onLostProjectsKpiClick
+                  : k.key === 'outstanding'
+                    ? onOutstandingKpiClick
+                    : undefined
+          }
+        />
+      )}
+    </div>
+  )
+
   const funnelRole = role === UserRole.SALES ? UserRole.SALES : UserRole.MANAGEMENT
   const funnelStages = buildZenithFunnelStages(funnelRole, data, dateFilter)
 
@@ -583,37 +638,16 @@ export default function ZenithExecutiveBody({
       {showOverview ? (
         <>
           <div className="zenith-kpi-ticker-stack">
-          {/* Row 1: KPI tiles full width — same 2×4 / 2-col rhythm as Ops/Finance */}
-          <div
-            id="zenith-kpis"
-            className="grid w-full grid-cols-2 gap-2.5 scroll-mt-28 sm:gap-3 lg:grid-cols-4"
-          >
-            {kpis.map((k, i) => (
-              <div key={k.key} className="min-h-0 min-w-0">
-                {k.key === 'capacity' ? (
-                  <KPIGauge
-                    totalKW={totalCapacityKW}
-                    pipelineKW={gaugePipelineKW}
-                    targetKW={targetKW}
-                  />
-                ) : (
-                  <KPICard
-                    item={k}
-                    index={i}
-                    icon={KPI_ICON_BY_KEY[k.key] ?? icons[i] ?? Zap}
-                    onClick={
-                      k.key === 'loan'
-                        ? onAvailingLoanKpiClick
-                        : k.key === 'lost'
-                          ? onLostProjectsKpiClick
-                          : k.key === 'outstanding'
-                            ? onOutstandingKpiClick
-                            : undefined
-                    }
-                  />
-                )}
+          {/* Row 1: capacity / pipeline / revenue / profit — Row 2: conversion + list KPIs (5 for Admin/Mgmt) */}
+          <div id="zenith-kpis" className="space-y-2.5 sm:space-y-3 scroll-mt-28">
+            <div className="grid w-full grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+              {kpiRow1.map((k, i) => renderKpiTile(k, i))}
+            </div>
+            {kpiRow2.length > 0 ? (
+              <div className={kpiRow2GridClass}>
+                {kpiRow2.map((k, i) => renderKpiTile(k, i + kpiRow1.length))}
               </div>
-            ))}
+            ) : null}
           </div>
           {insightsBar}
           <ZenithPriorityRibbon

@@ -15,6 +15,7 @@ export type ProjectsListFiltersState = {
   paymentStatus: string[]
   hasDocuments: boolean
   availingLoan: boolean
+  pendingSubsidy: boolean
   peBucket: PeBucketParam | null
   financingBank: string[]
   zenithClosedFrom: string | null
@@ -62,6 +63,7 @@ export function buildProjectListQueryParams(input: ProjectsListQueryInput): URLS
   if (filters.search?.trim()) params.append('search', filters.search.trim())
   if (filters.hasDocuments) params.append('hasDocuments', 'true')
   if (filters.availingLoan) params.append('availingLoan', 'true')
+  if (filters.pendingSubsidy) params.append('pendingSubsidy', 'true')
   if (filters.peBucket) params.append('peBucket', filters.peBucket)
   filters.financingBank.forEach((v) => params.append('financingBank', v))
   if (filters.zenithClosedFrom) params.append('zenithClosedFrom', filters.zenithClosedFrom)

@@ -56,9 +56,26 @@ describe('parseProjectsListFilters', () => {
     expect(filters.lifecycleSpecsIncompleteActive).toBe(true);
     expect(filters.lifecycleSpecsCompleteActive).toBe(false);
   });
+
+  it('parses pendingSubsidy', () => {
+    const filters = parseProjectsListFilters({ pendingSubsidy: 'true' });
+    expect(filters.pendingSubsidyActive).toBe(true);
+    expect(parseProjectsListFilters({}).pendingSubsidyActive).toBe(false);
+  });
 });
 
 describe('buildProjectsWhere', () => {
+  it('applies pendingSubsidy as Subsidy segment + Completed status', () => {
+    const filters = parseProjectsListFilters({ pendingSubsidy: 'true' });
+    const built = buildProjectsWhere(filters, adminUser);
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    const json = JSON.stringify(built.where);
+    expect(json).toContain(ProjectType.SUBSIDY);
+    expect(json).toContain(ProjectStatus.COMPLETED);
+    expect(json).not.toContain(ProjectStatus.COMPLETED_SUBSIDY_CREDITED);
+  });
+
   it('scopes Sales users to their salespersonId', () => {
     const filters = parseProjectsListFilters({});
     const built = buildProjectsWhere(filters, salesUser);

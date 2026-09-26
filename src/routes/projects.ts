@@ -844,11 +844,8 @@ router.post(
         }
       }
 
-      // Auto-select Panel Type based on Segment if not provided
-      let finalPanelType = panelType;
-      if (!finalPanelType) {
-        finalPanelType = defaultPanelTypeForProjectSegment(type);
-      }
+      // Segment mandates Panel Type: Subsidy → DCR, Non-Subsidy → Non-DCR (always enforce).
+      const finalPanelType = defaultPanelTypeForProjectSegment(type);
 
       // Auto-calculate expected profit (null for LOST — not in win book)
       const expectedProfit = projectStatus === ProjectStatus.LOST ? null : calculateExpectedProfit(projectCostNum, systemCapacityNum);
@@ -2086,6 +2083,16 @@ router.put(
 
       // Final cleanup: keep only Prisma-safe scalar update keys (strips relations / UI-only fields)
       updateData = pickProjectUpdateData(updateData as Record<string, unknown>);
+
+      // Segment mandates Panel Type: Subsidy → DCR, Non-Subsidy → Non-DCR (heal mismatches on every save).
+      {
+        const effectiveType = String(
+          (updateData.type as string | undefined) ?? project.type ?? '',
+        );
+        if (effectiveType) {
+          updateData.panelType = defaultPanelTypeForProjectSegment(effectiveType);
+        }
+      }
 
       const futurePaymentDate = assertPaymentCollectionDatesNotFuture(updateData);
       if (futurePaymentDate) {

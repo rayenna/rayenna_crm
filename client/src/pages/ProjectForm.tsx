@@ -373,11 +373,13 @@ const ProjectForm = () => {
     }
   }, [leadSource, setValue])
 
-  // Auto-select Panel Type based on Segment (Subsidy → DCR; Non-Subsidy → Non-DCR)
+  // Segment mandates Panel Type: Subsidy → DCR, Non-Subsidy → Non-DCR (create + edit).
   useEffect(() => {
-    if (!isEdit && projectType) {
-      setValue('panelType', defaultPanelTypeForProjectSegment(projectType))
-    }
+    if (!projectType) return
+    setValue('panelType', defaultPanelTypeForProjectSegment(projectType), {
+      shouldDirty: isEdit,
+      shouldValidate: false,
+    })
   }, [projectType, isEdit, setValue])
 
   // New project: allow inverter kW to track system capacity until user edits it.
@@ -1426,7 +1428,9 @@ const ProjectForm = () => {
                   </option>
                 ))}
               </select>
-              <p className={ZENITH_FIELD_HINT_CLS}>Subsidy vs non-subsidy eligibility for this project (not customer type).</p>
+              <p className={ZENITH_FIELD_HINT_CLS}>
+                Subsidy vs non-subsidy eligibility. Sets Panel type automatically (Subsidy → DCR, Non-Subsidy → Non-DCR).
+              </p>
             </div>
             <div>
               <label className={labelCls}>Service type *</label>
@@ -2218,26 +2222,43 @@ const ProjectForm = () => {
                     <span className={sublabelUpperCls}>
                       Panel type
                     </span>
-                    <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 pt-0.5">
-                      <label className="inline-flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          {...register('panelType')}
-                          value="DCR"
-                          className="h-3.5 w-3.5 border-[color:var(--border-input)] bg-[color:var(--bg-input)] text-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
-                        />
-                        <span className="text-sm font-medium text-[color:var(--text-primary)]">DCR</span>
-                      </label>
-                      <label className="inline-flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          {...register('panelType')}
-                          value="Non-DCR"
-                          className="h-3.5 w-3.5 border-[color:var(--border-input)] bg-[color:var(--bg-input)] text-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
-                        />
-                        <span className="text-sm font-medium text-[color:var(--text-primary)]">Non-DCR</span>
-                      </label>
-                    </div>
+                    {(() => {
+                      const mandated = defaultPanelTypeForProjectSegment(
+                        projectType || ProjectType.NON_SUBSIDY,
+                      )
+                      return (
+                        <>
+                          <input type="hidden" {...register('panelType')} />
+                          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 pt-0.5">
+                            {(['DCR', 'Non-DCR'] as const).map((opt) => {
+                              const selected = mandated === opt
+                              return (
+                                <span
+                                  key={opt}
+                                  className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium ${
+                                    selected
+                                      ? 'border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
+                                      : 'border-[color:var(--border-default)] text-[color:var(--text-muted)] opacity-60'
+                                  }`}
+                                  aria-current={selected ? 'true' : undefined}
+                                >
+                                  {opt}
+                                </span>
+                              )
+                            })}
+                          </div>
+                          <p className="text-[11px] leading-snug text-[color:var(--text-muted)]">
+                            Locked to Segment:{' '}
+                            <span className="font-medium text-[color:var(--text-secondary)]">Subsidy → DCR</span>
+                            {' · '}
+                            <span className="font-medium text-[color:var(--text-secondary)]">
+                              Non-Subsidy → Non-DCR
+                            </span>
+                            . Change Segment in Customer &amp; Project Details to update this.
+                          </p>
+                        </>
+                      )
+                    })()}
                   </div>
                 </div>
               </div>

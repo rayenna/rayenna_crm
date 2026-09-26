@@ -33,6 +33,8 @@ export type ZenithExplorerProject = {
   loan_bank_label?: string
   /** True when CRM `availingLoan`; used for Availing Loan KPI quick drawer (same slice as count, excluding Lost client-side). */
   availing_loan?: boolean
+  /** Project segment (`SUBSIDY` / `NON_SUBSIDY`); Pending Subsidy KPI = SUBSIDY + COMPLETED. */
+  project_type?: string | null
   /** Prisma `PaymentStatus` or null stored as PENDING; N/A pill matches stage/cost via `matchesZenithPaymentNaBucket`. */
   payment_status?: string
   /** Project Lifecycle — panel brand when entered (Zenith panel vs inverter chart). */

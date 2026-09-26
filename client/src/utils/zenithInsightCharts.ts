@@ -24,6 +24,61 @@ export const PIPELINE_AGE_BUCKET_COLORS: Record<PipelineAgeBucketId, string> = {
   '90+': 'var(--accent-red)',
 }
 
+/**
+ * Commissioning timeline — urgency + horizon:
+ * overdue (red) → this month (amber) → near months (lime→teal→cyan→blue) → later (indigo) → unscheduled (slate).
+ */
+export const COMMISSIONING_SPECIAL_COLORS: Record<'overdue' | 'this-month' | 'later' | 'unscheduled', string> =
+  {
+    overdue: 'var(--accent-red)',
+    'this-month': '#F59E0B',
+    later: '#6366F1',
+    unscheduled: '#94A3B8',
+  }
+
+/** Future calendar months in the 5-month horizon (index 0 = next month). */
+export const COMMISSIONING_FUTURE_MONTH_COLORS = [
+  '#84CC16', // +1 lime
+  '#14B8A6', // +2 teal
+  '#06B6D4', // +3 cyan
+  '#3B82F6', // +4 blue
+  '#8B5CF6', // +5 violet
+] as const
+
+/** Distinct fills for Outstanding-by-salesperson bars (same spectrum idea as loans-by-bank). */
+export const OUTSTANDING_SALES_BAR_COLORS = [
+  '#F59E0B',
+  '#06B6D4',
+  '#8B5CF6',
+  '#10B981',
+  '#EC4899',
+  '#3B82F6',
+  '#14B8A6',
+  '#F97316',
+] as const
+
+export function getCommissioningBucketColor(bucketId: CommissioningBucketId): string {
+  if (bucketId === 'overdue' || bucketId === 'this-month' || bucketId === 'later' || bucketId === 'unscheduled') {
+    return COMMISSIONING_SPECIAL_COLORS[bucketId]
+  }
+  // `month-YYYY-MM` — color by position among the 5-month horizon (next month = index 0).
+  const m = /^month-(\d{4})-(\d{2})$/.exec(bucketId)
+  if (m) {
+    const now = istPartsNow()
+    const y = Number(m[1])
+    const mo = Number(m[2])
+    const monthsAhead = (y - now.y) * 12 + (mo - now.m)
+    if (monthsAhead >= 1 && monthsAhead <= 5) {
+      return COMMISSIONING_FUTURE_MONTH_COLORS[(monthsAhead - 1) % COMMISSIONING_FUTURE_MONTH_COLORS.length]!
+    }
+  }
+  return 'var(--accent-gold)'
+}
+
+export function getOutstandingSalesBarColor(_name: string, index: number): string {
+  return OUTSTANDING_SALES_BAR_COLORS[index % OUTSTANDING_SALES_BAR_COLORS.length]!
+}
+
 export const PIPELINE_AGE_BUCKETS = [
   { id: '0-14', label: '0–14 days', min: 0, max: 14 },
   { id: '15-30', label: '15–30 days', min: 15, max: 30 },
@@ -190,12 +245,16 @@ export function buildCommissioningTimelineRows(projects: ZenithExplorerProject[]
     counts.set(id, (counts.get(id) ?? 0) + 1)
   }
   return defs
-    .map((d) => ({
-      key: d.id,
-      label: d.label,
-      count: counts.get(d.id) ?? 0,
-      value: counts.get(d.id) ?? 0,
-    }))
+    .map((d) => {
+      const count = counts.get(d.id) ?? 0
+      return {
+        key: d.id,
+        label: d.label,
+        count,
+        value: count,
+        fill: getCommissioningBucketColor(d.id),
+      }
+    })
     .filter((r) => r.count > 0)
 }
 
@@ -249,6 +308,10 @@ export function buildOutstandingBySalespersonRows(projects: ZenithExplorerProjec
     }))
     .sort((a, b) => b.value - a.value)
     .slice(0, OUTSTANDING_TOP_N)
+    .map((row, i) => ({
+      ...row,
+      fill: getOutstandingSalesBarColor(row.key, i),
+    }))
 }
 
 export function buildPipelineAgeFilterLabel(bucketId: PipelineAgeBucketId): string {

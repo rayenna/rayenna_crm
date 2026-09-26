@@ -1,35 +1,23 @@
 import { memo } from 'react'
 import type { ProjectFilterChip } from '../../utils/projectFilterChips'
+import { isProjectsDeepLinkChipId } from '../../utils/projectDeepLinkFilters'
 
 type ProjectsActiveFilterChipsProps = {
   chips: ProjectFilterChip[]
   showExportHint?: boolean
+  onClearDeepLinks?: () => void
 }
 
-const ProjectsActiveFilterChips = memo(({ chips, showExportHint }: ProjectsActiveFilterChipsProps) => {
-  if (chips.length === 0) return null
+const ProjectsActiveFilterChips = memo(
+  ({ chips, showExportHint, onClearDeepLinks }: ProjectsActiveFilterChipsProps) => {
+    if (chips.length === 0) return null
 
-  return (
-    <div
-      className="mb-3 rounded-xl border border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--accent-gold-muted) 35%, var(--bg-card))] px-3 py-2.5"
-      role="region"
-      aria-label="Active project filters"
-    >
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
-          Active filters
-        </span>
-        {showExportHint ? (
-          <span
-            className="text-[11px] font-medium text-[color:var(--accent-gold)]"
-            title="Excel and CSV export apply the same filters and search as this list"
-          >
-            Excel/CSV export uses these filters
-          </span>
-        ) : null}
-      </div>
+    const deepLinkChips = chips.filter((c) => isProjectsDeepLinkChipId(c.id))
+    const listChips = chips.filter((c) => !isProjectsDeepLinkChipId(c.id))
+
+    const renderChipList = (items: ProjectFilterChip[]) => (
       <ul className="flex list-none flex-wrap gap-2 p-0 m-0">
-        {chips.map((chip) => (
+        {items.map((chip) => (
           <li key={chip.id}>
             <button
               type="button"
@@ -48,9 +36,59 @@ const ProjectsActiveFilterChips = memo(({ chips, showExportHint }: ProjectsActiv
           </li>
         ))}
       </ul>
-    </div>
-  )
-})
+    )
+
+    return (
+      <div
+        className="mb-3 space-y-2.5 rounded-xl border border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--accent-gold-muted) 35%, var(--bg-card))] px-3 py-2.5"
+        role="region"
+        aria-label="Active project filters"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
+            Active filters
+          </span>
+          {showExportHint ? (
+            <span
+              className="text-[11px] font-medium text-[color:var(--accent-gold)]"
+              title="Excel and CSV export apply the same filters and search as this list"
+            >
+              Excel/CSV export uses these filters
+            </span>
+          ) : null}
+        </div>
+
+        {listChips.length > 0 ? renderChipList(listChips) : null}
+
+        {deepLinkChips.length > 0 ? (
+          <div className="rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-surface)]/80 px-2.5 py-2">
+            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
+                  From Zenith / dashboard
+                </p>
+                <p className="mt-0.5 text-[11px] leading-snug text-[color:var(--text-secondary)]">
+                  These came from a dashboard link and aren’t on the filter form — remove one, or clear
+                  all deep links.
+                </p>
+              </div>
+              {onClearDeepLinks ? (
+                <button
+                  type="button"
+                  onClick={onClearDeepLinks}
+                  className="inline-flex min-h-[32px] shrink-0 items-center justify-center rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--text-primary)] transition-colors hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)]"
+                >
+                  Clear deep links
+                </button>
+              ) : null}
+            </div>
+            {renderChipList(deepLinkChips)}
+          </div>
+        ) : null}
+      </div>
+    )
+  },
+)
 
 ProjectsActiveFilterChips.displayName = 'ProjectsActiveFilterChips'
 

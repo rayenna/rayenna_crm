@@ -1,4 +1,4 @@
-import { Zap, TrendingUp, IndianRupee, Target, Percent } from 'lucide-react'
+import { Zap, TrendingUp, IndianRupee, Target, HandCoins } from 'lucide-react'
 import {
   BarChart,
   Bar,
@@ -16,7 +16,7 @@ import { ZENITH_CHART_CUSTOM_TOOLTIP_SHELL } from '../dashboard/zenithRechartsTo
 import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../utils/axios'
 import { useAuth } from '../../contexts/AuthContext'
-import { ProjectStatus, UserRole } from '../../types'
+import { ProjectStatus, ProjectType, UserRole } from '../../types'
 import { getProjectStatusColor } from '../dashboard/projectStatusColors'
 import { buildOperationsZenithKpis } from './zenithKpi'
 import {
@@ -68,7 +68,7 @@ import ZenithPriorityRibbon from './ZenithPriorityRibbon'
 import { ZenithKpiSkeletonGrid } from './ZenithOverviewSkeletons'
 import { buildOperationsPriorityItems } from '../../utils/zenithPriorityItems'
 
-const icons = [Zap, TrendingUp, IndianRupee, Target, Percent]
+const icons = [Zap, TrendingUp, HandCoins, Target, IndianRupee]
 
 function ExploreInrTooltip({
   active,
@@ -181,6 +181,7 @@ export default function ZenithOperationsBody({
     { status: [ProjectStatus.COMPLETED_SUBSIDY_CREDITED] },
     dateFilter,
   )
+  const pendingSubsidyProjectsUrl = buildProjectsUrl({ pendingSubsidy: true }, dateFilter)
 
   /** Same status sets as `/api/dashboard/operations` counts (pending / completed installation, subsidy credited). */
   const onPendingInstallationKpiClick = useCallback(() => {
@@ -211,6 +212,20 @@ export default function ZenithOperationsBody({
       chartResetGroup: exploreChartResetGroup('ops'),
     })
   }, [explorerProjects, onOpenDrawerListMode, completedInstallationProjectsUrl])
+
+  const onPendingSubsidyKpiClick = useCallback(() => {
+    const filtered = explorerProjects.filter(
+      (p) =>
+        p.project_type === ProjectType.SUBSIDY && p.projectStatus === ProjectStatus.COMPLETED,
+    )
+    onOpenDrawerListMode({
+      filterLabel: 'Pending subsidy',
+      filteredProjects: filtered,
+      listAmountMode: 'deal_value',
+      projectsPageHref: pendingSubsidyProjectsUrl,
+      chartResetGroup: exploreChartResetGroup('ops'),
+    })
+  }, [explorerProjects, onOpenDrawerListMode, pendingSubsidyProjectsUrl])
 
   const onSubsidyCreditedKpiClick = useCallback(() => {
     const filtered = explorerProjects.filter(
@@ -327,7 +342,7 @@ export default function ZenithOperationsBody({
     return (
       <div className="px-3 sm:px-5 pt-3 pb-6 space-y-6 max-w-[1600px] mx-auto">
         <div className="zenith-kpi-ticker-stack">
-          <ZenithKpiSkeletonGrid count={4} />
+          <ZenithKpiSkeletonGrid count={5} />
           {insightsBar}
         </div>
       </div>
@@ -385,10 +400,10 @@ export default function ZenithOperationsBody({
       {showOverview ? (
         <>
           <div className="zenith-kpi-ticker-stack">
-          {/* Row 1: four Ops KPIs — full width, original tile sizes */}
+          {/* Ops KPIs — 5 tiles incl. Pending Subsidy (Subsidy + Completed) */}
           <div
             id="zenith-kpis"
-            className="grid w-full grid-cols-2 gap-3 scroll-mt-28 sm:grid-cols-2 lg:grid-cols-4"
+            className="grid w-full grid-cols-2 gap-3 scroll-mt-28 min-[744px]:grid-cols-3 lg:grid-cols-5"
           >
             {kpis.map((k, i) => (
               <div key={k.key} className="min-w-0">
@@ -401,9 +416,11 @@ export default function ZenithOperationsBody({
                       ? onPendingInstallationKpiClick
                       : k.key === 'done'
                         ? onCompletedInstallationKpiClick
-                        : k.key === 'cred'
-                          ? onSubsidyCreditedKpiClick
-                          : undefined
+                        : k.key === 'pendingSubsidy'
+                          ? onPendingSubsidyKpiClick
+                          : k.key === 'cred'
+                            ? onSubsidyCreditedKpiClick
+                            : undefined
                   }
                 />
               </div>

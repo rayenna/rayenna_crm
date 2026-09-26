@@ -1,11 +1,32 @@
 /** Shaped loading placeholders for Zenith overview panels (not generic blocks). */
 
 export function ZenithKpiSkeletonGrid({ count = 6 }: { count?: number }) {
+  const row1 = Math.min(4, count)
+  const row2 = Math.max(0, count - 4)
+  const row2Class =
+    row2 >= 5
+      ? 'grid w-full grid-cols-2 gap-2.5 sm:gap-3 min-[744px]:grid-cols-3 lg:grid-cols-5'
+      : row2 === 4
+        ? 'grid w-full grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4'
+        : row2 > 0
+          ? 'grid w-full grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-3'
+          : ''
+
+  const tile = (i: number) => (
+    <div
+      key={i}
+      className="zenith-skeleton zenith-skeleton-kpi min-h-[7.5rem] rounded-xl min-w-0 sm:min-h-[8rem]"
+    />
+  )
+
   return (
-    <div className="grid w-full grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="zenith-skeleton zenith-skeleton-kpi min-h-[7.5rem] rounded-xl min-w-0 sm:min-h-[8rem]" />
-      ))}
+    <div className="space-y-2.5 sm:space-y-3">
+      <div className="grid w-full grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+        {Array.from({ length: row1 }, (_, i) => tile(i))}
+      </div>
+      {row2 > 0 ? (
+        <div className={row2Class}>{Array.from({ length: row2 }, (_, i) => tile(i + row1))}</div>
+      ) : null}
     </div>
   )
 }

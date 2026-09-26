@@ -16,15 +16,14 @@ import { getSalesTeamColor } from '../components/dashboard/salesTeamColors'
 import DashboardFilters from '../components/dashboard/DashboardFilters'
 import HealthBadge from '../components/zenith/HealthBadge'
 import { projectDetailToHealthProject } from '../utils/dealHealthScore'
-import { evaluateDataSense, parseDataSenseRule, type DataSenseRuleId } from '../utils/dataSense'
+import { parseDataSenseRule, type DataSenseRuleId } from '../utils/dataSense'
 import FinancingBankPopoverIcon from '../components/projects/FinancingBankPopoverIcon'
 import CapacitySpecsPopover from '../components/projects/CapacitySpecsPopover'
 import LeadSourcePill from '../components/projects/LeadSourcePill'
 import { getFinancingBankDisplayName } from '../utils/financingBankDisplay'
 import { FiPaperclip } from 'react-icons/fi'
-import { FaUniversity, FaTicketAlt, FaBriefcase } from 'react-icons/fa'
+import { FaTicketAlt, FaBriefcase } from 'react-icons/fa'
 import { ErrorModal } from '@/components/common/ErrorModal'
-import { projectStatusStagePillClass } from '../components/zenith/zenithDealCardUi'
 import { ZenithSingleSelect } from '../components/zenith/ZenithSingleSelect'
 import {
   buildProjectExportQueryParams,
@@ -37,15 +36,43 @@ import {
   projectSegmentLabels,
 } from '../utils/projectSegment'
 import {
-  getCustomerTypeLegendLabel,
-  getProjectNameCustomerTypeColorClass,
   getProjectNameCustomerTypeTextClass,
 } from '../utils/customerTypeStyles'
 import ProjectsActiveFilterChips from '../components/projects/ProjectsActiveFilterChips'
+import ProjectsMobileCardList from '../components/projects/ProjectsMobileCardList'
+import ProjectsStageCell from '../components/projects/ProjectsStageCell'
+import ProjectsListHowToRead from '../components/projects/ProjectsListHowToRead'
+import ProjectsQuickPresets from '../components/projects/ProjectsQuickPresets'
+import ProjectsTablePrefsMenu from '../components/projects/ProjectsTablePrefsMenu'
 import { buildProjectFilterChips } from '../utils/projectFilterChips'
+import {
+  filtersHaveDeepLinkOnlyFields,
+  projectsDeepLinkClearPatch,
+} from '../utils/projectDeepLinkFilters'
+import {
+  buildProjectsPresetPatch,
+  projectsPresetsForRole,
+  type ProjectsPresetId,
+} from '../utils/projectsListPresets'
+import {
+  countProjectsTableVisibleCols,
+  projectsTableColRemWidths,
+  projectsTableTotalRemWidth,
+  readProjectsHiddenCols,
+  readProjectsLastPresetId,
+  readProjectsTableDensity,
+  writeProjectsHiddenCols,
+  writeProjectsLastPresetId,
+  writeProjectsTableDensity,
+  type ProjectsOptionalCol,
+  type ProjectsTableDensity,
+} from '../utils/projectsListPrefs'
 import { CUSTOMER_TYPE_OPTIONS, type CustomerType } from '../utils/customerRecord'
 
 const PROJECTS_FILTERS_STORAGE_KEY = 'rayenna_projects_filters'
+const PROJECTS_LIST_VIEW_STORAGE_KEY = 'rayenna_projects_list_view'
+/** Match audit breakpoint — cards default below this width. */
+const PROJECTS_CARDS_MAX_MQ = '(max-width: 743px)'
 
 function defaultOrderForProjectsSortKey(key: string): 'asc' | 'desc' {
   const descFirst = new Set([
@@ -76,6 +103,7 @@ function getInitialFiltersFromUrl(): {
   status: string[]
   paymentStatus: string[]
   availingLoan: boolean
+  pendingSubsidy: boolean
   selectedFYs: string[]
   selectedQuarters: string[]
   selectedMonths: string[]
@@ -101,6 +129,7 @@ function getInitialFiltersFromUrl(): {
   const status = p.getAll('status')
   const paymentStatus = p.getAll('paymentStatus')
   const availingLoan = p.get('availingLoan') === 'true'
+  const pendingSubsidy = p.get('pendingSubsidy') === 'true'
   const fy = p.getAll('fy')
   const quarter = p.getAll('quarter')
   const month = p.getAll('month')
@@ -129,6 +158,7 @@ function getInitialFiltersFromUrl(): {
     status.length > 0 ||
     paymentStatus.length > 0 ||
     availingLoan ||
+    pendingSubsidy ||
     fy.length > 0 ||
     quarter.length > 0 ||
     month.length > 0 ||
@@ -159,6 +189,7 @@ function getInitialFiltersFromUrl(): {
     status: validStatus,
     paymentStatus: validPayment,
     availingLoan,
+    pendingSubsidy,
     selectedFYs: fy,
     selectedQuarters: quarter,
     selectedMonths: month,
@@ -411,12 +442,12 @@ const PaymentStatusBadge = ({ project, compact = false }: { project: Project; co
   )
 }
 
-/** Visible data columns for thead/tbody (matches Tailwind lg/md/sm on table cells). Used for empty-state colspan below lg. */
-function getProjectsTableVisibleColumnCount(viewportWidth: number): number {
-  if (viewportWidth >= 1024) return 9
-  if (viewportWidth >= 768) return 8
-  if (viewportWidth >= 640) return 7
-  return 6
+/** Visible data columns for thead/tbody (matches Tailwind + user-hidden optional cols). */
+function getProjectsTableVisibleColumnCount(
+  viewportWidth: number,
+  hidden: ProjectsOptionalCol[] = [],
+): number {
+  return countProjectsTableVisibleCols(viewportWidth, hidden)
 }
 
 const Projects = () => {
@@ -429,6 +460,7 @@ const Projects = () => {
   const { user, hasRole } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const hoverCapable = useHoverCapableForTooltip()
   const urlInit = getInitialFiltersFromUrl()
   const initialSearchFromUrl = getInitialSearchFromUrl()
   const [page, setPage] = useState(1)
@@ -436,29 +468,103 @@ const Projects = () => {
   const debouncedSearch = useDebounce(searchInput, 500) // 500ms debounce
   const [showExportConfirm, setShowExportConfirm] = useState(false)
   const [pendingExportType, setPendingExportType] = useState<'excel' | 'csv' | null>(null)
+  const [exportMenuOpen, setExportMenuOpen] = useState(false)
+  const exportMenuRef = useRef<HTMLDivElement>(null)
   // Always start collapsed (including dashboard tile links with URL params) so mobile users see results first; use "Show Filters" to expand.
   const [showMoreFilters, setShowMoreFilters] = useState(false)
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [showFlagMeanings, setShowFlagMeanings] = useState(false)
+  const [tableDensity, setTableDensity] = useState<ProjectsTableDensity>(() =>
+    readProjectsTableDensity(),
+  )
+  const [hiddenCols, setHiddenCols] = useState<ProjectsOptionalCol[]>(() =>
+    readProjectsHiddenCols(),
+  )
+  const [activePresetId, setActivePresetId] = useState<ProjectsPresetId | null>(() => {
+    const id = readProjectsLastPresetId()
+    const valid: ProjectsPresetId[] = [
+      'open-pipeline',
+      'needs-review',
+      'availing-loan',
+      'pending-subsidy',
+      'outstanding-payment',
+    ]
+    return id && valid.includes(id as ProjectsPresetId) ? (id as ProjectsPresetId) : null
+  })
+
+  const showSegmentCol = !hiddenCols.includes('segment')
+  const showLeadCol = !hiddenCols.includes('lead')
+  const showConfirmCol = !hiddenCols.includes('confirm')
+  const tableColRem = projectsTableColRemWidths(tableDensity)
+  const tableTotalRem = projectsTableTotalRemWidth(tableDensity, hiddenCols)
+
+  const [isNarrowViewport, setIsNarrowViewport] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(PROJECTS_CARDS_MAX_MQ).matches : false,
+  )
+  const [listViewOverride, setListViewOverride] = useState<'cards' | 'table' | null>(() => {
+    try {
+      const v = sessionStorage.getItem(PROJECTS_LIST_VIEW_STORAGE_KEY)
+      return v === 'cards' || v === 'table' ? v : null
+    } catch {
+      return null
+    }
+  })
+  const listViewMode: 'cards' | 'table' =
+    listViewOverride ?? (isNarrowViewport ? 'cards' : 'table')
+
+  const setListViewMode = (mode: 'cards' | 'table') => {
+    setListViewOverride(mode)
+    try {
+      sessionStorage.setItem(PROJECTS_LIST_VIEW_STORAGE_KEY, mode)
+    } catch {
+      // ignore
+    }
+  }
 
   const [projectsTableVisibleCols, setProjectsTableVisibleCols] = useState(() =>
-    typeof window !== 'undefined' ? getProjectsTableVisibleColumnCount(window.innerWidth) : 9,
+    typeof window !== 'undefined'
+      ? getProjectsTableVisibleColumnCount(window.innerWidth, readProjectsHiddenCols())
+      : 9,
   )
   useEffect(() => {
-    const update = () => setProjectsTableVisibleCols(getProjectsTableVisibleColumnCount(window.innerWidth))
+    const update = () =>
+      setProjectsTableVisibleCols(getProjectsTableVisibleColumnCount(window.innerWidth, hiddenCols))
     update()
     window.addEventListener('resize', update)
     const mq640 = window.matchMedia('(min-width: 640px)')
     const mq768 = window.matchMedia('(min-width: 768px)')
     const mq1024 = window.matchMedia('(min-width: 1024px)')
+    const mqCards = window.matchMedia(PROJECTS_CARDS_MAX_MQ)
+    const updateNarrow = () => setIsNarrowViewport(mqCards.matches)
+    updateNarrow()
     mq640.addEventListener('change', update)
     mq768.addEventListener('change', update)
     mq1024.addEventListener('change', update)
+    mqCards.addEventListener('change', updateNarrow)
     return () => {
       window.removeEventListener('resize', update)
       mq640.removeEventListener('change', update)
       mq768.removeEventListener('change', update)
       mq1024.removeEventListener('change', update)
+      mqCards.removeEventListener('change', updateNarrow)
     }
-  }, [])
+  }, [hiddenCols])
+
+  useEffect(() => {
+    if (!exportMenuOpen) return
+    const onDoc = (e: MouseEvent) => {
+      if (!exportMenuRef.current?.contains(e.target as Node)) setExportMenuOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setExportMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [exportMenuOpen])
 
   // Dashboard-style date filters (FY / Quarter / Month)
   const [selectedFYs, setSelectedFYs] = useState<string[]>(() => urlInit?.selectedFYs ?? [])
@@ -508,6 +614,7 @@ const Projects = () => {
     paymentStatus: (urlInit?.paymentStatus ?? []) as string[],
     hasDocuments: false,
     availingLoan: urlInit?.availingLoan ?? false,
+    pendingSubsidy: urlInit?.pendingSubsidy ?? false,
     peBucket: (urlInit?.peBucket ?? null) as PeBucketParam | null,
     financingBank: (urlInit?.financingBank ?? []) as string[],
     zenithClosedFrom: urlInit?.zenithClosedFrom ?? null,
@@ -536,6 +643,7 @@ const Projects = () => {
     const statusFromUrl = searchParams.getAll('status')
     const paymentStatusFromUrl = searchParams.getAll('paymentStatus')
     const availingLoanFromUrl = searchParams.get('availingLoan') === 'true'
+    const pendingSubsidyFromUrl = searchParams.get('pendingSubsidy') === 'true'
     const fyFromUrl = searchParams.getAll('fy')
     const quarterFromUrl = searchParams.getAll('quarter')
     const monthFromUrl = searchParams.getAll('month')
@@ -606,6 +714,7 @@ const Projects = () => {
         validStatus.length > 0 ||
         validPayment.length > 0 ||
         availingLoanFromUrl ||
+        pendingSubsidyFromUrl ||
         hasDateParams ||
         hasExtendedTileParams ||
         hasSearchParam)
@@ -621,6 +730,7 @@ const Projects = () => {
             : {}),
         ...(validPayment.length > 0 && { paymentStatus: validPayment }),
         ...(availingLoanFromUrl && { availingLoan: true }),
+        ...(pendingSubsidyFromUrl && { pendingSubsidy: true }),
         ...(validTypeFromUrl.length > 0 && { type: validTypeFromUrl }),
         ...(validCustomerTypeFromUrl.length > 0 && { customerType: validCustomerTypeFromUrl }),
         ...(leadSourceIsNullFromUrl
@@ -751,6 +861,7 @@ const Projects = () => {
     filters.paymentStatus,
     filters.hasDocuments,
     filters.availingLoan,
+    filters.pendingSubsidy,
     filters.peBucket,
     filters.financingBank,
     filters.zenithClosedFrom,
@@ -777,6 +888,8 @@ const Projects = () => {
     } catch {
       // ignore
     }
+    writeProjectsLastPresetId(null)
+    setActivePresetId(null)
     // Reset search input (drives debounced search → filters.search)
     setSearchInput('')
 
@@ -798,6 +911,7 @@ const Projects = () => {
       paymentStatus: [],
       hasDocuments: false,
       availingLoan: false,
+      pendingSubsidy: false,
       peBucket: null,
       financingBank: [],
       zenithClosedFrom: null,
@@ -826,6 +940,39 @@ const Projects = () => {
     }
   }
 
+  const applyQuickPreset = (id: ProjectsPresetId) => {
+    const patch = buildProjectsPresetPatch(id, {
+      defaultStatusValues,
+      allowedStatusValues: statusOptions.map((o) => o.value),
+    })
+    setFilters((prev) => ({ ...prev, ...patch }))
+    setPage(1)
+    setActivePresetId(id)
+    writeProjectsLastPresetId(id)
+    if (urlHasFilterParams) {
+      navigate({ pathname: '/projects', search: '' }, { replace: true })
+    }
+  }
+
+  const handleTableDensityChange = (d: ProjectsTableDensity) => {
+    setTableDensity(d)
+    writeProjectsTableDensity(d)
+  }
+
+  const handleHiddenColsChange = (cols: ProjectsOptionalCol[]) => {
+    setHiddenCols(cols)
+    writeProjectsHiddenCols(cols)
+  }
+
+  const clearDeepLinkFilters = () => {
+    setPage(1)
+    setFilters((prev) => ({ ...prev, ...projectsDeepLinkClearPatch() }))
+    if (urlHasFilterParams) {
+      // Keep non–deep-link params out of URL by replacing with empty; panel filters live in React state.
+      navigate({ pathname: '/projects', search: '' }, { replace: true })
+    }
+  }
+
   const moreFiltersActiveCount = useMemo(() => {
     const normalize = (arr: string[]) => [...arr].sort().join('|')
     const statusIsDefault =
@@ -843,6 +990,7 @@ const Projects = () => {
       (filters.leadSource.length > 0 ? 1 : 0) +
       (filters.hasDocuments ? 1 : 0) +
       (filters.availingLoan ? 1 : 0) +
+      (filters.pendingSubsidy ? 1 : 0) +
       (filters.peBucket ? 1 : 0) +
       (filters.financingBank.length > 0 ? 1 : 0) +
       (filters.zenithClosedFrom || filters.zenithClosedTo ? 1 : 0) +
@@ -868,6 +1016,7 @@ const Projects = () => {
     filters.leadSource,
     filters.hasDocuments,
     filters.availingLoan,
+    filters.pendingSubsidy,
     filters.peBucket,
     filters.financingBank,
     filters.zenithClosedFrom,
@@ -1069,6 +1218,25 @@ const Projects = () => {
     ],
   )
 
+  // Keep Advanced open when restored filters use fields that only live there.
+  useEffect(() => {
+    if (
+      filters.customerType.length > 0 ||
+      filters.projectServiceType.length > 0 ||
+      filters.supportTicketStatus.length > 0 ||
+      filters.leadSource.length > 0 ||
+      Boolean(filters.sortBy)
+    ) {
+      setShowAdvancedFilters(true)
+    }
+  }, [
+    filters.customerType.length,
+    filters.projectServiceType.length,
+    filters.supportTicketStatus.length,
+    filters.leadSource.length,
+    filters.sortBy,
+  ])
+
   // Lead Source filter options - labels match ProjectDetail display
   const leadSourceOptions = [
     { value: LeadSource.WEBSITE, label: 'Website' },
@@ -1213,8 +1381,12 @@ const Projects = () => {
   /** No truncation on labels — wrap to extra lines if needed; glyph stays fixed at end of row. */
   const sortBtnHeader =
     'group flex min-h-[2rem] w-full min-w-0 flex-nowrap items-center gap-2 overflow-visible rounded-md px-1.5 py-1 text-left transition-colors hover:bg-[color:var(--bg-table-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] focus-visible:ring-offset-1 focus-visible:ring-offset-[color:var(--bg-page)] sm:min-h-[2.5rem] sm:gap-2 sm:px-2 sm:py-1.5'
+  const sortBtnHeaderEnd =
+    'group flex min-h-[2rem] w-full min-w-0 flex-nowrap items-center justify-end gap-1.5 overflow-visible rounded-md px-0 py-1 text-right transition-colors hover:bg-[color:var(--bg-table-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] focus-visible:ring-offset-1 focus-visible:ring-offset-[color:var(--bg-page)] sm:min-h-[2.5rem] sm:gap-2 sm:py-1.5'
   const sortLabelLeft =
     'min-w-0 flex-1 basis-0 whitespace-normal break-words text-left text-[11px] font-bold uppercase leading-snug tracking-wide text-[color:var(--text-secondary)] sm:text-xs sm:leading-tight sm:tracking-wider'
+  const sortLabelEnd =
+    'min-w-0 max-w-full whitespace-normal break-words text-right text-[11px] font-bold uppercase leading-snug tracking-wide text-[color:var(--text-secondary)] sm:text-xs sm:leading-tight sm:tracking-wider'
   const listErrorPanel = (
     <div
       className="mt-4 rounded-2xl border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] px-5 py-8 text-center shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]"
@@ -1258,16 +1430,73 @@ const Projects = () => {
             </div>
           </div>
 
-          {(user?.role === 'ADMIN' || user?.role === 'SALES') ? (
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+            {listViewMode === 'table' ? (
+              <ProjectsTablePrefsMenu
+                density={tableDensity}
+                hiddenCols={hiddenCols}
+                onDensityChange={handleTableDensityChange}
+                onHiddenColsChange={handleHiddenColsChange}
+              />
+            ) : null}
+            {hasRole([UserRole.ADMIN]) ? (
+              <div className="relative" ref={exportMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setExportMenuOpen((v) => !v)}
+                  className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 text-sm font-semibold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)]"
+                  aria-expanded={exportMenuOpen}
+                  aria-haspopup="menu"
+                  title="Export filtered list to Excel or CSV"
+                >
+                  Export
+                  <svg className="h-3.5 w-3.5 text-[color:var(--text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {exportMenuOpen ? (
+                  <div
+                    role="menu"
+                    className="absolute right-0 z-40 mt-1.5 w-48 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] p-1.5 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)]"
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setExportMenuOpen(false)
+                        handleExportClick('excel')
+                      }}
+                      className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm font-semibold text-[color:var(--text-primary)] hover:bg-[color:var(--bg-table-hover)]"
+                    >
+                      Export to Excel
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setExportMenuOpen(false)
+                        handleExportClick('csv')
+                      }}
+                      className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm font-semibold text-[color:var(--text-primary)] hover:bg-[color:var(--bg-table-hover)]"
+                    >
+                      Export to CSV
+                    </button>
+                    <p className="px-3 pb-2 pt-1 text-[10px] leading-snug text-[color:var(--text-muted)]">
+                      Uses current filters, search, and sort.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            {(user?.role === 'ADMIN' || user?.role === 'SALES') ? (
               <Link
                 to="/projects/new"
                 className="inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] shadow-lg transition-all hover:opacity-95"
               >
                 + New Project
               </Link>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
       </header>
 
@@ -1322,272 +1551,335 @@ const Projects = () => {
           <ProjectsActiveFilterChips
             chips={activeFilterChips}
             showExportHint={user?.role === UserRole.ADMIN}
+            onClearDeepLinks={
+              filtersHaveDeepLinkOnlyFields(filters) ? clearDeepLinkFilters : undefined
+            }
           />
 
-          {/* Filter By + Sort By + export — hidden until Show Filters */}
+          <ProjectsQuickPresets
+            presets={projectsPresetsForRole(user?.role)}
+            activeId={activePresetId}
+            onSelect={applyQuickPreset}
+          />
+
+          {/* Filter By + Sort By — hidden until Show Filters */}
           <div
             id="projects-more-filters"
             className={`${showMoreFilters ? 'overflow-visible' : 'overflow-hidden'} transition-all duration-300 ease-in-out ${
-              showMoreFilters ? 'max-h-[1400px] opacity-100' : 'max-h-0 opacity-0'
+              showMoreFilters ? 'max-h-[2200px] opacity-100' : 'max-h-0 opacity-0'
             }`}
           >
-            <div className={`${showMoreFilters ? 'pointer-events-auto' : 'pointer-events-none'} pt-2 space-y-2 sm:space-y-3`}>
-              <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Filter By</label>
-              {/* Uniform grid: 1 col mobile, 2 cols tablet, 3 cols laptop+ */}
-              <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
-                <DashboardFilters
-                  availableFYs={data?.availableFYs ?? []}
-                  selectedFYs={selectedFYs}
-                  selectedQuarters={selectedQuarters}
-                  selectedMonths={selectedMonths}
-                  onFYChange={setSelectedFYs}
-                  onQuarterChange={setSelectedQuarters}
-                  onMonthChange={setSelectedMonths}
-                  compact
-                  gridLayout
-                  variant="zenith"
-                />
-                {user?.role !== UserRole.SALES && (
+            <div className={`${showMoreFilters ? 'pointer-events-auto' : 'pointer-events-none'} pt-2 space-y-3`}>
+              <div>
+                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
+                  Daily filters
+                </label>
+                <p className="mb-2 text-[11px] text-[color:var(--text-secondary)]">
+                  Time, pipeline, segment, payment, and common flags.
+                </p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
+                  <DashboardFilters
+                    availableFYs={data?.availableFYs ?? []}
+                    selectedFYs={selectedFYs}
+                    selectedQuarters={selectedQuarters}
+                    selectedMonths={selectedMonths}
+                    onFYChange={setSelectedFYs}
+                    onQuarterChange={setSelectedQuarters}
+                    onMonthChange={setSelectedMonths}
+                    compact
+                    gridLayout
+                    variant="zenith"
+                  />
                   <MultiSelect
                     className="min-w-0 w-full"
-                    options={salesUserOptions}
-                    selectedValues={filters.salespersonId}
-                    onChange={(values) => setFilters({ ...filters, salespersonId: values })}
-                    placeholder="Sales users"
+                    options={statusOptions}
+                    selectedValues={filters.status}
+                    onChange={handleStatusChange}
+                    placeholder="Pipeline"
+                    multiSelectedLabel={user?.role === UserRole.OPERATIONS ? 'Confirmed Pipeline' : 'Active Pipeline'}
                     compact
                     variant="zenith"
                   />
-                )}
-                <MultiSelect
-                  className="min-w-0 w-full"
-                  options={customerTypeFilterOptions}
-                  selectedValues={filters.customerType}
-                  onChange={(values) => setFilters({ ...filters, customerType: values })}
-                  placeholder="Customer type"
-                  multiSelectedLabel="Types"
-                  compact
-                  variant="zenith"
-                />
-                <MultiSelect
-                  className="min-w-0 w-full"
-                  options={statusOptions}
-                  selectedValues={filters.status}
-                  onChange={handleStatusChange}
-                  placeholder="Pipeline"
-                  multiSelectedLabel={user?.role === UserRole.OPERATIONS ? 'Confirmed Pipeline' : 'Active Pipeline'}
-                  compact
-                  variant="zenith"
-                />
-                <MultiSelect
-                  className="min-w-0 w-full"
-                  options={typeOptions}
-                  selectedValues={filters.type}
-                  onChange={(values) => setFilters({ ...filters, type: values })}
-                  placeholder="Segments"
-                  compact
-                  variant="zenith"
-                />
-                <MultiSelect
-                  className="min-w-0 w-full"
-                  options={projectServiceTypeOptions}
-                  selectedValues={filters.projectServiceType}
-                  onChange={(values) => setFilters({ ...filters, projectServiceType: values })}
-                  placeholder="Project Types"
-                  compact
-                  variant="zenith"
-                />
-                <MultiSelect
-                  className="min-w-0 w-full"
-                  options={supportTicketStatusOptions}
-                  selectedValues={filters.supportTicketStatus}
-                  onChange={(values) => setFilters({ ...filters, supportTicketStatus: values })}
-                  placeholder="Ticket Statuses"
-                  compact
-                  variant="zenith"
-                />
-                {paymentStatusOptions.length > 0 && (
                   <MultiSelect
                     className="min-w-0 w-full"
-                    options={paymentStatusOptions}
-                    selectedValues={filters.paymentStatus}
-                    onChange={(values) => setFilters({ ...filters, paymentStatus: values })}
-                    placeholder="Payment Statuses"
+                    options={typeOptions}
+                    selectedValues={filters.type}
+                    onChange={(values) => setFilters({ ...filters, type: values })}
+                    placeholder="Segments"
                     compact
                     variant="zenith"
                   />
-                )}
-                <MultiSelect
-                  className="min-w-0 w-full"
-                  options={leadSourceOptions}
-                  selectedValues={filters.leadSource}
-                  onChange={(values) => setFilters({ ...filters, leadSource: values })}
-                  placeholder="Lead Sources"
-                  compact
-                  variant="zenith"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-2 pt-1 lg:grid-cols-2 lg:gap-x-6">
-                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                  <label className="inline-flex cursor-pointer items-center gap-2">
+                  {paymentStatusOptions.length > 0 && (
+                    <MultiSelect
+                      className="min-w-0 w-full"
+                      options={paymentStatusOptions}
+                      selectedValues={filters.paymentStatus}
+                      onChange={(values) => setFilters({ ...filters, paymentStatus: values })}
+                      placeholder="Payment Statuses"
+                      compact
+                      variant="zenith"
+                    />
+                  )}
+                  {user?.role !== UserRole.SALES && (
+                    <MultiSelect
+                      className="min-w-0 w-full"
+                      options={salesUserOptions}
+                      selectedValues={filters.salespersonId}
+                      onChange={(values) => setFilters({ ...filters, salespersonId: values })}
+                      placeholder="Sales users"
+                      compact
+                      variant="zenith"
+                    />
+                  )}
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <label
+                    className="inline-flex min-h-[44px] cursor-pointer touch-manipulation items-center gap-2 sm:min-h-0"
+                    title="Only projects with at least one attachment"
+                  >
                     <input
                       type="checkbox"
                       checked={filters.hasDocuments}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, hasDocuments: e.target.checked }))}
-                      className="h-4 w-4 rounded border-[color:var(--border-input)] bg-[color:var(--bg-input)] accent-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
+                      onChange={(e) => {
+                        setActivePresetId(null)
+                        writeProjectsLastPresetId(null)
+                        setFilters((prev) => ({ ...prev, hasDocuments: e.target.checked }))
+                      }}
+                      className="h-4 w-4 shrink-0 rounded border-[color:var(--border-input)] bg-[color:var(--bg-input)] accent-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
                     />
-                    <span className="text-sm text-[color:var(--text-primary)]">Has Artifacts</span>
+                    <span className="text-sm text-[color:var(--text-primary)]">Artifacts</span>
                   </label>
-                  <span className="text-xs text-[color:var(--text-secondary)]">
-                    (only projects with at least one attachment)
-                  </span>
-                </div>
-                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                  <label className="inline-flex cursor-pointer items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={filters.availingLoan}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, availingLoan: e.target.checked }))}
-                      className="h-4 w-4 rounded border-[color:var(--border-input)] bg-[color:var(--bg-input)] accent-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
-                    />
-                    <span className="text-sm text-[color:var(--text-primary)]">Availing Loan</span>
-                  </label>
-                  <span className="text-xs text-[color:var(--text-secondary)]">
-                    (only projects where Availing Loan/Financing is Yes)
-                  </span>
-                </div>
-                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                  <label className="inline-flex cursor-pointer items-center gap-2">
+                  <label
+                    className="inline-flex min-h-[44px] cursor-pointer touch-manipulation items-center gap-2 sm:min-h-0"
+                    title="Dates, payments, or capacity that do not match stage"
+                  >
                     <input
                       type="checkbox"
                       checked={filters.dataSenseNeedsReview}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        setActivePresetId(null)
+                        writeProjectsLastPresetId(null)
                         setFilters((prev) => ({
                           ...prev,
                           dataSenseNeedsReview: e.target.checked,
                           dataSenseRule: e.target.checked ? prev.dataSenseRule : null,
                         }))
-                      }
-                      className="h-4 w-4 rounded border-[color:var(--border-input)] bg-[color:var(--bg-input)] accent-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
+                      }}
+                      className="h-4 w-4 shrink-0 rounded border-[color:var(--border-input)] bg-[color:var(--bg-input)] accent-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
                     />
                     <span className="text-sm text-[color:var(--text-primary)]">Needs review</span>
                   </label>
-                    <span className="text-xs text-[color:var(--text-secondary)]">
-                      (dates, payments, or capacity that do not match stage)
-                    </span>
+                  <label
+                    className="inline-flex min-h-[44px] cursor-pointer touch-manipulation items-center gap-2 sm:min-h-0"
+                    title="Only projects where Availing Loan/Financing is Yes"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={filters.availingLoan}
+                      onChange={(e) => {
+                        setActivePresetId(null)
+                        writeProjectsLastPresetId(null)
+                        setFilters((prev) => ({ ...prev, availingLoan: e.target.checked }))
+                      }}
+                      className="h-4 w-4 shrink-0 rounded border-[color:var(--border-input)] bg-[color:var(--bg-input)] accent-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
+                    />
+                    <span className="text-sm text-[color:var(--text-primary)]">Loan</span>
+                  </label>
+                  <label
+                    className="inline-flex min-h-[44px] cursor-pointer touch-manipulation items-center gap-2 sm:min-h-0"
+                    title="Subsidy segment + Completed — awaiting subsidy credit"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={filters.pendingSubsidy}
+                      onChange={(e) => {
+                        setActivePresetId(null)
+                        writeProjectsLastPresetId(null)
+                        setFilters((prev) => ({ ...prev, pendingSubsidy: e.target.checked }))
+                      }}
+                      className="h-4 w-4 shrink-0 rounded border-[color:var(--border-input)] bg-[color:var(--bg-input)] accent-[color:var(--accent-gold)] focus:ring-[color:var(--accent-gold-muted)]"
+                    />
+                    <span className="text-sm text-[color:var(--text-primary)]">Pending subsidy</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowFlagMeanings((v) => !v)}
+                    className="inline-flex min-h-[32px] items-center text-[11px] font-semibold text-[color:var(--accent-gold)] underline-offset-2 hover:underline"
+                    aria-expanded={showFlagMeanings}
+                  >
+                    {showFlagMeanings ? 'Hide flag meanings' : 'What these flags mean'}
+                  </button>
                 </div>
+                {showFlagMeanings ? (
+                  <ul className="mt-2 list-none space-y-1 rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] px-3 py-2 text-[11px] leading-snug text-[color:var(--text-secondary)]">
+                    <li>
+                      <span className="font-semibold text-[color:var(--text-primary)]">Artifacts</span>
+                      {' — '}at least one attachment on the project.
+                    </li>
+                    <li>
+                      <span className="font-semibold text-[color:var(--text-primary)]">Needs review</span>
+                      {' — '}dates, payments, or capacity that do not match stage.
+                    </li>
+                    <li>
+                      <span className="font-semibold text-[color:var(--text-primary)]">Loan</span>
+                      {' — '}Availing Loan / Financing is Yes.
+                    </li>
+                    <li>
+                      <span className="font-semibold text-[color:var(--text-primary)]">Pending subsidy</span>
+                      {' — '}Subsidy segment + Completed, awaiting subsidy credit.
+                    </li>
+                  </ul>
+                ) : null}
               </div>
 
-              <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">Sort By</label>
-              <div className="max-w-2xl">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
-                  <ZenithSingleSelect
-                    value={extraSortSelectValue}
-                    onChange={(v) => {
-                      setPage(1)
-                      if (!v) {
-                        setFilters((prev) => ({ ...prev, sortBy: '', sortOrder: 'desc' }))
-                        return
-                      }
-                      setFilters((prev) => ({
-                        ...prev,
-                        sortBy: v,
-                        sortOrder: defaultOrderForProjectsSortKey(v),
-                      }))
-                    }}
-                    placeholder="— Default (confirmation date, newest first) —"
-                    options={[
-                      { value: 'customerName', label: 'Project (customer name)' },
-                      { value: 'dealHealthScore', label: 'Deal health score' },
-                      { value: 'projectType', label: 'Segment' },
-                      { value: 'projectStatus', label: 'Stage' },
-                      { value: 'systemCapacity', label: 'Capacity' },
-                      { value: 'projectCost', label: 'Order value' },
-                      { value: 'paymentStatus', label: 'Payment status' },
-                      { value: 'leadSource', label: 'Lead source' },
-                      { value: 'confirmationDate', label: 'Confirmation date' },
-                      { value: 'profitability', label: 'Profitability' },
-                      { value: 'creationDate', label: 'Creation date' },
-                      { value: 'slNo', label: 'Project number (#)' },
-                    ]}
-                    allowEmpty
-                    className="w-full min-w-0 flex-1 sm:max-w-md"
-                  />
-                  <div
-                    className="flex shrink-0 gap-1 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] p-0.5 shadow-inner ring-1 ring-[color:var(--border-default)]"
-                    role="group"
-                    aria-label="Sort direction"
+              <div className="border-t border-[color:var(--border-default)] pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedFilters((v) => !v)}
+                  className="flex min-h-[40px] w-full items-center justify-between gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 text-sm font-semibold text-[color:var(--text-primary)] transition-colors hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)] sm:w-auto"
+                  aria-expanded={showAdvancedFilters}
+                  aria-controls="projects-advanced-filters"
+                >
+                  <span>{showAdvancedFilters ? 'Hide advanced' : 'Show advanced'}</span>
+                  <svg
+                    className={`h-4 w-4 text-[color:var(--text-muted)] transition-transform ${showAdvancedFilters ? 'rotate-180' : ''}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    aria-hidden
                   >
-                    <button
-                      type="button"
-                      title="Ascending: A→Z, low→high, oldest→newest (depends on column). With default sort, uses confirmation date."
-                      onClick={() => {
-                        setPage(1)
-                        setFilters((prev) => {
-                          const by = prev.sortBy || 'confirmationDate'
-                          return { ...prev, sortBy: by, sortOrder: 'asc' }
-                        })
-                      }}
-                      className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${
-                        filters.sortBy && filters.sortOrder === 'asc'
-                          ? 'bg-[color:var(--bg-card-hover)] text-[color:var(--text-primary)] shadow-sm ring-1 ring-[color:var(--accent-gold-border)]'
-                          : 'text-[color:var(--text-muted)] hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)]'
-                      }`}
-                    >
-                      Ascending
-                    </button>
-                    <button
-                      type="button"
-                      title="Descending: Z→A, high→low, newest→oldest (depends on column). With default sort, uses confirmation date."
-                      onClick={() => {
-                        setPage(1)
-                        setFilters((prev) => {
-                          const by = prev.sortBy || 'confirmationDate'
-                          return { ...prev, sortBy: by, sortOrder: 'desc' }
-                        })
-                      }}
-                      className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${
-                        filters.sortBy && filters.sortOrder === 'desc'
-                          ? 'bg-[color:var(--bg-card-hover)] text-[color:var(--text-primary)] shadow-sm ring-1 ring-[color:var(--accent-gold-border)]'
-                          : 'text-[color:var(--text-muted)] hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)]'
-                      }`}
-                    >
-                      Descending
-                    </button>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                <div
+                  id="projects-advanced-filters"
+                  className={`${showAdvancedFilters ? 'mt-3 space-y-3' : 'hidden'}`}
+                >
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
+                    <MultiSelect
+                      className="min-w-0 w-full"
+                      options={customerTypeFilterOptions}
+                      selectedValues={filters.customerType}
+                      onChange={(values) => setFilters({ ...filters, customerType: values })}
+                      placeholder="Customer type"
+                      multiSelectedLabel="Types"
+                      compact
+                      variant="zenith"
+                    />
+                    <MultiSelect
+                      className="min-w-0 w-full"
+                      options={projectServiceTypeOptions}
+                      selectedValues={filters.projectServiceType}
+                      onChange={(values) => setFilters({ ...filters, projectServiceType: values })}
+                      placeholder="Project Types"
+                      compact
+                      variant="zenith"
+                    />
+                    <MultiSelect
+                      className="min-w-0 w-full"
+                      options={supportTicketStatusOptions}
+                      selectedValues={filters.supportTicketStatus}
+                      onChange={(values) => setFilters({ ...filters, supportTicketStatus: values })}
+                      placeholder="Ticket Statuses"
+                      compact
+                      variant="zenith"
+                    />
+                    <MultiSelect
+                      className="min-w-0 w-full"
+                      options={leadSourceOptions}
+                      selectedValues={filters.leadSource}
+                      onChange={(values) => setFilters({ ...filters, leadSource: values })}
+                      placeholder="Lead Sources"
+                      compact
+                      variant="zenith"
+                    />
+                  </div>
+
+                  <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
+                    Sort By
+                  </label>
+                  <div className="max-w-2xl">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
+                      <ZenithSingleSelect
+                        value={extraSortSelectValue}
+                        onChange={(v) => {
+                          setPage(1)
+                          if (!v) {
+                            setFilters((prev) => ({ ...prev, sortBy: '', sortOrder: 'desc' }))
+                            return
+                          }
+                          setFilters((prev) => ({
+                            ...prev,
+                            sortBy: v,
+                            sortOrder: defaultOrderForProjectsSortKey(v),
+                          }))
+                        }}
+                        placeholder="— Default (confirmation date, newest first) —"
+                        options={[
+                          { value: 'customerName', label: 'Project (customer name)' },
+                          { value: 'dealHealthScore', label: 'Deal health score' },
+                          { value: 'projectType', label: 'Segment' },
+                          { value: 'projectStatus', label: 'Stage' },
+                          { value: 'systemCapacity', label: 'Capacity' },
+                          { value: 'projectCost', label: 'Order value' },
+                          { value: 'paymentStatus', label: 'Payment status' },
+                          { value: 'leadSource', label: 'Lead source' },
+                          { value: 'confirmationDate', label: 'Confirmation date' },
+                          { value: 'profitability', label: 'Profitability' },
+                          { value: 'creationDate', label: 'Creation date' },
+                          { value: 'slNo', label: 'Project number (#)' },
+                        ]}
+                        allowEmpty
+                        className="w-full min-w-0 flex-1 sm:max-w-md"
+                      />
+                      <div
+                        className="flex shrink-0 gap-1 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] p-0.5 shadow-inner ring-1 ring-[color:var(--border-default)]"
+                        role="group"
+                        aria-label="Sort direction"
+                      >
+                        <button
+                          type="button"
+                          title="Ascending: A→Z, low→high, oldest→newest (depends on column). With default sort, uses confirmation date."
+                          onClick={() => {
+                            setPage(1)
+                            setFilters((prev) => {
+                              const by = prev.sortBy || 'confirmationDate'
+                              return { ...prev, sortBy: by, sortOrder: 'asc' }
+                            })
+                          }}
+                          className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${
+                            filters.sortBy && filters.sortOrder === 'asc'
+                              ? 'bg-[color:var(--bg-card-hover)] text-[color:var(--text-primary)] shadow-sm ring-1 ring-[color:var(--accent-gold-border)]'
+                              : 'text-[color:var(--text-muted)] hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)]'
+                          }`}
+                        >
+                          Ascending
+                        </button>
+                        <button
+                          type="button"
+                          title="Descending: Z→A, high→low, newest→oldest (depends on column). With default sort, uses confirmation date."
+                          onClick={() => {
+                            setPage(1)
+                            setFilters((prev) => {
+                              const by = prev.sortBy || 'confirmationDate'
+                              return { ...prev, sortBy: by, sortOrder: 'desc' }
+                            })
+                          }}
+                          className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${
+                            filters.sortBy && filters.sortOrder === 'desc'
+                              ? 'bg-[color:var(--bg-card-hover)] text-[color:var(--text-primary)] shadow-sm ring-1 ring-[color:var(--accent-gold-border)]'
+                              : 'text-[color:var(--text-muted)] hover:bg-[color:var(--bg-table-hover)] hover:text-[color:var(--text-primary)]'
+                          }`}
+                        >
+                          Descending
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Export buttons - Only visible to Admin users */}
-              {hasRole([UserRole.ADMIN]) && (
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                  <div className="flex gap-2">
-                  <button
-                    onClick={() => handleExportClick('excel')}
-                    className="flex items-center gap-2 rounded-xl bg-[color:var(--accent-gold)] px-4 py-2 text-sm font-extrabold text-[color:var(--text-inverse)] shadow-[var(--shadow-card)] transition-all hover:opacity-95 active:scale-[0.99]"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Export to Excel
-                  </button>
-                  <button
-                    onClick={() => handleExportClick('csv')}
-                    className="flex items-center gap-2 rounded-xl border border-[color:var(--border-strong)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-extrabold text-[color:var(--text-primary)] shadow-md transition-all hover:bg-[color:var(--bg-card-hover)] hover:border-[color:var(--accent-gold-border)] active:scale-[0.99]"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 01-2-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Export to CSV
-                  </button>
-                  </div>
-                  <p className="text-xs text-[color:var(--text-muted)] sm:max-w-md">
-                    Export uses the same filters, search, and sort as this list (including chips above).
-                  </p>
-                </div>
-              )}
-
-              {/* Clear all (search + filters) - bottom placement on mobile for easy access */}
               <div className="flex justify-end pt-1 sm:hidden">
                 <button
                   type="button"
@@ -1636,12 +1928,123 @@ Do you want to continue?`}
             </span>
           )}
         </div>
-        <div className="text-xs text-[color:var(--text-muted)]">
-          <span className="hidden sm:inline">Tip: Shift + scroll to move horizontally</span>
-          <span className="sm:hidden">Tip: swipe left/right on the table</span>
+        <div className="flex flex-wrap items-center gap-2">
+          {isNarrowViewport ? (
+            <div
+              className="flex shrink-0 gap-0.5 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] p-0.5"
+              role="group"
+              aria-label="List layout"
+            >
+              <button
+                type="button"
+                onClick={() => setListViewMode('cards')}
+                className={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
+                  listViewMode === 'cards'
+                    ? 'bg-[color:var(--bg-card-hover)] text-[color:var(--text-primary)] ring-1 ring-[color:var(--accent-gold-border)]'
+                    : 'text-[color:var(--text-muted)]'
+                }`}
+              >
+                Cards
+              </button>
+              <button
+                type="button"
+                onClick={() => setListViewMode('table')}
+                className={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
+                  listViewMode === 'table'
+                    ? 'bg-[color:var(--bg-card-hover)] text-[color:var(--text-primary)] ring-1 ring-[color:var(--accent-gold-border)]'
+                    : 'text-[color:var(--text-muted)]'
+                }`}
+              >
+                Table
+              </button>
+            </div>
+          ) : null}
+          {listViewMode === 'table' ? (
+            <div className="text-xs text-[color:var(--text-muted)]">
+              <span className="hidden sm:inline">Tip: Shift + scroll to move horizontally</span>
+              <span className="sm:hidden">Tip: swipe left/right on the table</span>
+            </div>
+          ) : null}
         </div>
       </div>
 
+      <ProjectsListHowToRead />
+
+      {listViewMode === 'cards' ? (
+        <>
+        <div
+          className="mb-3 grid grid-cols-3 gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] px-2 py-2.5 ring-1 ring-[color:var(--border-default)] sm:gap-3 sm:px-3 sm:py-3"
+          aria-label="List totals for current filters"
+        >
+          <div className="flex min-w-0 flex-col items-center gap-1 text-center">
+            <div className="inline-flex max-w-full items-center justify-center rounded-md border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-2 py-1 text-[11px] font-bold tabular-nums text-[color:var(--text-primary)] sm:text-xs">
+              {(data?.totals?.capacitySum ?? 0) / 1000 > 0
+                ? `${((data?.totals?.capacitySum ?? 0) / 1000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} MW`
+                : '—'}
+            </div>
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-secondary)] sm:text-[11px]">
+              Capacity
+            </span>
+          </div>
+          <div className="flex min-w-0 flex-col items-center gap-1 text-center">
+            <div className="inline-flex max-w-full items-center justify-center rounded-md border border-emerald-400/40 bg-emerald-500/10 px-2 py-1 text-[11px] font-bold tabular-nums text-[color:var(--text-primary)] sm:text-xs">
+              {(data?.totals?.costSum ?? 0) > 0
+                ? `₹${((data?.totals?.costSum ?? 0) / 1_000_000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} M`
+                : '—'}
+            </div>
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-secondary)] sm:text-[11px]">
+              Order
+            </span>
+          </div>
+          <div className="flex min-w-0 flex-col items-center gap-1 text-center">
+            <div className="inline-flex max-w-full items-center justify-center rounded-md border border-sky-400/40 bg-sky-500/10 px-2 py-1 text-[11px] font-bold tabular-nums text-[color:var(--text-primary)] sm:text-xs">
+              {(data?.totals?.balanceSum ?? 0) > 0
+                ? `₹${((data?.totals?.balanceSum ?? 0) / 1_000_000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} M`
+                : '—'}
+            </div>
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-secondary)] sm:text-[11px]">
+              Balance
+            </span>
+          </div>
+        </div>
+        <ProjectsMobileCardList
+          projects={displayProjects}
+          onOpen={(id) => navigate(`/projects/${id}`)}
+          emptySlot={
+            <div className="mx-auto flex max-w-md flex-col items-center text-center">
+              <div className="mb-3 inline-flex size-11 items-center justify-center rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] text-[color:var(--text-secondary)] shadow-sm">
+                <FaBriefcase className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <p className="font-semibold text-[color:var(--text-primary)]">
+                No projects match your search and filters.
+              </p>
+              <p className="mt-2 text-xs text-[color:var(--text-muted)]">
+                Try clearing filters, widening the date range, or changing the search text.
+                Health is the deal health score — tap or hover the badge for details.
+              </p>
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-center">
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-bold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)]"
+                >
+                  Clear filters
+                </button>
+                {(user?.role === 'ADMIN' || user?.role === 'SALES') && (
+                  <Link
+                    to="/projects/new"
+                    className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold)] px-4 py-2 text-sm font-bold text-[color:var(--text-inverse)] shadow-md transition-all hover:brightness-105"
+                  >
+                    + New Project
+                  </Link>
+                )}
+              </div>
+            </div>
+          }
+        />
+        </>
+      ) : (
+      <>
       {/* Projects table — DH = deal health badge column; uniform sort controls; fixed col widths (rem) + horizontal scroll when viewport is narrow. */}
       <div className="mobile-paint-anchor w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] [-webkit-overflow-scrolling:touch]">
         <style>
@@ -1649,7 +2052,7 @@ Do you want to continue?`}
             /*
              * Chrome/Edge do not reliably honor visibility:collapse + width:0 on <col> when sibling cells are display:none.
              * Below lg: drop colgroup from layout (display:none on col) and use table-layout:auto + width:max-content so only
-             * visible th/td define columns — no ghost horizontal scroll. Desktop keeps fixed colgroup + 95rem total.
+             * visible th/td define columns — no ghost horizontal scroll. Desktop keeps fixed colgroup + dynamic total width.
              */
             .projects-table-fit {
               table-layout: auto;
@@ -1660,6 +2063,11 @@ Do you want to continue?`}
             .projects-table-fit col {
               display: none !important;
             }
+            .projects-table-fit--compact td,
+            .projects-table-fit--compact th {
+              padding-top: 0.35rem;
+              padding-bottom: 0.35rem;
+            }
 
             @media (min-width: 1024px) {
               .projects-table-fit {
@@ -1667,86 +2075,99 @@ Do you want to continue?`}
                 width: var(--projects-table-total-width);
                 min-width: var(--projects-table-total-width);
                 max-width: var(--projects-table-total-width);
-                --projects-table-total-width: 95rem;
+                --projects-table-total-width: ${tableTotalRem}rem;
               }
               .projects-table-fit col {
                 display: table-column !important;
               }
-              .projects-col--project { width: 16rem; }
-              .projects-col--dh { width: 6rem; }
-              .projects-col--segment { width: 11rem; }
-              .projects-col--stage { width: 11rem; }
-              .projects-col--capacity { width: 9rem; }
-              .projects-col--order { width: 11rem; }
-              .projects-col--payment { width: 10rem; }
-              .projects-col--lead { width: 9rem; }
-              .projects-col--confirm { width: 12rem; }
+              .projects-col--project { width: ${tableColRem.project}rem; }
+              .projects-col--dh { width: ${tableColRem.dh}rem; }
+              .projects-col--segment { width: ${tableColRem.segment}rem; }
+              .projects-col--stage { width: ${tableColRem.stage}rem; }
+              .projects-col--capacity { width: ${tableColRem.capacity}rem; }
+              .projects-col--order { width: ${tableColRem.order}rem; }
+              .projects-col--payment { width: ${tableColRem.payment}rem; }
+              .projects-col--lead { width: ${tableColRem.lead}rem; }
+              .projects-col--confirm { width: ${tableColRem.confirm}rem; }
 
               .projects-table-fit thead tr:nth-child(2) th {
                 overflow: visible;
                 vertical-align: middle;
               }
-              .projects-table-fit thead tr:nth-child(2) th:nth-child(2) { min-width: 5.5rem; }
-              .projects-table-fit thead tr:nth-child(2) th:nth-child(3) { min-width: 10.5rem; }
-              .projects-table-fit thead tr:nth-child(2) th:nth-child(4) { min-width: 8rem; }
-              .projects-table-fit thead tr:nth-child(2) th:nth-child(5) { min-width: 8.5rem; }
-              .projects-table-fit thead tr:nth-child(2) th:nth-child(6) { min-width: 10.5rem; }
-              .projects-table-fit thead tr:nth-child(2) th:nth-child(7) { min-width: 9.5rem; }
-              .projects-table-fit thead tr:nth-child(2) th:nth-child(8) { min-width: 8.5rem; }
-              .projects-table-fit thead tr:nth-child(2) th:nth-child(9) { min-width: 11rem; }
               .projects-table-fit th:nth-child(2),
               .projects-table-fit td:nth-child(2) {
-                min-width: 5.75rem;
-              }
-              .projects-table-fit th:nth-child(9),
-              .projects-table-fit td:nth-child(9) {
-                min-width: 9rem;
+                min-width: 4.25rem;
               }
             }
           `}
         </style>
-          <table className="projects-table-fit text-sm leading-snug">
+          <table
+            className={`projects-table-fit text-sm leading-snug${
+              tableDensity === 'compact' ? ' projects-table-fit--compact' : ''
+            }`}
+          >
             <colgroup>
               <col className="projects-col--project" />
               <col className="projects-col--dh" />
-              <col className="projects-col--segment" />
+              {showSegmentCol ? <col className="projects-col--segment" /> : null}
               <col className="projects-col--stage" />
               <col className="projects-col--capacity" />
               <col className="projects-col--order" />
               <col className="projects-col--payment" />
-              <col className="projects-col--lead" />
-              <col className="projects-col--confirm" />
+              {showLeadCol ? <col className="projects-col--lead" /> : null}
+              {showConfirmCol ? <col className="projects-col--confirm" /> : null}
             </colgroup>
             <thead>
-              {/* Subtotals row - aligned above Capacity and Order Value columns */}
-              <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)]">
+              {/* Totals sit in the Capacity / Order value / Payment columns — same cell padding as sort headers below */}
+              <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)]" aria-label="List totals for current filters">
                 <th className="px-2 py-1.5 sm:px-2.5" scope="col" />
+                <th className="px-1.5 py-1.5 sm:px-2" scope="col" />
+                {showSegmentCol ? (
+                  <th className="hidden px-2 py-1.5 lg:table-cell lg:px-2.5" scope="col" />
+                ) : null}
                 <th className="px-2 py-1.5 sm:px-2.5" scope="col" />
-                <th className="px-2 py-1.5 sm:px-2.5 hidden lg:table-cell" scope="col" />
-                <th className="px-2 py-1.5 sm:px-2.5" scope="col" />
-                <th className="px-2 py-1.5 text-right align-bottom min-w-0 sm:px-2.5" scope="col">
-                  <div className="inline-block rounded-md border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-1.5 py-0.5 text-[10px] font-bold text-[color:var(--text-primary)] tabular-nums shadow-sm sm:px-2 sm:text-xs">
-                    {(data?.totals?.capacitySum ?? 0) / 1000 > 0
-                      ? `${((data?.totals?.capacitySum ?? 0) / 1000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} MW`
-                      : '—'}
+                <th className="px-2 py-1.5 text-right align-bottom sm:px-2.5" scope="col">
+                  <div className="flex w-full flex-col items-end gap-0.5">
+                    <div className="inline-flex max-w-full items-center justify-center rounded-md border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[color:var(--text-primary)] sm:px-2 sm:text-xs">
+                      {(data?.totals?.capacitySum ?? 0) / 1000 > 0
+                        ? `${((data?.totals?.capacitySum ?? 0) / 1000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} MW`
+                        : '—'}
+                    </div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-secondary)]">
+                      Capacity
+                    </span>
                   </div>
                 </th>
-                <th className="px-2 py-1.5 text-right align-bottom min-w-0 sm:px-2.5" scope="col">
-                  <div className="inline-block rounded-md border border-emerald-400/40 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-[color:var(--text-primary)] tabular-nums shadow-sm sm:px-2 sm:text-xs">
-                    {(data?.totals?.costSum ?? 0) > 0
-                      ? `₹${((data?.totals?.costSum ?? 0) / 1_000_000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} M`
-                      : '—'}
+                <th className="px-2 py-1.5 text-right align-bottom sm:px-2.5" scope="col">
+                  <div className="flex w-full flex-col items-end gap-0.5">
+                    <div className="inline-flex max-w-full items-center justify-center rounded-md border border-emerald-400/40 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[color:var(--text-primary)] sm:px-2 sm:text-xs">
+                      {(data?.totals?.costSum ?? 0) > 0
+                        ? `₹${((data?.totals?.costSum ?? 0) / 1_000_000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} M`
+                        : '—'}
+                    </div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-secondary)]">
+                      Order
+                    </span>
                   </div>
                 </th>
-                <th className="px-2 py-1.5 text-center align-bottom min-w-0 sm:px-2.5" scope="col">
-                  <div className="inline-block rounded-md border border-sky-400/40 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-bold text-[color:var(--text-primary)] tabular-nums shadow-sm sm:px-2 sm:text-xs">
-                    {(data?.totals?.balanceSum ?? 0) > 0
-                      ? `₹${((data?.totals?.balanceSum ?? 0) / 1_000_000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} M`
-                      : '—'}
+                <th className="px-2 py-1.5 text-right align-bottom sm:px-2.5" scope="col">
+                  <div className="flex w-full flex-col items-end gap-0.5">
+                    <div className="inline-flex max-w-full items-center justify-center rounded-md border border-sky-400/40 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[color:var(--text-primary)] sm:px-2 sm:text-xs">
+                      {(data?.totals?.balanceSum ?? 0) > 0
+                        ? `₹${((data?.totals?.balanceSum ?? 0) / 1_000_000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} M`
+                        : '—'}
+                    </div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-secondary)]">
+                      Balance
+                    </span>
                   </div>
                 </th>
-                <th className="px-2 py-1.5 hidden md:table-cell sm:px-2.5" scope="col" />
-                <th className="px-2 py-1.5 hidden sm:table-cell sm:px-2.5" scope="col" />
+                {showLeadCol ? (
+                  <th className="hidden px-2 py-1.5 md:table-cell md:px-2.5" scope="col" />
+                ) : null}
+                {showConfirmCol ? (
+                  <th className="hidden px-2 py-1.5 sm:table-cell sm:px-2.5" scope="col" />
+                ) : null}
               </tr>
               <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] shadow-sm">
                 <th
@@ -1768,7 +2189,7 @@ Do you want to continue?`}
                 </th>
                 <th
                   scope="col"
-                  className="px-2.5 py-2 align-middle sm:px-3 sm:py-2"
+                  className="w-[4.5rem] max-w-[4.5rem] px-1.5 py-2 align-middle sm:px-2 sm:py-2"
                   aria-sort={
                     filters.sortBy === 'dealHealthScore'
                       ? filters.sortOrder === 'asc'
@@ -1780,16 +2201,18 @@ Do you want to continue?`}
                   <button
                     type="button"
                     className={sortBtnHeader}
-                    title="Deal health — click to sort"
+                    title="Deal Health"
+                    aria-label="Deal Health — click to sort"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleProjectsColumnSort('dealHealthScore')
                     }}
                   >
-                    <span className={sortLabelLeft}>DH</span>
+                    <span className={`${sortLabelLeft} !flex-none whitespace-nowrap`}>DH</span>
                     <ProjectsSortGlyph sortKey="dealHealthScore" />
                   </button>
                 </th>
+                {showSegmentCol ? (
                 <th
                   scope="col"
                   className="hidden px-2.5 py-2 align-middle lg:table-cell lg:px-3 lg:py-2"
@@ -1813,6 +2236,7 @@ Do you want to continue?`}
                     <ProjectsSortGlyph sortKey="projectType" />
                   </button>
                 </th>
+                ) : null}
                 <th
                   scope="col"
                   className="px-2.5 py-2 align-middle sm:px-3 sm:py-2"
@@ -1838,7 +2262,7 @@ Do you want to continue?`}
                 </th>
                 <th
                   scope="col"
-                  className="px-2.5 py-2 align-middle sm:px-3 sm:py-2"
+                  className="px-2 py-2 align-middle sm:px-2.5 sm:py-2"
                   aria-sort={
                     filters.sortBy === 'systemCapacity'
                       ? filters.sortOrder === 'asc'
@@ -1849,19 +2273,19 @@ Do you want to continue?`}
                 >
                   <button
                     type="button"
-                    className={sortBtnHeader}
+                    className={sortBtnHeaderEnd}
                     onClick={(e) => {
                       e.stopPropagation()
                       handleProjectsColumnSort('systemCapacity')
                     }}
                   >
-                    <span className={sortLabelLeft}>Capacity</span>
+                    <span className={sortLabelEnd}>Capacity</span>
                     <ProjectsSortGlyph sortKey="systemCapacity" />
                   </button>
                 </th>
                 <th
                   scope="col"
-                  className="px-2.5 py-2 align-middle sm:px-3 sm:py-2"
+                  className="px-2 py-2 align-middle sm:px-2.5 sm:py-2"
                   aria-sort={
                     filters.sortBy === 'projectCost'
                       ? filters.sortOrder === 'asc'
@@ -1872,19 +2296,19 @@ Do you want to continue?`}
                 >
                   <button
                     type="button"
-                    className={sortBtnHeader}
+                    className={sortBtnHeaderEnd}
                     onClick={(e) => {
                       e.stopPropagation()
                       handleProjectsColumnSort('projectCost')
                     }}
                   >
-                    <span className={sortLabelLeft}>Order value</span>
+                    <span className={sortLabelEnd}>Order value</span>
                     <ProjectsSortGlyph sortKey="projectCost" />
                   </button>
                 </th>
                 <th
                   scope="col"
-                  className="px-2.5 py-2 align-middle sm:px-3 sm:py-2"
+                  className="px-2 py-2 align-middle sm:px-2.5 sm:py-2"
                   aria-sort={
                     filters.sortBy === 'paymentStatus'
                       ? filters.sortOrder === 'asc'
@@ -1895,19 +2319,20 @@ Do you want to continue?`}
                 >
                   <button
                     type="button"
-                    className={sortBtnHeader}
+                    className={sortBtnHeaderEnd}
                     onClick={(e) => {
                       e.stopPropagation()
                       handleProjectsColumnSort('paymentStatus')
                     }}
                   >
-                    <span className={sortLabelLeft}>Payment</span>
+                    <span className={sortLabelEnd}>Payment</span>
                     <ProjectsSortGlyph sortKey="paymentStatus" />
                   </button>
                 </th>
+                {showLeadCol ? (
                 <th
                   scope="col"
-                  className="hidden px-2.5 py-2 align-middle md:table-cell md:px-3 md:py-2"
+                  className="hidden px-2 py-2 align-middle md:table-cell md:px-2.5 md:py-2"
                   aria-sort={
                     filters.sortBy === 'leadSource'
                       ? filters.sortOrder === 'asc'
@@ -1918,19 +2343,21 @@ Do you want to continue?`}
                 >
                   <button
                     type="button"
-                    className={sortBtnHeader}
+                    className={sortBtnHeaderEnd}
                     onClick={(e) => {
                       e.stopPropagation()
                       handleProjectsColumnSort('leadSource')
                     }}
                   >
-                    <span className={sortLabelLeft}>Lead source</span>
+                    <span className={sortLabelEnd}>Lead source</span>
                     <ProjectsSortGlyph sortKey="leadSource" />
                   </button>
                 </th>
+                ) : null}
+                {showConfirmCol ? (
                 <th
                   scope="col"
-                  className="hidden px-2.5 py-2 align-middle sm:table-cell sm:px-3 sm:py-2"
+                  className="hidden px-2 py-2 align-middle sm:table-cell sm:px-2.5 sm:py-2"
                   aria-sort={
                     filters.sortBy === 'confirmationDate'
                       ? filters.sortOrder === 'asc'
@@ -1941,17 +2368,18 @@ Do you want to continue?`}
                 >
                   <button
                     type="button"
-                    className={sortBtnHeader}
+                    className={sortBtnHeaderEnd}
                     title="Sort by confirmation date"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleProjectsColumnSort('confirmationDate')
                     }}
                   >
-                    <span className={sortLabelLeft}>Confirmation date</span>
+                    <span className={sortLabelEnd}>Confirmation date</span>
                     <ProjectsSortGlyph sortKey="confirmationDate" />
                   </button>
                 </th>
+                ) : null}
               </tr>
             </thead>
             <tbody className="divide-y divide-[color:var(--border-default)]">
@@ -1963,13 +2391,43 @@ Do you want to continue?`}
                 return (
                 <tr
                   key={project.id}
-                  onClick={() => navigate(`/projects/${project.id}`)}
-                  className="group cursor-pointer transition-colors duration-150 ease-out odd:bg-[color:var(--bg-table-alt)] even:bg-[color:var(--bg-card)] hover:bg-[color:var(--bg-table-hover)]"
+                  onClick={
+                    hoverCapable
+                      ? () => navigate(`/projects/${project.id}`)
+                      : undefined
+                  }
+                  className={`group transition-colors duration-150 ease-out odd:bg-[color:var(--bg-table-alt)] even:bg-[color:var(--bg-card)] hover:bg-[color:var(--bg-table-hover)] ${
+                    hoverCapable ? 'cursor-pointer' : ''
+                  }`}
                 >
                   <td className="min-w-0 px-2 py-2 sm:px-2.5 lg:py-1.5 lg:pl-2 lg:pr-2">
-                    <p className={getProjectNameCustomerTypeTextClass(project.customer?.customerType)}>
-                      #{project.slNo} · {project.customer?.customerName || 'Unknown Customer'}
-                    </p>
+                    <div className="flex min-w-0 items-start gap-1.5">
+                      <button
+                        type="button"
+                        className={`min-w-0 flex-1 text-left touch-manipulation focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-gold-border)] rounded-sm ${getProjectNameCustomerTypeTextClass(project.customer?.customerType)}`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/projects/${project.id}`)
+                        }}
+                      >
+                        #{project.slNo} · {project.customer?.customerName || 'Unknown Customer'}
+                      </button>
+                      {!hoverCapable ? (
+                        <button
+                          type="button"
+                          aria-label="Open project"
+                          className="mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] text-[color:var(--text-secondary)] touch-manipulation"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            navigate(`/projects/${project.id}`)
+                          }}
+                        >
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      ) : null}
+                    </div>
                     <p className="mt-0.5 max-w-full truncate text-[11px] text-[color:var(--text-muted)] lg:text-xs">
                       {project.salesperson && (
                         <span style={{ color: getSalesTeamColor(project.salesperson.name, 0) }}>
@@ -2002,6 +2460,7 @@ Do you want to continue?`}
                       />
                     </div>
                   </td>
+                  {showSegmentCol ? (
                   <td className="hidden min-w-0 px-2 py-2 sm:px-2.5 lg:py-1.5 lg:pl-2 lg:pr-2 lg:table-cell">
                     {(() => {
                       const seg = projectSegmentLabels(project.type)
@@ -2016,48 +2475,12 @@ Do you want to continue?`}
                       )
                     })()}
                   </td>
+                  ) : null}
                   <td className="min-w-0 px-2 py-2 sm:px-2.5 lg:py-1.5 lg:pl-2 lg:pr-2">
-                    <div className="flex flex-wrap items-center gap-1">
-                      <span
-                        title={project.projectStatus.replace(/_/g, ' ')}
-                        className={`inline-flex max-w-[10rem] items-center truncate rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight lg:max-w-[11rem] lg:text-[11px] ${projectStatusStagePillClass(project.projectStatus)}`}
-                      >
-                        {project.projectStatus.replace(/_/g, ' ')}
-                      </span>
-                      {(() => {
-                        const sense = evaluateDataSense(project)
-                        if (!sense.length) return null
-                        const critical = sense.some((f) => f.severity === 'critical')
-                        return (
-                          <span
-                            title={sense.map((f) => f.title).join(' · ')}
-                            className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-semibold lg:text-[10px] ${
-                              critical
-                                ? 'border border-[color:var(--accent-red-border)] bg-[color:var(--accent-red-muted)] text-[color:var(--accent-red)]'
-                                : 'border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] text-[color:var(--accent-gold)]'
-                            }`}
-                          >
-                            Review
-                          </span>
-                        )
-                      })()}
-                      {peStatusByProjectId.get(project.id) === 'not-started' && (
-                        <span className="inline-flex items-center rounded border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-1.5 py-0.5 text-[9px] font-semibold text-[color:var(--text-secondary)] lg:text-[10px]">
-                          <span className="lg:hidden">Not Yet Created</span>
-                          <span className="hidden lg:inline">Not created</span>
-                        </span>
-                      )}
-                      {peStatusByProjectId.get(project.id) === 'draft' && (
-                        <span className="inline-flex items-center rounded border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-1.5 py-0.5 text-[9px] font-semibold text-[color:var(--accent-gold)] lg:text-[10px]">
-                          PE Draft
-                        </span>
-                      )}
-                      {peStatusByProjectId.get(project.id) === 'proposal-ready' && (
-                        <span className="inline-flex items-center rounded border border-emerald-400/35 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-[color:var(--accent-teal)] lg:text-[10px]">
-                          PE Ready
-                        </span>
-                      )}
-                    </div>
+                    <ProjectsStageCell
+                      project={project}
+                      peStatus={peStatusByProjectId.get(project.id)}
+                    />
                   </td>
                   <td className="min-w-0 py-2 pl-1.5 pr-2 text-right tabular-nums sm:px-2 lg:py-1.5">
                     <CapacitySpecsPopover
@@ -2077,17 +2500,21 @@ Do you want to continue?`}
                   <td className="min-w-0 px-2 py-2 text-center sm:px-2.5 lg:py-1.5 lg:px-2">
                     <PaymentStatusBadge project={project} compact />
                   </td>
+                  {showLeadCol ? (
                   <td className="hidden min-w-0 px-2 py-2 pl-2 pr-2 text-center md:table-cell lg:py-1.5 lg:pl-2 lg:pr-2">
                     <LeadSourcePill
                       leadSource={project.leadSource}
                       leadSourceDetails={project.leadSourceDetails}
                     />
                   </td>
+                  ) : null}
+                  {showConfirmCol ? (
                   <td className="hidden min-w-0 whitespace-nowrap px-1 py-2 text-center tabular-nums sm:table-cell sm:px-1.5 lg:py-1.5 lg:pl-1 lg:pr-1.5">
                     <span className="inline-block text-[11px] font-medium text-[color:var(--text-secondary)] lg:text-xs">
                       {project.confirmationDate ? format(new Date(project.confirmationDate), 'dd MMM yy') : '—'}
                     </span>
                   </td>
+                  ) : null}
                 </tr>
                 )
               })}
@@ -2106,6 +2533,7 @@ Do you want to continue?`}
                       </p>
                       <p className="mt-2 text-xs text-[color:var(--text-muted)]">
                         Try clearing filters, widening the date range, or changing the search text.
+                        Health tip: the DH column is Deal Health — tap or hover the badge for details.
                       </p>
                       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-center">
                         <button
@@ -2136,6 +2564,8 @@ Do you want to continue?`}
             </tbody>
           </table>
       </div>
+      </>
+      )}
 
       {data?.pagination && (
         <div className="mt-5 flex flex-col items-center justify-between gap-4 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] px-4 py-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:flex-row sm:px-5">
@@ -2163,61 +2593,6 @@ Do you want to continue?`}
         </div>
       )}
 
-      {/* Legend: 3 icons + 3 subtotals — single row on laptop, wrap neatly on smaller */}
-      <div className="mt-6 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-4 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-5">
-        <p className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-[color:var(--text-secondary)] sm:text-xs">
-          <span className="h-1 w-6 rounded-full bg-gradient-to-r from-[color:var(--accent-gold)] to-[color:var(--accent-teal)]" aria-hidden />
-          Legend
-        </p>
-        <div className="grid grid-cols-2 items-center gap-x-4 gap-y-2 text-[11px] leading-relaxed text-[color:var(--text-secondary)] sm:grid-cols-3 sm:gap-y-1.5 sm:text-xs lg:grid-cols-6">
-          <span className="col-span-2 inline-flex items-center gap-1.5 font-semibold text-[color:var(--text-primary)] sm:col-span-3 lg:col-span-6">
-            Project name colour (customer type)
-          </span>
-          {(['RESIDENTIAL', 'APARTMENT', 'COMMERCIAL'] as CustomerType[]).map((ct) => (
-            <span key={ct} className="inline-flex items-center gap-1.5 shrink-0">
-              <span className={`text-sm font-semibold ${getProjectNameCustomerTypeColorClass(ct)}`}>
-                # · {getCustomerTypeLegendLabel(ct)}
-              </span>
-              {ct === 'RESIDENTIAL' ? (
-                <span className="text-[color:var(--text-muted)]">(default)</span>
-              ) : null}
-            </span>
-          ))}
-          <span className="col-span-2 inline-flex items-center gap-1.5 font-semibold text-[color:var(--text-primary)] sm:col-span-3 lg:col-span-6 lg:mt-1">
-            Icons &amp; subtotals
-          </span>
-          <span className="inline-flex items-center gap-1.5 shrink-0">
-            <span className="text-[color:var(--accent-teal)]">
-              <FiPaperclip className="w-3.5 h-3.5" strokeWidth={2} />
-            </span>
-            Has attachment(s)
-          </span>
-          <span className="inline-flex items-center gap-1.5 shrink-0">
-            <span className="text-emerald-300">
-              <FaUniversity className="w-3.5 h-3.5" />
-            </span>
-            Availing Loan + bank (hover or tap for bank name)
-          </span>
-          <span className="inline-flex items-center gap-1.5 shrink-0">
-            <span className="text-[color:var(--accent-gold)]">
-              <FaTicketAlt className="w-3.5 h-3.5" />
-            </span>
-            Open/In progress ticket(s)
-          </span>
-          <span className="inline-flex items-center gap-1.5 shrink-0">
-            <span className="inline-block h-3 w-3 rounded border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] shadow-sm" />
-            Capacity subtotal
-          </span>
-          <span className="inline-flex items-center gap-1.5 shrink-0">
-            <span className="inline-block h-3 w-3 rounded border border-emerald-400/50 bg-emerald-500/25 shadow-sm" />
-            Order value subtotal
-          </span>
-          <span className="inline-flex items-center gap-1.5 shrink-0">
-            <span className="inline-block h-3 w-3 rounded border border-sky-400/50 bg-sky-500/25 shadow-sm" />
-            Balance subtotal
-          </span>
-        </div>
-      </div>
         </>
       )}
       </div>
