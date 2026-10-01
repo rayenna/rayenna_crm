@@ -30,6 +30,12 @@ export const ENERGY_DEYE_DISCLAIMER =
 export const ENERGY_DEYE_MIXED_YEAR_DISCLAIMER =
   'Some months are live from Deye Cloud. Others are expected Kerala typical. Splits are still typical, not the bill.';
 
+export const ENERGY_SUNWAYS_DISCLAIMER =
+  'Live generation from your Sunways inverter via Sunways Portal. Self-use, export and rupee savings are typical splits — not your KSEB bill.';
+
+export const ENERGY_SUNWAYS_MIXED_YEAR_DISCLAIMER =
+  'Some months are live from Sunways Portal. Others are expected Kerala typical. Splits are still typical, not the bill.';
+
 export class EnergyPeriodError extends Error {
   constructor(message: string) {
     super(message);
@@ -48,6 +54,7 @@ export type EnergyReadingDto = {
   isEstimated: boolean;
   liveFromSolis: boolean;
   liveFromDeye: boolean;
+  liveFromSunways: boolean;
   disclaimer: string | null;
   systemKw: number;
 };
@@ -58,6 +65,7 @@ export type AnnualEnergyDto = {
   isEstimated: boolean;
   liveFromSolis: boolean;
   liveFromDeye: boolean;
+  liveFromSunways: boolean;
   disclaimer: string | null;
 };
 
@@ -67,16 +75,27 @@ async function resolveEnergyMeta(consumerUserId: string): Promise<{
   systemKw: number;
   solisLinked: boolean;
   deyeLinked: boolean;
+  sunwaysLinked: boolean;
 }> {
   const consumer = await prisma.consumerUser.findUnique({
     where: { id: consumerUserId },
-    include: { project: { select: { systemCapacity: true, solisStationId: true, deyeStationId: true } } },
+    include: {
+      project: {
+        select: {
+          systemCapacity: true,
+          solisStationId: true,
+          deyeStationId: true,
+          sunwaysStationId: true,
+        },
+      },
+    },
   });
   const kw = consumer?.project?.systemCapacity;
   return {
     systemKw: kw && kw > 0 ? normalizeCapacityKw(kw) : DEFAULT_SYSTEM_KW,
     solisLinked: Boolean(consumer?.project?.solisStationId),
     deyeLinked: Boolean(consumer?.project?.deyeStationId),
+    sunwaysLinked: Boolean(consumer?.project?.sunwaysStationId),
   };
 }
 
@@ -108,10 +127,16 @@ async function repairInflatedSolisReading(row: {
   });
 }
 
-function disclaimerFor(isEstimated: boolean, liveFromSolis: boolean, liveFromDeye: boolean): string | null {
+function disclaimerFor(
+  isEstimated: boolean,
+  liveFromSolis: boolean,
+  liveFromDeye: boolean,
+  liveFromSunways: boolean,
+): string | null {
   if (isEstimated) return ENERGY_ESTIMATE_DISCLAIMER;
   if (liveFromSolis) return ENERGY_SOLIS_DISCLAIMER;
   if (liveFromDeye) return ENERGY_DEYE_DISCLAIMER;
+  if (liveFromSunways) return ENERGY_SUNWAYS_DISCLAIMER;
   return ENERGY_MANUAL_DISCLAIMER;
 }
 
@@ -139,12 +164,14 @@ function rowToDto(
   isEstimated: boolean,
   solisLinked: boolean,
   deyeLinked: boolean,
+  sunwaysLinked: boolean,
 ): EnergyReadingDto {
   const dailyReadings = Array.isArray(row.dailyReadings)
     ? (row.dailyReadings as HourlyEnergyPoint[])
     : [];
   const liveFromSolis = solisLinked && !isEstimated;
   const liveFromDeye = deyeLinked && !isEstimated;
+  const liveFromSunways = sunwaysLinked && !isEstimated;
   return {
     year: row.year,
     month: row.month,
@@ -156,7 +183,8 @@ function rowToDto(
     isEstimated,
     liveFromSolis,
     liveFromDeye,
-    disclaimer: disclaimerFor(isEstimated, liveFromSolis, liveFromDeye),
+    liveFromSunways,
+    disclaimer: disclaimerFor(isEstimated, liveFromSolis, liveFromDeye, liveFromSunways),
     systemKw,
   };
 }
@@ -168,7 +196,7 @@ export async function getOrCreateMonthlyReading(
 ): Promise<EnergyReadingDto> {
   assertUsablePeriod(year, month);
 
-  const { systemKw, solisLinked, deyeLinked } = await resolveEnergyMeta(consumerUserId);
+  const { systemKw, solisLinked, deyeLinked, sunwaysLinked } = await resolveEnergyMeta(consumerUserId);
 
   const existing = await prisma.energyReading.findUnique({
     where: {
@@ -177,8 +205,12 @@ export async function getOrCreateMonthlyReading(
   });
 
   if (existing) {
-    const repaired = await repairInflatedSolisReading(existing, systemKw, solisLinked || deyeLinked);
-    return rowToDto(repaired, systemKw, repaired.isEstimated, solisLinked, deyeLinked);
+    const repaired = await repairInflatedSolisReading(
+      existing,
+      systemKw,
+      solisLinked || deyeLinked || sunwaysLinked,
+    );
+    return rowToDto(repaired, systemKw, repaired.isEstimated, solisLinked, deyeLinked, sunwaysLinked);
   }
 
   const estimate = estimateMonthlyEnergy(systemKw, year, month);
@@ -197,7 +229,7 @@ export async function getOrCreateMonthlyReading(
     },
   });
 
-  return rowToDto(created, systemKw, true, solisLinked, deyeLinked);
+  return rowToDto(created, systemKw, true, solisLinked, deyeLinked, sunwaysLinked);
 }
 
 export async function getAnnualReadings(
@@ -213,11 +245,13 @@ export async function getAnnualReadings(
   let estimatedCount = 0;
   let liveSolisCount = 0;
   let liveDeyeCount = 0;
+  let liveSunwaysCount = 0;
   for (let month = 1; month <= lastMonth; month++) {
     const reading = await getOrCreateMonthlyReading(consumerUserId, year, month);
     if (reading.isEstimated) estimatedCount += 1;
     if (reading.liveFromSolis) liveSolisCount += 1;
     if (reading.liveFromDeye) liveDeyeCount += 1;
+    if (reading.liveFromSunways) liveSunwaysCount += 1;
     months.push(reading);
   }
 
@@ -225,12 +259,15 @@ export async function getAnnualReadings(
   const allEstimated = lastMonth > 0 && estimatedCount === months.length;
   const liveFromSolis = liveSolisCount > 0;
   const liveFromDeye = liveDeyeCount > 0;
+  const liveFromSunways = liveSunwaysCount > 0;
   let disclaimer: string | null = null;
   if (allEstimated) disclaimer = ENERGY_ESTIMATE_DISCLAIMER;
   else if (liveFromSolis && anyEstimated) disclaimer = ENERGY_SOLIS_MIXED_YEAR_DISCLAIMER;
   else if (liveFromDeye && anyEstimated) disclaimer = ENERGY_DEYE_MIXED_YEAR_DISCLAIMER;
+  else if (liveFromSunways && anyEstimated) disclaimer = ENERGY_SUNWAYS_MIXED_YEAR_DISCLAIMER;
   else if (liveFromSolis) disclaimer = ENERGY_SOLIS_DISCLAIMER;
   else if (liveFromDeye) disclaimer = ENERGY_DEYE_DISCLAIMER;
+  else if (liveFromSunways) disclaimer = ENERGY_SUNWAYS_DISCLAIMER;
   else if (anyEstimated) disclaimer = ENERGY_MIXED_YEAR_DISCLAIMER;
   else if (months.length > 0) disclaimer = ENERGY_MANUAL_DISCLAIMER;
 
@@ -240,6 +277,7 @@ export async function getAnnualReadings(
     isEstimated: anyEstimated,
     liveFromSolis,
     liveFromDeye,
+    liveFromSunways,
     disclaimer,
   };
 }
@@ -268,7 +306,7 @@ export async function upsertManualReading(
 ): Promise<EnergyReadingDto> {
   assertUsablePeriod(year, month);
 
-  const { systemKw, solisLinked, deyeLinked } = await resolveEnergyMeta(consumerUserId);
+  const { systemKw, solisLinked, deyeLinked, sunwaysLinked } = await resolveEnergyMeta(consumerUserId);
   const dailyReadings = buildHourlyReadings(data.totalGenerated, data.totalConsumed);
 
   const row = await prisma.energyReading.upsert({
@@ -290,5 +328,5 @@ export async function upsertManualReading(
     },
   });
 
-  return rowToDto(row, systemKw, false, solisLinked, deyeLinked);
+  return rowToDto(row, systemKw, false, solisLinked, deyeLinked, sunwaysLinked);
 }

@@ -11,6 +11,7 @@ function plantLabels(user: SolarHubUser): string[] {
   const bits: string[] = []
   if (user.project.solisStationId) bits.push('Solis')
   if (user.project.deyeStationId) bits.push('Deye')
+  if (user.project.sunwaysStationId) bits.push('Sunways')
   return bits
 }
 

@@ -56,6 +56,14 @@ import {
   setProjectDeyeStation,
   DeyeCloudError,
 } from '../services/deyeEnergyIngest';
+import { sunwaysPublicStatus } from '../services/sunwaysCloudClient';
+import {
+  ingestAllMappedSunwaysPlants,
+  ingestSunwaysEnergyForProject,
+  listSunwaysStationsForAdmin,
+  setProjectSunwaysStation,
+  SunwaysCloudError,
+} from '../services/sunwaysEnergyIngest';
 
 const router = express.Router();
 
@@ -90,7 +98,7 @@ router.get(
     query('search').optional().isString().trim(),
     query('active').optional().isIn(['true', 'false']),
     query('inverterBrand').optional().isString().trim(),
-    query('plantLink').optional().isIn(['solis', 'deye', 'none']),
+    query('plantLink').optional().isIn(['solis', 'deye', 'sunways', 'none']),
     query('neverLoggedIn').optional().isIn(['true', 'false']),
     query('sortBy').optional().isIn([
       'default',
@@ -112,7 +120,7 @@ router.get(
         search: req.query.search as string | undefined,
         active: req.query.active as 'true' | 'false' | undefined,
         inverterBrand: req.query.inverterBrand as string | undefined,
-        plantLink: req.query.plantLink as 'solis' | 'deye' | 'none' | undefined,
+        plantLink: req.query.plantLink as 'solis' | 'deye' | 'sunways' | 'none' | undefined,
         neverLoggedIn: req.query.neverLoggedIn === 'true',
         sortBy: req.query.sortBy as
           | 'default'
@@ -306,6 +314,95 @@ router.post('/users/:id/deye-sync', authenticate, async (req: Request, res: Resp
     const msg = err instanceof Error ? err.message : 'Deye sync failed';
     const status = err instanceof DeyeCloudError ? 502 : 400;
     console.error('Deye user sync error:', msg);
+    return res.status(status).json({ error: msg });
+  }
+});
+
+router.get('/sunways/status', authenticate, async (req: Request, res: Response) => {
+  if (!requireView(req, res)) return;
+  return res.json(sunwaysPublicStatus());
+});
+
+router.get('/sunways/stations', authenticate, async (req: Request, res: Response) => {
+  if (!requireView(req, res)) return;
+  try {
+    const stations = await listSunwaysStationsForAdmin();
+    return res.json({ items: stations });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to list Sunways plants';
+    const status = err instanceof SunwaysCloudError ? 502 : 500;
+    console.error('Sunways station list error:', msg);
+    return res.status(status).json({ error: msg });
+  }
+});
+
+router.post('/sunways/sync-all', authenticate, async (req: Request, res: Response) => {
+  if (!requireManage(req, res)) return;
+  try {
+    const summary = await ingestAllMappedSunwaysPlants();
+    return res.json(summary);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Sunways sync failed';
+    console.error('Sunways sync-all error:', msg);
+    return res.status(500).json({ error: msg });
+  }
+});
+
+router.patch(
+  '/users/:id/sunways-station',
+  authenticate,
+  [param('id').isString(), body('stationId').optional({ nullable: true })],
+  async (req: Request, res: Response) => {
+    if (!requireManage(req, res)) return;
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    try {
+      const user = await getSolarHubUser(req.params.id);
+      if (!user) return res.status(404).json({ error: 'Solar Hub user not found' });
+      const raw = req.body?.stationId;
+      const stationId =
+        typeof raw === 'string' && raw.trim()
+          ? raw.trim()
+          : typeof raw === 'number' && Number.isSafeInteger(raw)
+            ? String(raw)
+            : null;
+      await setProjectSunwaysStation(user.project.id, stationId);
+      if (!stationId) {
+        const updated = await getSolarHubUser(req.params.id);
+        return res.json(updated);
+      }
+      let monthsWritten = 0;
+      let ingestError: string | undefined;
+      try {
+        const ingest = await ingestSunwaysEnergyForProject(user.project.id);
+        monthsWritten = ingest.monthsWritten;
+      } catch (ingestErr) {
+        ingestError = ingestErr instanceof Error ? ingestErr.message : 'Sunways kWh pull failed';
+        console.warn('Sunways ingest after plant save:', ingestError);
+      }
+      const updated = await getSolarHubUser(req.params.id);
+      if (!updated) return res.status(404).json({ error: 'Solar Hub user not found' });
+      return res.json({ ...updated, monthsWritten, ingestError });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to save Sunways plant';
+      console.error('Sunways station map error:', msg);
+      return res.status(400).json({ error: msg });
+    }
+  },
+);
+
+router.post('/users/:id/sunways-sync', authenticate, async (req: Request, res: Response) => {
+  if (!requireManage(req, res)) return;
+  try {
+    const user = await getSolarHubUser(req.params.id);
+    if (!user) return res.status(404).json({ error: 'Solar Hub user not found' });
+    const result = await ingestSunwaysEnergyForProject(user.project.id);
+    const updated = await getSolarHubUser(req.params.id);
+    return res.json({ ...result, user: updated });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Sunways sync failed';
+    const status = err instanceof SunwaysCloudError ? 502 : 400;
+    console.error('Sunways user sync error:', msg);
     return res.status(status).json({ error: msg });
   }
 });

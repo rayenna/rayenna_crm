@@ -17,6 +17,7 @@ import NotificationsModal from '@/components/NotificationsModal'
 import HelpContextSuggestions from '@/components/HelpContextSuggestions'
 import HubLiveSolisPill from '@/components/HubLiveSolisPill'
 import HubLiveDeyePill from '@/components/HubLiveDeyePill'
+import HubLiveSunwaysPill from '@/components/HubLiveSunwaysPill'
 import { useConsumerHome } from '@/hooks/useConsumerHome'
 import { formatKwh, formatRupee } from '@/utils/energyCharts'
 import type { ProjectStep } from '@/types/home'
@@ -185,7 +186,7 @@ export default function Home() {
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <Zap className="h-4 w-4 text-[color:var(--accent-green)]" />
                 <h2 className="text-sm font-bold text-[color:var(--text-primary)]">
-                  {home.energy.liveFromSolis || home.energy.liveFromDeye
+                  {home.energy.liveFromSolis || home.energy.liveFromDeye || home.energy.liveFromSunways
                     ? 'This month · live'
                     : home.energy.isEstimated
                       ? 'Expected this month'
@@ -193,6 +194,7 @@ export default function Home() {
                 </h2>
                 {home.energy.liveFromSolis ? <HubLiveSolisPill /> : null}
                 {home.energy.liveFromDeye ? <HubLiveDeyePill /> : null}
+                {home.energy.liveFromSunways ? <HubLiveSunwaysPill /> : null}
               </div>
               <Link
                 to="/track"
@@ -208,6 +210,8 @@ export default function Home() {
                 ? ' · from your Solis inverter'
                 : home.energy.liveFromDeye
                   ? ' · from your Deye inverter'
+                  : home.energy.liveFromSunways
+                    ? ' · from your Sunways inverter'
                   : home.energy.isEstimated
                   ? ` · typical for a ${home.energy.systemKw} kW plant in Kerala`
                   : ' · logged from inverter'}
@@ -215,7 +219,7 @@ export default function Home() {
             <div className="mt-3 grid grid-cols-2 gap-2">
               <div>
                 <p className="text-[10px] text-[color:var(--text-tertiary)]">
-                  {home.energy.liveFromSolis || home.energy.liveFromDeye
+                  {home.energy.liveFromSolis || home.energy.liveFromDeye || home.energy.liveFromSunways
                     ? 'Generated live'
                     : home.energy.isEstimated
                       ? 'Expected generation'

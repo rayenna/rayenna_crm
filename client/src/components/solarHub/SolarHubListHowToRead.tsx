@@ -71,10 +71,16 @@ export default function SolarHubListHowToRead() {
               <span>Deye Cloud plant linked on the CRM project</span>
             </li>
             <li className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-[color:var(--accent-teal-muted)] px-2 py-0.5 text-[10px] font-bold text-[color:var(--accent-teal)]">
+                Sunways
+              </span>
+              <span>Sunways Portal plant linked on the CRM project</span>
+            </li>
+            <li className="flex flex-wrap items-center gap-2">
               <span className="rounded-full border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-2 py-0.5 text-[10px] font-bold uppercase text-[color:var(--accent-gold)]">
                 Unlinked
               </span>
-              <span>No OEM plant ID yet — open the user to link Solis or Deye</span>
+              <span>No OEM plant ID yet — open the user to link Solis, Deye, or Sunways</span>
             </li>
           </ul>
           <p className="mt-3 text-[color:var(--text-secondary)]">

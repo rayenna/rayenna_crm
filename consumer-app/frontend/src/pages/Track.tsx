@@ -17,6 +17,7 @@ import { Calendar, ChevronLeft, ChevronRight, Info } from 'lucide-react'
 import HelpContextSuggestions from '@/components/HelpContextSuggestions'
 import HubLiveSolisPill from '@/components/HubLiveSolisPill'
 import HubLiveDeyePill from '@/components/HubLiveDeyePill'
+import HubLiveSunwaysPill from '@/components/HubLiveSunwaysPill'
 import { useAnnualEnergy, useLogMonthlyEnergy, useMonthlyEnergy } from '@/hooks/useConsumerEnergy'
 import {
   distributionFromReading,
@@ -101,7 +102,9 @@ export default function Track() {
     viewMode === 'year' ? Boolean(annualQuery.data?.liveFromSolis) : Boolean(reading?.liveFromSolis)
   const liveFromDeye =
     viewMode === 'year' ? Boolean(annualQuery.data?.liveFromDeye) : Boolean(reading?.liveFromDeye)
-  const liveFromCloud = liveFromSolis || liveFromDeye
+  const liveFromSunways =
+    viewMode === 'year' ? Boolean(annualQuery.data?.liveFromSunways) : Boolean(reading?.liveFromSunways)
+  const liveFromCloud = liveFromSolis || liveFromDeye || liveFromSunways
   const canLog = viewMode === 'month' && isCurrentOrPastMonth(year, month)
 
   const distribution = useMemo(
@@ -170,6 +173,7 @@ export default function Track() {
           </h1>
           {liveFromSolis ? <HubLiveSolisPill /> : null}
           {liveFromDeye ? <HubLiveDeyePill /> : null}
+          {liveFromSunways ? <HubLiveSunwaysPill /> : null}
         </div>
         <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
           {viewMode === 'year'
@@ -177,6 +181,8 @@ export default function Track() {
               ? 'Year so far — live from your Solis inverter'
               : annualQuery.data?.liveFromDeye
                 ? 'Year so far — live from your Deye inverter'
+              : annualQuery.data?.liveFromSunways
+                ? 'Year so far — live from your Sunways inverter'
               : annualQuery.data?.isEstimated
                 ? 'Year so far — expected months until you log inverter kWh'
                 : 'Year so far — logged inverter generation'
@@ -184,6 +190,8 @@ export default function Track() {
               ? 'Live monthly generation from SolisCloud'
               : reading?.liveFromDeye
                 ? 'Live monthly generation from Deye Cloud'
+              : reading?.liveFromSunways
+                ? 'Live monthly generation from Sunways Portal'
               : monthIsEstimated
                 ? 'Expected generation for your plant size'
                 : 'Monthly generation from your inverter log'}
@@ -264,7 +272,7 @@ export default function Track() {
                   ? liveFromCloud
                     ? 'Generated live (YTD)'
                     : 'Generated (YTD)'
-                  : reading?.liveFromSolis || reading?.liveFromDeye
+                  : reading?.liveFromSolis || reading?.liveFromDeye || reading?.liveFromSunways
                     ? 'Generated live'
                     : monthIsEstimated
                       ? 'Expected generated'
@@ -299,7 +307,9 @@ export default function Track() {
                   ? 'This month is already live from SolisCloud. You only need this box if Rayenna asks you to correct a reading. Do not use the KSEB bill.'
                   : reading?.liveFromDeye
                     ? 'This month is already live from Deye Cloud. You only need this box if Rayenna asks you to correct a reading. Do not use the KSEB bill.'
-                  : 'Use this month’s generation from the inverter screen or the plant app. Do not use the KSEB bill (export is not total generation). Linked Solis or Deye plants update Hub automatically.'}
+                  : reading?.liveFromSunways
+                    ? 'This month is already live from Sunways Portal. You only need this box if Rayenna asks you to correct a reading. Do not use the KSEB bill.'
+                  : 'Use this month’s generation from the inverter screen or the plant app. Do not use the KSEB bill (export is not total generation). Linked Solis, Deye, or Sunways plants update Hub automatically.'}
               </p>
               <form onSubmit={handleLog} className="mt-3 flex gap-2">
                 <input

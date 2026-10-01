@@ -7,6 +7,7 @@ export type SolarHubPresetId =
   | 'never-logged-in'
   | 'solis-linked'
   | 'deye-linked'
+  | 'sunways-linked'
 
 export type SolarHubPresetDef = {
   id: SolarHubPresetId
@@ -18,7 +19,7 @@ export const SOLAR_HUB_PRESET_DEFS: SolarHubPresetDef[] = [
   {
     id: 'unlinked',
     label: 'Unlinked plants',
-    description: 'Active accounts with no Solis or Deye plant ID',
+    description: 'Active accounts with no Solis, Deye, or Sunways plant ID',
   },
   {
     id: 'inactive',
@@ -39,6 +40,11 @@ export const SOLAR_HUB_PRESET_DEFS: SolarHubPresetDef[] = [
     id: 'deye-linked',
     label: 'Deye linked',
     description: 'DeyeCloud plant ID present',
+  },
+  {
+    id: 'sunways-linked',
+    label: 'Sunways linked',
+    description: 'Sunways Portal plant ID present',
   },
 ]
 
@@ -69,6 +75,8 @@ export function solarHubPresetPatch(id: SolarHubPresetId): SolarHubPresetPatch {
       return { ...base, plantLink: 'solis' }
     case 'deye-linked':
       return { ...base, plantLink: 'deye' }
+    case 'sunways-linked':
+      return { ...base, plantLink: 'sunways' }
     default:
       return base
   }

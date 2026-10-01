@@ -5,8 +5,15 @@ import { Link2, RefreshCw } from 'lucide-react'
 import axiosInstance, { getFriendlyApiErrorMessage } from '../../utils/axios'
 import type { SolarHubUser } from '../../types/solarHub'
 
-type SolisStatus = { configured: boolean; apiHost: string | null }
-type SolisStation = { id: string; name: string; capacityKw: number | null }
+type SunwaysStatus = { configured: boolean; apiHost: string | null }
+type SunwaysStation = {
+  id: string
+  name: string
+  capacityKw: number | null
+  linkedSlNo?: number | null
+  linkedUsername?: string | null
+  linkedCustomerName?: string | null
+}
 
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -28,7 +35,7 @@ function kwhStatusLabel(opts: {
   lastError: string | null
   sync: SolarHubUser['energySync']
 }): { text: string; tone: 'muted' | 'ok' | 'warn' | 'bad' } {
-  if (opts.busy) return { text: 'Pulling kWh from SolisCloud…', tone: 'muted' }
+  if (opts.busy) return { text: 'Pulling kWh from Sunways Portal…', tone: 'muted' }
   if (opts.lastError) return { text: `kWh not synced — ${opts.lastError}`, tone: 'bad' }
   if (!opts.linked) return { text: 'kWh not synced — no plant linked', tone: 'muted' }
   const sync = opts.sync
@@ -44,12 +51,12 @@ function kwhStatusLabel(opts: {
     }
   }
   return {
-    text: `kWh synced · ${sync.liveMonthCount} month${sync.liveMonthCount === 1 ? '' : 's'} · ${monthLabel} not in Solis yet${when ? ` · last ${when}` : ''}`,
+    text: `kWh synced · ${sync.liveMonthCount} month${sync.liveMonthCount === 1 ? '' : 's'} · ${monthLabel} not in Sunways yet${when ? ` · last ${when}` : ''}`,
     tone: 'ok',
   }
 }
 
-export default function HubSolisPlantCard({
+export default function HubSunwaysPlantCard({
   user,
   canManage,
 }: {
@@ -57,8 +64,8 @@ export default function HubSolisPlantCard({
   canManage: boolean
 }) {
   const queryClient = useQueryClient()
-  const linked = user.project.solisStationId ?? ''
-  const otherCloudLinked = Boolean(user.project.deyeStationId || user.project.sunwaysStationId)
+  const linked = user.project.sunwaysStationId ?? ''
+  const otherCloudLinked = Boolean(user.project.solisStationId || user.project.deyeStationId)
   const [selectedId, setSelectedId] = useState(linked)
   const [manualId, setManualId] = useState(linked)
   const [lastError, setLastError] = useState<string | null>(null)
@@ -69,33 +76,33 @@ export default function HubSolisPlantCard({
   }, [linked])
 
   const statusQuery = useQuery({
-    queryKey: ['solis-status'],
+    queryKey: ['sunways-status'],
     queryFn: async () => {
-      const res = await axiosInstance.get('/api/admin/solar-hub/solis/status')
-      return res.data as SolisStatus
+      const res = await axiosInstance.get('/api/admin/solar-hub/sunways/status')
+      return res.data as SunwaysStatus
     },
   })
 
   const stationsQuery = useQuery({
-    queryKey: ['solis-stations'],
+    queryKey: ['sunways-stations'],
     queryFn: async () => {
-      const res = await axiosInstance.get('/api/admin/solar-hub/solis/stations')
-      return res.data as { items: SolisStation[] }
+      const res = await axiosInstance.get('/api/admin/solar-hub/sunways/stations')
+      return res.data as { items: SunwaysStation[] }
     },
     enabled: Boolean(statusQuery.data?.configured) && !otherCloudLinked,
   })
 
   const saveMutation = useMutation({
     mutationFn: (stationId: string | null) =>
-      axiosInstance.patch(`/api/admin/solar-hub/users/${user.id}/solis-station`, { stationId }),
+      axiosInstance.patch(`/api/admin/solar-hub/users/${user.id}/sunways-station`, { stationId }),
     onSuccess: (res) => {
       const body = res.data as SolarHubUser & { monthsWritten?: number; ingestError?: string }
-      const saved = body.project?.solisStationId ?? null
+      const saved = body.project?.sunwaysStationId ?? null
       setSelectedId(saved ?? '')
       setManualId(saved ?? '')
       setLastError(body.ingestError ?? null)
       queryClient.setQueryData(['solar-hub-user', user.id], body)
-      if (!saved) toast.success('Solis plant unlinked')
+      if (!saved) toast.success('Sunways plant unlinked')
       else if (!body.ingestError) toast.success('Plant saved')
       void queryClient.invalidateQueries({ queryKey: ['solar-hub-user', user.id] })
       void queryClient.invalidateQueries({ queryKey: ['solar-hub-users'] })
@@ -107,12 +114,12 @@ export default function HubSolisPlantCard({
   })
 
   const syncMutation = useMutation({
-    mutationFn: () => axiosInstance.post(`/api/admin/solar-hub/users/${user.id}/solis-sync`),
+    mutationFn: () => axiosInstance.post(`/api/admin/solar-hub/users/${user.id}/sunways-sync`),
     onSuccess: (res) => {
       const body = res.data as { monthsWritten?: number; user?: SolarHubUser }
       setLastError(null)
       if (body.user) queryClient.setQueryData(['solar-hub-user', user.id], body.user)
-      toast.success('kWh updated from SolisCloud')
+      toast.success('kWh updated from Sunways Portal')
       void queryClient.invalidateQueries({ queryKey: ['solar-hub-user', user.id] })
     },
     onError: (err) => {
@@ -146,24 +153,24 @@ export default function HubSolisPlantCard({
       <div className="flex items-center gap-2">
         <Link2 className="h-4 w-4 text-[color:var(--accent-gold)]" />
         <h2 className="text-xs font-bold uppercase tracking-wide text-[color:var(--text-muted)]">
-          SolisCloud plant
+          Sunways Portal plant
         </h2>
       </div>
       <p className="mt-2 text-xs text-[color:var(--text-muted)]">
-        Pick a plant, then Save — that also pulls kWh once. After that, Hub refreshes about every 6
-        hours. You do not need to click Pull kWh each day. Use Pull only if you want the latest
-        numbers right now. Splits are typical, not the KSEB bill.
+        One cloud per project. Pick a Sunways plant, then Save — that also pulls kWh once. Hub refreshes
+        about every 6 hours. Splits are typical, not the KSEB bill.
       </p>
 
       {otherCloudLinked ? (
         <p className="mt-3 text-sm text-[color:var(--text-primary)]">
-          This project is linked to another inverter cloud. Unlink Deye or Sunways first if this
-          inverter is on SolisCloud.
+          This project is linked to another inverter cloud. Unlink Solis or Deye first if this inverter
+          is on Sunways Portal.
         </p>
       ) : !configured ? (
         <p className="mt-3 text-sm text-[color:var(--text-primary)]">
-          Solis keys are not on the CRM API yet. Add <code>SOLIS_KEY_ID</code>,{' '}
-          <code>SOLIS_KEY_SECRET</code>, and <code>SOLIS_API_BASE_URL</code> on Render, then redeploy the API.
+          Sunways Portal credentials are not on the CRM API yet. Add <code>SUNWAYS_EMAIL</code>,{' '}
+          <code>SUNWAYS_PASSWORD</code>, and optionally <code>SUNWAYS_DISTRIBUTOR_CODES</code> on
+          Render, then redeploy the API.
         </p>
       ) : (
         <p className="mt-3 text-xs text-[color:var(--text-muted)]">
@@ -183,7 +190,7 @@ export default function HubSolisPlantCard({
         <div className="mt-4 space-y-3">
           {stations.length > 0 ? (
             <label className="block text-xs font-semibold text-[color:var(--text-muted)]">
-              Plant on this Solis account
+              Plant on this Sunways account
               <select
                 className="mt-1 w-full rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 text-sm text-[color:var(--text-primary)]"
                 value={selectedId}
@@ -197,12 +204,25 @@ export default function HubSolisPlantCard({
                 {selectedId && !stations.some((s) => s.id === selectedId) ? (
                   <option value={selectedId}>Linked plant {selectedId}</option>
                 ) : null}
-                {stations.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.id}
-                    {s.capacityKw ? ` · ${s.capacityKw} kW` : ''})
-                  </option>
-                ))}
+                {stations.map((s) => {
+                  const takenByOther = Boolean(s.linkedSlNo) && s.id !== linked
+                  const takenLabel = takenByOther
+                    ? ` · already #${s.linkedSlNo}${
+                        s.linkedUsername
+                          ? ` @${s.linkedUsername}`
+                          : s.linkedCustomerName
+                            ? ` ${s.linkedCustomerName}`
+                            : ''
+                      }`
+                    : ''
+                  return (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.id}
+                      {s.capacityKw ? ` · ${s.capacityKw} kW` : ''}
+                      {takenLabel})
+                    </option>
+                  )
+                })}
               </select>
             </label>
           ) : null}
@@ -215,7 +235,7 @@ export default function HubSolisPlantCard({
                 setManualId(e.target.value)
                 setSelectedId(e.target.value.trim())
               }}
-              placeholder="Filled from the list above, or paste from SolisCloud"
+              placeholder="Filled from the list above, or paste from Sunways Portal"
               className="mt-1 w-full rounded-lg border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 font-mono text-sm text-[color:var(--text-primary)]"
             />
           </label>

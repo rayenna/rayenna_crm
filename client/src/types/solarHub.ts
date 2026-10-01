@@ -21,6 +21,7 @@ export type SolarHubUser = {
     inverterBrand?: string | null
     solisStationId?: string | null
     deyeStationId?: string | null
+    sunwaysStationId?: string | null
   }
   energySync?: {
     liveMonthCount: number

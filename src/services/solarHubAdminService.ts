@@ -44,6 +44,7 @@ export type SolarHubUserListItem = {
     inverterBrand: string | null;
     solisStationId: string | null;
     deyeStationId: string | null;
+    sunwaysStationId: string | null;
   };
 };
 
@@ -85,6 +86,7 @@ function mapListItem(
       inverterBrand: string | null;
       solisStationId: string | null;
       deyeStationId: string | null;
+      sunwaysStationId: string | null;
     };
   },
 ): SolarHubUserListItem {
@@ -105,11 +107,12 @@ function mapListItem(
       inverterBrand: row.project.inverterBrand,
       solisStationId: row.project.solisStationId,
       deyeStationId: row.project.deyeStationId,
+      sunwaysStationId: row.project.sunwaysStationId,
     },
   };
 }
 
-export type SolarHubPlantLinkFilter = 'solis' | 'deye' | 'none';
+export type SolarHubPlantLinkFilter = 'solis' | 'deye' | 'sunways' | 'none';
 export type SolarHubUserSortBy = 'default' | 'createdAt_desc' | 'createdAt_asc' | 'lastLogin_desc' | 'username_asc';
 
 export async function listSolarHubUsers(input: {
@@ -144,10 +147,12 @@ export async function listSolarHubUsers(input: {
     andParts.push({ project: { solisStationId: { not: null } } });
   } else if (input.plantLink === 'deye') {
     andParts.push({ project: { deyeStationId: { not: null } } });
+  } else if (input.plantLink === 'sunways') {
+    andParts.push({ project: { sunwaysStationId: { not: null } } });
   } else if (input.plantLink === 'none') {
     andParts.push({
       project: {
-        AND: [{ solisStationId: null }, { deyeStationId: null }],
+        AND: [{ solisStationId: null }, { deyeStationId: null }, { sunwaysStationId: null }],
       },
     });
   }
@@ -196,6 +201,7 @@ export async function listSolarHubUsers(input: {
     inverterBrand: true,
     solisStationId: true,
     deyeStationId: true,
+    sunwaysStationId: true,
     customer: { select: { customerName: true } },
   } as const;
 
@@ -229,6 +235,7 @@ export async function getSolarHubUser(id: string): Promise<SolarHubUserDetail | 
           inverterBrand: true,
           solisStationId: true,
           deyeStationId: true,
+          sunwaysStationId: true,
           customer: { select: { customerName: true, customerId: true } },
         },
       },
@@ -281,6 +288,7 @@ export async function getSolarHubUserForProject(projectId: string) {
           inverterBrand: true,
           solisStationId: true,
           deyeStationId: true,
+          sunwaysStationId: true,
           customer: { select: { customerName: true, customerId: true } },
         },
       },

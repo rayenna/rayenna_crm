@@ -29,7 +29,7 @@ Dismiss stores a preference in this browser only (not synced across devices).
 
 - **Phones (under ~744px):** **cards** by default — `@username`, customer, plant (Solis / Deye / **Unlinked**), quiet Active/Inactive, last login. **Tap the whole card** to open user detail. Optional **Cards / Table** toggle is remembered for the session.
 - **Wider screens:** sortable table; row tap opens detail.
-- **Quick views** — one-tap presets: Unlinked plants, Inactive, Never logged in, Solis linked, Deye linked.
+- **Quick views** — one-tap presets: Unlinked plants, Inactive, Never logged in, Solis linked, Deye linked, Sunways linked.
 - **Filters** — search, Active/Inactive, inverter brand, cloud plant, never logged in, sort. **Clear All** appears only when something is applied. Sort does not inflate the **Show Filters (N)** count.
 - **How to read this list** — short plant legend (Solis / Deye / Unlinked).
 - **Install Hub script** — collapsed by default on the Users list so accounts stay above the fold; expand when you need the visit script. Full script stays open on **user detail** and **Provisioning**.
@@ -78,16 +78,16 @@ Hub **Home** and **Track** show monthly generation. After Ops/Admin map a plant,
 
 ## One cloud per project
 
-A project can be linked to **SolisCloud** or **Deye Cloud**, not both. Unlink the current plant before switching clouds. Other monitoring portals (including Solarman) are **not** connected to Hub yet.
+A project can be linked to **SolisCloud**, **Deye Cloud**, or **Sunways Portal** — one cloud only. Unlink the current plant before switching clouds. Other monitoring portals (including Solarman) are **not** connected to Hub yet.
 
 Match the cloud to the inverter the customer actually uses. Deye Cloud and Solarman are different systems even when the hardware looks similar.
 
 ## Map a plant (Operations / Admin)
 
 1. Open **Solar Hub → Users** → the homeowner (card or table).
-2. Use **SolisCloud plant** or **Deye Cloud plant**.
+2. Use **SolisCloud plant**, **Deye Cloud plant**, or **Sunways Portal plant**.
 3. Pick the plant from the list (or paste the plant id). **Save** also pulls kWh once.
-4. Confirm the status line shows months synced. Hub **Home** / **Track** then show a **Live · SolisCloud** or **Live · Deye Cloud** pill.
+4. Confirm the status line shows months synced. Hub **Home** / **Track** then show a **Live · SolisCloud**, **Live · Deye Cloud**, or **Live · Sunways** pill.
 
 Map by the Hub **username** and the customer you have open — not by an old spreadsheet row number. If Save says the plant is already on another project, unlink it there first (the message includes **#SL** and username).
 

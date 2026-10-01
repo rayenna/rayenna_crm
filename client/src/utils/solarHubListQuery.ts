@@ -1,7 +1,7 @@
 import { INVERTER_BRAND_OPTIONS } from '../constants/inverterBrands'
 
 export type SolarHubActiveFilter = 'all' | 'active' | 'inactive'
-export type SolarHubPlantLinkFilter = '' | 'solis' | 'deye' | 'none'
+export type SolarHubPlantLinkFilter = '' | 'solis' | 'deye' | 'sunways' | 'none'
 export type SolarHubUserSortBy =
   | 'default'
   | 'createdAt_desc'
@@ -67,7 +67,9 @@ export function parseSolarHubUserListStateFromSearchParams(
   if (activeRaw === 'false' || activeRaw === 'inactive') active = 'inactive'
 
   const plantLink: SolarHubPlantLinkFilter =
-    plantRaw === 'solis' || plantRaw === 'deye' || plantRaw === 'none' ? plantRaw : ''
+    plantRaw === 'solis' || plantRaw === 'deye' || plantRaw === 'sunways' || plantRaw === 'none'
+      ? plantRaw
+      : ''
 
   const sortBy: SolarHubUserSortBy = (
     [

@@ -16,6 +16,7 @@ export interface HomeEnergySummary {
   isEstimated: boolean
   liveFromSolis?: boolean
   liveFromDeye?: boolean
+  liveFromSunways?: boolean
   systemKw: number
 }
 

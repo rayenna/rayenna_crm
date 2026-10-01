@@ -283,6 +283,7 @@ export default function SolarHub() {
                     const plantBits: string[] = []
                     if (user.project.solisStationId) plantBits.push('Solis')
                     if (user.project.deyeStationId) plantBits.push('Deye')
+                    if (user.project.sunwaysStationId) plantBits.push('Sunways')
                     const unlinked = plantBits.length === 0
                     return (
                       <tr

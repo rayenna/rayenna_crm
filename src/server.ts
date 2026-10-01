@@ -283,6 +283,26 @@ const server = app.listen(PORT, async () => {
       void runDeyeIngest();
     }, SOLIS_INGEST_INTERVAL_MS).unref?.();
 
+    const runSunwaysIngest = async () => {
+      try {
+        const { ingestAllMappedSunwaysPlants } = await import('./services/sunwaysEnergyIngest');
+        const summary = await ingestAllMappedSunwaysPlants();
+        if (!summary.skipped) {
+          console.log(
+            `[sunways] ingest plants=${summary.plants} months=${summary.monthsWritten} failed=${summary.failed}`,
+          );
+        }
+      } catch (e) {
+        console.warn('[sunways] ingest failed:', (e as Error)?.message ?? e);
+      }
+    };
+    setTimeout(() => {
+      void runSunwaysIngest();
+    }, 240_000).unref?.();
+    setInterval(() => {
+      void runSunwaysIngest();
+    }, SOLIS_INGEST_INTERVAL_MS).unref?.();
+
     const authRoutes = (await import('./routes/auth')).default;
     const projectRoutes = (await import('./routes/projects')).default;
     const documentRoutes = (await import('./routes/documents')).default;

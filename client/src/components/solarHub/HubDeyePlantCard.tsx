@@ -65,7 +65,7 @@ export default function HubDeyePlantCard({
 }) {
   const queryClient = useQueryClient()
   const linked = user.project.deyeStationId ?? ''
-  const solisLinked = Boolean(user.project.solisStationId)
+  const otherCloudLinked = Boolean(user.project.solisStationId || user.project.sunwaysStationId)
   const [selectedId, setSelectedId] = useState(linked)
   const [manualId, setManualId] = useState(linked)
   const [lastError, setLastError] = useState<string | null>(null)
@@ -89,7 +89,7 @@ export default function HubDeyePlantCard({
       const res = await axiosInstance.get('/api/admin/solar-hub/deye/stations')
       return res.data as { items: DeyeStation[] }
     },
-    enabled: Boolean(statusQuery.data?.configured) && !solisLinked,
+    enabled: Boolean(statusQuery.data?.configured) && !otherCloudLinked,
   })
 
   const saveMutation = useMutation({
@@ -161,9 +161,10 @@ export default function HubDeyePlantCard({
         about every 6 hours. Splits are typical, not the KSEB bill.
       </p>
 
-      {solisLinked ? (
+      {otherCloudLinked ? (
         <p className="mt-3 text-sm text-[color:var(--text-primary)]">
-          This project is linked to SolisCloud. Unlink Solis first if this inverter is on Deye Cloud.
+          This project is linked to another inverter cloud. Unlink Solis or Sunways first if this
+          inverter is on Deye Cloud.
         </p>
       ) : !configured ? (
         <p className="mt-3 text-sm text-[color:var(--text-primary)]">
@@ -184,7 +185,7 @@ export default function HubDeyePlantCard({
         </p>
       )}
 
-      {canManage && !solisLinked ? (
+      {canManage && !otherCloudLinked ? (
         <div className="mt-4 space-y-3">
           {stations.length > 0 ? (
             <label className="block text-xs font-semibold text-[color:var(--text-muted)]">
@@ -266,7 +267,7 @@ export default function HubDeyePlantCard({
       ) : (
         <div className="mt-3 space-y-2">
           <p className="text-sm text-[color:var(--text-primary)]">{linked ? `Linked plant ${linked}` : 'Not linked'}</p>
-          {!solisLinked ? (
+          {!otherCloudLinked ? (
             <p className={`inline-block rounded-xl border px-3 py-2 text-xs font-semibold ${toneClass}`}>{status.text}</p>
           ) : null}
         </div>

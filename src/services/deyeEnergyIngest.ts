@@ -31,11 +31,14 @@ export async function setProjectDeyeStation(projectId: string, stationId: string
   const normalized = stationId?.trim() || null;
   const project = await prisma.project.findUnique({
     where: { id: projectId },
-    select: { solisStationId: true },
+    select: { solisStationId: true, sunwaysStationId: true },
   });
   if (!project) throw new Error('Project not found');
   if (normalized && project.solisStationId) {
     throw new Error('This project is already linked to a SolisCloud plant. Unlink Solis first.');
+  }
+  if (normalized && project.sunwaysStationId) {
+    throw new Error('This project is already linked to a Sunways plant. Unlink Sunways first.');
   }
   if (normalized) {
     const clash = await prisma.project.findFirst({

@@ -43,12 +43,14 @@ const PLANT_CHIPS: { value: SolarHubPlantLinkFilter; label: string }[] = [
   { value: '', label: 'Any plant' },
   { value: 'solis', label: 'Solis linked' },
   { value: 'deye', label: 'Deye linked' },
+  { value: 'sunways', label: 'Sunways linked' },
   { value: 'none', label: 'Not linked' },
 ]
 
 const PLANT_LABEL: Record<Exclude<SolarHubPlantLinkFilter, ''>, string> = {
   solis: 'Solis linked',
   deye: 'Deye linked',
+  sunways: 'Sunways linked',
   none: 'Not linked',
 }
 

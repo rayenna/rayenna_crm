@@ -384,6 +384,8 @@ model Project {
   solisStationId String? @unique
   /// Deye Cloud station id for Hub Layer 2 ingest.
   deyeStationId String? @unique
+  /// Sunways Portal station id for Hub Layer 2 ingest.
+  sunwaysStationId String? @unique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -15,7 +15,7 @@ const STEPS = [
   {
     n: '2',
     title: 'Open the user',
-    blurb: 'Link Solis or Deye plant and check Active status',
+    blurb: 'Link Solis, Deye, or Sunways plant and check Active status',
     to: '/solar-hub/users?plant=none',
     cta: 'Unlinked users',
   },

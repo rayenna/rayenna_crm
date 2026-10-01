@@ -16,6 +16,7 @@ export interface EnergyReading {
   isEstimated: boolean
   liveFromSolis?: boolean
   liveFromDeye?: boolean
+  liveFromSunways?: boolean
   disclaimer: string | null
   systemKw: number
 }
@@ -26,6 +27,7 @@ export interface AnnualEnergyResponse {
   isEstimated: boolean
   liveFromSolis?: boolean
   liveFromDeye?: boolean
+  liveFromSunways?: boolean
   disclaimer: string | null
 }
 
