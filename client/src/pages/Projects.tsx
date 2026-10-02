@@ -1609,7 +1609,8 @@ const Projects = () => {
           {/* Filter By + Sort By — hidden until Show Filters */}
           <div
             id="projects-more-filters"
-            inert={!showMoreFilters ? true : undefined}
+            // React DOM typings lag the HTML `inert` attribute; keep collapsed filters out of tab order.
+            {...(!showMoreFilters ? ({ inert: '' } as Record<string, string>) : {})}
             className={`${showMoreFilters ? 'overflow-visible' : 'overflow-hidden'} transition-all duration-300 ease-in-out ${
               showMoreFilters ? 'max-h-[2200px] opacity-100' : 'max-h-0 opacity-0'
             }`}
