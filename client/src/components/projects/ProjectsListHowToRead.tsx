@@ -15,30 +15,20 @@ type Props = {
 }
 
 /**
- * Collapsible “How to read this list” — near results summary so it is not below the fold.
- * Defaults open until the user collapses once (session), then stays closed.
+ * Collapsible “How to read this list” — near results summary.
+ * Defaults closed so the first project card stays above the fold on phones.
  */
 export default function ProjectsListHowToRead({ includeHealthTip = true }: Props) {
-  const [open, setOpen] = useState(() => {
-    try {
-      return sessionStorage.getItem(HOWTO_STORAGE_KEY) !== '1'
-    } catch {
-      return false
-    }
-  })
+  const [open, setOpen] = useState(false)
 
   const toggle = () => {
-    setOpen((v) => {
-      const next = !v
-      if (!next) {
-        try {
-          sessionStorage.setItem(HOWTO_STORAGE_KEY, '1')
-        } catch {
-          // ignore
-        }
-      }
-      return next
-    })
+    setOpen((v) => !v)
+    try {
+      // Keep key for older sessions that forced-open; always prefer closed default.
+      sessionStorage.setItem(HOWTO_STORAGE_KEY, '1')
+    } catch {
+      // ignore
+    }
   }
 
   return (
@@ -120,6 +110,25 @@ export default function ProjectsListHowToRead({ includeHealthTip = true }: Props
             <span className="inline-flex shrink-0 items-center gap-1.5">
               <span className="inline-block h-3 w-3 rounded border border-sky-400/50 bg-sky-500/25" />
               Balance total
+            </span>
+            <span className="col-span-2 inline-flex items-center gap-1.5 font-semibold text-[color:var(--text-primary)] sm:col-span-3 lg:col-span-6 lg:mt-1">
+              On phone cards
+            </span>
+            <span className="inline-flex shrink-0 items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 rounded border border-[color:var(--accent-gold-border)]/70 px-1 py-0.5 text-[9px] font-semibold text-[color:var(--accent-gold)]">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--accent-gold)]" />
+                Review
+              </span>
+              Needs review
+            </span>
+            <span className="inline-flex shrink-0 items-center gap-1.5">
+              <span className="rounded border border-[color:var(--border-default)] px-1 py-0.5 text-[9px] font-semibold text-[color:var(--text-muted)]">
+                PE
+              </span>
+              Proposal Engine status
+            </span>
+            <span className="inline-flex shrink-0 items-center gap-1.5">
+              Outstanding balance shows when payment is open
             </span>
           </div>
         </div>

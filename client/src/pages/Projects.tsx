@@ -61,6 +61,7 @@ import {
   readProjectsHiddenCols,
   readProjectsLastPresetId,
   readProjectsTableDensity,
+  seedMobileTableSlimColsIfNeeded,
   writeProjectsHiddenCols,
   writeProjectsLastPresetId,
   writeProjectsTableDensity,
@@ -442,12 +443,9 @@ const PaymentStatusBadge = ({ project, compact = false }: { project: Project; co
   )
 }
 
-/** Visible data columns for thead/tbody (matches Tailwind + user-hidden optional cols). */
-function getProjectsTableVisibleColumnCount(
-  viewportWidth: number,
-  hidden: ProjectsOptionalCol[] = [],
-): number {
-  return countProjectsTableVisibleCols(viewportWidth, hidden)
+/** Visible data columns for thead/tbody (always-on Project + Stage, plus optional prefs). */
+function getProjectsTableVisibleColumnCount(hidden: ProjectsOptionalCol[] = []): number {
+  return countProjectsTableVisibleCols(hidden)
 }
 
 const Projects = () => {
@@ -492,7 +490,11 @@ const Projects = () => {
     return id && valid.includes(id as ProjectsPresetId) ? (id as ProjectsPresetId) : null
   })
 
+  const showDhCol = !hiddenCols.includes('dh')
   const showSegmentCol = !hiddenCols.includes('segment')
+  const showCapacityCol = !hiddenCols.includes('capacity')
+  const showOrderCol = !hiddenCols.includes('order')
+  const showPaymentCol = !hiddenCols.includes('payment')
   const showLeadCol = !hiddenCols.includes('lead')
   const showConfirmCol = !hiddenCols.includes('confirm')
   const tableColRem = projectsTableColRemWidths(tableDensity)
@@ -522,33 +524,25 @@ const Projects = () => {
   }
 
   const [projectsTableVisibleCols, setProjectsTableVisibleCols] = useState(() =>
-    typeof window !== 'undefined'
-      ? getProjectsTableVisibleColumnCount(window.innerWidth, readProjectsHiddenCols())
-      : 9,
+    getProjectsTableVisibleColumnCount(readProjectsHiddenCols()),
   )
   useEffect(() => {
-    const update = () =>
-      setProjectsTableVisibleCols(getProjectsTableVisibleColumnCount(window.innerWidth, hiddenCols))
-    update()
-    window.addEventListener('resize', update)
-    const mq640 = window.matchMedia('(min-width: 640px)')
-    const mq768 = window.matchMedia('(min-width: 768px)')
-    const mq1024 = window.matchMedia('(min-width: 1024px)')
+    setProjectsTableVisibleCols(getProjectsTableVisibleColumnCount(hiddenCols))
+  }, [hiddenCols])
+
+  useEffect(() => {
     const mqCards = window.matchMedia(PROJECTS_CARDS_MAX_MQ)
     const updateNarrow = () => setIsNarrowViewport(mqCards.matches)
     updateNarrow()
-    mq640.addEventListener('change', update)
-    mq768.addEventListener('change', update)
-    mq1024.addEventListener('change', update)
     mqCards.addEventListener('change', updateNarrow)
-    return () => {
-      window.removeEventListener('resize', update)
-      mq640.removeEventListener('change', update)
-      mq768.removeEventListener('change', update)
-      mq1024.removeEventListener('change', update)
-      mqCards.removeEventListener('change', updateNarrow)
-    }
-  }, [hiddenCols])
+    return () => mqCards.removeEventListener('change', updateNarrow)
+  }, [])
+
+  // First phone Table visit with no saved column prefs → Slim (Segment / Lead / Confirm off).
+  useEffect(() => {
+    const seeded = seedMobileTableSlimColsIfNeeded(isNarrowViewport, listViewMode)
+    if (seeded) setHiddenCols(seeded)
+  }, [isNarrowViewport, listViewMode])
 
   useEffect(() => {
     if (!exportMenuOpen) return
@@ -1418,19 +1412,23 @@ const Projects = () => {
 
   return shell(
     <>
-      <header className="sticky top-0 z-30 mb-4 border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 94%, transparent)] pb-3 pt-1 backdrop-blur-xl sm:mb-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] shadow-inner">
+      <header className="sticky top-0 z-30 mb-3 border-b border-[color:var(--border-default)] bg-[color:color-mix(in srgb,var(--bg-surface) 94%, transparent)] pb-2.5 pt-1 backdrop-blur-xl sm:mb-6 sm:pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] shadow-inner sm:flex">
               <FaBriefcase className="h-5 w-5 text-[color:var(--accent-gold)]" aria-hidden />
             </div>
             <div className="min-w-0">
-              <h1 className="zenith-display text-xl font-bold tracking-tight text-[color:var(--text-primary)] sm:text-2xl">Projects</h1>
-              <p className="mt-0.5 text-sm text-[color:var(--text-secondary)]">Manage and track all your solar projects</p>
+              <h1 className="zenith-display text-lg font-bold tracking-tight text-[color:var(--text-primary)] sm:text-2xl">
+                Projects
+              </h1>
+              <p className="mt-0.5 hidden text-sm text-[color:var(--text-secondary)] sm:block">
+                Manage and track all your solar projects
+              </p>
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             {listViewMode === 'table' ? (
               <ProjectsTablePrefsMenu
                 density={tableDensity}
@@ -1444,7 +1442,7 @@ const Projects = () => {
                 <button
                   type="button"
                   onClick={() => setExportMenuOpen((v) => !v)}
-                  className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-3 py-2 text-sm font-semibold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)]"
+                  className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-2.5 py-2 text-sm font-semibold text-[color:var(--text-primary)] shadow-sm transition-all hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)] sm:px-3"
                   aria-expanded={exportMenuOpen}
                   aria-haspopup="menu"
                   title="Export filtered list to Excel or CSV"
@@ -1491,20 +1489,67 @@ const Projects = () => {
             {(user?.role === 'ADMIN' || user?.role === 'SALES') ? (
               <Link
                 to="/projects/new"
-                className="inline-flex min-h-[44px] touch-manipulation items-center justify-center rounded-xl bg-[color:var(--accent-gold)] px-4 py-2.5 text-sm font-bold text-[color:var(--text-inverse)] shadow-lg transition-all hover:opacity-95"
+                className="inline-flex min-h-[40px] touch-manipulation items-center justify-center rounded-xl bg-[color:var(--accent-gold)] px-3 py-2 text-sm font-bold text-[color:var(--text-inverse)] shadow-lg transition-all hover:opacity-95 sm:min-h-[44px] sm:px-4 sm:py-2.5"
               >
-                + New Project
+                <span className="sm:hidden">+ New</span>
+                <span className="hidden sm:inline">+ New Project</span>
               </Link>
             ) : null}
+          </div>
+        </div>
+
+        {/* Phone: sticky search + light filter controls so the list starts sooner */}
+        <div className="mt-2.5 space-y-1.5 sm:hidden">
+          <input
+            type="text"
+            placeholder="Search projects…"
+            className="zenith-native-filter-input min-h-[40px] w-full rounded-xl px-3 py-2 text-sm placeholder:text-[color:var(--text-placeholder)] transition-all focus:border-[color:var(--accent-gold-border)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-gold-muted)]"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.preventDefault()
+            }}
+            aria-label="Search projects"
+          />
+          <div className="flex items-center justify-between gap-3 px-0.5">
+            <button
+              type="button"
+              onClick={() => setShowMoreFilters((v) => !v)}
+              className="inline-flex min-h-[36px] touch-manipulation items-center gap-1 text-sm font-semibold text-[color:var(--text-primary)]"
+              aria-expanded={showMoreFilters}
+              aria-controls="projects-more-filters"
+            >
+              {showMoreFilters ? 'Hide filters' : 'Show filters'}
+              {!showMoreFilters && moreFiltersActiveCount > 0 ? (
+                <span className="text-[color:var(--accent-gold)]">({moreFiltersActiveCount})</span>
+              ) : null}
+              <svg
+                className={`h-3.5 w-3.5 text-[color:var(--text-muted)] transition-transform ${showMoreFilters ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="inline-flex min-h-[36px] touch-manipulation items-center text-sm font-semibold text-[color:var(--text-secondary)] underline-offset-2 hover:text-[color:var(--text-primary)] hover:underline"
+              title="Clear search and all filters"
+            >
+              Clear all
+            </button>
           </div>
         </div>
       </header>
 
       <div className="mobile-paint-fix max-w-full min-w-0 overflow-x-hidden px-0 pb-4 sm:pb-6">
-      <div className="mb-3 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] p-3 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:p-4">
+      <div className="mb-2 rounded-2xl border border-[color:var(--border-card)] bg-[color:var(--bg-card)] px-2.5 py-2 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--border-default)] sm:mb-3 sm:p-4">
         <div className="space-y-2 sm:space-y-3">
-          {/* Row 1: Search Bar + Show/Hide Filters toggle (and Clear All on larger screens) */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+          {/* Desktop/tablet search + filter toggles (phone search lives in sticky header) */}
+          <div className="hidden flex-col gap-2 sm:flex sm:flex-row sm:items-center">
             <input
               type="text"
               placeholder="Search across all projects..."
@@ -1513,7 +1558,7 @@ const Projects = () => {
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
             />
-            <div className="flex gap-2 w-full sm:w-auto">
+            <div className="flex w-full gap-2 sm:w-auto">
               <button
                 type="button"
                 onClick={() => setShowMoreFilters((v) => !v)}
@@ -1536,7 +1581,6 @@ const Projects = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
-              {/* Clear All next to toggle - visible on all screen sizes so it can reset Sort/filters even when filters are hidden */}
               <button
                 type="button"
                 onClick={clearAllFilters}
@@ -1565,6 +1609,7 @@ const Projects = () => {
           {/* Filter By + Sort By — hidden until Show Filters */}
           <div
             id="projects-more-filters"
+            inert={!showMoreFilters ? true : undefined}
             className={`${showMoreFilters ? 'overflow-visible' : 'overflow-hidden'} transition-all duration-300 ease-in-out ${
               showMoreFilters ? 'max-h-[2200px] opacity-100' : 'max-h-0 opacity-0'
             }`}
@@ -1880,17 +1925,6 @@ const Projects = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-1 sm:hidden">
-                <button
-                  type="button"
-                  onClick={clearAllFilters}
-                  className="min-h-[40px] w-full rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-input)] px-4 py-2 text-sm font-semibold text-[color:var(--text-primary)] transition-colors hover:border-[color:var(--border-strong)] hover:bg-[color:var(--bg-card-hover)]"
-                  title="Clear search and all filters"
-                >
-                  Clear All
-                </button>
-              </div>
-
             </div>
           </div>
         </div>
@@ -1973,42 +2007,43 @@ Do you want to continue?`}
       {listViewMode === 'cards' ? (
         <>
         <div
-          className="mb-3 grid grid-cols-3 gap-2 rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-card)] px-2 py-2.5 ring-1 ring-[color:var(--border-default)] sm:gap-3 sm:px-3 sm:py-3"
+          className="mb-2 grid grid-cols-3 gap-1 rounded-lg border border-[color:var(--border-default)]/80 bg-[color:var(--bg-surface)] px-1.5 py-1.5 sm:mb-3 sm:gap-3 sm:rounded-xl sm:bg-[color:var(--bg-card)] sm:px-3 sm:py-3 sm:ring-1 sm:ring-[color:var(--border-default)]"
           aria-label="List totals for current filters"
         >
-          <div className="flex min-w-0 flex-col items-center gap-1 text-center">
-            <div className="inline-flex max-w-full items-center justify-center rounded-md border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-2 py-1 text-[11px] font-bold tabular-nums text-[color:var(--text-primary)] sm:text-xs">
+          <div className="flex min-w-0 flex-col items-center gap-0.5 text-center sm:gap-1">
+            <div className="inline-flex max-w-full items-center justify-center rounded-md border border-[color:var(--accent-gold-border)]/70 bg-[color:var(--accent-gold-muted)]/80 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[color:var(--text-primary)] sm:px-2 sm:py-1 sm:text-xs">
               {(data?.totals?.capacitySum ?? 0) / 1000 > 0
                 ? `${((data?.totals?.capacitySum ?? 0) / 1000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} MW`
                 : '—'}
             </div>
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-secondary)] sm:text-[11px]">
+            <span className="text-[9px] font-semibold uppercase tracking-wide text-[color:var(--text-muted)] sm:text-[11px] sm:text-[color:var(--text-secondary)]">
               Capacity
             </span>
           </div>
-          <div className="flex min-w-0 flex-col items-center gap-1 text-center">
-            <div className="inline-flex max-w-full items-center justify-center rounded-md border border-emerald-400/40 bg-emerald-500/10 px-2 py-1 text-[11px] font-bold tabular-nums text-[color:var(--text-primary)] sm:text-xs">
+          <div className="flex min-w-0 flex-col items-center gap-0.5 text-center sm:gap-1">
+            <div className="inline-flex max-w-full items-center justify-center rounded-md border border-emerald-400/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[color:var(--text-primary)] sm:border-emerald-400/40 sm:px-2 sm:py-1 sm:text-xs">
               {(data?.totals?.costSum ?? 0) > 0
                 ? `₹${((data?.totals?.costSum ?? 0) / 1_000_000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} M`
                 : '—'}
             </div>
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-secondary)] sm:text-[11px]">
+            <span className="text-[9px] font-semibold uppercase tracking-wide text-[color:var(--text-muted)] sm:text-[11px] sm:text-[color:var(--text-secondary)]">
               Order
             </span>
           </div>
-          <div className="flex min-w-0 flex-col items-center gap-1 text-center">
-            <div className="inline-flex max-w-full items-center justify-center rounded-md border border-sky-400/40 bg-sky-500/10 px-2 py-1 text-[11px] font-bold tabular-nums text-[color:var(--text-primary)] sm:text-xs">
+          <div className="flex min-w-0 flex-col items-center gap-0.5 text-center sm:gap-1">
+            <div className="inline-flex max-w-full items-center justify-center rounded-md border border-sky-400/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[color:var(--text-primary)] sm:border-sky-400/40 sm:px-2 sm:py-1 sm:text-xs">
               {(data?.totals?.balanceSum ?? 0) > 0
                 ? `₹${((data?.totals?.balanceSum ?? 0) / 1_000_000).toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} M`
                 : '—'}
             </div>
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--text-secondary)] sm:text-[11px]">
+            <span className="text-[9px] font-semibold uppercase tracking-wide text-[color:var(--text-muted)] sm:text-[11px] sm:text-[color:var(--text-secondary)]">
               Balance
             </span>
           </div>
         </div>
         <ProjectsMobileCardList
           projects={displayProjects}
+          peStatusByProjectId={peStatusByProjectId}
           onOpen={(id) => navigate(`/projects/${id}`)}
           emptySlot={
             <div className="mx-auto flex max-w-md flex-col items-center text-center">
@@ -2063,10 +2098,23 @@ Do you want to continue?`}
             .projects-table-fit col {
               display: none !important;
             }
+            .projects-table-fit--comfortable td,
+            .projects-table-fit--comfortable th {
+              padding-top: 0.7rem;
+              padding-bottom: 0.7rem;
+            }
+            .projects-table-fit--comfortable {
+              font-size: 0.875rem;
+              line-height: 1.35;
+            }
             .projects-table-fit--compact td,
             .projects-table-fit--compact th {
-              padding-top: 0.35rem;
-              padding-bottom: 0.35rem;
+              padding-top: 0.2rem;
+              padding-bottom: 0.2rem;
+            }
+            .projects-table-fit--compact {
+              font-size: 0.75rem;
+              line-height: 1.2;
             }
 
             @media (min-width: 1024px) {
@@ -2094,26 +2142,24 @@ Do you want to continue?`}
                 overflow: visible;
                 vertical-align: middle;
               }
-              .projects-table-fit th:nth-child(2),
-              .projects-table-fit td:nth-child(2) {
-                min-width: 4.25rem;
-              }
             }
           `}
         </style>
           <table
-            className={`projects-table-fit text-sm leading-snug${
-              tableDensity === 'compact' ? ' projects-table-fit--compact' : ''
+            className={`projects-table-fit leading-snug${
+              tableDensity === 'compact'
+                ? ' projects-table-fit--compact'
+                : ' projects-table-fit--comfortable'
             }`}
           >
             <colgroup>
               <col className="projects-col--project" />
-              <col className="projects-col--dh" />
+              {showDhCol ? <col className="projects-col--dh" /> : null}
               {showSegmentCol ? <col className="projects-col--segment" /> : null}
               <col className="projects-col--stage" />
-              <col className="projects-col--capacity" />
-              <col className="projects-col--order" />
-              <col className="projects-col--payment" />
+              {showCapacityCol ? <col className="projects-col--capacity" /> : null}
+              {showOrderCol ? <col className="projects-col--order" /> : null}
+              {showPaymentCol ? <col className="projects-col--payment" /> : null}
               {showLeadCol ? <col className="projects-col--lead" /> : null}
               {showConfirmCol ? <col className="projects-col--confirm" /> : null}
             </colgroup>
@@ -2121,11 +2167,10 @@ Do you want to continue?`}
               {/* Totals sit in the Capacity / Order value / Payment columns — same cell padding as sort headers below */}
               <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)]" aria-label="List totals for current filters">
                 <th className="px-2 py-1.5 sm:px-2.5" scope="col" />
-                <th className="px-1.5 py-1.5 sm:px-2" scope="col" />
-                {showSegmentCol ? (
-                  <th className="hidden px-2 py-1.5 lg:table-cell lg:px-2.5" scope="col" />
-                ) : null}
+                {showDhCol ? <th className="px-1.5 py-1.5 sm:px-2" scope="col" /> : null}
+                {showSegmentCol ? <th className="px-2 py-1.5 sm:px-2.5" scope="col" /> : null}
                 <th className="px-2 py-1.5 sm:px-2.5" scope="col" />
+                {showCapacityCol ? (
                 <th className="px-2 py-1.5 text-right align-bottom sm:px-2.5" scope="col">
                   <div className="flex w-full flex-col items-end gap-0.5">
                     <div className="inline-flex max-w-full items-center justify-center rounded-md border border-[color:var(--accent-gold-border)] bg-[color:var(--accent-gold-muted)] px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[color:var(--text-primary)] sm:px-2 sm:text-xs">
@@ -2138,6 +2183,8 @@ Do you want to continue?`}
                     </span>
                   </div>
                 </th>
+                ) : null}
+                {showOrderCol ? (
                 <th className="px-2 py-1.5 text-right align-bottom sm:px-2.5" scope="col">
                   <div className="flex w-full flex-col items-end gap-0.5">
                     <div className="inline-flex max-w-full items-center justify-center rounded-md border border-emerald-400/40 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[color:var(--text-primary)] sm:px-2 sm:text-xs">
@@ -2150,6 +2197,8 @@ Do you want to continue?`}
                     </span>
                   </div>
                 </th>
+                ) : null}
+                {showPaymentCol ? (
                 <th className="px-2 py-1.5 text-right align-bottom sm:px-2.5" scope="col">
                   <div className="flex w-full flex-col items-end gap-0.5">
                     <div className="inline-flex max-w-full items-center justify-center rounded-md border border-sky-400/40 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[color:var(--text-primary)] sm:px-2 sm:text-xs">
@@ -2162,12 +2211,9 @@ Do you want to continue?`}
                     </span>
                   </div>
                 </th>
-                {showLeadCol ? (
-                  <th className="hidden px-2 py-1.5 md:table-cell md:px-2.5" scope="col" />
                 ) : null}
-                {showConfirmCol ? (
-                  <th className="hidden px-2 py-1.5 sm:table-cell sm:px-2.5" scope="col" />
-                ) : null}
+                {showLeadCol ? <th className="px-2 py-1.5 sm:px-2.5" scope="col" /> : null}
+                {showConfirmCol ? <th className="px-2 py-1.5 sm:px-2.5" scope="col" /> : null}
               </tr>
               <tr className="border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] shadow-sm">
                 <th
@@ -2187,6 +2233,7 @@ Do you want to continue?`}
                     <ProjectsSortGlyph sortKey="customerName" />
                   </button>
                 </th>
+                {showDhCol ? (
                 <th
                   scope="col"
                   className="w-[4.5rem] max-w-[4.5rem] px-1.5 py-2 align-middle sm:px-2 sm:py-2"
@@ -2212,10 +2259,11 @@ Do you want to continue?`}
                     <ProjectsSortGlyph sortKey="dealHealthScore" />
                   </button>
                 </th>
+                ) : null}
                 {showSegmentCol ? (
                 <th
                   scope="col"
-                  className="hidden px-2.5 py-2 align-middle lg:table-cell lg:px-3 lg:py-2"
+                  className="px-2.5 py-2 align-middle sm:px-3 sm:py-2"
                   aria-sort={
                     filters.sortBy === 'projectType'
                       ? filters.sortOrder === 'asc'
@@ -2260,6 +2308,7 @@ Do you want to continue?`}
                     <ProjectsSortGlyph sortKey="projectStatus" />
                   </button>
                 </th>
+                {showCapacityCol ? (
                 <th
                   scope="col"
                   className="px-2 py-2 align-middle sm:px-2.5 sm:py-2"
@@ -2283,6 +2332,8 @@ Do you want to continue?`}
                     <ProjectsSortGlyph sortKey="systemCapacity" />
                   </button>
                 </th>
+                ) : null}
+                {showOrderCol ? (
                 <th
                   scope="col"
                   className="px-2 py-2 align-middle sm:px-2.5 sm:py-2"
@@ -2306,6 +2357,8 @@ Do you want to continue?`}
                     <ProjectsSortGlyph sortKey="projectCost" />
                   </button>
                 </th>
+                ) : null}
+                {showPaymentCol ? (
                 <th
                   scope="col"
                   className="px-2 py-2 align-middle sm:px-2.5 sm:py-2"
@@ -2329,10 +2382,11 @@ Do you want to continue?`}
                     <ProjectsSortGlyph sortKey="paymentStatus" />
                   </button>
                 </th>
+                ) : null}
                 {showLeadCol ? (
                 <th
                   scope="col"
-                  className="hidden px-2 py-2 align-middle md:table-cell md:px-2.5 md:py-2"
+                  className="px-2 py-2 align-middle sm:px-2.5 sm:py-2"
                   aria-sort={
                     filters.sortBy === 'leadSource'
                       ? filters.sortOrder === 'asc'
@@ -2357,7 +2411,7 @@ Do you want to continue?`}
                 {showConfirmCol ? (
                 <th
                   scope="col"
-                  className="hidden px-2 py-2 align-middle sm:table-cell sm:px-2.5 sm:py-2"
+                  className="px-2 py-2 align-middle sm:px-2.5 sm:py-2"
                   aria-sort={
                     filters.sortBy === 'confirmationDate'
                       ? filters.sortOrder === 'asc'
@@ -2451,6 +2505,7 @@ Do you want to continue?`}
                       </span>
                     </p>
                   </td>
+                  {showDhCol ? (
                   <td className="px-1 py-2 text-center align-middle sm:px-1.5 lg:py-1.5">
                     <div className="flex justify-center">
                       <HealthBadge
@@ -2460,8 +2515,9 @@ Do you want to continue?`}
                       />
                     </div>
                   </td>
+                  ) : null}
                   {showSegmentCol ? (
-                  <td className="hidden min-w-0 px-2 py-2 sm:px-2.5 lg:py-1.5 lg:pl-2 lg:pr-2 lg:table-cell">
+                  <td className="min-w-0 px-2 py-2 sm:px-2.5 lg:py-1.5 lg:pl-2 lg:pr-2">
                     {(() => {
                       const seg = projectSegmentLabels(project.type)
                       return (
@@ -2482,6 +2538,7 @@ Do you want to continue?`}
                       peStatus={peStatusByProjectId.get(project.id)}
                     />
                   </td>
+                  {showCapacityCol ? (
                   <td className="min-w-0 py-2 pl-1.5 pr-2 text-right tabular-nums sm:px-2 lg:py-1.5">
                     <CapacitySpecsPopover
                       systemCapacity={project.systemCapacity}
@@ -2492,16 +2549,21 @@ Do you want to continue?`}
                       panelCapacityW={project.panelCapacityW}
                     />
                   </td>
+                  ) : null}
+                  {showOrderCol ? (
                   <td className="min-w-0 px-2 py-2 text-right tabular-nums sm:px-2.5 lg:py-1.5 lg:pl-2 lg:pr-2">
                     <span className="text-xs font-bold text-[color:var(--accent-teal)] transition-colors group-hover:opacity-90 lg:text-[13px]">
                       {project.projectCost ? `₹${project.projectCost.toLocaleString('en-IN')}` : '—'}
                     </span>
                   </td>
+                  ) : null}
+                  {showPaymentCol ? (
                   <td className="min-w-0 px-2 py-2 text-center sm:px-2.5 lg:py-1.5 lg:px-2">
                     <PaymentStatusBadge project={project} compact />
                   </td>
+                  ) : null}
                   {showLeadCol ? (
-                  <td className="hidden min-w-0 px-2 py-2 pl-2 pr-2 text-center md:table-cell lg:py-1.5 lg:pl-2 lg:pr-2">
+                  <td className="min-w-0 px-2 py-2 pl-2 pr-2 text-center lg:py-1.5 lg:pl-2 lg:pr-2">
                     <LeadSourcePill
                       leadSource={project.leadSource}
                       leadSourceDetails={project.leadSourceDetails}
@@ -2509,7 +2571,7 @@ Do you want to continue?`}
                   </td>
                   ) : null}
                   {showConfirmCol ? (
-                  <td className="hidden min-w-0 whitespace-nowrap px-1 py-2 text-center tabular-nums sm:table-cell sm:px-1.5 lg:py-1.5 lg:pl-1 lg:pr-1.5">
+                  <td className="min-w-0 whitespace-nowrap px-1 py-2 text-center tabular-nums sm:px-1.5 lg:py-1.5 lg:pl-1 lg:pr-1.5">
                     <span className="inline-block text-[11px] font-medium text-[color:var(--text-secondary)] lg:text-xs">
                       {project.confirmationDate ? format(new Date(project.confirmationDate), 'dd MMM yy') : '—'}
                     </span>

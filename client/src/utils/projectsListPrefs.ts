@@ -5,9 +5,89 @@ export const PROJECTS_HIDDEN_COLS_KEY = 'rayenna_projects_hidden_cols'
 export const PROJECTS_LAST_PRESET_KEY = 'rayenna_projects_last_preset'
 
 export type ProjectsTableDensity = 'comfortable' | 'compact'
-export type ProjectsOptionalCol = 'segment' | 'lead' | 'confirm'
 
-const OPTIONAL_COLS: ProjectsOptionalCol[] = ['segment', 'lead', 'confirm']
+/** Columns the user can hide. Project + Stage stay always visible. */
+export type ProjectsOptionalCol =
+  | 'dh'
+  | 'segment'
+  | 'capacity'
+  | 'order'
+  | 'payment'
+  | 'lead'
+  | 'confirm'
+
+export const PROJECTS_OPTIONAL_COLS: ProjectsOptionalCol[] = [
+  'dh',
+  'segment',
+  'capacity',
+  'order',
+  'payment',
+  'lead',
+  'confirm',
+]
+
+export const PROJECTS_OPTIONAL_COL_LABELS: Record<ProjectsOptionalCol, string> = {
+  dh: 'Deal Health (DH)',
+  segment: 'Segment',
+  capacity: 'Capacity',
+  order: 'Order value',
+  payment: 'Payment',
+  lead: 'Lead source',
+  confirm: 'Confirmation date',
+}
+
+/** Phone table “Slim” preset — hide the widest secondary columns. */
+export const PROJECTS_SLIM_HIDDEN_COLS: ProjectsOptionalCol[] = [
+  'segment',
+  'lead',
+  'confirm',
+]
+
+/** Set once after seeding Slim on first mobile table visit (session). */
+export const PROJECTS_MOBILE_TABLE_COLS_SEEDED_KEY = 'rayenna_projects_mobile_table_cols_seeded'
+
+const OPTIONAL_COLS = PROJECTS_OPTIONAL_COLS
+
+function orderedHidden(cols: Iterable<ProjectsOptionalCol>): ProjectsOptionalCol[] {
+  const set = new Set(cols)
+  return OPTIONAL_COLS.filter((c) => set.has(c))
+}
+
+/** True when Segment, Lead source, and Confirmation date are all hidden. */
+export function isProjectsSlimCols(hidden: ProjectsOptionalCol[]): boolean {
+  return PROJECTS_SLIM_HIDDEN_COLS.every((c) => hidden.includes(c))
+}
+
+/** Hide Segment / Lead / Confirm; keep any other already-hidden columns. */
+export function applyProjectsSlimCols(hidden: ProjectsOptionalCol[]): ProjectsOptionalCol[] {
+  return orderedHidden([...hidden, ...PROJECTS_SLIM_HIDDEN_COLS])
+}
+
+/** Show Segment / Lead / Confirm again; leave other hidden columns alone. */
+export function clearProjectsSlimCols(hidden: ProjectsOptionalCol[]): ProjectsOptionalCol[] {
+  const slim = new Set<ProjectsOptionalCol>(PROJECTS_SLIM_HIDDEN_COLS)
+  return orderedHidden(hidden.filter((c) => !slim.has(c)))
+}
+
+/**
+ * First time a phone opens Table view with no saved column prefs → Slim.
+ * Does not override an existing hidden-cols preference.
+ */
+export function seedMobileTableSlimColsIfNeeded(
+  isNarrow: boolean,
+  listViewMode: 'cards' | 'table',
+): ProjectsOptionalCol[] | null {
+  if (!isNarrow || listViewMode !== 'table') return null
+  try {
+    if (sessionStorage.getItem(PROJECTS_MOBILE_TABLE_COLS_SEEDED_KEY) === '1') return null
+    sessionStorage.setItem(PROJECTS_MOBILE_TABLE_COLS_SEEDED_KEY, '1')
+    if (sessionStorage.getItem(PROJECTS_HIDDEN_COLS_KEY) != null) return null
+    writeProjectsHiddenCols(PROJECTS_SLIM_HIDDEN_COLS)
+    return [...PROJECTS_SLIM_HIDDEN_COLS]
+  } catch {
+    return null
+  }
+}
 
 export function readProjectsTableDensity(): ProjectsTableDensity {
   try {
@@ -103,24 +183,22 @@ export function projectsTableTotalRemWidth(
   hidden: ProjectsOptionalCol[],
 ): number {
   const w = projectsTableColRemWidths(density)
-  let total = w.project + w.dh + w.stage + w.capacity + w.order + w.payment
+  let total = w.project + w.stage
+  if (!hidden.includes('dh')) total += w.dh
   if (!hidden.includes('segment')) total += w.segment
+  if (!hidden.includes('capacity')) total += w.capacity
+  if (!hidden.includes('order')) total += w.order
+  if (!hidden.includes('payment')) total += w.payment
   if (!hidden.includes('lead')) total += w.lead
   if (!hidden.includes('confirm')) total += w.confirm
   return total
 }
 
-export function countProjectsTableVisibleCols(
-  viewportWidth: number,
-  hidden: ProjectsOptionalCol[],
-): number {
-  // Always-on: Project, DH, Stage, Capacity, Order, Payment
-  let n = 6
-  const showSegment = !hidden.includes('segment') && viewportWidth >= 1024
-  const showLead = !hidden.includes('lead') && viewportWidth >= 768
-  const showConfirm = !hidden.includes('confirm') && viewportWidth >= 640
-  if (showSegment) n += 1
-  if (showLead) n += 1
-  if (showConfirm) n += 1
+/** Always-on Project + Stage, plus any optional cols not hidden. Viewport no longer overrides prefs. */
+export function countProjectsTableVisibleCols(hidden: ProjectsOptionalCol[]): number {
+  let n = 2
+  for (const id of OPTIONAL_COLS) {
+    if (!hidden.includes(id)) n += 1
+  }
   return n
 }

@@ -6,7 +6,10 @@ import {
   projectsPresetsForRole,
 } from './projectsListPresets'
 import {
+  applyProjectsSlimCols,
+  clearProjectsSlimCols,
   countProjectsTableVisibleCols,
+  isProjectsSlimCols,
   projectsTableTotalRemWidth,
 } from './projectsListPrefs'
 
@@ -47,13 +50,39 @@ describe('projectsListPresets', () => {
 describe('projectsListPrefs', () => {
   it('shrinks total width when optional columns are hidden', () => {
     const full = projectsTableTotalRemWidth('comfortable', [])
-    const slim = projectsTableTotalRemWidth('comfortable', ['segment', 'lead', 'confirm'])
+    const slim = projectsTableTotalRemWidth('comfortable', [
+      'dh',
+      'segment',
+      'capacity',
+      'order',
+      'payment',
+      'lead',
+      'confirm',
+    ])
     expect(slim).toBeLessThan(full)
   })
 
-  it('counts visible columns with viewport + hidden prefs', () => {
-    expect(countProjectsTableVisibleCols(1200, [])).toBe(9)
-    expect(countProjectsTableVisibleCols(1200, ['segment', 'lead', 'confirm'])).toBe(6)
-    expect(countProjectsTableVisibleCols(700, [])).toBe(7)
+  it('counts visible columns from hidden prefs (Project + Stage always on)', () => {
+    expect(countProjectsTableVisibleCols([])).toBe(9)
+    expect(countProjectsTableVisibleCols(['segment', 'lead', 'confirm'])).toBe(6)
+    expect(
+      countProjectsTableVisibleCols([
+        'dh',
+        'segment',
+        'capacity',
+        'order',
+        'payment',
+        'lead',
+        'confirm',
+      ]),
+    ).toBe(2)
+  })
+
+  it('Slim preset hides Segment / Lead / Confirm and can clear them', () => {
+    expect(isProjectsSlimCols([])).toBe(false)
+    const slim = applyProjectsSlimCols(['dh'])
+    expect(slim).toEqual(['dh', 'segment', 'lead', 'confirm'])
+    expect(isProjectsSlimCols(slim)).toBe(true)
+    expect(clearProjectsSlimCols(slim)).toEqual(['dh'])
   })
 })
