@@ -490,19 +490,31 @@ const Projects = () => {
     return id && valid.includes(id as ProjectsPresetId) ? (id as ProjectsPresetId) : null
   })
 
-  const showDhCol = !hiddenCols.includes('dh')
-  const showSegmentCol = !hiddenCols.includes('segment')
-  const showCapacityCol = !hiddenCols.includes('capacity')
-  const showOrderCol = !hiddenCols.includes('order')
-  const showPaymentCol = !hiddenCols.includes('payment')
-  const showLeadCol = !hiddenCols.includes('lead')
-  const showConfirmCol = !hiddenCols.includes('confirm')
-  const tableColRem = projectsTableColRemWidths(tableDensity)
-  const tableTotalRem = projectsTableTotalRemWidth(tableDensity, hiddenCols)
-
   const [isNarrowViewport, setIsNarrowViewport] = useState(() =>
     typeof window !== 'undefined' ? window.matchMedia(PROJECTS_CARDS_MAX_MQ).matches : false,
   )
+
+  /**
+   * Laptop/desktop table: always Comfortable + every column (fills the screen).
+   * Phone table: session density / Slim / Columns sheet prefs.
+   */
+  const effectiveTableDensity: ProjectsTableDensity = isNarrowViewport
+    ? tableDensity
+    : 'comfortable'
+  const effectiveHiddenCols: ProjectsOptionalCol[] = isNarrowViewport ? hiddenCols : []
+
+  const showDhCol = !effectiveHiddenCols.includes('dh')
+  const showSegmentCol = !effectiveHiddenCols.includes('segment')
+  const showCapacityCol = !effectiveHiddenCols.includes('capacity')
+  const showOrderCol = !effectiveHiddenCols.includes('order')
+  const showPaymentCol = !effectiveHiddenCols.includes('payment')
+  const showLeadCol = !effectiveHiddenCols.includes('lead')
+  const showConfirmCol = !effectiveHiddenCols.includes('confirm')
+  const tableColRem = projectsTableColRemWidths(effectiveTableDensity)
+  const tableTotalRem = projectsTableTotalRemWidth(effectiveTableDensity, effectiveHiddenCols)
+  /** Desktop: rem ratios → % of table so Comfortable + all cols fill the card with no empty strip */
+  const tableColPct = (rem: number) =>
+    tableTotalRem > 0 ? `${((rem / tableTotalRem) * 100).toFixed(3)}%` : 'auto'
   const [listViewOverride, setListViewOverride] = useState<'cards' | 'table' | null>(() => {
     try {
       const v = sessionStorage.getItem(PROJECTS_LIST_VIEW_STORAGE_KEY)
@@ -527,8 +539,8 @@ const Projects = () => {
     getProjectsTableVisibleColumnCount(readProjectsHiddenCols()),
   )
   useEffect(() => {
-    setProjectsTableVisibleCols(getProjectsTableVisibleColumnCount(hiddenCols))
-  }, [hiddenCols])
+    setProjectsTableVisibleCols(getProjectsTableVisibleColumnCount(effectiveHiddenCols))
+  }, [effectiveHiddenCols])
 
   useEffect(() => {
     const mqCards = window.matchMedia(PROJECTS_CARDS_MAX_MQ)
@@ -1429,7 +1441,8 @@ const Projects = () => {
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            {listViewMode === 'table' ? (
+            {/* Columns / Slim / density — phone table only; desktop always shows all columns comfortably */}
+            {listViewMode === 'table' && isNarrowViewport ? (
               <ProjectsTablePrefsMenu
                 density={tableDensity}
                 hiddenCols={hiddenCols}
@@ -1994,10 +2007,9 @@ Do you want to continue?`}
               </button>
             </div>
           ) : null}
-          {listViewMode === 'table' ? (
+          {listViewMode === 'table' && isNarrowViewport ? (
             <div className="text-xs text-[color:var(--text-muted)]">
-              <span className="hidden sm:inline">Tip: Shift + scroll to move horizontally</span>
-              <span className="sm:hidden">Tip: swipe left/right on the table</span>
+              Tip: swipe left/right on the table
             </div>
           ) : null}
         </div>
@@ -2121,23 +2133,22 @@ Do you want to continue?`}
             @media (min-width: 1024px) {
               .projects-table-fit {
                 table-layout: fixed;
-                width: var(--projects-table-total-width);
-                min-width: var(--projects-table-total-width);
-                max-width: var(--projects-table-total-width);
-                --projects-table-total-width: ${tableTotalRem}rem;
+                width: 100%;
+                min-width: 100%;
+                max-width: 100%;
               }
               .projects-table-fit col {
                 display: table-column !important;
               }
-              .projects-col--project { width: ${tableColRem.project}rem; }
-              .projects-col--dh { width: ${tableColRem.dh}rem; }
-              .projects-col--segment { width: ${tableColRem.segment}rem; }
-              .projects-col--stage { width: ${tableColRem.stage}rem; }
-              .projects-col--capacity { width: ${tableColRem.capacity}rem; }
-              .projects-col--order { width: ${tableColRem.order}rem; }
-              .projects-col--payment { width: ${tableColRem.payment}rem; }
-              .projects-col--lead { width: ${tableColRem.lead}rem; }
-              .projects-col--confirm { width: ${tableColRem.confirm}rem; }
+              .projects-col--project { width: ${tableColPct(tableColRem.project)}; }
+              .projects-col--dh { width: ${tableColPct(tableColRem.dh)}; }
+              .projects-col--segment { width: ${tableColPct(tableColRem.segment)}; }
+              .projects-col--stage { width: ${tableColPct(tableColRem.stage)}; }
+              .projects-col--capacity { width: ${tableColPct(tableColRem.capacity)}; }
+              .projects-col--order { width: ${tableColPct(tableColRem.order)}; }
+              .projects-col--payment { width: ${tableColPct(tableColRem.payment)}; }
+              .projects-col--lead { width: ${tableColPct(tableColRem.lead)}; }
+              .projects-col--confirm { width: ${tableColPct(tableColRem.confirm)}; }
 
               .projects-table-fit thead tr:nth-child(2) th {
                 overflow: visible;
@@ -2148,7 +2159,7 @@ Do you want to continue?`}
         </style>
           <table
             className={`projects-table-fit leading-snug${
-              tableDensity === 'compact'
+              effectiveTableDensity === 'compact'
                 ? ' projects-table-fit--compact'
                 : ' projects-table-fit--comfortable'
             }`}
