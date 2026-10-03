@@ -15,15 +15,19 @@ const MONTHS = [
   'December',
 ] as const
 
-const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+export const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export function monthLabel(month: number, year: number): string {
   return `${MONTHS[month - 1] ?? 'Month'} ${year}`
 }
 
 export function distributionFromReading(reading: EnergyReading) {
-  const selfConsumed = Math.min(reading.totalConsumed, reading.totalGenerated)
-  const gridExport = Math.max(0, reading.totalGenerated - selfConsumed)
+  const generated = Math.max(0, reading.totalGenerated)
+  const selfConsumed = Math.min(Math.max(0, reading.totalConsumed), generated)
+  const gridExport = Math.min(
+    Math.max(0, reading.gridExport),
+    Math.max(0, generated - selfConsumed),
+  )
   const gridImport = Math.max(0, reading.totalConsumed - selfConsumed)
   const total = selfConsumed + gridExport + gridImport || 1
   return [

@@ -25,11 +25,21 @@ import {
   formatRupee,
   monthLabel,
   shiftMonth,
+  SHORT_MONTHS,
 } from '@/utils/energyCharts'
 
 const CHART_GREEN = '#10B981'
 const PIE_CHART_H = 224
+const STACK_CHART_H = 268
 const BAR_CHART_H = 208
+const MONTH_TICK = { fill: 'var(--chart-axis-text)', fontSize: 9 }
+
+const chartTooltipStyle = {
+  background: 'var(--chart-tooltip-bg)',
+  border: '1px solid var(--chart-tooltip-border)',
+  borderRadius: 8,
+  fontSize: 12,
+}
 
 type ViewMode = 'month' | 'year'
 
@@ -61,6 +71,42 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint?:
       {hint ? (
         <p className="mt-1 text-[10px] text-[color:var(--text-tertiary)]">{hint}</p>
       ) : null}
+    </div>
+  )
+}
+
+type MonthlyStackRow = {
+  name: string
+  generated: number
+  selfUse: number
+  exportKwh: number
+  rest: number
+}
+
+function GenerationStackTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean
+  payload?: Array<{ payload?: MonthlyStackRow }>
+}) {
+  const row = payload?.[0]?.payload
+  if (!active || !row) return null
+  const parts: Array<[string, number]> = [
+    ['Self-use', row.selfUse],
+    ['Export', row.exportKwh],
+  ]
+  return (
+    <div className="recharts-default-tooltip" style={{ ...chartTooltipStyle, padding: '8px 10px' }}>
+      <p className="recharts-tooltip-label" style={{ margin: 0 }}>
+        Generated (Live or Expected): {Math.round(row.generated)} kWh
+      </p>
+      {parts.map(([name, value]) => (
+        <p key={name} style={{ margin: '2px 0 0' }}>
+          <span className="recharts-tooltip-item-name">{name}: </span>
+          <span className="recharts-tooltip-item-value">{Math.round(value)} kWh</span>
+        </p>
+      ))}
     </div>
   )
 }
@@ -112,10 +158,28 @@ export default function Track() {
     [reading],
   )
 
+  const monthlyStack = useMemo(
+    () =>
+      (annualMonths ?? []).map((m) => {
+        const generated = Math.max(0, m.totalGenerated)
+        const selfUse = Math.min(Math.max(0, m.totalConsumed), generated)
+        const exportKwh = Math.min(Math.max(0, m.gridExport), Math.max(0, generated - selfUse))
+        return {
+          name: SHORT_MONTHS[m.month - 1],
+          generated,
+          selfUse,
+          exportKwh,
+          rest: Math.max(0, generated - selfUse - exportKwh),
+        }
+      }),
+    [annualMonths],
+  )
+  const stackHasRest = monthlyStack.some((m) => m.rest > 0)
+
   const savingsTrend = useMemo(
     () =>
       (annualMonths ?? []).map((m) => ({
-        name: ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][m.month - 1],
+        name: SHORT_MONTHS[m.month - 1],
         savings: m.totalSavings,
       })),
     [annualMonths],
@@ -345,6 +409,47 @@ export default function Track() {
 
           <HelpContextSuggestions screen="track" className="mb-4" title="Help for your energy data" />
 
+          {monthlyStack.length > 0 ? (
+            <section className="zenith-glass mb-4 min-w-0 overflow-hidden rounded-2xl p-4">
+              <h2 className="text-sm font-bold text-[color:var(--text-primary)]">Monthly generation</h2>
+              <p className="mb-3 text-xs text-[color:var(--text-muted)]">
+                Each column is generated kWh — live or expected. Typical self-use and export sit inside that total
+              </p>
+              <HubChart height={STACK_CHART_H}>
+                <BarChart data={monthlyStack} margin={{ top: 8, right: 4, left: -4, bottom: 0 }}>
+                  <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
+                  <XAxis dataKey="name" interval={0} tick={MONTH_TICK} />
+                  <YAxis tick={{ fill: 'var(--chart-axis-text)', fontSize: 10 }} width={40} />
+                  <Tooltip content={<GenerationStackTooltip />} />
+                  <Legend
+                    itemSorter={(item) => (item.value === 'Self-use' ? 0 : 1)}
+                    wrapperStyle={{ fontSize: 11, width: '100%' }}
+                    layout="horizontal"
+                    verticalAlign="bottom"
+                    align="center"
+                  />
+                  <Bar dataKey="selfUse" name="Self-use" stackId="kwh" fill="var(--accent-green)" />
+                  <Bar
+                    dataKey="exportKwh"
+                    name="Export"
+                    stackId="kwh"
+                    fill="var(--accent-gold)"
+                    radius={stackHasRest ? undefined : [4, 4, 0, 0]}
+                  />
+                  {stackHasRest ? (
+                    <Bar
+                      dataKey="rest"
+                      stackId="kwh"
+                      fill="var(--text-muted)"
+                      legendType="none"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  ) : null}
+                </BarChart>
+              </HubChart>
+            </section>
+          ) : null}
+
           {viewMode === 'month' && distribution.length > 0 ? (
             <section className="zenith-glass mb-4 min-w-0 overflow-hidden rounded-2xl p-4">
               <h2 className="text-sm font-bold text-[color:var(--text-primary)]">Typical energy split</h2>
@@ -372,12 +477,7 @@ export default function Track() {
                       `${Math.round(Number(value) || 0)} kWh`,
                       String(name),
                     ]}
-                    contentStyle={{
-                      background: 'var(--chart-tooltip-bg)',
-                      border: '1px solid var(--chart-tooltip-border)',
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
+                    contentStyle={chartTooltipStyle}
                   />
                   <Legend
                     wrapperStyle={{ fontSize: 11, width: '100%' }}
@@ -400,16 +500,11 @@ export default function Track() {
             <HubChart height={BAR_CHART_H}>
               <BarChart data={savingsTrend} margin={{ top: 8, right: 4, left: -4, bottom: 0 }}>
                 <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fill: 'var(--chart-axis-text)', fontSize: 10 }} />
+                <XAxis dataKey="name" interval={0} tick={MONTH_TICK} />
                 <YAxis tick={{ fill: 'var(--chart-axis-text)', fontSize: 10 }} width={40} />
                 <Tooltip
                   formatter={(v) => [formatRupee(Number(v) || 0), 'Savings']}
-                  contentStyle={{
-                    background: 'var(--chart-tooltip-bg)',
-                    border: '1px solid var(--chart-tooltip-border)',
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
+                  contentStyle={chartTooltipStyle}
                 />
                 <Bar dataKey="savings" name="Savings" fill={CHART_GREEN} radius={[4, 4, 0, 0]} />
               </BarChart>
