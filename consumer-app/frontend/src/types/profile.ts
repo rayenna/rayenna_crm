@@ -40,6 +40,7 @@ export interface CrmContact {
 export interface CrmProfile {
   customerId: string
   customerType: 'RESIDENTIAL' | 'APARTMENT' | 'COMMERCIAL' | null
+  consumerNumber: string | null
   prefix: string | null
   firstName: string | null
   middleName: string | null

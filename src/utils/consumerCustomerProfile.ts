@@ -1,4 +1,4 @@
-import type { Customer, CustomerType } from '@prisma/client';
+import { CustomerType, type Customer } from '@prisma/client';
 import {
   parseCustomerContactNumbers,
   parseCustomerContacts,
@@ -8,6 +8,7 @@ import {
 export type ConsumerCrmProfileDto = {
   customerId: string;
   customerType: CustomerType | null;
+  consumerNumber: string | null;
   prefix: string | null;
   firstName: string | null;
   middleName: string | null;
@@ -25,14 +26,35 @@ export type ConsumerCrmProfileDto = {
   contacts: CustomerContactRow[];
 };
 
+/** Customer Master stores email as a JSON string array, or sometimes a plain address. */
+export function parseStoredEmailList(raw: string | null | undefined): string[] {
+  if (raw == null) return [];
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+  if (trimmed.startsWith('[') || (trimmed.startsWith('"') && trimmed.endsWith('"'))) {
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (Array.isArray(parsed)) {
+        return parsed.flatMap((item) => parseStoredEmailList(item == null ? '' : String(item)));
+      }
+      if (typeof parsed === 'string') return parseStoredEmailList(parsed);
+    } catch {
+      // Plain address that happens to start with a bracket.
+    }
+  }
+  return [trimmed];
+}
+
 function collectEmails(customer: Customer): string[] {
   const emails: string[] = [];
   const seen = new Set<string>();
   const push = (value: string | null | undefined) => {
-    const trimmed = value?.trim();
-    if (!trimmed || seen.has(trimmed)) return;
-    seen.add(trimmed);
-    emails.push(trimmed);
+    for (const item of parseStoredEmailList(value)) {
+      const key = item.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      emails.push(item);
+    }
   };
 
   push(customer.email);
@@ -89,7 +111,9 @@ export function buildConsumerCrmProfile(customer: Customer): ConsumerCrmProfileD
 
   return {
     customerId: customer.customerId,
-    customerType: customer.customerType,
+    // Customer Master shows a blank type as Residential.
+    customerType: customer.customerType ?? CustomerType.RESIDENTIAL,
+    consumerNumber: customer.consumerNumber?.trim() || null,
     prefix: primary?.prefix?.trim() || customer.prefix?.trim() || null,
     firstName: primary?.firstName?.trim() || customer.firstName?.trim() || null,
     middleName: primary?.middleName?.trim() || customer.middleName?.trim() || null,

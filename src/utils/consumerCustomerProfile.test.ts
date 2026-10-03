@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   allPhonesFromCustomer,
+  buildConsumerCrmProfile,
   primaryEmailFromCustomer,
   primaryPhoneFromCustomer,
 } from './consumerCustomerProfile';
@@ -53,6 +54,22 @@ describe('consumerCustomerProfile contacts', () => {
 
   it('uses first email from customer master', () => {
     expect(primaryEmailFromCustomer(mockCustomer())).toBe('ajay@example.com');
+  });
+
+  it('unwraps a JSON email list and fills a blank customer type', () => {
+    const profile = buildConsumerCrmProfile(
+      mockCustomer({
+        customerType: null,
+        email: '["ajay@example.com"]',
+        consumerNumber: '  1156789012345  ',
+      }),
+    );
+    expect(profile.customerType).toBe(CustomerType.RESIDENTIAL);
+    expect(profile.emails).toEqual(['ajay@example.com']);
+    expect(profile.consumerNumber).toBe('1156789012345');
+    expect(primaryEmailFromCustomer(mockCustomer({ email: '["ajay@example.com"]' }))).toBe(
+      'ajay@example.com',
+    );
   });
 
   it('includes apartment contact phones', () => {

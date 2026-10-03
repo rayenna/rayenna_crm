@@ -31,8 +31,7 @@ import { subscribeHubPush } from '@/utils/hubPush'
 function customerTypeLabel(type: CrmProfile['customerType']) {
   if (type === 'APARTMENT') return 'Apartment'
   if (type === 'COMMERCIAL') return 'Commercial'
-  if (type === 'RESIDENTIAL') return 'Residential'
-  return '—'
+  return 'Residential'
 }
 
 function displayNameFromCrm(crm: CrmProfile, username: string) {
@@ -137,6 +136,7 @@ function PersonalInfoModal({
           <ReadOnlyField label="Username" value={username} />
           <ReadOnlyField label="Customer type" value={customerTypeLabel(crm.customerType)} />
           <ReadOnlyField label="Customer ID" value={crm.customerId} />
+          <ReadOnlyField label="DISCOM consumer number" value={crm.consumerNumber?.trim() || '—'} />
           {crm.companyName ? <ReadOnlyField label="Society / company" value={crm.companyName} /> : null}
           {crm.firstName ? <ReadOnlyField label="First name" value={crm.firstName} /> : null}
           {crm.middleName ? <ReadOnlyField label="Middle name" value={crm.middleName} /> : null}
