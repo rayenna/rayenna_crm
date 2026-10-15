@@ -15,6 +15,7 @@ import {
 } from '@prisma/client';
 import prisma from '../prisma';
 import { authenticate } from '../middleware/auth';
+import { rateLimit } from '../middleware/rateLimit';
 import { istMonthBoundsForFyMonth } from '../utils/istCalendar';
 import {
   aggregateProjectsByCustomerType,
@@ -24,6 +25,10 @@ import {
 import { loadLifecycleBrandGaps } from '../utils/lifecycleBrandGaps';
 import { loadDataSenseGaps } from '../utils/dataSense';
 import { isSupportTicketOverdue } from '../utils/supportTicketQueue';
+import {
+  isZenithNlAskEnabled,
+  runZenithNlQuery,
+} from '../services/zenithNlQueryService';
 
 const router = express.Router();
 
@@ -3219,5 +3224,118 @@ router.get('/zenith-focus', authenticate, async (req: Request, res: Response) =>
     res.status(500).json({ error: error.message || 'Failed to load Zenith focus' });
   }
 });
+
+const zenithNlLimiter = rateLimit(30, 10 * 60 * 1000);
+
+/**
+ * Zenith Natural Language Ask — Sales / Management / Admin / Operations / Finance.
+ * Claude (Anthropic) maps question → typed intent; numbers come from deterministic Prisma aggregates.
+ */
+router.post(
+  '/zenith-nl-query',
+  authenticate,
+  zenithNlLimiter,
+  async (req: Request, res: Response) => {
+    try {
+      const role = req.user?.role;
+      const userId = req.user?.id;
+      const allowed: UserRole[] = [
+        UserRole.SALES,
+        UserRole.MANAGEMENT,
+        UserRole.ADMIN,
+        UserRole.OPERATIONS,
+        UserRole.FINANCE,
+      ];
+      if (!role || !userId || !allowed.includes(role)) {
+        return res.status(403).json({
+          error: 'Zenith Ask is not available for your role.',
+        });
+      }
+
+      if (!isZenithNlAskEnabled()) {
+        return res.status(503).json({
+          error:
+            'Zenith Ask is not configured. Set ANTHROPIC_API_KEY on the API server to enable natural-language analytics.',
+        });
+      }
+
+      const question = typeof req.body?.question === 'string' ? req.body.question : '';
+      const fyFilters = Array.isArray(req.body?.fy)
+        ? (req.body.fy as unknown[]).map(String).filter(Boolean)
+        : typeof req.body?.fy === 'string' && req.body.fy
+          ? [String(req.body.fy)]
+          : [];
+      const monthFilters = Array.isArray(req.body?.month)
+        ? (req.body.month as unknown[]).map(String).filter(Boolean)
+        : typeof req.body?.month === 'string' && req.body.month
+          ? [String(req.body.month)]
+          : [];
+      const quarterFilters = Array.isArray(req.body?.quarter)
+        ? (req.body.quarter as unknown[]).map(String).filter(Boolean)
+        : typeof req.body?.quarter === 'string' && req.body.quarter
+          ? [String(req.body.quarter)]
+          : [];
+
+      const priorRaw = req.body?.prior as
+        | { question?: unknown; metric?: unknown; filters?: unknown }
+        | null
+        | undefined;
+      const prior =
+        priorRaw &&
+        typeof priorRaw.question === 'string' &&
+        typeof priorRaw.metric === 'string'
+          ? {
+              question: priorRaw.question.slice(0, 500),
+              metric: priorRaw.metric.slice(0, 80),
+              filters:
+                priorRaw.filters && typeof priorRaw.filters === 'object'
+                  ? (priorRaw.filters as {
+                      projectStatus?: string;
+                      paymentStatus?: string;
+                      peBucket?: 'proposal-ready' | 'draft' | 'not-started' | 'rest';
+                      leadSource?: string;
+                      search?: string;
+                    })
+                  : undefined,
+            }
+          : null;
+
+      const baseWhere: Record<string, unknown> = {};
+      if (role === UserRole.SALES) {
+        baseWhere.salespersonId = userId;
+      }
+      const where = applyDateFilters(baseWhere, fyFilters, monthFilters, quarterFilters);
+
+      const result = await runZenithNlQuery({
+        question,
+        role,
+        userId,
+        where: where as Prisma.ProjectWhereInput,
+        dateFilter: {
+          selectedFYs: fyFilters,
+          selectedQuarters: quarterFilters,
+          selectedMonths: monthFilters,
+        },
+        prior,
+      });
+
+      return res.json(result);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : '';
+      if (msg === 'ANTHROPIC_API_KEY_MISSING') {
+        return res.status(503).json({
+          error:
+            'Zenith Ask is not configured. Set ANTHROPIC_API_KEY on the API server to enable natural-language analytics.',
+        });
+      }
+      if (error instanceof Error && error.name === 'ZenithNlClaudeError') {
+        console.error('[zenith-nl-query]', error.message);
+        return res.status(502).json({ error: error.message });
+      }
+      console.error('[zenith-nl-query]', error);
+      return res.status(500).json({ error: 'Failed to run Zenith Ask' });
+    }
+  },
+);
 
 export default router;

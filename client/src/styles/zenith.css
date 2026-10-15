@@ -1583,3 +1583,578 @@ body.zenith-drawer-open .zenith-root .recharts-tooltip-wrapper {
   background: color-mix(in srgb, var(--accent-teal-muted) 40%, transparent);
 }
 
+/* ── Zenith Ask (mobile-first composer + result; scrolls with page) ── */
+.zenith-root .zenith-ask-page-block {
+  position: relative;
+  z-index: 0;
+}
+
+.zenith-root .zenith-ask-page-block__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  width: 100%;
+}
+
+.zenith-root .zenith-ask-page-block__composer {
+  min-width: 0;
+  width: 100%;
+}
+
+.zenith-root .zenith-ask-suggestions {
+  min-width: 0;
+}
+
+.zenith-root .zenith-ask-suggestions__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.15rem;
+  padding-left: 0.15rem;
+}
+
+.zenith-root .zenith-ask-suggestions__sub {
+  display: none;
+  margin: 0;
+}
+
+.zenith-root .zenith-ask-composer__shell {
+  position: relative;
+  border-radius: 1.1rem;
+  padding: 0.7rem 0.75rem 0.75rem;
+  border: 1.5px solid color-mix(in srgb, var(--accent-gold) 48%, var(--border-default));
+  background:
+    linear-gradient(
+      155deg,
+      color-mix(in srgb, var(--accent-gold) 22%, var(--bg-card)) 0%,
+      var(--bg-card) 42%,
+      color-mix(in srgb, var(--bg-surface) 70%, var(--bg-card)) 100%
+    );
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent-gold) 18%, transparent),
+    0 10px 28px color-mix(in srgb, var(--accent-gold) 16%, transparent),
+    var(--shadow-card);
+  animation: zenith-ask-glow 3.6s ease-in-out infinite;
+}
+
+@keyframes zenith-ask-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent-gold) 18%, transparent),
+      0 10px 28px color-mix(in srgb, var(--accent-gold) 14%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent-gold) 36%, transparent),
+      0 14px 36px color-mix(in srgb, var(--accent-gold) 28%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zenith-root .zenith-ask-composer__shell {
+    animation: none;
+  }
+}
+
+.zenith-root .zenith-ask-composer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.zenith-root .zenith-ask-composer__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-inverse);
+  background: linear-gradient(
+    120deg,
+    var(--accent-gold) 0%,
+    color-mix(in srgb, var(--accent-gold) 70%, #c9a227) 100%
+  );
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-gold) 40%, transparent);
+}
+
+.zenith-root .zenith-ask-composer__hint {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.zenith-root .zenith-ask-composer__input {
+  display: block;
+  width: 100%;
+  min-height: 3.25rem;
+  resize: none;
+  border-radius: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--accent-gold) 28%, var(--border-default));
+  background: color-mix(in srgb, var(--bg-surface) 88%, var(--accent-gold) 6%);
+  color: var(--text-primary);
+  font-size: 1rem;
+  line-height: 1.35;
+  padding: 0.7rem 0.85rem;
+  outline: none;
+  font-family: inherit;
+}
+
+.zenith-root .zenith-ask-composer__input::placeholder {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.zenith-root .zenith-ask-composer__input:focus {
+  border-color: color-mix(in srgb, var(--accent-gold) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-gold) 22%, transparent);
+}
+
+.zenith-root .zenith-ask-composer__input:disabled {
+  opacity: 0.6;
+}
+
+.zenith-root .zenith-ask-composer__actions {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 0.55rem;
+  margin-top: 0.65rem;
+}
+
+.zenith-root .zenith-ask-composer__actions:has(> :only-child) {
+  grid-template-columns: 1fr;
+}
+
+.zenith-root .zenith-ask-composer__mic,
+.zenith-root .zenith-ask-composer__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 48px;
+  border-radius: 0.9rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  touch-action: manipulation;
+  cursor: pointer;
+  border: none;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.zenith-root .zenith-ask-composer__mic:active:not(:disabled),
+.zenith-root .zenith-ask-composer__submit:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.zenith-root .zenith-ask-composer__mic {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-surface) 80%, var(--accent-gold) 12%);
+  border: 1.5px solid color-mix(in srgb, var(--accent-gold) 45%, var(--border-default));
+}
+
+.zenith-root .zenith-ask-composer__mic.is-listening {
+  color: var(--accent-red);
+  border-color: color-mix(in srgb, var(--accent-red) 55%, transparent);
+  background: color-mix(in srgb, var(--accent-red-muted) 80%, var(--bg-card));
+  animation: zenith-ask-mic-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes zenith-ask-mic-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-red) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent-red) 0%, transparent);
+  }
+}
+
+.zenith-root .zenith-ask-composer__submit {
+  color: var(--text-inverse);
+  background: linear-gradient(
+    135deg,
+    var(--accent-gold) 0%,
+    color-mix(in srgb, var(--accent-gold) 72%, #b8860b) 100%
+  );
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent-gold) 38%, transparent);
+}
+
+.zenith-root .zenith-ask-composer__submit:disabled,
+.zenith-root .zenith-ask-composer__mic:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+  animation: none;
+}
+
+.zenith-root .zenith-ask-composer__spinner {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--text-inverse) 35%, transparent);
+  border-top-color: var(--text-inverse);
+  animation: zenith-ask-spin 0.7s linear infinite;
+}
+
+@keyframes zenith-ask-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.zenith-root .zenith-ask-composer__status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.zenith-root .zenith-ask-composer__status.is-live {
+  color: var(--accent-red);
+}
+
+.zenith-root .zenith-ask-composer__status.is-error {
+  color: var(--accent-red);
+}
+
+.zenith-root .zenith-ask-composer__pulse {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--accent-red);
+  animation: pulse-dot 1s ease-in-out infinite;
+}
+
+.zenith-root .zenith-ask-examples {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.15rem 0.15rem 0.35rem;
+  scrollbar-width: none;
+}
+
+.zenith-root .zenith-ask-examples::-webkit-scrollbar {
+  display: none;
+}
+
+.zenith-root .zenith-ask-examples__label {
+  flex: 0 0 auto;
+  align-self: center;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  padding-left: 0.15rem;
+}
+
+.zenith-root .zenith-ask-examples__chip {
+  flex: 0 0 auto;
+  max-width: 16rem;
+  text-align: left;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.25;
+  padding: 0.55rem 0.75rem;
+  min-height: 44px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent-gold) 35%, var(--border-default));
+  background: color-mix(in srgb, var(--accent-gold-muted) 70%, var(--bg-card));
+  color: var(--text-primary);
+  touch-action: manipulation;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zenith-root .zenith-ask-examples__chip:disabled {
+  opacity: 0.5;
+}
+
+.zenith-root .zenith-ask-result {
+  position: relative;
+  margin: 0.65rem 0 0.35rem;
+  border-radius: 1.15rem;
+  overflow: hidden;
+  border: 1.5px solid color-mix(in srgb, var(--accent-gold) 42%, var(--border-default));
+  background: var(--bg-card);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent-gold) 14%, transparent),
+    0 12px 30px color-mix(in srgb, var(--accent-gold) 12%, transparent),
+    var(--shadow-card);
+}
+
+.zenith-root .zenith-ask-result__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--accent-gold) 28%, var(--bg-card)) 0%,
+    color-mix(in srgb, var(--accent-gold-muted) 80%, var(--bg-card)) 100%
+  );
+  border-bottom: 1px solid color-mix(in srgb, var(--accent-gold) 22%, var(--border-default));
+}
+
+.zenith-root .zenith-ask-result__eyebrow {
+  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+}
+
+.zenith-root .zenith-ask-result__question {
+  margin: 0.25rem 0 0;
+  font-size: 0.98rem;
+  font-weight: 650;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.zenith-root .zenith-ask-result__close {
+  flex-shrink: 0;
+  min-height: 40px;
+  min-width: 40px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border-default) 80%, transparent);
+  background: color-mix(in srgb, var(--bg-surface) 70%, transparent);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.zenith-root .zenith-ask-result__body {
+  padding: 0.9rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.zenith-root .zenith-ask-result__insight {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--text-primary);
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, var(--accent-gold-muted) 55%, var(--bg-surface));
+  border: 1px solid color-mix(in srgb, var(--accent-gold) 18%, transparent);
+}
+
+.zenith-root .zenith-ask-followups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.zenith-root .zenith-ask-followups__label,
+.zenith-root .zenith-ask-history__label {
+  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+}
+
+.zenith-root .zenith-ask-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.zenith-root .zenith-ask-history__list {
+  display: flex;
+  gap: 0.45rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.15rem;
+  scrollbar-width: none;
+}
+
+.zenith-root .zenith-ask-history__list::-webkit-scrollbar {
+  display: none;
+}
+
+.zenith-root .zenith-ask-history__item {
+  flex: 0 0 auto;
+  max-width: 14rem;
+  text-align: left;
+  min-height: 40px;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border-default) 90%, var(--accent-gold));
+  background: color-mix(in srgb, var(--bg-surface) 88%, var(--bg-card));
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.zenith-root .zenith-ask-history__q {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 1024px) {
+  .zenith-root .zenith-ask-history__list {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .zenith-root .zenith-ask-history__item {
+    max-width: none;
+    border-radius: 0.75rem;
+  }
+
+  .zenith-root .zenith-ask-history__q {
+    white-space: normal;
+  }
+}
+
+.zenith-root .zenith-ask-result__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 48px;
+  width: 100%;
+  border-radius: 0.9rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-inverse);
+  background: linear-gradient(
+    135deg,
+    var(--accent-gold) 0%,
+    color-mix(in srgb, var(--accent-gold) 72%, #b8860b) 100%
+  );
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+@media (min-width: 640px) {
+  .zenith-root .zenith-ask-result__cta {
+    width: auto;
+    align-self: flex-end;
+    padding: 0 1.1rem;
+  }
+
+  .zenith-root .zenith-ask-composer__input {
+    font-size: 0.95rem;
+    min-height: 2.85rem;
+  }
+
+  .zenith-root .zenith-ask-composer__actions {
+    grid-template-columns: minmax(7.5rem, 0.9fr) minmax(8rem, 1.1fr);
+  }
+
+  .zenith-root .zenith-ask-composer__mic,
+  .zenith-root .zenith-ask-composer__submit {
+    min-height: 44px;
+    font-size: 0.88rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .zenith-root .zenith-ask-composer__shell {
+    padding: 0.75rem 0.9rem 0.85rem;
+    height: 100%;
+  }
+
+  .zenith-root .zenith-ask-page-block--with-suggestions .zenith-ask-page-block__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(16rem, 0.85fr);
+    gap: 0.85rem;
+    align-items: stretch;
+  }
+
+  .zenith-root .zenith-ask-page-block__composer,
+  .zenith-root .zenith-ask-composer {
+    height: 100%;
+  }
+
+  .zenith-root .zenith-ask-suggestions {
+    display: flex;
+    flex-direction: column;
+    border-radius: 1.1rem;
+    padding: 0.85rem 0.9rem;
+    border: 1.5px solid color-mix(in srgb, var(--accent-gold) 32%, var(--border-default));
+    background:
+      linear-gradient(
+        165deg,
+        color-mix(in srgb, var(--accent-gold) 14%, var(--bg-card)) 0%,
+        var(--bg-card) 55%
+      );
+    box-shadow: var(--shadow-card);
+  }
+
+  .zenith-root .zenith-ask-suggestions__head {
+    display: block;
+    margin-bottom: 0.65rem;
+    padding-left: 0;
+  }
+
+  .zenith-root .zenith-ask-suggestions__sub {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.72rem;
+    line-height: 1.35;
+    color: var(--text-muted);
+  }
+
+  .zenith-root .zenith-ask-examples--panel {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0.5rem;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .zenith-root .zenith-ask-examples--panel .zenith-ask-examples__chip {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: none;
+    white-space: normal;
+    border-radius: 0.85rem;
+    text-align: left;
+    line-height: 1.35;
+  }
+
+  .zenith-root .zenith-ask-examples:not(.zenith-ask-examples--panel) {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .zenith-root .zenith-ask-examples:not(.zenith-ask-examples--panel) .zenith-ask-examples__chip {
+    white-space: normal;
+    border-radius: 0.85rem;
+    max-width: none;
+  }
+}
+

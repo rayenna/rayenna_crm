@@ -2,7 +2,7 @@
 
 **Zenith** is Rayenna CRM’s full-screen **command center for analytics**. It uses the **same trusted numbers and date-filter rules** as the classic **[Dashboard](/help/dashboard)**, with Zenith styling in **Light** and **Dark** theme.
 
-> **Summary:** **Solar News** sits under the sticky **command bar**, then the **KPI tiles**, then **AI Insights**. **Your Focus** holds collapsible, role-specific panels. **Charts, KPIs, and the deal funnel** open **Quick Actions** or **Open in Projects →** with matching filters. On phones, a **bottom tab bar** shows one section at a time. With the CRM installed as a **PWA**, Zenith can show **saved dashboard data** offline and **queue** drawer changes until you reconnect.
+> **Summary:** **Solar News** sits under the sticky **command bar** (with **Ask Zenith** for Sales / Management / Admin), then the **KPI tiles**, then **AI Insights**. **Your Focus** holds collapsible, role-specific panels. **Charts, KPIs, and the deal funnel** open **Quick Actions** or **Open in Projects →** with matching filters. On phones, a **bottom tab bar** shows one section at a time. With the CRM installed as a **PWA**, Zenith can show **saved dashboard data** offline and **queue** drawer changes until you reconnect.
 
 ## Classic Dashboard vs Zenith
 
@@ -25,6 +25,7 @@ From **Zenith**, press **?** (when not typing in a field) to open **Help** here.
 | Area | Guide |
 | :-- | :-- |
 | **Command bar, FY, briefing** | [Command bar and filters](#command-bar-and-filters) |
+| **Ask Zenith (NL + follow-ups)** | [Ask Zenith](#ask-zenith-natural-language) |
 | **Solar News, AI Insights, KPIs** | [Ribbons and KPIs](#ribbons-and-kpis) |
 | **Hit List, pipeline table, Deal Health** | [Pipeline and Hit List](#pipeline-and-hit-list) |
 | **Needs review (dates / payments)** | [Things needing attention](/help/dashboard#things-needing-attention-dashboard) · [Needs review](/help/modules#needs-review-data-sense) |

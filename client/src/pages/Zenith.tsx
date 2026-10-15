@@ -7,6 +7,8 @@ import { useZenithMainQuery } from '../hooks/useZenithMainQuery'
 import { useZenithExplorerQuery } from '../hooks/useZenithExplorerQuery'
 import '../styles/zenith.css'
 import CommandBar from '../components/zenith/CommandBar'
+import ZenithAskComposer from '../components/zenith/ZenithAskComposer'
+import ZenithAskPanel from '../components/zenith/ZenithAskPanel'
 import DailyBriefing from '../components/zenith/DailyBriefing'
 import ZenithExecutiveBody from '../components/zenith/ZenithExecutiveBody'
 import ZenithOperationsBody from '../components/zenith/ZenithOperationsBody'
@@ -56,6 +58,42 @@ import {
 import { clearZenithDrawerBodyLock } from '../utils/zenithDrawerLifecycle'
 import { ZENITH_QUERY_STALE_MS } from '../constants/zenithQueryStale'
 import { formatZenithFilterSummary } from '../utils/zenithFilterSummary'
+import type {
+  ZenithAskHistoryItem,
+  ZenithNlPriorContext,
+  ZenithNlQueryResult,
+  ZenithNlQuerySuccess,
+} from '../types/zenithNlQuery'
+
+const ZENITH_ASK_HISTORY_MAX = 6
+
+const ZENITH_ASK_EXAMPLES: Record<string, string[]> = {
+  SALES: [
+    'Which lead sources drove the most revenue?',
+    'Show my pipeline by stage',
+    'Projects with outstanding balance',
+  ],
+  MANAGEMENT: [
+    'Which lead sources drove the most revenue this FY?',
+    'Revenue by salesperson',
+    'Summarise lost deals by reason',
+  ],
+  ADMIN: [
+    'Which lead sources drove the most revenue this FY?',
+    'Payment status breakdown',
+    'Proposal Engine bucket counts',
+  ],
+  OPERATIONS: [
+    'Show installation status breakdown',
+    'Projects pending subsidy credit',
+    'Pipeline by stage',
+  ],
+  FINANCE: [
+    'Payment status breakdown',
+    'Projects with outstanding balance',
+    'Which projects are availing loan?',
+  ],
+}
 
 const Zenith = () => {
   const { user } = useAuth()
@@ -67,6 +105,13 @@ const Zenith = () => {
   const financeQuickDrawer = useFinanceQuickDrawer()
   const operationsQuickDrawer = useOperationsQuickDrawer()
   const { isOnline, isSyncing, pendingCount, syncError, syncNow } = useOfflineSync()
+
+  const [askValue, setAskValue] = useState('')
+  const [askLoading, setAskLoading] = useState(false)
+  const [askResult, setAskResult] = useState<ZenithNlQueryResult | null>(null)
+  const [askError, setAskError] = useState<string | null>(null)
+  const [askHistory, setAskHistory] = useState<ZenithAskHistoryItem[]>([])
+  const askPriorRef = useRef<ZenithNlPriorContext | null>(null)
 
   const wasOfflineRef = useRef(false)
   const [showOnlineAck, setShowOnlineAck] = useState(false)
@@ -88,6 +133,63 @@ const Zenith = () => {
     user?.role === UserRole.SALES ||
     user?.role === UserRole.MANAGEMENT ||
     user?.role === UserRole.ADMIN
+
+  const showZenithAsk =
+    execZenithRole ||
+    user?.role === UserRole.OPERATIONS ||
+    user?.role === UserRole.FINANCE
+
+  const pushAskHistory = useCallback((success: ZenithNlQuerySuccess) => {
+    const entry: ZenithAskHistoryItem = {
+      id: `${Date.now()}-${success.intent.metric}`,
+      question: success.question,
+      insight: success.insight,
+      metric: success.intent.metric,
+      at: Date.now(),
+    }
+    setAskHistory((prev) => [entry, ...prev.filter((h) => h.question !== entry.question)].slice(0, ZENITH_ASK_HISTORY_MAX))
+    askPriorRef.current = {
+      question: success.question,
+      metric: success.intent.metric,
+      filters: success.intent.filters,
+    }
+  }, [])
+
+  const runZenithAsk = useCallback(
+    async (question: string) => {
+      const q = question.trim()
+      if (!q || !showZenithAsk || !isOnline) return
+      setAskLoading(true)
+      setAskError(null)
+      setAskResult(null)
+      setAskValue(q)
+      try {
+        const res = await axiosInstance.post<ZenithNlQueryResult>('/api/dashboard/zenith-nl-query', {
+          question: q,
+          fy: selectedFYs,
+          quarter: selectedQuarters,
+          month: selectedMonths,
+          prior: askPriorRef.current,
+        })
+        setAskResult(res.data)
+        if (res.data.ok) {
+          pushAskHistory(res.data)
+        }
+        window.requestAnimationFrame(() => {
+          document.getElementById('zenith-ask-result')?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+          })
+        })
+      } catch (err) {
+        setAskError(getFriendlyApiErrorMessage(err))
+        setAskResult(null)
+      } finally {
+        setAskLoading(false)
+      }
+    },
+    [showZenithAsk, isOnline, selectedFYs, selectedQuarters, selectedMonths, pushAskHistory],
+  )
 
   const showQuickActionDrawer =
     execZenithRole || user?.role === UserRole.OPERATIONS || user?.role === UserRole.FINANCE
@@ -371,7 +473,6 @@ const Zenith = () => {
   const insightsBar =
     !isFyError && user?.role && (hasZenithBodyData || !isError) ? (
       <ZenithAiInsightsTicker
-        belowKpis
         items={tickerItems}
         isLoading={isLoading && !hasZenithBodyData}
       />
@@ -392,7 +493,6 @@ const Zenith = () => {
             dateFilter={dateFilter}
             onOpenDrawerListMode={openDrawerListMode}
             mobileTab={mobileTabProp}
-            insightsBar={insightsBar}
             onOpenFinanceDrawer={
               user.role === UserRole.ADMIN || user.role === UserRole.MANAGEMENT
                 ? financeQuickDrawer.open
@@ -411,7 +511,6 @@ const Zenith = () => {
             dateFilter={dateFilter}
             onOpenDrawerListMode={openDrawerListMode}
             mobileTab={mobileTabProp}
-            insightsBar={insightsBar}
             onOpenOperationsDrawer={operationsQuickDrawer.open}
             onOpenProjectQuickDrawer={openZenithProjectQuickDrawer}
             onPriorityNavigate={handlePriorityNavigate}
@@ -425,7 +524,6 @@ const Zenith = () => {
             dateFilter={dateFilter}
             onOpenDrawerListMode={openDrawerListMode}
             mobileTab={mobileTabProp}
-            insightsBar={insightsBar}
             onOpenFinanceDrawer={financeQuickDrawer.open}
             onPriorityNavigate={handlePriorityNavigate}
           />
@@ -447,7 +545,6 @@ const Zenith = () => {
     operationsQuickDrawer.open,
     openZenithProjectQuickDrawer,
     mobileTabProp,
-    insightsBar,
     handlePriorityNavigate,
   ])
 
@@ -490,8 +587,72 @@ const Zenith = () => {
 
       <div id="zenith-mobile-nav-sentinel" className="h-0 w-0 overflow-hidden" aria-hidden />
 
-      {/* Solar news — above KPI tiles; AI Insights is passed into each role body under the tiles */}
+      {/* Solar news — above Ask; AI Insights stays under KPI tiles in role bodies */}
       {user?.role ? <SolarNewsTicker deferLoadMs={2000} /> : null}
+
+      {/* Ask scrolls with page content (not sticky with command bar). */}
+      {showZenithAsk ? (
+        <section
+          className={`zenith-ask-page-block zenith-exec-main mx-auto px-3 sm:px-5 pt-3 pb-1${
+            !askResult && !askLoading && !askError && user?.role
+              ? ' zenith-ask-page-block--with-suggestions'
+              : ''
+          }`}
+          aria-label="Zenith Ask"
+        >
+          <div className="zenith-ask-page-block__row">
+            <div className="zenith-ask-page-block__composer">
+              <ZenithAskComposer
+                value={askValue}
+                onChange={setAskValue}
+                onSubmit={runZenithAsk}
+                loading={askLoading}
+                isOnline={isOnline}
+              />
+            </div>
+            {!askResult && !askLoading && !askError && user?.role ? (
+              <aside className="zenith-ask-suggestions" aria-label="Example questions">
+                <div className="zenith-ask-suggestions__head">
+                  <span className="zenith-ask-examples__label">Try asking</span>
+                  <p className="zenith-ask-suggestions__sub">Tap a prompt to run it with your filters</p>
+                </div>
+                <div className="zenith-ask-examples zenith-ask-examples--panel">
+                  {(ZENITH_ASK_EXAMPLES[user.role] ?? ZENITH_ASK_EXAMPLES.MANAGEMENT).map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      disabled={!isOnline}
+                      onClick={() => void runZenithAsk(q)}
+                      className="zenith-ask-examples__chip"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </aside>
+            ) : null}
+          </div>
+          <ZenithAskPanel
+            result={askResult}
+            error={askError}
+            loading={askLoading}
+            history={askHistory}
+            onClose={() => {
+              setAskResult(null)
+              setAskError(null)
+            }}
+            onAskSuggestion={(q) => {
+              void runZenithAsk(q)
+            }}
+            onReplayHistory={(item) => {
+              void runZenithAsk(item.question)
+            }}
+          />
+        </section>
+      ) : null}
+
+      {/* AI Insights — under Ask (or under Solar News when Ask is hidden for Ops/Finance) */}
+      {insightsBar}
 
       {showQuickActionDrawer && quickAction.listMode && quickAction.isOpen ? (
         <div

@@ -41,6 +41,7 @@ const DASHBOARD_PART_FILES = [
 /** Zenith hub + sub-pages (order = sidebar scroll order). */
 const ZENITH_PART_FILES = [
   'command-bar-and-filters.md',
+  'ask-analytics.md',
   'ribbons-and-kpis.md',
   'pipeline-and-hit-list.md',
   'your-focus.md',
